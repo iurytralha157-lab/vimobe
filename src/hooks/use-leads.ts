@@ -235,3 +235,25 @@ export function useMoveLeadToStage() {
     },
   });
 }
+
+// Lightweight hook for counting leads (used in OnboardingChecklist)
+export function useLeadsCount() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ["leads-count", organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
+      
+      const { count, error } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", organization.id);
+      
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
