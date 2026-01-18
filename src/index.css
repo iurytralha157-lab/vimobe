@@ -2,117 +2,129 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Vimob CRM Design System */
+/* Vimob CRM - Modern Minimalist Design System with Purple Accent */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 99%;
+    --foreground: 240 10% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 10% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 240 10% 10%;
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    /* Purple Modern */
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 250 30% 96%;
+    --secondary-foreground: 240 10% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 250 20% 96%;
+    --muted-foreground: 240 5% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 262 70% 95%;
+    --accent-foreground: 262 83% 45%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
+    --border: 250 15% 91%;
+    --input: 250 15% 91%;
+    --ring: 262 83% 58%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 221 83% 53%;
+    /* Sidebar */
+    --sidebar-background: 250 30% 98%;
+    --sidebar-foreground: 240 10% 30%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 262 70% 96%;
+    --sidebar-accent-foreground: 262 83% 45%;
+    --sidebar-border: 250 15% 92%;
+    --sidebar-ring: 262 83% 58%;
 
-    /* Vimob Custom Colors */
-    --success: 142 76% 36%;
+    /* Semantic Colors */
+    --success: 152 69% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 0%;
+    --warning-foreground: 38 92% 15%;
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    /* Chart Colors */
-    --chart-1: 221 83% 53%;
-    --chart-2: 142 76% 36%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 0 84% 60%;
-    --chart-5: 262 83% 58%;
+    /* Chart Colors - Purple based */
+    --chart-1: 262 83% 58%;
+    --chart-2: 280 75% 60%;
+    --chart-3: 240 65% 55%;
+    --chart-4: 320 70% 55%;
+    --chart-5: 200 75% 50%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(280 75% 60%) 100%);
+    --gradient-subtle: linear-gradient(135deg, hsl(262 70% 97%) 0%, hsl(250 30% 98%) 100%);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 240 10% 6%;
+    --foreground: 0 0% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 10% 8%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 10% 8%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Purple Modern Dark */
+    --primary: 262 85% 65%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 250 15% 15%;
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 250 15% 15%;
+    --muted-foreground: 240 5% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 262 50% 18%;
+    --accent-foreground: 262 85% 75%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 217 91% 60%;
+    --border: 250 15% 18%;
+    --input: 250 15% 18%;
+    --ring: 262 85% 65%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 217 91% 60%;
+    /* Sidebar Dark */
+    --sidebar-background: 240 10% 7%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 262 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 262 50% 15%;
+    --sidebar-accent-foreground: 262 85% 75%;
+    --sidebar-border: 250 15% 15%;
+    --sidebar-ring: 262 85% 65%;
 
-    /* Vimob Custom Colors */
-    --success: 142 71% 45%;
+    /* Semantic Colors Dark */
+    --success: 152 69% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 0%;
-    --info: 199 89% 48%;
+    --warning-foreground: 38 92% 10%;
+    --info: 199 89% 55%;
     --info-foreground: 0 0% 100%;
 
-    /* Chart Colors */
-    --chart-1: 217 91% 60%;
-    --chart-2: 142 71% 45%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 0 63% 31%;
-    --chart-5: 262 83% 58%;
+    /* Chart Colors Dark */
+    --chart-1: 262 85% 65%;
+    --chart-2: 280 75% 65%;
+    --chart-3: 240 65% 60%;
+    --chart-4: 320 70% 60%;
+    --chart-5: 200 75% 55%;
+
+    /* Gradients Dark */
+    --gradient-primary: linear-gradient(135deg, hsl(262 85% 65%) 0%, hsl(280 75% 65%) 100%);
+    --gradient-subtle: linear-gradient(135deg, hsl(262 50% 12%) 0%, hsl(250 15% 10%) 100%);
   }
 }
 
@@ -123,12 +135,13 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01", "ss03";
   }
 
-  /* Custom Scrollbar */
+  /* Modern Scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
@@ -136,22 +149,108 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 3px;
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.35);
+  }
+
+  /* Selection */
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary));
   }
 }
 
 @layer components {
+  /* Glass Effect */
   .glass {
-    @apply bg-background/80 backdrop-blur-sm;
+    @apply bg-background/70 backdrop-blur-xl border border-border/50;
   }
 
+  /* Card Hover */
   .card-hover {
-    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1;
+  }
+
+  /* Gradient Background */
+  .gradient-bg {
+    background: var(--gradient-subtle);
+  }
+
+  /* Primary Gradient */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  /* Subtle border glow */
+  .glow-border {
+    @apply relative;
+  }
+  
+  .glow-border::before {
+    content: '';
+    @apply absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-300;
+    background: var(--gradient-primary);
+    z-index: -1;
+    margin: -1px;
+  }
+  
+  .glow-border:hover::before {
+    @apply opacity-20;
+  }
+
+  /* Stats card */
+  .stat-card {
+    @apply relative overflow-hidden rounded-xl border bg-card p-6 transition-all duration-300;
+  }
+
+  .stat-card::before {
+    content: '';
+    @apply absolute top-0 right-0 w-32 h-32 rounded-full opacity-10;
+    background: hsl(var(--primary));
+    filter: blur(40px);
+    transform: translate(30%, -30%);
+  }
+
+  /* Navigation link active */
+  .nav-link-active {
+    @apply relative bg-accent text-accent-foreground font-medium;
+  }
+
+  .nav-link-active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full;
+    background: hsl(var(--primary));
+  }
+
+  /* Input focus */
+  .input-focus {
+    @apply transition-all duration-200;
+  }
+
+  .input-focus:focus-within {
+    @apply ring-2 ring-primary/20 border-primary;
+  }
+
+  /* Badge variants */
+  .badge-success {
+    @apply bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400;
+  }
+
+  .badge-warning {
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
+  }
+
+  .badge-info {
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+
+  /* Table row hover */
+  .table-row-hover {
+    @apply transition-colors duration-150 hover:bg-muted/50;
   }
 }
 
@@ -160,14 +259,15 @@
     text-wrap: balance;
   }
 
+  /* Animations */
   .animate-in {
-    animation: fadeIn 0.2s ease-out;
+    animation: fadeIn 0.25s ease-out;
   }
 
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
@@ -176,17 +276,52 @@
   }
 
   .animate-slide-in {
-    animation: slideIn 0.3s ease-out;
+    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   @keyframes slideIn {
     from {
       opacity: 0;
-      transform: translateX(-8px);
+      transform: translateX(-12px);
     }
     to {
       opacity: 1;
       transform: translateX(0);
     }
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Hover effects */
+  .hover-lift {
+    @apply transition-transform duration-200 hover:-translate-y-0.5;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  /* Focus visible */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 }
