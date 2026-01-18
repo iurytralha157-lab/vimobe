@@ -71,6 +71,19 @@ export const en = {
     alreadyHaveAccount: "Already have an account?",
     dontHaveAccount: "Don't have an account?",
     orContinueWith: "Or continue with",
+    // Password recovery
+    sendResetLink: "Send recovery link",
+    resetLinkSent: "Link sent!",
+    checkYourEmail: "Check your email to reset your password.",
+    newPassword: "New password",
+    confirmNewPassword: "Confirm new password",
+    passwordUpdated: "Password updated!",
+    passwordUpdatedDesc: "Your password has been changed successfully. You can now log in.",
+    backToLogin: "Back to login",
+    goToLogin: "Go to login",
+    enterEmailForReset: "Enter your email to receive the recovery link.",
+    enterNewPassword: "Enter your new password below.",
+    invalidResetLink: "Invalid or expired recovery link.",
   },
 
   // Navigation
