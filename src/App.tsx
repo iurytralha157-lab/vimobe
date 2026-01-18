@@ -51,7 +51,7 @@ const queryClient = new QueryClient({
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading, profile, isSuperAdmin } = useAuth();
 
   if (isLoading) {
     return (
@@ -65,8 +65,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Check if user needs onboarding
-  if (profile && !profile.organization_id) {
+  // Super admins não precisam de organização
+  if (profile && !profile.organization_id && !isSuperAdmin) {
     return <Navigate to="/onboarding" replace />;
   }
 
@@ -75,7 +75,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 // Admin Route Component
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isSuperAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isSuperAdmin, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -83,6 +83,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
   }
 
   if (!isSuperAdmin) {
@@ -94,7 +98,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 // Public Route (redirect to dashboard if authenticated)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading, profile, isSuperAdmin } = useAuth();
 
   if (isLoading) {
     return (
@@ -105,6 +109,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
+    // Super admin vai direto para o painel admin
+    if (isSuperAdmin) {
+      return <Navigate to="/admin" replace />;
+    }
+    // Usuários normais sem organização vão para onboarding
     if (profile && !profile.organization_id) {
       return <Navigate to="/onboarding" replace />;
     }
