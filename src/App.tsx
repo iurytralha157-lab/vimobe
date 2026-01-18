@@ -96,6 +96,30 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Onboarding Route - requires auth but no organization check
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, profile, isSuperAdmin } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Se já tem organização, redireciona para o dashboard
+  if (profile?.organization_id) {
+    return isSuperAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 // Public Route (redirect to dashboard if authenticated)
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, profile, isSuperAdmin } = useAuth();
@@ -136,13 +160,13 @@ function AppRoutes() {
         }
       />
 
-      {/* Onboarding */}
+      {/* Onboarding - uses OnboardingRoute to avoid redirect loop */}
       <Route
         path="/onboarding"
         element={
-          <ProtectedRoute>
+          <OnboardingRoute>
             <Onboarding />
-          </ProtectedRoute>
+          </OnboardingRoute>
         }
       />
 
