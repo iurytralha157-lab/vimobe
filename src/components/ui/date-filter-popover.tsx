@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DatePreset, datePresetOptions } from '@/hooks/use-dashboard-filters';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DateFilterPopoverProps {
   datePreset: DatePreset;
@@ -29,6 +30,7 @@ export function DateFilterPopover({
   const [tempRange, setTempRange] = useState<DateRange | undefined>(
     customDateRange ? { from: customDateRange.from, to: customDateRange.to } : undefined
   );
+  const isMobile = useIsMobile();
 
   const handlePresetSelect = (preset: DatePreset) => {
     if (preset === 'custom') {
@@ -107,8 +109,9 @@ export function DateFilterPopover({
               defaultMonth={tempRange?.from}
               selected={tempRange}
               onSelect={handleCalendarSelect}
-              numberOfMonths={2}
+              numberOfMonths={isMobile ? 1 : 2}
               locale={ptBR}
+              className="pointer-events-auto"
             />
             <div className="flex items-center justify-between gap-2 p-3 border-t">
               <Button 

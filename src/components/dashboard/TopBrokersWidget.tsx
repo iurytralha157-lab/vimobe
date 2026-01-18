@@ -123,23 +123,23 @@ export function TopBrokersWidget({ brokers, isLoading }: TopBrokersWidgetProps) 
               </div>
 
               {/* Avatar */}
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                 <AvatarImage src={broker.avatar_url || undefined} />
-                <AvatarFallback className="text-xs">
+                <AvatarFallback className="text-[10px] sm:text-xs">
                   {getInitials(broker.name)}
                 </AvatarFallback>
               </Avatar>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{broker.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs sm:text-sm font-medium truncate">{broker.name}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {broker.closedLeads} {broker.closedLeads === 1 ? 'venda' : 'vendas'}
                 </p>
               </div>
 
               {/* Value */}
-              <span className="text-xs font-medium text-primary">
+              <span className="text-[10px] sm:text-xs font-medium text-primary">
                 {formatCurrency(broker.salesValue)}
               </span>
             </div>
