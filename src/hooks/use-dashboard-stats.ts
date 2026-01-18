@@ -76,6 +76,7 @@ export function useEnhancedDashboardStats(filters: DashboardFilters) {
       return { totalLeads, conversionRate, closedLeads, avgResponseTime: '--', totalSalesValue, leadsTrend: 0, conversionTrend: 0, closedTrend: 0 };
     },
     enabled: !!organization?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -98,6 +99,7 @@ export function useLeadsChartData() {
       });
     },
     enabled: !!organization?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -126,6 +128,7 @@ export function useFunnelData() {
       }));
     },
     enabled: !!organization?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -141,6 +144,7 @@ export function useLeadSourcesData() {
       return [{ name: 'Direto', value: leads.length }];
     },
     enabled: !!organization?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -166,6 +170,7 @@ export function useTopBrokers(filters: DashboardFilters) {
       return (users || []).map(user => ({ id: user.id, name: user.name, avatar_url: user.avatar_url, closedLeads: brokerStats[user.id]?.closedLeads || 0, salesValue: 0 })).sort((a, b) => b.closedLeads - a.closedLeads).slice(0, 5);
     },
     enabled: !!organization?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -180,6 +185,7 @@ export function useUpcomingTasks() {
       return (tasks || []).map((task: any) => ({ id: task.id, title: task.title, type: 'task' as const, due_date: task.due_date || new Date().toISOString(), lead_name: task.lead?.name || 'Lead', lead_id: task.lead_id }));
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

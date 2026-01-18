@@ -14,7 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeams } from '@/hooks/use-teams';
-import { useLeads } from '@/hooks/use-leads';
+import { useLeadsCount } from '@/hooks/use-leads';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { cn } from '@/lib/utils';
 
@@ -32,7 +32,7 @@ export function OnboardingChecklist() {
   const navigate = useNavigate();
   const { organization } = useAuth();
   const { data: teams = [] } = useTeams();
-  const { data: leads = [] } = useLeads();
+  const { data: leadsCount = 0 } = useLeadsCount();
   const { data: users = [] } = useOrganizationUsers();
   
   const [dismissed, setDismissed] = useState(false);
@@ -76,7 +76,7 @@ export function OnboardingChecklist() {
       title: 'Importar contatos',
       description: 'Importe sua base de leads existente',
       icon: Upload,
-      isComplete: leads.length > 0,
+      isComplete: leadsCount > 0,
       action: () => navigate('/crm/contacts'),
       actionLabel: 'Importar',
     },
