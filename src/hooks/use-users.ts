@@ -36,6 +36,28 @@ export function useUsers() {
   });
 }
 
+export function useOrganizationUsers() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ["organization-users", organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, avatar_url, email, role, is_active")
+        .eq("organization_id", organization.id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data as Pick<User, 'id' | 'name' | 'avatar_url' | 'email' | 'role' | 'is_active'>[];
+    },
+    enabled: !!organization?.id,
+  });
+}
+
 export function useUser(id: string | undefined) {
   return useQuery({
     queryKey: ["user", id],
@@ -73,6 +95,7 @@ export function useUpdateUser() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["organization-users"] });
       queryClient.invalidateQueries({ queryKey: ["user", data.id] });
       toast({ title: "Usuário atualizado!" });
     },
