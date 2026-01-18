@@ -119,11 +119,12 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
               />
               <Legend 
                 verticalAlign="bottom"
-                height={40}
+                height={36}
                 iconType="circle"
-                iconSize={8}
+                iconSize={6}
+                wrapperStyle={{ fontSize: '10px' }}
                 formatter={(value) => (
-                  <span className="text-xs text-foreground">{value}</span>
+                  <span className="text-[10px] sm:text-xs text-foreground">{value}</span>
                 )}
               />
             </PieChart>

@@ -129,37 +129,40 @@ export function OnboardingChecklist() {
               <div 
                 key={item.id}
                 className={cn(
-                  "flex items-center gap-4 p-3 rounded-lg transition-colors",
+                  "flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 rounded-lg transition-colors",
                   item.isComplete 
                     ? "bg-orange-500/10" 
                     : "bg-muted/50 hover:bg-muted"
                 )}
               >
-                <div className={cn(
-                  "flex-shrink-0",
-                  item.isComplete ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground"
-                )}>
-                  {item.isComplete ? (
-                    <CheckCircle2 className="h-5 w-5" />
-                  ) : (
-                    <Circle className="h-5 w-5" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={cn(
-                    "font-medium text-sm",
-                    item.isComplete && "line-through text-muted-foreground"
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={cn(
+                    "flex-shrink-0",
+                    item.isComplete ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground"
                   )}>
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {item.description}
-                  </p>
+                    {item.isComplete ? (
+                      <CheckCircle2 className="h-5 w-5" />
+                    ) : (
+                      <Circle className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "font-medium text-sm",
+                      item.isComplete && "line-through text-muted-foreground"
+                    )}>
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {item.description}
+                    </p>
+                  </div>
                 </div>
                 {!item.isComplete && item.action && (
                   <Button 
                     variant="outline" 
                     size="sm"
+                    className="w-full sm:w-auto flex-shrink-0"
                     onClick={item.action}
                   >
                     {item.actionLabel}
