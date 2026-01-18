@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 
 // Pages
 import Auth from "@/pages/Auth";
+import ResetPassword from "@/pages/ResetPassword";
 import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
 import Contacts from "@/pages/Contacts";
@@ -159,6 +160,9 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      
+      {/* Password Reset - accessible without auth (comes from email link) */}
+      <Route path="/auth/reset-password" element={<ResetPassword />} />
 
       {/* Onboarding - uses OnboardingRoute to avoid redirect loop */}
       <Route

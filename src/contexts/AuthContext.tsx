@@ -40,6 +40,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -152,6 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string) => {
     try {
+      const redirectUrl = `${window.location.origin}/`;
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -159,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name,
           },
+          emailRedirectTo: redirectUrl,
         },
       });
 
@@ -198,6 +203,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const sendPasswordReset = async (email: string) => {
+    try {
+      const redirectUrl = `${window.location.origin}/auth/reset-password`;
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao enviar e-mail",
+          description: error.message,
+        });
+        return { error };
+      }
+
+      toast({
+        title: "E-mail enviado!",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+      });
+
+      return { error: null };
+    } catch (error) {
+      const err = error as Error;
+      toast({
+        variant: "destructive",
+        title: "Erro ao enviar e-mail",
+        description: err.message,
+      });
+      return { error: err };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao atualizar senha",
+          description: error.message,
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Senha atualizada!",
+        description: "Sua senha foi alterada com sucesso.",
+      });
+
+      return { error: null };
+    } catch (error) {
+      const err = error as Error;
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar senha",
+        description: err.message,
+      });
+      return { error: err };
+    }
+  };
+
   const isSuperAdmin = profile?.role === "super_admin";
   const isAdmin = profile?.role === "admin" || isSuperAdmin;
 
@@ -214,6 +285,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     refreshProfile,
+    sendPasswordReset,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

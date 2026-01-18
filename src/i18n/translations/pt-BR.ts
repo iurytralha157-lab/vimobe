@@ -71,6 +71,19 @@ export const ptBR = {
     alreadyHaveAccount: "Já tem uma conta?",
     dontHaveAccount: "Não tem uma conta?",
     orContinueWith: "Ou continue com",
+    // Password recovery
+    sendResetLink: "Enviar link de recuperação",
+    resetLinkSent: "Link enviado!",
+    checkYourEmail: "Verifique seu e-mail para redefinir sua senha.",
+    newPassword: "Nova senha",
+    confirmNewPassword: "Confirmar nova senha",
+    passwordUpdated: "Senha atualizada!",
+    passwordUpdatedDesc: "Sua senha foi alterada com sucesso. Você já pode fazer login.",
+    backToLogin: "Voltar para login",
+    goToLogin: "Ir para login",
+    enterEmailForReset: "Digite seu e-mail para receber o link de recuperação.",
+    enterNewPassword: "Digite sua nova senha abaixo.",
+    invalidResetLink: "Link de recuperação inválido ou expirado.",
   },
 
   // Navigation
