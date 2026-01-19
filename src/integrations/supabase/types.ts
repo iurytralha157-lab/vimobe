@@ -3097,6 +3097,7 @@ export type Database = {
         Args: { p_session_id: string; p_user_id?: string }
         Returns: boolean
       }
+      can_manage_session: { Args: { session_id: string }; Returns: boolean }
       create_notification: {
         Args: {
           p_content: string
@@ -3108,6 +3109,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_session_owner: { Args: { session_id: string }; Returns: string }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {
         Args: {
@@ -3154,6 +3156,10 @@ export type Database = {
         Returns: boolean
       }
       user_has_organization: { Args: never; Returns: boolean }
+      user_has_session_access: {
+        Args: { session_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "super_admin"
