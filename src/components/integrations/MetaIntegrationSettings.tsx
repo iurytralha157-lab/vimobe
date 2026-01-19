@@ -191,9 +191,9 @@ export function MetaIntegrationSettings() {
 
   const openEditDialog = (integration: MetaIntegration) => {
     setEditingPage(integration.page_id);
-    setSelectedPipelineId(integration.pipeline_id || "");
-    setSelectedStageId(integration.stage_id || "");
-    setSelectedStatus(integration.default_status || "novo");
+    setSelectedPipelineId("");
+    setSelectedStageId("");
+    setSelectedStatus("novo");
     setShowEditDialog(true);
   };
 
@@ -304,20 +304,18 @@ export function MetaIntegrationSettings() {
                           </Badge>
                         </div>
                         
-                        {integration.pipeline_id && (
-                          <p className="text-sm text-muted-foreground">
-                            {meta.pipelineConfigured} • {meta.status}: {integration.default_status || meta.statusNew}
-                          </p>
-                        )}
+                        <p className="text-sm text-muted-foreground">
+                          {meta.pipelineConfigured}
+                        </p>
                         
                         <div className="flex items-center gap-4 mt-2">
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <Users className="h-4 w-4" />
-                            <span>{integration.leads_received || 0} {meta.leadsReceived}</span>
+                            <span>{meta.leadsReceived}</span>
                           </div>
-                          {integration.last_lead_at && (
+                          {integration.last_sync_at && (
                             <span className="text-xs text-muted-foreground">
-                              {meta.lastLead}: {new Date(integration.last_lead_at).toLocaleDateString()}
+                              {meta.lastLead}: {new Date(integration.last_sync_at).toLocaleDateString()}
                             </span>
                           )}
                         </div>
@@ -500,7 +498,7 @@ export function MetaIntegrationSettings() {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{meta.configurePage}</DialogTitle>
+            <DialogTitle>{meta.editPage}</DialogTitle>
             <DialogDescription>
               {meta.changeDestination}
             </DialogDescription>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Phone, 
@@ -59,18 +59,18 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
   const createEvent = useCreateScheduleEvent();
   const updateEvent = useUpdateScheduleEvent();
 
-  const [selectedType, setSelectedType] = useState<EventType>(event?.event_type || 'call');
+  const [selectedType, setSelectedType] = useState<EventType>((event?.event_type as EventType) || 'call');
   const [title, setTitle] = useState(event?.title || '');
   const [description, setDescription] = useState(event?.description || '');
   const [selectedUserId, setSelectedUserId] = useState(event?.user_id || defaultUserId || '');
   const [date, setDate] = useState<Date | undefined>(
-    event?.start_at ? new Date(event.start_at) : defaultDate || getBrasiliaTime()
+    event?.start_time ? new Date(event.start_time) : defaultDate || getBrasiliaTime()
   );
   const [time, setTime] = useState(
-    event?.start_at ? format(new Date(event.start_at), 'HH:mm') : getCurrentTimeForInput()
+    event?.start_time ? format(new Date(event.start_time), 'HH:mm') : getCurrentTimeForInput()
   );
-  const [duration, setDuration] = useState(event?.duration_minutes || 30);
-  const [isCompleted, setIsCompleted] = useState(event?.is_completed || false);
+  const [duration, setDuration] = useState(30);
+  const [isCompleted, setIsCompleted] = useState(event?.status === 'completed');
 
   const maxDescriptionLength = 280;
   const remainingChars = maxDescriptionLength - description.length;
@@ -79,22 +79,23 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
     if (!title.trim() || !date || !selectedUserId) return;
 
     const [hours, minutes] = time.split(':').map(Number);
-    const startAt = new Date(date);
-    startAt.setHours(hours, minutes, 0, 0);
+    const startTime = new Date(date);
+    startTime.setHours(hours, minutes, 0, 0);
+    const endTime = addMinutes(startTime, duration);
 
     const eventData = {
       title: title.trim(),
       description: description.trim() || undefined,
       event_type: selectedType,
-      start_at: startAt.toISOString(),
-      duration_minutes: duration,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      is_all_day: false,
       user_id: selectedUserId,
       lead_id: leadId,
-      is_completed: isCompleted,
     };
 
     if (event) {
-      await updateEvent.mutateAsync({ id: event.id, ...eventData });
+      await updateEvent.mutateAsync({ id: event.id, ...eventData, status: isCompleted ? 'completed' : 'scheduled' });
     } else {
       await createEvent.mutateAsync(eventData);
     }

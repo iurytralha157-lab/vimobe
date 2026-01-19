@@ -7,7 +7,6 @@ import {
   CheckSquare, 
   MessageSquare, 
   MapPin,
-  Check,
   MoreHorizontal,
   Trash2,
   Edit2,
@@ -75,7 +74,7 @@ export function EventsList({ events, onEditEvent, showUser = true, showLead = tr
     const groups: Record<string, ScheduleEvent[]> = {};
     
     events.forEach((event) => {
-      const dateKey = format(new Date(event.start_at), 'yyyy-MM-dd');
+      const dateKey = format(new Date(event.start_time), 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -101,26 +100,27 @@ export function EventsList({ events, onEditEvent, showUser = true, showLead = tr
       {groupedEvents.map(([dateKey, dayEvents]) => (
         <div key={dateKey}>
           <h3 className="text-sm font-medium text-muted-foreground mb-3 capitalize">
-            {getDateLabel(dayEvents[0].start_at)}
+            {getDateLabel(dayEvents[0].start_time)}
           </h3>
           <div className="space-y-2">
             {dayEvents.map((event) => {
               const Icon = eventTypeIcons[event.event_type as EventType];
-              const isOverdue = !event.is_completed && isPast(new Date(event.start_at));
+              const isCompleted = event.status === 'completed';
+              const isOverdue = !isCompleted && isPast(new Date(event.start_time));
               
               return (
                 <div
                   key={event.id}
                   className={cn(
                     "group flex items-start gap-3 p-3 rounded-lg border bg-card transition-all",
-                    event.is_completed && "opacity-60",
+                    isCompleted && "opacity-60",
                     isOverdue && "border-destructive/50 bg-destructive/5"
                   )}
                 >
                   <Checkbox
-                    checked={event.is_completed}
+                    checked={isCompleted}
                     onCheckedChange={(checked) => {
-                      completeEvent.mutate({ id: event.id, is_completed: checked as boolean });
+                      completeEvent.mutate({ id: event.id, status: checked ? 'completed' : 'scheduled' });
                     }}
                     className="mt-1"
                   />
@@ -139,15 +139,14 @@ export function EventsList({ events, onEditEvent, showUser = true, showLead = tr
                       <div>
                         <p className={cn(
                           "font-medium",
-                          event.is_completed && "line-through"
+                          isCompleted && "line-through"
                         )}>
                           {event.title}
                         </p>
                         <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
-                            {format(new Date(event.start_at), 'HH:mm')}
-                            {event.duration_minutes && ` (${event.duration_minutes} min)`}
+                            {format(new Date(event.start_time), 'HH:mm')}
                           </span>
                           <span className="text-xs px-1.5 py-0.5 rounded bg-muted">
                             {eventTypeLabels[event.event_type as EventType]}
