@@ -8,13 +8,13 @@ export interface MetaIntegration {
   organization_id: string;
   page_id: string | null;
   page_name: string | null;
-  is_connected: boolean;
-  pipeline_id: string | null;
-  stage_id: string | null;
-  default_status: string | null;
-  leads_received: number | null;
-  last_lead_at: string | null;
+  is_connected: boolean | null;
+  access_token: string | null;
+  field_mapping: unknown;
+  form_ids: unknown;
+  campaign_property_mapping: unknown;
   last_error: string | null;
+  last_sync_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -34,14 +34,14 @@ export function useMetaIntegrations() {
     queryFn: async () => {
       if (!profile?.organization_id) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("meta_integrations")
         .select("*")
         .eq("organization_id", profile.organization_id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as MetaIntegration[];
+      return (data || []) as MetaIntegration[];
     },
     enabled: !!profile?.organization_id,
   });
@@ -54,7 +54,7 @@ export function useMetaGetAuthUrl() {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth`,
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
         {
           method: "POST",
           headers: {
@@ -85,7 +85,7 @@ export function useMetaExchangeToken() {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth`,
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
         {
           method: "POST",
           headers: {
@@ -131,7 +131,7 @@ export function useMetaConnectPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth`,
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
         {
           method: "POST",
           headers: {
@@ -185,7 +185,7 @@ export function useMetaUpdatePage() {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth`,
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
         {
           method: "POST",
           headers: {
@@ -228,7 +228,7 @@ export function useMetaDisconnectPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth`,
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
         {
           method: "POST",
           headers: {
@@ -268,7 +268,7 @@ export function useMetaTogglePage() {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/meta-oauth`,
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
         {
           method: "POST",
           headers: {

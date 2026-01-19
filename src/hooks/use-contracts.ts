@@ -9,7 +9,7 @@ export interface ContractBroker {
   user_id: string;
   commission_percentage: number;
   commission_value?: number;
-  role: string;
+  role?: string;
   created_at: string;
   user?: { id: string; name: string; email: string };
 }
@@ -17,28 +17,23 @@ export interface ContractBroker {
 export interface Contract {
   id: string;
   organization_id: string;
-  contract_number: string;
-  type: 'sale' | 'rental' | 'service';
-  status: 'draft' | 'active' | 'completed' | 'cancelled';
-  property_id?: string;
-  lead_id?: string;
-  client_name: string;
-  client_email?: string;
-  client_phone?: string;
-  client_document?: string;
-  total_value: number;
-  down_payment: number;
-  installments: number;
-  payment_conditions?: string;
-  start_date?: string;
-  end_date?: string;
-  signing_date?: string;
-  notes?: string;
-  created_by?: string;
-  created_at: string;
-  updated_at: string;
-  property?: { id: string; code: string; title: string };
-  lead?: { id: string; name: string };
+  contract_number: string | null;
+  contract_type: string | null;
+  status: string | null;
+  property_id?: string | null;
+  lead_id?: string | null;
+  value: number | null;
+  commission_percentage: number | null;
+  commission_value: number | null;
+  signing_date?: string | null;
+  closing_date?: string | null;
+  notes?: string | null;
+  attachments?: unknown;
+  created_by?: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  property?: { id: string; code: string; title: string | null } | null;
+  lead?: { id: string; name: string } | null;
   brokers?: ContractBroker[];
 }
 
@@ -74,7 +69,7 @@ export function useContracts(filters?: { status?: string; type?: string }) {
   return useQuery({
     queryKey: ['contracts', profile?.organization_id, filters],
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from('contracts')
         .select(`
           *,
@@ -87,12 +82,12 @@ export function useContracts(filters?: { status?: string; type?: string }) {
         query = query.eq('status', filters.status);
       }
       if (filters?.type) {
-        query = query.eq('type', filters.type);
+        query = query.eq('contract_type', filters.type);
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as Contract[];
+      return (data || []) as Contract[];
     },
     enabled: !!profile?.organization_id,
   });
@@ -104,7 +99,7 @@ export function useContract(id: string | undefined) {
     queryFn: async () => {
       if (!id) return null;
 
-      const { data: contract, error } = await supabase
+      const { data: contract, error } = await (supabase as any)
         .from('contracts')
         .select(`
           *,
@@ -163,20 +158,20 @@ export function useCreateContract() {
       
       const contractNumber = await generateContractNumber(orgId);
 
-      const { data: contract, error } = await supabase
+      const { data: contract, error } = await (supabase as any)
         .from('contracts')
         .insert({
           ...contractData,
           contract_number: contractNumber,
           organization_id: orgId,
           created_by: user?.id,
-        } as never)
+        })
         .select()
         .single();
 
       if (error) throw error;
 
-      const contractTyped = contract as unknown as Contract;
+      const contractTyped = contract as Contract;
 
       // Insert brokers if provided
       if (brokers && brokers.length > 0) {
@@ -184,7 +179,7 @@ export function useCreateContract() {
           contract_id: contractTyped.id,
           user_id: b.user_id,
           commission_percentage: b.commission_percentage,
-          commission_value: (contractData.total_value || 0) * (b.commission_percentage / 100),
+          commission_value: (contractData.value || 0) * (b.commission_percentage / 100),
         }));
 
         await (supabase as any).from('contract_brokers').insert(brokerEntries);
@@ -208,9 +203,9 @@ export function useUpdateContract() {
 
   return useMutation({
     mutationFn: async ({ id, brokers, ...data }: UpdateContractInput) => {
-      const { data: contract, error } = await supabase
+      const { data: contract, error } = await (supabase as any)
         .from('contracts')
-        .update(data as never)
+        .update(data)
         .eq('id', id)
         .select()
         .single();
@@ -226,7 +221,7 @@ export function useUpdateContract() {
             contract_id: id,
             user_id: b.user_id,
             commission_percentage: b.commission_percentage,
-            commission_value: (data.total_value || 0) * (b.commission_percentage / 100),
+            commission_value: (data.value || 0) * (b.commission_percentage / 100),
           }));
 
           await (supabase as any).from('contract_brokers').insert(brokerEntries);
@@ -254,7 +249,7 @@ export function useActivateContract() {
   return useMutation({
     mutationFn: async (contractId: string) => {
       // Get contract details
-      const { data: contractRaw, error: contractError } = await supabase
+      const { data: contractRaw, error: contractError } = await (supabase as any)
         .from('contracts')
         .select('*')
         .eq('id', contractId)
@@ -262,7 +257,7 @@ export function useActivateContract() {
 
       if (contractError) throw contractError;
 
-      const contract = contractRaw as unknown as Contract;
+      const contract = contractRaw as Contract;
 
       // Get brokers
       const { data: brokersRaw } = await (supabase as any)
@@ -273,77 +268,31 @@ export function useActivateContract() {
       const brokers = (brokersRaw || []) as ContractBroker[];
 
       // Update contract status
-      await supabase
+      await (supabase as any)
         .from('contracts')
-        .update({ status: 'active', signing_date: new Date().toISOString().split('T')[0] } as never)
+        .update({ status: 'active', signing_date: new Date().toISOString().split('T')[0] })
         .eq('id', contractId);
 
       // Generate receivable entries
       const orgId = organization?.id || profile?.organization_id;
-      const installmentValue = (contract.total_value - (contract.down_payment || 0)) / contract.installments;
+      const totalValue = contract.value || 0;
       const entries: Record<string, unknown>[] = [];
-      const baseDate = new Date(contract.start_date || new Date());
 
-      // Down payment entry if exists
-      if (contract.down_payment > 0) {
-        entries.push({
-          organization_id: orgId,
-          type: 'receivable',
-          contract_id: contractId,
-          property_id: contract.property_id,
-          related_person_type: 'client',
-          related_person_name: contract.client_name,
-          description: `Entrada - ${contract.contract_number}`,
-          value: contract.down_payment,
-          due_date: baseDate.toISOString().split('T')[0],
-          status: 'pending',
-          installment_number: 0,
-          total_installments: contract.installments + 1,
-          created_by: user?.id,
-        });
-      }
-
-      // Installment entries
-      for (let i = 0; i < contract.installments; i++) {
-        const dueDate = new Date(baseDate);
-        dueDate.setMonth(dueDate.getMonth() + i + 1);
-        
-        entries.push({
-          organization_id: orgId,
-          type: 'receivable',
-          contract_id: contractId,
-          property_id: contract.property_id,
-          related_person_type: 'client',
-          related_person_name: contract.client_name,
-          description: `Parcela ${i + 1}/${contract.installments} - ${contract.contract_number}`,
-          value: installmentValue,
-          due_date: dueDate.toISOString().split('T')[0],
-          status: 'pending',
-          installment_number: i + 1,
-          total_installments: contract.installments,
-          created_by: user?.id,
-        });
-      }
-
-      if (entries.length > 0) {
-        await supabase.from('financial_entries').insert(entries as never[]);
-      }
-
-      // Generate commission forecasts for brokers
+      // Commission entries for brokers
       const commissions = brokers.map((broker) => ({
         organization_id: orgId,
         contract_id: contractId,
         user_id: broker.user_id,
         property_id: contract.property_id,
-        base_value: contract.total_value,
+        base_value: totalValue,
         percentage: broker.commission_percentage,
-        calculated_value: contract.total_value * (broker.commission_percentage / 100),
+        calculated_value: totalValue * (broker.commission_percentage / 100),
         status: 'forecast',
         forecast_date: new Date().toISOString().split('T')[0],
       }));
 
       if (commissions.length > 0) {
-        await supabase.from('commissions').insert(commissions as never[]);
+        await (supabase as any).from('commissions').insert(commissions);
       }
 
       return contract;
@@ -354,7 +303,7 @@ export function useActivateContract() {
       queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
       queryClient.invalidateQueries({ queryKey: ['financial-dashboard'] });
-      toast({ title: "Contrato ativado com sucesso", description: "Contas a receber e comissões foram geradas automaticamente." });
+      toast({ title: "Contrato ativado com sucesso", description: "Comissões foram geradas automaticamente." });
     },
     onError: (error: Error) => {
       toast({ title: "Erro ao ativar contrato", description: error.message, variant: "destructive" });

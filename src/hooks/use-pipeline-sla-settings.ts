@@ -4,26 +4,21 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface PipelineSlaSettings {
   id: string;
-  organization_id: string;
   pipeline_id: string;
-  first_response_target_seconds: number;
-  warn_after_seconds: number;
-  overdue_after_seconds: number;
-  notify_assignee: boolean;
-  notify_manager: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  stage_id: string | null;
+  warning_hours: number | null;
+  critical_hours: number | null;
+  sla_start_field: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface SlaSettingsInput {
   pipeline_id: string;
-  first_response_target_seconds?: number;
-  warn_after_seconds?: number;
-  overdue_after_seconds?: number;
-  notify_assignee?: boolean;
-  notify_manager?: boolean;
-  is_active?: boolean;
+  stage_id?: string | null;
+  warning_hours?: number;
+  critical_hours?: number;
+  sla_start_field?: string;
 }
 
 export function usePipelineSlaSettings(pipelineId: string | null) {
@@ -32,7 +27,7 @@ export function usePipelineSlaSettings(pipelineId: string | null) {
     queryFn: async () => {
       if (!pipelineId) return null;
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("pipeline_sla_settings")
         .select("*")
         .eq("pipeline_id", pipelineId)
@@ -49,12 +44,12 @@ export function useAllPipelineSlaSettings() {
   return useQuery({
     queryKey: ["all-pipeline-sla-settings"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("pipeline_sla_settings")
         .select("*");
 
       if (error) throw error;
-      return data as PipelineSlaSettings[];
+      return (data || []) as PipelineSlaSettings[];
     },
   });
 }
@@ -66,7 +61,7 @@ export function useUpsertPipelineSlaSettings() {
   return useMutation({
     mutationFn: async (input: SlaSettingsInput) => {
       // First check if settings exist
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase as any)
         .from("pipeline_sla_settings")
         .select("id")
         .eq("pipeline_id", input.pipeline_id)
@@ -74,15 +69,13 @@ export function useUpsertPipelineSlaSettings() {
 
       if (existing) {
         // Update
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("pipeline_sla_settings")
           .update({
-            first_response_target_seconds: input.first_response_target_seconds,
-            warn_after_seconds: input.warn_after_seconds,
-            overdue_after_seconds: input.overdue_after_seconds,
-            notify_assignee: input.notify_assignee,
-            notify_manager: input.notify_manager,
-            is_active: input.is_active,
+            stage_id: input.stage_id,
+            warning_hours: input.warning_hours,
+            critical_hours: input.critical_hours,
+            sla_start_field: input.sla_start_field,
           })
           .eq("id", existing.id)
           .select()
@@ -91,26 +84,15 @@ export function useUpsertPipelineSlaSettings() {
         if (error) throw error;
         return data;
       } else {
-        // Insert - get org_id from pipeline
-        const { data: pipeline } = await supabase
-          .from("pipelines")
-          .select("organization_id")
-          .eq("id", input.pipeline_id)
-          .single();
-
-        if (!pipeline) throw new Error("Pipeline not found");
-
-        const { data, error } = await supabase
+        // Insert
+        const { data, error } = await (supabase as any)
           .from("pipeline_sla_settings")
           .insert({
-            organization_id: pipeline.organization_id,
             pipeline_id: input.pipeline_id,
-            first_response_target_seconds: input.first_response_target_seconds ?? 300,
-            warn_after_seconds: input.warn_after_seconds ?? 180,
-            overdue_after_seconds: input.overdue_after_seconds ?? 300,
-            notify_assignee: input.notify_assignee ?? true,
-            notify_manager: input.notify_manager ?? true,
-            is_active: input.is_active ?? true,
+            stage_id: input.stage_id ?? null,
+            warning_hours: input.warning_hours ?? 24,
+            critical_hours: input.critical_hours ?? 48,
+            sla_start_field: input.sla_start_field ?? 'created_at',
           })
           .select()
           .single();
@@ -127,7 +109,7 @@ export function useUpsertPipelineSlaSettings() {
         description: "As configurações foram atualizadas com sucesso.",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error saving SLA settings:", error);
       toast({
         title: "Erro ao salvar",

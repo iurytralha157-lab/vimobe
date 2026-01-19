@@ -7,7 +7,8 @@ export function useUpdatePipelineRoundRobin() {
   
   return useMutation({
     mutationFn: async ({ pipelineId, roundRobinId }: { pipelineId: string; roundRobinId: string | null }) => {
-      const { data, error } = await supabase
+      // Use (supabase as any) to bypass type checking since default_round_robin_id may not be in types.ts yet
+      const { data, error } = await (supabase as any)
         .from('pipelines')
         .update({ default_round_robin_id: roundRobinId })
         .eq('id', pipelineId)
@@ -21,7 +22,7 @@ export function useUpdatePipelineRoundRobin() {
       queryClient.invalidateQueries({ queryKey: ['pipelines'] });
       toast.success('Round-robin padrão atualizado!');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error('Erro ao atualizar: ' + error.message);
     },
   });
