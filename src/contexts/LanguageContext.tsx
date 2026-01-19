@@ -51,13 +51,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
       const { data } = await supabase
         .from('users')
-        .select('language')
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (data?.language && (data.language === 'pt-BR' || data.language === 'en')) {
-        setLanguageState(data.language as Language);
-        localStorage.setItem(STORAGE_KEY, data.language);
+      const userLanguage = (data as { language?: string } | null)?.language;
+      if (userLanguage && (userLanguage === 'pt-BR' || userLanguage === 'en')) {
+        setLanguageState(userLanguage as Language);
+        localStorage.setItem(STORAGE_KEY, userLanguage);
       }
     };
 
@@ -77,7 +78,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       try {
         await supabase
           .from('users')
-          .update({ language: lang })
+          .update({ language: lang } as Record<string, unknown>)
           .eq('id', userId);
       } catch (error) {
         console.error('Error saving language preference:', error);
