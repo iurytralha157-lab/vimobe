@@ -3,6 +3,11 @@ import { en } from "./translations/en";
 
 export type Language = "pt-BR" | "en";
 
+export const languageNames: Record<Language, string> = {
+  "pt-BR": "Português (Brasil)",
+  "en": "English",
+};
+
 export const translations = {
   "pt-BR": ptBR,
   en: en,
