@@ -14,3 +14,27 @@ verify_jwt = false
 
 [functions.wordpress-webhook]
 verify_jwt = false
+
+[functions.automation-executor]
+verify_jwt = false
+
+[functions.automation-runner]
+verify_jwt = false
+
+[functions.automation-trigger]
+verify_jwt = false
+
+[functions.calculate-first-response]
+verify_jwt = false
+
+[functions.create-organization-admin]
+verify_jwt = false
+
+[functions.create-super-admin]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.delete-organization]
+verify_jwt = false
