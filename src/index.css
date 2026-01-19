@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -62,6 +64,21 @@
     --chart-4: 10 80% 55%;
     --chart-5: 45 85% 50%;
 
+    /* Kanban Colors */
+    --kanban-new: 217 91% 60%;
+    --kanban-contacted: 280 87% 65%;
+    --kanban-qualified: 45 93% 47%;
+    --kanban-proposal: 24 95% 53%;
+    --kanban-negotiation: 16 85% 55%;
+    --kanban-won: 152 69% 40%;
+    --kanban-lost: 0 72% 51%;
+
+    /* Chat Bubble Colors */
+    --chat-sent: 24 95% 53%;
+    --chat-sent-foreground: 0 0% 100%;
+    --chat-received: 30 15% 96%;
+    --chat-received-foreground: 20 14% 10%;
+
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(16 85% 55%) 100%);
     --gradient-subtle: linear-gradient(135deg, hsl(24 80% 97%) 0%, hsl(30 20% 98%) 100%);
@@ -122,6 +139,21 @@
     --chart-4: 10 80% 60%;
     --chart-5: 45 85% 55%;
 
+    /* Kanban Colors Dark */
+    --kanban-new: 217 91% 65%;
+    --kanban-contacted: 280 87% 70%;
+    --kanban-qualified: 45 93% 52%;
+    --kanban-proposal: 24 95% 58%;
+    --kanban-negotiation: 16 85% 60%;
+    --kanban-won: 152 69% 45%;
+    --kanban-lost: 0 62% 50%;
+
+    /* Chat Bubble Colors Dark */
+    --chat-sent: 24 95% 58%;
+    --chat-sent-foreground: 0 0% 100%;
+    --chat-received: 20 15% 18%;
+    --chat-received-foreground: 0 0% 95%;
+
     /* Gradients Dark */
     --gradient-primary: linear-gradient(135deg, hsl(24 95% 58%) 0%, hsl(16 85% 60%) 100%);
     --gradient-subtle: linear-gradient(135deg, hsl(24 50% 12%) 0%, hsl(20 15% 10%) 100%);
@@ -135,6 +167,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     font-feature-settings: "cv11", "ss01", "ss03";
   }
 
@@ -226,6 +259,11 @@
     background: hsl(var(--primary));
   }
 
+  /* Sidebar nav active */
+  .nav-active {
+    @apply bg-primary/10 text-primary border-l-2 border-primary;
+  }
+
   /* Input focus */
   .input-focus {
     @apply transition-all duration-200;
@@ -251,6 +289,62 @@
   /* Table row hover */
   .table-row-hover {
     @apply transition-colors duration-150 hover:bg-muted/50;
+  }
+
+  /* Kanban Column Styles */
+  .kanban-column-new {
+    border-top: 3px solid hsl(var(--kanban-new));
+  }
+
+  .kanban-column-contacted {
+    border-top: 3px solid hsl(var(--kanban-contacted));
+  }
+
+  .kanban-column-qualified {
+    border-top: 3px solid hsl(var(--kanban-qualified));
+  }
+
+  .kanban-column-proposal {
+    border-top: 3px solid hsl(var(--kanban-proposal));
+  }
+
+  .kanban-column-negotiation {
+    border-top: 3px solid hsl(var(--kanban-negotiation));
+  }
+
+  .kanban-column-won {
+    border-top: 3px solid hsl(var(--kanban-won));
+  }
+
+  .kanban-column-lost {
+    border-top: 3px solid hsl(var(--kanban-lost));
+  }
+
+  /* Lead Card */
+  .lead-card {
+    @apply bg-card border border-border rounded-lg p-3 cursor-grab transition-all duration-200;
+  }
+
+  .lead-card:hover {
+    @apply shadow-md border-primary/30;
+  }
+
+  .lead-card.dragging {
+    @apply opacity-50 cursor-grabbing shadow-xl rotate-2;
+  }
+
+  /* Chat Bubbles */
+  .chat-bubble-sent {
+    @apply bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2 max-w-[80%] ml-auto;
+  }
+
+  .chat-bubble-received {
+    @apply bg-muted text-foreground rounded-2xl rounded-bl-sm px-4 py-2 max-w-[80%];
+  }
+
+  /* Drop target indicator */
+  .drop-target {
+    @apply border-2 border-dashed border-primary/50 bg-primary/5;
   }
 }
 
@@ -290,6 +384,21 @@
     }
   }
 
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   .animate-scale-in {
     animation: scaleIn 0.2s ease-out;
   }
@@ -302,6 +411,42 @@
     to {
       opacity: 1;
       transform: scale(1);
+    }
+  }
+
+  .animate-drawer-up {
+    animation: drawerSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes drawerSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Shimmer loading effect */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
     }
   }
 
@@ -323,5 +468,27 @@
   /* Focus visible */
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  /* Drag states */
+  .dragging {
+    @apply opacity-50 cursor-grabbing;
+  }
+
+  .drag-over {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+
+  /* SLA indicator colors */
+  .sla-ok {
+    @apply text-success;
+  }
+
+  .sla-warning {
+    @apply text-warning;
+  }
+
+  .sla-critical {
+    @apply text-destructive animate-pulse;
   }
 }
