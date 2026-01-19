@@ -151,3 +151,109 @@ export function useDeleteFinancialEntry() {
     },
   });
 }
+
+export function useMarkEntryAsPaid() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, paid_value }: { id: string; paid_value?: number }) => {
+      const { data, error } = await supabase
+        .from("financial_entries")
+        .update({ 
+          status: "paid", 
+          paid_date: new Date().toISOString(),
+          amount: paid_value,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-dashboard"] });
+      toast.success("Pagamento registrado!");
+    },
+  });
+}
+
+export interface FinancialDashboardData {
+  receivable30: number;
+  receivable60: number;
+  receivable90: number;
+  totalPayable: number;
+  pendingCommissions: number;
+  forecastCommissions: number;
+  paidCommissions: number;
+  overdueReceivables: number;
+  overduePayables: number;
+}
+
+export function useFinancialDashboard() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ["financial-dashboard", organization?.id],
+    queryFn: async (): Promise<FinancialDashboardData> => {
+      if (!organization?.id) {
+        return {
+          receivable30: 0, receivable60: 0, receivable90: 0,
+          totalPayable: 0, pendingCommissions: 0, forecastCommissions: 0,
+          paidCommissions: 0, overdueReceivables: 0, overduePayables: 0,
+        };
+      }
+
+      const now = new Date();
+      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const in60Days = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+      const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+      // Get financial entries
+      const { data: entries } = await supabase
+        .from("financial_entries")
+        .select("*")
+        .eq("organization_id", organization.id);
+
+      // Get commissions
+      const { data: commissions } = await supabase
+        .from("commissions")
+        .select("*")
+        .eq("organization_id", organization.id);
+
+      let receivable30 = 0, receivable60 = 0, receivable90 = 0;
+      let totalPayable = 0, overdueReceivables = 0, overduePayables = 0;
+
+      entries?.forEach(entry => {
+        const dueDate = entry.due_date ? new Date(entry.due_date) : null;
+        const isPending = entry.status === 'pending';
+
+        if (entry.type === 'receivable' && isPending && dueDate) {
+          if (dueDate <= in30Days) receivable30 += entry.amount;
+          if (dueDate <= in60Days) receivable60 += entry.amount;
+          if (dueDate <= in90Days) receivable90 += entry.amount;
+          if (dueDate < now) overdueReceivables += entry.amount;
+        }
+        if (entry.type === 'payable' && isPending) {
+          totalPayable += entry.amount;
+          if (dueDate && dueDate < now) overduePayables += entry.amount;
+        }
+      });
+
+      let pendingCommissions = 0, forecastCommissions = 0, paidCommissions = 0;
+      commissions?.forEach(c => {
+        if (c.status === 'paid') paidCommissions += c.amount;
+        else if (c.status === 'pending') pendingCommissions += c.amount;
+        else forecastCommissions += c.amount;
+      });
+
+      return {
+        receivable30, receivable60, receivable90,
+        totalPayable, pendingCommissions, forecastCommissions,
+        paidCommissions, overdueReceivables, overduePayables,
+      };
+    },
+    enabled: !!organization?.id,
+  });
+}

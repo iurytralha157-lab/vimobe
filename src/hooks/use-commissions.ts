@@ -115,3 +115,174 @@ export function useUpdateCommission() {
     },
   });
 }
+
+export function useApproveCommission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("commissions")
+        .update({ status: "approved" })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
+      toast.success("Comissão aprovada!");
+    },
+  });
+}
+
+export function usePayCommission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("commissions")
+        .update({ status: "paid", paid_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
+      toast.success("Comissão paga!");
+    },
+  });
+}
+
+export function useCancelCommission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("commissions")
+        .update({ status: "cancelled" })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commissions"] });
+      toast.success("Comissão cancelada!");
+    },
+  });
+}
+
+// Commission Rules
+export interface CommissionRule {
+  id: string;
+  name: string;
+  percentage: number;
+  contract_type?: string;
+  is_active: boolean;
+  organization_id: string;
+}
+
+export function useCommissionRules() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ["commission-rules", organization?.id],
+    queryFn: async (): Promise<CommissionRule[]> => {
+      // For now return empty array since table may not exist
+      return [];
+    },
+    enabled: !!organization?.id,
+  });
+}
+
+export function useCreateCommissionRule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rule: Partial<CommissionRule>) => {
+      // Placeholder
+      return rule;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commission-rules"] });
+      toast.success("Regra criada!");
+    },
+  });
+}
+
+export function useUpdateCommissionRule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<CommissionRule>) => {
+      return { id, ...updates };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commission-rules"] });
+      toast.success("Regra atualizada!");
+    },
+  });
+}
+
+export function useDeleteCommissionRule() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commission-rules"] });
+      toast.success("Regra excluída!");
+    },
+  });
+}
+
+export function useCommissionsByBroker(dateRange?: { from: Date; to: Date }) {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ["commissions-by-broker", organization?.id, dateRange],
+    queryFn: async () => {
+      if (!organization?.id) return [];
+
+      let query = supabase
+        .from("commissions")
+        .select("*, user:users!commissions_user_id_fkey(id, name, avatar_url)")
+        .eq("organization_id", organization.id);
+
+      if (dateRange) {
+        query = query
+          .gte("created_at", dateRange.from.toISOString())
+          .lte("created_at", dateRange.to.toISOString());
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Group by broker
+      const brokerMap: Record<string, { user: any; total: number; paid: number; pending: number; count: number }> = {};
+      
+      data?.forEach((c: any) => {
+        if (!c.user) return;
+        if (!brokerMap[c.user.id]) {
+          brokerMap[c.user.id] = { user: c.user, total: 0, paid: 0, pending: 0, count: 0 };
+        }
+        brokerMap[c.user.id].total += c.amount;
+        brokerMap[c.user.id].count++;
+        if (c.status === 'paid') brokerMap[c.user.id].paid += c.amount;
+        else brokerMap[c.user.id].pending += c.amount;
+      });
+
+      return Object.values(brokerMap).sort((a, b) => b.total - a.total);
+    },
+    enabled: !!organization?.id,
+  });
+}

@@ -9,6 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DatePreset, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DateFilterPopoverProps {
   datePreset: DatePreset;
@@ -134,5 +135,39 @@ export function DateFilterPopover({
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+// Simple period filter for reports
+interface SimplePeriodFilterProps {
+  value: string;
+  onChange: (value: string) => void;
+  options?: Array<{ value: string; label: string }>;
+  className?: string;
+}
+
+export function SimplePeriodFilter({ 
+  value, 
+  onChange, 
+  options = [
+    { value: 'month', label: 'Este mês' },
+    { value: 'quarter', label: 'Este trimestre' },
+    { value: 'year', label: 'Este ano' },
+  ],
+  className 
+}: SimplePeriodFilterProps) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className={cn("w-[180px]", className)}>
+        <SelectValue placeholder="Selecione o período" />
+      </SelectTrigger>
+      <SelectContent className="bg-popover">
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
