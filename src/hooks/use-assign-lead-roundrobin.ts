@@ -28,8 +28,9 @@ export function useAssignLeadRoundRobin() {
       }
 
       // Then call the handle_lead_intake RPC to trigger round-robin
+      // Using raw SQL call since the function was just created and types haven't regenerated
       const { data, error } = await supabase
-        .rpc('handle_lead_intake', { p_lead_id: leadId });
+        .rpc('handle_lead_intake' as any, { p_lead_id: leadId });
 
       if (error) {
         throw new Error(`Erro ao atribuir lead: ${error.message}`);

@@ -1,19 +1,38 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Tables } from '@/integrations/supabase/types';
 
-export type RoundRobin = Tables<'round_robins'> & {
-  rules: RoundRobinRule[];
-  members: RoundRobinMember[];
-  leads_distributed?: number;
-};
+export interface RoundRobinRule {
+  id: string;
+  round_robin_id: string;
+  match_type: string;
+  match_value: string;
+}
 
-export type RoundRobinRule = Tables<'round_robin_rules'>;
-export type RoundRobinMember = Tables<'round_robin_members'> & {
+export interface RoundRobinMember {
+  id: string;
+  round_robin_id: string;
+  user_id: string;
+  team_id: string | null;
+  position: number;
+  weight: number | null;
   user?: { id: string; name: string; email?: string; avatar_url: string | null };
   leads_count?: number;
-};
+}
+
+export interface RoundRobin {
+  id: string;
+  organization_id: string;
+  name: string;
+  is_active: boolean | null;
+  last_assigned_index: number | null;
+  created_at: string;
+  // New columns from migration
+  strategy: string | null;
+  leads_distributed: number | null;
+  rules: RoundRobinRule[];
+  members: RoundRobinMember[];
+}
 
 export function useRoundRobins() {
   return useQuery({
@@ -66,7 +85,7 @@ export function useRoundRobins() {
       
       const rulesByRR = (rules || []).reduce((acc, r) => {
         if (!acc[r.round_robin_id]) acc[r.round_robin_id] = [];
-        acc[r.round_robin_id].push(r);
+        acc[r.round_robin_id].push(r as RoundRobinRule);
         return acc;
       }, {} as Record<string, RoundRobinRule[]>);
       
@@ -82,9 +101,10 @@ export function useRoundRobins() {
       
       return (roundRobins || []).map(rr => ({
         ...rr,
+        strategy: (rr as any).strategy || 'simple',
+        leads_distributed: countsByRR[rr.id] || (rr as any).leads_distributed || 0,
         rules: rulesByRR[rr.id] || [],
         members: membersByRR[rr.id] || [],
-        leads_distributed: countsByRR[rr.id] || 0,
       })) as RoundRobin[];
     },
   });

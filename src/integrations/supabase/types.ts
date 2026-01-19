@@ -162,6 +162,58 @@ export type Database = {
           },
         ]
       }
+      automation_connections: {
+        Row: {
+          automation_id: string | null
+          condition_branch: string | null
+          created_at: string | null
+          id: string
+          source_handle: string | null
+          source_node_id: string | null
+          target_node_id: string | null
+        }
+        Insert: {
+          automation_id?: string | null
+          condition_branch?: string | null
+          created_at?: string | null
+          id?: string
+          source_handle?: string | null
+          source_node_id?: string | null
+          target_node_id?: string | null
+        }
+        Update: {
+          automation_id?: string | null
+          condition_branch?: string | null
+          created_at?: string | null
+          id?: string
+          source_handle?: string | null
+          source_node_id?: string | null
+          target_node_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_connections_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_connections_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "automation_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_connections_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "automation_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_edges: {
         Row: {
           automation_id: string | null
@@ -211,8 +263,83 @@ export type Database = {
           },
         ]
       }
+      automation_executions: {
+        Row: {
+          automation_id: string | null
+          completed_at: string | null
+          conversation_id: string | null
+          current_node_id: string | null
+          error_message: string | null
+          execution_data: Json | null
+          id: string
+          lead_id: string | null
+          next_execution_at: string | null
+          organization_id: string
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          automation_id?: string | null
+          completed_at?: string | null
+          conversation_id?: string | null
+          current_node_id?: string | null
+          error_message?: string | null
+          execution_data?: Json | null
+          id?: string
+          lead_id?: string | null
+          next_execution_at?: string | null
+          organization_id: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          automation_id?: string | null
+          completed_at?: string | null
+          conversation_id?: string | null
+          current_node_id?: string | null
+          error_message?: string | null
+          execution_data?: Json | null
+          id?: string
+          lead_id?: string | null
+          next_execution_at?: string | null
+          organization_id?: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_executions_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_current_node_id_fkey"
+            columns: ["current_node_id"]
+            isOneToOne: false
+            referencedRelation: "automation_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_nodes: {
         Row: {
+          action_type: string | null
           automation_id: string | null
           created_at: string | null
           id: string
@@ -222,6 +349,7 @@ export type Database = {
           position_y: number | null
         }
         Insert: {
+          action_type?: string | null
           automation_id?: string | null
           created_at?: string | null
           id?: string
@@ -231,6 +359,7 @@ export type Database = {
           position_y?: number | null
         }
         Update: {
+          action_type?: string | null
           automation_id?: string | null
           created_at?: string | null
           id?: string
@@ -297,9 +426,54 @@ export type Database = {
           },
         ]
       }
+      automation_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          media_type: string | null
+          media_url: string | null
+          name: string
+          organization_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          name: string
+          organization_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          name?: string
+          organization_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automations: {
         Row: {
           created_at: string | null
+          created_by: string | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -311,6 +485,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -322,6 +497,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -347,24 +523,33 @@ export type Database = {
           day_offset: number
           description: string | null
           id: string
+          observation: string | null
           position: number | null
+          recommended_message: string | null
           title: string
+          type: string | null
         }
         Insert: {
           cadence_template_id: string
           day_offset?: number
           description?: string | null
           id?: string
+          observation?: string | null
           position?: number | null
+          recommended_message?: string | null
           title: string
+          type?: string | null
         }
         Update: {
           cadence_template_id?: string
           day_offset?: number
           description?: string | null
           id?: string
+          observation?: string | null
           position?: number | null
+          recommended_message?: string | null
           title?: string
+          type?: string | null
         }
         Relationships: [
           {
@@ -706,6 +891,7 @@ export type Database = {
           expires_at: string
           id: string
           organization_id: string
+          role: string | null
           token: string
           used_at: string | null
         }
@@ -716,6 +902,7 @@ export type Database = {
           expires_at?: string
           id?: string
           organization_id: string
+          role?: string | null
           token?: string
           used_at?: string | null
         }
@@ -726,6 +913,7 @@ export type Database = {
           expires_at?: string
           id?: string
           organization_id?: string
+          role?: string | null
           token?: string
           used_at?: string | null
         }
@@ -988,6 +1176,7 @@ export type Database = {
           is_done: boolean | null
           lead_id: string
           title: string
+          type: string | null
         }
         Insert: {
           created_at?: string
@@ -1000,6 +1189,7 @@ export type Database = {
           is_done?: boolean | null
           lead_id: string
           title: string
+          type?: string | null
         }
         Update: {
           created_at?: string
@@ -1012,6 +1202,7 @@ export type Database = {
           is_done?: boolean | null
           lead_id?: string
           title?: string
+          type?: string | null
         }
         Relationships: [
           {
@@ -1871,24 +2062,30 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_assigned_index: number | null
+          leads_distributed: number | null
           name: string
           organization_id: string
+          strategy: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           is_active?: boolean | null
           last_assigned_index?: number | null
+          leads_distributed?: number | null
           name: string
           organization_id: string
+          strategy?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           is_active?: boolean | null
           last_assigned_index?: number | null
+          leads_distributed?: number | null
           name?: string
           organization_id?: string
+          strategy?: string | null
         }
         Relationships: [
           {
@@ -1993,35 +2190,50 @@ export type Database = {
         Row: {
           action_config: Json | null
           action_type: string
+          alert_message: string | null
+          automation_type: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
           organization_id: string | null
           stage_id: string | null
+          target_stage_id: string | null
+          trigger_days: number | null
           trigger_type: string
           updated_at: string | null
+          whatsapp_template: string | null
         }
         Insert: {
           action_config?: Json | null
           action_type: string
+          alert_message?: string | null
+          automation_type?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           organization_id?: string | null
           stage_id?: string | null
+          target_stage_id?: string | null
+          trigger_days?: number | null
           trigger_type: string
           updated_at?: string | null
+          whatsapp_template?: string | null
         }
         Update: {
           action_config?: Json | null
           action_type?: string
+          alert_message?: string | null
+          automation_type?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           organization_id?: string | null
           stage_id?: string | null
+          target_stage_id?: string | null
+          trigger_days?: number | null
           trigger_type?: string
           updated_at?: string | null
+          whatsapp_template?: string | null
         }
         Relationships: [
           {
@@ -2034,6 +2246,13 @@ export type Database = {
           {
             foreignKeyName: "stage_automations_stage_id_fkey"
             columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_automations_target_stage_id_fkey"
+            columns: ["target_stage_id"]
             isOneToOne: false
             referencedRelation: "stages"
             referencedColumns: ["id"]
@@ -2613,10 +2832,12 @@ export type Database = {
       whatsapp_sessions: {
         Row: {
           created_at: string
+          display_name: string | null
           id: string
           instance_id: string | null
           instance_name: string
           is_active: boolean | null
+          last_connected_at: string | null
           organization_id: string
           owner_user_id: string
           phone_number: string | null
@@ -2627,10 +2848,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_name?: string | null
           id?: string
           instance_id?: string | null
           instance_name: string
           is_active?: boolean | null
+          last_connected_at?: string | null
           organization_id: string
           owner_user_id: string
           phone_number?: string | null
@@ -2641,10 +2864,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_name?: string | null
           id?: string
           instance_id?: string | null
           instance_name?: string
           is_active?: boolean | null
+          last_connected_at?: string | null
           organization_id?: string
           owner_user_id?: string
           phone_number?: string | null
@@ -2770,6 +2995,7 @@ export type Database = {
       get_user_led_team_ids: { Args: never; Returns: string[] }
       get_user_organization_id: { Args: never; Returns: string }
       get_user_team_ids: { Args: never; Returns: string[] }
+      handle_lead_intake: { Args: { p_lead_id: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_team_leader:
