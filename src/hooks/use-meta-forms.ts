@@ -47,7 +47,7 @@ export function useMetaFormConfigs(integrationId: string | undefined) {
     queryFn: async () => {
       if (!profile?.organization_id || !integrationId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("meta_form_configs")
         .select("*")
         .eq("organization_id", profile.organization_id)
@@ -57,7 +57,7 @@ export function useMetaFormConfigs(integrationId: string | undefined) {
       if (error) throw error;
       
       // Parse JSONB fields
-      return (data || []).map(config => ({
+      return (data || []).map((config: any) => ({
         ...config,
         auto_tags: Array.isArray(config.auto_tags) ? config.auto_tags : [],
         field_mapping: typeof config.field_mapping === 'object' ? config.field_mapping : {},
@@ -122,7 +122,7 @@ export function useSaveFormConfig() {
     }) => {
       if (!profile?.organization_id) throw new Error("No organization");
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("meta_form_configs")
         .upsert({
           organization_id: profile.organization_id,
@@ -164,7 +164,7 @@ export function useToggleFormConfig() {
 
   return useMutation({
     mutationFn: async ({ formId, isActive, integrationId }: { formId: string; isActive: boolean; integrationId: string }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("meta_form_configs")
         .update({ 
           is_active: isActive,
@@ -189,7 +189,7 @@ export function useDeleteFormConfig() {
 
   return useMutation({
     mutationFn: async ({ formId, integrationId }: { formId: string; integrationId: string }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("meta_form_configs")
         .delete()
         .eq("form_id", formId);

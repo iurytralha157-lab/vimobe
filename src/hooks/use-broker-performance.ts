@@ -74,20 +74,20 @@ export function useBrokerPerformance(dateRange?: DateRange) {
 
       if (activitiesError) throw activitiesError;
 
-      // Fetch contracts for sales
+      // Fetch contracts for sales - use value instead of total_value (column name in DB)
       const { data: contracts, error: contractsError } = await supabase
         .from('contracts')
-        .select('id, created_by, total_value, signing_date')
+        .select('id, created_by, value, signing_date')
         .eq('organization_id', organizationId)
         .gte('created_at', from.toISOString())
         .lte('created_at', to.toISOString());
 
       if (contractsError) throw contractsError;
 
-      // Fetch commissions
+      // Fetch commissions - use amount instead of calculated_value (column name in DB)
       const { data: commissions, error: commissionsError } = await supabase
         .from('commissions')
-        .select('id, user_id, calculated_value')
+        .select('id, user_id, amount')
         .eq('organization_id', organizationId)
         .gte('created_at', from.toISOString())
         .lte('created_at', to.toISOString());
@@ -140,11 +140,11 @@ export function useBrokerPerformance(dateRange?: DateRange) {
 
         // Total sales
         const userContracts = contracts?.filter(c => c.created_by === user.id) || [];
-        const totalSales = userContracts.reduce((sum, c) => sum + (c.total_value || 0), 0);
+        const totalSales = userContracts.reduce((sum, c) => sum + ((c as any).value || 0), 0);
 
         // Total commissions
         const userCommissions = commissions?.filter(c => c.user_id === user.id) || [];
-        const totalCommissions = userCommissions.reduce((sum, c) => sum + (c.calculated_value || 0), 0);
+        const totalCommissions = userCommissions.reduce((sum, c) => sum + ((c as any).amount || 0), 0);
 
         return {
           userId: user.id,

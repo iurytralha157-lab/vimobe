@@ -48,13 +48,13 @@ export function useFinancialCategories() {
   return useQuery({
     queryKey: ['financial-categories', profile?.organization_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('financial_categories')
         .select('*')
         .order('name');
 
       if (error) throw error;
-      return data as unknown as FinancialCategory[];
+      return data as FinancialCategory[];
     },
     enabled: !!profile?.organization_id,
   });
@@ -68,13 +68,13 @@ export function useCreateFinancialCategory() {
   return useMutation({
     mutationFn: async (data: { name: string; type: 'income' | 'expense' }) => {
       const orgId = organization?.id || profile?.organization_id;
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('financial_categories')
         .insert({
           name: data.name,
           type: data.type,
           organization_id: orgId,
-        } as never)
+        })
         .select()
         .single();
 

@@ -20,18 +20,21 @@ export function useInvitationByToken(token: string | null) {
     queryFn: async (): Promise<InvitationByToken | null> => {
       if (!token) return null;
       
-      // Usar RPC segura que não expõe listagem de convites
+      // Query directly from invitations table
       const { data, error } = await supabase
-        .rpc('get_invitation_by_token', { _token: token });
+        .from('invitations')
+        .select('id, email, role, organization_id, expires_at')
+        .eq('token', token)
+        .is('used_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching invitation:', error);
         return null;
       }
       
-      // RPC retorna array, pegamos o primeiro (ou null se vazio)
-      const invitation = data?.[0] || null;
-      return invitation as InvitationByToken | null;
+      return data as InvitationByToken | null;
     },
     enabled: !!token,
     staleTime: 1000 * 60 * 5, // 5 minutos

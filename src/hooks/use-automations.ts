@@ -138,16 +138,22 @@ export function useAutomation(automationId: string) {
       const [automationRes, nodesRes, connectionsRes] = await Promise.all([
         supabase.from('automations').select('*').eq('id', automationId).single(),
         supabase.from('automation_nodes').select('*').eq('automation_id', automationId).order('created_at'),
-        supabase.from('automation_connections').select('*').eq('automation_id', automationId),
+        (supabase as any).from('automation_connections').select('*').eq('automation_id', automationId),
       ]);
 
       if (automationRes.error) throw automationRes.error;
 
+      // Map node_config to config for compatibility
+      const nodes = (nodesRes.data || []).map((node: any) => ({
+        ...node,
+        config: node.node_config,
+      }));
+
       return {
         ...automationRes.data,
-        nodes: nodesRes.data || [],
+        nodes,
         connections: connectionsRes.data || [],
-      } as AutomationWithNodes;
+      } as unknown as AutomationWithNodes;
     },
     enabled: !!automationId,
   });

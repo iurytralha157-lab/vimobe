@@ -76,8 +76,8 @@ export function GoogleCalendarConnect() {
               </Label>
               <Switch
                 id="sync-enabled"
-                checked={calendarStatus?.is_sync_enabled}
-                onCheckedChange={(checked) => toggleSync.mutate(checked)}
+                checked={!!calendarStatus?.calendar_id}
+                onCheckedChange={(checked) => toggleSync.mutate(checked ? 'primary' : '')}
               />
             </div>
           </>

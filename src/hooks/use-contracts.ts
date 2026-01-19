@@ -45,25 +45,24 @@ export interface Contract {
 async function generateContractNumber(organizationId: string): Promise<string> {
   const year = new Date().getFullYear();
   
-  const { data: existing } = await supabase
+  const { data: existing } = await (supabase as any)
     .from('contract_sequences')
     .select('last_number')
     .eq('organization_id', organizationId)
     .single();
 
   let nextNumber = 1;
-  const existingTyped = existing as unknown as { last_number: number } | null;
   
-  if (existingTyped) {
-    nextNumber = existingTyped.last_number + 1;
-    await supabase
+  if (existing) {
+    nextNumber = existing.last_number + 1;
+    await (supabase as any)
       .from('contract_sequences')
-      .update({ last_number: nextNumber } as never)
+      .update({ last_number: nextNumber })
       .eq('organization_id', organizationId);
   } else {
-    await supabase
+    await (supabase as any)
       .from('contract_sequences')
-      .insert({ organization_id: organizationId, last_number: 1 } as never);
+      .insert({ organization_id: organizationId, last_number: 1 });
   }
 
   return `CTR-${year}-${String(nextNumber).padStart(5, '0')}`;
@@ -118,13 +117,13 @@ export function useContract(id: string | undefined) {
       if (error) throw error;
 
       // Fetch brokers separately with user info
-      const { data: brokers } = await supabase
+      const { data: brokers } = await (supabase as any)
         .from('contract_brokers')
         .select('*')
         .eq('contract_id', id);
 
       // Fetch user details for each broker
-      const brokersTyped = brokers as unknown as ContractBroker[] || [];
+      const brokersTyped = (brokers || []) as ContractBroker[];
       const brokersWithUsers = await Promise.all(
         brokersTyped.map(async (broker) => {
           const { data: user } = await supabase
@@ -136,7 +135,7 @@ export function useContract(id: string | undefined) {
         })
       );
 
-      return { ...contract, brokers: brokersWithUsers } as unknown as Contract;
+      return { ...contract, brokers: brokersWithUsers } as Contract;
     },
     enabled: !!id,
   });
@@ -188,7 +187,7 @@ export function useCreateContract() {
           commission_value: (contractData.total_value || 0) * (b.commission_percentage / 100),
         }));
 
-        await supabase.from('contract_brokers').insert(brokerEntries as never[]);
+        await (supabase as any).from('contract_brokers').insert(brokerEntries);
       }
 
       return contractTyped;
@@ -220,7 +219,7 @@ export function useUpdateContract() {
 
       // Update brokers if provided
       if (brokers) {
-        await supabase.from('contract_brokers').delete().eq('contract_id', id);
+        await (supabase as any).from('contract_brokers').delete().eq('contract_id', id);
         
         if (brokers.length > 0) {
           const brokerEntries = brokers.map(b => ({
@@ -230,7 +229,7 @@ export function useUpdateContract() {
             commission_value: (data.total_value || 0) * (b.commission_percentage / 100),
           }));
 
-          await supabase.from('contract_brokers').insert(brokerEntries as never[]);
+          await (supabase as any).from('contract_brokers').insert(brokerEntries);
         }
       }
 
@@ -266,12 +265,12 @@ export function useActivateContract() {
       const contract = contractRaw as unknown as Contract;
 
       // Get brokers
-      const { data: brokersRaw } = await supabase
+      const { data: brokersRaw } = await (supabase as any)
         .from('contract_brokers')
         .select('*')
         .eq('contract_id', contractId);
 
-      const brokers = brokersRaw as unknown as ContractBroker[] || [];
+      const brokers = (brokersRaw || []) as ContractBroker[];
 
       // Update contract status
       await supabase

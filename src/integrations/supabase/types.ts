@@ -593,6 +593,47 @@ export type Database = {
           },
         ]
       }
+      commission_rules: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          percentage: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          percentage?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          percentage?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commissions: {
         Row: {
           amount: number
@@ -653,6 +694,71 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_brokers: {
+        Row: {
+          commission_percentage: number | null
+          contract_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          commission_percentage?: number | null
+          contract_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          commission_percentage?: number | null
+          contract_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_brokers_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_brokers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_sequences: {
+        Row: {
+          id: string
+          last_number: number | null
+          organization_id: string
+        }
+        Insert: {
+          id?: string
+          last_number?: number | null
+          organization_id: string
+        }
+        Update: {
+          id?: string
+          last_number?: number | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_sequences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -742,6 +848,44 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          type: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          type?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1292,6 +1436,7 @@ export type Database = {
           pipeline_id: string | null
           property_code: string | null
           property_id: string | null
+          source: string | null
           stage_entered_at: string | null
           stage_id: string | null
           updated_at: string
@@ -1308,6 +1453,7 @@ export type Database = {
           pipeline_id?: string | null
           property_code?: string | null
           property_id?: string | null
+          source?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
           updated_at?: string
@@ -1324,6 +1470,7 @@ export type Database = {
           pipeline_id?: string | null
           property_code?: string | null
           property_id?: string | null
+          source?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
           updated_at?: string

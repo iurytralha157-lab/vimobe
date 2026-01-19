@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
