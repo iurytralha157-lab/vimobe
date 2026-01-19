@@ -2311,36 +2311,69 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          cpf: string | null
           created_at: string
           email: string
+          endereco: string | null
           id: string
           is_active: boolean | null
+          language: string | null
           name: string
+          numero: string | null
           organization_id: string | null
+          phone: string | null
           role: string | null
+          uf: string | null
           updated_at: string
+          whatsapp: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf?: string | null
           created_at?: string
           email: string
+          endereco?: string | null
           id: string
           is_active?: boolean | null
+          language?: string | null
           name: string
+          numero?: string | null
           organization_id?: string | null
+          phone?: string | null
           role?: string | null
+          uf?: string | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string
+          endereco?: string | null
           id?: string
           is_active?: boolean | null
+          language?: string | null
           name?: string
+          numero?: string | null
           organization_id?: string | null
+          phone?: string | null
           role?: string | null
+          uf?: string | null
           updated_at?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {

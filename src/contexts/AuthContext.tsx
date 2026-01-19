@@ -84,9 +84,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
     const { data } = await supabase
-      .from('user_roles')
+      .from('user_roles' as 'users')
       .select('role')
-      .eq('user_id', userId)
+      .eq('user_id' as 'id', userId)
       .eq('role', 'super_admin')
       .single();
     
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from("users")
-        .select("*")
+        .select("id, email, name, avatar_url, role, organization_id, is_active, created_at, updated_at")
         .eq("id", userId)
         .single();
 
