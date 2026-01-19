@@ -18,6 +18,7 @@ export interface WhatsAppSession {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  last_connected_at?: string | null;
   owner?: {
     id: string;
     name: string;
@@ -55,7 +56,13 @@ export function useWhatsAppSessions() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as WhatsAppSession[];
+      
+      // Map data to include display_name with fallback
+      return (data || []).map(session => ({
+        ...session,
+        display_name: (session as any).display_name || null,
+        last_connected_at: (session as any).last_connected_at || null,
+      })) as WhatsAppSession[];
     },
     enabled: !!profile?.organization_id,
   });
@@ -77,7 +84,11 @@ export function useWhatsAppSession(sessionId: string | null) {
         .single();
 
       if (error) throw error;
-      return data as WhatsAppSession;
+      return {
+        ...data,
+        display_name: (data as any).display_name || null,
+        last_connected_at: (data as any).last_connected_at || null,
+      } as WhatsAppSession;
     },
     enabled: !!sessionId,
   });
@@ -129,7 +140,7 @@ export function useCreateWhatsAppSession() {
           instance_name: uniqueInstanceName,
           display_name: displayName,
           status: "disconnected",
-        })
+        } as any)
         .select()
         .single();
 
@@ -158,7 +169,13 @@ export function useCreateWhatsAppSession() {
         throw new Error(result.error || "Failed to create instance");
       }
 
-      return { session, evolutionData: result.data };
+      return { 
+        session: {
+          ...session,
+          display_name: (session as any).display_name || displayName,
+        } as WhatsAppSession, 
+        evolutionData: result.data 
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });

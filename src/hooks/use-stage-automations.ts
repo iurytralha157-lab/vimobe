@@ -2,19 +2,35 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Tables } from "@/integrations/supabase/types";
 
-export type StageAutomation = Tables<'stage_automations'>;
+// Extended type that includes new columns added by migration
+export interface StageAutomation {
+  id: string;
+  stage_id: string | null;
+  organization_id: string | null;
+  trigger_type: string;
+  action_type: string;
+  action_config: Record<string, unknown> | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  // New columns from migration
+  automation_type: string | null;
+  trigger_days: number | null;
+  target_stage_id: string | null;
+  whatsapp_template: string | null;
+  alert_message: string | null;
+}
 
 export type AutomationType = 'move_after_inactivity' | 'send_whatsapp_on_enter' | 'alert_on_inactivity';
 
 export interface CreateAutomationData {
   stage_id: string;
   automation_type: AutomationType;
-  trigger_days?: number;
-  target_stage_id?: string;
-  whatsapp_template?: string;
-  alert_message?: string;
+  trigger_days?: number | null;
+  target_stage_id?: string | null;
+  whatsapp_template?: string | null;
+  alert_message?: string | null;
   is_active?: boolean;
 }
 
@@ -40,7 +56,7 @@ export function useStageAutomations(stageId?: string) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as StageAutomation[];
+      return (data || []) as unknown as StageAutomation[];
     },
     enabled: !!organizationId
   });
@@ -54,19 +70,29 @@ export function useCreateStageAutomation() {
     mutationFn: async (data: CreateAutomationData) => {
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
 
+      const insertData = {
+        stage_id: data.stage_id,
+        organization_id: profile.organization_id,
+        automation_type: data.automation_type,
+        trigger_type: 'on_enter', // default trigger
+        action_type: data.automation_type, // use automation_type as action_type
+        trigger_days: data.trigger_days || null,
+        target_stage_id: data.target_stage_id || null,
+        whatsapp_template: data.whatsapp_template || null,
+        alert_message: data.alert_message || null,
+        is_active: data.is_active ?? true,
+      };
+
       const { data: result, error } = await supabase
         .from('stage_automations')
-        .insert([{
-          ...data,
-          organization_id: profile.organization_id
-        }])
+        .insert([insertData])
         .select()
         .single();
 
       if (error) throw error;
       return result;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stage-automations'] });
       toast.success('Automação criada com sucesso');
     },
@@ -84,7 +110,7 @@ export function useUpdateStageAutomation() {
     mutationFn: async ({ id, ...data }: Partial<StageAutomation> & { id: string }) => {
       const { data: result, error } = await supabase
         .from('stage_automations')
-        .update(data)
+        .update(data as any)
         .eq('id', id)
         .select()
         .single();

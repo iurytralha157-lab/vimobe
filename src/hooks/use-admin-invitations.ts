@@ -5,12 +5,13 @@ import { toast } from 'sonner';
 export interface AdminInvitation {
   id: string;
   email: string | null;
-  role: 'admin' | 'user';
+  role: string | null;
   token: string;
   organization_id: string;
   expires_at: string;
   used_at: string | null;
   created_at: string | null;
+  created_by: string | null;
 }
 
 export function useAdminInvitations(organizationId: string | undefined) {
@@ -31,7 +32,10 @@ export function useAdminInvitations(organizationId: string | undefined) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as AdminInvitation[];
+      return (data || []).map(inv => ({
+        ...inv,
+        role: (inv as any).role || 'user'
+      })) as AdminInvitation[];
     },
     enabled: !!organizationId,
   });
@@ -53,7 +57,7 @@ export function useAdminInvitations(organizationId: string | undefined) {
           role: data.role,
           organization_id: data.organizationId,
           expires_at: expiresAt.toISOString(),
-        })
+        } as any)
         .select()
         .single();
 

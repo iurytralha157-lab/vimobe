@@ -1,13 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Tables } from '@/integrations/supabase/types';
 
-export type CadenceTemplate = Tables<'cadence_templates'> & {
+// Extended types with new columns
+export interface CadenceTaskTemplate {
+  id: string;
+  cadence_template_id: string;
+  day_offset: number;
+  title: string;
+  description: string | null;
+  position: number | null;
+  // New columns from migration
+  type: string | null;
+  observation: string | null;
+  recommended_message: string | null;
+}
+
+export interface CadenceTemplate {
+  id: string;
+  organization_id: string;
+  stage_key: string;
+  name: string;
+  created_at: string;
   tasks: CadenceTaskTemplate[];
-};
-
-export type CadenceTaskTemplate = Tables<'cadence_tasks_template'>;
+}
 
 export function useCadenceTemplates() {
   return useQuery({
@@ -67,7 +83,7 @@ export function useCadenceTemplates() {
       
       const tasksByTemplate = (tasks || []).reduce((acc, task) => {
         if (!acc[task.cadence_template_id]) acc[task.cadence_template_id] = [];
-        acc[task.cadence_template_id].push(task);
+        acc[task.cadence_template_id].push(task as unknown as CadenceTaskTemplate);
         return acc;
       }, {} as Record<string, CadenceTaskTemplate[]>);
       
@@ -94,7 +110,7 @@ export function useCreateCadenceTask() {
     }) => {
       const { data, error } = await supabase
         .from('cadence_tasks_template')
-        .insert(task)
+        .insert(task as any)
         .select()
         .single();
       
