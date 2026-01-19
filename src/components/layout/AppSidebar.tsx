@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, LogOut, ChevronLeft, ChevronRight, ChevronDown, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronLeft, ChevronRight, ChevronDown, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -231,21 +231,6 @@ export function AppSidebar() {
               </NavLink>
             </li>)}
         </ul>
-      </div>
-
-      {/* Logout button */}
-      <div className="p-3 border-t border-sidebar-border">
-        <Button 
-          variant="ghost" 
-          className={cn(
-            "w-full text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10",
-            collapsed ? "justify-center px-0" : "justify-start gap-3"
-          )}
-          onClick={signOut}
-        >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && <span>{t.auth.logout}</span>}
-        </Button>
       </div>
     </aside>;
 }
