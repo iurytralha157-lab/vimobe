@@ -2800,45 +2800,57 @@ export type Database = {
       }
       whatsapp_conversations: {
         Row: {
+          archived_at: string | null
           contact_name: string | null
           contact_phone: string | null
           contact_picture: string | null
+          contact_presence: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           is_group: boolean | null
           last_message: string | null
           last_message_at: string | null
           lead_id: string | null
+          presence_updated_at: string | null
           remote_jid: string
           session_id: string
           unread_count: number | null
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           contact_picture?: string | null
+          contact_presence?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_group?: boolean | null
           last_message?: string | null
           last_message_at?: string | null
           lead_id?: string | null
+          presence_updated_at?: string | null
           remote_jid: string
           session_id: string
           unread_count?: number | null
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           contact_picture?: string | null
+          contact_presence?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_group?: boolean | null
           last_message?: string | null
           last_message_at?: string | null
           lead_id?: string | null
+          presence_updated_at?: string | null
           remote_jid?: string
           session_id?: string
           unread_count?: number | null
@@ -2863,46 +2875,67 @@ export type Database = {
       }
       whatsapp_messages: {
         Row: {
+          client_message_id: string | null
           content: string | null
           conversation_id: string
           delivered_at: string | null
           from_me: boolean
           id: string
+          media_error: string | null
           media_mime_type: string | null
+          media_size: number | null
+          media_status: string | null
+          media_storage_path: string | null
           media_url: string | null
           message_id: string
           message_type: string | null
           read_at: string | null
+          sender_jid: string | null
+          sender_name: string | null
           sent_at: string
           session_id: string
           status: string | null
         }
         Insert: {
+          client_message_id?: string | null
           content?: string | null
           conversation_id: string
           delivered_at?: string | null
           from_me?: boolean
           id?: string
+          media_error?: string | null
           media_mime_type?: string | null
+          media_size?: number | null
+          media_status?: string | null
+          media_storage_path?: string | null
           media_url?: string | null
           message_id: string
           message_type?: string | null
           read_at?: string | null
+          sender_jid?: string | null
+          sender_name?: string | null
           sent_at?: string
           session_id: string
           status?: string | null
         }
         Update: {
+          client_message_id?: string | null
           content?: string | null
           conversation_id?: string
           delivered_at?: string | null
           from_me?: boolean
           id?: string
+          media_error?: string | null
           media_mime_type?: string | null
+          media_size?: number | null
+          media_status?: string | null
+          media_storage_path?: string | null
           media_url?: string | null
           message_id?: string
           message_type?: string | null
           read_at?: string | null
+          sender_jid?: string | null
+          sender_name?: string | null
           sent_at?: string
           session_id?: string
           status?: string | null
