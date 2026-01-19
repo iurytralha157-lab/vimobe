@@ -26,7 +26,7 @@ export function useSuperAdmin() {
     queryKey: ['super-admin-organizations'],
     queryFn: async () => {
       // Get organizations
-      const { data: orgs, error } = await supabase
+      const { data: orgs, error } = await (supabase as any)
         .from('organizations')
         .select('*')
         .order('created_at', { ascending: false });
@@ -44,12 +44,13 @@ export function useSuperAdmin() {
         .select('organization_id');
 
       // Aggregate counts
-      const orgStats: OrganizationWithStats[] = (orgs || []).map(org => ({
+      const orgStats: OrganizationWithStats[] = ((orgs || []) as any[]).map(org => ({
         ...org,
         is_active: org.is_active ?? true,
         subscription_status: org.subscription_status ?? 'trial',
         max_users: org.max_users ?? 10,
         admin_notes: org.admin_notes ?? null,
+        last_access_at: org.last_access_at ?? null,
         user_count: userCounts?.filter(u => u.organization_id === org.id).length || 0,
         lead_count: leadCounts?.filter(l => l.organization_id === org.id).length || 0,
       }));

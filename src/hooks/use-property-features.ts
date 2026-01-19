@@ -6,8 +6,8 @@ export interface PropertyFeature {
   id: string;
   organization_id: string;
   name: string;
-  category: string | null;
-  created_at: string;
+  icon: string | null;
+  created_at: string | null;
 }
 
 const DEFAULT_FEATURES = [
@@ -39,7 +39,7 @@ export function usePropertyFeatures() {
         .order('name');
       
       if (error) throw error;
-      return data as PropertyFeature[];
+      return (data || []) as PropertyFeature[];
     },
   });
 }
@@ -81,7 +81,7 @@ export function useCreatePropertyFeature() {
       queryClient.invalidateQueries({ queryKey: ['property-features'] });
       toast.success('Característica adicionada!');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });
