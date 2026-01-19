@@ -104,6 +104,64 @@ export function useCreateTeam() {
   });
 }
 
+export function useUpdateTeam() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (input: { 
+      id: string; 
+      name: string; 
+      memberIds: string[]; 
+      leaderIds: string[];
+    }) => {
+      // Update team name
+      const { error: teamError } = await supabase
+        .from("teams")
+        .update({ name: input.name })
+        .eq("id", input.id);
+
+      if (teamError) throw teamError;
+
+      // Remove all existing members
+      const { error: deleteError } = await supabase
+        .from("team_members")
+        .delete()
+        .eq("team_id", input.id);
+
+      if (deleteError) throw deleteError;
+
+      // Add new members
+      if (input.memberIds.length > 0) {
+        const members = input.memberIds.map((userId) => ({
+          team_id: input.id,
+          user_id: userId,
+          is_leader: input.leaderIds.includes(userId),
+        }));
+
+        const { error: membersError } = await supabase
+          .from("team_members")
+          .insert(members);
+
+        if (membersError) throw membersError;
+      }
+
+      return { id: input.id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      toast({ title: "Equipe atualizada!" });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar equipe",
+        description: error.message,
+      });
+    },
+  });
+}
+
 export function useDeleteTeam() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
