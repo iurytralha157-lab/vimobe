@@ -5,28 +5,52 @@ import { Tables, Json } from '@/integrations/supabase/types';
 
 export type Activity = Tables<'activities'> & {
   user?: { id: string; name: string } | null;
+  lead?: { id: string; name: string } | null;
 };
 
 export function useActivities(leadId?: string) {
   return useQuery({
     queryKey: ['activities', leadId],
     queryFn: async () => {
-      if (!leadId) return [];
+      let query = supabase
+        .from('activities')
+        .select(`
+          *,
+          user:users!activities_user_id_fkey(id, name),
+          lead:leads(id, name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
       
+      if (leadId) {
+        query = query.eq('lead_id', leadId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Activity[];
+    },
+    enabled: leadId ? true : false,
+  });
+}
+
+export function useRecentActivities() {
+  return useQuery({
+    queryKey: ['recent-activities'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('activities')
         .select(`
           *,
-          user:users!activities_user_id_fkey(id, name)
+          user:users!activities_user_id_fkey(id, name),
+          lead:leads(id, name)
         `)
-        .eq('lead_id', leadId)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(10);
       
       if (error) throw error;
       return data as Activity[];
     },
-    enabled: !!leadId,
   });
 }
 
@@ -56,6 +80,7 @@ export function useCreateActivity() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
     },
     onError: (error) => {
       toast.error('Erro ao criar atividade: ' + error.message);
