@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useOrganizations, useUpdateOrganization, useToggleModule, useOrganizationUsers } from '@/hooks/use-super-admin';
-import { useAdminInvitations, useCreateInvitation, useDeleteInvitation, getInviteLink } from '@/hooks/use-admin-invitations';
+import { useAdminInvitations, useCreateInvitation, useDeleteInvitation, getInviteLink, Invitation } from '@/hooks/use-admin-invitations';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,7 @@ export default function AdminOrganizationDetail() {
   const updateOrganization = useUpdateOrganization();
   const toggleModule = useToggleModule();
   const { startImpersonate } = useAuth();
-  const { data: invitations, isLoading: loadingInvitations } = useAdminInvitations(id);
+  const { data: invitations = [], isLoading: loadingInvitations } = useAdminInvitations(id);
   const createInvitation = useCreateInvitation();
   const deleteInvitation = useDeleteInvitation();
   const { data: orgUsers } = useOrganizationUsers(id || '');
