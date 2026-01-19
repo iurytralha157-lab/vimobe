@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.send-notification]
 verify_jwt = false
+
+[functions.evolution-proxy]
+verify_jwt = false
+
+[functions.evolution-webhook]
+verify_jwt = false
+
+[functions.wordpress-webhook]
+verify_jwt = false
