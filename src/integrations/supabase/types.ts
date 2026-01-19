@@ -2706,14 +2706,17 @@ export type Database = {
       user_roles: {
         Row: {
           id: string
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
