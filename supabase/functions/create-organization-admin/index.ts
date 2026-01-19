@@ -79,8 +79,6 @@ Deno.serve(async (req) => {
       .from('organizations')
       .insert({
         name,
-        is_active: true,
-        subscription_status: 'active',
       })
       .select()
       .single();
@@ -152,7 +150,7 @@ Deno.serve(async (req) => {
       .insert({
         organization_id: org.id,
         name: 'Pipeline Principal',
-        is_active: true,
+        is_default: true,
       })
       .select()
       .single();
@@ -160,11 +158,11 @@ Deno.serve(async (req) => {
     if (pipeline) {
       // Create default stages
       const defaultStages = [
-        { name: 'Novo', color: '#3B82F6', order_index: 0 },
-        { name: 'Qualificação', color: '#F59E0B', order_index: 1 },
-        { name: 'Proposta', color: '#8B5CF6', order_index: 2 },
-        { name: 'Negociação', color: '#EC4899', order_index: 3 },
-        { name: 'Fechado', color: '#10B981', order_index: 4 },
+        { name: 'Novo', stage_key: 'novo', color: '#3B82F6', position: 0 },
+        { name: 'Qualificação', stage_key: 'qualificacao', color: '#F59E0B', position: 1 },
+        { name: 'Proposta', stage_key: 'proposta', color: '#8B5CF6', position: 2 },
+        { name: 'Negociação', stage_key: 'negociacao', color: '#EC4899', position: 3 },
+        { name: 'Fechado', stage_key: 'fechado', color: '#10B981', position: 4 },
       ];
 
       await supabaseAdmin
@@ -172,7 +170,6 @@ Deno.serve(async (req) => {
         .insert(defaultStages.map(stage => ({
           ...stage,
           pipeline_id: pipeline.id,
-          organization_id: org.id,
         })));
     }
 
