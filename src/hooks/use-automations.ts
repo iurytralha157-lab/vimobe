@@ -13,6 +13,26 @@ export type TriggerType =
   | "inactivity"
   | "manual";
 
+export const TRIGGER_TYPE_LABELS: Record<TriggerType, string> = {
+  message_received: "Mensagem Recebida",
+  scheduled: "Agendado",
+  lead_stage_changed: "Mudança de Etapa",
+  tag_added: "Tag Adicionada",
+  lead_created: "Lead Criado",
+  inactivity: "Inatividade",
+  manual: "Manual",
+};
+
+export const TRIGGER_TYPE_DESCRIPTIONS: Record<TriggerType, string> = {
+  message_received: "Dispara quando uma mensagem é recebida",
+  scheduled: "Dispara em um horário específico",
+  lead_stage_changed: "Dispara quando o lead muda de etapa",
+  tag_added: "Dispara quando uma tag é adicionada",
+  lead_created: "Dispara quando um novo lead é criado",
+  inactivity: "Dispara após período de inatividade",
+  manual: "Dispara manualmente pelo usuário",
+};
+
 export type ActionType =
   | "send_whatsapp"
   | "send_email"
