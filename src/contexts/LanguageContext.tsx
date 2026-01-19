@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { Language, TranslationKeys, translations, t } from "@/i18n";
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { translations, Language, TranslationKeys, t } from '@/i18n';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LanguageContextType {
   language: Language;
-  setLanguage: (lang: Language) => void;
+  setLanguage: (lang: Language) => Promise<void>;
   t: (path: string, params?: Record<string, string | number>) => string;
   translations: TranslationKeys;
 }
@@ -28,16 +29,61 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return "pt-BR";
   });
 
-  const setLanguage = useCallback((lang: Language) => {
-    setLanguageState(lang);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, lang);
-    }
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Get user ID from session (independent of AuthContext to avoid circular dependency)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Load language from user profile when logged in
+  useEffect(() => {
+    const loadUserLanguage = async () => {
+      if (!userId) return;
+
+      const { data } = await supabase
+        .from('users')
+        .select('language')
+        .eq('id', userId)
+        .single();
+
+      if (data?.language && (data.language === 'pt-BR' || data.language === 'en')) {
+        setLanguageState(data.language as Language);
+        localStorage.setItem(STORAGE_KEY, data.language);
+      }
+    };
+
+    loadUserLanguage();
+  }, [userId]);
 
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
+
+  const setLanguage = useCallback(async (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem(STORAGE_KEY, lang);
+
+    // If user is logged in, save to database
+    if (userId) {
+      try {
+        await supabase
+          .from('users')
+          .update({ language: lang })
+          .eq('id', userId);
+      } catch (error) {
+        console.error('Error saving language preference:', error);
+      }
+    }
+  }, [userId]);
 
   const translate = useCallback(
     (path: string, params?: Record<string, string | number>) => {

@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { WhatsAppConversation } from "@/hooks/use-whatsapp";
+import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
 
 interface FloatingChatState {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface FloatingChatState {
   pendingPhone: string | null;
   pendingLeadName: string | null;
   pendingMessage: string | null;
+  pendingLeadId: string | null;
 }
 
 interface FloatingChatContextType {
@@ -18,38 +19,40 @@ interface FloatingChatContextType {
   minimizeChat: () => void;
   maximizeChat: () => void;
   openConversation: (conversation: WhatsAppConversation) => void;
+  openNewChat: (phone: string, leadName?: string) => void;
+  openNewChatWithMessage: (phone: string, message: string, leadId?: string, leadName?: string) => void;
+  openNewConversation: (phone: string, leadName?: string, message?: string) => void; // Legacy support
   clearActiveConversation: () => void;
-  openNewConversation: (phone: string, leadName?: string, message?: string) => void;
   clearPendingMessage: () => void;
 }
 
 const FloatingChatContext = createContext<FloatingChatContextType | undefined>(undefined);
 
-const initialState: FloatingChatState = {
-  isOpen: false,
-  isMinimized: false,
-  activeConversation: null,
-  pendingPhone: null,
-  pendingLeadName: null,
-  pendingMessage: null,
-};
-
 export function FloatingChatProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<FloatingChatState>(initialState);
+  const [state, setState] = useState<FloatingChatState>({
+    isOpen: false,
+    isMinimized: false,
+    activeConversation: null,
+    pendingPhone: null,
+    pendingLeadName: null,
+    pendingMessage: null,
+    pendingLeadId: null,
+  });
 
   const openChat = useCallback(() => {
     setState((prev) => ({ ...prev, isOpen: true, isMinimized: false }));
   }, []);
 
   const closeChat = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      isOpen: false,
+    setState((prev) => ({ 
+      ...prev, 
+      isOpen: false, 
       isMinimized: false,
       activeConversation: null,
       pendingPhone: null,
       pendingLeadName: null,
       pendingMessage: null,
+      pendingLeadId: null,
     }));
   }, []);
 
@@ -71,31 +74,77 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openConversation = useCallback((conversation: WhatsAppConversation) => {
-    setState((prev) => ({
-      ...prev,
+    setState((prev) => ({ 
+      ...prev, 
+      isOpen: true, 
+      isMinimized: false,
       activeConversation: conversation,
       pendingPhone: null,
       pendingLeadName: null,
+      pendingMessage: null,
+      pendingLeadId: null,
     }));
   }, []);
 
-  const clearActiveConversation = useCallback(() => {
-    setState((prev) => ({ ...prev, activeConversation: null }));
+  const openNewChat = useCallback((phone: string, leadName?: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    setState((prev) => ({ 
+      ...prev, 
+      isOpen: true, 
+      isMinimized: false,
+      activeConversation: null,
+      pendingPhone: cleanPhone,
+      pendingLeadName: leadName || null,
+      pendingMessage: null,
+      pendingLeadId: null,
+    }));
   }, []);
 
+  const openNewChatWithMessage = useCallback((phone: string, message: string, leadId?: string, leadName?: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    setState((prev) => ({ 
+      ...prev, 
+      isOpen: true, 
+      isMinimized: false,
+      activeConversation: null,
+      pendingPhone: cleanPhone,
+      pendingLeadName: leadName || null,
+      pendingMessage: message,
+      pendingLeadId: leadId || null,
+    }));
+  }, []);
+
+  // Legacy function for backward compatibility
   const openNewConversation = useCallback((phone: string, leadName?: string, message?: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
     setState((prev) => ({
       ...prev,
       isOpen: true,
       isMinimized: false,
-      pendingPhone: phone,
+      activeConversation: null,
+      pendingPhone: cleanPhone,
       pendingLeadName: leadName || null,
       pendingMessage: message || null,
+      pendingLeadId: null,
+    }));
+  }, []);
+
+  const clearActiveConversation = useCallback(() => {
+    setState((prev) => ({ 
+      ...prev, 
+      activeConversation: null,
+      pendingPhone: null,
+      pendingLeadName: null,
+      pendingMessage: null,
+      pendingLeadId: null,
     }));
   }, []);
 
   const clearPendingMessage = useCallback(() => {
-    setState((prev) => ({ ...prev, pendingMessage: null }));
+    setState((prev) => ({ 
+      ...prev, 
+      pendingMessage: null,
+    }));
   }, []);
 
   return (
@@ -108,8 +157,10 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
         minimizeChat,
         maximizeChat,
         openConversation,
-        clearActiveConversation,
+        openNewChat,
+        openNewChatWithMessage,
         openNewConversation,
+        clearActiveConversation,
         clearPendingMessage,
       }}
     >
@@ -121,7 +172,7 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
 export function useFloatingChat() {
   const context = useContext(FloatingChatContext);
   if (!context) {
-    throw new Error("useFloatingChat must be used within a FloatingChatProvider");
+    throw new Error("useFloatingChat must be used within FloatingChatProvider");
   }
   return context;
 }
