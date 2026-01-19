@@ -8,9 +8,8 @@ export interface GoogleCalendarToken {
   user_id: string;
   access_token: string;
   refresh_token: string;
-  token_expires_at: string;
-  calendar_id: string;
-  is_sync_enabled: boolean;
+  expires_at: string;
+  calendar_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -94,12 +93,12 @@ export function useToggleGoogleCalendarSync() {
   const { profile } = useAuth();
 
   return useMutation({
-    mutationFn: async (is_sync_enabled: boolean) => {
+    mutationFn: async (calendar_id: string) => {
       if (!profile?.id) throw new Error('Usuário não encontrado');
 
       const { data, error } = await supabase
         .from('google_calendar_tokens')
-        .update({ is_sync_enabled })
+        .update({ calendar_id })
         .eq('user_id', profile.id)
         .select()
         .single();
@@ -107,13 +106,13 @@ export function useToggleGoogleCalendarSync() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
-      toast.success(data.is_sync_enabled ? 'Sincronização ativada' : 'Sincronização desativada');
+      toast.success('Calendário atualizado');
     },
     onError: (error) => {
       console.error('Error toggling sync:', error);
-      toast.error('Erro ao alterar sincronização');
+      toast.error('Erro ao atualizar calendário');
     },
   });
 }

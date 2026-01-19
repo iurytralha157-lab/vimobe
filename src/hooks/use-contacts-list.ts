@@ -49,7 +49,7 @@ export function useContactsList(filters: ContactListFilters) {
   return useQuery({
     queryKey: ['contacts-list', filters],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('list_contacts_paginated', {
+      const { data, error } = await (supabase as any).rpc('list_contacts_paginated', {
         p_search: filters.search || null,
         p_pipeline_id: filters.pipelineId || null,
         p_stage_id: filters.stageId || null,
@@ -68,7 +68,8 @@ export function useContactsList(filters: ContactListFilters) {
       if (error) throw error;
 
       // Parse tags from jsonb
-      return (data || []).map((row: any) => ({
+      const items = Array.isArray(data) ? data : [];
+      return items.map((row: any) => ({
         ...row,
         tags: Array.isArray(row.tags) ? row.tags : [],
       })) as Contact[];

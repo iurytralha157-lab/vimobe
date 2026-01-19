@@ -45,13 +45,13 @@ export function useCommissionRules() {
   return useQuery({
     queryKey: ['commission-rules', profile?.organization_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('commission_rules')
         .select('*')
         .order('name');
 
       if (error) throw error;
-      return data as unknown as CommissionRule[];
+      return data as CommissionRule[];
     },
     enabled: !!profile?.organization_id,
   });
@@ -64,12 +64,12 @@ export function useCreateCommissionRule() {
 
   return useMutation({
     mutationFn: async (data: Partial<CommissionRule>) => {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('commission_rules')
         .insert({
           ...data,
           organization_id: profile?.organization_id,
-        } as never)
+        })
         .select()
         .single();
 
@@ -92,9 +92,9 @@ export function useUpdateCommissionRule() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<CommissionRule> & { id: string }) => {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('commission_rules')
-        .update(data as never)
+        .update(data)
         .eq('id', id)
         .select()
         .single();
@@ -118,7 +118,7 @@ export function useDeleteCommissionRule() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('commission_rules')
         .delete()
         .eq('id', id);

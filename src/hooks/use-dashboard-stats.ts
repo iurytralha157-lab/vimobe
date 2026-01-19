@@ -64,7 +64,7 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_dashboard_stats');
+      const { data, error } = await (supabase as any).rpc('get_dashboard_stats');
       
       if (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -181,7 +181,7 @@ export function useLeadsChartData() {
       const sevenDaysAgo = subDays(new Date(), 7).toISOString();
       
       // Query otimizada: apenas campos necessários
-      const { data: leads } = await supabase
+      const { data: leads } = await (supabase as any)
         .from('leads')
         .select('created_at, source')
         .gte('created_at', sevenDaysAgo)
@@ -195,15 +195,15 @@ export function useLeadsChartData() {
         const dayName = days[date.getDay()];
         const dateStr = format(date, 'yyyy-MM-dd');
         
-        const dayLeads = (leads || []).filter(l => 
-          l.created_at.startsWith(dateStr)
+        const dayLeads = (leads || []).filter((l: any) => 
+          l.created_at?.startsWith(dateStr)
         );
         
         chartData.push({
           name: dayName,
-          meta: dayLeads.filter(l => l.source === 'meta').length,
-          site: dayLeads.filter(l => l.source === 'site' || l.source === 'wordpress').length,
-          wordpress: dayLeads.filter(l => l.source === 'wordpress').length,
+          meta: dayLeads.filter((l: any) => l.source === 'meta').length,
+          site: dayLeads.filter((l: any) => l.source === 'site' || l.source === 'wordpress').length,
+          wordpress: dayLeads.filter((l: any) => l.source === 'wordpress').length,
         });
       }
       
@@ -218,7 +218,7 @@ export function useFunnelData() {
   return useQuery({
     queryKey: ['funnel-data'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_funnel_data');
+      const { data, error } = await (supabase as any).rpc('get_funnel_data');
       
       if (error) {
         console.error('Error fetching funnel data:', error);
@@ -236,7 +236,7 @@ export function useLeadSourcesData() {
   return useQuery({
     queryKey: ['lead-sources-data'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_lead_sources_data');
+      const { data, error } = await (supabase as any).rpc('get_lead_sources_data');
       
       if (error) {
         console.error('Error fetching lead sources:', error);
