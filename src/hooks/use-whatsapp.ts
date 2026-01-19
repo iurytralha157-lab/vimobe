@@ -10,12 +10,17 @@ export interface WhatsAppConversation {
   contact_name: string | null;
   contact_phone: string | null;
   contact_picture: string | null;
+  contact_presence: string | null;
+  presence_updated_at: string | null;
   last_message: string | null;
   last_message_at: string | null;
-  unread_count: number | null;
-  is_group: boolean | null;
+  unread_count: number;
+  is_group: boolean;
   lead_id: string | null;
+  archived_at: string | null;
+  deleted_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface WhatsAppMessage {
