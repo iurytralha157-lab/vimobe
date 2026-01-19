@@ -8,11 +8,23 @@ interface UserProfile {
   email: string;
   name: string;
   avatar_url: string | null;
-  role: string | null;
+  role: 'admin' | 'user' | 'super_admin';
   organization_id: string | null;
   is_active: boolean | null;
   created_at: string;
   updated_at: string;
+  // Extended fields
+  language?: string;
+  phone?: string;
+  whatsapp?: string;
+  cpf?: string;
+  cep?: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
 }
 
 interface Organization {
@@ -25,6 +37,8 @@ interface Organization {
   segment: string | null;
   created_at: string;
   updated_at: string;
+  is_active?: boolean;
+  subscription_status?: string;
 }
 
 interface ImpersonatingState {
@@ -38,6 +52,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   organization: Organization | null;
   isLoading: boolean;
+  loading: boolean; // Alias for compatibility
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   isAdmin: boolean;
@@ -60,8 +75,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [impersonating, setImpersonating] = useState<ImpersonatingState | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [impersonating, setImpersonating] = useState<ImpersonatingState | null>(() => {
+    const stored = localStorage.getItem('impersonating');
+    return stored ? JSON.parse(stored) : null;
+  });
   const { toast } = useToast();
+
+  const checkSuperAdmin = async (userId: string): Promise<boolean> => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'super_admin')
+      .single();
+    
+    return !!data;
+  };
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -76,24 +106,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setProfile(profileData);
+      // Check if super_admin via user_roles table
+      const superAdmin = await checkSuperAdmin(userId);
+      setIsSuperAdmin(superAdmin);
 
-      // Fetch organization if user has one
-      if (profileData?.organization_id) {
+      setProfile(profileData as UserProfile);
+
+      // If impersonating, fetch that org instead
+      const orgIdToFetch = impersonating?.orgId || profileData?.organization_id;
+
+      if (orgIdToFetch) {
         const { data: orgData, error: orgError } = await supabase
           .from("organizations")
           .select("*")
-          .eq("id", profileData.organization_id)
+          .eq("id", orgIdToFetch)
           .single();
 
         if (!orgError && orgData) {
-          setOrganization(orgData);
+          setOrganization(orgData as Organization);
         }
       }
     } catch (error) {
       console.error("Error in fetchProfile:", error);
     }
-  }, []);
+  }, [impersonating?.orgId]);
 
   const refreshProfile = useCallback(async () => {
     if (user?.id) {
@@ -102,8 +138,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id, fetchProfile]);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -115,6 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -123,12 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
           setOrganization(null);
+          setIsSuperAdmin(false);
         }
         setIsLoading(false);
       }
     );
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
@@ -207,6 +251,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
       setProfile(null);
       setOrganization(null);
+      setIsSuperAdmin(false);
+      setImpersonating(null);
+      localStorage.removeItem('impersonating');
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -278,16 +325,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isSuperAdmin = profile?.role === "super_admin";
   const isAdmin = profile?.role === "admin" || isSuperAdmin;
 
   const startImpersonate = useCallback((orgId: string, orgName: string) => {
-    setImpersonating({ orgId, orgName });
-  }, []);
+    const session: ImpersonatingState = { orgId, orgName };
+    setImpersonating(session);
+    localStorage.setItem('impersonating', JSON.stringify(session));
+    
+    // Refresh to load the impersonated org
+    if (user) {
+      fetchProfile(user.id);
+    }
+  }, [user, fetchProfile]);
 
   const stopImpersonate = useCallback(() => {
     setImpersonating(null);
-  }, []);
+    localStorage.removeItem('impersonating');
+    
+    // Refresh to load original org
+    if (user) {
+      fetchProfile(user.id);
+    }
+  }, [user, fetchProfile]);
 
   const value: AuthContextType = {
     user,
@@ -295,6 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     organization,
     isLoading,
+    loading: isLoading, // Alias for compatibility
     isAuthenticated: !!user,
     isSuperAdmin,
     isAdmin,
