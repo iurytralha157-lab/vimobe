@@ -111,28 +111,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Create user profile in users table
+    // 3. Update user profile in users table (trigger already created the user)
     const { error: userError } = await supabaseAdmin
       .from('users')
-      .insert({
-        id: authData.user.id,
-        email: adminEmail,
+      .update({
         name: adminName,
         role: 'admin',
         organization_id: org.id,
         is_active: true,
-      });
+      })
+      .eq('id', authData.user.id);
 
     if (userError) {
       // Rollback: delete auth user and organization
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       await supabaseAdmin.from('organizations').delete().eq('id', org.id);
-      console.error('Error creating user profile:', userError);
+      console.error('Error updating user profile:', userError);
       return new Response(JSON.stringify({ error: userError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // 3b. Add admin role to user_roles table
+    await supabaseAdmin
+      .from('user_roles')
+      .upsert({
+        user_id: authData.user.id,
+        role: 'admin',
+      }, { onConflict: 'user_id,role' });
 
     // 4. Create default modules for the org
     const defaultModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
