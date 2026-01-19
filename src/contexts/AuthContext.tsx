@@ -27,6 +27,11 @@ interface Organization {
   updated_at: string;
 }
 
+interface ImpersonatingState {
+  orgId: string;
+  orgName: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -36,12 +41,15 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   isAdmin: boolean;
+  impersonating: ImpersonatingState | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  startImpersonate: (orgId: string, orgName: string) => void;
+  stopImpersonate: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [impersonating, setImpersonating] = useState<ImpersonatingState | null>(null);
   const { toast } = useToast();
 
   const fetchProfile = useCallback(async (userId: string) => {
@@ -272,6 +281,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isSuperAdmin = profile?.role === "super_admin";
   const isAdmin = profile?.role === "admin" || isSuperAdmin;
 
+  const startImpersonate = useCallback((orgId: string, orgName: string) => {
+    setImpersonating({ orgId, orgName });
+  }, []);
+
+  const stopImpersonate = useCallback(() => {
+    setImpersonating(null);
+  }, []);
+
   const value: AuthContextType = {
     user,
     session,
@@ -281,12 +298,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!user,
     isSuperAdmin,
     isAdmin,
+    impersonating,
     signIn,
     signUp,
     signOut,
     refreshProfile,
     sendPasswordReset,
     updatePassword,
+    startImpersonate,
+    stopImpersonate,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
