@@ -257,3 +257,41 @@ export function useLeadsCount() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
+
+export function useAddLeadTag() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ leadId, tagId }: { leadId: string; tagId: string }) => {
+      const { error } = await supabase
+        .from('lead_tags')
+        .insert({ lead_id: leadId, tag_id: tagId });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead'] });
+    },
+  });
+}
+
+export function useRemoveLeadTag() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ leadId, tagId }: { leadId: string; tagId: string }) => {
+      const { error } = await supabase
+        .from('lead_tags')
+        .delete()
+        .eq('lead_id', leadId)
+        .eq('tag_id', tagId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead'] });
+    },
+  });
+}
