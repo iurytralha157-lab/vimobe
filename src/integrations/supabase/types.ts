@@ -1513,6 +1513,50 @@ export type Database = {
           },
         ]
       }
+      member_availability: {
+        Row: {
+          created_at: string | null
+          day_of_week: number
+          end_time: string | null
+          id: string
+          is_active: boolean | null
+          is_all_day: boolean | null
+          start_time: string | null
+          team_member_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: number
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_all_day?: boolean | null
+          start_time?: string | null
+          team_member_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_all_day?: boolean | null
+          start_time?: string | null
+          team_member_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_availability_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_integrations: {
         Row: {
           access_token: string | null
