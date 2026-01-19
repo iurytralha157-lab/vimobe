@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ThemeProvider } from "next-themes";
+import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
 
 // Pages
 import Auth from "@/pages/Auth";
@@ -20,6 +21,7 @@ import Agenda from "@/pages/Agenda";
 import Conversations from "@/pages/Conversations";
 import Automations from "@/pages/Automations";
 import CRMManagement from "@/pages/CRMManagement";
+import Pipelines from "@/pages/Pipelines";
 import FinancialDashboard from "@/pages/FinancialDashboard";
 import FinancialEntries from "@/pages/FinancialEntries";
 import FinancialReports from "@/pages/FinancialReports";
@@ -44,7 +46,10 @@ import AdminAudit from "@/pages/admin/AdminAudit";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
       retry: 1,
     },
   },
@@ -52,7 +57,7 @@ const queryClient = new QueryClient({
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile, isSuperAdmin } = useAuth();
+  const { isAuthenticated, isLoading, profile, isSuperAdmin, impersonating } = useAuth();
 
   if (isLoading) {
     return (
@@ -66,12 +71,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Super admins não precisam de organização
+  // Super admins sem impersonation vão para o painel admin
+  if (isSuperAdmin && !impersonating) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  // Usuários normais sem organização vão para onboarding
   if (profile && !profile.organization_id && !isSuperAdmin) {
     return <Navigate to="/onboarding" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <div className={impersonating ? "pt-12" : ""}>
+      {children}
+    </div>
+  );
 }
 
 // Admin Route Component
@@ -123,7 +137,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
 // Public Route (redirect to dashboard if authenticated)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile, isSuperAdmin } = useAuth();
+  const { isAuthenticated, isLoading, profile, isSuperAdmin, impersonating } = useAuth();
 
   if (isLoading) {
     return (
@@ -134,8 +148,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
-    // Super admin vai direto para o painel admin
-    if (isSuperAdmin) {
+    // Super admin vai direto para o painel admin (a menos que esteja impersonando)
+    if (isSuperAdmin && !impersonating) {
       return <Navigate to="/admin" replace />;
     }
     // Usuários normais sem organização vão para onboarding
@@ -184,6 +198,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* CRM Routes */}
+      <Route
         path="/contacts"
         element={
           <ProtectedRoute>
@@ -191,6 +215,64 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/crm/contacts"
+        element={
+          <ProtectedRoute>
+            <Contacts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/crm/contatos"
+        element={
+          <ProtectedRoute>
+            <Contacts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/crm/pipelines"
+        element={
+          <ProtectedRoute>
+            <Pipelines />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/conversations"
+        element={
+          <ProtectedRoute>
+            <Conversations />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/crm/conversas"
+        element={
+          <ProtectedRoute>
+            <Conversations />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/crm"
+        element={
+          <ProtectedRoute>
+            <CRMManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/crm/management"
+        element={
+          <ProtectedRoute>
+            <CRMManagement />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* Properties & Contracts */}
       <Route
         path="/properties"
         element={
@@ -207,6 +289,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      
+      {/* Schedule */}
       <Route
         path="/agenda"
         element={
@@ -215,14 +299,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/conversations"
-        element={
-          <ProtectedRoute>
-            <Conversations />
-          </ProtectedRoute>
-        }
-      />
+      
+      {/* Automations */}
       <Route
         path="/automations"
         element={
@@ -231,16 +309,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/crm"
-        element={
-          <ProtectedRoute>
-            <CRMManagement />
-          </ProtectedRoute>
-        }
-      />
 
-      {/* Financial Routes */}
+      {/* Financial Routes - English */}
       <Route
         path="/financial"
         element={
@@ -265,6 +335,50 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      
+      {/* Financial Routes - Portuguese Aliases */}
+      <Route
+        path="/financeiro"
+        element={
+          <ProtectedRoute>
+            <FinancialDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/financeiro/contas"
+        element={
+          <ProtectedRoute>
+            <FinancialEntries />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/financeiro/contratos"
+        element={
+          <ProtectedRoute>
+            <Contracts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/financeiro/comissoes"
+        element={
+          <ProtectedRoute>
+            <Commissions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/financeiro/relatorios"
+        element={
+          <ProtectedRoute>
+            <FinancialReports />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* Commissions */}
       <Route
         path="/commissions"
         element={
@@ -277,6 +391,14 @@ function AppRoutes() {
       {/* Reports */}
       <Route
         path="/performance"
+        element={
+          <ProtectedRoute>
+            <BrokerPerformance />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports/performance"
         element={
           <ProtectedRoute>
             <BrokerPerformance />
@@ -402,6 +524,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                <ImpersonateBanner />
                 <AppRoutes />
               </BrowserRouter>
             </TooltipProvider>
