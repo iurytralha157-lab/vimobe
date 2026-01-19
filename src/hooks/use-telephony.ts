@@ -36,23 +36,15 @@ export interface TelephonyCall {
   };
 }
 
+// Note: telephony_calls table does not exist in schema yet
+// These hooks return empty data as placeholders
+
 export function useLeadCalls(leadId: string | null) {
   return useQuery({
     queryKey: ['telephony-calls', 'lead', leadId],
     queryFn: async () => {
-      if (!leadId) return [];
-
-      const { data, error } = await supabase
-        .from('telephony_calls')
-        .select(`
-          *,
-          user:users!telephony_calls_user_id_fkey(id, name, avatar_url)
-        `)
-        .eq('lead_id', leadId)
-        .order('initiated_at', { ascending: false });
-
-      if (error) throw error;
-      return data as TelephonyCall[];
+      // Table doesn't exist - return empty array
+      return [] as TelephonyCall[];
     },
     enabled: !!leadId,
   });
@@ -69,30 +61,8 @@ export function useUserCalls(userId?: string, options?: {
   return useQuery({
     queryKey: ['telephony-calls', 'user', targetUserId, options],
     queryFn: async () => {
-      if (!targetUserId) return [];
-
-      let query = supabase
-        .from('telephony_calls')
-        .select(`
-          *,
-          lead:leads!telephony_calls_lead_id_fkey(id, name)
-        `)
-        .eq('user_id', targetUserId)
-        .order('initiated_at', { ascending: false });
-
-      if (options?.startDate) {
-        query = query.gte('initiated_at', options.startDate.toISOString());
-      }
-      if (options?.endDate) {
-        query = query.lte('initiated_at', options.endDate.toISOString());
-      }
-      if (options?.status) {
-        query = query.eq('status', options.status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as TelephonyCall[];
+      // Table doesn't exist - return empty array
+      return [] as TelephonyCall[];
     },
     enabled: !!targetUserId,
   });
@@ -109,38 +79,8 @@ export function useOrganizationCalls(options?: {
   return useQuery({
     queryKey: ['telephony-calls', 'organization', options],
     queryFn: async () => {
-      let query = supabase
-        .from('telephony_calls')
-        .select(`
-          *,
-          user:users!telephony_calls_user_id_fkey(id, name, avatar_url),
-          lead:leads!telephony_calls_lead_id_fkey(id, name, pipeline_id)
-        `)
-        .order('initiated_at', { ascending: false });
-
-      if (options?.startDate) {
-        query = query.gte('initiated_at', options.startDate.toISOString());
-      }
-      if (options?.endDate) {
-        query = query.lte('initiated_at', options.endDate.toISOString());
-      }
-      if (options?.userId) {
-        query = query.eq('user_id', options.userId);
-      }
-      if (options?.limit) {
-        query = query.limit(options.limit);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Filter by pipeline if needed (post-query since it's nested)
-      let results = data as TelephonyCall[];
-      if (options?.pipelineId) {
-        results = results.filter(c => (c.lead as any)?.pipeline_id === options.pipelineId);
-      }
-
-      return results;
+      // Table doesn't exist - return empty array
+      return [] as TelephonyCall[];
     },
   });
 }
@@ -167,45 +107,19 @@ export function useTelephonyMetrics(options?: {
   return useQuery({
     queryKey: ['telephony-metrics', options],
     queryFn: async () => {
-      let query = supabase
-        .from('telephony_calls')
-        .select('*');
-
-      if (options?.startDate) {
-        query = query.gte('initiated_at', options.startDate.toISOString());
-      }
-      if (options?.endDate) {
-        query = query.lte('initiated_at', options.endDate.toISOString());
-      }
-      if (options?.userId) {
-        query = query.eq('user_id', options.userId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      const calls = data || [];
-      const answered = calls.filter(c => c.status === 'answered' || c.status === 'ended');
-      const missed = calls.filter(c => c.status === 'missed' || c.status === 'no_answer');
-      const outbound = calls.filter(c => c.direction === 'outbound');
-      const inbound = calls.filter(c => c.direction === 'inbound');
-
-      const talkTimeTotal = calls.reduce((sum, c) => sum + (c.talk_time_seconds || 0), 0);
-      const durationTotal = calls.reduce((sum, c) => sum + (c.duration_seconds || 0), 0);
-
+      // Return empty metrics
       const metrics: TelephonyMetrics = {
-        totalCalls: calls.length,
-        answeredCalls: answered.length,
-        missedCalls: missed.length,
-        outboundCalls: outbound.length,
-        inboundCalls: inbound.length,
-        talkTimeTotal,
-        talkTimeAvg: answered.length > 0 ? Math.round(talkTimeTotal / answered.length) : 0,
-        durationTotal,
-        durationAvg: calls.length > 0 ? Math.round(durationTotal / calls.length) : 0,
-        answerRate: calls.length > 0 ? Math.round((answered.length / calls.length) * 100) : 0,
+        totalCalls: 0,
+        answeredCalls: 0,
+        missedCalls: 0,
+        outboundCalls: 0,
+        inboundCalls: 0,
+        talkTimeTotal: 0,
+        talkTimeAvg: 0,
+        durationTotal: 0,
+        durationAvg: 0,
+        answerRate: 0,
       };
-
       return metrics;
     },
   });
@@ -231,66 +145,8 @@ export function useTelephonyRanking(options?: {
   return useQuery({
     queryKey: ['telephony-ranking', options],
     queryFn: async () => {
-      let query = supabase
-        .from('telephony_calls')
-        .select(`
-          user_id,
-          status,
-          talk_time_seconds,
-          duration_seconds,
-          user:users!telephony_calls_user_id_fkey(id, name, avatar_url)
-        `);
-
-      if (options?.startDate) {
-        query = query.gte('initiated_at', options.startDate.toISOString());
-      }
-      if (options?.endDate) {
-        query = query.lte('initiated_at', options.endDate.toISOString());
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Group by user
-      const userMap = new Map<string, {
-        user: any;
-        calls: any[];
-      }>();
-
-      for (const call of data || []) {
-        if (!call.user_id) continue;
-        
-        if (!userMap.has(call.user_id)) {
-          userMap.set(call.user_id, {
-            user: call.user,
-            calls: [],
-          });
-        }
-        userMap.get(call.user_id)!.calls.push(call);
-      }
-
-      const ranking: BrokerTelephonyRanking[] = [];
-
-      for (const [userId, data] of userMap) {
-        const answered = data.calls.filter(c => c.status === 'answered' || c.status === 'ended');
-        const talkTimeTotal = data.calls.reduce((sum, c) => sum + (c.talk_time_seconds || 0), 0);
-
-        ranking.push({
-          userId,
-          userName: data.user?.name || 'Unknown',
-          avatarUrl: data.user?.avatar_url,
-          totalCalls: data.calls.length,
-          answeredCalls: answered.length,
-          talkTimeTotal,
-          talkTimeAvg: answered.length > 0 ? Math.round(talkTimeTotal / answered.length) : 0,
-          answerRate: data.calls.length > 0 ? Math.round((answered.length / data.calls.length) * 100) : 0,
-        });
-      }
-
-      // Sort by total calls descending
-      ranking.sort((a, b) => b.totalCalls - a.totalCalls);
-
-      return options?.limit ? ranking.slice(0, options.limit) : ranking;
+      // Return empty ranking
+      return [] as BrokerTelephonyRanking[];
     },
   });
 }
@@ -298,27 +154,8 @@ export function useTelephonyRanking(options?: {
 export function useRecordingUrl() {
   return useMutation({
     mutationFn: async (callId: string) => {
-      const { data, error } = await supabase.functions.invoke('telephony-recording-proxy', {
-        body: null,
-        headers: {},
-      });
-
-      // Use query params approach
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/telephony-recording-proxy?call_id=${callId}&action=signed_url`,
-        {
-          headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get recording URL');
-      }
-
-      return response.json() as Promise<{ url: string; expires_in?: number; warning?: string }>;
+      // Placeholder - would fetch from edge function
+      throw new Error('Recording feature not available');
     },
   });
 }
@@ -333,27 +170,11 @@ export function useCreateCall() {
       direction?: 'inbound' | 'outbound';
       notes?: string;
     }) => {
-      const { data: call, error } = await supabase
-        .from('telephony_calls')
-        .insert({
-          phone_to: data.phone_to,
-          phone_from: null,
-          direction: data.direction || 'outbound',
-          status: 'initiated',
-          initiated_at: new Date().toISOString(),
-          notes: data.notes,
-        } as any)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return call;
+      // Table doesn't exist - throw error
+      throw new Error('Telephony feature not available');
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['telephony-calls'] });
-      if (variables.lead_id) {
-        queryClient.invalidateQueries({ queryKey: ['telephony-calls', 'lead', variables.lead_id] });
-      }
     },
   });
 }
@@ -363,15 +184,8 @@ export function useUpdateCall() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<TelephonyCall> & { id: string }) => {
-      const { data: call, error } = await supabase
-        .from('telephony_calls')
-        .update(data as any)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return call;
+      // Table doesn't exist - throw error
+      throw new Error('Telephony feature not available');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['telephony-calls'] });

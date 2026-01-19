@@ -14,7 +14,7 @@ import {
   parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Phone, Mail, Calendar as CalendarIcon, CheckSquare, MessageSquare, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
@@ -49,7 +49,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
   const eventsByDate = useMemo(() => {
     const map: Record<string, ScheduleEvent[]> = {};
     events.forEach((event) => {
-      const dateKey = format(parseISO(event.start_at), 'yyyy-MM-dd');
+      const dateKey = format(parseISO(event.start_time), 'yyyy-MM-dd');
       if (!map[dateKey]) {
         map[dateKey] = [];
       }

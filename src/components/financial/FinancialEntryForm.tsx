@@ -298,7 +298,7 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
                     <SelectItem value="none">Nenhum</SelectItem>
                     {contracts?.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.contract_number} - {c.client_name}
+                        {c.contract_number || c.id}
                       </SelectItem>
                     ))}
                   </SelectContent>
