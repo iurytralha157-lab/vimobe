@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -30,7 +29,6 @@ import {
   Plus, 
   MoreHorizontal, 
   Shuffle,
-  Building2,
   Tags,
   Facebook,
   Globe,
@@ -39,10 +37,9 @@ import {
   Loader2,
   Users,
   X,
-  GitBranch,
   Play,
   Filter,
-  AlertCircle
+  Zap
 } from 'lucide-react';
 import { useRoundRobins, useUpdateRoundRobin, useDeleteRoundRobin, RoundRobin as RoundRobinType } from '@/hooks/use-round-robins';
 import { useTeams } from '@/hooks/use-teams';
@@ -51,7 +48,6 @@ import { useCreateRoundRobin } from '@/hooks/use-create-round-robin';
 import { EditQueueDialog } from '@/components/round-robin/EditQueueDialog';
 import { RulesManager } from '@/components/round-robin/RulesManager';
 import { TestRuleDialog } from '@/components/round-robin/TestRuleDialog';
-import { PipelineRoundRobinManager } from '@/components/round-robin/PipelineRoundRobinManager';
 
 const matchTypeLabels: Record<string, string> = {
   campaign: 'Campanha',
@@ -64,7 +60,6 @@ const matchTypeLabels: Record<string, string> = {
 const matchTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   campaign: Facebook,
   tag: Tags,
-  property: Building2,
   source: Globe,
   form: Facebook,
 };
@@ -146,118 +141,84 @@ export function DistributionTab() {
   // Stats
   const activeQueues = roundRobins.filter(rr => rr.is_active).length;
   const totalLeadsDistributed = roundRobins.reduce((acc, rr) => acc + (rr.leads_distributed || 0), 0);
-  const totalMembers = roundRobins.reduce((acc, rr) => acc + rr.members.length, 0);
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Shuffle className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{roundRobins.length}</p>
-              <p className="text-xs text-muted-foreground">Filas criadas</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <Play className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{activeQueues}</p>
-              <p className="text-xs text-muted-foreground">Filas ativas</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalMembers}</p>
-              <p className="text-xs text-muted-foreground">Participantes</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <Filter className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalLeadsDistributed}</p>
-              <p className="text-xs text-muted-foreground">Leads distribuídos</p>
-            </div>
-          </div>
-        </Card>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Distribuição de Leads</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {roundRobins.length} {roundRobins.length === 1 ? 'fila' : 'filas'} · {activeQueues} {activeQueues === 1 ? 'ativa' : 'ativas'} · {totalLeadsDistributed} leads distribuídos
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setTestDialogOpen(true)} className="gap-2">
+            <Play className="h-4 w-4" />
+            Testar
+          </Button>
+          <Button onClick={() => setQueueDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nova Fila
+          </Button>
+        </div>
       </div>
 
-      {/* Queues Section */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="font-semibold flex items-center gap-2">
-              <Shuffle className="h-5 w-5" />
-              Filas de Distribuição
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configure filas para distribuir leads automaticamente
+      {/* Queues Grid */}
+      {roundRobins.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Shuffle className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Configure sua distribuição</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+              Crie filas para distribuir leads automaticamente entre sua equipe
             </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={() => setTestDialogOpen(true)} className="w-full sm:w-auto">
-              <Play className="h-4 w-4 mr-2" />
-              Testar Regras
-            </Button>
-            <Button onClick={() => setQueueDialogOpen(true)} className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={() => setQueueDialogOpen(true)} size="lg" className="gap-2">
+              <Plus className="h-4 w-4" />
               Nova Fila
             </Button>
-          </div>
-        </div>
-
-        {roundRobins.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Shuffle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-              <h3 className="font-medium mb-2">Nenhuma fila configurada</h3>
-              <p className="text-muted-foreground mb-4 text-sm">
-                Crie filas para distribuir leads automaticamente entre sua equipe
-              </p>
-              <Button onClick={() => setQueueDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Fila
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {roundRobins.map((rr) => (
-              <Card key={rr.id} className={rr.is_active ? '' : 'opacity-60'}>
-                <CardHeader className="flex flex-col sm:flex-row items-start justify-between pb-3 gap-3">
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Shuffle className="h-5 w-5 text-primary" />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {roundRobins.map((rr) => (
+            <Card 
+              key={rr.id} 
+              className={`overflow-hidden transition-all duration-300 ${
+                rr.is_active 
+                  ? 'hover:shadow-lg border-primary/20' 
+                  : 'opacity-60 bg-muted/20'
+              }`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                      rr.is_active ? 'bg-primary/10' : 'bg-muted'
+                    }`}>
+                      <Shuffle className={`h-5 w-5 ${rr.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-base truncate">{rr.name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge variant={rr.strategy === 'weighted' ? 'default' : 'secondary'} className="text-xs">
-                          {rr.strategy === 'weighted' ? 'Ponderada' : 'Simples'}
+                    <div>
+                      <CardTitle className="text-base">{rr.name}</CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge 
+                          variant={rr.strategy === 'weighted' ? 'default' : 'secondary'} 
+                          className="text-xs"
+                        >
+                          {rr.strategy === 'weighted' ? 'Ponderada' : 'Round Robin'}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {rr.leads_distributed || 0} leads
-                        </span>
+                        {rr.is_active && (
+                          <div className="flex items-center gap-1 text-xs text-green-600">
+                            <Zap className="h-3 w-3" />
+                            <span>Ativa</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-center gap-2">
                     <Switch 
                       checked={rr.is_active || false} 
                       onCheckedChange={() => toggleActive(rr.id, rr.is_active || false)}
@@ -287,45 +248,47 @@ export function DistributionTab() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Rules */}
-                  <div>
-                    <p className="text-sm font-medium mb-2">Critérios de entrada</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {rr.rules.length > 0 ? (
-                        rr.rules.map((rule) => {
-                          const Icon = matchTypeIcons[rule.match_type] || Globe;
-                          return (
-                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                              <Icon className="h-3 w-3" />
-                              <span className="hidden sm:inline">{matchTypeLabels[rule.match_type] || rule.match_type}:</span> {rule.match_value}
-                            </Badge>
-                          );
-                        })
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Qualquer lead</span>
-                      )}
-                    </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                {/* Rules */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Critérios</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rr.rules.length > 0 ? (
+                      rr.rules.map((rule) => {
+                        const Icon = matchTypeIcons[rule.match_type] || Globe;
+                        return (
+                          <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
+                            <Icon className="h-3 w-3" />
+                            {rule.match_value}
+                          </Badge>
+                        );
+                      })
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Qualquer lead</span>
+                    )}
                   </div>
+                </div>
 
-                  {/* Members */}
-                  <div>
-                    <p className="text-sm font-medium mb-2">Participantes</p>
-                    <div className="flex items-center gap-2 flex-wrap">
+                {/* Members */}
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                       {rr.members.length > 0 ? (
                         <>
                           <div className="flex -space-x-2">
-                            {rr.members.slice(0, 4).map((member) => (
+                            {rr.members.slice(0, 5).map((member) => (
                               <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
                                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                                   {member.user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
                                 </AvatarFallback>
                               </Avatar>
                             ))}
-                            {rr.members.length > 4 && (
+                            {rr.members.length > 5 && (
                               <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                                <span className="text-xs text-muted-foreground">+{rr.members.length - 4}</span>
+                                <span className="text-xs text-muted-foreground">+{rr.members.length - 5}</span>
                               </div>
                             )}
                           </div>
@@ -334,35 +297,19 @@ export function DistributionTab() {
                           </span>
                         </>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Nenhum participante</span>
+                        <span className="text-xs text-muted-foreground">Sem participantes</span>
                       )}
                     </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {rr.leads_distributed || 0} leads
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Divider */}
-      <Separator className="my-6" />
-
-      {/* Pipeline Round-Robin Fallback Section */}
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-            <GitBranch className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div>
-            <h3 className="font-semibold">Distribuição Padrão por Pipeline</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configure qual fila será usada como fallback quando nenhuma regra específica corresponder
-            </p>
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-        <PipelineRoundRobinManager />
-      </div>
+      )}
 
       {/* Test Rules Dialog */}
       <TestRuleDialog 
@@ -370,15 +317,24 @@ export function DistributionTab() {
         onOpenChange={setTestDialogOpen} 
       />
 
+      {/* Edit Queue Dialog */}
+      {editingQueue && (
+        <EditQueueDialog
+          open={!!editingQueue}
+          onOpenChange={(open) => !open && setEditingQueue(null)}
+          queue={editingQueue}
+        />
+      )}
+
       {/* Rules Manager Dialog */}
       {rulesQueue && (
         <Dialog open={!!rulesQueue} onOpenChange={(open) => !open && setRulesQueue(null)}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Regras de "{rulesQueue.name}"</DialogTitle>
-          </DialogHeader>
-          <RulesManager roundRobinId={rulesQueue.id} roundRobinName={rulesQueue.name} />
-        </DialogContent>
+            <DialogHeader>
+              <DialogTitle>Regras de "{rulesQueue.name}"</DialogTitle>
+            </DialogHeader>
+            <RulesManager roundRobinId={rulesQueue.id} roundRobinName={rulesQueue.name} />
+          </DialogContent>
         </Dialog>
       )}
 
@@ -388,7 +344,7 @@ export function DistributionTab() {
           <DialogHeader>
             <DialogTitle>Nova Fila de Distribuição</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 md:space-y-6 py-4">
+          <div className="space-y-6 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome da Fila</Label>
@@ -405,8 +361,8 @@ export function DistributionTab() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="simple">Simples (Round Robin)</SelectItem>
-                    <SelectItem value="weighted">Ponderada (Por Peso)</SelectItem>
+                    <SelectItem value="simple">Round Robin</SelectItem>
+                    <SelectItem value="weighted">Ponderada</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -424,29 +380,31 @@ export function DistributionTab() {
                     <SelectItem value="source">Fonte</SelectItem>
                     <SelectItem value="campaign">Campanha</SelectItem>
                     <SelectItem value="tag">Tag</SelectItem>
-                    <SelectItem value="property">Imóvel</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="flex gap-2 flex-1">
-                  <Input 
-                    placeholder="Valor"
-                    value={newRuleValue}
-                    onChange={(e) => setNewRuleValue(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button type="button" variant="outline" onClick={addRule}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Input
+                  placeholder="Valor..."
+                  value={newRuleValue}
+                  onChange={(e) => setNewRuleValue(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="button" variant="secondary" onClick={addRule}>
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
               {queueRules.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {queueRules.map((rule, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1">
+                  {queueRules.map((rule, idx) => (
+                    <Badge key={idx} variant="secondary" className="gap-1 pr-1">
                       {matchTypeLabels[rule.type]}: {rule.value}
-                      <button onClick={() => removeRule(i)} className="ml-1 hover:text-destructive">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-4 w-4 hover:bg-transparent"
+                        onClick={() => removeRule(idx)}
+                      >
                         <X className="h-3 w-3" />
-                      </button>
+                      </Button>
                     </Badge>
                   ))}
                 </div>
@@ -457,65 +415,54 @@ export function DistributionTab() {
             <div className="space-y-3">
               <Label>Participantes</Label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Select onValueChange={(v) => addMember(v)}>
+                <Select onValueChange={(v) => addMember(v, undefined)}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Adicionar usuário..." />
+                    <SelectValue placeholder="Adicionar corretor..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.filter(u => !queueMembers.some(m => m.userId === u.id)).map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select onValueChange={(v) => addMember(undefined, v)}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Adicionar equipe..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.filter(t => !queueMembers.some(m => m.teamId === t.id)).map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          {team.name}
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {users
+                      .filter(u => !queueMembers.some(m => m.userId === u.id))
+                      .map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            {user.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    }
                   </SelectContent>
                 </Select>
               </div>
               {queueMembers.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {queueMembers.map((member, i) => {
+                <div className="space-y-2">
+                  {queueMembers.map((member, idx) => {
                     const user = users.find(u => u.id === member.userId);
                     const team = teams.find(t => t.id === member.teamId);
                     return (
-                      <Badge key={i} variant="outline" className="gap-2 py-1.5">
-                        {team ? (
-                          <>
-                            <Users className="h-3 w-3" />
-                            {team.name}
-                          </>
-                        ) : (
-                          user?.name
-                        )}
-                        {queueStrategy === 'weighted' && (
-                          <Input
-                            type="number"
-                            className="w-12 h-5 text-xs p-1"
-                            value={member.weight}
-                            onChange={(e) => {
-                              const newMembers = [...queueMembers];
-                              newMembers[i].weight = parseInt(e.target.value) || 1;
-                              setQueueMembers(newMembers);
-                            }}
-                          />
-                        )}
-                        <button onClick={() => removeMember(i)} className="hover:text-destructive">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
+                      <div 
+                        key={idx} 
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                              {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || team?.name?.[0] || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">
+                            {user?.name || team?.name}
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => removeMember(idx)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     );
                   })}
                 </div>
@@ -526,7 +473,10 @@ export function DistributionTab() {
               <Button variant="outline" onClick={() => setQueueDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateQueue} disabled={createRoundRobin.isPending || !queueName.trim()}>
+              <Button 
+                onClick={handleCreateQueue}
+                disabled={!queueName.trim() || createRoundRobin.isPending}
+              >
                 {createRoundRobin.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Criar Fila
               </Button>
@@ -534,13 +484,6 @@ export function DistributionTab() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Edit Queue Dialog */}
-      <EditQueueDialog 
-        queue={editingQueue} 
-        open={!!editingQueue}
-        onOpenChange={(open) => !open && setEditingQueue(null)}
-      />
     </div>
   );
 }

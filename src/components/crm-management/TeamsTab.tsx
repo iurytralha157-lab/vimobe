@@ -1,22 +1,11 @@
 import { useState } from 'react';
-import { Users, Plus, Crown, GitBranch, Link as LinkIcon, Unlink, Loader2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Users, Plus, Crown, MoreHorizontal, Pencil, Trash2, Clock, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,56 +13,30 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TeamDialog } from '@/components/teams/TeamDialog';
-import { TeamLeadersStats } from '@/components/teams/TeamLeadersStats';
+import { MemberAvailabilityDialog } from '@/components/teams/MemberAvailabilityDialog';
 import { useTeams, useDeleteTeam, Team } from '@/hooks/use-teams';
-import { useTeamPipelines, useAllTeamPipelines, useAssignPipelineToTeam, useRemovePipelineFromTeam } from '@/hooks/use-team-pipelines';
-import { usePipelines } from '@/hooks/use-stages';
-import { cn } from '@/lib/utils';
+import { useTeamMembersAvailability, formatAvailabilitySummary } from '@/hooks/use-member-availability';
 
 export function TeamsTab() {
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
-  const [pipelineDialogOpen, setPipelineDialogOpen] = useState(false);
-  const [pipelineTeam, setPipelineTeam] = useState<Team | null>(null);
+  const [availabilityMember, setAvailabilityMember] = useState<{
+    id: string;
+    name: string;
+    avatar?: string | null;
+  } | null>(null);
 
   const { data: teams = [], isLoading } = useTeams();
-  const { data: teamPipelines = [] } = useTeamPipelines();
-  const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
-  const { data: allTeamPipelines = [] } = useAllTeamPipelines();
   const deleteTeam = useDeleteTeam();
-  const assignPipeline = useAssignPipelineToTeam();
-  const removePipeline = useRemovePipelineFromTeam();
 
-  const getPipelinesCount = (teamId: string) => {
-    return teamPipelines.filter(tp => tp.team_id === teamId).length;
-  };
+  // Get all team member IDs for availability query
+  const allMemberIds = teams.flatMap(t => t.members?.map(m => m.id) || []);
+  const { data: allAvailability = [] } = useTeamMembersAvailability(allMemberIds);
 
-  const getTeamPipelines = (teamId: string) => {
-    return allTeamPipelines
-      .filter((tp: any) => tp.team_id === teamId)
-      .map((tp: any) => tp.pipeline);
-  };
-
-  const getPipelineTeams = (pipelineId: string) => {
-    return allTeamPipelines
-      .filter((tp: any) => tp.pipeline_id === pipelineId)
-      .map((tp: any) => tp.team);
-  };
-
-  const isPipelineAssigned = (teamId: string, pipelineId: string) => {
-    return allTeamPipelines.some(
-      (tp: any) => tp.team_id === teamId && tp.pipeline_id === pipelineId
-    );
-  };
-
-  const handleTogglePipeline = async (teamId: string, pipelineId: string, isAssigned: boolean) => {
-    if (isAssigned) {
-      await removePipeline.mutateAsync({ teamId, pipelineId });
-    } else {
-      await assignPipeline.mutateAsync({ teamId, pipelineId });
-    }
+  const getMemberAvailability = (memberId: string) => {
+    return allAvailability.filter(a => a.team_member_id === memberId);
   };
 
   const handleEdit = (team: Team) => {
@@ -99,17 +62,20 @@ export function TeamsTab() {
     setTeamDialogOpen(true);
   };
 
-  const handleManagePipelines = (team: Team) => {
-    setPipelineTeam(team);
-    setPipelineDialogOpen(true);
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-48" />
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[...Array(2)].map((_, i) => (
+            <Skeleton key={i} className="h-64" />
           ))}
         </div>
       </div>
@@ -118,277 +84,165 @@ export function TeamsTab() {
 
   // Count stats
   const totalMembers = teams.reduce((acc, t) => acc + (t.members?.length || 0), 0);
-  const totalLeaders = teams.reduce((acc, t) => acc + (t.members?.filter(m => m.is_leader)?.length || 0), 0);
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{teams.length}</p>
-              <p className="text-xs text-muted-foreground">Equipes</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalMembers}</p>
-              <p className="text-xs text-muted-foreground">Membros totais</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <Crown className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalLeaders}</p>
-              <p className="text-xs text-muted-foreground">Líderes</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <GitBranch className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{allTeamPipelines.length}</p>
-              <p className="text-xs text-muted-foreground">Vínculos ativos</p>
-            </div>
-          </div>
-        </Card>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Equipes</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {teams.length} {teams.length === 1 ? 'equipe' : 'equipes'} · {totalMembers} {totalMembers === 1 ? 'membro' : 'membros'}
+          </p>
+        </div>
+        <Button onClick={handleNewTeam} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Nova Equipe
+        </Button>
       </div>
 
-      {/* Leader Stats */}
-      <TeamLeadersStats />
-
-      {/* Teams Section */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="font-semibold flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Equipes
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Organize seus corretores em equipes
+      {/* Teams Grid */}
+      {teams.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Crie sua primeira equipe</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+              Organize seus corretores em equipes e configure a disponibilidade de cada um
             </p>
-          </div>
-          <Button onClick={handleNewTeam} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Equipe
-          </Button>
-        </div>
-
-        {teams.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-              <h3 className="font-medium mb-2">Nenhuma equipe criada</h3>
-              <p className="text-muted-foreground mb-4 text-sm">
-                Crie equipes para organizar seus corretores
-              </p>
-              <Button onClick={handleNewTeam}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar primeira equipe
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teams.map((team) => {
-              const teamPipelinesData = getTeamPipelines(team.id);
-              const leaders = (team.members || []).filter(m => m.is_leader);
-              
-              return (
-                <Card key={team.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Users className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">{team.name}</CardTitle>
+            <Button onClick={handleNewTeam} size="lg" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Equipe
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {teams.map((team) => {
+            const leaders = (team.members || []).filter(m => m.is_leader);
+            const regularMembers = (team.members || []).filter(m => !m.is_leader);
+            
+            return (
+              <Card key={team.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                {/* Team Header */}
+                <div className="p-4 bg-gradient-to-br from-primary/5 to-transparent border-b">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{team.name}</h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="secondary" className="text-xs">
+                            {team.members?.length || 0} membros
+                          </Badge>
                           {leaders.length > 0 && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Crown className="h-3 w-3 text-amber-500" />
-                              <span className="text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1 text-amber-600">
+                              <Crown className="h-3 w-3" />
+                              <span className="text-xs">
                                 {leaders.map(l => l.user?.name?.split(' ')[0]).join(', ')}
                               </span>
                             </div>
                           )}
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(team)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleManagePipelines(team)}>
-                            <LinkIcon className="h-4 w-4 mr-2" />
-                            Gerenciar Pipelines
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(team)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Members */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {(team.members || []).slice(0, 5).map((member) => (
-                          <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                              {member.user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                        {(team.members?.length || 0) > 5 && (
-                          <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">+{(team.members?.length || 0) - 5}</span>
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {team.members?.length || 0} membros
-                      </span>
-                    </div>
-
-                    {/* Pipelines */}
-                    <div className="pt-3 border-t border-border">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-muted-foreground">Pipelines vinculadas</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 text-xs px-2"
-                          onClick={() => handleManagePipelines(team)}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(team)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(team)}
+                          className="text-destructive"
                         >
-                          <LinkIcon className="h-3 w-3 mr-1" />
-                          Gerenciar
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Members List */}
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {[...leaders, ...regularMembers].map((member) => {
+                      const availability = getMemberAvailability(member.id);
+                      const availabilitySummary = formatAvailabilitySummary(availability);
+                      
+                      return (
+                        <div 
+                          key={member.id} 
+                          className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                              <AvatarImage src={member.user?.avatar_url || undefined} />
+                              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                                {getInitials(member.user?.name || '?')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{member.user?.name}</span>
+                                {member.is_leader && (
+                                  <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                                <Calendar className="h-3 w-3" />
+                                <span>{availabilitySummary}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
+                            onClick={() => setAvailabilityMember({
+                              id: member.id,
+                              name: member.user?.name || '',
+                              avatar: member.user?.avatar_url,
+                            })}
+                          >
+                            <Clock className="h-3.5 w-3.5" />
+                            Escala
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    
+                    {(team.members?.length || 0) === 0 && (
+                      <div className="p-6 text-center text-muted-foreground">
+                        <p className="text-sm">Nenhum membro na equipe</p>
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="mt-1"
+                          onClick={() => handleEdit(team)}
+                        >
+                          Adicionar membros
                         </Button>
                       </div>
-                      {teamPipelinesData.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {teamPipelinesData.slice(0, 3).map((p: any) => (
-                            <Badge key={p?.id} variant="outline" className="text-xs">
-                              <GitBranch className="h-3 w-3 mr-1" />
-                              {p?.name}
-                            </Badge>
-                          ))}
-                          {teamPipelinesData.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{teamPipelinesData.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Unlink className="h-3 w-3" />
-                          Acesso a todas as pipelines
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Divider */}
-      <Separator className="my-6" />
-
-      {/* Pipeline Access Overview */}
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-            <GitBranch className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div>
-            <h3 className="font-semibold">Visão Geral de Acesso</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Pipelines sem vínculo ficam acessíveis a todos. Pipelines vinculadas são restritas às equipes associadas.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {pipelines.map((pipeline) => {
-            const pipelineTeams = getPipelineTeams(pipeline.id);
-            const hasTeams = pipelineTeams.length > 0;
-
-            return (
-              <Card 
-                key={pipeline.id} 
-                className={cn(
-                  "p-4",
-                  !hasTeams && "border-dashed"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <GitBranch className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="font-medium truncate">{pipeline.name}</span>
-                    {pipeline.is_default && (
-                      <Badge variant="secondary" className="text-xs shrink-0">Padrão</Badge>
                     )}
                   </div>
-                  {hasTeams && (
-                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
-                      Restrita
-                    </Badge>
-                  )}
-                </div>
-                
-                <div className="mt-3">
-                  {hasTeams ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {pipelineTeams.map((team: any) => (
-                        <Badge key={team?.id} variant="outline" className="text-xs gap-1">
-                          <Users className="h-3 w-3" />
-                          {team?.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Unlink className="h-3 w-3" />
-                      Acessível a todos
-                    </p>
-                  )}
-                </div>
+                </CardContent>
               </Card>
             );
           })}
         </div>
-      </div>
+      )}
 
       {/* Team Dialog */}
       <TeamDialog
@@ -396,6 +250,17 @@ export function TeamsTab() {
         onOpenChange={setTeamDialogOpen}
         team={selectedTeam}
       />
+
+      {/* Member Availability Dialog */}
+      {availabilityMember && (
+        <MemberAvailabilityDialog
+          open={!!availabilityMember}
+          onOpenChange={(open) => !open && setAvailabilityMember(null)}
+          teamMemberId={availabilityMember.id}
+          memberName={availabilityMember.name}
+          memberAvatar={availabilityMember.avatar}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -419,67 +284,6 @@ export function TeamsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Pipeline Assignment Dialog */}
-      <Dialog open={pipelineDialogOpen} onOpenChange={setPipelineDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              {pipelineTeam?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Selecione as pipelines que esta equipe terá acesso exclusivo
-            </DialogDescription>
-          </DialogHeader>
-
-          <ScrollArea className="max-h-[400px] -mx-6 px-6">
-            <div className="space-y-2">
-              {pipelines.map((pipeline) => {
-                const isAssigned = pipelineTeam ? isPipelineAssigned(pipelineTeam.id, pipeline.id) : false;
-                const isProcessing = assignPipeline.isPending || removePipeline.isPending;
-
-                return (
-                  <label
-                    key={pipeline.id}
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all hover:bg-accent",
-                      isAssigned && "border-primary bg-primary/5"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={isAssigned}
-                        disabled={isProcessing}
-                        onCheckedChange={() => {
-                          if (pipelineTeam) {
-                            handleTogglePipeline(pipelineTeam.id, pipeline.id, isAssigned);
-                          }
-                        }}
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <GitBranch className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{pipeline.name}</span>
-                        </div>
-                        {pipeline.is_default && (
-                          <span className="text-xs text-muted-foreground">Pipeline padrão</span>
-                        )}
-                      </div>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          </ScrollArea>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPipelineDialogOpen(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
