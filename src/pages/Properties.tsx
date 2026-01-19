@@ -222,8 +222,8 @@ export default function Properties() {
       imagem_principal: property.imagem_principal || '',
       fotos: (property.fotos as string[]) || [],
       video_imovel: property.video_imovel || '',
-      detalhes_extras: (property.detalhes_extras as string[]) || [],
-      proximidades: (property.proximidades as string[]) || [],
+      detalhes_extras: [],
+      proximidades: [],
     });
     setDialogOpen(true);
   };

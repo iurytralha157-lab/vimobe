@@ -70,7 +70,7 @@ export default function Settings() {
   
   // Calcular métricas Meta
   const activeMetaPages = metaIntegrations.filter(i => i.is_connected);
-  const totalMetaLeadsReceived = metaIntegrations.reduce((acc, i) => acc + (i.leads_received || 0), 0);
+  const totalMetaLeadsReceived = 0; // leads_received column doesn't exist in DB
   const isMetaConnected = metaIntegrations.length > 0;
   const hasWhatsAppModule = hasModule('whatsapp');
   const [userDialogOpen, setUserDialogOpen] = useState(false);

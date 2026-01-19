@@ -155,6 +155,7 @@ export const ptBR = {
         statusContacted: 'Contatado',
         statusQualified: 'Qualificado',
         statusNegotiating: 'Negociando',
+        editPage: 'Editar Página',
       },
       wordpress: {
         title: 'Integração WordPress',

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Volume2, VolumeX, Loader2, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { useRecordingUrl, formatCallDuration } from "@/hooks/use-telephony";
+import { formatCallDuration } from "@/hooks/use-telephony";
 import { toast } from "sonner";
 
 interface RecordingPlayerProps {
@@ -17,22 +17,13 @@ export function RecordingPlayer({ callId, onClose }: RecordingPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-
-  const { mutate: getRecordingUrl, isPending } = useRecordingUrl();
+  const [isPending, setIsPending] = useState(true);
 
   useEffect(() => {
-    getRecordingUrl(callId, {
-      onSuccess: (data) => {
-        setAudioUrl(data.url);
-        if (data.warning) {
-          toast.info(data.warning);
-        }
-      },
-      onError: (error) => {
-        toast.error(error.message || "Erro ao carregar gravação");
-      },
-    });
-  }, [callId, getRecordingUrl]);
+    // Recording URL functionality not available - telephony_calls table doesn't exist
+    setIsPending(false);
+    toast.error("Funcionalidade de gravação não disponível");
+  }, [callId]);
 
   useEffect(() => {
     const audio = audioRef.current;

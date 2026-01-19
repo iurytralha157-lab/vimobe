@@ -155,6 +155,7 @@ export const en = {
         statusContacted: 'Contacted',
         statusQualified: 'Qualified',
         statusNegotiating: 'Negotiating',
+        editPage: 'Edit Page',
       },
       wordpress: {
         title: 'WordPress Integration',

@@ -33,19 +33,9 @@ export function useWebhooks() {
   return useQuery({
     queryKey: ['webhooks'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('webhooks_integrations')
-        .select(`
-          *,
-          pipeline:pipelines(id, name),
-          team:teams(id, name),
-          stage:stages(id, name, color),
-          property:properties(id, code, title)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as WebhookIntegration[];
+      // webhooks_integrations table doesn't exist yet
+      console.warn('webhooks_integrations table not available');
+      return [] as WebhookIntegration[];
     },
   });
 }
@@ -66,28 +56,7 @@ export function useCreateWebhook() {
       webhook_url?: string;
       trigger_events?: string[];
     }) => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('Não autenticado');
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('id', userData.user.id)
-        .single();
-
-      if (!profile?.organization_id) throw new Error('Organização não encontrada');
-
-      const { data, error } = await supabase
-        .from('webhooks_integrations')
-        .insert({
-          organization_id: profile.organization_id,
-          ...webhook,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      throw new Error('Tabela webhooks_integrations não existe');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] });
@@ -119,15 +88,7 @@ export function useUpdateWebhook() {
       webhook_url?: string;
       trigger_events?: string[];
     }) => {
-      const { data, error } = await supabase
-        .from('webhooks_integrations')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      throw new Error('Tabela webhooks_integrations não existe');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] });
@@ -144,12 +105,7 @@ export function useDeleteWebhook() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('webhooks_integrations')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      throw new Error('Tabela webhooks_integrations não existe');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] });
@@ -166,12 +122,7 @@ export function useToggleWebhook() {
 
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from('webhooks_integrations')
-        .update({ is_active })
-        .eq('id', id);
-
-      if (error) throw error;
+      throw new Error('Tabela webhooks_integrations não existe');
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] });
@@ -188,18 +139,7 @@ export function useRegenerateToken() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // Generate new token (32 bytes hex)
-      const array = new Uint8Array(32);
-      crypto.getRandomValues(array);
-      const newToken = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-
-      const { error } = await supabase
-        .from('webhooks_integrations')
-        .update({ api_token: newToken })
-        .eq('id', id);
-
-      if (error) throw error;
-      return newToken;
+      throw new Error('Tabela webhooks_integrations não existe');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] });
