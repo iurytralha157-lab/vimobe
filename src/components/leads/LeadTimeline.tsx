@@ -1,3 +1,4 @@
+import { useLeadTimeline, LeadTimelineEvent, formatResponseTime } from '@/hooks/use-lead-timeline';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -7,43 +8,20 @@ import {
   UserCheck, 
   MessageCircle, 
   Phone, 
+  Zap, 
   Tag,
   FileText,
+  Bot,
   Clock,
-  AlertTriangle,
-  Bot
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-interface TimelineEvent {
-  id: string;
-  event_type: string;
-  event_at: string;
-  metadata?: Record<string, unknown> | null;
-  is_automation?: boolean;
-  channel?: string | null;
-  actor?: {
-    name: string;
-    avatar_url?: string | null;
-  } | null;
-}
-
 interface LeadTimelineProps {
   leadId: string;
-  events?: TimelineEvent[];
-  isLoading?: boolean;
 }
-
-// Format response time
-const formatResponseTime = (seconds: number): string => {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}min`;
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
-};
 
 const eventConfig: Record<string, {
   icon: React.ComponentType<{ className?: string }>;
@@ -64,7 +42,7 @@ const eventConfig: Record<string, {
     bgColor: 'bg-blue-100 dark:bg-blue-900/50'
   },
   first_response: {
-    icon: Clock,
+    icon: Zap,
     label: 'Primeira resposta',
     color: 'text-yellow-600 dark:text-yellow-400',
     bgColor: 'bg-yellow-100 dark:bg-yellow-900/50'
@@ -125,37 +103,40 @@ const eventConfig: Record<string, {
   }
 };
 
-function getEventDetails(event: TimelineEvent): string {
+function getEventDetails(event: LeadTimelineEvent): string {
   const metadata = event.metadata || {};
   
   switch (event.event_type) {
     case 'lead_created':
-      return (metadata as Record<string, string>).source ? `Origem: ${(metadata as Record<string, string>).source}` : '';
+      return metadata.source ? `Origem: ${metadata.source}` : '';
+    
+    case 'lead_assigned':
+      return '';
     
     case 'first_response':
-      const responseTime = (metadata as Record<string, number>).response_seconds;
+      const responseTime = metadata.response_seconds;
       if (responseTime !== undefined) {
         return `Tempo: ${formatResponseTime(responseTime)}`;
       }
       return '';
     
     case 'stage_changed':
-      const from = (metadata as Record<string, string>).old_stage_name;
-      const to = (metadata as Record<string, string>).new_stage_name;
+      const from = metadata.old_stage_name;
+      const to = metadata.new_stage_name;
       if (from && to) {
         return `${from} → ${to}`;
       }
       return '';
     
     case 'sla_warning':
-      const warnSeconds = (metadata as Record<string, number>).elapsed_seconds;
+      const warnSeconds = metadata.elapsed_seconds;
       if (warnSeconds !== undefined) {
         return `${Math.floor(warnSeconds / 60)} minutos sem resposta`;
       }
       return 'Lead em alerta de SLA';
     
     case 'sla_overdue':
-      const overdueSeconds = (metadata as Record<string, number>).elapsed_seconds;
+      const overdueSeconds = metadata.elapsed_seconds;
       if (overdueSeconds !== undefined) {
         return `${Math.floor(overdueSeconds / 60)} minutos sem resposta`;
       }
@@ -166,7 +147,9 @@ function getEventDetails(event: TimelineEvent): string {
   }
 }
 
-export function LeadTimeline({ leadId, events = [], isLoading = false }: LeadTimelineProps) {
+export function LeadTimeline({ leadId }: LeadTimelineProps) {
+  const { data: events = [], isLoading } = useLeadTimeline(leadId);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -192,9 +175,9 @@ export function LeadTimeline({ leadId, events = [], isLoading = false }: LeadTim
       {firstResponseEvent && (
         <div className="mb-4 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <Zap className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-              Primeira resposta em {formatResponseTime((firstResponseEvent.metadata as Record<string, number>)?.response_seconds || 0)}
+              Primeira resposta em {formatResponseTime((firstResponseEvent.metadata as any)?.response_seconds || 0)}
             </span>
             {firstResponseEvent.is_automation && (
               <Badge variant="outline" className="text-xs gap-1">
@@ -215,7 +198,7 @@ export function LeadTimeline({ leadId, events = [], isLoading = false }: LeadTim
       <div className="absolute left-3.5 top-2 bottom-2 w-px bg-border" />
       
       <div className="space-y-3">
-        {events.map((event) => {
+        {events.map((event, index) => {
           const config = eventConfig[event.event_type] || {
             icon: Clock,
             label: event.event_type,

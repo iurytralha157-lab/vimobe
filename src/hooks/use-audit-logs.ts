@@ -64,41 +64,6 @@ export function useAuditLogs(filters?: AuditLogFilters, page = 1, limit = 20) {
   });
 }
 
-export function useAuditLogActions() {
-  return useQuery({
-    queryKey: ["audit-log-actions"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("audit_logs")
-        .select("action")
-        .limit(100);
-
-      if (error) throw error;
-
-      const uniqueActions = [...new Set(data.map((d) => d.action))];
-      return uniqueActions.sort();
-    },
-  });
-}
-
-export function useAuditLogEntityTypes() {
-  return useQuery({
-    queryKey: ["audit-log-entity-types"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("audit_logs")
-        .select("entity_type")
-        .not("entity_type", "is", null)
-        .limit(100);
-
-      if (error) throw error;
-
-      const uniqueTypes = [...new Set(data.map((d) => d.entity_type).filter(Boolean))];
-      return uniqueTypes.sort() as string[];
-    },
-  });
-}
-
 export function useCreateAuditLog() {
   const queryClient = useQueryClient();
 

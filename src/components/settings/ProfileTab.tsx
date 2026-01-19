@@ -56,16 +56,16 @@ export function ProfileTab() {
     if (profile) {
       setFormData({
         name: profile.name || '',
-        phone: (profile as any).phone || '',
-        whatsapp: (profile as any).whatsapp || '',
-        cpf: (profile as any).cpf || '',
-        cep: (profile as any).cep || '',
-        endereco: (profile as any).endereco || '',
-        numero: (profile as any).numero || '',
-        complemento: (profile as any).complemento || '',
-        bairro: (profile as any).bairro || '',
-        cidade: (profile as any).cidade || '',
-        uf: (profile as any).uf || '',
+        phone: profile.phone || '',
+        whatsapp: profile.whatsapp || '',
+        cpf: profile.cpf || '',
+        cep: profile.cep || '',
+        endereco: profile.endereco || '',
+        numero: profile.numero || '',
+        complemento: profile.complemento || '',
+        bairro: profile.bairro || '',
+        cidade: profile.cidade || '',
+        uf: profile.uf || '',
       });
     }
   }, [profile]);
@@ -97,10 +97,10 @@ export function ProfileTab() {
       if (updateError) throw updateError;
 
       await refreshProfile();
-      toast.success("Foto atualizada com sucesso");
+      toast.success(t.settings.profile.saveSuccess);
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      toast.error("Erro ao atualizar foto");
+      toast.error(t.settings.profile.saveError);
     } finally {
       setUploadingAvatar(false);
     }
@@ -115,16 +115,26 @@ export function ProfileTab() {
         .from('users')
         .update({
           name: formData.name.trim() || profile.name,
+          phone: formData.phone || null,
+          whatsapp: formData.whatsapp || null,
+          cpf: formData.cpf || null,
+          cep: formData.cep || null,
+          endereco: formData.endereco || null,
+          numero: formData.numero || null,
+          complemento: formData.complemento || null,
+          bairro: formData.bairro || null,
+          cidade: formData.cidade || null,
+          uf: formData.uf || null,
         })
         .eq('id', profile.id);
 
       if (error) throw error;
 
       await refreshProfile();
-      toast.success("Perfil atualizado com sucesso");
+      toast.success(t.settings.profile.saveSuccess);
     } catch (error) {
       console.error('Error saving profile:', error);
-      toast.error("Erro ao salvar perfil");
+      toast.error(t.settings.profile.saveError);
     } finally {
       setSaving(false);
     }
@@ -161,15 +171,15 @@ export function ProfileTab() {
 
   const handleLanguageChange = async (lang: string) => {
     await setLanguage(lang as Language);
-    toast.success("Idioma atualizado");
+    toast.success(t.settings.profile.saveSuccess);
   };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Perfil</CardTitle>
-          <CardDescription>Gerencie suas informações pessoais</CardDescription>
+          <CardTitle>{t.settings.profile.title}</CardTitle>
+          <CardDescription>{t.settings.profile.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Avatar Upload */}
@@ -209,7 +219,7 @@ export function ProfileTab() {
               <h3 className="text-lg font-medium">{profile?.name}</h3>
               <p className="text-sm text-muted-foreground">{profile?.email}</p>
               <Badge variant="secondary" className="mt-2">
-                {profile?.role === 'admin' ? 'Administrador' : 'Usuário'}
+                {profile?.role === 'admin' ? t.settings.users.admin : t.settings.users.user}
               </Badge>
             </div>
           </div>
@@ -218,7 +228,7 @@ export function ProfileTab() {
           <div className="space-y-2 pt-4 border-t">
             <Label className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              Idioma
+              {t.settings.profile.language}
             </Label>
             <Select value={language} onValueChange={handleLanguageChange}>
               <SelectTrigger className="w-[200px]">
@@ -230,28 +240,28 @@ export function ProfileTab() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Selecione o idioma de preferência
+              {t.settings.profile.languageDescription}
             </p>
           </div>
 
           {/* Personal Info */}
           <div className="space-y-4 pt-4 border-t">
-            <h4 className="font-medium">Informações Pessoais</h4>
+            <h4 className="font-medium">{t.settings.profile.personalInfo}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nome</Label>
+                <Label>{t.common.name}</Label>
                 <Input 
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nome"
+                  placeholder={t.common.name}
                 />
               </div>
               <div className="space-y-2">
-                <Label>E-mail</Label>
+                <Label>{t.common.email}</Label>
                 <Input value={profile?.email || ''} disabled />
               </div>
               <div className="space-y-2">
-                <Label>CPF</Label>
+                <Label>{t.settings.profile.cpf}</Label>
                 <Input 
                   placeholder="000.000.000-00"
                   value={formData.cpf}
@@ -265,17 +275,17 @@ export function ProfileTab() {
 
           {/* Contact Info */}
           <div className="space-y-4">
-            <h4 className="font-medium">Contato</h4>
+            <h4 className="font-medium">{t.settings.profile.contactInfo}</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Telefone</Label>
+                <Label>{t.common.phone}</Label>
                 <PhoneInput 
                   value={formData.phone}
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>WhatsApp</Label>
+                <Label>{t.settings.profile.whatsapp}</Label>
                 <PhoneInput 
                   value={formData.whatsapp}
                   onChange={(value) => setFormData(prev => ({ ...prev, whatsapp: value }))}
@@ -288,10 +298,10 @@ export function ProfileTab() {
 
           {/* Address */}
           <div className="space-y-4">
-            <h4 className="font-medium">Endereço</h4>
+            <h4 className="font-medium">{t.settings.profile.addressInfo}</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>CEP</Label>
+                <Label>{t.settings.profile.cep}</Label>
                 <Input 
                   placeholder="00000-000"
                   value={formData.cep}
@@ -299,49 +309,49 @@ export function ProfileTab() {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>Rua</Label>
+                <Label>{t.settings.profile.street}</Label>
                 <Input 
-                  placeholder="Rua"
+                  placeholder={t.settings.profile.street}
                   value={formData.endereco}
                   onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Número</Label>
+                <Label>{t.settings.profile.number}</Label>
                 <Input 
-                  placeholder="Número"
+                  placeholder={t.settings.profile.number}
                   value={formData.numero}
                   onChange={(e) => setFormData(prev => ({ ...prev, numero: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Complemento</Label>
+                <Label>{t.settings.profile.complement}</Label>
                 <Input 
-                  placeholder="Complemento"
+                  placeholder={t.settings.profile.complement}
                   value={formData.complemento}
                   onChange={(e) => setFormData(prev => ({ ...prev, complemento: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Bairro</Label>
+                <Label>{t.settings.profile.neighborhood}</Label>
                 <Input 
-                  placeholder="Bairro"
+                  placeholder={t.settings.profile.neighborhood}
                   value={formData.bairro}
                   onChange={(e) => setFormData(prev => ({ ...prev, bairro: e.target.value }))}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>Cidade</Label>
+                <Label>{t.settings.profile.city}</Label>
                 <Input 
-                  placeholder="Cidade"
+                  placeholder={t.settings.profile.city}
                   value={formData.cidade}
                   onChange={(e) => setFormData(prev => ({ ...prev, cidade: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>UF</Label>
+                <Label>{t.settings.profile.state}</Label>
                 <Input 
-                  placeholder="UF"
+                  placeholder={t.settings.profile.state}
                   maxLength={2}
                   value={formData.uf}
                   onChange={(e) => setFormData(prev => ({ ...prev, uf: e.target.value.toUpperCase() }))}
@@ -354,7 +364,7 @@ export function ProfileTab() {
           <div className="flex justify-end pt-4 border-t">
             <Button onClick={handleSaveProfile} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
+              {t.common.save}
             </Button>
           </div>
         </CardContent>

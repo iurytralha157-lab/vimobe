@@ -647,12 +647,11 @@ export function useArchiveConversation() {
 
   return useMutation({
     mutationFn: async ({ conversationId, archive }: { conversationId: string; archive: boolean }) => {
-      // Note: archived_at column may not exist - check schema
       const { error } = await supabase
         .from("whatsapp_conversations")
         .update({ 
-          unread_count: archive ? 0 : 0 // Placeholder update
-        } as any)
+          archived_at: archive ? new Date().toISOString() : null 
+        })
         .eq("id", conversationId);
 
       if (error) throw error;
@@ -674,10 +673,10 @@ export function useDeleteConversation() {
 
   return useMutation({
     mutationFn: async (conversationId: string) => {
-      // Hard delete since deleted_at may not exist
+      // Soft delete
       const { error } = await supabase
         .from("whatsapp_conversations")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", conversationId);
 
       if (error) throw error;

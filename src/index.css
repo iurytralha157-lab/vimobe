@@ -1,162 +1,146 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Vimob CRM - Modern Design System with Orange Accent */
-
 @layer base {
   :root {
+    /* Vetter CRM - Clean Professional Theme */
     --background: 0 0% 100%;
-    --foreground: 20 14% 10%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 20 14% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Orange Modern */
-    --primary: 24 95% 53%;
+    /* Primary - Teal/Cyan */
+    --primary: 21 77% 51%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 20% 96%;
-    --secondary-foreground: 20 14% 20%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 30 15% 96%;
-    --muted-foreground: 20 10% 46%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 24 80% 95%;
-    --accent-foreground: 24 95% 40%;
+    --accent: 30 85% 96%;
+    --accent-foreground: 21 77% 45%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 15% 90%;
-    --input: 30 15% 90%;
-    --ring: 24 95% 53%;
+    --success: 21 77% 51%;
+    --success-foreground: 0 0% 100%;
 
-    --radius: 0.75rem;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 21 77% 51%;
+
+    --radius: 0.875rem;
 
     /* Sidebar */
-    --sidebar-background: 30 20% 98%;
-    --sidebar-foreground: 20 14% 30%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-background: 220 14% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 187 85% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 80% 96%;
-    --sidebar-accent-foreground: 24 95% 40%;
-    --sidebar-border: 30 15% 92%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-accent: 30 85% 96%;
+    --sidebar-accent-foreground: 21 77% 45%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 187 85% 40%;
 
-    /* Semantic Colors */
-    --success: 152 69% 40%;
-    --success-foreground: 0 0% 100%;
-    --warning: 45 93% 47%;
-    --warning-foreground: 45 93% 15%;
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
-
-    /* Chart Colors - Orange based */
-    --chart-1: 24 95% 53%;
-    --chart-2: 16 85% 55%;
-    --chart-3: 35 90% 50%;
-    --chart-4: 10 80% 55%;
-    --chart-5: 45 85% 50%;
-
-    /* Kanban Colors */
+    /* Kanban colors */
     --kanban-new: 217 91% 60%;
-    --kanban-contacted: 280 87% 65%;
-    --kanban-qualified: 45 93% 47%;
-    --kanban-proposal: 24 95% 53%;
-    --kanban-negotiation: 16 85% 55%;
-    --kanban-won: 152 69% 40%;
-    --kanban-lost: 0 72% 51%;
+    --kanban-contacted: 187 85% 40%;
+    --kanban-active: 21 77% 51%;
+    --kanban-meeting: 262 83% 58%;
+    --kanban-noshow: 38 92% 50%;
+    --kanban-negotiation: 330 81% 60%;
+    --kanban-closed: 21 77% 51%;
+    --kanban-lost: 0 84% 60%;
 
-    /* Chat Bubble Colors */
-    --chat-sent: 24 95% 53%;
-    --chat-sent-foreground: 0 0% 100%;
-    --chat-received: 30 15% 96%;
-    --chat-received-foreground: 20 14% 10%;
+    /* Chart colors */
+    --chart-1: 187 85% 40%;
+    --chart-2: 262 83% 58%;
+    --chart-3: 21 77% 51%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 330 81% 60%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(16 85% 55%) 100%);
-    --gradient-subtle: linear-gradient(135deg, hsl(24 80% 97%) 0%, hsl(30 20% 98%) 100%);
+    /* Chat bubble - other person (inverted) */
+    --chat-bubble: 222 47% 11%;
+    --chat-bubble-foreground: 0 0% 100%;
+
+    --shadow-sm: 0px 1px 1.5px 0px hsla(0, 0%, 0%, 0.17);
+    --shadow: 0px 1px 3px 0px hsla(0, 0%, 0%, 0.17);
+    --shadow-md: 0px 1px 4.5px 0px hsla(0, 0%, 0%, 0.17);
+    --shadow-lg: 0px 1px 7.5px 0px hsla(0, 0%, 0%, 0.17);
+    --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 
   .dark {
-    --background: 20 14% 6%;
-    --foreground: 0 0% 95%;
+    /* Black Premium Background */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
 
-    --card: 20 14% 8%;
-    --card-foreground: 0 0% 95%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 20 14% 8%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
 
-    /* Orange Modern Dark */
-    --primary: 24 95% 58%;
+    /* Orange Primary */
+    --primary: 21 77% 51%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 20 15% 15%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 20 15% 15%;
-    --muted-foreground: 20 10% 60%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 63%;
 
-    --accent: 24 50% 18%;
-    --accent-foreground: 24 95% 70%;
+    /* Orange Accent */
+    --accent: 21 77% 12%;
+    --accent-foreground: 21 77% 65%;
 
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 20 15% 18%;
-    --input: 20 15% 18%;
-    --ring: 24 95% 58%;
-
-    /* Sidebar Dark */
-    --sidebar-background: 20 14% 7%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 24 95% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 50% 15%;
-    --sidebar-accent-foreground: 24 95% 70%;
-    --sidebar-border: 20 15% 15%;
-    --sidebar-ring: 24 95% 58%;
-
-    /* Semantic Colors Dark */
-    --success: 152 69% 45%;
+    --success: 21 77% 51%;
     --success-foreground: 0 0% 100%;
-    --warning: 45 93% 50%;
-    --warning-foreground: 45 93% 10%;
-    --info: 199 89% 55%;
-    --info-foreground: 0 0% 100%;
 
-    /* Chart Colors Dark */
-    --chart-1: 24 95% 58%;
-    --chart-2: 16 85% 60%;
-    --chart-3: 35 90% 55%;
-    --chart-4: 10 80% 60%;
-    --chart-5: 45 85% 55%;
+    --warning: 38 85% 50%;
+    --warning-foreground: 0 0% 100%;
 
-    /* Kanban Colors Dark */
-    --kanban-new: 217 91% 65%;
-    --kanban-contacted: 280 87% 70%;
-    --kanban-qualified: 45 93% 52%;
-    --kanban-proposal: 24 95% 58%;
-    --kanban-negotiation: 16 85% 60%;
-    --kanban-won: 152 69% 45%;
-    --kanban-lost: 0 62% 50%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 21 77% 51%;
 
-    /* Chat Bubble Colors Dark */
-    --chat-sent: 24 95% 58%;
-    --chat-sent-foreground: 0 0% 100%;
-    --chat-received: 20 15% 18%;
-    --chat-received-foreground: 0 0% 95%;
+    /* Sidebar Black Premium */
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 21 77% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 21 77% 12%;
+    --sidebar-accent-foreground: 21 77% 65%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 21 77% 51%;
+    --radius: 0.875rem;
 
-    /* Gradients Dark */
-    --gradient-primary: linear-gradient(135deg, hsl(24 95% 58%) 0%, hsl(16 85% 60%) 100%);
-    --gradient-subtle: linear-gradient(135deg, hsl(24 50% 12%) 0%, hsl(20 15% 10%) 100%);
+    /* Chat bubble - other person (inverted for dark mode) */
+    --chat-bubble: 0 0% 98%;
+    --chat-bubble-foreground: 0 0% 7%;
+
+    --shadow-sm: 0px 1px 1.5px 0px hsla(0, 0%, 0%, 0.25);
+    --shadow: 0px 1px 3px 0px hsla(0, 0%, 0%, 0.25);
+    --shadow-md: 0px 1px 4.5px 0px hsla(0, 0%, 0%, 0.25);
+    --shadow-lg: 0px 1px 7.5px 0px hsla(0, 0%, 0%, 0.25);
+    --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 }
 
@@ -165,203 +149,94 @@
     @apply border-border;
   }
 
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
-    font-feature-settings: "cv11", "ss01", "ss03";
-  }
-
-  /* Modern Scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.2);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.35);
-  }
-
-  /* Selection */
-  ::selection {
-    background: hsl(var(--primary) / 0.2);
-    color: hsl(var(--primary));
+    @apply bg-background text-foreground;
   }
 }
 
 @layer components {
-  /* Glass Effect */
+  /* Kanban column headers */
+  .kanban-column-new { @apply border-t-4; border-top-color: hsl(var(--kanban-new)); }
+  .kanban-column-contacted { @apply border-t-4; border-top-color: hsl(var(--kanban-contacted)); }
+  .kanban-column-active { @apply border-t-4; border-top-color: hsl(var(--kanban-active)); }
+  .kanban-column-meeting { @apply border-t-4; border-top-color: hsl(var(--kanban-meeting)); }
+  .kanban-column-noshow { @apply border-t-4; border-top-color: hsl(var(--kanban-noshow)); }
+  .kanban-column-negotiation { @apply border-t-4; border-top-color: hsl(var(--kanban-negotiation)); }
+  .kanban-column-closed { @apply border-t-4; border-top-color: hsl(var(--kanban-closed)); }
+  .kanban-column-lost { @apply border-t-4; border-top-color: hsl(var(--kanban-lost)); }
+
+  /* Glass effect */
   .glass {
-    @apply bg-background/70 backdrop-blur-xl border border-border/50;
+    @apply bg-white/80 dark:bg-card/80 backdrop-blur-xl;
   }
 
-  /* Card Hover */
+  /* Smooth scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70;
+  }
+
+  /* Card hover effect */
   .card-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1;
+    @apply transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5;
   }
 
-  /* Gradient Background */
-  .gradient-bg {
-    background: var(--gradient-subtle);
-  }
-
-  /* Primary Gradient */
-  .gradient-primary {
-    background: var(--gradient-primary);
-  }
-
-  /* Subtle border glow */
-  .glow-border {
-    @apply relative;
-  }
-  
-  .glow-border::before {
-    content: '';
-    @apply absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-300;
-    background: var(--gradient-primary);
-    z-index: -1;
-    margin: -1px;
-  }
-  
-  .glow-border:hover::before {
-    @apply opacity-20;
-  }
-
-  /* Stats card */
+  /* Stat card */
   .stat-card {
-    @apply relative overflow-hidden rounded-xl border bg-card p-6 transition-all duration-300;
+    @apply p-6 rounded-xl bg-card border border-border card-hover;
   }
 
-  .stat-card::before {
-    content: '';
-    @apply absolute top-0 right-0 w-32 h-32 rounded-full opacity-10;
-    background: hsl(var(--primary));
-    filter: blur(40px);
-    transform: translate(30%, -30%);
-  }
-
-  /* Navigation link active */
-  .nav-link-active {
-    @apply relative bg-accent text-accent-foreground font-medium;
-  }
-
-  .nav-link-active::before {
-    content: '';
-    @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full;
-    background: hsl(var(--primary));
-  }
-
-  /* Sidebar nav active */
-  .nav-active {
-    @apply bg-primary/10 text-primary border-l-2 border-primary;
-  }
-
-  /* Input focus */
-  .input-focus {
-    @apply transition-all duration-200;
-  }
-
-  .input-focus:focus-within {
-    @apply ring-2 ring-primary/20 border-primary;
-  }
-
-  /* Badge variants */
-  .badge-success {
-    @apply bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400;
-  }
-
-  .badge-warning {
-    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
-  }
-
-  .badge-info {
-    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
-  }
-
-  /* Table row hover */
-  .table-row-hover {
-    @apply transition-colors duration-150 hover:bg-muted/50;
-  }
-
-  /* Kanban Column Styles */
-  .kanban-column-new {
-    border-top: 3px solid hsl(var(--kanban-new));
-  }
-
-  .kanban-column-contacted {
-    border-top: 3px solid hsl(var(--kanban-contacted));
-  }
-
-  .kanban-column-qualified {
-    border-top: 3px solid hsl(var(--kanban-qualified));
-  }
-
-  .kanban-column-proposal {
-    border-top: 3px solid hsl(var(--kanban-proposal));
-  }
-
-  .kanban-column-negotiation {
-    border-top: 3px solid hsl(var(--kanban-negotiation));
-  }
-
-  .kanban-column-won {
-    border-top: 3px solid hsl(var(--kanban-won));
-  }
-
-  .kanban-column-lost {
-    border-top: 3px solid hsl(var(--kanban-lost));
-  }
-
-  /* Lead Card */
+  /* Lead card in kanban */
   .lead-card {
-    @apply bg-card border border-border rounded-lg p-3 cursor-grab transition-all duration-200;
+    @apply p-3 rounded-lg bg-card border border-border shadow-sm 
+           hover:shadow-md hover:border-primary/20 transition-all duration-200 cursor-pointer;
   }
 
-  .lead-card:hover {
-    @apply shadow-md border-primary/30;
-  }
-
-  .lead-card.dragging {
-    @apply opacity-50 cursor-grabbing shadow-xl rotate-2;
-  }
-
-  /* Chat Bubbles */
-  .chat-bubble-sent {
-    @apply bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2 max-w-[80%] ml-auto;
-  }
-
-  .chat-bubble-received {
-    @apply bg-muted text-foreground rounded-2xl rounded-bl-sm px-4 py-2 max-w-[80%];
-  }
-
-  /* Drop target indicator */
-  .drop-target {
-    @apply border-2 border-dashed border-primary/50 bg-primary/5;
+  /* Active nav item */
+  .nav-active {
+    @apply bg-accent text-accent-foreground font-medium;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  /* Animations */
+  /* Animation utilities */
   .animate-in {
-    animation: fadeIn 0.25s ease-out;
+    animation: animateIn 0.2s ease-out;
   }
 
-  @keyframes fadeIn {
+  @keyframes animateIn {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(4px);
     }
     to {
       opacity: 1;
@@ -369,23 +244,8 @@
     }
   }
 
-  .animate-slide-in {
-    animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(-12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
   .animate-slide-in-right {
-    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideInRight 0.3s ease-out;
   }
 
   @keyframes slideInRight {
@@ -399,96 +259,12 @@
     }
   }
 
-  .animate-scale-in {
-    animation: scaleIn 0.2s ease-out;
-  }
-
-  @keyframes scaleIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  .animate-drawer-up {
-    animation: drawerSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes drawerSlideUp {
-    from {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Shimmer loading effect */
-  .animate-shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted-foreground) / 0.1) 50%,
-      hsl(var(--muted)) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
-  /* Hover effects */
-  .hover-lift {
-    @apply transition-transform duration-200 hover:-translate-y-0.5;
-  }
-
-  .hover-scale {
-    @apply transition-transform duration-200 hover:scale-105;
-  }
-
-  /* Gradient text */
-  .text-gradient {
-    @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-primary);
-  }
-
-  /* Focus visible */
-  .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-  }
-
-  /* Drag states */
+  /* Drag and drop states */
   .dragging {
-    @apply opacity-50 cursor-grabbing;
+    @apply opacity-50 rotate-2 scale-105;
   }
 
-  .drag-over {
-    @apply ring-2 ring-primary ring-offset-2;
-  }
-
-  /* SLA indicator colors */
-  .sla-ok {
-    @apply text-success;
-  }
-
-  .sla-warning {
-    @apply text-warning;
-  }
-
-  .sla-critical {
-    @apply text-destructive animate-pulse;
+  .drop-target {
+    @apply bg-accent/50 border-2 border-dashed border-primary;
   }
 }

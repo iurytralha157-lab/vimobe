@@ -7,12 +7,15 @@ export function useUpdatePipelineRoundRobin() {
   
   return useMutation({
     mutationFn: async ({ pipelineId, roundRobinId }: { pipelineId: string; roundRobinId: string | null }) => {
-      // Note: The default_round_robin_id column may not exist in the schema
-      // This is a placeholder implementation
-      console.log('Updating pipeline round robin:', { pipelineId, roundRobinId });
+      const { data, error } = await supabase
+        .from('pipelines')
+        .update({ default_round_robin_id: roundRobinId })
+        .eq('id', pipelineId)
+        .select()
+        .single();
       
-      // For now, just return success - the actual column needs to be added via migration
-      return { id: pipelineId, default_round_robin_id: roundRobinId };
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipelines'] });

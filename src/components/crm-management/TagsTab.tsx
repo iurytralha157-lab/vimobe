@@ -1,60 +1,99 @@
-import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Users, Pencil, Trash2, Loader2, Tags as TagsIcon, Search, TrendingUp, Hash } from "lucide-react";
-import { useTags, useCreateTag, useDeleteTag } from "@/hooks/use-tags";
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { 
+  Plus, 
+  MoreHorizontal, 
+  Users, 
+  Pencil, 
+  Trash2, 
+  Loader2,
+  Tags as TagsIcon,
+  Search,
+  TrendingUp,
+  Hash
+} from 'lucide-react';
+import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from '@/hooks/use-tags';
 
 const colorOptions = [
-  { color: "#ef4444", name: "Vermelho" },
-  { color: "#f59e0b", name: "Laranja" },
-  { color: "#22c55e", name: "Verde" },
-  { color: "#3b82f6", name: "Azul" },
-  { color: "#8b5cf6", name: "Roxo" },
-  { color: "#ec4899", name: "Rosa" },
-  { color: "#06b6d4", name: "Ciano" },
-  { color: "#6b7280", name: "Cinza" },
+  { color: '#ef4444', name: 'Vermelho' },
+  { color: '#f59e0b', name: 'Laranja' },
+  { color: '#22c55e', name: 'Verde' },
+  { color: '#3b82f6', name: 'Azul' },
+  { color: '#8b5cf6', name: 'Roxo' },
+  { color: '#ec4899', name: 'Rosa' },
+  { color: '#06b6d4', name: 'Ciano' },
+  { color: '#6b7280', name: 'Cinza' },
 ];
 
 export function TagsTab() {
   const { data: tags = [], isLoading } = useTags();
   const createTag = useCreateTag();
+  const updateTag = useUpdateTag();
   const deleteTag = useDeleteTag();
-
+  
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTag, setEditingTag] = useState<{ id: string; name: string; color: string; description?: string } | null>(
-    null
-  );
-  const [formData, setFormData] = useState({ name: "", color: "#3b82f6", description: "" });
-  const [searchTerm, setSearchTerm] = useState("");
+  const [editingTag, setEditingTag] = useState<{ id: string; name: string; color: string; description?: string } | null>(null);
+  const [formData, setFormData] = useState({ name: '', color: '#3b82f6', description: '' });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const filteredTags = useMemo(() => {
     if (!searchTerm) return tags;
     const lower = searchTerm.toLowerCase();
-    return tags.filter((tag) => tag.name.toLowerCase().includes(lower) || tag.description?.toLowerCase().includes(lower));
+    return tags.filter(tag => 
+      tag.name.toLowerCase().includes(lower) || 
+      tag.description?.toLowerCase().includes(lower)
+    );
   }, [tags, searchTerm]);
+
+  // Stats
+  const totalLeadsTagged = useMemo(() => 
+    tags.reduce((acc, tag) => acc + (tag.lead_count || 0), 0)
+  , [tags]);
+
+  const topTag = useMemo(() => {
+    if (tags.length === 0) return null;
+    return [...tags].sort((a, b) => (b.lead_count || 0) - (a.lead_count || 0))[0];
+  }, [tags]);
+
+  const maxLeadCount = useMemo(() => 
+    Math.max(...tags.map(t => t.lead_count || 0), 1)
+  , [tags]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (editingTag) {
-      // Update not implemented yet - just close dialog
+      await updateTag.mutateAsync({ id: editingTag.id, ...formData });
     } else {
       await createTag.mutateAsync(formData);
     }
-
+    
     setDialogOpen(false);
     setEditingTag(null);
-    setFormData({ name: "", color: "#3b82f6", description: "" });
+    setFormData({ name: '', color: '#3b82f6', description: '' });
   };
 
   const openEdit = (tag: { id: string; name: string; color: string; description?: string | null }) => {
-    setEditingTag({ id: tag.id, name: tag.name, color: tag.color, description: tag.description || "" });
-    setFormData({ name: tag.name, color: tag.color, description: tag.description || "" });
+    setEditingTag({ id: tag.id, name: tag.name, color: tag.color, description: tag.description || '' });
+    setFormData({ name: tag.name, color: tag.color, description: tag.description || '' });
     setDialogOpen(true);
   };
 
@@ -91,7 +130,7 @@ export function TagsTab() {
               <Users className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">0</p>
+              <p className="text-2xl font-bold">{totalLeadsTagged}</p>
               <p className="text-xs text-muted-foreground">Leads tagueados</p>
             </div>
           </div>
@@ -102,8 +141,10 @@ export function TagsTab() {
               <TrendingUp className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">0</p>
-              <p className="text-xs text-muted-foreground">Tag mais usada</p>
+              <p className="text-2xl font-bold">{topTag?.lead_count || 0}</p>
+              <p className="text-xs text-muted-foreground truncate" title={topTag?.name}>
+                {topTag?.name || 'Tag mais usada'}
+              </p>
             </div>
           </div>
         </Card>
@@ -113,7 +154,9 @@ export function TagsTab() {
               <Hash className="h-5 w-5 text-amber-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">0</p>
+              <p className="text-2xl font-bold">
+                {tags.length > 0 ? Math.round(totalLeadsTagged / tags.length) : 0}
+              </p>
               <p className="text-xs text-muted-foreground">Média por tag</p>
             </div>
           </div>
@@ -133,16 +176,13 @@ export function TagsTab() {
             />
           </div>
         </div>
-        <Dialog
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) {
-              setEditingTag(null);
-              setFormData({ name: "", color: "#3b82f6", description: "" });
-            }
-          }}
-        >
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingTag(null);
+            setFormData({ name: '', color: '#3b82f6', description: '' });
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
@@ -151,7 +191,7 @@ export function TagsTab() {
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingTag ? "Editar Tag" : "Nova Tag"}</DialogTitle>
+              <DialogTitle>{editingTag ? 'Editar Tag' : 'Nova Tag'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div className="space-y-2">
@@ -160,27 +200,35 @@ export function TagsTab() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Cliente VIP"
+                  placeholder="Ex: Quente, Investidor..."
                   required
                 />
               </div>
+
               <div className="space-y-2">
                 <Label>Cor</Label>
                 <div className="flex flex-wrap gap-2">
-                  {colorOptions.map((option) => (
+                  {colorOptions.map(({ color, name }) => (
                     <button
-                      key={option.color}
+                      key={color}
                       type="button"
-                      className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                        formData.color === option.color ? "border-foreground scale-110" : "border-transparent"
+                      title={name}
+                      className={`w-10 h-10 rounded-lg transition-all flex items-center justify-center ${
+                        formData.color === color 
+                          ? 'scale-110 ring-2 ring-offset-2 ring-primary shadow-lg' 
+                          : 'hover:scale-105'
                       }`}
-                      style={{ backgroundColor: option.color }}
-                      onClick={() => setFormData({ ...formData, color: option.color })}
-                      title={option.name}
-                    />
+                      style={{ backgroundColor: color }}
+                      onClick={() => setFormData({ ...formData, color })}
+                    >
+                      {formData.color === color && (
+                        <span className="text-white text-lg">✓</span>
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição (opcional)</Label>
                 <Input
@@ -190,65 +238,132 @@ export function TagsTab() {
                   placeholder="Descrição da tag..."
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={createTag.isPending}>
-                {createTag.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {editingTag ? "Salvar Alterações" : "Criar Tag"}
-              </Button>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createTag.isPending || updateTag.isPending}>
+                  {(createTag.isPending || updateTag.isPending) && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  {editingTag ? 'Salvar' : 'Criar'}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Tags Grid */}
-      {filteredTags.length === 0 ? (
+      {/* Empty State */}
+      {tags.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <TagsIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="font-medium mb-2">Nenhuma tag encontrada</h3>
-            <p className="text-muted-foreground text-sm">
-              {searchTerm ? "Tente outra busca" : "Crie sua primeira tag para organizar seus leads"}
+            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <TagsIcon className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-medium text-lg mb-2">Nenhuma tag criada</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+              Crie tags para categorizar e organizar seus leads de forma eficiente
+            </p>
+            <Button onClick={() => setDialogOpen(true)} size="lg">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar primeira tag
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tags Grid */}
+      {filteredTags.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredTags.map((tag) => {
+            const percentage = maxLeadCount > 0 ? ((tag.lead_count || 0) / maxLeadCount) * 100 : 0;
+            
+            return (
+              <Card key={tag.id} className="group hover:shadow-md transition-all">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
+                        style={{ backgroundColor: `${tag.color}20` }}
+                      >
+                        <TagsIcon className="h-6 w-6" style={{ color: tag.color }} />
+                      </div>
+                      <div>
+                        <Badge 
+                          variant="secondary"
+                          style={{ backgroundColor: `${tag.color}15`, color: tag.color, borderColor: `${tag.color}30` }}
+                          className="text-sm font-semibold border"
+                        >
+                          {tag.name}
+                        </Badge>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(tag)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => handleDelete(tag.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {tag.description && (
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {tag.description}
+                    </p>
+                  )}
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Leads</span>
+                      <span className="font-semibold">{tag.lead_count || 0}</span>
+                    </div>
+                    <Progress 
+                      value={percentage} 
+                      className="h-2"
+                      style={{ 
+                        // @ts-ignore - custom property for progress color
+                        '--progress-color': tag.color 
+                      } as React.CSSProperties}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* No Results */}
+      {tags.length > 0 && filteredTags.length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground">
+              Nenhuma tag encontrada para "{searchTerm}"
             </p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {filteredTags.map((tag) => (
-            <Card key={tag.id} className="p-4 group relative">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${tag.color}20` }}>
-                  <TagsIcon className="h-5 w-5" style={{ color: tag.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Badge style={{ backgroundColor: tag.color, color: "white" }}>{tag.name}</Badge>
-                  </div>
-                  {tag.description && <p className="text-xs text-muted-foreground mt-1 truncate">{tag.description}</p>}
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => openEdit(tag)}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(tag.id)}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </Card>
-          ))}
-        </div>
       )}
     </div>
   );

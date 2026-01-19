@@ -1,17 +1,21 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Play, 
+  MessageSquare, 
+  Clock, 
+  GitBranch, 
+  Tag, 
+  UserPlus,
+  Zap,
+  Loader2,
+} from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,208 +25,176 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { MoreVertical, Edit, Trash2, Zap, Play, Clock } from "lucide-react";
-import { format } from "date-fns";
-import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-
-interface Automation {
-  id: string;
-  name: string;
-  description: string | null;
-  trigger_type: string;
-  trigger_config: any;
-  is_active: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { 
+  useAutomations, 
+  useDeleteAutomation, 
+  useToggleAutomation,
+  TRIGGER_TYPE_LABELS,
+  TriggerType,
+} from '@/hooks/use-automations';
+import { CreateAutomationDialog } from './CreateAutomationDialog';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface AutomationListProps {
-  onEdit: (automation: Automation) => void;
+  onEdit: (automationId: string) => void;
 }
 
-const triggerLabels: Record<string, string> = {
-  on_enter: "Ao entrar no estágio",
-  on_exit: "Ao sair do estágio",
-  on_time: "Tempo no estágio",
-  webhook: "Webhook",
-  lead_created: "Lead criado",
-  lead_updated: "Lead atualizado",
+const getTriggerIcon = (triggerType: TriggerType) => {
+  switch (triggerType) {
+    case 'message_received':
+      return MessageSquare;
+    case 'scheduled':
+      return Clock;
+    case 'lead_stage_changed':
+      return GitBranch;
+    case 'tag_added':
+      return Tag;
+    case 'lead_created':
+      return UserPlus;
+    case 'inactivity':
+      return Clock;
+    case 'manual':
+      return Play;
+    default:
+      return Zap;
+  }
 };
 
 export function AutomationList({ onEdit }: AutomationListProps) {
-  const { profile } = useAuth();
-  const queryClient = useQueryClient();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  const { data: automations, isLoading } = useQuery({
-    queryKey: ["automations", profile?.organization_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("automations")
-        .select("*")
-        .eq("organization_id", profile!.organization_id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data as Automation[];
-    },
-    enabled: !!profile?.organization_id,
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const { error } = await supabase
-        .from("automations")
-        .update({ is_active: isActive })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["automations"] });
-    },
-    onError: () => {
-      toast.error("Erro ao atualizar automação");
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("automations")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["automations"] });
-      toast.success("Automação excluída");
-      setDeleteId(null);
-    },
-    onError: () => {
-      toast.error("Erro ao excluir automação");
-    },
-  });
+  const { data: automations, isLoading } = useAutomations();
+  const deleteAutomation = useDeleteAutomation();
+  const toggleAutomation = useToggleAutomation();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <Skeleton className="h-6 w-48 mb-2" />
-              <Skeleton className="h-4 w-full" />
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    );
-  }
-
-  if (!automations?.length) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <Zap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="font-medium text-lg mb-2">Nenhuma automação</h3>
-          <p className="text-muted-foreground">
-            Crie sua primeira automação para automatizar tarefas repetitivas.
-          </p>
-        </CardContent>
-      </Card>
     );
   }
 
   return (
-    <>
-      <div className="space-y-4">
-        {automations.map((automation) => (
-          <Card key={automation.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-medium">{automation.name}</h3>
-                    <Badge variant={automation.is_active ? "default" : "secondary"}>
-                      {automation.is_active ? "Ativa" : "Inativa"}
-                    </Badge>
-                  </div>
-                  
-                  {automation.description && (
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {automation.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Play className="h-3 w-3" />
-                      {triggerLabels[automation.trigger_type] || automation.trigger_type}
-                    </div>
-                    {automation.updated_at && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(automation.updated_at), "dd/MM/yyyy HH:mm")}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={automation.is_active ?? false}
-                    onCheckedChange={(checked) =>
-                      toggleMutation.mutate({ id: automation.id, isActive: checked })
-                    }
-                  />
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit(automation)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive"
-                        onClick={() => setDeleteId(automation.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Automação
+        </Button>
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A automação será permanentemente excluída.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+      {automations?.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center px-4">
+            <Zap className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Nenhuma automação criada</h3>
+            <p className="text-muted-foreground mb-4 text-sm">
+              Crie fluxos automáticos para enviar mensagens, mover leads e muito mais
+            </p>
+            <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Criar primeira automação
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {automations?.map((automation) => {
+            const TriggerIcon = getTriggerIcon(automation.trigger_type as TriggerType);
+            
+            return (
+              <Card key={automation.id} className="group">
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 w-full sm:w-auto">
+                      <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                        <TriggerIcon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base flex flex-wrap items-center gap-2">
+                          <span className="truncate">{automation.name}</span>
+                          <Badge variant={automation.is_active ? 'default' : 'secondary'} className="shrink-0">
+                            {automation.is_active ? 'Ativa' : 'Inativa'}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription className="mt-1 line-clamp-2">
+                          {automation.description || 'Sem descrição'}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={automation.is_active}
+                      onCheckedChange={(checked) => 
+                        toggleAutomation.mutate({ id: automation.id, is_active: checked })
+                      }
+                      className="shrink-0"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
+                      <span className="truncate">
+                        <span className="hidden sm:inline">Gatilho: </span>
+                        {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
+                      </span>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="text-xs">
+                        {formatDistanceToNow(new Date(automation.created_at), { 
+                          addSuffix: true, 
+                          locale: ptBR 
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="sm" onClick={() => onEdit(automation.id)} className="flex-1 sm:flex-none">
+                        <Edit2 className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação não pode ser desfeita. A automação "{automation.name}" será excluída permanentemente.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteAutomation.mutate(automation.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <CreateAutomationDialog 
+        open={createDialogOpen} 
+        onOpenChange={setCreateDialogOpen}
+        onCreated={(id) => {
+          setCreateDialogOpen(false);
+          onEdit(id);
+        }}
+      />
+    </div>
   );
 }

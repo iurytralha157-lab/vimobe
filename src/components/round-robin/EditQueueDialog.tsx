@@ -23,39 +23,33 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Shuffle, Loader2, Trash2, Save } from 'lucide-react';
-import { useUsers } from '@/hooks/use-users';
+import { 
+  RoundRobin, 
+  RoundRobinMember,
+  useUpdateRoundRobinMembers, 
+  useAddRoundRobinMember, 
+  useRemoveRoundRobinMember 
+} from '@/hooks/use-round-robins';
+import { useOrganizationUsers } from '@/hooks/use-users';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-
-interface Member {
-  id: string;
-  user_id: string;
-  weight: number;
-  user?: { name?: string; email?: string };
-  leads_count?: number;
-}
-
-interface RoundRobin {
-  id: string;
-  name: string;
-  members: Member[];
-}
 
 interface EditQueueDialogProps {
   queue: RoundRobin | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (members: { memberId: string; weight: number }[]) => Promise<void>;
 }
 
-export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueueDialogProps) {
-  const { data: users = [] } = useUsers();
+export function EditQueueDialog({ queue, open, onOpenChange }: EditQueueDialogProps) {
+  const { data: users = [] } = useOrganizationUsers();
+  const updateMembers = useUpdateRoundRobinMembers();
+  const addMember = useAddRoundRobinMember();
+  const removeMember = useRemoveRoundRobinMember();
   
-  const [localMembers, setLocalMembers] = useState<Member[]>([]);
+  const [localMembers, setLocalMembers] = useState<(RoundRobinMember & { weight: number })[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [resetCounter, setResetCounter] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (queue) {
@@ -69,6 +63,7 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
 
   if (!queue) return null;
 
+  // Calculate total weight for percentage display
   const totalWeight = localMembers.reduce((sum, m) => sum + m.weight, 0);
 
   const handleWeightChange = (memberId: string, value: number) => {
@@ -78,26 +73,36 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
     setHasChanges(true);
   };
 
-  const handleRemoveMember = (memberId: string) => {
-    setLocalMembers(prev => prev.filter(m => m.id !== memberId));
-    setHasChanges(true);
+  const handleAddMember = async () => {
+    if (!selectedUserId) return;
+    
+    await addMember.mutateAsync({
+      roundRobinId: queue.id,
+      userId: selectedUserId,
+      weight: 10,
+    });
+    
+    setSelectedUserId('');
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    await removeMember.mutateAsync(memberId);
   };
 
   const handleSave = async () => {
-    if (!onSave) return;
-    setIsSaving(true);
-    try {
-      await onSave(localMembers.map(m => ({
+    await updateMembers.mutateAsync({
+      roundRobinId: queue.id,
+      members: localMembers.map(m => ({
         memberId: m.id,
         weight: m.weight,
-      })));
-      setHasChanges(false);
-      onOpenChange(false);
-    } finally {
-      setIsSaving(false);
-    }
+      })),
+    });
+    
+    setHasChanges(false);
+    onOpenChange(false);
   };
 
+  // Filter out users already in the queue
   const availableUsers = users.filter(
     u => !localMembers.some(m => m.user_id === u.id)
   );
@@ -120,18 +125,20 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
+          {/* Info text */}
           <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
             A distribuição será automática para todos os leads que entrarem nesta fila.
             Ajuste o percentual de cada usuário para determinar a proporção de leads que ele receberá.
           </div>
 
+          {/* Members Table */}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[45%]">Usuários</TableHead>
-                  <TableHead className="w-[25%] text-center">Peso</TableHead>
-                  <TableHead className="w-[20%] text-center">%</TableHead>
+                  <TableHead className="w-[25%] text-center">Percentual %</TableHead>
+                  <TableHead className="w-[20%] text-center">Contador</TableHead>
                   <TableHead className="w-[10%]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -154,17 +161,24 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          value={member.weight}
-                          onChange={(e) => handleWeightChange(member.id, parseInt(e.target.value) || 1)}
-                          className="w-16 text-center mx-auto"
-                          min={1}
-                          max={100}
-                        />
+                        <div className="flex items-center justify-center gap-2">
+                          <Input
+                            type="number"
+                            value={member.weight}
+                            onChange={(e) => handleWeightChange(member.id, parseInt(e.target.value) || 1)}
+                            className="w-16 text-center"
+                            min={1}
+                            max={100}
+                          />
+                          <span className="text-sm text-muted-foreground w-10">
+                            ({percentage}%)
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className="text-muted-foreground">{percentage}%</span>
+                        <span className="text-muted-foreground">
+                          {member.leads_count || 0}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <Button
@@ -172,6 +186,7 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
                           onClick={() => handleRemoveMember(member.id)}
+                          disabled={removeMember.isPending}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -191,6 +206,7 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
             </Table>
           </div>
 
+          {/* Add member */}
           <div className="flex gap-2">
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
               <SelectTrigger className="flex-1">
@@ -199,32 +215,25 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
               <SelectContent>
                 {availableUsers.map(user => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.name}
+                    {user.name} {user.email && `<${user.email}>`}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Button 
               variant="outline" 
-              onClick={() => {
-                if (selectedUserId) {
-                  const user = users.find(u => u.id === selectedUserId);
-                  setLocalMembers(prev => [...prev, {
-                    id: `new-${Date.now()}`,
-                    user_id: selectedUserId,
-                    weight: 10,
-                    user: { name: user?.name, email: user?.email },
-                  }]);
-                  setSelectedUserId('');
-                  setHasChanges(true);
-                }
-              }}
-              disabled={!selectedUserId}
+              onClick={handleAddMember}
+              disabled={!selectedUserId || addMember.isPending}
             >
-              Adicionar
+              {addMember.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Adicionar'
+              )}
             </Button>
           </div>
 
+          {/* Reset counter option */}
           <div className="flex items-center gap-2 pt-2">
             <Checkbox 
               id="reset-counter" 
@@ -236,15 +245,16 @@ export function EditQueueDialog({ queue, open, onOpenChange, onSave }: EditQueue
             </Label>
           </div>
 
+          {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button 
               onClick={handleSave}
-              disabled={isSaving || !hasChanges}
+              disabled={updateMembers.isPending || !hasChanges}
             >
-              {isSaving ? (
+              {updateMembers.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Save className="h-4 w-4 mr-2" />

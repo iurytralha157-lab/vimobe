@@ -5,10 +5,10 @@ interface FloatingChatState {
   isOpen: boolean;
   isMinimized: boolean;
   activeConversation: WhatsAppConversation | null;
-  pendingPhone: string | null;
-  pendingLeadName: string | null;
-  pendingMessage: string | null;
-  pendingLeadId: string | null;
+  pendingPhone: string | null; // Telefone para iniciar nova conversa
+  pendingLeadName: string | null; // Nome do lead para nova conversa
+  pendingMessage: string | null; // Mensagem pré-preenchida
+  pendingLeadId: string | null; // ID do lead
 }
 
 interface FloatingChatContextType {
@@ -21,7 +21,6 @@ interface FloatingChatContextType {
   openConversation: (conversation: WhatsAppConversation) => void;
   openNewChat: (phone: string, leadName?: string) => void;
   openNewChatWithMessage: (phone: string, message: string, leadId?: string, leadName?: string) => void;
-  openNewConversation: (phone: string, leadName?: string, message?: string) => void; // Legacy support
   clearActiveConversation: () => void;
   clearPendingMessage: () => void;
 }
@@ -57,12 +56,11 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleChat = useCallback(() => {
-    setState((prev) => {
-      if (prev.isOpen && !prev.isMinimized) {
-        return { ...prev, isOpen: false };
-      }
-      return { ...prev, isOpen: true, isMinimized: false };
-    });
+    setState((prev) => ({ 
+      ...prev, 
+      isOpen: !prev.isOpen, 
+      isMinimized: false 
+    }));
   }, []);
 
   const minimizeChat = useCallback(() => {
@@ -81,12 +79,11 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
       activeConversation: conversation,
       pendingPhone: null,
       pendingLeadName: null,
-      pendingMessage: null,
-      pendingLeadId: null,
     }));
   }, []);
 
   const openNewChat = useCallback((phone: string, leadName?: string) => {
+    // Limpa o telefone para formato numérico
     const cleanPhone = phone.replace(/\D/g, "");
     setState((prev) => ({ 
       ...prev, 
@@ -111,21 +108,6 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
       pendingLeadName: leadName || null,
       pendingMessage: message,
       pendingLeadId: leadId || null,
-    }));
-  }, []);
-
-  // Legacy function for backward compatibility
-  const openNewConversation = useCallback((phone: string, leadName?: string, message?: string) => {
-    const cleanPhone = phone.replace(/\D/g, "");
-    setState((prev) => ({
-      ...prev,
-      isOpen: true,
-      isMinimized: false,
-      activeConversation: null,
-      pendingPhone: cleanPhone,
-      pendingLeadName: leadName || null,
-      pendingMessage: message || null,
-      pendingLeadId: null,
     }));
   }, []);
 
@@ -159,7 +141,6 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
         openConversation,
         openNewChat,
         openNewChatWithMessage,
-        openNewConversation,
         clearActiveConversation,
         clearPendingMessage,
       }}

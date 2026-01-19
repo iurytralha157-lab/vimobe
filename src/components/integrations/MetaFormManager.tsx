@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,10 @@ import {
   Users,
   Home,
   Tag,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   useMetaFormConfigs,
   useFetchPageForms,
@@ -35,6 +38,7 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
   const fetchForms = useFetchPageForms();
   const toggleForm = useToggleFormConfig();
 
+  // Fetch forms when integration loads
   useEffect(() => {
     if (integration.page_id) {
       loadForms();
@@ -46,13 +50,15 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
     
     setIsLoadingForms(true);
     try {
+      // We need to get the access token from the edge function
       const result = await fetchForms.mutateAsync({
         pageId: integration.page_id,
-        accessToken: "",
+        accessToken: "", // Edge function will use stored token
       });
       setForms(result.forms || []);
     } catch (error) {
       console.error("Error loading forms:", error);
+      // Don't show error toast if it's just because no forms exist
     } finally {
       setIsLoadingForms(false);
     }
@@ -111,6 +117,7 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
         </Card>
       ) : (
         <div className="space-y-3">
+          {/* Configured forms first */}
           {configuredForms.map((form) => {
             const config = getFormConfig(form.id)!;
             return (
@@ -124,6 +131,7 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
             );
           })}
 
+          {/* Unconfigured forms */}
           {unconfiguredForms.map((form) => (
             <FormCard
               key={form.id}
@@ -134,6 +142,7 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
         </div>
       )}
 
+      {/* Form Config Dialog */}
       <MetaFormConfigDialog
         open={!!editingForm}
         onOpenChange={(open) => !open && setEditingForm(null)}

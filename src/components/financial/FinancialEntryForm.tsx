@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,18 +22,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCreateFinancialEntry, useUpdateFinancialEntry } from '@/hooks/use-financial';
+import { useFinancialCategories, useCreateFinancialEntry, useUpdateFinancialEntry } from '@/hooks/use-financial';
 import { useProperties } from '@/hooks/use-properties';
 import { useContracts } from '@/hooks/use-contracts';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
-  type: z.enum(['receita', 'despesa']),
-  category: z.string().optional(),
+  type: z.enum(['receivable', 'payable']),
+  category_id: z.string().optional(),
   description: z.string().min(1, 'Descrição é obrigatória'),
-  amount: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  value: z.number().min(0.01, 'Valor deve ser maior que zero'),
   due_date: z.string().min(1, 'Data de vencimento é obrigatória'),
+  competence_date: z.string().optional(),
   payment_method: z.string().optional(),
+  property_id: z.string().optional(),
+  contract_id: z.string().optional(),
+  related_person_name: z.string().optional(),
+  related_person_type: z.string().optional(),
   notes: z.string().optional(),
   has_installments: z.boolean().default(false),
   installments_count: z.number().min(2).max(60).optional(),
@@ -47,6 +53,7 @@ interface FinancialEntryFormProps {
 }
 
 export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntryFormProps) {
+  const { data: categories } = useFinancialCategories();
   const { data: properties } = useProperties();
   const { data: contracts } = useContracts();
   const createEntry = useCreateFinancialEntry();
@@ -55,12 +62,17 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: entry?.type || 'receita',
-      category: entry?.category || '',
+      type: entry?.type || 'receivable',
+      category_id: entry?.category_id || '',
       description: entry?.description || '',
-      amount: entry?.amount || 0,
+      value: entry?.value || 0,
       due_date: entry?.due_date?.split('T')[0] || '',
+      competence_date: entry?.competence_date?.split('T')[0] || '',
       payment_method: entry?.payment_method || '',
+      property_id: entry?.property_id || '',
+      contract_id: entry?.contract_id || '',
+      related_person_name: entry?.related_person_name || '',
+      related_person_type: entry?.related_person_type || '',
       notes: entry?.notes || '',
       has_installments: false,
       installments_count: 2,
@@ -70,19 +82,23 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
   const watchType = form.watch('type');
   const watchHasInstallments = form.watch('has_installments');
 
-  const categories = watchType === 'receita' 
-    ? ['Comissão', 'Aluguel', 'Taxa de administração', 'Outros']
-    : ['Marketing', 'Operacional', 'Pessoal', 'Impostos', 'Outros'];
+  const filteredCategories = categories?.filter(c => (watchType === 'receivable' ? 'income' : 'expense') === c.type) || [];
 
   const onSubmit = async (values: FormValues) => {
-    const payload = {
+    const payload: any = {
       type: values.type,
-      category: values.category || null,
+      category_id: values.category_id || null,
       description: values.description,
-      amount: values.amount,
+      value: values.value,
       due_date: values.due_date,
+      competence_date: values.competence_date || null,
       payment_method: values.payment_method || null,
+      property_id: values.property_id || null,
+      contract_id: values.contract_id || null,
+      related_person_name: values.related_person_name || null,
+      related_person_type: values.related_person_type || null,
       notes: values.notes || null,
+      installments: values.has_installments ? values.installments_count : undefined,
     };
 
     if (entry) {
@@ -112,8 +128,8 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="receita">Receita</SelectItem>
-                    <SelectItem value="despesa">Despesa</SelectItem>
+                    <SelectItem value="receivable">A Receber</SelectItem>
+                    <SelectItem value="payable">A Pagar</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -123,7 +139,7 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
 
           <FormField
             control={form.control}
-            name="category"
+            name="category_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
@@ -134,9 +150,9 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
+                    {filteredCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -164,7 +180,7 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="amount"
+            name="value"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Valor (R$)</FormLabel>
@@ -197,31 +213,141 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="payment_method"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Forma de Pagamento</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="competence_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Competência</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
+                  <Input type="date" {...field} />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="pix">PIX</SelectItem>
-                  <SelectItem value="boleto">Boleto</SelectItem>
-                  <SelectItem value="transfer">Transferência</SelectItem>
-                  <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                  <SelectItem value="debit_card">Cartão de Débito</SelectItem>
-                  <SelectItem value="cash">Dinheiro</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="payment_method"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Forma de Pagamento</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="boleto">Boleto</SelectItem>
+                    <SelectItem value="transfer">Transferência</SelectItem>
+                    <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                    <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                    <SelectItem value="cash">Dinheiro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="property_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Imóvel (opcional)</FormLabel>
+                <Select onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} value={field.value || 'none'}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {properties?.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.code} - {p.title || p.endereco}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="contract_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Contrato (opcional)</FormLabel>
+                <Select onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} value={field.value || 'none'}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {contracts?.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.contract_number} - {c.client_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="related_person_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pessoa Relacionada</FormLabel>
+                <FormControl>
+                  <Input placeholder="Nome" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="related_person_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Pessoa</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="client">Cliente</SelectItem>
+                    <SelectItem value="broker">Corretor</SelectItem>
+                    <SelectItem value="supplier">Fornecedor</SelectItem>
+                    <SelectItem value="owner">Proprietário</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {!entry && (
           <div className="space-y-4 p-4 bg-muted/50 rounded-lg">

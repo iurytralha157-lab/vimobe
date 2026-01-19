@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,7 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Search, X } from "lucide-react";
-import { usePipelines, useStages } from "@/hooks/use-pipelines";
+import { usePipelines, useStages } from "@/hooks/use-stages";
 import { useTags } from "@/hooks/use-tags";
 import { useProperties } from "@/hooks/use-properties";
 import { useUsers } from "@/hooks/use-users";
@@ -61,6 +62,7 @@ export function MetaFormConfigDialog({
   config,
   integrationId,
 }: MetaFormConfigDialogProps) {
+  // Form state
   const [pipelineId, setPipelineId] = useState("");
   const [stageId, setStageId] = useState("");
   const [defaultStatus, setDefaultStatus] = useState("novo");
@@ -71,6 +73,7 @@ export function MetaFormConfigDialog({
   const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<string[]>([]);
 
+  // Data hooks
   const { data: pipelines } = usePipelines();
   const { data: stages } = useStages(pipelineId || undefined);
   const { data: tags } = useTags();
@@ -78,6 +81,7 @@ export function MetaFormConfigDialog({
   const { data: users } = useUsers();
   const saveConfig = useSaveFormConfig();
 
+  // Load existing config when dialog opens
   useEffect(() => {
     if (config) {
       setPipelineId(config.pipeline_id || "");
@@ -89,6 +93,7 @@ export function MetaFormConfigDialog({
       setFieldMapping(config.field_mapping || {});
       setCustomFields(config.custom_fields_config || []);
     } else {
+      // Reset form
       setPipelineId("");
       setStageId("");
       setDefaultStatus("novo");
@@ -138,6 +143,7 @@ export function MetaFormConfigDialog({
       [metaField]: crmField,
     }));
 
+    // If mapping to custom, add to customFields
     if (crmField === "custom" && !customFields.includes(metaField)) {
       setCustomFields(prev => [...prev, metaField]);
     } else if (crmField !== "custom" && customFields.includes(metaField)) {

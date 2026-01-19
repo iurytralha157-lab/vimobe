@@ -9,8 +9,7 @@ import {
   MessageSquare, 
   MapPin,
   X,
-  Info,
-  User
+  Info
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,10 +20,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn, getCurrentTimeForInput, getBrasiliaTime } from '@/lib/utils';
+import { User } from 'lucide-react';
+import { useCreateScheduleEvent, useUpdateScheduleEvent, EventType, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
-
-export type EventType = 'call' | 'email' | 'meeting' | 'task' | 'message' | 'visit';
 
 const eventTypes: { type: EventType; label: string; icon: React.ElementType }[] = [
   { type: 'call', label: 'Ligar', icon: Phone },
@@ -45,18 +44,6 @@ const durationOptions = [
   { value: 120, label: '2 horas' },
 ];
 
-interface ScheduleEvent {
-  id: string;
-  title: string;
-  description?: string;
-  event_type: EventType;
-  start_time: string;
-  duration_minutes?: number;
-  user_id: string;
-  lead_id?: string;
-  is_completed?: boolean;
-}
-
 interface EventFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -65,63 +52,57 @@ interface EventFormProps {
   leadName?: string;
   defaultUserId?: string;
   defaultDate?: Date;
-  onSave?: (data: Partial<ScheduleEvent>) => Promise<void>;
 }
 
-export function EventForm({ 
-  open, 
-  onOpenChange, 
-  event, 
-  leadId, 
-  leadName, 
-  defaultUserId, 
-  defaultDate,
-  onSave 
-}: EventFormProps) {
+export function EventForm({ open, onOpenChange, event, leadId, leadName, defaultUserId, defaultDate }: EventFormProps) {
   const { data: users = [] } = useUsers();
+  const createEvent = useCreateScheduleEvent();
+  const updateEvent = useUpdateScheduleEvent();
 
   const [selectedType, setSelectedType] = useState<EventType>(event?.event_type || 'call');
   const [title, setTitle] = useState(event?.title || '');
   const [description, setDescription] = useState(event?.description || '');
   const [selectedUserId, setSelectedUserId] = useState(event?.user_id || defaultUserId || '');
   const [date, setDate] = useState<Date | undefined>(
-    event?.start_time ? new Date(event.start_time) : defaultDate || new Date()
+    event?.start_at ? new Date(event.start_at) : defaultDate || getBrasiliaTime()
   );
   const [time, setTime] = useState(
-    event?.start_time ? format(new Date(event.start_time), 'HH:mm') : format(new Date(), 'HH:mm')
+    event?.start_at ? format(new Date(event.start_at), 'HH:mm') : getCurrentTimeForInput()
   );
   const [duration, setDuration] = useState(event?.duration_minutes || 30);
   const [isCompleted, setIsCompleted] = useState(event?.is_completed || false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const maxDescriptionLength = 280;
   const remainingChars = maxDescriptionLength - description.length;
 
   const handleSubmit = async () => {
-    if (!title.trim() || !date || !selectedUserId || !onSave) return;
+    if (!title.trim() || !date || !selectedUserId) return;
 
     const [hours, minutes] = time.split(':').map(Number);
     const startAt = new Date(date);
     startAt.setHours(hours, minutes, 0, 0);
 
-    setIsLoading(true);
-    try {
-      await onSave({
-        id: event?.id,
-        title: title.trim(),
-        description: description.trim() || undefined,
-        event_type: selectedType,
-        start_time: startAt.toISOString(),
-        duration_minutes: duration,
-        user_id: selectedUserId,
-        lead_id: leadId,
-        is_completed: isCompleted,
-      });
-      onOpenChange(false);
-    } finally {
-      setIsLoading(false);
+    const eventData = {
+      title: title.trim(),
+      description: description.trim() || undefined,
+      event_type: selectedType,
+      start_at: startAt.toISOString(),
+      duration_minutes: duration,
+      user_id: selectedUserId,
+      lead_id: leadId,
+      is_completed: isCompleted,
+    };
+
+    if (event) {
+      await updateEvent.mutateAsync({ id: event.id, ...eventData });
+    } else {
+      await createEvent.mutateAsync(eventData);
     }
+
+    onOpenChange(false);
   };
+
+  const isLoading = createEvent.isPending || updateEvent.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,6 +114,7 @@ export function EventForm({
         </DialogHeader>
 
         <div className="space-y-5">
+          {/* Lead info if present */}
           {leadName && (
             <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg text-sm">
               <User className="h-4 w-4 text-primary" />
@@ -140,11 +122,13 @@ export function EventForm({
             </div>
           )}
 
+          {/* Info banner */}
           <div className="flex items-start gap-2 p-3 bg-accent/50 rounded-lg text-sm text-muted-foreground">
             <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
             <span>As atividades serão sincronizadas com o Google Calendar quando conectado.</span>
           </div>
 
+          {/* Event type selector */}
           <div className="flex flex-wrap gap-2">
             {eventTypes.map(({ type, label, icon: Icon }) => (
               <Button
@@ -161,6 +145,7 @@ export function EventForm({
             ))}
           </div>
 
+          {/* Title and User */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Assunto</Label>
@@ -188,6 +173,7 @@ export function EventForm({
             </div>
           </div>
 
+          {/* Date, Time, Duration */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Data *</Label>
@@ -235,7 +221,7 @@ export function EventForm({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Duração</Label>
+              <Label>Duração (min)</Label>
               <Select value={duration.toString()} onValueChange={(v) => setDuration(Number(v))}>
                 <SelectTrigger>
                   <SelectValue />
@@ -251,6 +237,7 @@ export function EventForm({
             </div>
           </div>
 
+          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>
             <Textarea
@@ -265,6 +252,7 @@ export function EventForm({
             </p>
           </div>
 
+          {/* Mark as completed */}
           <div className="flex items-center gap-2">
             <Checkbox
               id="completed"
@@ -276,6 +264,7 @@ export function EventForm({
             </Label>
           </div>
 
+          {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancelar

@@ -1,17 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-// Interface for invitation data
+// Interface para o retorno da RPC get_invitation_by_token
 interface InvitationByToken {
   id: string;
   email: string | null;
+  role: 'admin' | 'user';
   organization_id: string;
   expires_at: string;
 }
 
 /**
- * Hook to fetch invitation by token
- * Returns null if token is invalid or expired
+ * Hook seguro para buscar convite por token usando RPC
+ * Evita enumeration de convites via SELECT direto
  */
 export function useInvitationByToken(token: string | null) {
   return useQuery({
@@ -19,24 +20,21 @@ export function useInvitationByToken(token: string | null) {
     queryFn: async (): Promise<InvitationByToken | null> => {
       if (!token) return null;
       
-      // Query invitation directly - RLS should handle security
+      // Usar RPC segura que não expõe listagem de convites
       const { data, error } = await supabase
-        .from('invitations')
-        .select('id, email, organization_id, expires_at')
-        .eq('token', token)
-        .is('used_at', null)
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+        .rpc('get_invitation_by_token', { _token: token });
       
       if (error) {
         console.error('Error fetching invitation:', error);
         return null;
       }
       
-      return data as InvitationByToken | null;
+      // RPC retorna array, pegamos o primeiro (ou null se vazio)
+      const invitation = data?.[0] || null;
+      return invitation as InvitationByToken | null;
     },
     enabled: !!token,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: false, // Don't retry if failed (could be invalid token)
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    retry: false, // Não retentar se falhar (pode ser token inválido)
   });
 }

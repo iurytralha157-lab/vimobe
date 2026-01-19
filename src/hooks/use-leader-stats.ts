@@ -1,88 +1,153 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface LeaderStats {
   userId: string;
   userName: string;
-  userAvatar: string | null;
   teamId: string;
   teamName: string;
   totalLeads: number;
   convertedLeads: number;
   conversionRate: number;
+  avgTimeInStage: number | null;
 }
 
 export function useLeaderStats() {
-  const { organization } = useAuth();
-
   return useQuery({
-    queryKey: ["leader-stats", organization?.id],
-    queryFn: async (): Promise<LeaderStats[]> => {
-      if (!organization?.id) return [];
-
-      // Fetch all team leaders
-      const { data: leaders, error: leadersError } = await supabase
-        .from("team_members")
+    queryKey: ['leader-stats'],
+    queryFn: async () => {
+      // Get all team leaders
+      const { data: teamMembers, error: membersError } = await supabase
+        .from('team_members')
         .select(`
           user_id,
           team_id,
-          user:users(id, name, avatar_url),
-          team:teams!inner(id, name, organization_id)
+          is_leader,
+          user:users(id, name),
+          team:teams(id, name)
         `)
-        .eq("is_leader", true)
-        .eq("team.organization_id", organization.id);
-
-      if (leadersError) throw leadersError;
-      if (!leaders || leaders.length === 0) return [];
-
-      // Fetch leads assigned to each leader
-      const leaderIds = leaders.map((l) => l.user_id);
+        .eq('is_leader', true);
       
-      const { data: leads, error: leadsError } = await supabase
-        .from("leads")
-        .select(`
-          id,
-          assigned_user_id,
-          stage:stages(stage_key)
-        `)
-        .eq("organization_id", organization.id)
-        .in("assigned_user_id", leaderIds);
-
-      if (leadsError) throw leadsError;
-
-      // Calculate stats for each leader
-      const stats: LeaderStats[] = leaders.map((leader) => {
-        const leaderLeads = leads?.filter(
-          (l) => l.assigned_user_id === leader.user_id
-        ) || [];
+      if (membersError) throw membersError;
+      
+      // Get leads for each leader's team pipelines
+      const stats: LeaderStats[] = [];
+      
+      for (const member of teamMembers || []) {
+        // Get pipelines for this team
+        const { data: teamPipelines } = await supabase
+          .from('team_pipelines')
+          .select('pipeline_id')
+          .eq('team_id', member.team_id);
         
-        const totalLeads = leaderLeads.length;
-        const convertedLeads = leaderLeads.filter(
-          (l) => l.stage?.stage_key === "won" || l.stage?.stage_key === "closed_won"
-        ).length;
+        const pipelineIds = (teamPipelines || []).map(tp => tp.pipeline_id);
         
-        const conversionRate = totalLeads > 0 
-          ? Math.round((convertedLeads / totalLeads) * 100) 
-          : 0;
-
-        const user = leader.user as { id: string; name: string; avatar_url: string | null } | null;
-        const team = leader.team as { id: string; name: string } | null;
-
-        return {
-          userId: leader.user_id,
-          userName: user?.name || "Usuário",
-          userAvatar: user?.avatar_url || null,
-          teamId: leader.team_id,
-          teamName: team?.name || "Equipe",
-          totalLeads,
-          convertedLeads,
-          conversionRate,
-        };
-      });
-
-      return stats.sort((a, b) => b.conversionRate - a.conversionRate);
+        if (pipelineIds.length === 0) {
+          stats.push({
+            userId: member.user_id,
+            userName: (member.user as any)?.name || 'Desconhecido',
+            teamId: member.team_id,
+            teamName: (member.team as any)?.name || 'Desconhecido',
+            totalLeads: 0,
+            convertedLeads: 0,
+            conversionRate: 0,
+            avgTimeInStage: null,
+          });
+          continue;
+        }
+        
+        // Get total leads in team's pipelines
+        const { count: totalLeads } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .in('pipeline_id', pipelineIds);
+        
+        // Get converted leads (assuming last stage = converted)
+        const { data: stages } = await supabase
+          .from('stages')
+          .select('id, position, pipeline_id')
+          .in('pipeline_id', pipelineIds)
+          .order('position', { ascending: false });
+        
+        // Get max position stage for each pipeline
+        const lastStageIds = pipelineIds.map(pId => {
+          const pipelineStages = (stages || []).filter(s => s.pipeline_id === pId);
+          return pipelineStages[0]?.id;
+        }).filter(Boolean);
+        
+        const { count: convertedLeads } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .in('stage_id', lastStageIds);
+        
+        const total = totalLeads || 0;
+        const converted = convertedLeads || 0;
+        
+        stats.push({
+          userId: member.user_id,
+          userName: (member.user as any)?.name || 'Desconhecido',
+          teamId: member.team_id,
+          teamName: (member.team as any)?.name || 'Desconhecido',
+          totalLeads: total,
+          convertedLeads: converted,
+          conversionRate: total > 0 ? Math.round((converted / total) * 100) : 0,
+          avgTimeInStage: null,
+        });
+      }
+      
+      return stats;
     },
-    enabled: !!organization?.id,
+  });
+}
+
+export function useTeamLeaderStats(teamId: string) {
+  return useQuery({
+    queryKey: ['team-leader-stats', teamId],
+    queryFn: async () => {
+      // Get leaders for this team
+      const { data: leaders, error } = await supabase
+        .from('team_members')
+        .select(`
+          user_id,
+          user:users(id, name, avatar_url)
+        `)
+        .eq('team_id', teamId)
+        .eq('is_leader', true);
+      
+      if (error) throw error;
+      
+      // Get pipelines for this team
+      const { data: teamPipelines } = await supabase
+        .from('team_pipelines')
+        .select('pipeline_id')
+        .eq('team_id', teamId);
+      
+      const pipelineIds = (teamPipelines || []).map(tp => tp.pipeline_id);
+      
+      const leaderStats = [];
+      
+      for (const leader of leaders || []) {
+        // Get leads assigned to this leader
+        let query = supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .eq('assigned_user_id', leader.user_id);
+        
+        if (pipelineIds.length > 0) {
+          query = query.in('pipeline_id', pipelineIds);
+        }
+        
+        const { count: assignedLeads } = await query;
+        
+        leaderStats.push({
+          userId: leader.user_id,
+          user: leader.user,
+          assignedLeads: assignedLeads || 0,
+        });
+      }
+      
+      return leaderStats;
+    },
+    enabled: !!teamId,
   });
 }

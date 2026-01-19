@@ -1,132 +1,79 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ContactListFilters {
   search?: string;
   pipelineId?: string;
   stageId?: string;
-  userId?: string;
+  assigneeId?: string;
+  unassigned?: boolean;
   tagId?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-  sortBy?: 'name' | 'created_at' | 'updated_at';
-  sortOrder?: 'asc' | 'desc';
+  source?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  sortBy?: 'created_at' | 'name' | 'last_interaction_at' | 'stage';
+  sortDir?: 'asc' | 'desc';
   page?: number;
-  pageSize?: number;
+  limit?: number;
+}
+
+export interface ContactTag {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export interface Contact {
   id: string;
   name: string;
-  email: string | null;
   phone: string | null;
-  message: string | null;
-  stage_id: string | null;
+  email: string | null;
   pipeline_id: string | null;
+  stage_id: string | null;
+  stage_name: string | null;
+  stage_color: string | null;
   assigned_user_id: string | null;
+  assignee_name: string | null;
+  assignee_avatar: string | null;
+  source: string;
   created_at: string;
-  updated_at: string;
-  stage?: {
-    id: string;
-    name: string;
-    color: string | null;
-  };
-  assigned_user?: {
-    id: string;
-    name: string;
-    avatar_url: string | null;
-  };
-  tags?: Array<{
-    id: string;
-    name: string;
-    color: string;
-  }>;
+  sla_status: string | null;
+  last_interaction_at: string | null;
+  last_interaction_preview: string | null;
+  last_interaction_channel: string | null;
+  tags: ContactTag[];
+  total_count: number;
 }
 
-export interface ContactsListResult {
-  contacts: Contact[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-export function useContactsList(filters: ContactListFilters = {}) {
-  const { organization } = useAuth();
-  const page = filters.page || 1;
-  const pageSize = filters.pageSize || 20;
-
+export function useContactsList(filters: ContactListFilters) {
   return useQuery({
-    queryKey: ["contacts-list", organization?.id, filters],
-    queryFn: async (): Promise<ContactsListResult> => {
-      if (!organization?.id) {
-        return { contacts: [], total: 0, page: 1, pageSize: 20, totalPages: 0 };
-      }
-
-      let query = supabase
-        .from("leads")
-        .select(`
-          *,
-          stage:stages(id, name, color),
-          assigned_user:users!leads_assigned_user_id_fkey(id, name, avatar_url),
-          lead_tags(tag:tags(id, name, color))
-        `, { count: 'exact' })
-        .eq("organization_id", organization.id);
-
-      // Apply filters
-      if (filters.search) {
-        query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`);
-      }
-
-      if (filters.pipelineId && filters.pipelineId !== 'all') {
-        query = query.eq("pipeline_id", filters.pipelineId);
-      }
-
-      if (filters.stageId && filters.stageId !== 'all') {
-        query = query.eq("stage_id", filters.stageId);
-      }
-
-      if (filters.userId && filters.userId !== 'all') {
-        query = query.eq("assigned_user_id", filters.userId);
-      }
-
-      if (filters.dateFrom) {
-        query = query.gte("created_at", filters.dateFrom.toISOString());
-      }
-
-      if (filters.dateTo) {
-        query = query.lte("created_at", filters.dateTo.toISOString());
-      }
-
-      // Sorting
-      const sortBy = filters.sortBy || 'created_at';
-      const sortOrder = filters.sortOrder || 'desc';
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-
-      // Pagination
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-
-      const { data, error, count } = await query;
+    queryKey: ['contacts-list', filters],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_contacts_paginated', {
+        p_search: filters.search || null,
+        p_pipeline_id: filters.pipelineId || null,
+        p_stage_id: filters.stageId || null,
+        p_assignee_id: filters.unassigned ? null : (filters.assigneeId || null),
+        p_unassigned: filters.unassigned || false,
+        p_tag_id: filters.tagId || null,
+        p_source: filters.source || null,
+        p_created_from: filters.createdFrom || null,
+        p_created_to: filters.createdTo || null,
+        p_sort_by: filters.sortBy || 'created_at',
+        p_sort_dir: filters.sortDir || 'desc',
+        p_page: filters.page || 1,
+        p_limit: filters.limit || 25,
+      });
 
       if (error) throw error;
 
-      const contacts: Contact[] = (data || []).map((lead: any) => ({
-        ...lead,
-        tags: lead.lead_tags?.map((lt: any) => lt.tag).filter(Boolean) || [],
-      }));
-
-      return {
-        contacts,
-        total: count || 0,
-        page,
-        pageSize,
-        totalPages: Math.ceil((count || 0) / pageSize),
-      };
+      // Parse tags from jsonb
+      return (data || []).map((row: any) => ({
+        ...row,
+        tags: Array.isArray(row.tags) ? row.tags : [],
+      })) as Contact[];
     },
-    enabled: !!organization?.id,
-    staleTime: 30 * 1000, // 30 seconds
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
 }

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Clock, AlertTriangle } from "lucide-react";
+import { formatSlaTime } from "@/hooks/use-sla-reports";
 import { cn } from "@/lib/utils";
 
 interface SlaBadgeProps {
@@ -9,19 +10,6 @@ interface SlaBadgeProps {
   firstResponseAt: string | null;
   className?: string;
   showTime?: boolean;
-}
-
-// Format SLA time for display
-function formatSlaTime(seconds: number | null): string {
-  if (!seconds || seconds < 0) return "0min";
-  
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}min`;
-  }
-  return `${minutes}min`;
 }
 
 export function SlaBadge({

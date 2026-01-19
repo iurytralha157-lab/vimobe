@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuditLogs, AuditLog, AuditLogFilters } from '@/hooks/use-audit-logs';
-import { useOrganizations } from '@/hooks/use-super-admin';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
 
 const actionLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   create: { label: 'Criar', variant: 'default' },
@@ -42,7 +42,7 @@ export default function AdminAudit() {
   const [filters, setFilters] = useState<AuditLogFilters>({});
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   
-  const { data: organizations } = useOrganizations();
+  const { organizations } = useSuperAdmin();
   const { data: logsData, isLoading } = useAuditLogs(filters, page, 20);
 
   const handleFilterChange = (key: keyof AuditLogFilters, value: string) => {
@@ -168,7 +168,7 @@ export default function AdminAudit() {
                     {logsData?.data.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell className="font-mono text-sm">
-                          {log.created_at ? format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }) : '-'}
+                          {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
                         </TableCell>
                         <TableCell>
                           {log.user?.name || log.user?.email || 'Sistema'}
@@ -182,7 +182,7 @@ export default function AdminAudit() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {entityLabels[log.entity_type || ''] || log.entity_type}
+                          {entityLabels[log.entity_type] || log.entity_type}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -252,7 +252,7 @@ export default function AdminAudit() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Data/Hora</p>
-                  <p>{selectedLog.created_at ? format(new Date(selectedLog.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR }) : '-'}</p>
+                  <p>{format(new Date(selectedLog.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Usuário</p>
@@ -266,7 +266,7 @@ export default function AdminAudit() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Entidade</p>
-                  <p>{entityLabels[selectedLog.entity_type || ''] || selectedLog.entity_type}</p>
+                  <p>{entityLabels[selectedLog.entity_type] || selectedLog.entity_type}</p>
                 </div>
                 {selectedLog.entity_id && (
                   <div className="col-span-2">

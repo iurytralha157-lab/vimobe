@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { useAllUsers } from '@/hooks/use-super-admin';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function AdminUsers() {
-  const { data: allUsers, isLoading: loadingUsers } = useAllUsers();
+  const { allUsers, loadingUsers } = useSuperAdmin();
   const [search, setSearch] = useState('');
 
   const filteredUsers = allUsers?.filter(user =>
@@ -66,6 +66,7 @@ export default function AdminUsers() {
                   >
                     <div className="flex items-center gap-4">
                       <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.avatar_url || undefined} />
                         <AvatarFallback className="bg-primary text-primary-foreground">
                           {getInitials(user.name)}
                         </AvatarFallback>

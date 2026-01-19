@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -93,12 +93,12 @@ export function StageSettingsDialog({
   const stageTemplate = templates.find(t => t.stage_key === stage?.stage_key);
   
   // Update local state when stage changes
-  useEffect(() => {
+  useState(() => {
     if (stage) {
       setName(stage.name);
       setColor(stage.color || '#22c55e');
     }
-  }, [stage]);
+  });
   
   const handleSaveGeneral = async () => {
     if (!stage) return;

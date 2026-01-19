@@ -87,16 +87,31 @@ export function OrganizationTab() {
         .from('organizations')
         .update({
           name: formData.name,
+          cnpj: formData.cnpj || null,
+          inscricao_estadual: formData.inscricao_estadual || null,
+          razao_social: formData.razao_social || null,
+          nome_fantasia: formData.nome_fantasia || null,
+          cep: formData.cep || null,
+          endereco: formData.endereco || null,
+          numero: formData.numero || null,
+          complemento: formData.complemento || null,
+          bairro: formData.bairro || null,
+          cidade: formData.cidade || null,
+          uf: formData.uf || null,
+          telefone: formData.telefone || null,
+          whatsapp: formData.whatsapp || null,
+          email: formData.email || null,
+          website: formData.website || null,
         })
         .eq('id', organization.id);
 
       if (error) throw error;
 
       await refreshProfile();
-      toast.success("Organização atualizada com sucesso");
+      toast.success(t.settings.organization.saveSuccess);
     } catch (error) {
       console.error('Error saving organization:', error);
-      toast.error("Erro ao salvar organização");
+      toast.error(t.settings.organization.saveError);
     } finally {
       setSaving(false);
     }
@@ -105,18 +120,18 @@ export function OrganizationTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Organização</CardTitle>
-        <CardDescription>Gerencie as informações da sua organização</CardDescription>
+        <CardTitle>{t.settings.organization.title}</CardTitle>
+        <CardDescription>{t.settings.organization.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Company Name */}
         <div className="space-y-2">
-          <Label htmlFor="org-name">Nome da Empresa</Label>
+          <Label htmlFor="org-name">{t.settings.organization.companyName}</Label>
           <Input
             id="org-name"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="Nome da Empresa"
+            placeholder={t.settings.organization.companyName}
             disabled={!isAdmin}
           />
         </div>
@@ -125,10 +140,10 @@ export function OrganizationTab() {
 
         {/* Fiscal Data */}
         <div className="space-y-4">
-          <h4 className="font-medium">Dados Fiscais</h4>
+          <h4 className="font-medium">{t.settings.organization.fiscalData}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>CNPJ</Label>
+              <Label>{t.settings.organization.cnpj}</Label>
               <Input 
                 placeholder="00.000.000/0000-00" 
                 value={formData.cnpj}
@@ -137,27 +152,27 @@ export function OrganizationTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Inscrição Estadual</Label>
+              <Label>{t.settings.organization.stateRegistration}</Label>
               <Input 
-                placeholder="Inscrição Estadual"
+                placeholder={t.settings.organization.stateRegistration}
                 value={formData.inscricao_estadual}
                 onChange={(e) => setFormData(prev => ({ ...prev, inscricao_estadual: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
-              <Label>Razão Social</Label>
+              <Label>{t.settings.organization.legalName}</Label>
               <Input 
-                placeholder="Razão Social"
+                placeholder={t.settings.organization.legalName}
                 value={formData.razao_social}
                 onChange={(e) => setFormData(prev => ({ ...prev, razao_social: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
-              <Label>Nome Fantasia</Label>
+              <Label>{t.settings.organization.tradeName}</Label>
               <Input 
-                placeholder="Nome Fantasia"
+                placeholder={t.settings.organization.tradeName}
                 value={formData.nome_fantasia}
                 onChange={(e) => setFormData(prev => ({ ...prev, nome_fantasia: e.target.value }))}
                 disabled={!isAdmin}
@@ -170,10 +185,10 @@ export function OrganizationTab() {
 
         {/* Address */}
         <div className="space-y-4">
-          <h4 className="font-medium">Endereço</h4>
+          <h4 className="font-medium">{t.settings.organization.address}</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>CEP</Label>
+              <Label>{t.settings.profile.cep}</Label>
               <Input 
                 placeholder="00000-000" 
                 value={formData.cep}
@@ -182,54 +197,54 @@ export function OrganizationTab() {
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Rua</Label>
+              <Label>{t.settings.profile.street}</Label>
               <Input 
-                placeholder="Rua"
+                placeholder={t.settings.profile.street}
                 value={formData.endereco}
                 onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
-              <Label>Número</Label>
+              <Label>{t.settings.profile.number}</Label>
               <Input 
-                placeholder="Número"
+                placeholder={t.settings.profile.number}
                 value={formData.numero}
                 onChange={(e) => setFormData(prev => ({ ...prev, numero: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
-              <Label>Complemento</Label>
+              <Label>{t.settings.profile.complement}</Label>
               <Input 
-                placeholder="Complemento"
+                placeholder={t.settings.profile.complement}
                 value={formData.complemento}
                 onChange={(e) => setFormData(prev => ({ ...prev, complemento: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
-              <Label>Bairro</Label>
+              <Label>{t.settings.profile.neighborhood}</Label>
               <Input 
-                placeholder="Bairro"
+                placeholder={t.settings.profile.neighborhood}
                 value={formData.bairro}
                 onChange={(e) => setFormData(prev => ({ ...prev, bairro: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Cidade</Label>
+              <Label>{t.settings.profile.city}</Label>
               <Input 
-                placeholder="Cidade"
+                placeholder={t.settings.profile.city}
                 value={formData.cidade}
                 onChange={(e) => setFormData(prev => ({ ...prev, cidade: e.target.value }))}
                 disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
-              <Label>UF</Label>
+              <Label>{t.settings.profile.state}</Label>
               <Input 
-                placeholder="UF"
+                placeholder={t.settings.profile.state}
                 maxLength={2}
                 value={formData.uf}
                 onChange={(e) => setFormData(prev => ({ ...prev, uf: e.target.value.toUpperCase() }))}
@@ -243,10 +258,10 @@ export function OrganizationTab() {
 
         {/* Contact */}
         <div className="space-y-4">
-          <h4 className="font-medium">Contato</h4>
+          <h4 className="font-medium">{t.settings.organization.contact}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Telefone</Label>
+              <Label>{t.common.phone}</Label>
               <Input 
                 placeholder="(00) 0000-0000" 
                 value={formData.telefone}
@@ -255,7 +270,7 @@ export function OrganizationTab() {
               />
             </div>
             <div className="space-y-2">
-              <Label>WhatsApp</Label>
+              <Label>{t.settings.profile.whatsapp}</Label>
               <Input 
                 placeholder="(00) 00000-0000" 
                 value={formData.whatsapp}
@@ -264,7 +279,7 @@ export function OrganizationTab() {
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>E-mail</Label>
+              <Label>{t.common.email}</Label>
               <Input 
                 placeholder="contato@empresa.com" 
                 value={formData.email}
@@ -273,7 +288,7 @@ export function OrganizationTab() {
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Website</Label>
+              <Label>{t.settings.organization.website}</Label>
               <Input 
                 placeholder="https://www.empresa.com" 
                 value={formData.website}
@@ -289,14 +304,14 @@ export function OrganizationTab() {
           <div className="flex justify-end pt-4 border-t">
             <Button onClick={handleSave} disabled={saving || !formData.name.trim()}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
+              {t.common.save}
             </Button>
           </div>
         )}
 
         {!isAdmin && (
           <p className="text-xs text-muted-foreground pt-4">
-            Apenas administradores podem editar estas informações.
+            {t.settings.profile.changePhotoNote}
           </p>
         )}
       </CardContent>

@@ -1,0 +1,229 @@
+import { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from 'next-themes';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetTrigger 
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useOrganizationModules } from '@/hooks/use-organization-modules';
+import { useSystemSettings } from '@/hooks/use-system-settings';
+import {
+  Menu,
+  LayoutDashboard,
+  Kanban,
+  Users,
+  Calendar,
+  Building2,
+  DollarSign,
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
+  Shuffle,
+  MessageSquare,
+  TrendingUp,
+  Receipt,
+  FileText,
+  Zap,
+} from 'lucide-react';
+
+interface NavItem {
+  icon: any;
+  labelKey: string;
+  path: string;
+  module?: string;
+  adminOnly?: boolean;
+  children?: NavItem[];
+}
+
+// Exact same nav items as AppSidebar (desktop)
+const allNavItems: NavItem[] = [
+  { icon: LayoutDashboard, labelKey: 'dashboard', path: '/dashboard' },
+  { icon: Kanban, labelKey: 'pipelines', path: '/crm/pipelines', module: 'crm' },
+  { icon: MessageSquare, labelKey: 'conversations', path: '/crm/conversas', module: 'whatsapp' },
+  { icon: Users, labelKey: 'contacts', path: '/crm/contacts', module: 'crm' },
+  { 
+    icon: DollarSign, 
+    labelKey: 'financial', 
+    path: '/financeiro',
+    module: 'financial',
+    children: [
+      { icon: TrendingUp, labelKey: 'financialDashboard', path: '/financeiro' },
+      { icon: Receipt, labelKey: 'entries', path: '/financeiro/contas' },
+      { icon: FileText, labelKey: 'contracts', path: '/financeiro/contratos' },
+      { icon: DollarSign, labelKey: 'commissions', path: '/financeiro/comissoes' },
+      { icon: BarChart3, labelKey: 'reports', path: '/financeiro/relatorios' },
+    ]
+  },
+  { icon: Building2, labelKey: 'properties', path: '/properties', module: 'properties' },
+  { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'crm', adminOnly: true },
+  { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
+  { icon: Calendar, labelKey: 'schedule', path: '/agenda', module: 'agenda' },
+  { icon: Zap, labelKey: 'automations', path: '/automations', module: 'crm', adminOnly: true },
+];
+
+
+export function MobileSidebar() {
+  const [open, setOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { profile, isSuperAdmin } = useAuth();
+  const { t } = useLanguage();
+  const { hasModule } = useOrganizationModules();
+  const { data: systemSettings } = useSystemSettings();
+  const { resolvedTheme } = useTheme();
+
+  // Theme-based logo logic (same as desktop)
+  const logoUrl = useMemo(() => {
+    if (resolvedTheme === 'dark' && systemSettings?.logo_url_dark) {
+      return systemSettings.logo_url_dark;
+    }
+    if (systemSettings?.logo_url_light) {
+      return systemSettings.logo_url_light;
+    }
+    return null;
+  }, [resolvedTheme, systemSettings]);
+
+  // Filter nav items based on enabled modules and user role
+  const navItems = useMemo(() => {
+    return allNavItems.filter(item => {
+      if (item.module && !hasModule(item.module as any)) return false;
+      if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      return true;
+    });
+  }, [hasModule, profile?.role, isSuperAdmin]);
+
+  // Helper to get label from translation
+  const getLabel = (labelKey: string): string => {
+    return (t.nav as Record<string, string>)[labelKey] || labelKey;
+  };
+
+  const toggleMenu = (path: string) => {
+    setOpenMenus(prev => 
+      prev.includes(path) 
+        ? prev.filter(p => p !== path)
+        : [...prev, path]
+    );
+  };
+
+  const isMenuOpen = (path: string) => openMenus.includes(path);
+
+  const isActiveParent = (item: NavItem) => {
+    if (item.children) {
+      return item.children.some(child => location.pathname === child.path);
+    }
+    return location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setOpen(false);
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="lg:hidden">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
+        {/* Logo header */}
+        <div className="p-4 border-b border-border">
+          {logoUrl ? (
+            <img 
+              src={logoUrl} 
+              alt="Logo" 
+              className="object-contain"
+              style={{
+                maxWidth: systemSettings?.logo_width || 160,
+                maxHeight: systemSettings?.logo_height || 48
+              }}
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-lg">V</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Navigation - main scrollable area */}
+        <nav className="flex-1 py-4 px-3 overflow-y-auto">
+          <ul className="space-y-1">
+            {navItems.map((item) => {
+              const isOpen = isMenuOpen(item.path) || isActiveParent(item);
+              
+              if (item.children) {
+                return (
+                  <li key={item.path}>
+                    <button
+                      onClick={() => toggleMenu(item.path)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                        isActiveParent(item)
+                          ? "bg-accent text-accent-foreground" 
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="h-5 w-5" />
+                        <span>{getLabel(item.labelKey)}</span>
+                      </div>
+                      {isOpen ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                    {isOpen && (
+                      <ul className="ml-4 mt-1 space-y-1 border-l border-border pl-3">
+                        {item.children.map((child) => (
+                          <li key={child.path}>
+                            <button
+                              onClick={() => handleNavigation(child.path)}
+                              className={cn(
+                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                                location.pathname === child.path
+                                  ? "bg-accent text-accent-foreground font-medium"
+                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                              )}
+                            >
+                              <child.icon className="h-4 w-4" />
+                              <span>{getLabel(child.labelKey)}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              }
+
+              return (
+                <li key={item.path}>
+                  <button
+                    onClick={() => handleNavigation(item.path)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                      isActiveParent(item)
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{getLabel(item.labelKey)}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </SheetContent>
+    </Sheet>
+  );
+}

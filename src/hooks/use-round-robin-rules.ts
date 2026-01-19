@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
 export interface RuleMatch {
   pipeline_id?: string;
@@ -16,12 +17,17 @@ export interface RuleMatch {
   };
 }
 
-// Interface based on actual database schema
 export interface RoundRobinRule {
   id: string;
   round_robin_id: string;
-  match_type: string;
-  match_value: string;
+  organization_id: string | null;
+  name: string | null;
+  priority: number;
+  is_active: boolean;
+  match: RuleMatch;
+  match_type: string | null;
+  match_value: string | null;
+  created_at: string;
 }
 
 export function useRoundRobinRules(roundRobinId?: string) {
@@ -30,7 +36,8 @@ export function useRoundRobinRules(roundRobinId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('round_robin_rules')
-        .select('*');
+        .select('*')
+        .order('priority', { ascending: true });
       
       if (roundRobinId) {
         query = query.eq('round_robin_id', roundRobinId);
@@ -40,7 +47,10 @@ export function useRoundRobinRules(roundRobinId?: string) {
       
       if (error) throw error;
       
-      return (data || []) as RoundRobinRule[];
+      return (data || []).map(rule => ({
+        ...rule,
+        match: (rule.match as RuleMatch) || {},
+      })) as RoundRobinRule[];
     },
     enabled: !!roundRobinId || roundRobinId === undefined,
   });
@@ -52,19 +62,25 @@ export function useAllRoundRobinRules() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('round_robin_rules')
-        .select('*');
+        .select('*')
+        .order('priority', { ascending: true });
       
       if (error) throw error;
       
-      return (data || []) as RoundRobinRule[];
+      return (data || []).map(rule => ({
+        ...rule,
+        match: (rule.match as RuleMatch) || {},
+      })) as RoundRobinRule[];
     },
   });
 }
 
 interface CreateRuleInput {
   round_robin_id: string;
-  match_type: string;
-  match_value: string;
+  name?: string;
+  priority?: number;
+  is_active?: boolean;
+  match: RuleMatch;
 }
 
 export function useCreateRoundRobinRule() {
@@ -76,8 +92,12 @@ export function useCreateRoundRobinRule() {
         .from('round_robin_rules')
         .insert({
           round_robin_id: input.round_robin_id,
-          match_type: input.match_type,
-          match_value: input.match_value,
+          name: input.name || null,
+          priority: input.priority || 100,
+          is_active: input.is_active ?? true,
+          match: input.match as unknown as Json,
+          match_type: '',
+          match_value: '',
         })
         .select()
         .single();
@@ -100,8 +120,10 @@ export function useCreateRoundRobinRule() {
 interface UpdateRuleInput {
   id: string;
   round_robin_id: string;
-  match_type?: string;
-  match_value?: string;
+  name?: string;
+  priority?: number;
+  is_active?: boolean;
+  match?: RuleMatch;
 }
 
 export function useUpdateRoundRobinRule() {
@@ -111,8 +133,10 @@ export function useUpdateRoundRobinRule() {
     mutationFn: async (input: UpdateRuleInput) => {
       const updateData: Record<string, unknown> = {};
       
-      if (input.match_type !== undefined) updateData.match_type = input.match_type;
-      if (input.match_value !== undefined) updateData.match_value = input.match_value;
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.priority !== undefined) updateData.priority = input.priority;
+      if (input.is_active !== undefined) updateData.is_active = input.is_active;
+      if (input.match !== undefined) updateData.match = input.match as unknown as Json;
       
       const { data, error } = await supabase
         .from('round_robin_rules')
@@ -157,6 +181,33 @@ export function useDeleteRoundRobinRule() {
     },
     onError: (error) => {
       toast.error('Erro ao excluir regra: ' + error.message);
+    },
+  });
+}
+
+export function useReorderRules() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (rules: { id: string; priority: number }[]) => {
+      for (const rule of rules) {
+        const { error } = await supabase
+          .from('round_robin_rules')
+          .update({ priority: rule.priority })
+          .eq('id', rule.id);
+        
+        if (error) throw error;
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['round-robin-rules'] });
+      queryClient.invalidateQueries({ queryKey: ['round-robin-rules-all'] });
+      queryClient.invalidateQueries({ queryKey: ['round-robins'] });
+      toast.success('Prioridades atualizadas!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao reordenar regras: ' + error.message);
     },
   });
 }

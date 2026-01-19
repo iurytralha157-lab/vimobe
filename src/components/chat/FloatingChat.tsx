@@ -8,37 +8,34 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import {
-  MessageCircle,
-  X,
-  Minus,
-  Send,
-  ArrowLeft,
-  Search,
-  Loader2,
-  Check,
-  CheckCheck,
-  Clock,
-  User,
-} from "lucide-react";
+import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Mic, Video, FileText, User, Phone, Users, Paperclip, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
-import {
-  useWhatsAppConversations,
-  useWhatsAppMessages,
-  useSendWhatsAppMessage,
-  WhatsAppConversation,
-  WhatsAppMessage,
-} from "@/hooks/use-whatsapp";
+import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, WhatsAppConversation, WhatsAppMessage } from "@/hooks/use-whatsapp-conversations";
 import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
+import { useStartConversation, useFindConversationByPhone } from "@/hooks/use-start-conversation";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 export function FloatingChat() {
-  const { state, closeChat, minimizeChat, maximizeChat, openConversation, clearActiveConversation } =
-    useFloatingChat();
-  const { isOpen, isMinimized, activeConversation } = state;
+  const {
+    state,
+    closeChat,
+    minimizeChat,
+    maximizeChat,
+    openConversation,
+    clearActiveConversation,
+    clearPendingMessage
+  } = useFloatingChat();
+  const {
+    isOpen,
+    isMinimized,
+    activeConversation,
+    pendingPhone,
+    pendingLeadName,
+    pendingMessage
+  } = state;
   const isMobile = useIsMobile();
-
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const [messageText, setMessageText] = useState("");
@@ -46,21 +43,38 @@ export function FloatingChat() {
     return localStorage.getItem("whatsapp-hide-groups-floating") === "true";
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const { data: sessions, isLoading: loadingSessions } = useWhatsAppSessions();
-  const { data: conversations, isLoading: loadingConversations } = useWhatsAppConversations();
-  const { data: messages, isLoading: loadingMessages } = useWhatsAppMessages(activeConversation?.id || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    data: sessions,
+    isLoading: loadingSessions
+  } = useWhatsAppSessions();
+  const {
+    data: conversations,
+    isLoading: loadingConversations
+  } = useWhatsAppConversations(selectedSessionId || undefined, {
+    hideGroups
+  });
+  const {
+    data: messages,
+    isLoading: loadingMessages
+  } = useWhatsAppMessages(activeConversation?.id || null);
   const sendMessage = useSendWhatsAppMessage();
+  const markAsRead = useMarkConversationAsRead();
+  const startConversation = useStartConversation();
+  const findConversation = useFindConversationByPhone();
+
+  // Enable realtime
+  useWhatsAppRealtimeConversations();
 
   // Save hide groups preference
   useEffect(() => {
     localStorage.setItem("whatsapp-hide-groups-floating", String(hideGroups));
   }, [hideGroups]);
 
-  // Auto-select first connected session
+  // Auto-selecionar primeira sessão conectada
   useEffect(() => {
     if (!selectedSessionId && sessions?.length) {
-      const connectedSession = sessions.find((s) => s.status === "connected");
+      const connectedSession = sessions.find(s => s.status === "connected");
       if (connectedSession) {
         setSelectedSessionId(connectedSession.id);
       } else if (sessions[0]) {
@@ -69,295 +83,458 @@ export function FloatingChat() {
     }
   }, [sessions, selectedSessionId]);
 
+  // Handle pending phone (abrir nova conversa)
+  useEffect(() => {
+    if (pendingPhone && selectedSessionId) {
+      handleStartConversation(pendingPhone, pendingLeadName || undefined);
+    }
+  }, [pendingPhone, selectedSessionId]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth"
+    });
   }, [messages]);
 
-  const filteredConversations = conversations
-    ?.filter((conv) => {
-      if (hideGroups && conv.is_group) return false;
-      if (selectedSessionId && conv.session_id !== selectedSessionId) return false;
-      if (!searchTerm) return true;
-      const search = searchTerm.toLowerCase();
-      return conv.contact_name?.toLowerCase().includes(search) || conv.contact_phone?.includes(search);
-    })
-    .slice(0, 50);
+  // Pre-fill message from pendingMessage when conversation is active
+  useEffect(() => {
+    if (pendingMessage && activeConversation) {
+      setMessageText(pendingMessage);
+      clearPendingMessage();
+    }
+  }, [activeConversation, pendingMessage, clearPendingMessage]);
 
+  // Mark as read
+  useEffect(() => {
+    if (activeConversation && activeConversation.unread_count > 0) {
+      markAsRead.mutate({
+        id: activeConversation.id,
+        session_id: activeConversation.session_id,
+        remote_jid: activeConversation.remote_jid,
+        is_group: activeConversation.is_group
+      });
+    }
+  }, [activeConversation?.id]);
+  const handleStartConversation = async (phone: string, leadName?: string) => {
+    if (!selectedSessionId) {
+      toast({
+        title: "Nenhuma sessão WhatsApp",
+        description: "Configure uma sessão WhatsApp primeiro",
+        variant: "destructive"
+      });
+      return;
+    }
+    try {
+      // Primeiro tenta encontrar conversa existente
+      const existing = await findConversation.mutateAsync(phone);
+      if (existing) {
+        openConversation(existing);
+        return;
+      }
+
+      // Se não existe, criar nova
+      const newConversation = await startConversation.mutateAsync({
+        phone,
+        sessionId: selectedSessionId,
+        leadName
+      });
+      openConversation(newConversation);
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+    }
+  };
+  const filteredConversations = conversations?.filter(conv => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return conv.contact_name?.toLowerCase().includes(search) || conv.contact_phone?.includes(search);
+  });
   const handleSendMessage = async () => {
     if (!messageText.trim() || !activeConversation) return;
 
+    // Verify session is valid and connected before sending
+    const sessionId = activeConversation.session_id;
+    const sessionExists = sessions?.find(s => s.id === sessionId);
+    if (!sessionExists) {
+      toast({
+        title: "Sessão inválida",
+        description: "A sessão WhatsApp não existe mais. Selecione outra conversa.",
+        variant: "destructive"
+      });
+      clearActiveConversation();
+      return;
+    }
+    if (sessionExists.status !== "connected") {
+      toast({
+        title: "WhatsApp Desconectado",
+        description: "Reconecte o WhatsApp em Configurações → WhatsApp",
+        variant: "destructive"
+      });
+      return;
+    }
     await sendMessage.mutateAsync({
-      conversationId: activeConversation.id,
-      content: messageText.trim(),
+      conversation: activeConversation,
+      text: messageText.trim()
     });
     setMessageText("");
   };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeConversation) return;
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+      const {
+        error: uploadError
+      } = await supabase.storage.from("whatsapp-media").upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const {
+        data: urlData
+      } = supabase.storage.from("whatsapp-media").getPublicUrl(filePath);
 
-  const formatMessageTime = (date: string | null) => {
-    if (!date) return "";
-    const d = new Date(date);
-    return format(d, "HH:mm");
+      // Determine media type
+      let mediaType = "document";
+      if (file.type.startsWith("image/")) mediaType = "image";else if (file.type.startsWith("video/")) mediaType = "video";else if (file.type.startsWith("audio/")) mediaType = "audio";
+
+      // Send message with media
+      await sendMessage.mutateAsync({
+        conversation: activeConversation,
+        text: file.name,
+        mediaUrl: urlData.publicUrl,
+        mediaType
+      });
+      toast({
+        title: "Arquivo enviado",
+        description: "O arquivo foi enviado com sucesso"
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Erro ao enviar arquivo",
+        description: "Não foi possível enviar o arquivo",
+        variant: "destructive"
+      });
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
-
-  const formatConversationDate = (date: string | null) => {
+  const formatConversationTime = (date: string | null) => {
     if (!date) return "";
     const d = new Date(date);
     if (isToday(d)) return format(d, "HH:mm");
     if (isYesterday(d)) return "Ontem";
     return format(d, "dd/MM");
   };
-
-  const getStatusIcon = (status: string | null) => {
-    switch (status) {
-      case "read":
-        return <CheckCheck className="h-3 w-3 text-blue-500" />;
-      case "delivered":
-        return <CheckCheck className="h-3 w-3 text-muted-foreground" />;
-      case "sent":
-        return <Check className="h-3 w-3 text-muted-foreground" />;
-      default:
-        return <Clock className="h-3 w-3 text-muted-foreground" />;
-    }
-  };
-
+  const unreadCount = conversations?.reduce((acc, c) => acc + (c.unread_count || 0), 0) || 0;
+  const connectedSessions = sessions?.filter(s => s.status === "connected") || [];
+  const hasConnectedSession = connectedSessions.length > 0;
   if (!isOpen) return null;
 
-  // Minimized state
-  if (isMinimized) {
-    return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button
-          onClick={maximizeChat}
-          className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all"
-        >
-          <MessageCircle className="h-6 w-6" />
+  // Shared content components
+  const ChatHeader = ({
+    mobile = false
+  }: {
+    mobile?: boolean;
+  }) => <div className={cn("flex items-center justify-between shrink-0", mobile ? "px-4 py-3 bg-card border-b border-border" : "h-16 bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground px-5 shadow-sm")}>
+      <div className="flex items-center gap-2">
+        {activeConversation && <Button variant="ghost" size="icon" className={cn("h-8 w-8", mobile ? "hover:bg-muted" : "text-primary-foreground hover:bg-primary-foreground/20")} onClick={clearActiveConversation}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>}
+        <MessageCircle className={cn("h-5 w-5", mobile && "text-primary")} />
+        <span className={cn("font-medium", mobile ? "text-base" : "")}>
+          {activeConversation ? activeConversation.contact_name || activeConversation.contact_phone : "WhatsApp"}
+        </span>
+        {activeConversation?.is_group && <Badge variant="secondary" className="text-[10px] h-4">
+            Grupo
+          </Badge>}
+        {!isMinimized && unreadCount > 0 && !activeConversation && <Badge variant="secondary" className="h-5 min-w-5 flex items-center justify-center text-xs">
+            {unreadCount}
+          </Badge>}
+      </div>
+      <div className="flex items-center gap-1">
+        {!mobile && <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20" onClick={isMinimized ? maximizeChat : minimizeChat}>
+            <Minus className="h-4 w-4" />
+          </Button>}
+        <Button variant="ghost" size="icon" className={cn("h-8 w-8", mobile ? "hover:bg-muted" : "text-primary-foreground hover:bg-primary-foreground/20")} onClick={closeChat}>
+          <X className="h-4 w-4" />
         </Button>
       </div>
-    );
+    </div>;
+  const DisconnectedState = () => <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-card">
+      <Phone className="h-12 w-12 text-muted-foreground mb-4" />
+      <p className="text-muted-foreground mb-2">Nenhum WhatsApp conectado</p>
+      <p className="text-sm text-muted-foreground">
+        Acesse Configurações → WhatsApp para conectar
+      </p>
+    </div>;
+  const MessagesView = () => <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
+      <ScrollArea className="flex-1">
+        <div className="px-4 py-3">
+          {loadingMessages ? <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
+              <MessageCircle className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground text-sm">Nenhuma mensagem</p>
+              <p className="text-xs text-muted-foreground">Envie uma mensagem para começar</p>
+            </div> : <div className="flex flex-col gap-2">
+              {messages?.map(msg => <ChatMessageBubble key={msg.id} message={msg} isGroup={activeConversation!.is_group} />)}
+              <div ref={messagesEndRef} />
+            </div>}
+        </div>
+      </ScrollArea>
+    </div>;
+  const MessageInput = ({
+    mobile = false
+  }: {
+    mobile?: boolean;
+  }) => <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-6")}>
+      <div className="flex items-center gap-2">
+        <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" />
+        <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
+          <Paperclip className="h-5 w-5" />
+        </Button>
+          <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={handleKeyPress} className={cn("flex-1", mobile ? "h-11" : "h-10")} />
+          <Button size="icon" className={cn(mobile ? "h-10 w-10" : "h-10 w-10")} onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending}>
+          {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>;
+  const ConversationFilters = () => <div className="p-4 space-y-3 border-b shrink-0 bg-card">
+      {connectedSessions.length > 1 && <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+          <SelectTrigger className="h-9">
+            <SelectValue placeholder="Selecione canal" />
+          </SelectTrigger>
+          <SelectContent>
+            {connectedSessions.map(session => <SelectItem key={session.id} value={session.id}>
+                {session.instance_name}
+              </SelectItem>)}
+          </SelectContent>
+        </Select>}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9" />
+      </div>
+      <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+        <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
+        <span>Ocultar grupos</span>
+      </label>
+    </div>;
+  const ConversationList = () => <div className="flex-1 overflow-hidden min-h-0 w-full max-w-full overflow-x-hidden bg-card">
+      <ScrollArea className="h-full w-full max-w-full">
+        <div className="flex flex-col w-full max-w-full">
+          {loadingConversations || loadingSessions ? <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div> : filteredConversations?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
+              <MessageCircle className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-muted-foreground text-sm">Nenhuma conversa</p>
+            </div> : filteredConversations?.map(conv => <div key={conv.id} className="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-accent hover:shadow-sm transition-all duration-200 border-b border-border active:bg-accent w-full max-w-full overflow-hidden box-border" onClick={() => openConversation(conv)}>
+                <Avatar className="h-12 w-12 shrink-0 ring-2 ring-background shadow-sm">
+                  <AvatarImage src={conv.contact_picture || undefined} />
+                  <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                    {conv.is_group ? <Users className="w-5 h-5" /> : conv.contact_name?.[0] || conv.contact_phone?.[0] || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0 overflow-hidden" style={{
+            maxWidth: 'calc(100% - 60px)'
+          }}>
+                  <div className="flex items-center justify-between gap-2 w-full overflow-hidden">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+                      <p className="font-medium text-sm truncate min-w-0" style={{
+                  maxWidth: '220px'
+                }}>
+                        {conv.contact_name || conv.contact_phone}
+                      </p>
+                      {conv.is_group && <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">
+                          Grupo
+                        </Badge>}
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                      {formatConversationTime(conv.last_message_at)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-1 w-full overflow-hidden">
+                    <p className="text-xs text-muted-foreground truncate flex-1 min-w-0" style={{
+                maxWidth: '240px'
+              }}>
+                      {conv.last_message || "Sem mensagens"}
+                    </p>
+                    {conv.unread_count > 0 && <Badge className="h-5 min-w-5 flex items-center justify-center p-0 text-[10px] shrink-0">
+                        {conv.unread_count}
+                      </Badge>}
+                  </div>
+                  {/* Tags do lead */}
+                  {conv.lead?.tags && conv.lead.tags.length > 0 && <div className="flex items-center gap-1 mt-1">
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 font-medium truncate max-w-[100px]" style={{
+                backgroundColor: `${conv.lead.tags[0].tag.color}20`,
+                color: conv.lead.tags[0].tag.color,
+                borderColor: conv.lead.tags[0].tag.color
+              }}>
+                        {conv.lead.tags[0].tag.name}
+                      </Badge>
+                      {conv.lead.tags.length > 1 && <span className="text-[9px] text-muted-foreground">
+                          +{conv.lead.tags.length - 1}
+                        </span>}
+                    </div>}
+                </div>
+              </div>)}
+        </div>
+      </ScrollArea>
+    </div>;
+
+  // Mobile version - use Drawer with balloon effect
+  if (isMobile) {
+    return <Drawer open={isOpen} onOpenChange={open => !open && closeChat()}>
+        <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-1.5 max-w-full overflow-hidden">
+          {/* Hidden title for accessibility */}
+          <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
+          
+          {/* Inner wrapper for balloon effect */}
+          <div className={cn("flex flex-col", "h-[88vh]", "w-full", "max-w-full", "bg-card", "rounded-2xl", "shadow-2xl", "overflow-hidden", "border", "animate-drawer-slide-up")}>
+            {/* Custom handle */}
+            <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted-foreground/30 shrink-0" />
+            
+            {/* Header */}
+            <ChatHeader mobile />
+
+            {/* Content */}
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
+              {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? <>
+                  <MessagesView />
+                  <MessageInput mobile />
+                </> : <>
+                  <ConversationFilters />
+                  <ConversationList />
+                </>}
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>;
   }
 
-  const chatContent = (
-    <div className={cn("flex flex-col bg-background", isMobile ? "h-full" : "h-[600px] w-[400px]")}>
+  // Desktop version - floating window
+  return <div className={cn("fixed bottom-4 right-4 z-50", "bg-card", "border border-border", "rounded-2xl", "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]", "ring-1 ring-border", "transition-all duration-300 ease-out", "flex flex-col overflow-hidden", "animate-scale-in", isMinimized ? "w-80 h-14" : "w-[420px] h-[600px]")}>
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b bg-primary text-primary-foreground">
-        <div className="flex items-center gap-2">
-          {activeConversation && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-              onClick={clearActiveConversation}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          )}
-          <MessageCircle className="h-5 w-5" />
-          <span className="font-medium">
-            {activeConversation ? activeConversation.contact_name || activeConversation.contact_phone : "WhatsApp"}
+      <ChatHeader />
+
+      {!isMinimized && <>
+          {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? <>
+              <MessagesView />
+              <MessageInput />
+            </> : <>
+              <ConversationFilters />
+              <ConversationList />
+            </>}
+        </>}
+    </div>;
+}
+function ChatMessageBubble({
+  message,
+  isGroup
+}: {
+  message: WhatsAppMessage;
+  isGroup: boolean;
+}) {
+  const isFromMe = message.from_me;
+
+  // Check if URL is a temporary WhatsApp URL that won't work in browser
+  const isWhatsAppTempUrl = (url: string | null) => {
+    if (!url) return false;
+    return url.includes('mmg.whatsapp.net') || url.includes('.enc') || url.includes('pps.whatsapp.net');
+  };
+  const isValidMediaUrl = (url: string | null) => {
+    if (!url) return false;
+    return url.startsWith('https://') && !isWhatsAppTempUrl(url);
+  };
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "sent":
+        return <Check className="h-3 w-3" />;
+      case "delivered":
+        return <CheckCheck className="h-3 w-3" />;
+      case "read":
+      case "played":
+        return <CheckCheck className="h-3 w-3 text-blue-400" />;
+      default:
+        return <Clock className="h-3 w-3" />;
+    }
+  };
+  const renderContent = () => {
+    switch (message.message_type) {
+      case "image":
+        return <div>
+            {isValidMediaUrl(message.media_url) ? <a href={message.media_url} target="_blank" rel="noopener noreferrer">
+                <img src={message.media_url!} alt="Imagem" className="max-w-full rounded mb-1 cursor-pointer hover:opacity-90" />
+              </a> : <div className={cn("flex flex-col items-center justify-center gap-2 p-4 rounded-lg min-w-[160px]", isFromMe ? "bg-primary-foreground/10" : "bg-background/50")}>
+                <Image className="w-8 h-8 opacity-50" />
+                <span className="text-xs opacity-70">Imagem recebida</span>
+                <span className="text-[10px] opacity-50">(não disponível)</span>
+              </div>}
+            {message.content && message.content !== "[Imagem]" && <p className="text-sm">{message.content}</p>}
+          </div>;
+      case "audio":
+        return <div className="flex items-center gap-2">
+            {isValidMediaUrl(message.media_url) ? <audio controls className="max-w-[200px]">
+                <source src={message.media_url!} type={message.media_mime_type || "audio/ogg"} />
+              </audio> : <div className={cn("flex items-center gap-2 px-3 py-2 rounded-full min-w-[150px]", isFromMe ? "bg-primary-foreground/10" : "bg-background/50")}>
+                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", isFromMe ? "bg-primary-foreground/20" : "bg-muted-foreground/20")}>
+                  <Mic className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-medium">Áudio recebido</span>
+                  <span className="text-[10px] opacity-50">(não disponível)</span>
+                </div>
+              </div>}
+          </div>;
+      case "video":
+        return <div>
+            {isValidMediaUrl(message.media_url) ? <video controls className="max-w-full rounded mb-1">
+                <source src={message.media_url!} type={message.media_mime_type || "video/mp4"} />
+              </video> : <div className={cn("flex flex-col items-center justify-center gap-2 p-4 rounded-lg min-w-[160px]", isFromMe ? "bg-primary-foreground/10" : "bg-background/50")}>
+                <Video className="w-8 h-8 opacity-50" />
+                <span className="text-xs opacity-70">Vídeo recebido</span>
+                <span className="text-[10px] opacity-50">(não disponível)</span>
+              </div>}
+          </div>;
+      case "document":
+        return <a href={isValidMediaUrl(message.media_url) ? message.media_url! : "#"} target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-2", isValidMediaUrl(message.media_url) && "hover:underline")}>
+            <FileText className="h-4 w-4" />
+            <span className="text-sm">{message.content || "Documento"}</span>
+            {!isValidMediaUrl(message.media_url) && <span className="text-[10px] opacity-50">(não disponível)</span>}
+          </a>;
+      default:
+        return <p className="text-sm whitespace-pre-wrap break-words [word-break:break-word]">
+            {message.content}
+          </p>;
+    }
+  };
+  return <div className={cn("flex w-full", isFromMe ? "justify-end" : "justify-start")}>
+      <div className={cn("inline-block rounded-lg px-3 py-1.5", "max-w-[85%] sm:max-w-[75%]", "break-words", isFromMe ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-chatBubble text-chatBubble-foreground rounded-bl-sm")}>
+        {/* Show sender name in group messages */}
+        {isGroup && !isFromMe && message.sender_name && <p className="text-xs font-medium text-blue-500 mb-1">
+            {message.sender_name}
+          </p>}
+        
+        {renderContent()}
+        
+        <div className={cn("flex items-center gap-1 mt-0.5", isFromMe ? "justify-end" : "justify-start")}>
+          <span className={cn("text-[10px]", isFromMe ? "text-primary-foreground/70" : "text-chatBubble-foreground/70")}>
+            {format(new Date(message.sent_at), "HH:mm")}
           </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            onClick={minimizeChat}
-          >
-            <Minus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            onClick={closeChat}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          {isFromMe && <span className="text-primary-foreground/70">
+              {getStatusIcon(message.status)}
+            </span>}
         </div>
       </div>
-
-      {activeConversation ? (
-        // Messages view
-        <>
-          <ScrollArea className="flex-1 p-3">
-            <div className="space-y-2">
-              {loadingMessages ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : messages?.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">Nenhuma mensagem</div>
-              ) : (
-                messages?.map((msg) => (
-                  <div key={msg.id} className={cn("flex", msg.from_me ? "justify-end" : "justify-start")}>
-                    <div
-                      className={cn(
-                        "max-w-[80%] rounded-lg px-3 py-2 text-sm",
-                        msg.from_me ? "bg-primary text-primary-foreground" : "bg-muted"
-                      )}
-                    >
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                      <div
-                        className={cn(
-                          "flex items-center justify-end gap-1 mt-1 text-[10px]",
-                          msg.from_me ? "text-primary-foreground/70" : "text-muted-foreground"
-                        )}
-                      >
-                        <span>{formatMessageTime(msg.sent_at)}</span>
-                        {msg.from_me && getStatusIcon(msg.status)}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
-
-          {/* Input */}
-          <div className="p-3 border-t">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Digite uma mensagem..."
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="flex-1"
-              />
-              <Button
-                size="icon"
-                onClick={handleSendMessage}
-                disabled={!messageText.trim() || sendMessage.isPending}
-              >
-                {sendMessage.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </>
-      ) : (
-        // Conversations list
-        <>
-          {/* Session selector */}
-          {sessions && sessions.length > 1 && (
-            <div className="p-2 border-b">
-              <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Selecione a sessão" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sessions.map((session) => (
-                    <SelectItem key={session.id} value={session.id}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={cn(
-                            "h-2 w-2 rounded-full",
-                            session.status === "connected" ? "bg-green-500" : "bg-muted-foreground"
-                          )}
-                        />
-                        Sessão {session.id.slice(0, 8)}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Search and filters */}
-          <div className="p-2 space-y-2 border-b">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar conversas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-8 text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox id="hideGroups" checked={hideGroups} onCheckedChange={(c) => setHideGroups(!!c)} />
-              <label htmlFor="hideGroups" className="text-xs text-muted-foreground cursor-pointer">
-                Ocultar grupos
-              </label>
-            </div>
-          </div>
-
-          {/* Conversations */}
-          <ScrollArea className="flex-1">
-            {loadingConversations ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredConversations?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma conversa encontrada</div>
-            ) : (
-              <div className="divide-y">
-                {filteredConversations?.map((conv) => (
-                  <button
-                    key={conv.id}
-                    className="w-full p-3 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left"
-                    onClick={() => openConversation(conv)}
-                  >
-                    <Avatar className="h-10 w-10 shrink-0">
-                      {conv.contact_picture ? (
-                        <AvatarImage src={conv.contact_picture} />
-                      ) : null}
-                      <AvatarFallback>
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium truncate text-sm">
-                          {conv.contact_name || conv.contact_phone}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          {formatConversationDate(conv.last_message_at)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2 mt-0.5">
-                        <p className="text-xs text-muted-foreground truncate">{conv.last_message}</p>
-                        {conv.unread_count && conv.unread_count > 0 && (
-                          <Badge className="h-5 min-w-5 px-1 text-[10px] shrink-0">{conv.unread_count}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </>
-      )}
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Drawer open={isOpen} onOpenChange={(open) => !open && closeChat()}>
-        <DrawerContent className="h-[85vh]">
-          <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
-          {chatContent}
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50 rounded-lg shadow-2xl border overflow-hidden">
-      {chatContent}
-    </div>
-  );
+    </div>;
 }

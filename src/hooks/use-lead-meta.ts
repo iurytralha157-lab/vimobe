@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// Interface based on actual database schema
 export interface LeadMeta {
   id: string;
   lead_id: string;
@@ -10,6 +9,10 @@ export interface LeadMeta {
   ad_id: string | null;
   adset_id: string | null;
   campaign_id: string | null;
+  ad_name: string | null;
+  adset_name: string | null;
+  campaign_name: string | null;
+  platform: string | null;
   raw_payload: any;
   created_at: string;
 }

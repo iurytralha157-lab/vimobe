@@ -1,104 +1,102 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-export interface Invitation {
+export interface AdminInvitation {
   id: string;
   email: string | null;
+  role: 'admin' | 'user';
   token: string;
   organization_id: string;
   expires_at: string;
   used_at: string | null;
   created_at: string | null;
-  created_by: string | null;
 }
 
-export function useAdminInvitations(organizationId?: string) {
-  return useQuery({
-    queryKey: ["admin-invitations", organizationId],
+export function useAdminInvitations(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  // Fetch invitations for a specific organization
+  const { data: invitations, isLoading } = useQuery({
+    queryKey: ['admin-invitations', organizationId],
     queryFn: async () => {
-      let query = supabase
-        .from("invitations")
-        .select("*")
-        .is("used_at", null)
-        .order("created_at", { ascending: false });
+      if (!organizationId) return [];
+      
+      const { data, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .is('used_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
 
-      if (organizationId) {
-        query = query.eq("organization_id", organizationId);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data as Invitation[];
+      return (data || []) as AdminInvitation[];
     },
     enabled: !!organizationId,
   });
-}
 
-export function useCreateInvitation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ 
-      organizationId, 
-      email,
-      role = "user",
-    }: { 
-      organizationId: string; 
-      email: string;
-      role?: string;
+  // Create invitation
+  const createInvitation = useMutation({
+    mutationFn: async (data: { 
+      email: string; 
+      role: 'admin' | 'user';
+      organizationId: string;
     }) => {
-      const token = crypto.randomUUID();
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
 
-      const { data, error } = await supabase
-        .from("invitations")
+      const { data: invitation, error } = await supabase
+        .from('invitations')
         .insert({
-          organization_id: organizationId,
-          email,
-          token,
+          email: data.email,
+          role: data.role,
+          organization_id: data.organizationId,
           expires_at: expiresAt.toISOString(),
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return invitation;
     },
-    onSuccess: (_, { organizationId }) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-invitations", organizationId] });
-      toast.success("Convite criado com sucesso");
+    onSuccess: () => {
+      toast.success('Convite criado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['admin-invitations', organizationId] });
     },
-    onError: (error: Error) => {
-      toast.error("Erro ao criar convite: " + error.message);
+    onError: (error) => {
+      toast.error('Erro ao criar convite: ' + error.message);
     },
   });
-}
 
-export function useDeleteInvitation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, organizationId }: { id: string; organizationId: string }) => {
+  // Delete invitation
+  const deleteInvitation = useMutation({
+    mutationFn: async (invitationId: string) => {
       const { error } = await supabase
-        .from("invitations")
+        .from('invitations')
         .delete()
-        .eq("id", id);
+        .eq('id', invitationId);
 
       if (error) throw error;
-      return organizationId;
     },
-    onSuccess: (organizationId) => {
-      queryClient.invalidateQueries({ queryKey: ["admin-invitations", organizationId] });
-      toast.success("Convite excluído");
+    onSuccess: () => {
+      toast.success('Convite removido!');
+      queryClient.invalidateQueries({ queryKey: ['admin-invitations', organizationId] });
     },
-    onError: (error: Error) => {
-      toast.error("Erro ao excluir convite: " + error.message);
+    onError: (error) => {
+      toast.error('Erro ao remover convite: ' + error.message);
     },
   });
-}
 
-export function getInviteLink(token: string) {
-  return `${window.location.origin}/auth?invite=${token}`;
+  const getInviteLink = (token: string) => {
+    return `${window.location.origin}/auth?invite=${token}`;
+  };
+
+  return {
+    invitations,
+    isLoading,
+    createInvitation,
+    deleteInvitation,
+    getInviteLink,
+  };
 }

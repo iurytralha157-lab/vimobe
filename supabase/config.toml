@@ -1,9 +1,6 @@
-project_id = "iemalzlfnbouobyjwlwi"
+project_id = "ulodfqdmoalttgbxrutj"
 
-[functions.meta-webhook]
-verify_jwt = false
-
-[functions.send-notification]
+[functions.wordpress-webhook]
 verify_jwt = false
 
 [functions.evolution-proxy]
@@ -12,29 +9,56 @@ verify_jwt = false
 [functions.evolution-webhook]
 verify_jwt = false
 
-[functions.wordpress-webhook]
+[functions.google-calendar-auth]
 verify_jwt = false
 
-[functions.automation-executor]
+[functions.google-calendar-sync]
 verify_jwt = false
 
 [functions.automation-runner]
 verify_jwt = false
 
-[functions.automation-trigger]
-verify_jwt = false
-
-[functions.calculate-first-response]
+[functions.create-super-admin]
 verify_jwt = false
 
 [functions.create-organization-admin]
-verify_jwt = false
-
-[functions.create-super-admin]
-verify_jwt = false
+verify_jwt = true
 
 [functions.create-user]
 verify_jwt = false
 
 [functions.delete-organization]
+verify_jwt = false
+
+[functions.meta-oauth]
+verify_jwt = false
+
+[functions.meta-webhook]
+verify_jwt = false
+
+[functions.generic-webhook]
+verify_jwt = false
+
+[functions.session-health-check]
+verify_jwt = false
+
+[functions.message-sender]
+verify_jwt = false
+
+[functions.automation-trigger]
+verify_jwt = false
+
+[functions.automation-executor]
+verify_jwt = false
+
+[functions.media-worker]
+verify_jwt = false
+
+[functions.calculate-first-response]
+verify_jwt = false
+
+[functions.threecplus-webhook]
+verify_jwt = false
+
+[functions.telephony-recording-proxy]
 verify_jwt = false

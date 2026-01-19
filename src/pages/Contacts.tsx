@@ -1,333 +1,782 @@
-import { useState } from "react";
-import AppLayout from "@/components/layout/AppLayout";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useLeads, useCreateLead, useDeleteLead, useMoveLeadToStage } from "@/hooks/use-leads";
-import { useDefaultPipeline } from "@/hooks/use-pipelines";
-import { useUsers } from "@/hooks/use-users";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useState, useDeferredValue } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Card, CardContent } from '@/components/ui/card';
+import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+  Table,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
-  Plus,
-  Search,
-  MoreHorizontal,
-  Phone,
-  Mail,
-  MessageSquare,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { 
+  Search, 
+  MoreHorizontal, 
+  Phone, 
+  Mail, 
+  ExternalLink,
+  Users,
+  UserCircle,
+  Calendar,
+  X,
+  Download,
+  Upload,
+  ChevronDown,
+  MessageCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Trash2,
-  GripVertical,
-  User,
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
+} from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ContactCard } from '@/components/contacts/ContactCard';
+import { MobileFilters } from '@/components/contacts/MobileFilters';
+import { usePipelines, useStages } from '@/hooks/use-stages';
+import { useOrganizationUsers } from '@/hooks/use-users';
+import { useTags } from '@/hooks/use-tags';
+import { format, formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
+import { TableSkeleton } from '@/components/contacts/TableSkeleton';
+import { EmptyState } from '@/components/contacts/EmptyState';
+import { useContactsList, type ContactListFilters } from '@/hooks/use-contacts-list';
+import { exportContacts } from '@/lib/export-contacts';
+import { useLeads, useLead, useDeleteLead } from '@/hooks/use-leads';
 
 export default function Contacts() {
-  const { t } = useLanguage();
-  const [search, setSearch] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newLead, setNewLead] = useState({ name: "", email: "", phone: "", message: "" });
+  const isMobile = useIsMobile();
+  // Filter states
+  const [search, setSearch] = useState('');
+  const [selectedPipeline, setSelectedPipeline] = useState<string>('all');
+  const [selectedStage, setSelectedStage] = useState<string>('all');
+  const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [selectedSource, setSelectedSource] = useState<string>('all');
+  const [createdFrom, setCreatedFrom] = useState<string>('');
+  const [createdTo, setCreatedTo] = useState<string>('');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
+  const [pageInputValue, setPageInputValue] = useState('1');
 
-  const { data: leads, isLoading } = useLeads({ search: search || undefined });
-  const { data: pipeline } = useDefaultPipeline();
-  const { data: users } = useUsers();
-  const createLead = useCreateLead();
-  const deleteLead = useDeleteLead();
-  const moveLead = useMoveLeadToStage();
+  // Pagination & Sort states
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [sortBy, setSortBy] = useState<ContactListFilters['sortBy']>('created_at');
+  const [sortDir, setSortDir] = useState<ContactListFilters['sortDir']>('desc');
 
-  const handleCreateLead = async () => {
-    if (!newLead.name.trim()) return;
-    
-    await createLead.mutateAsync({
-      name: newLead.name,
-      email: newLead.email || undefined,
-      phone: newLead.phone || undefined,
-      message: newLead.message || undefined,
-      pipeline_id: pipeline?.id,
-      stage_id: pipeline?.stages?.[0]?.id,
-    });
-    
-    setNewLead({ name: "", email: "", phone: "", message: "" });
-    setIsDialogOpen(false);
+  // Debounce search
+  const deferredSearch = useDeferredValue(search);
+
+  // Build filters
+  const filters: ContactListFilters = {
+    search: deferredSearch || undefined,
+    pipelineId: selectedPipeline !== 'all' ? selectedPipeline : undefined,
+    stageId: selectedStage !== 'all' ? selectedStage : undefined,
+    assigneeId: selectedAssignee !== 'all' && selectedAssignee !== 'unassigned' ? selectedAssignee : undefined,
+    unassigned: selectedAssignee === 'unassigned',
+    tagId: selectedTag !== 'all' ? selectedTag : undefined,
+    source: selectedSource !== 'all' ? selectedSource : undefined,
+    createdFrom: createdFrom ? `${createdFrom}T00:00:00` : undefined,
+    createdTo: createdTo ? `${createdTo}T23:59:59` : undefined,
+    sortBy,
+    sortDir,
+    page,
+    limit: pageSize,
   };
 
-  const getLeadsByStage = (stageId: string) => {
-    return leads?.filter((lead) => lead.stage_id === stageId) || [];
+  // Fetch data
+  const { data: contacts = [], isLoading, isFetching } = useContactsList(filters);
+  const { data: pipelines = [] } = usePipelines();
+  const { data: stages = [] } = useStages(selectedPipeline !== 'all' ? selectedPipeline : undefined);
+  const { data: users = [] } = useOrganizationUsers();
+  const { data: tags = [] } = useTags();
+  
+  // For export, we need all leads (old hook) - only fetch when exporting
+  const { data: allLeads = [] } = useLeads();
+  
+  // Fetch selected lead for detail dialog
+  const { data: selectedLead } = useLead(selectedContactId);
+  const deleteLead = useDeleteLead();
+
+  const totalCount = contacts[0]?.total_count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  const sourceLabels: Record<string, string> = {
+    manual: 'Manual',
+    meta: 'Meta Ads',
+    site: 'Site',
+    wordpress: 'WordPress',
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setSelectedPipeline('all');
+    setSelectedStage('all');
+    setSelectedAssignee('all');
+    setSelectedTag('all');
+    setSelectedSource('all');
+    setCreatedFrom('');
+    setCreatedTo('');
+    setPage(1);
+  };
+
+  const hasActiveFilters = search || selectedPipeline !== 'all' || selectedStage !== 'all' || 
+    selectedAssignee !== 'all' || selectedTag !== 'all' || selectedSource !== 'all' || createdFrom || createdTo;
+
+  const activeFilterCount = [
+    selectedPipeline !== 'all',
+    selectedStage !== 'all',
+    selectedAssignee !== 'all',
+    selectedTag !== 'all',
+    selectedSource !== 'all',
+    createdFrom,
+    createdTo,
+  ].filter(Boolean).length;
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleSort = (column: ContactListFilters['sortBy']) => {
+    if (sortBy === column) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDir('desc');
+    }
+    setPage(1);
+  };
+
+  const SortIcon = ({ column }: { column: ContactListFilters['sortBy'] }) => {
+    if (sortBy !== column) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    return sortDir === 'asc' 
+      ? <ArrowUp className="h-3 w-3 ml-1" />
+      : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
+
+  // Reset page when filters change
+  const handleFilterChange = <T,>(setter: (value: T) => void) => (value: T) => {
+    setter(value);
+    setPage(1);
   };
 
   return (
-    <AppLayout>
-      <div className="flex flex-col h-[calc(100vh-4rem)]">
-        {/* Header */}
-        <div className="p-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">{t("nav.contacts")}</h1>
-              <p className="text-muted-foreground">
-                {leads?.length || 0} leads no pipeline
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("common.search")}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 w-64"
-                />
-              </div>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t("leads.newLead")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t("leads.newLead")}</DialogTitle>
-                    <DialogDescription>
-                      Adicione um novo lead ao seu pipeline
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">{t("common.name")} *</Label>
-                      <Input
-                        id="name"
-                        value={newLead.name}
-                        onChange={(e) => setNewLead({ ...newLead, name: e.target.value })}
-                        placeholder="Nome do lead"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">{t("common.email")}</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={newLead.email}
-                        onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
-                        placeholder="email@exemplo.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">{t("common.phone")}</Label>
-                      <Input
-                        id="phone"
-                        value={newLead.phone}
-                        onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })}
-                        placeholder="(11) 99999-9999"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="message">{t("leads.message")}</Label>
-                      <Textarea
-                        id="message"
-                        value={newLead.message}
-                        onChange={(e) => setNewLead({ ...newLead, message: e.target.value })}
-                        placeholder="Mensagem ou observação inicial"
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      {t("common.cancel")}
-                    </Button>
-                    <Button onClick={handleCreateLead} disabled={createLead.isPending}>
-                      {createLead.isPending ? t("common.loading") : t("common.save")}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+    <AppLayout title="Contatos">
+      <div className="space-y-6 animate-in relative">
+        {/* Loading indicator for background fetches */}
+        {isFetching && !isLoading && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 z-50">
+            <div className="h-full bg-primary animate-pulse" />
           </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <p className="text-muted-foreground text-sm">
+            {isLoading ? 'Carregando...' : `${totalCount} contatos`}
+          </p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size={isMobile ? 'sm' : 'default'} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                {isMobile ? <Upload className="h-4 w-4" /> : (
+                  <>
+                    Importar / Exportar
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                <Upload className="h-4 w-4 mr-2 text-primary" />
+                Importar Contatos
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => exportContacts({ leads: allLeads })}
+                disabled={allLeads.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2 text-primary" />
+                Exportar Contatos
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Kanban Board */}
-        <ScrollArea className="flex-1">
-          <div className="p-6">
-            {isLoading ? (
-              <div className="flex gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex-shrink-0 w-80">
-                    <Skeleton className="h-10 w-full mb-4" />
-                    <Skeleton className="h-32 w-full mb-2" />
-                    <Skeleton className="h-32 w-full" />
-                  </div>
-                ))}
+        {/* Filters - Mobile vs Desktop */}
+        {isMobile ? (
+          <MobileFilters
+            search={search}
+            setSearch={(v) => { setSearch(v); setPage(1); }}
+            selectedPipeline={selectedPipeline}
+            setSelectedPipeline={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}
+            selectedStage={selectedStage}
+            setSelectedStage={handleFilterChange(setSelectedStage)}
+            selectedAssignee={selectedAssignee}
+            setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
+            selectedTag={selectedTag}
+            setSelectedTag={handleFilterChange(setSelectedTag)}
+            selectedSource={selectedSource}
+            setSelectedSource={handleFilterChange(setSelectedSource)}
+            createdFrom={createdFrom}
+            setCreatedFrom={handleFilterChange(setCreatedFrom)}
+            createdTo={createdTo}
+            setCreatedTo={handleFilterChange(setCreatedTo)}
+            pipelines={pipelines}
+            stages={stages}
+            users={users}
+            tags={tags}
+            hasActiveFilters={!!hasActiveFilters}
+            clearFilters={clearFilters}
+            activeFilterCount={activeFilterCount}
+          />
+        ) : (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-wrap gap-3">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, email ou telefone..."
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    className="pl-9"
+                  />
+                </div>
+
+                {/* Pipeline */}
+                <Select value={selectedPipeline} onValueChange={(v) => {
+                  handleFilterChange(setSelectedPipeline)(v);
+                  setSelectedStage('all');
+                }}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Pipeline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas pipelines</SelectItem>
+                    {pipelines.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Stage */}
+                <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Estágio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos estágios</SelectItem>
+                    {stages.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Assignee */}
+                <Select value={selectedAssignee} onValueChange={handleFilterChange(setSelectedAssignee)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="unassigned">Sem responsável</SelectItem>
+                    {users.map(u => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Tag */}
+                <Select value={selectedTag} onValueChange={handleFilterChange(setSelectedTag)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas tags</SelectItem>
+                    {tags.map(t => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Source */}
+                <Select value={selectedSource} onValueChange={handleFilterChange(setSelectedSource)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Fonte" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas fontes</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="meta">Meta Ads</SelectItem>
+                    <SelectItem value="site">Site</SelectItem>
+                    <SelectItem value="wordpress">WordPress</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Date Filters */}
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    placeholder="De"
+                    value={createdFrom}
+                    onChange={(e) => handleFilterChange(setCreatedFrom)(e.target.value)}
+                    className="w-[140px]"
+                  />
+                  <span className="text-muted-foreground">até</span>
+                  <Input
+                    type="date"
+                    placeholder="Até"
+                    value={createdTo}
+                    onChange={(e) => handleFilterChange(setCreatedTo)(e.target.value)}
+                    className="w-[140px]"
+                  />
+                </div>
+
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar filtros
+                  </Button>
+                )}
               </div>
-            ) : pipeline?.stages?.length ? (
-              <div className="flex gap-4">
-                {pipeline.stages.map((stage) => {
-                  const stageLeads = getLeadsByStage(stage.id);
-                  return (
-                    <div key={stage.id} className="flex-shrink-0 w-80">
-                      <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-muted/50">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: stage.color || "#6366f1" }}
-                        />
-                        <span className="font-medium">{stage.name}</span>
-                        <Badge variant="secondary" className="ml-auto">
-                          {stageLeads.length}
-                        </Badge>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Content - Mobile Cards vs Desktop Table */}
+        <Card>
+          {isMobile ? (
+            // Mobile Card List
+            <div>
+              {isLoading ? (
+                <div className="divide-y">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="p-4 space-y-3 animate-pulse">
+                      <div className="flex justify-between">
+                        <div className="space-y-2 flex-1">
+                          <div className="h-4 w-32 bg-muted rounded" />
+                          <div className="h-3 w-24 bg-muted rounded" />
+                        </div>
+                        <div className="h-8 w-8 bg-muted rounded" />
                       </div>
-                      <div className="space-y-3">
-                        {stageLeads.map((lead) => (
-                          <Card key={lead.id} className="card-hover cursor-pointer">
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-10 w-10">
-                                    <AvatarFallback>
-                                      {lead.name.charAt(0).toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <p className="font-medium">{lead.name}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {formatDistanceToNow(new Date(lead.created_at), {
-                                        addSuffix: true,
-                                        locale: ptBR,
-                                      })}
-                                    </p>
-                                  </div>
-                                </div>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {lead.phone && (
-                                      <DropdownMenuItem>
-                                        <Phone className="h-4 w-4 mr-2" />
-                                        Ligar
-                                      </DropdownMenuItem>
-                                    )}
-                                    {lead.email && (
-                                      <DropdownMenuItem>
-                                        <Mail className="h-4 w-4 mr-2" />
-                                        E-mail
-                                      </DropdownMenuItem>
-                                    )}
-                                    {lead.phone && (
-                                      <DropdownMenuItem>
-                                        <MessageSquare className="h-4 w-4 mr-2" />
-                                        WhatsApp
-                                      </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem
-                                      className="text-destructive"
-                                      onClick={() => deleteLead.mutate(lead.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Excluir
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                              
-                              {/* Contact info */}
-                              <div className="mt-3 space-y-1">
-                                {lead.phone && (
-                                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                    <Phone className="h-3 w-3" />
-                                    {lead.phone}
-                                  </p>
-                                )}
-                                {lead.email && (
-                                  <p className="text-sm text-muted-foreground flex items-center gap-2 truncate">
-                                    <Mail className="h-3 w-3" />
-                                    {lead.email}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Tags */}
-                              {lead.tags && lead.tags.length > 0 && (
-                                <div className="mt-3 flex flex-wrap gap-1">
-                                  {lead.tags.map((tag) => (
-                                    <Badge
-                                      key={tag.id}
-                                      variant="outline"
-                                      className="text-xs"
-                                      style={{ borderColor: tag.color, color: tag.color }}
-                                    >
-                                      {tag.name}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Assigned user */}
-                              {lead.assigned_user && (
-                                <div className="mt-3 pt-3 border-t flex items-center gap-2">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={lead.assigned_user.avatar_url || undefined} />
-                                    <AvatarFallback className="text-xs">
-                                      {lead.assigned_user.name.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm text-muted-foreground">
-                                    {lead.assigned_user.name}
-                                  </span>
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                        {stageLeads.length === 0 && (
-                          <div className="p-4 text-center text-muted-foreground text-sm border-2 border-dashed rounded-lg">
-                            Nenhum lead nesta etapa
-                          </div>
-                        )}
+                      <div className="flex gap-2">
+                        <div className="h-6 w-20 bg-muted rounded-full" />
+                        <div className="h-6 w-16 bg-muted rounded-full" />
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              ) : contacts.length === 0 ? (
+                <EmptyState
+                  hasActiveFilters={!!hasActiveFilters}
+                  onImport={() => setImportDialogOpen(true)}
+                  onCreate={() => {/* TODO: Open create dialog */}}
+                  onClearFilters={clearFilters}
+                />
+              ) : (
+                <div className="divide-y">
+                  {contacts.map((contact) => (
+                    <ContactCard 
+                      key={contact.id} 
+                      contact={contact} 
+                      sourceLabels={sourceLabels}
+                      onViewDetails={() => setSelectedContactId(contact.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Desktop Table
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <span className="flex items-center">
+                      Contato
+                      <SortIcon column="name" />
+                    </span>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => handleSort('stage')}
+                  >
+                    <span className="flex items-center">
+                      Estágio
+                      <SortIcon column="stage" />
+                    </span>
+                  </TableHead>
+                  <TableHead>Responsável</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Fonte</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => handleSort('last_interaction_at')}
+                  >
+                    <span className="flex items-center">
+                      Última Interação
+                      <SortIcon column="last_interaction_at" />
+                    </span>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    <span className="flex items-center">
+                      Data
+                      <SortIcon column="created_at" />
+                    </span>
+                  </TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+
+              {isLoading ? (
+                <TableSkeleton rows={10} />
+              ) : contacts.length === 0 ? (
+                <tbody>
+                  <tr>
+                    <td colSpan={8}>
+                      <EmptyState
+                        hasActiveFilters={!!hasActiveFilters}
+                        onImport={() => setImportDialogOpen(true)}
+                        onCreate={() => {/* TODO: Open create dialog */}}
+                        onClearFilters={clearFilters}
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              ) : (
+                <tbody>
+                  {contacts.map((contact) => (
+                    <TableRow key={contact.id} className="cursor-pointer hover:bg-accent/50">
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-medium">{contact.name}</p>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            {contact.phone && (
+                              <a 
+                                href={`tel:${contact.phone}`} 
+                                className="flex items-center gap-1 hover:text-foreground"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Phone className="h-3 w-3" />
+                                {contact.phone}
+                              </a>
+                            )}
+                            {contact.email && (
+                              <a 
+                                href={`mailto:${contact.email}`} 
+                                className="flex items-center gap-1 hover:text-foreground"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Mail className="h-3 w-3" />
+                                {contact.email}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {contact.stage_name ? (
+                          <Badge 
+                            variant="outline" 
+                            className="gap-1.5"
+                            style={{ 
+                              borderColor: contact.stage_color || undefined,
+                              color: contact.stage_color || undefined
+                            }}
+                          >
+                            <div 
+                              className="h-2 w-2 rounded-full" 
+                              style={{ backgroundColor: contact.stage_color || undefined }} 
+                            />
+                            {contact.stage_name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {contact.assignee_name ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={contact.assignee_avatar || undefined} />
+                              <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+                                {getInitials(contact.assignee_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{contact.assignee_name.split(' ')[0]}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm flex items-center gap-1">
+                            <UserCircle className="h-4 w-4" />
+                            Sem responsável
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(contact.tags || []).slice(0, 2).map(tag => (
+                            <Badge 
+                              key={tag.id} 
+                              variant="secondary"
+                              className="text-xs"
+                              style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                            >
+                              {tag.name}
+                            </Badge>
+                          ))}
+                          {(contact.tags?.length || 0) > 2 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{(contact.tags?.length || 0) - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {sourceLabels[contact.source] || contact.source}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {contact.last_interaction_at ? (
+                          <div className="space-y-0.5">
+                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                              {contact.last_interaction_preview || 'Interação registrada'}
+                            </p>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              {contact.last_interaction_channel === 'whatsapp' && (
+                                <MessageCircle className="h-3 w-3" />
+                              )}
+                              {formatDistanceToNow(new Date(contact.last_interaction_at), { 
+                                addSuffix: true, 
+                                locale: ptBR 
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(contact.created_at), 'dd/MM/yy', { locale: ptBR })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedContactId(contact.id)}>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Ver detalhes
+                            </DropdownMenuItem>
+                            {contact.phone && (
+                              <DropdownMenuItem asChild>
+                                <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank">
+                                  <Phone className="h-4 w-4 mr-2" />
+                                  WhatsApp
+                                </a>
+                              </DropdownMenuItem>
+                            )}
+                            {contact.email && (
+                              <DropdownMenuItem asChild>
+                                <a href={`mailto:${contact.email}`}>
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Enviar email
+                                </a>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => setDeleteContactId(contact.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </tbody>
+              )}
+            </Table>
+          )}
+
+          {/* Pagination - Compact style */}
+          {totalPages > 0 && (
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                {totalCount} itens
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { setPage(1); setPageInputValue('1'); }}
+                  disabled={page === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { const newPage = Math.max(1, page - 1); setPage(newPage); setPageInputValue(String(newPage)); }}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-2 mx-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={pageInputValue}
+                    onChange={(e) => setPageInputValue(e.target.value)}
+                    onBlur={() => {
+                      const parsed = parseInt(pageInputValue, 10);
+                      if (!isNaN(parsed) && parsed >= 1 && parsed <= totalPages) {
+                        setPage(parsed);
+                      } else {
+                        setPageInputValue(String(page));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const parsed = parseInt(pageInputValue, 10);
+                        if (!isNaN(parsed) && parsed >= 1 && parsed <= totalPages) {
+                          setPage(parsed);
+                        } else {
+                          setPageInputValue(String(page));
+                        }
+                      }
+                    }}
+                    className="w-12 h-8 text-center px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                    de {totalPages}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { const newPage = Math.min(totalPages, page + 1); setPage(newPage); setPageInputValue(String(newPage)); }}
+                  disabled={page === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { setPage(totalPages); setPageInputValue(String(totalPages)); }}
+                  disabled={page === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                <User className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">Nenhum pipeline configurado</h3>
-                <p className="text-muted-foreground">
-                  Configure um pipeline para começar a gerenciar seus leads
-                </p>
-              </div>
-            )}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+            </div>
+          )}
+        </Card>
+
+        {/* Import Dialog */}
+        <ImportContactsDialog 
+          open={importDialogOpen} 
+          onOpenChange={setImportDialogOpen} 
+        />
+
+        {/* Lead Detail Dialog */}
+        {selectedLead && (
+          <LeadDetailDialog
+            lead={selectedLead}
+            stages={stages}
+            allTags={tags}
+            allUsers={users}
+            onClose={() => setSelectedContactId(null)}
+            refetchStages={() => {}}
+          />
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir contato?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Todos os dados relacionados a este contato 
+                (histórico, tarefas, atividades, mensagens) serão removidos permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteContactId) {
+                    deleteLead.mutate(deleteContactId, {
+                      onSuccess: () => setDeleteContactId(null),
+                    });
+                  }
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );

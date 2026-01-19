@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Sheet,
   SheetContent,
@@ -8,16 +8,16 @@ import {
   SheetTitle,
   SheetTrigger,
   SheetFooter,
-} from "@/components/ui/sheet";
+} from '@/components/ui/sheet';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Filter, Search, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/select';
+import { Filter, Search, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface MobileFiltersProps {
   search: string;
@@ -91,7 +91,9 @@ export function MobileFilters({
           <Button variant="outline" size="icon" className="shrink-0 relative">
             <Filter className="h-4 w-4" />
             {activeFilterCount > 0 && (
-              <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+              <Badge 
+                className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+              >
                 {activeFilterCount}
               </Badge>
             )}
@@ -114,22 +116,17 @@ export function MobileFilters({
             {/* Pipeline */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Pipeline</label>
-              <Select
-                value={selectedPipeline}
-                onValueChange={(v) => {
-                  setSelectedPipeline(v);
-                  setSelectedStage("all");
-                }}
-              >
+              <Select value={selectedPipeline} onValueChange={(v) => {
+                setSelectedPipeline(v);
+                setSelectedStage('all');
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas pipelines" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas pipelines</SelectItem>
-                  {pipelines.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
+                  {pipelines.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -138,20 +135,14 @@ export function MobileFilters({
             {/* Stage */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Estágio</label>
-              <Select
-                value={selectedStage}
-                onValueChange={setSelectedStage}
-                disabled={selectedPipeline === "all"}
-              >
+              <Select value={selectedStage} onValueChange={setSelectedStage} disabled={selectedPipeline === 'all'}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos estágios" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos estágios</SelectItem>
-                  {stages.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
+                  {stages.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -167,10 +158,8 @@ export function MobileFilters({
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="unassigned">Sem responsável</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
+                  {users.map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -185,13 +174,10 @@ export function MobileFilters({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas tags</SelectItem>
-                  {tags.map((t) => (
+                  {tags.map(t => (
                     <SelectItem key={t.id} value={t.id}>
                       <div className="flex items-center gap-2">
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: t.color }}
-                        />
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
                         {t.name}
                       </div>
                     </SelectItem>

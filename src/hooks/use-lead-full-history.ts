@@ -69,7 +69,7 @@ function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
       }
       return undefined;
     default:
-      return event.description || undefined;
+      return undefined;
   }
 }
 
@@ -97,7 +97,7 @@ export function useLeadFullHistory(leadId: string) {
       type: e.event_type,
       label: timelineEventLabels[e.event_type] || e.event_type,
       content: getTimelineEventDetails(e),
-      timestamp: e.created_at || new Date().toISOString(),
+      timestamp: e.event_at,
       actor: e.actor ? {
         id: e.actor.id,
         name: e.actor.name,
@@ -105,6 +105,8 @@ export function useLeadFullHistory(leadId: string) {
       } : null,
       source: 'timeline' as const,
       metadata: e.metadata,
+      channel: e.channel,
+      isAutomation: e.is_automation,
     }));
 
     // Convert activities

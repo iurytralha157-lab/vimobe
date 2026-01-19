@@ -12,6 +12,7 @@ import {
   Tag, 
   ArrowRight,
   History,
+  MessageSquare,
   Calendar,
   Plus,
   X

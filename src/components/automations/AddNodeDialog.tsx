@@ -1,91 +1,153 @@
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { 
   MessageSquare, 
   Mail, 
-  ArrowRight, 
+  GitBranch, 
+  Clock, 
   Tag, 
-  UserPlus, 
-  Webhook,
-  Clock,
-  GitBranch,
+  XCircle,
+  ArrowRight,
+  UserPlus,
+  Globe,
   CheckSquare,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface AddNodeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddNode: (type: string, nodeType: "action" | "condition" | "delay") => void;
+  onAdd: (type: string, actionType?: string) => void;
 }
 
 const actionNodes = [
-  { type: "send_whatsapp", label: "Enviar WhatsApp", icon: MessageSquare, color: "text-green-600" },
-  { type: "send_email", label: "Enviar Email", icon: Mail, color: "text-blue-600" },
-  { type: "move_lead", label: "Mover Lead", icon: ArrowRight, color: "text-purple-600" },
-  { type: "add_tag", label: "Adicionar Tag", icon: Tag, color: "text-orange-600" },
-  { type: "assign_user", label: "Atribuir Usuário", icon: UserPlus, color: "text-cyan-600" },
-  { type: "create_task", label: "Criar Tarefa", icon: CheckSquare, color: "text-pink-600" },
-  { type: "webhook", label: "Webhook", icon: Webhook, color: "text-gray-600" },
+  {
+    type: 'action',
+    actionType: 'send_whatsapp',
+    icon: MessageSquare,
+    label: 'Enviar WhatsApp',
+    description: 'Envia uma mensagem via WhatsApp',
+  },
+  {
+    type: 'action',
+    actionType: 'send_email',
+    icon: Mail,
+    label: 'Enviar Email',
+    description: 'Envia um email para o lead',
+  },
+  {
+    type: 'action',
+    actionType: 'move_lead',
+    icon: ArrowRight,
+    label: 'Mover Lead',
+    description: 'Move o lead para outra etapa',
+  },
+  {
+    type: 'action',
+    actionType: 'add_tag',
+    icon: Tag,
+    label: 'Adicionar Tag',
+    description: 'Adiciona uma tag ao lead',
+  },
+  {
+    type: 'action',
+    actionType: 'remove_tag',
+    icon: XCircle,
+    label: 'Remover Tag',
+    description: 'Remove uma tag do lead',
+  },
+  {
+    type: 'action',
+    actionType: 'create_task',
+    icon: CheckSquare,
+    label: 'Criar Tarefa',
+    description: 'Cria uma tarefa para o lead',
+  },
+  {
+    type: 'action',
+    actionType: 'assign_user',
+    icon: UserPlus,
+    label: 'Atribuir Responsável',
+    description: 'Atribui o lead a um usuário',
+  },
+  {
+    type: 'action',
+    actionType: 'webhook',
+    icon: Globe,
+    label: 'Webhook',
+    description: 'Chama um webhook externo',
+  },
 ];
 
-const controlNodes = [
-  { type: "condition", label: "Condição", icon: GitBranch, color: "text-amber-600", nodeType: "condition" as const },
-  { type: "delay", label: "Aguardar", icon: Clock, color: "text-purple-600", nodeType: "delay" as const },
+const flowNodes = [
+  {
+    type: 'condition',
+    icon: GitBranch,
+    label: 'Condição',
+    description: 'Divide o fluxo baseado em uma condição',
+  },
+  {
+    type: 'delay',
+    icon: Clock,
+    label: 'Aguardar',
+    description: 'Aguarda um tempo antes de continuar',
+  },
 ];
 
-export function AddNodeDialog({ open, onOpenChange, onAddNode }: AddNodeDialogProps) {
-  const handleAddAction = (type: string) => {
-    onAddNode(type, "action");
-    onOpenChange(false);
-  };
-
-  const handleAddControl = (type: string, nodeType: "condition" | "delay") => {
-    onAddNode(type, nodeType);
-    onOpenChange(false);
-  };
-
+export function AddNodeDialog({ open, onOpenChange, onAdd }: AddNodeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar Nó</DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4">
+
+        <div className="space-y-6">
+          {/* Actions */}
           <div>
-            <h4 className="text-sm font-medium mb-2 text-muted-foreground">Ações</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Ações</h3>
             <div className="grid grid-cols-2 gap-2">
               {actionNodes.map((node) => (
                 <Button
-                  key={node.type}
+                  key={node.actionType}
                   variant="outline"
-                  className="justify-start h-auto py-3"
-                  onClick={() => handleAddAction(node.type)}
+                  className="h-auto p-4 flex flex-col items-start text-left gap-1"
+                  onClick={() => onAdd(node.type, node.actionType)}
                 >
-                  <node.icon className={`h-4 w-4 mr-2 ${node.color}`} />
-                  <span className="text-sm">{node.label}</span>
+                  <div className="flex items-center gap-2">
+                    <node.icon className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{node.label}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {node.description}
+                  </span>
                 </Button>
               ))}
             </div>
           </div>
 
+          {/* Flow Control */}
           <div>
-            <h4 className="text-sm font-medium mb-2 text-muted-foreground">Controle de Fluxo</h4>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">Controle de Fluxo</h3>
             <div className="grid grid-cols-2 gap-2">
-              {controlNodes.map((node) => (
+              {flowNodes.map((node) => (
                 <Button
                   key={node.type}
                   variant="outline"
-                  className="justify-start h-auto py-3"
-                  onClick={() => handleAddControl(node.type, node.nodeType)}
+                  className="h-auto p-4 flex flex-col items-start text-left gap-1"
+                  onClick={() => onAdd(node.type)}
                 >
-                  <node.icon className={`h-4 w-4 mr-2 ${node.color}`} />
-                  <span className="text-sm">{node.label}</span>
+                  <div className="flex items-center gap-2">
+                    <node.icon className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{node.label}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {node.description}
+                  </span>
                 </Button>
               ))}
             </div>

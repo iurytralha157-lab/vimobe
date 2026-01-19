@@ -1,126 +1,52 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
 
-export interface Property {
-  id: string;
-  code: string;
-  title: string | null;
-  descricao: string | null;
-  organization_id: string;
-  tipo_de_imovel: string | null;
-  tipo_de_negocio: string | null;
-  status: string | null;
-  preco: number | null;
-  area_util: number | null;
-  area_total: number | null;
-  quartos: number | null;
-  suites: number | null;
-  banheiros: number | null;
-  vagas: number | null;
-  andar: number | null;
-  condominio: number | null;
-  iptu: number | null;
-  endereco: string | null;
-  numero: string | null;
-  complemento: string | null;
-  bairro: string | null;
-  cidade: string | null;
-  uf: string | null;
-  cep: string | null;
-  destaque: boolean | null;
-  imagem_principal: string | null;
-  fotos: string[] | null;
-  video_imovel: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type Property = Tables<'properties'>;
 
-export interface CreatePropertyInput {
-  code?: string;
-  title?: string;
-  descricao?: string;
-  tipo_de_imovel?: string;
-  tipo_de_negocio?: string;
-  status?: string;
-  preco?: number;
-  area_util?: number;
-  area_total?: number;
-  quartos?: number;
-  suites?: number;
-  banheiros?: number;
-  vagas?: number;
-  andar?: number;
-  condominio?: number;
-  iptu?: number;
-  endereco?: string;
-  numero?: string;
-  complemento?: string;
-  bairro?: string;
-  cidade?: string;
-  uf?: string;
-  cep?: string;
-  destaque?: boolean;
-  imagem_principal?: string;
-  fotos?: string[];
-}
+// Campos otimizados para listagem (evita SELECT *)
+const PROPERTY_LIST_FIELDS = `
+  id, code, title, tipo_de_imovel, tipo_de_negocio, 
+  status, destaque, bairro, cidade, uf,
+  quartos, banheiros, vagas, area_util, preco, 
+  imagem_principal, created_at, organization_id
+`;
 
-export function useProperties(filters?: {
-  status?: string;
-  tipoNegocio?: string;
-  tipoImovel?: string;
-  search?: string;
-}) {
-  const { organization } = useAuth();
-
+export function useProperties(search?: string) {
   return useQuery({
-    queryKey: ["properties", organization?.id, filters],
+    queryKey: ['properties', search],
     queryFn: async () => {
-      if (!organization?.id) return [];
-
       let query = supabase
-        .from("properties")
-        .select("*")
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: false });
-
-      if (filters?.status) {
-        query = query.eq("status", filters.status);
+        .from('properties')
+        .select(PROPERTY_LIST_FIELDS)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      
+      if (search) {
+        query = query.or(`code.ilike.%${search}%,title.ilike.%${search}%,bairro.ilike.%${search}%,cidade.ilike.%${search}%`);
       }
-      if (filters?.tipoNegocio) {
-        query = query.eq("tipo_de_negocio", filters.tipoNegocio);
-      }
-      if (filters?.tipoImovel) {
-        query = query.eq("tipo_de_imovel", filters.tipoImovel);
-      }
-      if (filters?.search) {
-        query = query.or(
-          `code.ilike.%${filters.search}%,title.ilike.%${filters.search}%,bairro.ilike.%${filters.search}%,cidade.ilike.%${filters.search}%`
-        );
-      }
-
+      
       const { data, error } = await query;
-
+      
       if (error) throw error;
       return data as Property[];
     },
-    enabled: !!organization?.id,
   });
 }
 
-export function useProperty(id: string | undefined) {
+export function useProperty(id: string | null) {
   return useQuery({
-    queryKey: ["property", id],
+    queryKey: ['property', id],
     queryFn: async () => {
       if (!id) return null;
-
+      
       const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("id", id)
+        .from('properties')
+        .select('*')
+        .eq('id', id)
         .single();
-
+      
       if (error) throw error;
       return data as Property;
     },
@@ -128,120 +54,130 @@ export function useProperty(id: string | undefined) {
   });
 }
 
+async function generatePropertyCode(organizationId: string, tipoImovel: string): Promise<string> {
+  const prefix = tipoImovel === 'Casa' ? 'CA' : 
+                 tipoImovel === 'Cobertura' ? 'CB' :
+                 tipoImovel === 'Comercial' ? 'CO' : 'AP';
+  
+  const { data: seq } = await supabase
+    .from('property_sequences')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .eq('prefix', prefix)
+    .single();
+  
+  let nextNumber = 1;
+  
+  if (seq) {
+    nextNumber = (seq.last_number || 0) + 1;
+    await supabase
+      .from('property_sequences')
+      .update({ last_number: nextNumber })
+      .eq('id', seq.id);
+  } else {
+    await supabase
+      .from('property_sequences')
+      .insert({ organization_id: organizationId, prefix, last_number: 1 });
+  }
+  
+  return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+}
+
 export function useCreateProperty() {
   const queryClient = useQueryClient();
-  const { organization } = useAuth();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (input: CreatePropertyInput) => {
-      if (!organization?.id) throw new Error("No organization");
-
-      // Generate code if not provided
-      let code = input.code;
-      if (!code) {
-        const { data: sequence } = await supabase
-          .from("property_sequences")
-          .select("*")
-          .eq("organization_id", organization.id)
+    mutationFn: async (property: Omit<Partial<Property>, 'id' | 'code' | 'organization_id' | 'created_at' | 'updated_at'> & { detalhes_extras?: string[]; proximidades?: string[] }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+      
+      // Check if impersonating
+      const impersonating = localStorage.getItem('impersonating');
+      let organizationId: string | null = null;
+      
+      if (impersonating) {
+        const session = JSON.parse(impersonating);
+        organizationId = session.orgId;
+      } else {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('organization_id')
+          .eq('id', user.user.id)
           .single();
-
-        const nextNumber = (sequence?.last_number || 0) + 1;
-        code = `${sequence?.prefix || "IMV"}${String(nextNumber).padStart(4, "0")}`;
-
-        // Update sequence
-        if (sequence) {
-          await supabase
-            .from("property_sequences")
-            .update({ last_number: nextNumber })
-            .eq("id", sequence.id);
-        } else {
-          await supabase.from("property_sequences").insert({
-            organization_id: organization.id,
-            prefix: "IMV",
-            last_number: nextNumber,
-          });
-        }
+        organizationId = userData?.organization_id || null;
       }
-
+      
+      if (!organizationId) throw new Error('Organização não encontrada');
+      
+      const code = await generatePropertyCode(organizationId, property.tipo_de_imovel || 'Apartamento');
+      
       const { data, error } = await supabase
-        .from("properties")
+        .from('properties')
         .insert({
-          ...input,
+          ...property,
           code,
-          organization_id: organization.id,
-          status: input.status || "disponivel",
+          organization_id: organizationId,
         })
         .select()
         .single();
-
+      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["properties"] });
-      toast({ title: "Imóvel cadastrado!" });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      toast.success('Imóvel cadastrado com sucesso!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao cadastrar imóvel",
-        description: error.message,
-      });
+      toast.error('Erro ao cadastrar imóvel: ' + error.message);
     },
   });
 }
 
 export function useUpdateProperty() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async ({ id, ...input }: Partial<Property> & { id: string }) => {
+    mutationFn: async ({ id, ...updates }: Partial<Property> & { id: string; detalhes_extras?: string[]; proximidades?: string[] }) => {
       const { data, error } = await supabase
-        .from("properties")
-        .update(input)
-        .eq("id", id)
+        .from('properties')
+        .update(updates)
+        .eq('id', id)
         .select()
         .single();
-
+      
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["properties"] });
-      queryClient.invalidateQueries({ queryKey: ["property", data.id] });
-      toast({ title: "Imóvel atualizado!" });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['property', variables.id] });
+      toast.success('Imóvel atualizado!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar imóvel",
-        description: error.message,
-      });
+      toast.error('Erro ao atualizar imóvel: ' + error.message);
     },
   });
 }
 
 export function useDeleteProperty() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("properties").delete().eq("id", id);
+      const { error } = await supabase
+        .from('properties')
+        .delete()
+        .eq('id', id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["properties"] });
-      toast({ title: "Imóvel excluído!" });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      toast.success('Imóvel excluído!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir imóvel",
-        description: error.message,
-      });
+      toast.error('Erro ao excluir imóvel: ' + error.message);
     },
   });
 }

@@ -11,7 +11,7 @@ interface Organization {
   name: string;
   subscription_status: string;
   created_at: string;
-  last_access_at?: string | null;
+  last_access_at: string | null;
 }
 
 interface Props {

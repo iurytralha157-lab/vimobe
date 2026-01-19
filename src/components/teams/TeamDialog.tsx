@@ -1,22 +1,17 @@
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Team, useCreateTeam, useUpdateTeam } from "@/hooks/use-teams";
-import { useUsers } from "@/hooks/use-users";
+import { useState, useEffect } from 'react';
+import { Crown, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { useUsers } from '@/hooks/use-users';
+import { useCreateTeam, useUpdateTeam, Team } from '@/hooks/use-teams';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface TeamDialogProps {
   open: boolean;
@@ -24,176 +19,194 @@ interface TeamDialogProps {
   team?: Team | null;
 }
 
-export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
-  const [name, setName] = useState("");
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [leaders, setLeaders] = useState<string[]>([]);
+interface MemberSelection {
+  userId: string;
+  isLeader: boolean;
+}
 
-  const { data: users, isLoading: usersLoading } = useUsers();
+export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
+  const [name, setName] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<MemberSelection[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: users = [] } = useUsers();
   const createTeam = useCreateTeam();
   const updateTeam = useUpdateTeam();
 
-  const isEditing = !!team;
-  const isPending = createTeam.isPending || updateTeam.isPending;
-
   useEffect(() => {
-    if (open) {
-      if (team) {
-        setName(team.name);
-        setSelectedMembers(team.members?.map((m) => m.user_id) || []);
-        setLeaders(
-          team.members?.filter((m) => m.is_leader).map((m) => m.user_id) || []
-        );
-      } else {
-        setName("");
-        setSelectedMembers([]);
-        setLeaders([]);
-      }
-    }
-  }, [open, team]);
-
-  const handleMemberToggle = (userId: string) => {
-    setSelectedMembers((prev) => {
-      if (prev.includes(userId)) {
-        // Remove from members and leaders
-        setLeaders((l) => l.filter((id) => id !== userId));
-        return prev.filter((id) => id !== userId);
-      }
-      return [...prev, userId];
-    });
-  };
-
-  const handleLeaderToggle = (userId: string) => {
-    setLeaders((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleSubmit = () => {
-    if (!name.trim()) return;
-
-    if (isEditing && team) {
-      updateTeam.mutate(
-        {
-          id: team.id,
-          name: name.trim(),
-          memberIds: selectedMembers,
-          leaderIds: leaders,
-        },
-        {
-          onSuccess: () => onOpenChange(false),
-        }
+    if (team) {
+      setName(team.name);
+      setSelectedMembers(
+        team.members?.map(m => ({
+          userId: m.user_id,
+          isLeader: m.is_leader || false,
+        })) || []
       );
     } else {
-      createTeam.mutate(
-        {
-          name: name.trim(),
-          memberIds: selectedMembers,
-          leaderId: leaders[0],
-        },
-        {
-          onSuccess: () => onOpenChange(false),
-        }
-      );
+      setName('');
+      setSelectedMembers([]);
     }
-  };
+  }, [team, open]);
 
   const getInitials = (name: string) => {
     return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
+      .split(' ')
+      .map(n => n[0])
+      .join('')
       .toUpperCase()
       .slice(0, 2);
   };
 
+  const toggleMember = (userId: string) => {
+    setSelectedMembers(prev => {
+      const exists = prev.find(m => m.userId === userId);
+      if (exists) {
+        return prev.filter(m => m.userId !== userId);
+      }
+      return [...prev, { userId, isLeader: false }];
+    });
+  };
+
+  const toggleLeader = (userId: string) => {
+    setSelectedMembers(prev =>
+      prev.map(m =>
+        m.userId === userId ? { ...m, isLeader: !m.isLeader } : m
+      )
+    );
+  };
+
+  const isMemberSelected = (userId: string) => {
+    return selectedMembers.some(m => m.userId === userId);
+  };
+
+  const getMemberSelection = (userId: string) => {
+    return selectedMembers.find(m => m.userId === userId);
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      toast.error('Informe o nome da equipe');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (team) {
+        // Atualizar equipe existente
+        await updateTeam.mutateAsync({
+          id: team.id,
+          name: name.trim(),
+          memberIds: selectedMembers.map(m => m.userId),
+        });
+
+        // Atualizar líderes
+        for (const member of selectedMembers) {
+          await supabase
+            .from('team_members')
+            .update({ is_leader: member.isLeader })
+            .eq('team_id', team.id)
+            .eq('user_id', member.userId);
+        }
+      } else {
+        // Criar nova equipe
+        const result = await createTeam.mutateAsync({
+          name: name.trim(),
+          memberIds: selectedMembers.map(m => m.userId),
+        });
+
+        // Definir líderes
+        for (const member of selectedMembers.filter(m => m.isLeader)) {
+          await supabase
+            .from('team_members')
+            .update({ is_leader: true })
+            .eq('team_id', result.id)
+            .eq('user_id', member.userId);
+        }
+      }
+
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving team:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Editar Equipe" : "Nova Equipe"}
-          </DialogTitle>
+          <DialogTitle>{team ? 'Editar Equipe' : 'Nova Equipe'}</DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? "Atualize os dados da equipe"
-              : "Crie uma nova equipe e adicione membros"}
+            {team
+              ? 'Atualize as informações da equipe'
+              : 'Crie uma nova equipe e adicione membros'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome da equipe</Label>
+            <Label htmlFor="name">Nome da Equipe</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Vendas, Atendimento..."
+              placeholder="Ex: Equipe Vendas SP"
             />
           </div>
 
           <div className="space-y-2">
             <Label>Membros</Label>
-            {usersLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <ScrollArea className="h-64 rounded-md border">
-                <div className="p-2 space-y-1">
-                  {users?.map((user) => {
-                    const isSelected = selectedMembers.includes(user.id);
-                    const isLeader = leaders.includes(user.id);
+            <ScrollArea className="h-64 border rounded-lg p-2">
+              <div className="space-y-2">
+                {users.map((user) => {
+                  const isSelected = isMemberSelected(user.id);
+                  const memberData = getMemberSelection(user.id);
 
-                    return (
-                      <div
-                        key={user.id}
-                        className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => handleMemberToggle(user.id)}
-                          />
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback className="text-xs">
-                              {getInitials(user.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {user.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {user.email}
-                            </span>
-                          </div>
+                  return (
+                    <div
+                      key={user.id}
+                      className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
+                        isSelected ? 'bg-primary/10' : 'hover:bg-muted'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleMember(user.id)}
+                        />
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.avatar_url || undefined} />
+                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">{user.name}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
                         </div>
-
-                        {isSelected && (
-                          <div className="flex items-center gap-2">
-                            <Label
-                              htmlFor={`leader-${user.id}`}
-                              className="text-xs text-muted-foreground"
-                            >
-                              Líder
-                            </Label>
-                            <Switch
-                              id={`leader-${user.id}`}
-                              checked={isLeader}
-                              onCheckedChange={() => handleLeaderToggle(user.id)}
-                            />
-                          </div>
-                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
+
+                      {isSelected && (
+                        <div className="flex items-center gap-2">
+                          <Crown
+                            className={`h-4 w-4 transition-colors ${
+                              memberData?.isLeader ? 'text-yellow-500' : 'text-muted-foreground/40'
+                            }`}
+                          />
+                          <Switch
+                            checked={memberData?.isLeader || false}
+                            onCheckedChange={() => toggleLeader(user.id)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+            <p className="text-xs text-muted-foreground">
+              Ative o switch <Crown className="h-3 w-3 inline text-yellow-500" /> para definir como líder
+            </p>
           </div>
         </div>
 
@@ -201,9 +214,9 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={isPending || !name.trim()}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? "Salvar" : "Criar"}
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {team ? 'Salvar' : 'Criar Equipe'}
           </Button>
         </DialogFooter>
       </DialogContent>

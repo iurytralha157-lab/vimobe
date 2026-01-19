@@ -39,7 +39,7 @@ export function FinancialCard({
   };
 
   return (
-    <Card className={cn(variantStyles[variant], className)}>
+    <Card className={cn('card-hover', variantStyles[variant], className)}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">

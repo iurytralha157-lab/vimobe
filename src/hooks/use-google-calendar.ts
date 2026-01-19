@@ -8,10 +8,11 @@ export interface GoogleCalendarToken {
   user_id: string;
   access_token: string;
   refresh_token: string;
-  expires_at: string;
-  calendar_id: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  token_expires_at: string;
+  calendar_id: string;
+  is_sync_enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useGoogleCalendarStatus() {
@@ -96,16 +97,15 @@ export function useToggleGoogleCalendarSync() {
     mutationFn: async (is_sync_enabled: boolean) => {
       if (!profile?.id) throw new Error('Usuário não encontrado');
 
-      // Note: is_sync_enabled column may not exist - this is a placeholder
       const { data, error } = await supabase
         .from('google_calendar_tokens')
-        .update({ calendar_id: is_sync_enabled ? 'primary' : null })
+        .update({ is_sync_enabled })
         .eq('user_id', profile.id)
         .select()
         .single();
 
       if (error) throw error;
-      return { ...data, is_sync_enabled };
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });

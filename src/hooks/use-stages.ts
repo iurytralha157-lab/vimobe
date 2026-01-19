@@ -1,284 +1,322 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+import { normalizePhone } from '@/lib/phone-utils';
 
-export interface Stage {
-  id: string;
-  name: string;
-  stage_key: string;
-  color: string | null;
-  position: number;
-  pipeline_id: string;
-  leads?: any[];
+export type Stage = Tables<'stages'> & {
+  lead_count?: number;
+};
+
+// Campos otimizados para leads no pipeline
+const LEAD_PIPELINE_FIELDS = `
+  id, name, phone, email, source, created_at, 
+  stage_id, assigned_user_id, pipeline_id, message,
+  valor_interesse, stage_entered_at,
+  first_response_seconds, first_response_is_automation, first_response_at,
+  sla_status, sla_seconds_elapsed,
+  assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url)
+`;
+
+export function useStages(pipelineId?: string) {
+  return useQuery({
+    queryKey: ['stages', pipelineId],
+    queryFn: async () => {
+      let query = supabase
+        .from('stages')
+        .select('id, name, color, stage_key, position, pipeline_id')
+        .order('position');
+      
+      if (pipelineId) {
+        query = query.eq('pipeline_id', pipelineId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Query otimizada: contar leads agrupados por stage em uma única query
+      const { data: leadCounts } = await supabase
+        .from('leads')
+        .select('stage_id')
+        .not('stage_id', 'is', null);
+      
+      const countsByStage = (leadCounts || []).reduce((acc, l) => {
+        if (l.stage_id) {
+          acc[l.stage_id] = (acc[l.stage_id] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      
+      return (data || []).map(stage => ({
+        ...stage,
+        lead_count: countsByStage[stage.id] || 0,
+      })) as Stage[];
+    },
+  });
 }
 
-export interface Pipeline {
-  id: string;
-  name: string;
-  organization_id: string;
-  is_default: boolean | null;
-  created_at: string;
-  stages?: Stage[];
+export function useStagesWithLeads(pipelineId?: string) {
+  return useQuery({
+    queryKey: ['stages-with-leads', pipelineId],
+    queryFn: async () => {
+      // Get default pipeline if not provided
+      let targetPipelineId = pipelineId;
+      if (!targetPipelineId) {
+        const { data: pipeline } = await supabase
+          .from('pipelines')
+          .select('id')
+          .eq('is_default', true)
+          .maybeSingle();
+        
+        targetPipelineId = pipeline?.id;
+      }
+      
+      if (!targetPipelineId) {
+        return [];
+      }
+      
+      // Query unificada: stages e leads em paralelo
+      const [stagesResult, leadsResult] = await Promise.all([
+        supabase
+          .from('stages')
+          .select('id, name, color, stage_key, position, pipeline_id')
+          .eq('pipeline_id', targetPipelineId)
+          .order('position'),
+        supabase
+          .from('leads')
+          .select(LEAD_PIPELINE_FIELDS)
+          .eq('pipeline_id', targetPipelineId)
+          .order('created_at', { ascending: false })
+          .limit(500) // Limite para performance
+      ]);
+      
+      if (stagesResult.error) throw stagesResult.error;
+      
+      const stages = stagesResult.data || [];
+      const leads = leadsResult.data || [];
+      
+      // Buscar tags apenas se houver leads
+      const leadIds = leads.map(l => l.id);
+      let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
+      
+      if (leadIds.length > 0) {
+        const { data: leadTags } = await supabase
+          .from('lead_tags')
+          .select('lead_id, tag:tags(id, name, color)')
+          .in('lead_id', leadIds);
+        
+        tagsByLead = (leadTags || []).reduce((acc, lt) => {
+          if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
+          if (lt.tag) acc[lt.lead_id].push(lt.tag as any);
+          return acc;
+        }, {} as Record<string, { id: string; name: string; color: string }[]>);
+      }
+      
+      // Buscar fotos e unread_count do WhatsApp para leads com telefone
+      const leadsWithPhone = leads.filter(l => l.phone);
+      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
+      
+      if (leadsWithPhone.length > 0) {
+        const { data: conversations } = await supabase
+          .from('whatsapp_conversations')
+          .select('contact_phone, contact_picture, unread_count');
+        
+        // Criar mapa telefone normalizado → { foto, unread_count }
+        (conversations || []).forEach(c => {
+          if (c.contact_phone) {
+            const normalized = normalizePhone(c.contact_phone);
+            if (normalized) {
+              const existing = phoneToWhatsApp.get(normalized);
+              // Soma unread_count se já existir (múltiplas conversas para mesmo telefone)
+              phoneToWhatsApp.set(normalized, {
+                picture: c.contact_picture || existing?.picture || null,
+                unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
+              });
+            }
+          }
+        });
+      }
+      
+      // Map de stages para lookup rápido
+      const stagesById = stages.reduce((acc, stage) => {
+        acc[stage.id] = stage;
+        return acc;
+      }, {} as Record<string, any>);
+      
+      // Agrupar leads por stage
+      const leadsByStage = leads.reduce((acc, lead) => {
+        const stageId = lead.stage_id || 'no-stage';
+        if (!acc[stageId]) acc[stageId] = [];
+        
+        // Adicionar foto do WhatsApp e unread_count ao lead
+        let whatsapp_picture: string | null = null;
+        let unread_count = 0;
+        if (lead.phone) {
+          const normalizedPhone = normalizePhone(lead.phone);
+          const whatsappData = phoneToWhatsApp.get(normalizedPhone);
+          whatsapp_picture = whatsappData?.picture || null;
+          unread_count = whatsappData?.unread_count || 0;
+        }
+        
+        acc[stageId].push({
+          ...lead,
+          tags: tagsByLead[lead.id] || [],
+          stage: stagesById[stageId] || null,
+          whatsapp_picture,
+          unread_count,
+        });
+        return acc;
+      }, {} as Record<string, any[]>);
+      
+      return stages.map(stage => ({
+        ...stage,
+        leads: leadsByStage[stage.id] || [],
+      }));
+    },
+  });
 }
 
 export function usePipelines() {
-  const { organization } = useAuth();
-
   return useQuery({
-    queryKey: ["pipelines", organization?.id],
+    queryKey: ['pipelines'],
     queryFn: async () => {
-      if (!organization?.id) return [];
-
       const { data, error } = await supabase
-        .from("pipelines")
-        .select(`
-          *,
-          stages(*)
-        `)
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: true });
-
+        .from('pipelines')
+        .select('id, name, is_default, created_at, organization_id')
+        .order('created_at');
+      
       if (error) throw error;
-
-      return (data || []).map((pipeline) => ({
-        ...pipeline,
-        stages: (pipeline.stages || []).sort(
-          (a: Stage, b: Stage) => a.position - b.position
-        ),
-      })) as Pipeline[];
+      return data;
     },
-    enabled: !!organization?.id,
-  });
-}
-
-export function useStages(pipelineId: string | undefined) {
-  return useQuery({
-    queryKey: ["stages", pipelineId],
-    queryFn: async () => {
-      if (!pipelineId) return [];
-
-      const { data, error } = await supabase
-        .from("stages")
-        .select("*")
-        .eq("pipeline_id", pipelineId)
-        .order("position", { ascending: true });
-
-      if (error) throw error;
-      return data as Stage[];
-    },
-    enabled: !!pipelineId,
-  });
-}
-
-export function useStagesWithLeads(pipelineId: string | undefined) {
-  const { organization } = useAuth();
-
-  return useQuery({
-    queryKey: ["stages-with-leads", pipelineId, organization?.id],
-    queryFn: async () => {
-      if (!pipelineId || !organization?.id) return [];
-
-      // Fetch stages
-      const { data: stages, error: stagesError } = await supabase
-        .from("stages")
-        .select("*")
-        .eq("pipeline_id", pipelineId)
-        .order("position", { ascending: true });
-
-      if (stagesError) throw stagesError;
-
-      // Fetch leads with related data
-      const { data: leads, error: leadsError } = await supabase
-        .from("leads")
-        .select(`
-          *,
-          assigned_user:users!leads_assigned_user_id_fkey(id, name, avatar_url),
-          property:properties(id, code, title),
-          lead_tags(tag_id, tags:tags(id, name, color))
-        `)
-        .eq("pipeline_id", pipelineId)
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: false });
-
-      if (leadsError) throw leadsError;
-
-      // Group leads by stage
-      const stagesWithLeads = (stages || []).map((stage) => ({
-        ...stage,
-        leads: (leads || [])
-          .filter((lead) => lead.stage_id === stage.id)
-          .map((lead) => ({
-            ...lead,
-            lead_tags: lead.lead_tags?.map((lt: any) => ({
-              tag_id: lt.tag_id,
-              ...lt.tags,
-            })),
-          })),
-      }));
-
-      return stagesWithLeads as Stage[];
-    },
-    enabled: !!pipelineId && !!organization?.id,
   });
 }
 
 export function useCreatePipeline() {
   const queryClient = useQueryClient();
-  const { organization } = useAuth();
-
+  
   return useMutation({
-    mutationFn: async (input: { name: string; stages?: { name: string; stage_key: string; color?: string }[] }) => {
-      if (!organization?.id) throw new Error("No organization");
-
-      // Create pipeline
+    mutationFn: async ({ name, isDefault = false }: { name: string; isDefault?: boolean }) => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+      
+      const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.user.id)
+        .single();
+      
+      if (!userData?.organization_id) throw new Error('Organização não encontrada');
+      
       const { data: pipeline, error: pipelineError } = await supabase
-        .from("pipelines")
+        .from('pipelines')
         .insert({
-          name: input.name,
-          organization_id: organization.id,
-          is_default: false,
+          name,
+          organization_id: userData.organization_id,
+          is_default: isDefault,
         })
         .select()
         .single();
-
+      
       if (pipelineError) throw pipelineError;
-
-      // Create default stages if none provided
-      const defaultStages = input.stages || [
-        { name: "Novo", stage_key: "new", color: "#3b82f6" },
-        { name: "Em Contato", stage_key: "contacted", color: "#22c55e" },
-        { name: "Negociação", stage_key: "negotiation", color: "#f59e0b" },
-        { name: "Fechado", stage_key: "closed", color: "#8b5cf6" },
-      ];
-
-      const { error: stagesError } = await supabase.from("stages").insert(
-        defaultStages.map((stage, index) => ({
-          pipeline_id: pipeline.id,
-          name: stage.name,
-          stage_key: stage.stage_key,
-          color: stage.color || "#6b7280",
-          position: index,
-        }))
-      );
-
+      
+      // Usar função do banco para criar stages e cadências padrão
+      const { error: stagesError } = await supabase.rpc('create_default_stages_for_pipeline', {
+        p_pipeline_id: pipeline.id,
+        p_org_id: userData.organization_id,
+      });
+      
       if (stagesError) throw stagesError;
-
+      
       return pipeline;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      toast.success("Pipeline criada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['cadence-templates'] });
     },
-    onError: (error) => {
-      toast.error("Erro ao criar pipeline: " + error.message);
+  });
+}
+
+export function useUpdatePipeline() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, name, isDefault }: { id: string; name?: string; isDefault?: boolean }) => {
+      const updates: Record<string, any> = {};
+      if (name !== undefined) updates.name = name;
+      if (isDefault !== undefined) updates.is_default = isDefault;
+      
+      const { data, error } = await supabase
+        .from('pipelines')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
     },
   });
 }
 
 export function useDeletePipeline() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: async (pipelineId: string) => {
-      // First delete stages
-      await supabase.from("stages").delete().eq("pipeline_id", pipelineId);
-
-      // Then delete pipeline
+    mutationFn: async (id: string) => {
+      await supabase.from('stages').delete().eq('pipeline_id', id);
+      
       const { error } = await supabase
-        .from("pipelines")
+        .from('pipelines')
         .delete()
-        .eq("id", pipelineId);
-
+        .eq('id', id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      toast.success("Pipeline excluída!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao excluir pipeline: " + error.message);
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
     },
   });
 }
 
 export function useCreateStage() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: async (input: { pipelineId: string; name: string; color?: string }) => {
-      // Get max position
-      const { data: stages } = await supabase
-        .from("stages")
-        .select("position")
-        .eq("pipeline_id", input.pipelineId)
-        .order("position", { ascending: false })
+    mutationFn: async ({ pipelineId, name, color }: { pipelineId: string; name: string; color?: string }) => {
+      const { data: existingStages } = await supabase
+        .from('stages')
+        .select('position')
+        .eq('pipeline_id', pipelineId)
+        .order('position', { ascending: false })
         .limit(1);
-
-      const nextPosition = stages && stages.length > 0 ? stages[0].position + 1 : 0;
-
+      
+      const nextPosition = (existingStages?.[0]?.position ?? -1) + 1;
+      const stageKey = name.toLowerCase().replace(/\s+/g, '_').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
       const { data, error } = await supabase
-        .from("stages")
+        .from('stages')
         .insert({
-          pipeline_id: input.pipelineId,
-          name: input.name,
-          stage_key: input.name.toLowerCase().replace(/\s+/g, "_"),
-          color: input.color || "#6b7280",
+          pipeline_id: pipelineId,
+          name,
+          stage_key: stageKey,
           position: nextPosition,
+          color: color || '#6b7280',
         })
         .select()
         .single();
-
+      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stages-with-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-    },
-    onError: (error) => {
-      toast.error("Erro ao criar coluna: " + error.message);
-    },
-  });
-}
-
-export function useUpdateStage() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; name?: string; color?: string; position?: number }) => {
-      const { data, error } = await supabase
-        .from("stages")
-        .update(input)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stages-with-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-    },
-  });
-}
-
-export function useDeleteStage() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (stageId: string) => {
-      const { error } = await supabase.from("stages").delete().eq("id", stageId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stages-with-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      toast.success("Coluna excluída!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao excluir coluna: " + error.message);
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
     },
   });
 }

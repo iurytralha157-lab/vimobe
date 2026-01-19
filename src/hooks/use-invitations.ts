@@ -7,10 +7,11 @@ export interface Invitation {
   organization_id: string;
   email: string | null;
   token: string;
+  role: 'admin' | 'user';
   created_by: string | null;
   expires_at: string;
   used_at: string | null;
-  created_at: string | null;
+  created_at: string;
 }
 
 export function useInvitations() {
@@ -34,7 +35,7 @@ export function useCreateInvitation() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ email }: { email?: string }) => {
+    mutationFn: async ({ email, role }: { email?: string; role: 'admin' | 'user' }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Não autenticado');
       
@@ -51,6 +52,7 @@ export function useCreateInvitation() {
         .insert({
           organization_id: profile.organization_id,
           email: email || null,
+          role,
           created_by: userData.user.id,
         })
         .select()

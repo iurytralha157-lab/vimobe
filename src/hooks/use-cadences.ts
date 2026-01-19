@@ -1,126 +1,134 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
 
-export interface CadenceTask {
-  id: string;
-  cadence_template_id: string;
-  day_offset: number;
-  type: "call" | "message" | "email" | "note";
-  title: string;
-  description: string | null;
-  position: number | null;
-}
+export type CadenceTemplate = Tables<'cadence_templates'> & {
+  tasks: CadenceTaskTemplate[];
+};
 
-export interface CadenceTemplate {
-  id: string;
-  name: string;
-  stage_key: string;
-  organization_id: string;
-  created_at: string;
-  tasks: CadenceTask[];
-}
+export type CadenceTaskTemplate = Tables<'cadence_tasks_template'>;
 
 export function useCadenceTemplates() {
-  const { organization } = useAuth();
-
   return useQuery({
-    queryKey: ["cadence-templates", organization?.id],
+    queryKey: ['cadence-templates'],
     queryFn: async () => {
-      if (!organization?.id) return [];
-
-      const { data, error } = await supabase
-        .from("cadence_templates")
-        .select(`
-          *,
-          cadence_tasks_template(*)
-        `)
-        .eq("organization_id", organization.id);
-
+      // First, ensure cadence templates exist for all stages
+      const { data: stages } = await supabase
+        .from('stages')
+        .select('stage_key, name')
+        .order('position');
+      
+      const { data: existingTemplates } = await supabase
+        .from('cadence_templates')
+        .select('stage_key');
+      
+      const existingKeys = new Set((existingTemplates || []).map(t => t.stage_key));
+      const missingStages = (stages || []).filter(s => !existingKeys.has(s.stage_key));
+      
+      // Create missing templates
+      if (missingStages.length > 0) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { data: userProfile } = await supabase
+            .from('users')
+            .select('organization_id')
+            .eq('id', userData.user.id)
+            .single();
+          
+          if (userProfile?.organization_id) {
+            await supabase
+              .from('cadence_templates')
+              .insert(missingStages.map(s => ({
+                stage_key: s.stage_key,
+                name: s.name,
+                organization_id: userProfile.organization_id,
+              })));
+          }
+        }
+      }
+      
+      // Now fetch all templates with tasks
+      const { data: templates, error } = await supabase
+        .from('cadence_templates')
+        .select('*')
+        .order('stage_key');
+      
       if (error) throw error;
-
-      return (data || []).map((template) => ({
+      
+      // Get tasks for all templates
+      const templateIds = (templates || []).map(t => t.id);
+      const { data: tasks } = await supabase
+        .from('cadence_tasks_template')
+        .select('*')
+        .in('cadence_template_id', templateIds.length > 0 ? templateIds : ['no-templates'])
+        .order('day_offset')
+        .order('position');
+      
+      const tasksByTemplate = (tasks || []).reduce((acc, task) => {
+        if (!acc[task.cadence_template_id]) acc[task.cadence_template_id] = [];
+        acc[task.cadence_template_id].push(task);
+        return acc;
+      }, {} as Record<string, CadenceTaskTemplate[]>);
+      
+      return (templates || []).map(template => ({
         ...template,
-        tasks: (template.cadence_tasks_template || [])
-          .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
-          .map((task: any) => ({
-            ...task,
-            type: task.title?.toLowerCase().includes("ligação") || task.title?.toLowerCase().includes("call")
-              ? "call"
-              : task.title?.toLowerCase().includes("mensagem") || task.title?.toLowerCase().includes("message")
-              ? "message"
-              : task.title?.toLowerCase().includes("email")
-              ? "email"
-              : "note",
-          })),
+        tasks: tasksByTemplate[template.id] || [],
       })) as CadenceTemplate[];
     },
-    enabled: !!organization?.id,
   });
 }
 
 export function useCreateCadenceTask() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (input: {
+    mutationFn: async (task: {
       cadence_template_id: string;
       day_offset: number;
-      type: string;
+      type: 'call' | 'message' | 'email' | 'note';
       title: string;
+      description?: string;
+      observation?: string;
+      recommended_message?: string;
     }) => {
       const { data, error } = await supabase
-        .from("cadence_tasks_template")
-        .insert({
-          cadence_template_id: input.cadence_template_id,
-          day_offset: input.day_offset,
-          title: input.title,
-        })
+        .from('cadence_tasks_template')
+        .insert(task)
         .select()
         .single();
-
+      
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cadence-templates"] });
-      toast({ title: "Tarefa criada!" });
+      queryClient.invalidateQueries({ queryKey: ['cadence-templates'] });
+      toast.success('Tarefa adicionada!');
     },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar tarefa",
-        description: error.message,
-      });
+    onError: (error) => {
+      toast.error('Erro ao adicionar tarefa: ' + error.message);
     },
   });
 }
 
 export function useDeleteCadenceTask() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (taskId: string) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("cadence_tasks_template")
+        .from('cadence_tasks_template')
         .delete()
-        .eq("id", taskId);
-
+        .eq('id', id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cadence-templates"] });
-      toast({ title: "Tarefa removida!" });
+      queryClient.invalidateQueries({ queryKey: ['cadence-templates'] });
+      toast.success('Tarefa removida!');
     },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao remover tarefa",
-        description: error.message,
-      });
+    onError: (error) => {
+      toast.error('Erro ao remover tarefa: ' + error.message);
     },
   });
 }

@@ -36,11 +36,12 @@ export function useCreateRoundRobin() {
       
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
       
-      // Create round robin (strategy column may not exist yet)
+      // Create round robin
       const { data: roundRobin, error: rrError } = await supabase
         .from('round_robins')
         .insert({
           name: input.name,
+          strategy: input.strategy,
           organization_id: profile.organization_id,
         })
         .select()

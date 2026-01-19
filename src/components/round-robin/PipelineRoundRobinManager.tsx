@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, GitBranch, Shuffle, AlertCircle } from 'lucide-react';
 import {
@@ -8,31 +8,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { usePipelines } from '@/hooks/use-pipelines';
+import { usePipelines } from '@/hooks/use-stages';
+import { useRoundRobins } from '@/hooks/use-round-robins';
+import { useUpdatePipelineRoundRobin } from '@/hooks/use-pipeline-round-robin';
+import { Tables } from '@/integrations/supabase/types';
 
-interface RoundRobin {
-  id: string;
-  name: string;
-  is_active: boolean;
-}
+type Pipeline = Tables<'pipelines'>;
 
-interface PipelineRoundRobinManagerProps {
-  roundRobins: RoundRobin[];
-  isLoading?: boolean;
-  onUpdate?: (pipelineId: string, roundRobinId: string | null) => Promise<void>;
-}
-
-export function PipelineRoundRobinManager({ 
-  roundRobins = [], 
-  isLoading: rrLoading,
-  onUpdate 
-}: PipelineRoundRobinManagerProps) {
+export function PipelineRoundRobinManager() {
   const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
+  const { data: roundRobins = [], isLoading: rrLoading } = useRoundRobins();
+  const updatePipelineRR = useUpdatePipelineRoundRobin();
   
   const handleChange = async (pipelineId: string, roundRobinId: string | null) => {
-    if (onUpdate) {
-      await onUpdate(pipelineId, roundRobinId === 'none' ? null : roundRobinId);
-    }
+    await updatePipelineRR.mutateAsync({ 
+      pipelineId, 
+      roundRobinId: roundRobinId === 'none' ? null : roundRobinId 
+    });
   };
   
   if (pipelinesLoading || rrLoading) {
@@ -44,6 +36,7 @@ export function PipelineRoundRobinManager({
   }
   
   const activeRoundRobins = roundRobins.filter(rr => rr.is_active);
+  const pipelinesWithoutRR = pipelines.filter(p => !(p as any).default_round_robin_id);
   
   return (
     <div className="space-y-6">
@@ -55,58 +48,79 @@ export function PipelineRoundRobinManager({
         </p>
       </div>
       
-      {activeRoundRobins.length === 0 && (
+      {pipelinesWithoutRR.length > 0 && (
         <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-700 dark:text-amber-400">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <p className="text-sm">
-            Nenhum round-robin ativo encontrado. Crie e ative filas de distribuição primeiro.
+            {pipelinesWithoutRR.length} pipeline(s) sem round-robin padrão configurado. 
+            Leads podem ficar sem atribuição automática.
           </p>
         </div>
       )}
       
       <div className="grid gap-4">
-        {pipelines.map((pipeline) => (
-          <Card key={pipeline.id}>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <GitBranch className="h-4 w-4 text-primary" />
+        {pipelines.map((pipeline) => {
+          const pipelineAny = pipeline as any;
+          const currentRRId = pipelineAny.default_round_robin_id;
+          const currentRR = roundRobins.find(rr => rr.id === currentRRId);
+          
+          return (
+            <Card key={pipeline.id}>
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <GitBranch className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{pipeline.name}</p>
+                      {pipeline.is_default && (
+                        <Badge variant="secondary" className="text-xs">Padrão</Badge>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{pipeline.name}</p>
-                    {pipeline.is_default && (
-                      <Badge variant="secondary" className="text-xs mt-1">Padrão</Badge>
-                    )}
+                  
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={currentRRId || 'none'}
+                      onValueChange={(value) => handleChange(pipeline.id, value)}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Selecione uma fila..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">Nenhum (sem fallback)</span>
+                        </SelectItem>
+                        {activeRoundRobins.map((rr) => (
+                          <SelectItem key={rr.id} value={rr.id}>
+                            <div className="flex items-center gap-2">
+                              <Shuffle className="h-4 w-4" />
+                              {rr.name}
+                              <Badge variant="outline" className="text-xs ml-1">
+                                {rr.members.length} membros
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                
-                <Select
-                  defaultValue="none"
-                  onValueChange={(value) => handleChange(pipeline.id, value)}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">
-                      <span className="text-muted-foreground">Nenhum</span>
-                    </SelectItem>
-                    {activeRoundRobins.map((rr) => (
-                      <SelectItem key={rr.id} value={rr.id}>
-                        <div className="flex items-center gap-2">
-                          <Shuffle className="h-3 w-3" />
-                          {rr.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
+      
+      {pipelines.length === 0 && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <GitBranch className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground">Nenhum pipeline encontrado</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

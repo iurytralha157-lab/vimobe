@@ -132,24 +132,24 @@ export function UpcomingTasksWidget({
             >
               {/* Icon */}
               <div className={cn(
-                "flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg",
+                "flex items-center justify-center w-8 h-8 rounded-lg",
                 taskType.bg
               )}>
-                <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", taskType.color)} />
+                <Icon className={cn("h-4 w-4", taskType.color)} />
               </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium truncate">{task.title}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                <p className="text-sm font-medium truncate">{task.title}</p>
+                <p className="text-xs text-muted-foreground truncate">
                   {task.lead_name}
                 </p>
               </div>
 
               {/* Time / Complete Button */}
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-2">
                 <span className={cn(
-                  "text-[10px] sm:text-xs",
+                  "text-xs",
                   timeInfo.urgent ? "text-destructive font-medium" : "text-muted-foreground"
                 )}>
                   {timeInfo.label}

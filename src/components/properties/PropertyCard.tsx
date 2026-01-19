@@ -1,215 +1,136 @@
-import {
-  MapPin,
-  Bed,
-  Bath,
-  Car,
-  Ruler,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Eye,
-  Star,
-  Building2,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-
-interface Property {
-  id: string;
-  code: string;
-  title: string | null;
-  imagem_principal: string | null;
-  status: string | null;
-  destaque: boolean | null;
-  tipo_de_negocio: string | null;
-  tipo_de_imovel: string | null;
-  preco: number | null;
-  quartos: number | null;
-  banheiros: number | null;
-  vagas: number | null;
-  area_util: number | null;
-  bairro: string | null;
-  cidade: string | null;
-  uf: string | null;
-}
+} from '@/components/ui/dropdown-menu';
+import { 
+  MoreHorizontal, 
+  MapPin, 
+  Bed, 
+  Bath, 
+  Car,
+  Ruler,
+  Star,
+  Building2,
+  Pencil,
+  Trash2,
+  Eye
+} from 'lucide-react';
+import { Property } from '@/hooks/use-properties';
 
 interface PropertyCardProps {
   property: Property;
-  onView?: (property: Property) => void;
-  onEdit?: (property: Property) => void;
-  onDelete?: (property: Property) => void;
-  className?: string;
+  onEdit: (property: Property) => void;
+  onDelete: (id: string) => void;
+  formatPrice: (value: number | null, tipo: string | null) => string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  disponivel: { label: "Disponível", className: "bg-emerald-500 hover:bg-emerald-500" },
-  reservado: { label: "Reservado", className: "bg-amber-500 hover:bg-amber-500" },
-  vendido: { label: "Vendido", className: "bg-blue-500 hover:bg-blue-500" },
-  alugado: { label: "Alugado", className: "bg-violet-500 hover:bg-violet-500" },
-};
-
-const BUSINESS_TYPE_LABELS: Record<string, string> = {
-  venda: "Venda",
-  aluguel: "Aluguel",
-  venda_aluguel: "Venda/Aluguel",
-};
-
-export function PropertyCard({
-  property,
-  onView,
-  onEdit,
-  onDelete,
-  className,
-}: PropertyCardProps) {
-  const status = STATUS_CONFIG[property.status || "disponivel"] || STATUS_CONFIG.disponivel;
-
-  const formatCurrency = (value: number | null) => {
-    if (!value) return "Sob consulta";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const location = [property.bairro, property.cidade]
-    .filter(Boolean)
-    .join(", ");
-
+export function PropertyCard({ property, onEdit, onDelete, formatPrice }: PropertyCardProps) {
   return (
-    <Card className={cn("overflow-hidden group hover:shadow-lg transition-shadow", className)}>
-      {/* Image */}
-      <div className="relative aspect-[4/3] bg-muted">
+    <Card className="overflow-hidden card-hover">
+      <div className="aspect-[4/3] bg-muted relative">
         {property.imagem_principal ? (
-          <img
-            src={property.imagem_principal}
-            alt={property.title || "Imóvel"}
-            className="w-full h-full object-cover"
-          />
+          <img src={property.imagem_principal} alt={property.title || ''} className="w-full h-full object-cover" />
+        ) : property.fotos && Array.isArray(property.fotos) && (property.fotos as string[]).length > 0 ? (
+          <img src={(property.fotos as string[])[0]} alt={property.title || ''} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Building2 className="h-16 w-16 text-muted-foreground/50" />
+            <Building2 className="h-12 w-12 text-muted-foreground/30" />
           </div>
         )}
-
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex gap-2">
-          <Badge className={cn("text-white border-0", status.className)}>
-            {status.label}
+        {property.destaque && (
+          <Badge className="absolute top-2 left-2 bg-warning text-warning-foreground">
+            <Star className="h-3 w-3 mr-1" />
+            Destaque
           </Badge>
-          {property.destaque && (
-            <Badge className="bg-yellow-500 hover:bg-yellow-500 text-white border-0">
-              <Star className="h-3 w-3 mr-1 fill-current" />
-              Destaque
-            </Badge>
+        )}
+        <div className="absolute top-2 right-2 flex gap-1">
+          <Badge 
+            variant={property.tipo_de_negocio === 'Venda' ? 'default' : 'secondary'}
+          >
+            {property.tipo_de_negocio}
+          </Badge>
+          {property.status === 'inativo' && (
+            <Badge variant="outline" className="bg-background">Inativo</Badge>
           )}
         </div>
-
-        {/* Code badge */}
-        <Badge variant="secondary" className="absolute top-3 right-3">
-          {property.code}
-        </Badge>
-
-        {/* Business type */}
-        {property.tipo_de_negocio && (
-          <Badge
-            variant="secondary"
-            className="absolute bottom-3 left-3 bg-background/80 backdrop-blur-sm"
-          >
-            {BUSINESS_TYPE_LABELS[property.tipo_de_negocio] || property.tipo_de_negocio}
-          </Badge>
-        )}
       </div>
-
       <CardContent className="p-4">
-        {/* Header */}
-        <div className="flex justify-between items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-lg line-clamp-1">
-              {property.title || `Imóvel ${property.code}`}
-            </h3>
-            {location && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{location}</span>
-              </p>
-            )}
-          </div>
-
+        <div className="flex items-start justify-between mb-2">
+          <Badge variant="outline" className="font-mono text-xs">
+            {property.code}
+          </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <Button variant="ghost" size="icon" className="h-6 w-6">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {onView && (
-                <DropdownMenuItem onClick={() => onView(property)}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Ver detalhes
-                </DropdownMenuItem>
-              )}
-              {onEdit && (
-                <DropdownMenuItem onClick={() => onEdit(property)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
-                </DropdownMenuItem>
-              )}
-              {onDelete && (
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => onDelete(property)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={() => onEdit(property)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Eye className="h-4 w-4 mr-2" />
+                Visualizar
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-destructive"
+                onClick={() => onDelete(property.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Features */}
-        <div className="flex flex-wrap gap-3 mt-4 text-sm text-muted-foreground">
-          {property.quartos !== null && property.quartos !== undefined && (
-            <span className="flex items-center gap-1">
-              <Bed className="h-4 w-4" />
-              {property.quartos}
-            </span>
+        <h3 className="font-medium text-sm line-clamp-2 mb-2">
+          {property.title || `${property.tipo_de_imovel} em ${property.bairro}`}
+        </h3>
+
+        {(property.bairro || property.cidade) && (
+          <div className="flex items-center gap-1 text-muted-foreground text-sm mb-3">
+            <MapPin className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{[property.bairro, property.cidade].filter(Boolean).join(', ')}</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 text-muted-foreground text-xs mb-3 flex-wrap">
+          {property.quartos && property.quartos > 0 && (
+            <div className="flex items-center gap-1">
+              <Bed className="h-3 w-3" />
+              <span>{property.quartos}</span>
+            </div>
           )}
-          {property.banheiros !== null && property.banheiros !== undefined && (
-            <span className="flex items-center gap-1">
-              <Bath className="h-4 w-4" />
-              {property.banheiros}
-            </span>
+          {property.banheiros && property.banheiros > 0 && (
+            <div className="flex items-center gap-1">
+              <Bath className="h-3 w-3" />
+              <span>{property.banheiros}</span>
+            </div>
           )}
-          {property.vagas !== null && property.vagas !== undefined && (
-            <span className="flex items-center gap-1">
-              <Car className="h-4 w-4" />
-              {property.vagas}
-            </span>
+          {property.vagas && property.vagas > 0 && (
+            <div className="flex items-center gap-1">
+              <Car className="h-3 w-3" />
+              <span>{property.vagas}</span>
+            </div>
           )}
-          {property.area_util !== null && property.area_util !== undefined && (
-            <span className="flex items-center gap-1">
-              <Ruler className="h-4 w-4" />
-              {property.area_util}m²
-            </span>
+          {property.area_util && (
+            <div className="flex items-center gap-1">
+              <Ruler className="h-3 w-3" />
+              <span>{property.area_util}m²</span>
+            </div>
           )}
         </div>
 
-        {/* Price */}
-        <div className="mt-4 pt-4 border-t">
-          <p className="text-xl font-bold text-primary">
-            {formatCurrency(property.preco)}
-          </p>
-        </div>
+        <p className="text-lg font-bold text-primary">
+          {formatPrice(property.preco, property.tipo_de_negocio)}
+        </p>
       </CardContent>
     </Card>
   );

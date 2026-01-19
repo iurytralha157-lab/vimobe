@@ -1,315 +1,243 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
-export interface Organization {
+export interface OrganizationWithStats {
   id: string;
   name: string;
-  subscription_status: string;
+  logo_url: string | null;
   is_active: boolean;
+  subscription_status: string;
   max_users: number;
   admin_notes: string | null;
   created_at: string;
-  segment: string | null;
-  logo_url: string | null;
+  last_access_at: string | null;
   user_count?: number;
   lead_count?: number;
 }
 
-export interface SuperAdminStats {
-  totalOrganizations: number;
-  activeOrganizations: number;
-  trialOrganizations: number;
-  suspendedOrganizations: number;
-  totalUsers: number;
-  totalLeads: number;
-}
-
-export interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-  organization_id: string | null;
-  organization?: { name: string } | null;
-}
-
-export function useOrganizations() {
-  return useQuery({
-    queryKey: ["admin-organizations"],
-    queryFn: async () => {
-      const { data: orgs, error } = await supabase
-        .from("organizations")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Get user counts per organization
-      const { data: userCounts } = await supabase
-        .from("users")
-        .select("organization_id")
-        .not("organization_id", "is", null);
-
-      // Get lead counts per organization
-      const { data: leadCounts } = await supabase
-        .from("leads")
-        .select("organization_id");
-
-      const userCountMap = new Map<string, number>();
-      const leadCountMap = new Map<string, number>();
-
-      userCounts?.forEach((u) => {
-        if (u.organization_id) {
-          userCountMap.set(u.organization_id, (userCountMap.get(u.organization_id) || 0) + 1);
-        }
-      });
-
-      leadCounts?.forEach((l) => {
-        if (l.organization_id) {
-          leadCountMap.set(l.organization_id, (leadCountMap.get(l.organization_id) || 0) + 1);
-        }
-      });
-
-      return orgs.map((org) => ({
-        ...org,
-        subscription_status: (org as any).subscription_status || "active",
-        is_active: (org as any).is_active ?? true,
-        max_users: (org as any).max_users || 10,
-        admin_notes: (org as any).admin_notes || null,
-        user_count: userCountMap.get(org.id) || 0,
-        lead_count: leadCountMap.get(org.id) || 0,
-      })) as Organization[];
-    },
-  });
-}
-
-export function useSuperAdminStats() {
-  return useQuery({
-    queryKey: ["admin-stats"],
-    queryFn: async () => {
-      const [orgsResult, usersResult, leadsResult] = await Promise.all([
-        supabase.from("organizations").select("id, created_at"),
-        supabase.from("users").select("id").not("organization_id", "is", null),
-        supabase.from("leads").select("id"),
-      ]);
-
-      const orgs = orgsResult.data || [];
-      
-      return {
-        totalOrganizations: orgs.length,
-        activeOrganizations: orgs.length, // Simplified - all are active by default
-        trialOrganizations: 0,
-        suspendedOrganizations: 0,
-        totalUsers: usersResult.data?.length || 0,
-        totalLeads: leadsResult.data?.length || 0,
-      } as SuperAdminStats;
-    },
-  });
-}
-
-export function useAllUsers() {
-  return useQuery({
-    queryKey: ["admin-all-users"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select(`
-          id,
-          name,
-          email,
-          role,
-          is_active,
-          created_at,
-          organization_id,
-          organizations:organization_id (name)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      return data.map((user) => ({
-        ...user,
-        organization: user.organizations,
-      })) as AdminUser[];
-    },
-  });
-}
-
-export function useCreateOrganization() {
+export function useSuperAdmin() {
+  const { isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
 
-  return useMutation({
+  // Fetch all organizations with stats
+  const { data: organizations, isLoading: loadingOrgs } = useQuery({
+    queryKey: ['super-admin-organizations'],
+    queryFn: async () => {
+      // Get organizations
+      const { data: orgs, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get user counts per org
+      const { data: userCounts } = await supabase
+        .from('users')
+        .select('organization_id');
+
+      // Get lead counts per org
+      const { data: leadCounts } = await supabase
+        .from('leads')
+        .select('organization_id');
+
+      // Aggregate counts
+      const orgStats: OrganizationWithStats[] = (orgs || []).map(org => ({
+        ...org,
+        is_active: org.is_active ?? true,
+        subscription_status: org.subscription_status ?? 'trial',
+        max_users: org.max_users ?? 10,
+        admin_notes: org.admin_notes ?? null,
+        user_count: userCounts?.filter(u => u.organization_id === org.id).length || 0,
+        lead_count: leadCounts?.filter(l => l.organization_id === org.id).length || 0,
+      }));
+
+      return orgStats;
+    },
+    enabled: isSuperAdmin,
+  });
+
+  // Fetch all users across organizations
+  const { data: allUsers, isLoading: loadingUsers } = useQuery({
+    queryKey: ['super-admin-users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          organization:organizations(id, name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isSuperAdmin,
+  });
+
+  // Create new organization with admin user via edge function
+  const createOrganization = useMutation({
     mutationFn: async (data: { 
       name: string; 
-      segment?: string;
-      adminEmail: string;
-      adminName: string;
+      adminEmail: string; 
+      adminName: string; 
       adminPassword: string;
     }) => {
-      // Create organization
-      const { data: org, error: orgError } = await supabase
-        .from("organizations")
-        .insert({ name: data.name, segment: data.segment })
-        .select()
-        .single();
+      const { data: session } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-organization-admin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.session?.access_token}`,
+          },
+          body: JSON.stringify(data),
+        }
+      );
 
-      if (orgError) throw orgError;
-
-      // Create admin user via auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.adminEmail,
-        password: data.adminPassword,
-        options: {
-          data: { name: data.adminName },
-        },
-      });
-
-      if (authError) throw authError;
-
-      // Update user with organization
-      if (authData.user) {
-        await supabase
-          .from("users")
-          .update({ 
-            organization_id: org.id,
-            role: "admin",
-            name: data.adminName,
-          })
-          .eq("id", authData.user.id);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar organização');
       }
 
-      return org;
+      return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-organizations"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
-      toast.success("Organização criada com sucesso");
+    onSuccess: (data) => {
+      toast.success(`Organização "${data.organization.name}" criada com sucesso!`);
+      queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
     },
-    onError: (error: Error) => {
-      toast.error("Erro ao criar organização: " + error.message);
+    onError: (error) => {
+      toast.error('Erro ao criar organização: ' + error.message);
     },
   });
-}
 
-export function useUpdateOrganization() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<Organization> & { id: string }) => {
+  // Update organization
+  const updateOrganization = useMutation({
+    mutationFn: async (data: { 
+      id: string; 
+      name?: string;
+      is_active?: boolean;
+      subscription_status?: string;
+      max_users?: number;
+      admin_notes?: string;
+    }) => {
+      const { id, ...updates } = data;
       const { error } = await supabase
-        .from("organizations")
-        .update(data)
-        .eq("id", id);
+        .from('organizations')
+        .update(updates)
+        .eq('id', id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-organizations"] });
-      toast.success("Organização atualizada");
+      toast.success('Organização atualizada!');
+      queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
     },
-    onError: (error: Error) => {
-      toast.error("Erro ao atualizar: " + error.message);
+    onError: (error) => {
+      toast.error('Erro ao atualizar: ' + error.message);
     },
   });
-}
 
-export function useDeleteOrganization() {
-  const queryClient = useQueryClient();
+  // Delete organization via edge function (bypasses RLS)
+  const deleteOrganization = useMutation({
+    mutationFn: async (organizationId: string) => {
+      const { data: session } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-organization`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.session?.access_token}`,
+          },
+          body: JSON.stringify({ organizationId }),
+        }
+      );
 
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("organizations")
-        .delete()
-        .eq("id", id);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao excluir organização');
+      }
 
-      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-organizations"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
-      toast.success("Organização excluída");
+      toast.success('Organização excluída com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
     },
-    onError: (error: Error) => {
-      toast.error("Erro ao excluir: " + error.message);
+    onError: (error) => {
+      toast.error('Erro ao excluir organização: ' + error.message);
     },
   });
-}
 
-export function useOrganizationModules(organizationId: string) {
-  return useQuery({
-    queryKey: ["organization-modules", organizationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_modules")
-        .select("*")
-        .eq("organization_id", organizationId);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!organizationId,
-  });
-}
-
-export function useToggleModule() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ 
-      organizationId, 
-      moduleName, 
-      isEnabled 
-    }: { 
+  // Update module access for an organization
+  const updateModuleAccess = useMutation({
+    mutationFn: async (data: { 
       organizationId: string; 
       moduleName: string; 
       isEnabled: boolean;
     }) => {
+      // Check if module record exists
       const { data: existing } = await supabase
-        .from("organization_modules")
-        .select("id")
-        .eq("organization_id", organizationId)
-        .eq("module_name", moduleName)
+        .from('organization_modules')
+        .select('id')
+        .eq('organization_id', data.organizationId)
+        .eq('module_name', data.moduleName)
         .single();
 
       if (existing) {
-        await supabase
-          .from("organization_modules")
-          .update({ is_enabled: isEnabled })
-          .eq("id", existing.id);
+        // Update
+        const { error } = await supabase
+          .from('organization_modules')
+          .update({ is_enabled: data.isEnabled })
+          .eq('id', existing.id);
+        if (error) throw error;
       } else {
-        await supabase
-          .from("organization_modules")
-          .insert({ 
-            organization_id: organizationId, 
-            module_name: moduleName, 
-            is_enabled: isEnabled 
+        // Insert
+        const { error } = await supabase
+          .from('organization_modules')
+          .insert({
+            organization_id: data.organizationId,
+            module_name: data.moduleName,
+            is_enabled: data.isEnabled,
           });
+        if (error) throw error;
       }
     },
-    onSuccess: (_, { organizationId }) => {
-      queryClient.invalidateQueries({ queryKey: ["organization-modules", organizationId] });
-      toast.success("Módulo atualizado");
+    onSuccess: () => {
+      toast.success('Acesso ao módulo atualizado!');
+      queryClient.invalidateQueries({ queryKey: ['organization-modules'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar módulo: ' + error.message);
     },
   });
-}
 
-export function useOrganizationUsers(organizationId: string) {
-  return useQuery({
-    queryKey: ["organization-users", organizationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false });
+  // Get stats
+  const stats = {
+    totalOrganizations: organizations?.length || 0,
+    activeOrganizations: organizations?.filter(o => o.is_active).length || 0,
+    trialOrganizations: organizations?.filter(o => o.subscription_status === 'trial').length || 0,
+    suspendedOrganizations: organizations?.filter(o => o.subscription_status === 'suspended').length || 0,
+    totalUsers: allUsers?.length || 0,
+  };
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!organizationId,
-  });
+  return {
+    organizations,
+    allUsers,
+    loadingOrgs,
+    loadingUsers,
+    stats,
+    createOrganization,
+    updateOrganization,
+    updateModuleAccess,
+    deleteOrganization,
+  };
 }

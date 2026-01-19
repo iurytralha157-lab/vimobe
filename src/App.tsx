@@ -3,534 +3,217 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { SidebarProvider } from "@/contexts/SidebarContext";
-import { ThemeProvider } from "next-themes";
+import { SuperAdminRoute } from "@/components/guards/SuperAdminRoute";
+import { AdminRoute } from "@/components/guards/AdminRoute";
 import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
 
-// Pages
-import Auth from "@/pages/Auth";
-import ResetPassword from "@/pages/ResetPassword";
-import Onboarding from "@/pages/Onboarding";
-import Dashboard from "@/pages/Dashboard";
-import Contacts from "@/pages/Contacts";
-import Properties from "@/pages/Properties";
-import Contracts from "@/pages/Contracts";
-import Agenda from "@/pages/Agenda";
-import Conversations from "@/pages/Conversations";
-import Automations from "@/pages/Automations";
-import CRMManagement from "@/pages/CRMManagement";
-import Pipelines from "@/pages/Pipelines";
-import FinancialDashboard from "@/pages/FinancialDashboard";
-import FinancialEntries from "@/pages/FinancialEntries";
-import FinancialReports from "@/pages/FinancialReports";
-import Commissions from "@/pages/Commissions";
-import BrokerPerformance from "@/pages/BrokerPerformance";
-import TelephonyReports from "@/pages/TelephonyReports";
-import Settings from "@/pages/Settings";
-import MetaSettings from "@/pages/MetaSettings";
-import WhatsAppSettings from "@/pages/WhatsAppSettings";
-import Notifications from "@/pages/Notifications";
-import Help from "@/pages/Help";
-import NotFound from "@/pages/NotFound";
+import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
+import Dashboard from "./pages/Dashboard";
+import Pipelines from "./pages/Pipelines";
+import Contacts from "./pages/Contacts";
+import Properties from "./pages/Properties";
+import CRMManagement from "./pages/CRMManagement";
+import Settings from "./pages/Settings";
+import Help from "./pages/Help";
+import NotFound from "./pages/NotFound";
+import Conversations from "./pages/Conversations";
+import Agenda from "./pages/Agenda";
+import FinancialDashboard from "./pages/FinancialDashboard";
+import FinancialEntries from "./pages/FinancialEntries";
+import Contracts from "./pages/Contracts";
+import Commissions from "./pages/Commissions";
+import FinancialReports from "./pages/FinancialReports";
+import BrokerPerformancePage from "./pages/BrokerPerformance";
+import MetaSettings from "./pages/MetaSettings";
+import Automations from "./pages/Automations";
 
-// Admin Pages
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import AdminOrganizations from "@/pages/admin/AdminOrganizations";
-import AdminOrganizationDetail from "@/pages/admin/AdminOrganizationDetail";
-import AdminUsers from "@/pages/admin/AdminUsers";
-import AdminSettings from "@/pages/admin/AdminSettings";
-import AdminAudit from "@/pages/admin/AdminAudit";
+// Admin pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOrganizations from "./pages/admin/AdminOrganizations";
+import AdminOrganizationDetail from "./pages/admin/AdminOrganizationDetail";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminAudit from "./pages/admin/AdminAudit";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 2, // 2 minutes
-      gcTime: 1000 * 60 * 10, // 10 minutes garbage collection
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      retry: 1,
+      staleTime: 1000 * 60 * 2, // 2 minutos - dados considerados frescos
+      gcTime: 1000 * 60 * 10, // 10 minutos - tempo de garbage collection
+      refetchOnWindowFocus: false, // Não re-fetch ao focar janela
+      refetchOnMount: false, // Não re-fetch ao montar (usa cache)
+      retry: 1, // Apenas 1 retry em caso de erro
     },
   },
 });
 
-// Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile, isSuperAdmin, impersonating } = useAuth();
-
-  if (isLoading) {
+  const { user, loading, profile, isSuperAdmin, impersonating } = useAuth();
+  
+  // Ainda carregando autenticação
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+  
+  // Não autenticado
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // User existe mas profile ainda não carregou - aguardar
+  if (!profile && !isSuperAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Carregando perfil...</div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Super admins sem impersonation vão para o painel admin
-  if (isSuperAdmin && !impersonating) {
+  // Super admin sem impersonation e sem org -> admin panel
+  if (isSuperAdmin && !impersonating && !profile?.organization_id) {
     return <Navigate to="/admin" replace />;
   }
 
-  // Usuários normais sem organização vão para onboarding
-  if (profile && !profile.organization_id && !isSuperAdmin) {
+  // Usuário regular sem organização -> onboarding
+  if (!isSuperAdmin && profile && !profile.organization_id) {
     return <Navigate to="/onboarding" replace />;
   }
-
-  return (
-    <div className={impersonating ? "pt-12" : ""}>
-      {children}
-    </div>
-  );
-}
-
-// Admin Route Component
-function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isSuperAdmin, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  if (!isSuperAdmin) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-}
-
-// Onboarding Route - requires auth but no organization check
-function OnboardingRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile, isSuperAdmin } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Se já tem organização, redireciona para o dashboard
-  if (profile?.organization_id) {
-    return isSuperAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-}
-
-// Public Route (redirect to dashboard if authenticated)
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, profile, isSuperAdmin, impersonating } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    // Super admin vai direto para o painel admin (a menos que esteja impersonando)
-    if (isSuperAdmin && !impersonating) {
-      return <Navigate to="/admin" replace />;
-    }
-    // Usuários normais sem organização vão para onboarding
-    if (profile && !profile.organization_id) {
-      return <Navigate to="/onboarding" replace />;
-    }
-    return <Navigate to="/" replace />;
-  }
-
+  
   return <>{children}</>;
 }
 
 function AppRoutes() {
+  const { user, loading, profile, isSuperAdmin, impersonating } = useAuth();
+
+  // Determine default redirect for authenticated users
+  const getDefaultRedirect = () => {
+    if (isSuperAdmin && !impersonating) {
+      return "/admin";
+    }
+    return "/dashboard";
+  };
+
+  // Renderiza elemento para rota /auth
+  const renderAuthRoute = () => {
+    // Se está carregando, mostra loading
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-pulse text-muted-foreground">Carregando...</div>
+        </div>
+      );
+    }
+    
+    // Se user existe
+    if (user) {
+      // Se profile ainda não carregou e não é super admin, aguarda
+      if (!profile && !isSuperAdmin) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="animate-pulse text-muted-foreground">Carregando perfil...</div>
+          </div>
+        );
+      }
+      // Profile carregou ou é super admin, redireciona
+      return <Navigate to={getDefaultRedirect()} replace />;
+    }
+    
+    // Não autenticado, mostra login
+    return <Auth />;
+  };
+
+  // Renderiza elemento para rota /onboarding
+  const renderOnboardingRoute = () => {
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-pulse text-muted-foreground">Carregando...</div>
+        </div>
+      );
+    }
+    
+    // User autenticado, com profile carregado, sem org, não é super admin
+    if (user && profile && !profile.organization_id && !isSuperAdmin) {
+      return <Onboarding />;
+    }
+    
+    return <Navigate to={getDefaultRedirect()} replace />;
+  };
+
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/auth"
-        element={
-          <PublicRoute>
-            <Auth />
-          </PublicRoute>
-        }
-      />
+    <>
+      {/* Show impersonate banner when super admin is viewing as another org */}
+      <ImpersonateBanner />
       
-      {/* Password Reset - accessible without auth (comes from email link) */}
-      <Route path="/auth/reset-password" element={<ResetPassword />} />
-
-      {/* Onboarding - uses OnboardingRoute to avoid redirect loop */}
-      <Route
-        path="/onboarding"
-        element={
-          <OnboardingRoute>
-            <Onboarding />
-          </OnboardingRoute>
-        }
-      />
-
-      {/* Protected Routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* CRM Routes */}
-      <Route
-        path="/contacts"
-        element={
-          <ProtectedRoute>
-            <Contacts />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/crm/contacts"
-        element={
-          <ProtectedRoute>
-            <Contacts />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/crm/contatos"
-        element={
-          <ProtectedRoute>
-            <Contacts />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/crm/pipelines"
-        element={
-          <ProtectedRoute>
-            <Pipelines />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/conversations"
-        element={
-          <ProtectedRoute>
-            <Conversations />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/crm/conversas"
-        element={
-          <ProtectedRoute>
-            <Conversations />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/crm"
-        element={
-          <ProtectedRoute>
-            <CRMManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/crm/management"
-        element={
-          <ProtectedRoute>
-            <CRMManagement />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Properties & Contracts */}
-      <Route
-        path="/properties"
-        element={
-          <ProtectedRoute>
-            <Properties />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/contracts"
-        element={
-          <ProtectedRoute>
-            <Contracts />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Schedule */}
-      <Route
-        path="/agenda"
-        element={
-          <ProtectedRoute>
-            <Agenda />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Automations */}
-      <Route
-        path="/automations"
-        element={
-          <ProtectedRoute>
-            <Automations />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Financial Routes - English */}
-      <Route
-        path="/financial"
-        element={
-          <ProtectedRoute>
-            <FinancialDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financial/entries"
-        element={
-          <ProtectedRoute>
-            <FinancialEntries />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financial/reports"
-        element={
-          <ProtectedRoute>
-            <FinancialReports />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Financial Routes - Portuguese Aliases */}
-      <Route
-        path="/financeiro"
-        element={
-          <ProtectedRoute>
-            <FinancialDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financeiro/contas"
-        element={
-          <ProtectedRoute>
-            <FinancialEntries />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financeiro/contratos"
-        element={
-          <ProtectedRoute>
-            <Contracts />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financeiro/comissoes"
-        element={
-          <ProtectedRoute>
-            <Commissions />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/financeiro/relatorios"
-        element={
-          <ProtectedRoute>
-            <FinancialReports />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Commissions */}
-      <Route
-        path="/commissions"
-        element={
-          <ProtectedRoute>
-            <Commissions />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Reports */}
-      <Route
-        path="/performance"
-        element={
-          <ProtectedRoute>
-            <BrokerPerformance />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports/performance"
-        element={
-          <ProtectedRoute>
-            <BrokerPerformance />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/telephony"
-        element={
-          <ProtectedRoute>
-            <TelephonyReports />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Settings */}
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings/meta"
-        element={
-          <ProtectedRoute>
-            <MetaSettings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings/whatsapp"
-        element={
-          <ProtectedRoute>
-            <WhatsAppSettings />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Other */}
-      <Route
-        path="/notifications"
-        element={
-          <ProtectedRoute>
-            <Notifications />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/help"
-        element={
-          <ProtectedRoute>
-            <Help />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Admin Routes */}
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/organizations"
-        element={
-          <AdminRoute>
-            <AdminOrganizations />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/organizations/:id"
-        element={
-          <AdminRoute>
-            <AdminOrganizationDetail />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <AdminRoute>
-            <AdminUsers />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/settings"
-        element={
-          <AdminRoute>
-            <AdminSettings />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/audit"
-        element={
-          <AdminRoute>
-            <AdminAudit />
-          </AdminRoute>
-        }
-      />
-
-      {/* Catch-all */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+      <div className={impersonating ? "pt-12" : ""}>
+        <Routes>
+          <Route path="/auth" element={renderAuthRoute()} />
+          <Route path="/onboarding" element={renderOnboardingRoute()} />
+          
+          {/* Super Admin Routes */}
+          <Route path="/admin" element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
+          <Route path="/admin/organizations" element={<SuperAdminRoute><AdminOrganizations /></SuperAdminRoute>} />
+          <Route path="/admin/organizations/:id" element={<SuperAdminRoute><AdminOrganizationDetail /></SuperAdminRoute>} />
+          <Route path="/admin/users" element={<SuperAdminRoute><AdminUsers /></SuperAdminRoute>} />
+          <Route path="/admin/settings" element={<SuperAdminRoute><AdminSettings /></SuperAdminRoute>} />
+          <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
+          
+          {/* Regular Routes */}
+          <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
+          <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+          <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+          <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
+          <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
+          
+          {/* Financial Module */}
+          <Route path="/financeiro" element={<ProtectedRoute><FinancialDashboard /></ProtectedRoute>} />
+          <Route path="/financeiro/contas" element={<ProtectedRoute><FinancialEntries /></ProtectedRoute>} />
+          <Route path="/financeiro/contratos" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
+          <Route path="/financeiro/comissoes" element={<ProtectedRoute><Commissions /></ProtectedRoute>} />
+          <Route path="/financeiro/relatorios" element={<ProtectedRoute><FinancialReports /></ProtectedRoute>} />
+          <Route path="/reports/performance" element={<ProtectedRoute><AdminRoute><BrokerPerformancePage /></AdminRoute></ProtectedRoute>} />
+          
+          {/* Automations */}
+          <Route path="/automations" element={<ProtectedRoute><AdminRoute><Automations /></AdminRoute></ProtectedRoute>} />
+          
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
+    </>
   );
 }
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <LanguageProvider>
-        <AuthProvider>
-          <SidebarProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <ImpersonateBanner />
-                <AppRoutes />
-              </BrowserRouter>
-            </TooltipProvider>
-          </SidebarProvider>
-        </AuthProvider>
-      </LanguageProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <LanguageProvider>
+              <AppRoutes />
+            </LanguageProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );

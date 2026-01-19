@@ -1,47 +1,26 @@
+import { useState } from "react";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Play, Clock, User } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  PhoneIncoming,
-  PhoneOutgoing,
-  PhoneMissed,
-  Clock,
-  User,
-  ChevronDown,
-  ChevronUp,
-  Phone,
-} from "lucide-react";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import { useLeadCalls, formatCallDuration, getCallStatusInfo } from "@/hooks/use-telephony";
+import { useLeadCalls, formatCallDuration, TelephonyCall } from "@/hooks/use-telephony";
 import { RecordingPlayer } from "./RecordingPlayer";
 
 interface LeadCallsSectionProps {
   leadId: string;
-  className?: string;
 }
 
-export function LeadCallsSection({ leadId, className }: LeadCallsSectionProps) {
+export function LeadCallsSection({ leadId }: LeadCallsSectionProps) {
   const { data: calls, isLoading } = useLeadCalls(leadId);
-  const [expandedCallId, setExpandedCallId] = useState<string | null>(null);
-
-  const getCallIcon = (direction: string, status: string) => {
-    if (status === "missed" || status === "no-answer") {
-      return <PhoneMissed className="h-4 w-4 text-red-500" />;
-    }
-    if (direction === "inbound") {
-      return <PhoneIncoming className="h-4 w-4 text-emerald-500" />;
-    }
-    return <PhoneOutgoing className="h-4 w-4 text-blue-500" />;
-  };
+  const [playingCallId, setPlayingCallId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
-      <Card className={className}>
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Phone className="h-4 w-4" />
@@ -57,9 +36,9 @@ export function LeadCallsSection({ leadId, className }: LeadCallsSectionProps) {
     );
   }
 
-  if (!calls?.length) {
+  if (!calls || calls.length === 0) {
     return (
-      <Card className={className}>
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Phone className="h-4 w-4" />
@@ -76,95 +55,127 @@ export function LeadCallsSection({ leadId, className }: LeadCallsSectionProps) {
   }
 
   return (
-    <Card className={className}>
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Phone className="h-4 w-4" />
-          Ligações
-          <Badge variant="secondary" className="ml-auto">
-            {calls.length}
-          </Badge>
+          Ligações ({calls.length})
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {calls.map((call) => {
-          const statusInfo = getCallStatusInfo(call.status);
-          const isExpanded = expandedCallId === call.id;
-
-          return (
-            <Collapsible
-              key={call.id}
-              open={isExpanded}
-              onOpenChange={() => setExpandedCallId(isExpanded ? null : call.id)}
-            >
-              <div
-                className={cn(
-                  "rounded-lg border p-3 transition-colors",
-                  isExpanded && "bg-muted/50"
-                )}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start p-0 h-auto hover:bg-transparent"
-                  >
-                    <div className="flex items-center gap-3 w-full">
-                      <div className="shrink-0">
-                        {getCallIcon(call.direction, call.status)}
-                      </div>
-
-                      <div className="flex-1 text-left">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">
-                            {call.direction === "inbound" ? "Recebida" : "Realizada"}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className={cn("text-xs", statusInfo.bgColor, statusInfo.color)}
-                          >
-                            {statusInfo.label}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {format(new Date(call.initiated_at), "dd/MM HH:mm", { locale: ptBR })}
-                          </span>
-                          {call.duration && call.duration > 0 && (
-                            <span>{formatCallDuration(call.duration)}</span>
-                          )}
-                          {call.user && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {call.user.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {call.recording_url && (
-                        <div className="shrink-0">
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </Button>
-                </CollapsibleTrigger>
-
-                {call.recording_url && (
-                  <CollapsibleContent className="mt-3">
-                    <RecordingPlayer recordingUrl={call.recording_url} />
-                  </CollapsibleContent>
-                )}
-              </div>
-            </Collapsible>
-          );
-        })}
+      <CardContent className="space-y-3">
+        {calls.map((call) => (
+          <CallItem 
+            key={call.id} 
+            call={call} 
+            isPlaying={playingCallId === call.id}
+            onPlay={() => setPlayingCallId(playingCallId === call.id ? null : call.id)}
+          />
+        ))}
       </CardContent>
     </Card>
+  );
+}
+
+interface CallItemProps {
+  call: TelephonyCall;
+  isPlaying: boolean;
+  onPlay: () => void;
+}
+
+function CallItem({ call, isPlaying, onPlay }: CallItemProps) {
+  const getStatusIcon = () => {
+    if (call.status === 'missed' || call.status === 'no_answer') {
+      return <PhoneMissed className="h-4 w-4 text-destructive" />;
+    }
+    if (call.direction === 'inbound') {
+      return <PhoneIncoming className="h-4 w-4 text-blue-500" />;
+    }
+    return <PhoneOutgoing className="h-4 w-4 text-green-500" />;
+  };
+
+  const getStatusBadge = () => {
+    switch (call.status) {
+      case 'answered':
+      case 'ended':
+        return <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Atendida</Badge>;
+      case 'missed':
+      case 'no_answer':
+        return <Badge variant="destructive">Perdida</Badge>;
+      case 'initiated':
+        return <Badge variant="secondary">Iniciada</Badge>;
+      case 'busy':
+        return <Badge variant="outline">Ocupado</Badge>;
+      default:
+        return <Badge variant="outline">{call.status}</Badge>;
+    }
+  };
+
+  const hasRecording = call.recording_status === 'ready' && (call.recording_url || call.recording_storage_path);
+
+  return (
+    <div className="border rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {getStatusIcon()}
+          <span className="text-sm font-medium">
+            {call.direction === 'inbound' ? 'Recebida' : 'Realizada'}
+          </span>
+          {getStatusBadge()}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {call.initiated_at && format(new Date(call.initiated_at), "dd/MM HH:mm", { locale: ptBR })}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-4">
+          {call.user && (
+            <div className="flex items-center gap-1.5">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={call.user.avatar_url || undefined} />
+                <AvatarFallback className="text-[10px]">
+                  {call.user.name?.charAt(0) || <User className="h-3 w-3" />}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-muted-foreground">{call.user.name}</span>
+            </div>
+          )}
+          {call.duration_seconds && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {formatCallDuration(call.duration_seconds)}
+            </div>
+          )}
+        </div>
+
+        {hasRecording && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1"
+            onClick={onPlay}
+          >
+            <Play className="h-3 w-3" />
+            Ouvir
+          </Button>
+        )}
+      </div>
+
+      {call.outcome && (
+        <p className="text-xs text-muted-foreground">
+          Resultado: {call.outcome}
+        </p>
+      )}
+
+      {call.notes && (
+        <p className="text-xs text-muted-foreground italic">
+          {call.notes}
+        </p>
+      )}
+
+      {isPlaying && hasRecording && (
+        <RecordingPlayer callId={call.id} onClose={onPlay} />
+      )}
+    </div>
   );
 }

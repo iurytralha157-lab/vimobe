@@ -1,116 +1,63 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { translations, Language, TranslationKeys, t } from '@/i18n';
+import { translations, Language, TranslationKeys } from '@/i18n';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => Promise<void>;
-  t: (path: string, params?: Record<string, string | number>) => string;
-  translations: TranslationKeys;
+  t: TranslationKeys;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const STORAGE_KEY = "vimob-language";
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { profile, user } = useAuth();
+  const [language, setLanguageState] = useState<Language>('pt-BR');
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY) as Language | null;
-      if (stored && (stored === "pt-BR" || stored === "en")) {
-        return stored;
-      }
-      // Detect browser language
-      const browserLang = navigator.language;
-      if (browserLang.startsWith("pt")) {
-        return "pt-BR";
+  // Initialize language from profile or localStorage
+  useEffect(() => {
+    const profileLang = profile?.language;
+    if (profileLang && (profileLang === 'pt-BR' || profileLang === 'en')) {
+      setLanguageState(profileLang as Language);
+    } else {
+      const storedLang = localStorage.getItem('language') as Language;
+      if (storedLang && (storedLang === 'pt-BR' || storedLang === 'en')) {
+        setLanguageState(storedLang);
       }
     }
-    return "pt-BR";
-  });
-
-  const [userId, setUserId] = useState<string | null>(null);
-
-  // Get user ID from session (independent of AuthContext to avoid circular dependency)
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Load language from user profile when logged in
-  useEffect(() => {
-    const loadUserLanguage = async () => {
-      if (!userId) return;
-
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      const userLanguage = (data as { language?: string } | null)?.language;
-      if (userLanguage && (userLanguage === 'pt-BR' || userLanguage === 'en')) {
-        setLanguageState(userLanguage as Language);
-        localStorage.setItem(STORAGE_KEY, userLanguage);
-      }
-    };
-
-    loadUserLanguage();
-  }, [userId]);
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
+  }, [profile]);
 
   const setLanguage = useCallback(async (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem(STORAGE_KEY, lang);
+    localStorage.setItem('language', lang);
 
     // If user is logged in, save to database
-    if (userId) {
+    if (user?.id) {
       try {
         await supabase
           .from('users')
-          .update({ language: lang } as Record<string, unknown>)
-          .eq('id', userId);
+          .update({ language: lang })
+          .eq('id', user.id);
       } catch (error) {
         console.error('Error saving language preference:', error);
       }
     }
-  }, [userId]);
+  }, [user?.id]);
 
-  const translate = useCallback(
-    (path: string, params?: Record<string, string | number>) => {
-      return t(language, path, params);
-    },
-    [language]
-  );
-
-  const value: LanguageContextType = {
-    language,
-    setLanguage,
-    t: translate,
-    translations: translations[language],
-  };
+  const t = translations[language];
 
   return (
-    <LanguageContext.Provider value={value}>
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );
-}
+};
 
-export function useLanguage() {
+export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (context === undefined) {
-    throw new Error("useLanguage must be used within a LanguageProvider");
+    throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
-}
+};

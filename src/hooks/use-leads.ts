@@ -1,122 +1,104 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
+import { normalizePhone } from '@/lib/phone-utils';
 
-export interface Lead {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  message: string | null;
-  stage_id: string | null;
-  pipeline_id: string | null;
-  assigned_user_id: string | null;
-  organization_id: string;
-  property_id: string | null;
-  property_code: string | null;
-  stage_entered_at: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joined data
-  stage?: { id: string; name: string; color: string | null; position: number };
-  assigned_user?: { id: string; name: string; avatar_url: string | null };
-  property?: { id: string; code: string; title: string | null };
+export type Lead = Tables<'leads'> & {
   tags?: { id: string; name: string; color: string }[];
-}
+  assignee?: { id: string; name: string; avatar_url: string | null };
+  stage?: { id: string; name: string; color: string; stage_key: string };
+};
 
-export interface CreateLeadInput {
-  name: string;
-  email?: string;
-  phone?: string;
-  message?: string;
-  stage_id?: string;
-  pipeline_id?: string;
-  assigned_user_id?: string;
-  property_id?: string;
-  property_code?: string;
-}
+// Campos otimizados para listagem (evita SELECT *)
+const LEAD_LIST_FIELDS = `
+  id, name, phone, email, source, created_at, updated_at,
+  stage_id, assigned_user_id, pipeline_id, organization_id,
+  property_code, message, campaign_name,
+  stage:stages(id, name, color, stage_key),
+  assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url)
+`;
 
-export interface UpdateLeadInput extends Partial<CreateLeadInput> {
-  id: string;
-}
-
-export function useLeads(filters?: {
-  stageId?: string;
-  assignedUserId?: string;
-  pipelineId?: string;
+export function useLeads(filters?: { 
+  stageId?: string; 
+  assigneeId?: string; 
   search?: string;
+  limit?: number;
 }) {
-  const { organization } = useAuth();
-
+  const limit = filters?.limit || 200;
+  
   return useQuery({
-    queryKey: ["leads", organization?.id, filters],
+    queryKey: ['leads', filters],
     queryFn: async () => {
-      if (!organization?.id) return [];
-
       let query = supabase
-        .from("leads")
-        .select(`
-          *,
-          stage:stages(id, name, color, position),
-          assigned_user:users!leads_assigned_user_id_fkey(id, name, avatar_url),
-          property:properties(id, code, title),
-          lead_tags(tag:tags(id, name, color))
-        `)
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: false });
-
+        .from('leads')
+        .select(LEAD_LIST_FIELDS)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
       if (filters?.stageId) {
-        query = query.eq("stage_id", filters.stageId);
+        query = query.eq('stage_id', filters.stageId);
       }
-      if (filters?.assignedUserId) {
-        query = query.eq("assigned_user_id", filters.assignedUserId);
-      }
-      if (filters?.pipelineId) {
-        query = query.eq("pipeline_id", filters.pipelineId);
+      if (filters?.assigneeId) {
+        query = query.eq('assigned_user_id', filters.assigneeId);
       }
       if (filters?.search) {
-        query = query.or(
-          `name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`
-        );
+        query = query.or(`name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
       }
-
+      
       const { data, error } = await query;
-
       if (error) throw error;
 
-      return (data || []).map((lead) => ({
+      // Buscar tags apenas para os leads retornados (batch otimizado)
+      const leadIds = (data || []).map(l => l.id);
+      if (leadIds.length === 0) return [] as Lead[];
+
+      const { data: leadTags } = await supabase
+        .from('lead_tags')
+        .select('lead_id, tag:tags(id, name, color)')
+        .in('lead_id', leadIds);
+
+      const tagsByLead = (leadTags || []).reduce((acc, lt) => {
+        if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
+        if (lt.tag) acc[lt.lead_id].push(lt.tag as any);
+        return acc;
+      }, {} as Record<string, { id: string; name: string; color: string }[]>);
+
+      return (data || []).map(lead => ({
         ...lead,
-        tags: lead.lead_tags?.map((lt: any) => lt.tag) || [],
+        tags: tagsByLead[lead.id] || [],
       })) as Lead[];
     },
-    enabled: !!organization?.id,
   });
 }
 
-export function useLead(id: string | undefined) {
+export function useLead(id: string | null) {
   return useQuery({
-    queryKey: ["lead", id],
+    queryKey: ['lead', id],
     queryFn: async () => {
       if (!id) return null;
-
+      
       const { data, error } = await supabase
-        .from("leads")
+        .from('leads')
         .select(`
           *,
-          stage:stages(id, name, color, position),
-          assigned_user:users!leads_assigned_user_id_fkey(id, name, avatar_url, email),
-          property:properties(id, code, title, preco, bairro, cidade),
-          lead_tags(tag:tags(id, name, color))
+          stage:stages(id, name, color, stage_key),
+          assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url)
         `)
-        .eq("id", id)
+        .eq('id', id)
         .single();
-
+      
       if (error) throw error;
-
+      
+      // Get tags
+      const { data: leadTags } = await supabase
+        .from('lead_tags')
+        .select('tag:tags(id, name, color)')
+        .eq('lead_id', id);
+      
       return {
         ...data,
-        tags: data.lead_tags?.map((lt: any) => lt.tag) || [],
+        tags: (leadTags || []).map(lt => lt.tag).filter(Boolean),
       } as Lead;
     },
     enabled: !!id,
@@ -125,136 +107,313 @@ export function useLead(id: string | undefined) {
 
 export function useCreateLead() {
   const queryClient = useQueryClient();
-  const { organization } = useAuth();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (input: CreateLeadInput) => {
-      if (!organization?.id) throw new Error("No organization");
-
+    mutationFn: async (lead: {
+      name: string;
+      phone?: string;
+      email?: string;
+      message?: string;
+      source?: string;
+      stage_id?: string;
+      pipeline_id?: string;
+      property_code?: string;
+      assigned_user_id?: string;
+      tag_ids?: string[];
+    }) => {
+      // Buscar usuário autenticado - org_id é definido pelo trigger enforce_organization_id()
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Usuário não autenticado');
+      
+      // Buscar org_id para verificação de leads duplicados (não para INSERT)
+      const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.user.id)
+        .single();
+      const organizationId = userData?.organization_id;
+      
+      if (!organizationId) throw new Error('Usuário não possui organização');
+      
+      // ===== VERIFICAR SE JÁ EXISTE LEAD COM ESTE TELEFONE =====
+      if (lead.phone) {
+        const normalizedPhone = normalizePhone(lead.phone);
+        
+        if (normalizedPhone) {
+          // Buscar leads existentes com telefone similar
+          const { data: existingLeads } = await supabase
+            .from('leads')
+            .select('id, phone')
+            .eq('organization_id', organizationId)
+            .not('phone', 'is', null);
+          
+          // Verificar se algum lead tem o mesmo telefone normalizado
+          const existingLead = existingLeads?.find(l => {
+            if (!l.phone) return false;
+            return normalizePhone(l.phone) === normalizedPhone;
+          });
+          
+          if (existingLead) {
+            // Atualizar lead existente ao invés de criar novo
+            const updateData: any = {};
+            if (lead.name && lead.name !== 'unknown') updateData.name = lead.name;
+            if (lead.email) updateData.email = lead.email;
+            if (lead.message) updateData.message = lead.message;
+            if (lead.property_code) updateData.property_code = lead.property_code;
+            if (lead.assigned_user_id) updateData.assigned_user_id = lead.assigned_user_id;
+            if (lead.stage_id) updateData.stage_id = lead.stage_id;
+            if (lead.pipeline_id) updateData.pipeline_id = lead.pipeline_id;
+            
+            if (Object.keys(updateData).length > 0) {
+              const { data: updatedLead, error: updateError } = await supabase
+                .from('leads')
+                .update(updateData)
+                .eq('id', existingLead.id)
+                .select()
+                .single();
+              
+              if (updateError) throw updateError;
+              
+              // Add tags if provided
+              if (lead.tag_ids && lead.tag_ids.length > 0) {
+                for (const tagId of lead.tag_ids) {
+                  await supabase
+                    .from('lead_tags')
+                    .upsert({ lead_id: existingLead.id, tag_id: tagId }, { onConflict: 'lead_id,tag_id' });
+                }
+              }
+              
+              toast.success('Lead atualizado (telefone já existia)');
+              return updatedLead;
+            }
+            
+            toast.info('Lead já existe com este telefone');
+            return existingLead;
+          }
+        }
+      }
+      
+      // Get default pipeline and first stage if not provided
+      let pipelineId = lead.pipeline_id;
+      let stageId = lead.stage_id;
+      
+      if (!pipelineId) {
+        const { data: pipeline } = await supabase
+          .from('pipelines')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .eq('is_default', true)
+          .single();
+        
+        pipelineId = pipeline?.id;
+      }
+      
+      if (!stageId && pipelineId) {
+        const { data: stage } = await supabase
+          .from('stages')
+          .select('id')
+          .eq('pipeline_id', pipelineId)
+          .order('position')
+          .limit(1)
+          .single();
+        
+        stageId = stage?.id;
+      }
+      
+      const { tag_ids, ...leadData } = lead;
+      
+      // O trigger enforce_organization_id() vai sobrescrever organization_id
+      // mas precisamos incluí-lo para satisfazer o TypeScript
+      const insertData = {
+        ...leadData,
+        organization_id: organizationId!, // Será sobrescrito pelo trigger
+        pipeline_id: pipelineId,
+        stage_id: stageId,
+        source: (lead.source || 'manual') as any,
+      };
+      
       const { data, error } = await supabase
-        .from("leads")
-        .insert({
-          ...input,
-          organization_id: organization.id,
-        })
+        .from('leads')
+        .insert(insertData)
         .select()
         .single();
-
+      
       if (error) throw error;
+      
+      // Add tags if provided
+      if (tag_ids && tag_ids.length > 0) {
+        await supabase
+          .from('lead_tags')
+          .insert(tag_ids.map(tagId => ({ lead_id: data.id, tag_id: tagId })));
+      }
+      
+      // Vincular conversas WhatsApp existentes ao novo lead
+      if (lead.phone) {
+        const normalizedPhone = normalizePhone(lead.phone);
+        
+        if (normalizedPhone) {
+          // Buscar conversas sem lead vinculado
+          const { data: conversations } = await supabase
+            .from('whatsapp_conversations')
+            .select('id, contact_phone')
+            .is('lead_id', null);
+          
+          // Atualizar conversas que correspondem ao telefone
+          for (const conv of conversations || []) {
+            if (conv.contact_phone && normalizePhone(conv.contact_phone) === normalizedPhone) {
+              await supabase
+                .from('whatsapp_conversations')
+                .update({ lead_id: data.id })
+                .eq('id', conv.id);
+            }
+          }
+        }
+      }
+      
+      // Log activity: lead created
+      await supabase.from('activities').insert({
+        lead_id: data.id,
+        user_id: user.user.id,
+        type: 'lead_created',
+        content: `Lead "${lead.name}" foi criado`,
+      });
+      
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast({ title: "Lead criado com sucesso!" });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
+      toast.success('Lead criado com sucesso!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar lead",
-        description: error.message,
-      });
+      toast.error('Erro ao criar lead: ' + error.message);
     },
   });
 }
 
 export function useUpdateLead() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async ({ id, ...input }: UpdateLeadInput) => {
+    mutationFn: async ({ id, ...updates }: Partial<Lead> & { id: string }) => {
+      const { data: user } = await supabase.auth.getUser();
+      
+      const updateData: any = { ...updates };
+      delete updateData.tags;
+      delete updateData.assignee;
+      delete updateData.stage;
+      
+      // Check if this is a stage change
+      const isStageChange = !!updates.stage_id;
+      const isAssigneeChange = updates.assigned_user_id !== undefined;
+      
+      if (isStageChange) {
+        updateData.stage_entered_at = new Date().toISOString();
+      }
+      
+      // Get current lead data for comparison
+      const { data: currentLead } = await supabase
+        .from('leads')
+        .select('name, assigned_user_id, stage_id')
+        .eq('id', id)
+        .single();
+      
       const { data, error } = await supabase
-        .from("leads")
-        .update(input)
-        .eq("id", id)
+        .from('leads')
+        .update(updateData)
+        .eq('id', id)
         .select()
         .single();
-
+      
       if (error) throw error;
+      
+      // Log activity based on what changed
+      if (user?.user?.id) {
+        // Check if it's a contact info update (not stage/assignee)
+        const contactFields = ['name', 'phone', 'email', 'cargo', 'empresa', 'endereco', 
+          'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep', 'message', 
+          'valor_interesse', 'property_id', 'property_code'];
+        
+        const isContactUpdate = Object.keys(updates).some(key => contactFields.includes(key));
+        
+        if (isContactUpdate && !isStageChange && !isAssigneeChange) {
+          const fieldsUpdated = Object.keys(updates).filter(k => contactFields.includes(k));
+          await supabase.from('activities').insert({
+            lead_id: id,
+            user_id: user.user.id,
+            type: 'contact_updated',
+            content: 'Informações de contato atualizadas',
+            metadata: { fields_updated: fieldsUpdated }
+          });
+        }
+        
+        // Log assignee change
+        if (isAssigneeChange && currentLead?.assigned_user_id !== updates.assigned_user_id) {
+          let content = 'Responsável removido';
+          if (updates.assigned_user_id) {
+            const { data: newAssignee } = await supabase
+              .from('users')
+              .select('name')
+              .eq('id', updates.assigned_user_id)
+              .single();
+            content = newAssignee?.name 
+              ? `Responsável alterado para ${newAssignee.name}`
+              : 'Responsável alterado';
+          }
+          
+          await supabase.from('activities').insert({
+            lead_id: id,
+            user_id: user.user.id,
+            type: 'assignee_changed',
+            content,
+            metadata: { 
+              old_assignee_id: currentLead?.assigned_user_id || null,
+              new_assignee_id: updates.assigned_user_id || null 
+            }
+          });
+        }
+      }
+      
       return data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead", data.id] });
-      toast({ title: "Lead atualizado!" });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead'] });
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar lead",
-        description: error.message,
-      });
+      toast.error('Erro ao atualizar lead: ' + error.message);
     },
   });
 }
 
 export function useDeleteLead() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("leads").delete().eq("id", id);
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast({ title: "Lead excluído!" });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts-list'] });
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
+      toast.success('Contato excluído!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir lead",
-        description: error.message,
-      });
+      toast.error('Erro ao excluir lead: ' + error.message);
     },
-  });
-}
-
-export function useMoveLeadToStage() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ leadId, stageId }: { leadId: string; stageId: string }) => {
-      const { data, error } = await supabase
-        .from("leads")
-        .update({ 
-          stage_id: stageId,
-          stage_entered_at: new Date().toISOString(),
-        })
-        .eq("id", leadId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-    },
-  });
-}
-
-// Lightweight hook for counting leads (used in OnboardingChecklist)
-export function useLeadsCount() {
-  const { organization } = useAuth();
-
-  return useQuery({
-    queryKey: ["leads-count", organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return 0;
-      
-      const { count, error } = await supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("organization_id", organization.id);
-      
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!organization?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -263,15 +422,57 @@ export function useAddLeadTag() {
   
   return useMutation({
     mutationFn: async ({ leadId, tagId }: { leadId: string; tagId: string }) => {
+      const { data: user } = await supabase.auth.getUser();
+      
+      // Verificar se a tag já está associada ao lead
+      const { data: existingTag } = await supabase
+        .from('lead_tags')
+        .select('id')
+        .eq('lead_id', leadId)
+        .eq('tag_id', tagId)
+        .maybeSingle();
+      
+      if (existingTag) {
+        throw new Error('TAG_ALREADY_EXISTS');
+      }
+      
       const { error } = await supabase
         .from('lead_tags')
         .insert({ lead_id: leadId, tag_id: tagId });
       
       if (error) throw error;
+      
+      // Log activity
+      if (user?.user?.id) {
+        const { data: tag } = await supabase
+          .from('tags')
+          .select('name')
+          .eq('id', tagId)
+          .single();
+        
+        await supabase.from('activities').insert({
+          lead_id: leadId,
+          user_id: user.user.id,
+          type: 'tag_added',
+          content: `Tag "${tag?.name || 'Desconhecida'}" adicionada`,
+          metadata: { tag_id: tagId, tag_name: tag?.name }
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead'] });
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success('Tag adicionada!');
+    },
+    onError: (error: any) => {
+      if (error.message === 'TAG_ALREADY_EXISTS' || error.message?.includes('unique constraint')) {
+        toast.info('Esta tag já está adicionada ao lead');
+      } else {
+        toast.error('Erro ao adicionar tag: ' + error.message);
+      }
     },
   });
 }
@@ -281,6 +482,15 @@ export function useRemoveLeadTag() {
   
   return useMutation({
     mutationFn: async ({ leadId, tagId }: { leadId: string; tagId: string }) => {
+      const { data: user } = await supabase.auth.getUser();
+      
+      // Get tag name before deleting
+      const { data: tag } = await supabase
+        .from('tags')
+        .select('name')
+        .eq('id', tagId)
+        .single();
+      
       const { error } = await supabase
         .from('lead_tags')
         .delete()
@@ -288,10 +498,28 @@ export function useRemoveLeadTag() {
         .eq('tag_id', tagId);
       
       if (error) throw error;
+      
+      // Log activity
+      if (user?.user?.id) {
+        await supabase.from('activities').insert({
+          lead_id: leadId,
+          user_id: user.user.id,
+          type: 'tag_removed',
+          content: `Tag "${tag?.name || 'Desconhecida'}" removida`,
+          metadata: { tag_id: tagId, tag_name: tag?.name }
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead'] });
+      queryClient.invalidateQueries({ queryKey: ['stages'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      toast.success('Tag removida!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao remover tag: ' + error.message);
     },
   });
 }

@@ -1,11 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Tables, Json } from '@/integrations/supabase/types';
+import { Tables } from '@/integrations/supabase/types';
 
 export type Activity = Tables<'activities'> & {
-  user?: { id: string; name: string } | null;
-  lead?: { id: string; name: string } | null;
+  user?: { id: string; name: string };
+  lead?: { id: string; name: string };
 };
 
 export function useActivities(leadId?: string) {
@@ -16,7 +15,7 @@ export function useActivities(leadId?: string) {
         .from('activities')
         .select(`
           *,
-          user:users!activities_user_id_fkey(id, name),
+          user:users(id, name),
           lead:leads(id, name)
         `)
         .order('created_at', { ascending: false })
@@ -30,7 +29,6 @@ export function useActivities(leadId?: string) {
       if (error) throw error;
       return data as Activity[];
     },
-    enabled: leadId ? true : false,
   });
 }
 
@@ -42,7 +40,7 @@ export function useRecentActivities() {
         .from('activities')
         .select(`
           *,
-          user:users!activities_user_id_fkey(id, name),
+          user:users(id, name),
           lead:leads(id, name)
         `)
         .order('created_at', { ascending: false })
@@ -62,7 +60,7 @@ export function useCreateActivity() {
       lead_id: string;
       type: string;
       content?: string;
-      metadata?: Json;
+      metadata?: Record<string, any>;
     }) => {
       const { data: user } = await supabase.auth.getUser();
       
@@ -81,9 +79,6 @@ export function useCreateActivity() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
-    },
-    onError: (error) => {
-      toast.error('Erro ao criar atividade: ' + error.message);
     },
   });
 }

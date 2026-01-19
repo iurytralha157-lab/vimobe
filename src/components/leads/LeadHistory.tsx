@@ -1,50 +1,38 @@
+import { useLeadFullHistory, UnifiedHistoryEvent } from '@/hooks/use-lead-full-history';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Loader2, 
   ArrowRight, 
-  UserPlus, 
-  UserCheck, 
-  MessageCircle, 
+  UserCircle, 
+  MessageSquare, 
   Phone, 
+  Mail, 
+  CheckCircle,
+  UserPlus,
+  UserCheck,
+  Zap,
   Tag,
   FileText,
+  Bot,
   Clock,
-  AlertTriangle,
-  CheckCircle,
-  Mail
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-interface HistoryEvent {
-  id: string;
-  type: string;
-  label: string;
-  content?: string | null;
-  timestamp: string;
-  actor?: {
-    name: string;
-    avatar_url?: string | null;
-  } | null;
-  metadata?: Record<string, unknown> | null;
-  isAutomation?: boolean;
-  channel?: string | null;
-}
-
 interface LeadHistoryProps {
   leadId: string;
-  events?: HistoryEvent[];
-  isLoading?: boolean;
 }
 
 const eventIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  // Timeline events
   lead_created: UserPlus,
   lead_assigned: UserCheck,
-  first_response: Clock,
-  whatsapp_message_sent: MessageCircle,
-  whatsapp_message_received: MessageCircle,
+  first_response: Zap,
+  whatsapp_message_sent: MessageSquare,
+  whatsapp_message_received: MessageSquare,
   call_initiated: Phone,
   stage_changed: ArrowRight,
   note_created: FileText,
@@ -52,12 +40,15 @@ const eventIcons: Record<string, React.ComponentType<{ className?: string }>> = 
   tag_removed: Tag,
   sla_warning: AlertTriangle,
   sla_overdue: AlertTriangle,
+  // Activity events
   stage_change: ArrowRight,
-  note: MessageCircle,
+  note: MessageSquare,
   call: Phone,
   email: Mail,
-  message: MessageCircle,
+  message: MessageSquare,
   task_completed: CheckCircle,
+  contact_updated: UserCircle,
+  assignee_changed: UserCircle,
 };
 
 const eventColors: Record<string, { text: string; bg: string }> = {
@@ -73,17 +64,22 @@ const eventColors: Record<string, { text: string; bg: string }> = {
   tag_removed: { text: 'text-gray-500 dark:text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' },
   sla_warning: { text: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/50' },
   sla_overdue: { text: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/50' },
+  // Activity events
   stage_change: { text: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800' },
   note: { text: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-100 dark:bg-indigo-900/50' },
   call: { text: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-900/50' },
   email: { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/50' },
   message: { text: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/50' },
   task_completed: { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/50' },
+  contact_updated: { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/50' },
+  assignee_changed: { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/50' },
 };
 
 const defaultColor = { text: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' };
 
-export function LeadHistory({ leadId, events = [], isLoading = false }: LeadHistoryProps) {
+export function LeadHistory({ leadId }: LeadHistoryProps) {
+  const { data: events = [], isLoading } = useLeadFullHistory(leadId);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -100,8 +96,34 @@ export function LeadHistory({ leadId, events = [], isLoading = false }: LeadHist
     );
   }
 
+  // Find first_response event for highlighting
+  const firstResponseEvent = events.find(e => e.type === 'first_response');
+
   return (
     <div className="relative">
+      {/* First Response Summary */}
+      {firstResponseEvent && (
+        <div className="mb-4 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Zap className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+              {firstResponseEvent.content || 'Primeira resposta registrada'}
+            </span>
+            {firstResponseEvent.isAutomation && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <Bot className="h-3 w-3" />
+                Automação
+              </Badge>
+            )}
+            {firstResponseEvent.channel && (
+              <Badge variant="secondary" className="text-xs">
+                {firstResponseEvent.channel === 'whatsapp' ? 'WhatsApp' : firstResponseEvent.channel}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Timeline line */}
       <div className="absolute left-3.5 top-2 bottom-2 w-px bg-border" />
       
@@ -143,6 +165,7 @@ export function LeadHistory({ leadId, events = [], isLoading = false }: LeadHist
                       
                       {event.isAutomation && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                          <Bot className="h-2.5 w-2.5" />
                           Auto
                         </Badge>
                       )}
@@ -150,6 +173,12 @@ export function LeadHistory({ leadId, events = [], isLoading = false }: LeadHist
                       {event.channel && event.type !== 'first_response' && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {event.channel}
+                        </Badge>
+                      )}
+                      
+                      {event.source === 'timeline' && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                          Sistema
                         </Badge>
                       )}
                     </div>
@@ -163,11 +192,18 @@ export function LeadHistory({ leadId, events = [], isLoading = false }: LeadHist
                     {/* Show metadata details for stage changes */}
                     {event.metadata && typeof event.metadata === 'object' && !event.content && (
                       <div className="text-xs text-muted-foreground mt-1">
-                        {(event.metadata as Record<string, string>).from_stage && (event.metadata as Record<string, string>).to_stage && (
+                        {(event.metadata as any).from_stage && (event.metadata as any).to_stage && (
                           <span className="flex items-center gap-1">
-                            {(event.metadata as Record<string, string>).from_stage} 
+                            {(event.metadata as any).from_stage} 
                             <ArrowRight className="h-3 w-3" /> 
-                            {(event.metadata as Record<string, string>).to_stage}
+                            {(event.metadata as any).to_stage}
+                          </span>
+                        )}
+                        {(event.metadata as any).old_stage_name && (event.metadata as any).new_stage_name && !event.content && (
+                          <span className="flex items-center gap-1">
+                            {(event.metadata as any).old_stage_name} 
+                            <ArrowRight className="h-3 w-3" /> 
+                            {(event.metadata as any).new_stage_name}
                           </span>
                         )}
                       </div>

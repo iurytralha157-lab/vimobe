@@ -1,173 +1,151 @@
-import { useState } from "react";
-import { X, Plus, Check } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { Plus, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface FeatureSelectorProps {
-  label?: string;
-  availableFeatures: string[];
-  selectedFeatures: string[];
-  onSelect: (features: string[]) => void;
-  onAddNew?: (feature: string) => void;
-  allowAddNew?: boolean;
-  placeholder?: string;
-  className?: string;
+  title: string;
+  options: string[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+  allowAdd?: boolean;
+  onAddNew?: (name: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
 export function FeatureSelector({
-  label,
-  availableFeatures,
-  selectedFeatures,
-  onSelect,
+  title,
+  options,
+  selected,
+  onChange,
+  allowAdd = false,
   onAddNew,
-  allowAddNew = true,
-  placeholder = "Adicionar...",
-  className,
+  isLoading = false,
 }: FeatureSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [newFeature, setNewFeature] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const [newItem, setNewItem] = useState('');
+  const [adding, setAdding] = useState(false);
 
-  const filteredFeatures = availableFeatures.filter(
-    (feature) =>
-      feature.toLowerCase().includes(search.toLowerCase()) &&
-      !selectedFeatures.includes(feature)
-  );
-
-  const handleSelect = (feature: string) => {
-    if (selectedFeatures.includes(feature)) {
-      onSelect(selectedFeatures.filter((f) => f !== feature));
+  const toggleItem = (item: string) => {
+    if (selected.includes(item)) {
+      onChange(selected.filter(s => s !== item));
     } else {
-      onSelect([...selectedFeatures, feature]);
+      onChange([...selected, item]);
     }
   };
 
-  const handleRemove = (feature: string) => {
-    onSelect(selectedFeatures.filter((f) => f !== feature));
+  const handleAddNew = async () => {
+    if (!newItem.trim() || !onAddNew) return;
+    
+    setAdding(true);
+    try {
+      await onAddNew(newItem.trim());
+      // Auto-select the new item
+      onChange([...selected, newItem.trim()]);
+      setNewItem('');
+      setShowInput(false);
+    } catch (error) {
+      // Error is handled by the mutation
+    } finally {
+      setAdding(false);
+    }
   };
 
-  const handleAddNew = () => {
-    if (newFeature.trim() && onAddNew) {
-      onAddNew(newFeature.trim());
-      onSelect([...selectedFeatures, newFeature.trim()]);
-      setNewFeature("");
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddNew();
+    } else if (e.key === 'Escape') {
+      setShowInput(false);
+      setNewItem('');
     }
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
-      {label && (
-        <label className="text-sm font-medium leading-none">{label}</label>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium text-foreground">{title}</h4>
+        {allowAdd && !showInput && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setShowInput(true)}
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Adicionar
+          </Button>
+        )}
+      </div>
+
+      {showInput && (
+        <div className="flex items-center gap-2">
+          <Input
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            placeholder="Nome da nova opção..."
+            className="h-8 text-sm"
+            onKeyDown={handleKeyDown}
+            autoFocus
+            disabled={adding}
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="h-8"
+            onClick={handleAddNew}
+            disabled={!newItem.trim() || adding}
+          >
+            {adding ? '...' : 'OK'}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => {
+              setShowInput(false);
+              setNewItem('');
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       )}
 
-      {/* Selected Features */}
-      <div className="flex flex-wrap gap-2 min-h-[2rem]">
-        {selectedFeatures.map((feature) => (
-          <Badge
-            key={feature}
-            variant="secondary"
-            className="gap-1 pr-1"
-          >
-            {feature}
-            <button
-              type="button"
-              onClick={() => handleRemove(feature)}
-              className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              {placeholder}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-2" align="start">
-            <Input
-              placeholder="Buscar..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="mb-2 h-8"
-            />
-
-            <div className="max-h-48 overflow-y-auto space-y-1">
-              {filteredFeatures.map((feature) => (
-                <button
-                  key={feature}
-                  type="button"
-                  onClick={() => {
-                    handleSelect(feature);
-                    setSearch("");
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md",
-                    "hover:bg-muted transition-colors text-left",
-                    selectedFeatures.includes(feature) && "bg-muted"
-                  )}
-                >
-                  <Check
-                    className={cn(
-                      "h-4 w-4",
-                      selectedFeatures.includes(feature)
-                        ? "opacity-100"
-                        : "opacity-0"
-                    )}
-                  />
-                  {feature}
-                </button>
-              ))}
-
-              {filteredFeatures.length === 0 && search && (
-                <p className="text-sm text-muted-foreground px-2 py-1">
-                  Nenhum resultado encontrado
-                </p>
-              )}
-            </div>
-
-            {allowAddNew && onAddNew && (
-              <div className="mt-2 pt-2 border-t flex gap-2">
-                <Input
-                  placeholder="Nova característica"
-                  value={newFeature}
-                  onChange={(e) => setNewFeature(e.target.value)}
-                  className="h-8 flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddNew();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8"
-                  onClick={handleAddNew}
-                  disabled={!newFeature.trim()}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
-      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-4">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      ) : options.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">
+          Nenhuma opção disponível. Adicione a primeira!
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {options.map((option) => {
+            const isSelected = selected.includes(option);
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => toggleItem(option)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                  "border-2 focus:outline-none focus:ring-2 focus:ring-primary/20",
+                  isSelected
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary/50 text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                )}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,13 +1,12 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface Team {
   id: string;
   name: string;
   organization_id: string;
-  created_at: string | null;
+  created_at: string;
   members?: TeamMember[];
 }
 
@@ -15,172 +14,158 @@ export interface TeamMember {
   id: string;
   team_id: string;
   user_id: string;
-  is_leader: boolean | null;
-  created_at: string | null;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-    avatar_url: string | null;
-  };
+  created_at: string;
+  is_leader?: boolean;
+  user?: { id: string; name: string; avatar_url: string | null };
 }
 
 export function useTeams() {
-  const { organization } = useAuth();
-
   return useQuery({
-    queryKey: ["teams", organization?.id],
+    queryKey: ['teams'],
     queryFn: async () => {
-      if (!organization?.id) return [];
-
-      const { data, error } = await supabase
-        .from("teams")
-        .select(`
-          *,
-          members:team_members(
-            *,
-            user:users(id, name, email, avatar_url)
-          )
-        `)
-        .eq("organization_id", organization.id)
-        .order("name");
-
+      const { data: teams, error } = await supabase
+        .from('teams')
+        .select('*')
+        .order('name');
+      
       if (error) throw error;
-      return data as Team[];
+      
+      if (!teams || teams.length === 0) return [];
+      
+      const teamIds = teams.map(t => t.id);
+      
+      const { data: members } = await supabase
+        .from('team_members')
+        .select('*, user:users(id, name, avatar_url)')
+        .in('team_id', teamIds);
+      
+      // Cast the result to include is_leader
+      const membersWithLeader = (members || []).map(m => ({
+        ...m,
+        is_leader: (m as any).is_leader ?? false,
+      }));
+      
+      const membersByTeam = membersWithLeader.reduce((acc, m) => {
+        if (!acc[m.team_id]) acc[m.team_id] = [];
+        acc[m.team_id].push(m as TeamMember);
+        return acc;
+      }, {} as Record<string, TeamMember[]>);
+      
+      return teams.map(team => ({
+        ...team,
+        members: membersByTeam[team.id] || [],
+      })) as Team[];
     },
-    enabled: !!organization?.id,
   });
 }
 
 export function useCreateTeam() {
   const queryClient = useQueryClient();
-  const { organization } = useAuth();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (input: { name: string; memberIds?: string[]; leaderId?: string }) => {
-      if (!organization?.id) throw new Error("No organization");
-
-      // Create team
-      const { data: team, error: teamError } = await supabase
-        .from("teams")
+    mutationFn: async (data: { name: string; memberIds?: string[] }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Não autenticado');
+      
+      const { data: profile } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', userData.user.id)
+        .single();
+      
+      if (!profile?.organization_id) throw new Error('Organização não encontrada');
+      
+      const { data: team, error } = await supabase
+        .from('teams')
         .insert({
-          name: input.name,
-          organization_id: organization.id,
+          name: data.name,
+          organization_id: profile.organization_id,
         })
         .select()
         .single();
-
-      if (teamError) throw teamError;
-
-      // Add members
-      if (input.memberIds?.length) {
-        const members = input.memberIds.map((userId) => ({
+      
+      if (error) throw error;
+      
+      if (data.memberIds && data.memberIds.length > 0) {
+        const membersToInsert = data.memberIds.map(userId => ({
           team_id: team.id,
           user_id: userId,
-          is_leader: userId === input.leaderId,
         }));
-
-        const { error: membersError } = await supabase
-          .from("team_members")
-          .insert(members);
-
-        if (membersError) throw membersError;
+        
+        await supabase.from('team_members').insert(membersToInsert);
       }
-
+      
       return team;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast({ title: "Equipe criada!" });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast.success('Equipe criada!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar equipe",
-        description: error.message,
-      });
+      toast.error('Erro ao criar equipe: ' + error.message);
     },
   });
 }
 
 export function useUpdateTeam() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
-    mutationFn: async (input: { 
-      id: string; 
-      name: string; 
-      memberIds: string[]; 
-      leaderIds: string[];
-    }) => {
-      // Update team name
-      const { error: teamError } = await supabase
-        .from("teams")
-        .update({ name: input.name })
-        .eq("id", input.id);
-
-      if (teamError) throw teamError;
-
-      // Remove all existing members
-      const { error: deleteError } = await supabase
-        .from("team_members")
-        .delete()
-        .eq("team_id", input.id);
-
-      if (deleteError) throw deleteError;
-
-      // Add new members
-      if (input.memberIds.length > 0) {
-        const members = input.memberIds.map((userId) => ({
-          team_id: input.id,
-          user_id: userId,
-          is_leader: input.leaderIds.includes(userId),
-        }));
-
-        const { error: membersError } = await supabase
-          .from("team_members")
-          .insert(members);
-
-        if (membersError) throw membersError;
+    mutationFn: async ({ id, name, memberIds }: { id: string; name?: string; memberIds?: string[] }) => {
+      if (name) {
+        const { error } = await supabase
+          .from('teams')
+          .update({ name })
+          .eq('id', id);
+        
+        if (error) throw error;
       }
-
-      return { id: input.id };
+      
+      if (memberIds !== undefined) {
+        // Remove all current members
+        await supabase.from('team_members').delete().eq('team_id', id);
+        
+        // Add new members
+        if (memberIds.length > 0) {
+          const membersToInsert = memberIds.map(userId => ({
+            team_id: id,
+            user_id: userId,
+          }));
+          
+          await supabase.from('team_members').insert(membersToInsert);
+        }
+      }
+      
+      return { id };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast({ title: "Equipe atualizada!" });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast.success('Equipe atualizada!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar equipe",
-        description: error.message,
-      });
+      toast.error('Erro ao atualizar equipe: ' + error.message);
     },
   });
 }
 
 export function useDeleteTeam() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
+  
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("teams").delete().eq("id", id);
+      const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast({ title: "Equipe excluída!" });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      toast.success('Equipe excluída!');
     },
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir equipe",
-        description: error.message,
-      });
+      toast.error('Erro ao excluir equipe: ' + error.message);
     },
   });
 }

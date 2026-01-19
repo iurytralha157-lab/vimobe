@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { useOrganizations, useUpdateOrganization, useToggleModule, useOrganizationUsers } from '@/hooks/use-super-admin';
-import { useAdminInvitations, useCreateInvitation, useDeleteInvitation, getInviteLink, Invitation } from '@/hooks/use-admin-invitations';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
+import { useAdminInvitations } from '@/hooks/use-admin-invitations';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,14 +62,15 @@ const ALL_MODULES = [
 export default function AdminOrganizationDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: organizations } = useOrganizations();
-  const updateOrganization = useUpdateOrganization();
-  const toggleModule = useToggleModule();
+  const { organizations, updateOrganization, updateModuleAccess } = useSuperAdmin();
   const { startImpersonate } = useAuth();
-  const { data: invitations = [], isLoading: loadingInvitations } = useAdminInvitations(id);
-  const createInvitation = useCreateInvitation();
-  const deleteInvitation = useDeleteInvitation();
-  const { data: orgUsers } = useOrganizationUsers(id || '');
+  const { 
+    invitations, 
+    isLoading: loadingInvitations, 
+    createInvitation, 
+    deleteInvitation, 
+    getInviteLink 
+  } = useAdminInvitations(id);
 
   const org = organizations?.find(o => o.id === id);
 
@@ -93,6 +94,20 @@ export default function AdminOrganizationDetail() {
       if (!id) return [];
       const { data } = await supabase
         .from('organization_modules')
+        .select('*')
+        .eq('organization_id', id);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Fetch organization users
+  const { data: orgUsers } = useQuery({
+    queryKey: ['org-users', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data } = await supabase
+        .from('users')
         .select('*')
         .eq('organization_id', id);
       return data || [];
@@ -125,7 +140,7 @@ export default function AdminOrganizationDetail() {
     updateOrganization.mutate({
       id: org.id,
       ...formData,
-    } as any);
+    });
   };
 
   const handleImpersonate = () => {
@@ -139,7 +154,7 @@ export default function AdminOrganizationDetail() {
   };
 
   const handleModuleToggle = async (moduleName: string, enabled: boolean) => {
-    await toggleModule.mutateAsync({
+    await updateModuleAccess.mutateAsync({
       organizationId: org.id,
       moduleName,
       isEnabled: enabled,
@@ -435,18 +450,23 @@ export default function AdminOrganizationDetail() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          <Badge variant={invite.role === 'admin' ? 'default' : 'secondary'}>
+                            {invite.role === 'admin' ? 'Administrador' : 'Usuário'}
+                          </Badge>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => copyInviteLink(invite.token)}
+                            title="Copiar link"
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive"
-                            onClick={() => deleteInvitation.mutate({ id: invite.id, organizationId: id! })}
+                            onClick={() => deleteInvitation.mutate(invite.id)}
+                            title="Remover convite"
+                            className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

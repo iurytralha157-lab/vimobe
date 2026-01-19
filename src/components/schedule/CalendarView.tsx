@@ -14,20 +14,10 @@ import {
   parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Phone, Mail, Calendar as CalendarIcon, CheckSquare, MessageSquare, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-
-export type EventType = 'call' | 'email' | 'meeting' | 'task' | 'message' | 'visit';
-
-export interface ScheduleEvent {
-  id: string;
-  title: string;
-  event_type: EventType;
-  start_time: string;
-  end_time: string;
-  is_completed?: boolean;
-}
+import { ScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 
 const eventTypeColors: Record<EventType, string> = {
   call: 'bg-blue-500',
@@ -59,7 +49,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
   const eventsByDate = useMemo(() => {
     const map: Record<string, ScheduleEvent[]> = {};
     events.forEach((event) => {
-      const dateKey = format(parseISO(event.start_time), 'yyyy-MM-dd');
+      const dateKey = format(parseISO(event.start_at), 'yyyy-MM-dd');
       if (!map[dateKey]) {
         map[dateKey] = [];
       }
@@ -72,6 +62,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
 
   return (
     <div className="bg-card rounded-xl border p-4">
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold capitalize">
           {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
@@ -106,6 +97,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
         </div>
       </div>
 
+      {/* Week days header */}
       <div className="grid grid-cols-7 mb-2">
         {weekDays.map((day) => (
           <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
@@ -114,6 +106,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
         ))}
       </div>
 
+      {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-1">
         {calendarDays.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
@@ -141,6 +134,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
                 {format(day, 'd')}
               </span>
 
+              {/* Event dots */}
               {dayEvents.length > 0 && (
                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5">
                   {dayEvents.slice(0, 3).map((event, idx) => (
@@ -148,7 +142,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
                       key={event.id}
                       className={cn(
                         "w-1.5 h-1.5 rounded-full",
-                        isSelected ? "bg-primary-foreground/70" : eventTypeColors[event.event_type]
+                        isSelected ? "bg-primary-foreground/70" : eventTypeColors[event.event_type as EventType]
                       )}
                     />
                   ))}
@@ -167,6 +161,7 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
         })}
       </div>
 
+      {/* Legend */}
       <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-blue-500" />
@@ -183,6 +178,10 @@ export function CalendarView({ events, selectedDate, onDateSelect }: CalendarVie
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-amber-500" />
           <span>Tarefa</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-amber-500" />
+          <span>Mensagem</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-pink-500" />

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { usePipelineSlaSettings, useUpsertPipelineSlaSettings } from "@/hooks/use-pipeline-sla-settings";
 import { Loader2, Clock, AlertTriangle, Bell } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PipelineSlaSettingsProps {
   open: boolean;
@@ -27,6 +28,7 @@ export function PipelineSlaSettings({
   pipelineId,
   pipelineName,
 }: PipelineSlaSettingsProps) {
+  const { t } = useLanguage();
   const { data: settings, isLoading } = usePipelineSlaSettings(pipelineId);
   const upsertMutation = useUpsertPipelineSlaSettings();
 

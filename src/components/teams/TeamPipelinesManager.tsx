@@ -1,106 +1,83 @@
-import { useState } from "react";
-import { AlertCircle, Check, FolderKanban, Loader2, Plus, X } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useTeams, Team } from "@/hooks/use-teams";
-import { usePipelines } from "@/hooks/use-pipelines";
-import {
-  useAllTeamPipelines,
-  useAssignPipelineToTeam,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Users, 
+  GitBranch, 
+  Link as LinkIcon,
+  Unlink,
+  Crown,
+  Check,
+  X,
+  Loader2,
+  AlertTriangle
+} from 'lucide-react';
+import { useTeams } from '@/hooks/use-teams';
+import { usePipelines } from '@/hooks/use-stages';
+import { 
+  useAllTeamPipelines, 
+  useAssignPipelineToTeam, 
   useRemovePipelineFromTeam,
-} from "@/hooks/use-team-pipelines";
+  useSetTeamLeader 
+} from '@/hooks/use-team-pipelines';
+import { cn } from '@/lib/utils';
 
 export function TeamPipelinesManager() {
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [showDialog, setShowDialog] = useState(false);
-  const [selectedPipelines, setSelectedPipelines] = useState<string[]>([]);
-
-  const { data: teams, isLoading: teamsLoading } = useTeams();
-  const { data: pipelines, isLoading: pipelinesLoading } = usePipelines();
-  const { data: teamPipelines, isLoading: teamPipelinesLoading } = useAllTeamPipelines();
-  
+  const { data: teams = [], isLoading: teamsLoading } = useTeams();
+  const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
+  const { data: allTeamPipelines = [] } = useAllTeamPipelines();
   const assignPipeline = useAssignPipelineToTeam();
   const removePipeline = useRemovePipelineFromTeam();
+  const setTeamLeader = useSetTeamLeader();
 
-  const isLoading = teamsLoading || pipelinesLoading || teamPipelinesLoading;
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const isLoading = teamsLoading || pipelinesLoading;
 
   const getTeamPipelines = (teamId: string) => {
-    return teamPipelines?.filter((tp) => tp.team_id === teamId) || [];
+    return allTeamPipelines
+      .filter((tp: any) => tp.team_id === teamId)
+      .map((tp: any) => tp.pipeline);
   };
 
   const getPipelineTeams = (pipelineId: string) => {
-    return teamPipelines?.filter((tp) => tp.pipeline_id === pipelineId) || [];
+    return allTeamPipelines
+      .filter((tp: any) => tp.pipeline_id === pipelineId)
+      .map((tp: any) => tp.team);
   };
 
-  const handleManagePipelines = (team: Team) => {
-    setSelectedTeam(team);
-    const currentPipelines = getTeamPipelines(team.id).map((tp) => tp.pipeline_id);
-    setSelectedPipelines(currentPipelines);
-    setShowDialog(true);
-  };
-
-  const handleTogglePipeline = (pipelineId: string) => {
-    setSelectedPipelines((prev) =>
-      prev.includes(pipelineId)
-        ? prev.filter((id) => id !== pipelineId)
-        : [...prev, pipelineId]
+  const isPipelineAssigned = (teamId: string, pipelineId: string) => {
+    return allTeamPipelines.some(
+      (tp: any) => tp.team_id === teamId && tp.pipeline_id === pipelineId
     );
   };
 
-  const handleSave = async () => {
-    if (!selectedTeam) return;
-
-    const currentPipelines = getTeamPipelines(selectedTeam.id).map((tp) => tp.pipeline_id);
-    
-    // Pipelines to add
-    const toAdd = selectedPipelines.filter((id) => !currentPipelines.includes(id));
-    // Pipelines to remove
-    const toRemove = currentPipelines.filter((id) => !selectedPipelines.includes(id));
-
-    // Execute mutations
-    for (const pipelineId of toAdd) {
-      await assignPipeline.mutateAsync({
-        teamId: selectedTeam.id,
-        pipelineId,
-      });
+  const handleTogglePipeline = async (teamId: string, pipelineId: string, isAssigned: boolean) => {
+    if (isAssigned) {
+      await removePipeline.mutateAsync({ teamId, pipelineId });
+    } else {
+      await assignPipeline.mutateAsync({ teamId, pipelineId });
     }
-
-    for (const pipelineId of toRemove) {
-      await removePipeline.mutateAsync({
-        teamId: selectedTeam.id,
-        pipelineId,
-      });
-    }
-
-    setShowDialog(false);
-    setSelectedTeam(null);
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -108,184 +85,251 @@ export function TeamPipelinesManager() {
 
   return (
     <div className="space-y-6">
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Hierarquia de acesso</AlertTitle>
-        <AlertDescription>
-          Líderes de equipe podem ver e gerenciar leads dos membros de sua equipe
-          nos pipelines vinculados.
-        </AlertDescription>
-      </Alert>
+      {/* Info Card */}
+      <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
+        <CardContent className="flex items-start gap-3 py-4">
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-400">Hierarquia de Acesso</p>
+            <p className="text-amber-700 dark:text-amber-500 mt-1">
+              Ao vincular pipelines a equipes, apenas <strong>admins</strong>, <strong>líderes da equipe</strong> e <strong>usuários com leads atribuídos</strong> terão acesso aos leads dessas pipelines.
+              Pipelines sem vínculo ficam acessíveis a todos.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Teams Panel */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Equipes</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Equipes
+            </CardTitle>
+            <CardDescription>
+              Clique em uma equipe para gerenciar suas pipelines
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {teams?.map((team) => {
-              const pipelineLinks = getTeamPipelines(team.id);
-              const leaders = team.members?.filter((m) => m.is_leader) || [];
+            {teams.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Nenhuma equipe criada. Crie equipes na aba "Equipes".
+              </p>
+            ) : (
+              teams.map((team) => {
+                const teamPipelines = getTeamPipelines(team.id);
+                const leaders = (team.members || []).filter(m => m.is_leader);
+                const isSelected = selectedTeamId === team.id;
 
-              return (
-                <div
-                  key={team.id}
-                  className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{team.name}</h4>
-                        <Badge variant="secondary">
-                          {team.members?.length || 0} membros
-                        </Badge>
+                return (
+                  <div
+                    key={team.id}
+                    onClick={() => {
+                      setSelectedTeamId(team.id);
+                      setDialogOpen(true);
+                    }}
+                    className={cn(
+                      "p-4 rounded-lg border cursor-pointer transition-all hover:border-primary/50 hover:bg-accent/50",
+                      isSelected && "border-primary bg-accent"
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{team.name}</span>
+                          {leaders.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Crown className="h-3 w-3 text-amber-500" />
+                              <span className="text-xs text-muted-foreground">
+                                {leaders.map(l => l.user?.name?.split(' ')[0]).join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-1.5">
+                            {(team.members || []).slice(0, 4).map((member) => (
+                              <Avatar key={member.id} className="h-6 w-6 border border-background">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-[10px]">
+                                  {member.user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))}
+                            {(team.members?.length || 0) > 4 && (
+                              <div className="h-6 w-6 rounded-full bg-muted border border-background flex items-center justify-center">
+                                <span className="text-[10px] text-muted-foreground">+{(team.members?.length || 0) - 4}</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {team.members?.length || 0} membros
+                          </span>
+                        </div>
                       </div>
 
-                      {leaders.length > 0 && (
-                        <div className="flex -space-x-2">
-                          {leaders.slice(0, 3).map((leader) => (
-                            <Avatar
-                              key={leader.id}
-                              className="h-6 w-6 border-2 border-background"
-                            >
-                              <AvatarImage src={leader.user?.avatar_url || undefined} />
-                              <AvatarFallback className="text-[10px]">
-                                {getInitials(leader.user?.name || "?")}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                        </div>
-                      )}
-
-                      {pipelineLinks.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {pipelineLinks.map((link) => (
-                            <Badge
-                              key={link.id}
-                              variant="outline"
-                              className="text-xs gap-1"
-                            >
-                              <FolderKanban className="h-3 w-3" />
-                              {link.pipeline?.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {teamPipelines.length > 0 ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <LinkIcon className="h-3 w-3" />
+                            {teamPipelines.length}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Sem pipelines
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleManagePipelines(team)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    {teamPipelines.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t">
+                        {teamPipelines.map((p: any) => (
+                          <Badge key={p?.id} variant="outline" className="text-xs">
+                            <GitBranch className="h-3 w-3 mr-1" />
+                            {p?.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
-
-            {(!teams || teams.length === 0) && (
-              <p className="text-center text-muted-foreground py-4">
-                Nenhuma equipe criada
-              </p>
+                );
+              })
             )}
           </CardContent>
         </Card>
 
-        {/* Pipelines Panel */}
+        {/* Pipelines Overview */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Pipelines</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <GitBranch className="h-5 w-5" />
+              Pipelines
+            </CardTitle>
+            <CardDescription>
+              Visão geral das pipelines e suas equipes vinculadas
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {pipelines?.map((pipeline) => {
-              const teamLinks = getPipelineTeams(pipeline.id);
-
-              return (
-                <div
-                  key={pipeline.id}
-                  className="p-3 rounded-lg border bg-card"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                      <h4 className="font-medium">{pipeline.name}</h4>
-                    </div>
-
-                    {teamLinks.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {teamLinks.map((link) => (
-                          <Badge key={link.id} variant="secondary" className="text-xs">
-                            {link.team?.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Nenhuma equipe vinculada
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {(!pipelines || pipelines.length === 0) && (
-              <p className="text-center text-muted-foreground py-4">
-                Nenhum pipeline criado
+            {pipelines.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Nenhuma pipeline criada.
               </p>
+            ) : (
+              pipelines.map((pipeline) => {
+                const pipelineTeams = getPipelineTeams(pipeline.id);
+                const hasTeams = pipelineTeams.length > 0;
+
+                return (
+                  <div
+                    key={pipeline.id}
+                    className={cn(
+                      "p-4 rounded-lg border",
+                      !hasTeams && "border-dashed"
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <GitBranch className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{pipeline.name}</span>
+                          {pipeline.is_default && (
+                            <Badge variant="secondary" className="text-xs">Padrão</Badge>
+                          )}
+                        </div>
+                        
+                        {hasTeams ? (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {pipelineTeams.map((team: any) => (
+                              <Badge key={team?.id} variant="outline" className="text-xs gap-1">
+                                <Users className="h-3 w-3" />
+                                {team?.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            <Unlink className="h-3 w-3" />
+                            Acessível a todos os usuários
+                          </p>
+                        )}
+                      </div>
+
+                      {hasTeams && (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          Restrita
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Manage Pipelines Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      {/* Pipeline Assignment Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Gerenciar Pipelines</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              {selectedTeam?.name}
+            </DialogTitle>
             <DialogDescription>
-              Selecione os pipelines que a equipe "{selectedTeam?.name}" terá acesso
+              Selecione as pipelines que esta equipe terá acesso
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="h-64 rounded-md border">
-            <div className="p-2 space-y-1">
-              {pipelines?.map((pipeline) => {
-                const isSelected = selectedPipelines.includes(pipeline.id);
+          <ScrollArea className="max-h-[400px] -mx-6 px-6">
+            <div className="space-y-2">
+              {pipelines.map((pipeline) => {
+                const isAssigned = selectedTeamId ? isPipelineAssigned(selectedTeamId, pipeline.id) : false;
+                const isProcessing = assignPipeline.isPending || removePipeline.isPending;
 
                 return (
-                  <div
+                  <label
                     key={pipeline.id}
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                    onClick={() => handleTogglePipeline(pipeline.id)}
-                  >
-                    <Checkbox checked={isSelected} />
-                    <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{pipeline.name}</span>
-                    {isSelected && (
-                      <Check className="h-4 w-4 text-primary ml-auto" />
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all hover:bg-accent",
+                      isAssigned && "border-primary bg-primary/5"
                     )}
-                  </div>
+                  >
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={isAssigned}
+                        disabled={isProcessing}
+                        onCheckedChange={() => {
+                          if (selectedTeamId) {
+                            handleTogglePipeline(selectedTeamId, pipeline.id, isAssigned);
+                          }
+                        }}
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <GitBranch className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{pipeline.name}</span>
+                        </div>
+                        {pipeline.is_default && (
+                          <span className="text-xs text-muted-foreground">Pipeline padrão</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {isAssigned && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </label>
                 );
               })}
             </div>
           </ScrollArea>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={assignPipeline.isPending || removePipeline.isPending}
-            >
-              {(assignPipeline.isPending || removePipeline.isPending) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Salvar
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,49 +1,61 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Volume2, VolumeX, Download, RotateCcw } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Loader2, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { cn } from "@/lib/utils";
-import { useRecordingUrl } from "@/hooks/use-telephony";
+import { useRecordingUrl, formatCallDuration } from "@/hooks/use-telephony";
+import { toast } from "sonner";
 
 interface RecordingPlayerProps {
-  recordingUrl: string | null;
-  className?: string;
+  callId: string;
+  onClose?: () => void;
 }
 
-export function RecordingPlayer({ recordingUrl, className }: RecordingPlayerProps) {
+export function RecordingPlayer({ callId, onClose }: RecordingPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const getRecordingUrl = useRecordingUrl();
+  const { mutate: getRecordingUrl, isPending } = useRecordingUrl();
 
   useEffect(() => {
-    if (recordingUrl) {
-      loadRecording();
-    }
-  }, [recordingUrl]);
+    getRecordingUrl(callId, {
+      onSuccess: (data) => {
+        setAudioUrl(data.url);
+        if (data.warning) {
+          toast.info(data.warning);
+        }
+      },
+      onError: (error) => {
+        toast.error(error.message || "Erro ao carregar gravação");
+      },
+    });
+  }, [callId, getRecordingUrl]);
 
-  const loadRecording = async () => {
-    if (!recordingUrl) return;
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    setIsLoading(true);
-    try {
-      const url = await getRecordingUrl.mutateAsync(recordingUrl);
-      setAudioUrl(url);
-    } catch (error) {
-      console.error("Failed to load recording:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleEnded = () => setIsPlaying(false);
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [audioUrl]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
-
+    
     if (isPlaying) {
       audioRef.current.pause();
     } else {
@@ -58,145 +70,100 @@ export function RecordingPlayer({ recordingUrl, className }: RecordingPlayerProp
     setIsMuted(!isMuted);
   };
 
-  const handleTimeUpdate = () => {
-    if (!audioRef.current) return;
-    setCurrentTime(audioRef.current.currentTime);
-  };
-
-  const handleLoadedMetadata = () => {
-    if (!audioRef.current) return;
-    setDuration(audioRef.current.duration);
-  };
-
   const handleSeek = (value: number[]) => {
     if (!audioRef.current) return;
     audioRef.current.currentTime = value[0];
     setCurrentTime(value[0]);
   };
 
-  const handleEnded = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  };
-
-  const restart = () => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = 0;
-    setCurrentTime(0);
-    if (!isPlaying) {
-      audioRef.current.play();
-      setIsPlaying(true);
+  const handleDownload = () => {
+    if (audioUrl) {
+      window.open(audioUrl, '_blank');
     }
   };
 
-  const formatTime = (time: number) => {
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleDownload = () => {
-    if (!audioUrl) return;
-    const link = document.createElement("a");
-    link.href = audioUrl;
-    link.download = `recording-${Date.now()}.mp3`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  if (!recordingUrl) {
+  if (isPending) {
     return (
-      <div className={cn("text-sm text-muted-foreground", className)}>
-        Sem gravação disponível
+      <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="text-sm">Carregando gravação...</span>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (!audioUrl) {
     return (
-      <div className={cn("text-sm text-muted-foreground animate-pulse", className)}>
-        Carregando gravação...
+      <div className="bg-destructive/10 rounded-lg p-3 text-center">
+        <span className="text-sm text-destructive">Gravação não disponível</span>
       </div>
     );
   }
 
   return (
-    <div className={cn("flex items-center gap-2 p-2 rounded-lg bg-muted/50", className)}>
-      {audioUrl && (
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={handleEnded}
-        />
-      )}
+    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={togglePlay}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={togglePlay}
-        disabled={!audioUrl}
-      >
-        {isPlaying ? (
-          <Pause className="h-4 w-4" />
-        ) : (
-          <Play className="h-4 w-4" />
+        <div className="flex-1">
+          <Slider
+            value={[currentTime]}
+            max={duration || 100}
+            step={0.1}
+            onValueChange={handleSeek}
+            className="cursor-pointer"
+          />
+        </div>
+
+        <span className="text-xs text-muted-foreground min-w-[80px] text-right">
+          {formatCallDuration(Math.floor(currentTime))} / {formatCallDuration(Math.floor(duration))}
+        </span>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={toggleMute}
+        >
+          {isMuted ? (
+            <VolumeX className="h-4 w-4" />
+          ) : (
+            <Volume2 className="h-4 w-4" />
+          )}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleDownload}
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         )}
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={restart}
-        disabled={!audioUrl}
-      >
-        <RotateCcw className="h-3 w-3" />
-      </Button>
-
-      <div className="flex-1 flex items-center gap-2">
-        <span className="text-xs text-muted-foreground w-10">
-          {formatTime(currentTime)}
-        </span>
-        <Slider
-          value={[currentTime]}
-          max={duration || 100}
-          step={0.1}
-          onValueChange={handleSeek}
-          className="flex-1"
-          disabled={!audioUrl}
-        />
-        <span className="text-xs text-muted-foreground w-10">
-          {formatTime(duration)}
-        </span>
       </div>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={toggleMute}
-        disabled={!audioUrl}
-      >
-        {isMuted ? (
-          <VolumeX className="h-4 w-4" />
-        ) : (
-          <Volume2 className="h-4 w-4" />
-        )}
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={handleDownload}
-        disabled={!audioUrl}
-      >
-        <Download className="h-4 w-4" />
-      </Button>
     </div>
   );
 }

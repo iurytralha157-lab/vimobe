@@ -7,6 +7,7 @@ import {
   CheckSquare, 
   MessageSquare, 
   MapPin,
+  Check,
   MoreHorizontal,
   Trash2,
   Edit2,
@@ -23,20 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-export type EventType = 'call' | 'email' | 'meeting' | 'task' | 'message' | 'visit';
-
-export interface ScheduleEvent {
-  id: string;
-  title: string;
-  description?: string;
-  event_type: EventType;
-  start_time: string;
-  duration_minutes?: number;
-  is_completed?: boolean;
-  user?: { name: string; avatar_url?: string | null };
-  lead?: { name: string };
-}
+import { ScheduleEvent, useCompleteScheduleEvent, useDeleteScheduleEvent, EventType } from '@/hooks/use-schedule-events';
 
 const eventTypeIcons: Record<EventType, React.ElementType> = {
   call: Phone,
@@ -68,20 +56,14 @@ const eventTypeColors: Record<EventType, string> = {
 interface EventsListProps {
   events: ScheduleEvent[];
   onEditEvent?: (event: ScheduleEvent) => void;
-  onCompleteEvent?: (id: string, is_completed: boolean) => void;
-  onDeleteEvent?: (id: string) => void;
   showUser?: boolean;
   showLead?: boolean;
 }
 
-export function EventsList({ 
-  events, 
-  onEditEvent, 
-  onCompleteEvent,
-  onDeleteEvent,
-  showUser = true, 
-  showLead = true 
-}: EventsListProps) {
+export function EventsList({ events, onEditEvent, showUser = true, showLead = true }: EventsListProps) {
+  const completeEvent = useCompleteScheduleEvent();
+  const deleteEvent = useDeleteScheduleEvent();
+
   const getDateLabel = (dateStr: string) => {
     const date = new Date(dateStr);
     if (isToday(date)) return 'Hoje';
@@ -93,7 +75,7 @@ export function EventsList({
     const groups: Record<string, ScheduleEvent[]> = {};
     
     events.forEach((event) => {
-      const dateKey = format(new Date(event.start_time), 'yyyy-MM-dd');
+      const dateKey = format(new Date(event.start_at), 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -119,12 +101,12 @@ export function EventsList({
       {groupedEvents.map(([dateKey, dayEvents]) => (
         <div key={dateKey}>
           <h3 className="text-sm font-medium text-muted-foreground mb-3 capitalize">
-            {getDateLabel(dayEvents[0].start_time)}
+            {getDateLabel(dayEvents[0].start_at)}
           </h3>
           <div className="space-y-2">
             {dayEvents.map((event) => {
-              const Icon = eventTypeIcons[event.event_type];
-              const isOverdue = !event.is_completed && isPast(new Date(event.start_time));
+              const Icon = eventTypeIcons[event.event_type as EventType];
+              const isOverdue = !event.is_completed && isPast(new Date(event.start_at));
               
               return (
                 <div
@@ -138,7 +120,7 @@ export function EventsList({
                   <Checkbox
                     checked={event.is_completed}
                     onCheckedChange={(checked) => {
-                      onCompleteEvent?.(event.id, checked as boolean);
+                      completeEvent.mutate({ id: event.id, is_completed: checked as boolean });
                     }}
                     className="mt-1"
                   />
@@ -146,7 +128,7 @@ export function EventsList({
                   <div
                     className={cn(
                       "flex-shrink-0 p-2 rounded-lg",
-                      eventTypeColors[event.event_type]
+                      eventTypeColors[event.event_type as EventType]
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -164,11 +146,11 @@ export function EventsList({
                         <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
-                            {format(new Date(event.start_time), 'HH:mm')}
+                            {format(new Date(event.start_at), 'HH:mm')}
                             {event.duration_minutes && ` (${event.duration_minutes} min)`}
                           </span>
                           <span className="text-xs px-1.5 py-0.5 rounded bg-muted">
-                            {eventTypeLabels[event.event_type]}
+                            {eventTypeLabels[event.event_type as EventType]}
                           </span>
                         </div>
                       </div>
@@ -189,7 +171,7 @@ export function EventsList({
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => onDeleteEvent?.(event.id)}
+                            onClick={() => deleteEvent.mutate(event.id)}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />

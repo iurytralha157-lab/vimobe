@@ -1,173 +1,213 @@
 import { useState } from 'react';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DatePreset, datePresetOptions } from '@/hooks/use-dashboard-filters';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  DatePreset, 
+  datePresetOptions,
+} from '@/hooks/use-dashboard-filters';
 
 interface DateFilterPopoverProps {
   datePreset: DatePreset;
   onDatePresetChange: (preset: DatePreset) => void;
-  customDateRange: { from: Date; to: Date } | null;
-  onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
+  customDateRange?: { from: Date; to: Date } | null;
+  onCustomDateRangeChange?: (range: { from: Date; to: Date } | null) => void;
   triggerClassName?: string;
+  align?: 'start' | 'center' | 'end';
+  defaultPreset?: DatePreset;
+  showCalendar?: boolean;
 }
 
-export function DateFilterPopover({ 
+export function DateFilterPopover({
   datePreset,
   onDatePresetChange,
-  customDateRange, 
+  customDateRange,
   onCustomDateRangeChange,
-  triggerClassName 
+  triggerClassName,
+  align = 'start',
+  defaultPreset = 'last30days',
+  showCalendar = true,
 }: DateFilterPopoverProps) {
-  const [open, setOpen] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [tempRange, setTempRange] = useState<DateRange | undefined>(
-    customDateRange ? { from: customDateRange.from, to: customDateRange.to } : undefined
-  );
-  const isMobile = useIsMobile();
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
 
-  const handlePresetSelect = (preset: DatePreset) => {
-    if (preset === 'custom') {
-      setShowCalendar(true);
-    } else {
-      onDatePresetChange(preset);
-      setOpen(false);
-      setShowCalendar(false);
-    }
+  const handleDatePresetChange = (preset: DatePreset) => {
+    onDatePresetChange(preset);
+    onCustomDateRangeChange?.(null);
+    setDatePickerOpen(false);
   };
 
-  const handleCalendarSelect = (range: DateRange | undefined) => {
-    setTempRange(range);
-  };
-
-  const handleApply = () => {
-    if (tempRange?.from && tempRange?.to) {
-      onCustomDateRangeChange({ from: tempRange.from, to: tempRange.to });
+  const handleApplyCustomDate = () => {
+    if (tempDateRange.from && tempDateRange.to) {
       onDatePresetChange('custom');
+      onCustomDateRangeChange?.({
+        from: tempDateRange.from,
+        to: tempDateRange.to,
+      });
+      setDatePickerOpen(false);
+      setTempDateRange({});
     }
-    setOpen(false);
-    setShowCalendar(false);
   };
 
-  const handleClear = () => {
-    setTempRange(undefined);
-    onCustomDateRangeChange(null);
-    onDatePresetChange('30days');
-    setOpen(false);
-    setShowCalendar(false);
+  const getDateLabel = () => {
+    if (datePreset === 'custom' && customDateRange) {
+      return `${format(customDateRange.from, 'dd/MM', { locale: ptBR })} - ${format(customDateRange.to, 'dd/MM', { locale: ptBR })}`;
+    }
+    const option = datePresetOptions.find(o => o.value === datePreset);
+    return option?.label || 'Período';
   };
 
-  const getDisplayLabel = () => {
-    if (datePreset === 'custom' && customDateRange?.from && customDateRange?.to) {
-      return `${format(customDateRange.from, "dd/MM/yy", { locale: ptBR })} - ${format(customDateRange.to, "dd/MM/yy", { locale: ptBR })}`;
-    }
-    return datePresetOptions.find(o => o.value === datePreset)?.label || 'Período';
-  };
+  const isActive = datePreset !== defaultPreset || !!customDateRange;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
+        <Button 
+          variant="outline" 
+          size="sm" 
           className={cn(
-            "font-normal gap-2",
+            "h-9 gap-2 text-sm",
+            isActive && "border-primary text-primary",
             triggerClassName
           )}
         >
           <CalendarIcon className="h-4 w-4" />
-          <span className="truncate">{getDisplayLabel()}</span>
-          <ChevronDown className="h-3 w-3 opacity-50" />
+          <span>{getDateLabel()}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        {!showCalendar ? (
-          <div className="p-2 space-y-1">
-            {datePresetOptions.map((option) => (
-              <button
+      <PopoverContent className="w-auto p-0" align={align}>
+        <div className="p-4 space-y-4">
+          {/* Preset buttons in 2-column grid matching the design */}
+          <div className="grid grid-cols-2 gap-2">
+            {datePresetOptions.filter(o => o.value !== 'custom').map(option => (
+              <Button
                 key={option.value}
-                onClick={() => handlePresetSelect(option.value)}
+                variant={datePreset === option.value && !customDateRange ? "default" : "outline"}
+                size="sm"
                 className={cn(
-                  "w-full text-left px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors",
-                  datePreset === option.value && "bg-accent font-medium"
+                  "h-10 text-sm font-medium rounded-full transition-all",
+                  datePreset === option.value && !customDateRange 
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "hover:bg-muted"
                 )}
+                onClick={() => handleDatePresetChange(option.value)}
               >
                 {option.label}
-              </button>
+              </Button>
             ))}
           </div>
-        ) : (
-          <>
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={tempRange?.from}
-              selected={tempRange}
-              onSelect={handleCalendarSelect}
-              numberOfMonths={isMobile ? 1 : 2}
-              locale={ptBR}
-              className="pointer-events-auto"
-            />
-            <div className="flex items-center justify-between gap-2 p-3 border-t">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowCalendar(false)}
-              >
-                Voltar
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={handleClear}>
-                  Limpar
-                </Button>
-                <Button size="sm" onClick={handleApply} disabled={!tempRange?.from || !tempRange?.to}>
-                  Aplicar
-                </Button>
+
+          {showCalendar && (
+            <>
+              {/* Divider with text */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-start">
+                  <span className="bg-popover pr-2 text-xs text-muted-foreground">
+                    Ou selecione um período:
+                  </span>
+                </div>
               </div>
-            </div>
-          </>
-        )}
+
+              {/* Calendar for custom range */}
+              <Calendar
+                mode="range"
+                selected={{ from: tempDateRange.from, to: tempDateRange.to }}
+                onSelect={(range) => {
+                  setTempDateRange({ from: range?.from, to: range?.to });
+                }}
+                numberOfMonths={1}
+                locale={ptBR}
+                className="pointer-events-auto rounded-md"
+              />
+
+              {/* Apply button */}
+              <Button 
+                size="sm" 
+                className="w-full h-10 rounded-full font-medium"
+                disabled={!tempDateRange.from || !tempDateRange.to}
+                onClick={handleApplyCustomDate}
+              >
+                Aplicar
+              </Button>
+            </>
+          )}
+        </div>
       </PopoverContent>
     </Popover>
   );
 }
 
-// Simple period filter for reports
+// Simple period filter for pages that only need preset options (no custom date range)
 interface SimplePeriodFilterProps {
   value: string;
   onChange: (value: string) => void;
-  options?: Array<{ value: string; label: string }>;
-  className?: string;
+  options: { value: string; label: string }[];
+  triggerClassName?: string;
+  align?: 'start' | 'center' | 'end';
 }
 
-export function SimplePeriodFilter({ 
-  value, 
-  onChange, 
-  options = [
-    { value: 'month', label: 'Este mês' },
-    { value: 'quarter', label: 'Este trimestre' },
-    { value: 'year', label: 'Este ano' },
-  ],
-  className 
+export function SimplePeriodFilter({
+  value,
+  onChange,
+  options,
+  triggerClassName,
+  align = 'start',
 }: SimplePeriodFilterProps) {
+  const [open, setOpen] = useState(false);
+
+  const currentLabel = options.find(o => o.value === value)?.label || 'Período';
+
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={cn("w-[180px]", className)}>
-        <SelectValue placeholder="Selecione o período" />
-      </SelectTrigger>
-      <SelectContent className="bg-popover">
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className={cn(
+            "h-9 gap-2 text-sm",
+            triggerClassName
+          )}
+        >
+          <CalendarIcon className="h-4 w-4" />
+          <span>{currentLabel}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align={align}>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-2">
+            {options.map(option => (
+              <Button
+                key={option.value}
+                variant={value === option.value ? "default" : "outline"}
+                size="sm"
+                className={cn(
+                  "h-10 text-sm font-medium rounded-full transition-all",
+                  value === option.value 
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "hover:bg-muted"
+                )}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

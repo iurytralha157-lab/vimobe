@@ -23,20 +23,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { BrokerSelector, BrokerEntry } from './BrokerSelector';
-import { useCreateContract } from '@/hooks/use-contracts';
+import { useCreateContract, useUpdateContract } from '@/hooks/use-contracts';
 import { useProperties } from '@/hooks/use-properties';
 import { useLeads } from '@/hooks/use-leads';
 import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
-  contract_type: z.enum(['sale', 'rental', 'service']),
-  lead_id: z.string().optional(),
+  type: z.enum(['sale', 'rental', 'service']),
+  client_name: z.string().min(1, 'Nome do cliente é obrigatório'),
+  client_email: z.string().email().optional().or(z.literal('')),
+  client_phone: z.string().optional(),
+  client_document: z.string().optional(),
   property_id: z.string().optional(),
-  value: z.number().min(0, 'Valor deve ser maior que zero'),
-  commission_percentage: z.number().min(0).max(100).optional(),
-  commission_value: z.number().min(0).optional(),
+  lead_id: z.string().optional(),
+  total_value: z.number().min(0, 'Valor deve ser maior que zero'),
+  down_payment: z.number().min(0).optional(),
+  installments: z.number().min(1).max(360).optional(),
+  payment_conditions: z.string().optional(),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
   signing_date: z.string().optional(),
-  closing_date: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -52,60 +58,89 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
   const { data: properties } = useProperties();
   const { data: leads } = useLeads();
   const createContract = useCreateContract();
+  const updateContract = useUpdateContract();
 
-  const [brokers, setBrokers] = useState<BrokerEntry[]>([]);
+  const [brokers, setBrokers] = useState<BrokerEntry[]>(
+    contract?.brokers?.map((b: any) => ({
+      user_id: b.user_id,
+      commission_percentage: b.commission_percentage,
+      role: b.role,
+    })) || []
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      contract_type: contract?.contract_type || 'sale',
-      lead_id: contract?.lead_id || '',
+      type: contract?.type || 'sale',
+      client_name: contract?.client_name || '',
+      client_email: contract?.client_email || '',
+      client_phone: contract?.client_phone || '',
+      client_document: contract?.client_document || '',
       property_id: contract?.property_id || '',
-      value: contract?.value || 0,
-      commission_percentage: contract?.commission_percentage || 0,
-      commission_value: contract?.commission_value || 0,
+      lead_id: contract?.lead_id || '',
+      total_value: contract?.total_value || 0,
+      down_payment: contract?.down_payment || 0,
+      installments: contract?.installments || 1,
+      payment_conditions: contract?.payment_conditions || '',
+      start_date: contract?.start_date?.split('T')[0] || '',
+      end_date: contract?.end_date?.split('T')[0] || '',
       signing_date: contract?.signing_date?.split('T')[0] || '',
-      closing_date: contract?.closing_date?.split('T')[0] || '',
       notes: contract?.notes || '',
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     const contractData = {
-      contract_type: values.contract_type,
-      lead_id: values.lead_id || null,
+      type: values.type,
+      client_name: values.client_name,
+      client_email: values.client_email || null,
+      client_phone: values.client_phone || null,
+      client_document: values.client_document || null,
       property_id: values.property_id || null,
-      value: values.value,
-      commission_percentage: values.commission_percentage || null,
-      commission_value: values.commission_value || null,
+      lead_id: values.lead_id || null,
+      total_value: values.total_value,
+      down_payment: values.down_payment || null,
+      installments: values.installments || null,
+      payment_conditions: values.payment_conditions || null,
+      start_date: values.start_date || null,
+      end_date: values.end_date || null,
       signing_date: values.signing_date || null,
-      closing_date: values.closing_date || null,
       notes: values.notes || null,
     };
 
-    await createContract.mutateAsync(contractData);
+    const brokerData = brokers.filter(b => b.user_id).map(b => ({
+      user_id: b.user_id,
+      commission_percentage: b.commission_percentage,
+    }));
+
+    if (contract) {
+      await updateContract.mutateAsync({ ...contractData, id: contract.id, brokers: brokerData });
+    } else {
+      await createContract.mutateAsync({ ...contractData, brokers: brokerData });
+    }
     onSuccess();
   };
 
-  const isLoading = createContract.isPending;
+  const isLoading = createContract.isPending || updateContract.isPending;
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <Tabs defaultValue="general" className="w-full">
           <ScrollArea className="w-full">
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 mb-2">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 mb-2">
               <TabsTrigger value="general" className="text-xs sm:text-sm">Geral</TabsTrigger>
               <TabsTrigger value="property" className="text-xs sm:text-sm">Imóvel</TabsTrigger>
               <TabsTrigger value="values" className="text-xs sm:text-sm">Valores</TabsTrigger>
               <TabsTrigger value="brokers" className="text-xs sm:text-sm hidden sm:flex">Corretores</TabsTrigger>
+              <TabsTrigger value="dates" className="text-xs sm:text-sm hidden sm:flex">Datas</TabsTrigger>
             </TabsList>
           </ScrollArea>
 
           <TabsContent value="general" className="space-y-4 pt-2">
             <FormField
               control={form.control}
-              name="contract_type"
+              name="type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Contrato</FormLabel>
@@ -126,7 +161,102 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="client_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Cliente</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nome completo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="client_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="email@exemplo.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="client_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(00) 00000-0000" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="client_document"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF/CNPJ</FormLabel>
+                  <FormControl>
+                    <Input placeholder="000.000.000-00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Mobile only: show brokers and dates here */}
+            <div className="sm:hidden space-y-4 pt-4 border-t">
+              <h4 className="font-medium text-sm">Corretores</h4>
+              <BrokerSelector brokers={brokers} onChange={setBrokers} />
+            </div>
+
+            <div className="sm:hidden space-y-4 pt-4 border-t">
+              <h4 className="font-medium text-sm">Datas</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="start_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Início</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="end_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Término</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
                 name="signing_date"
@@ -143,37 +273,17 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
 
               <FormField
                 control={form.control}
-                name="closing_date"
+                name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data de Fechamento</FormLabel>
+                    <FormLabel>Observações</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Textarea placeholder="Observações adicionais..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observações</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Observações adicionais..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Mobile only: show brokers here */}
-            <div className="sm:hidden space-y-4 pt-4 border-t">
-              <h4 className="font-medium text-sm">Corretores</h4>
-              <BrokerSelector brokers={brokers} onChange={setBrokers} />
             </div>
           </TabsContent>
 
@@ -234,10 +344,10 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
           <TabsContent value="values" className="space-y-4 pt-2">
             <FormField
               control={form.control}
-              name="value"
+              name="total_value"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Valor do Contrato (R$)</FormLabel>
+                  <FormLabel>Valor Total (R$)</FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
@@ -255,16 +365,15 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="commission_percentage"
+                name="down_payment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Comissão (%)</FormLabel>
+                    <FormLabel>Entrada (R$)</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
                         step="0.01" 
                         min="0"
-                        max="100"
                         {...field}
                         onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                       />
@@ -276,17 +385,17 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
 
               <FormField
                 control={form.control}
-                name="commission_value"
+                name="installments"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor da Comissão (R$)</FormLabel>
+                    <FormLabel>Número de Parcelas</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.01"
-                        min="0"
+                        min="1"
+                        max="360"
                         {...field}
-                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                        onChange={e => field.onChange(parseInt(e.target.value) || 1)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -294,10 +403,84 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="payment_conditions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Condições de Pagamento</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Descreva as condições..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </TabsContent>
 
           <TabsContent value="brokers" className="pt-2 hidden sm:block">
             <BrokerSelector brokers={brokers} onChange={setBrokers} />
+          </TabsContent>
+
+          <TabsContent value="dates" className="space-y-4 pt-2 hidden sm:block">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="start_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Início</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="end_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Término</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="signing_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de Assinatura</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Observações adicionais..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </TabsContent>
         </Tabs>
 

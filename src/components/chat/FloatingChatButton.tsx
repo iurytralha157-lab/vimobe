@@ -1,7 +1,8 @@
 import { useFloatingChat } from "@/contexts/FloatingChatContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { MessageCircle } from "lucide-react";
-import { useWhatsAppConversations } from "@/hooks/use-whatsapp";
+import { useWhatsAppConversations, useWhatsAppRealtimeConversations } from "@/hooks/use-whatsapp-conversations";
 import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
 import { useLocation } from "react-router-dom";
 
@@ -10,15 +11,18 @@ export function FloatingChatButton() {
   const { data: sessions } = useWhatsAppSessions();
   const { data: conversations } = useWhatsAppConversations();
   const location = useLocation();
+  
+  // Enable realtime para manter badge atualizado
+  useWhatsAppRealtimeConversations();
 
   // Verificar se tem sessão conectada
   const hasConnectedSession = sessions?.some((s) => s.status === "connected");
-
+  
   // Contar mensagens não lidas
   const unreadCount = conversations?.reduce((acc, c) => acc + (c.unread_count || 0), 0) || 0;
 
   // Não mostrar botão se chat está aberto, não tem sessão, ou está na página de conversas
-  const isOnConversationsPage = location.pathname === "/crm/conversas" || location.pathname === "/conversations";
+  const isOnConversationsPage = location.pathname === "/crm/conversas";
   if (state.isOpen || !hasConnectedSession || isOnConversationsPage) return null;
 
   return (

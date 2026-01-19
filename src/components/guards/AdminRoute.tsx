@@ -6,11 +6,11 @@ interface AdminRouteProps {
 }
 
 /**
- * Guard that only allows admins and super admins to access the route.
+ * Guard that only allows admins and team leaders to access the route.
  * Regular users are redirected to the dashboard.
  */
 export function AdminRoute({ children }: AdminRouteProps) {
-  const { profile, isLoading: loading, isSuperAdmin } = useAuth();
+  const { profile, loading, isSuperAdmin } = useAuth();
 
   if (loading) {
     return (

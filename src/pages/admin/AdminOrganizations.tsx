@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { useOrganizations, useCreateOrganization, useUpdateOrganization, useDeleteOrganization } from '@/hooks/use-super-admin';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,10 +49,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function AdminOrganizations() {
-  const { data: organizations, isLoading: loadingOrgs } = useOrganizations();
-  const createOrganization = useCreateOrganization();
-  const updateOrganization = useUpdateOrganization();
-  const deleteOrganization = useDeleteOrganization();
+  const { organizations, loadingOrgs, createOrganization, updateOrganization, deleteOrganization } = useSuperAdmin();
   const { startImpersonate } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');

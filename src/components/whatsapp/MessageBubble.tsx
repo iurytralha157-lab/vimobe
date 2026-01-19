@@ -1,5 +1,5 @@
-import { useState, useRef, SyntheticEvent } from "react";
-import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, Loader2, Image as ImageIcon, Video } from "lucide-react";
+import { useState, useRef, useEffect, SyntheticEvent } from "react";
+import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ interface MessageBubbleProps {
   mediaMimeType?: string | null;
   mediaStatus?: 'pending' | 'ready' | 'failed' | null;
   mediaError?: string | null;
+  mediaSize?: number | null;
   fromMe: boolean;
   status?: string;
   sentAt: string;
@@ -31,9 +32,19 @@ const generateWaveform = (seed: string, count: number = 40): number[] => {
   
   for (let i = 0; i < count; i++) {
     const val = Math.abs(Math.sin(hash * (i + 1) * 0.1) * Math.cos(hash * (i + 1) * 0.05));
-    bars.push(0.2 + val * 0.8);
+    bars.push(0.2 + val * 0.8); // Min 20%, max 100%
   }
   return bars;
+};
+
+// Check browser support for audio/ogg with opus codec
+const checkOggOpusSupport = (): boolean => {
+  try {
+    const audio = document.createElement('audio');
+    return !!(audio.canPlayType && audio.canPlayType('audio/ogg; codecs=opus').replace(/no/, ''));
+  } catch {
+    return false;
+  }
 };
 
 export function MessageBubble({
@@ -43,6 +54,7 @@ export function MessageBubble({
   mediaMimeType,
   mediaStatus,
   mediaError,
+  mediaSize,
   fromMe,
   status,
   sentAt,
@@ -59,9 +71,37 @@ export function MessageBubble({
   const [currentTime, setCurrentTime] = useState(0);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [audioReady, setAudioReady] = useState(false);
+  const [mediaChecked, setMediaChecked] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   
+  // Waveform bars generated from mediaUrl or sentAt as seed
   const waveformBars = generateWaveform(mediaUrl || sentAt, 40);
+
+  // Debug: Check media URL accessibility
+  useEffect(() => {
+    if (mediaUrl && (messageType === 'audio' || messageType === 'image' || messageType === 'video') && !mediaChecked) {
+      setMediaChecked(true);
+      
+      fetch(mediaUrl, { method: 'HEAD', mode: 'cors' })
+        .then(res => {
+          console.log('[Media Check]', {
+            type: messageType,
+            url: mediaUrl.substring(0, 80) + '...',
+            status: res.status,
+            contentType: res.headers.get('content-type'),
+            acceptRanges: res.headers.get('accept-ranges'),
+            contentLength: res.headers.get('content-length')
+          });
+        })
+        .catch(err => {
+          console.warn('[Media Check Failed]', {
+            type: messageType,
+            url: mediaUrl.substring(0, 80) + '...',
+            error: err.message
+          });
+        });
+    }
+  }, [mediaUrl, messageType, mediaChecked]);
 
   const formatTime = (date: string) => {
     return format(new Date(date), "HH:mm");
@@ -74,21 +114,28 @@ export function MessageBubble({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatFileSize = (bytes: number | null | undefined) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const getStatusIcon = () => {
     if (!fromMe) return null;
     
     switch (status) {
       case "read":
       case "played":
-        return <CheckCheck className="w-4 h-4 text-blue-400" />;
+        return <CheckCheck className="w-[16px] h-[16px] text-blue-400" />;
       case "delivered":
-        return <CheckCheck className="w-4 h-4 opacity-60" />;
+        return <CheckCheck className="w-[16px] h-[16px] opacity-60" />;
       case "sent":
-        return <Check className="w-4 h-4 opacity-60" />;
+        return <Check className="w-[16px] h-[16px] opacity-60" />;
       case "pending":
-        return <Clock className="w-4 h-4 opacity-60 animate-pulse" />;
+        return <Clock className="w-[16px] h-[16px] opacity-60 animate-pulse" />;
       default:
-        return <Check className="w-4 h-4 opacity-60" />;
+        return <Check className="w-[16px] h-[16px] opacity-60" />;
     }
   };
 
@@ -126,14 +173,31 @@ export function MessageBubble({
     if (audioRef.current) {
       setAudioDuration(audioRef.current.duration);
       setAudioReady(true);
+      console.log('[Audio Ready]', {
+        url: mediaUrl?.substring(0, 60) + '...',
+        duration: audioRef.current.duration
+      });
     }
   };
 
   const handleAudioError = (e: SyntheticEvent<HTMLAudioElement>) => {
     const audio = e.currentTarget;
     const errorCode = audio.error?.code;
+    const errorMsg = audio.error?.message;
     
-    if (errorCode === 4) {
+    console.error('[Audio Error]', {
+      url: mediaUrl?.substring(0, 60) + '...',
+      code: errorCode,
+      message: errorMsg,
+      mimeType: mediaMimeType,
+      networkState: audio.networkState,
+      readyState: audio.readyState
+    });
+    
+    // Check if it's a format issue
+    if (mediaMimeType?.includes('ogg') && !checkOggOpusSupport()) {
+      setAudioError('Formato não suportado neste navegador');
+    } else if (errorCode === 4) {
       setAudioError('Formato não suportado');
     } else if (errorCode === 2) {
       setAudioError('Erro de rede');
@@ -142,13 +206,19 @@ export function MessageBubble({
     }
   };
 
-  const handleImageError = () => {
+  const handleImageError = (e: SyntheticEvent<HTMLImageElement>) => {
+    console.error('[Image Error]', {
+      url: mediaUrl?.substring(0, 60) + '...',
+      naturalWidth: e.currentTarget.naturalWidth,
+      naturalHeight: e.currentTarget.naturalHeight
+    });
     setImageError(true);
     setImageLoading(false);
   };
 
   const handleImageLoad = () => {
     setImageLoading(false);
+    console.log('[Image Loaded]', { url: mediaUrl?.substring(0, 60) + '...' });
   };
 
   const handleWaveformClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -182,7 +252,7 @@ export function MessageBubble({
   const renderMediaFailed = () => (
     <div className={cn(
       "flex flex-col items-center gap-2 p-4 rounded-md min-w-[200px]",
-      "bg-destructive/10"
+      fromMe ? "bg-destructive/10" : "bg-destructive/10"
     )}>
       <AlertCircle className="w-6 h-6 text-destructive" />
       <span className="text-sm text-muted-foreground">Mídia não disponível</span>
@@ -198,6 +268,7 @@ export function MessageBubble({
           className="mt-1"
           onClick={onRetryMedia}
         >
+          <RefreshCw className="w-3 h-3 mr-1" />
           Tentar novamente
         </Button>
       )}
@@ -217,9 +288,12 @@ export function MessageBubble({
     if (hasValidMedia) {
       const playedBars = Math.floor((audioProgress / 100) * waveformBars.length);
       
+      // If there's an error, show fallback with download button
       if (audioError) {
         return (
-          <div className={cn("flex flex-col gap-2 py-2 px-2 min-w-[260px]")}>
+          <div className={cn(
+            "flex flex-col gap-2 py-2 px-2 min-w-[260px]",
+          )}>
             <div className="flex items-center gap-3">
               <div className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
@@ -240,12 +314,24 @@ export function MessageBubble({
                 </Button>
               </div>
             </div>
+            <div className="flex items-center justify-end gap-1">
+              <span className={cn(
+                "text-[11px]",
+                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+              )}>
+                {formatTime(sentAt)}
+              </span>
+              {getStatusIcon()}
+            </div>
           </div>
         );
       }
       
       return (
-        <div className={cn("flex items-center gap-2 py-1.5 px-1 min-w-[280px]")}>
+        <div className={cn(
+          "flex items-center gap-2 py-1.5 px-1 min-w-[280px]",
+        )}>
+          {/* Play/Pause Button */}
           <button
             onClick={handleAudioPlay}
             className={cn(
@@ -262,6 +348,7 @@ export function MessageBubble({
             )}
           </button>
           
+          {/* Waveform */}
           <div className="flex-1 flex flex-col gap-1">
             <div 
               className="flex items-center gap-[2px] h-[32px] cursor-pointer"
@@ -285,10 +372,11 @@ export function MessageBubble({
               ))}
             </div>
             
+            {/* Duration */}
             <div className="flex items-center justify-between">
               <span className={cn(
                 "text-[11px]",
-                fromMe ? "text-primary-foreground/60" : "text-muted-foreground/60"
+                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
               )}>
                 {isPlaying || currentTime > 0 
                   ? formatDuration(currentTime) 
@@ -297,7 +385,7 @@ export function MessageBubble({
               </span>
               <span className={cn(
                 "flex items-center gap-1",
-                fromMe ? "text-primary-foreground/60" : "text-muted-foreground/60"
+                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
               )}>
                 <span className="text-[11px]">{formatTime(sentAt)}</span>
                 {getStatusIcon()}
@@ -344,6 +432,7 @@ export function MessageBubble({
   };
 
   const renderMedia = () => {
+    // Check media status for proper state handling
     if (mediaStatus === 'pending') {
       return renderMediaPending();
     }
@@ -352,9 +441,12 @@ export function MessageBubble({
       return renderMediaFailed();
     }
 
+    // For 'ready' status or legacy messages (null status), check URL validity
     const hasValidMedia = isValidMediaUrl(mediaUrl);
     
+    // If no valid URL but status is null (legacy), show as failed for retry
     if (!hasValidMedia && mediaStatus === null && messageType !== 'text' && messageType !== 'sticker') {
+      // Legacy message with expired/invalid URL - treat as failed
       return renderMediaFailed();
     }
 
@@ -467,6 +559,7 @@ export function MessageBubble({
             )}
             onClick={() => hasValidMedia && window.open(mediaUrl!, "_blank")}
           >
+            {/* Icon - fixed width */}
             <div className={cn(
               "w-9 h-9 rounded-md flex items-center justify-center shrink-0",
               fromMe ? "bg-primary-foreground/20" : "bg-primary/10"
@@ -477,16 +570,18 @@ export function MessageBubble({
               )} />
             </div>
             
-            <div className="min-w-0 flex-1">
+            {/* Content area - 90% */}
+            <div className="min-w-0 flex-[9]">
               <p className="text-sm font-medium truncate">
                 {content || "Documento"}
               </p>
             </div>
             
+            {/* Timestamp area - 10% */}
             <div className="flex flex-col items-end shrink-0 gap-0.5">
               <span className={cn(
                 "text-[11px] leading-none whitespace-nowrap",
-                fromMe ? "text-primary-foreground/60" : "text-muted-foreground/60"
+                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
               )}>
                 {formatTime(sentAt)}
               </span>
@@ -496,7 +591,9 @@ export function MessageBubble({
         );
 
       case "sticker":
-        return <div className="text-4xl">🎭</div>;
+        return (
+          <div className="text-4xl">🎭</div>
+        );
 
       default:
         return null;
@@ -517,8 +614,8 @@ export function MessageBubble({
       <div className={cn(
         "max-w-[65%] rounded-lg px-2 py-1.5 relative",
         fromMe 
-          ? "chat-bubble-sent rounded-br-[4px]" 
-          : "chat-bubble-received rounded-bl-[4px]"
+          ? "bg-primary text-primary-foreground rounded-br-[4px]" 
+          : "bg-chatBubble text-chatBubble-foreground rounded-bl-[4px]"
       )}>
         {/* Sender name for groups */}
         {isGroup && !fromMe && senderName && (
@@ -532,15 +629,16 @@ export function MessageBubble({
         {content && messageType === "text" && (
           <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">
             {content}
+            {/* Invisible spacer for timestamp */}
             <span className="inline-block w-[70px]"></span>
           </p>
         )}
 
-        {/* Inline timestamp for text messages */}
+        {/* Inline timestamp for text messages and non-overlay media (except audio which has its own) */}
         {(!isMediaWithOverlayTimestamp && !isAudioMessage) && (
           <span className={cn(
             "float-right -mt-4 ml-2 flex items-center gap-0.5",
-            fromMe ? "text-primary-foreground/60" : "text-muted-foreground/60"
+            fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
           )}>
             <span className="text-[11px] leading-none">{formatTime(sentAt)}</span>
             {getStatusIcon()}

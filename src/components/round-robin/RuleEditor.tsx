@@ -20,8 +20,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { X, Plus, Clock, Loader2 } from 'lucide-react';
-import { usePipelines } from '@/hooks/use-pipelines';
+import { usePipelines } from '@/hooks/use-stages';
 import { useTags } from '@/hooks/use-tags';
+import { RuleMatch } from '@/hooks/use-round-robin-rules';
 
 const SOURCES = [
   { value: 'meta', label: 'Meta Ads' },
@@ -39,19 +40,6 @@ const DAYS_OF_WEEK = [
   { value: 5, label: 'Sex' },
   { value: 6, label: 'Sáb' },
 ];
-
-export interface RuleMatch {
-  pipeline_id?: string;
-  source?: string[];
-  campaign_name_contains?: string;
-  tag_in?: string[];
-  city_in?: string[];
-  schedule?: {
-    days: number[];
-    start: string;
-    end: string;
-  };
-}
 
 interface RuleEditorProps {
   open: boolean;
@@ -80,6 +68,7 @@ export function RuleEditor({
   const [priority, setPriority] = useState(100);
   const [isActive, setIsActive] = useState(true);
   
+  // Match fields
   const [pipelineId, setPipelineId] = useState<string>('');
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [campaignContains, setCampaignContains] = useState('');
@@ -87,6 +76,7 @@ export function RuleEditor({
   const [cities, setCities] = useState<string[]>([]);
   const [newCity, setNewCity] = useState('');
   
+  // Schedule
   const [useSchedule, setUseSchedule] = useState(false);
   const [scheduleDays, setScheduleDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [scheduleStart, setScheduleStart] = useState('08:00');
@@ -114,6 +104,7 @@ export function RuleEditor({
         setUseSchedule(false);
       }
     } else if (open) {
+      // Reset form
       setName('');
       setPriority(100);
       setIsActive(true);
@@ -199,6 +190,7 @@ export function RuleEditor({
         </DialogHeader>
         
         <div className="space-y-6 py-4">
+          {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nome da Regra</Label>
@@ -224,6 +216,7 @@ export function RuleEditor({
             <Label>Regra ativa</Label>
           </div>
           
+          {/* Pipeline */}
           <div className="space-y-2">
             <Label>Pipeline (opcional)</Label>
             <Select value={pipelineId} onValueChange={setPipelineId}>
@@ -239,6 +232,7 @@ export function RuleEditor({
             </Select>
           </div>
           
+          {/* Sources */}
           <div className="space-y-2">
             <Label>Fontes</Label>
             <div className="flex flex-wrap gap-2">
@@ -258,6 +252,7 @@ export function RuleEditor({
             )}
           </div>
           
+          {/* Campaign Contains */}
           <div className="space-y-2">
             <Label>Nome da campanha contém</Label>
             <Input
@@ -267,6 +262,7 @@ export function RuleEditor({
             />
           </div>
           
+          {/* Tags */}
           <div className="space-y-2">
             <Label>Tags (lead deve ter alguma)</Label>
             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
@@ -288,6 +284,7 @@ export function RuleEditor({
             </div>
           </div>
           
+          {/* Cities */}
           <div className="space-y-2">
             <Label>Cidades</Label>
             <div className="flex gap-2">
@@ -315,6 +312,7 @@ export function RuleEditor({
             )}
           </div>
           
+          {/* Schedule */}
           <div className="space-y-4 p-4 border rounded-lg">
             <div className="flex items-center gap-2">
               <Checkbox

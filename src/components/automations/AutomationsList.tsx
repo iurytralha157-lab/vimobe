@@ -1,107 +1,154 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Edit2, Zap } from "lucide-react";
-import { useStageAutomations, useUpdateStageAutomation, useDeleteStageAutomation, StageAutomation } from "@/hooks/use-stage-automations";
+import { Card, CardContent } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useStageAutomations, useDeleteStageAutomation, useToggleStageAutomation, AUTOMATION_TYPE_LABELS, StageAutomation } from "@/hooks/use-stage-automations";
+import { useStages } from "@/hooks/use-stages";
+import { Pencil, Trash2, Zap, Clock, MessageSquare, Bell, ArrowRight } from "lucide-react";
 
 interface AutomationsListProps {
   stageId: string;
   pipelineId: string;
-  onEdit: (automation: StageAutomation) => void;
+  onEdit?: (automation: StageAutomation) => void;
 }
 
-const triggerLabels: Record<string, string> = {
-  on_enter: "Ao entrar",
-  on_exit: "Ao sair",
-  on_time: "Por tempo",
-};
-
-const actionLabels: Record<string, string> = {
-  send_notification: "Notificação",
-  send_email: "Email",
-  send_whatsapp: "WhatsApp",
-  assign_user: "Atribuir",
-  add_tag: "Tag",
-  create_task: "Tarefa",
-};
-
 export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsListProps) {
-  const { data: automations = [], isLoading } = useStageAutomations(stageId);
-  const updateMutation = useUpdateStageAutomation();
-  const deleteMutation = useDeleteStageAutomation();
+  const { data: automations, isLoading } = useStageAutomations(stageId);
+  const { data: stages } = useStages(pipelineId);
+  const deleteAutomation = useDeleteStageAutomation();
+  const toggleAutomation = useToggleStageAutomation();
 
-  const handleToggle = (automation: StageAutomation, isActive: boolean) => {
-    updateMutation.mutate({
-      id: automation.id,
-      stage_id: automation.stage_id,
-      is_active: isActive,
-    });
+  const getAutomationIcon = (type: string) => {
+    switch (type) {
+      case 'move_after_inactivity':
+        return <ArrowRight className="h-4 w-4" />;
+      case 'send_whatsapp_on_enter':
+        return <MessageSquare className="h-4 w-4" />;
+      case 'alert_on_inactivity':
+        return <Bell className="h-4 w-4" />;
+      default:
+        return <Zap className="h-4 w-4" />;
+    }
   };
 
-  const handleDelete = (automationId: string) => {
-    deleteMutation.mutate({ id: automationId, stageId });
+  const getTargetStageName = (stageId: string | null) => {
+    if (!stageId || !stages) return null;
+    const stage = stages.find(s => s.id === stageId);
+    return stage?.name || 'Estágio desconhecido';
+  };
+
+  const getAutomationDescription = (automation: StageAutomation) => {
+    switch (automation.automation_type) {
+      case 'move_after_inactivity':
+        return (
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {automation.trigger_days} dias → {getTargetStageName(automation.target_stage_id)}
+          </span>
+        );
+      case 'send_whatsapp_on_enter':
+        return (
+          <span className="text-sm text-muted-foreground line-clamp-1">
+            {automation.whatsapp_template?.slice(0, 50)}...
+          </span>
+        );
+      case 'alert_on_inactivity':
+        return (
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {automation.trigger_days} dias - {automation.alert_message}
+          </span>
+        );
+      default:
+        return null;
+    }
   };
 
   if (isLoading) {
-    return (
-      <div className="text-center py-8 text-muted-foreground text-sm">
-        Carregando automações...
-      </div>
-    );
+    return <div className="text-center py-4 text-muted-foreground">Carregando...</div>;
   }
 
-  if (automations.length === 0) {
+  if (!automations || automations.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground text-sm border rounded-lg">
+      <div className="text-center py-8 text-muted-foreground">
         <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
         <p>Nenhuma automação configurada</p>
+        <p className="text-sm">Adicione uma automação para este estágio</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {automations.map((automation) => (
-        <div
-          key={automation.id}
-          className="flex items-center justify-between p-3 border rounded-lg bg-card"
-        >
-          <div className="flex items-center gap-3">
-            <Switch
-              checked={automation.is_active}
-              onCheckedChange={(checked) => handleToggle(automation, checked)}
-            />
-            <div>
+        <Card key={automation.id} className={!automation.is_active ? 'opacity-60' : ''}>
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="p-2 rounded-md bg-primary/10 text-primary">
+                  {getAutomationIcon(automation.automation_type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium text-sm">
+                      {AUTOMATION_TYPE_LABELS[automation.automation_type as keyof typeof AUTOMATION_TYPE_LABELS]}
+                    </h4>
+                    {!automation.is_active && (
+                      <Badge variant="secondary" className="text-xs">
+                        Inativa
+                      </Badge>
+                    )}
+                  </div>
+                  {getAutomationDescription(automation)}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  {triggerLabels[automation.trigger_type] || automation.trigger_type}
-                </Badge>
-                <span className="text-muted-foreground">→</span>
-                <Badge variant="outline" className="text-xs">
-                  {actionLabels[automation.action_type] || automation.action_type}
-                </Badge>
+                <Switch
+                  checked={automation.is_active ?? true}
+                  onCheckedChange={(checked) => 
+                    toggleAutomation.mutate({ id: automation.id, is_active: checked })
+                  }
+                />
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit?.(automation)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. A automação será permanentemente removida.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteAutomation.mutate(automation.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => onEdit(automation)}
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-              onClick={() => handleDelete(automation.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

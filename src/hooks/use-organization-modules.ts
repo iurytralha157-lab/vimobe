@@ -1,40 +1,91 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type ModuleName = 
-  | "financial"
-  | "contracts"
-  | "commissions"
-  | "properties"
-  | "telephony"
-  | "whatsapp"
-  | "automations";
+  | 'crm' 
+  | 'financial' 
+  | 'properties' 
+  | 'whatsapp' 
+  | 'agenda' 
+  | 'cadences'
+  | 'tags'
+  | 'round_robin'
+  | 'reports';
+
+// Default modules that are enabled if no explicit record exists
+const DEFAULT_ENABLED_MODULES: ModuleName[] = [
+  'crm',
+  'financial',
+  'properties',
+  'whatsapp',
+  'agenda',
+  'cadences',
+  'tags',
+  'round_robin',
+  'reports'
+];
 
 export function useOrganizationModules() {
-  const { profile } = useAuth();
+  const { organization, isSuperAdmin } = useAuth();
 
   const { data: modules, isLoading } = useQuery({
-    queryKey: ["organization-modules", profile?.organization_id],
+    queryKey: ['organization-modules', organization?.id],
     queryFn: async () => {
-      if (!profile?.organization_id) return [];
+      if (!organization?.id) return [];
 
       const { data, error } = await supabase
-        .from("organization_modules")
-        .select("*")
-        .eq("organization_id", profile.organization_id);
+        .from('organization_modules')
+        .select('*')
+        .eq('organization_id', organization.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching organization modules:', error);
+        return [];
+      }
+
       return data || [];
     },
-    enabled: !!profile?.organization_id,
+    enabled: !!organization?.id,
   });
 
+  // Check if a specific module is enabled
   const hasModule = (moduleName: ModuleName): boolean => {
-    if (!modules) return true; // Default to true if no modules configured
-    const module = modules.find((m) => m.module_name === moduleName);
-    return module?.is_enabled ?? true;
+    // Super admin always has access to all modules
+    if (isSuperAdmin) return true;
+    
+    // If no modules configured, use defaults (all enabled)
+    if (!modules || modules.length === 0) {
+      return DEFAULT_ENABLED_MODULES.includes(moduleName);
+    }
+
+    // Find the module in the list
+    const moduleRecord = modules.find(m => m.module_name === moduleName);
+    
+    // If not found in list, assume enabled (default behavior)
+    if (!moduleRecord) return true;
+    
+    return moduleRecord.is_enabled;
   };
 
-  return { modules, hasModule, isLoading };
+  // Get list of all enabled modules
+  const enabledModules = (): ModuleName[] => {
+    if (isSuperAdmin) return DEFAULT_ENABLED_MODULES;
+    
+    if (!modules || modules.length === 0) {
+      return DEFAULT_ENABLED_MODULES;
+    }
+
+    return DEFAULT_ENABLED_MODULES.filter(moduleName => {
+      const moduleRecord = modules.find(m => m.module_name === moduleName);
+      return !moduleRecord || moduleRecord.is_enabled;
+    });
+  };
+
+  return {
+    modules,
+    isLoading,
+    hasModule,
+    enabledModules,
+  };
 }

@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Users, Upload, Plus } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Users, Upload, Plus } from 'lucide-react';
 
 interface EmptyStateProps {
   hasActiveFilters: boolean;
@@ -8,11 +8,11 @@ interface EmptyStateProps {
   onClearFilters: () => void;
 }
 
-export function EmptyState({
-  hasActiveFilters,
-  onImport,
+export function EmptyState({ 
+  hasActiveFilters, 
+  onImport, 
   onCreate,
-  onClearFilters,
+  onClearFilters 
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
@@ -23,8 +23,8 @@ export function EmptyState({
         <h3 className="font-semibold text-lg">Nenhum contato encontrado</h3>
         <p className="text-muted-foreground text-sm max-w-sm mt-1">
           {hasActiveFilters
-            ? "Tente ajustar os filtros para encontrar mais resultados."
-            : "Comece importando uma planilha ou criando seu primeiro contato."}
+            ? 'Tente ajustar os filtros para encontrar mais resultados.'
+            : 'Comece importando uma planilha ou criando seu primeiro contato.'}
         </p>
       </div>
       <div className="flex gap-3 mt-2">

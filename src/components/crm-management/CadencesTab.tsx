@@ -1,15 +1,38 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Phone, MessageCircle, Mail, FileText, GripVertical, Trash2, Loader2, Lock } from "lucide-react";
-import { useCadenceTemplates, useCreateCadenceTask, useDeleteCadenceTask } from "@/hooks/use-cadences";
-import { useCanEditCadences } from "@/hooks/use-can-edit-cadences";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { 
+  Plus, 
+  Phone, 
+  MessageCircle, 
+  Mail, 
+  FileText,
+  GripVertical,
+  Trash2,
+  Loader2,
+  Lightbulb,
+  FileEdit,
+  Lock
+} from 'lucide-react';
+import { useCadenceTemplates, useCreateCadenceTask, useDeleteCadenceTask } from '@/hooks/use-cadences';
+import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 
 const taskTypeIcons = {
   call: Phone,
@@ -19,10 +42,10 @@ const taskTypeIcons = {
 };
 
 const taskTypeLabels = {
-  call: "Ligação",
-  message: "Mensagem",
-  email: "Email",
-  note: "Observação",
+  call: 'Ligação',
+  message: 'Mensagem',
+  email: 'Email',
+  note: 'Observação',
 };
 
 export function CadencesTab() {
@@ -30,27 +53,33 @@ export function CadencesTab() {
   const createTask = useCreateCadenceTask();
   const deleteTask = useDeleteCadenceTask();
   const canEdit = useCanEditCadences();
-
+  
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
-  const [newTask, setNewTask] = useState({
-    dayOffset: 0,
-    title: "",
-    description: "",
+  const [newTask, setNewTask] = useState({ 
+    dayOffset: 0, 
+    type: 'call' as 'call' | 'message' | 'email' | 'note', 
+    title: '', 
+    description: '',
+    observation: '',
+    recommendedMessage: '',
   });
 
   const handleAddTask = async () => {
     if (!selectedTemplateId || !newTask.title) return;
-
+    
     await createTask.mutateAsync({
       cadence_template_id: selectedTemplateId,
       day_offset: newTask.dayOffset,
-      type: "note",
+      type: newTask.type,
       title: newTask.title,
+      description: newTask.description || undefined,
+      observation: newTask.observation || undefined,
+      recommended_message: newTask.recommendedMessage || undefined,
     });
-
+    
     setTaskDialogOpen(false);
-    setNewTask({ dayOffset: 0, title: "", description: "" });
+    setNewTask({ dayOffset: 0, type: 'call', title: '', description: '', observation: '', recommendedMessage: '' });
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -103,47 +132,68 @@ export function CadencesTab() {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base font-medium">{template.name}</CardTitle>
               {canEdit && (
-                <Button variant="ghost" size="sm" className="h-8" onClick={() => openAddTaskDialog(template.id)}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8"
+                  onClick={() => openAddTaskDialog(template.id)}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               )}
             </CardHeader>
             <CardContent className="pt-0">
               {template.tasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma tarefa configurada</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma tarefa configurada
+                </p>
               ) : (
                 <div className="space-y-2">
-                  {template.tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30 group"
-                    >
-                      <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab" />
-                      <Badge variant="outline" className="shrink-0 font-mono text-xs">
-                        D{task.day_offset >= 0 ? "+" : ""}
-                        {task.day_offset}
-                      </Badge>
-                      <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <FileText className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{task.title}</p>
-                        {task.description && (
-                          <p className="text-xs text-muted-foreground truncate">{task.description}</p>
+                  {template.tasks.map((task) => {
+                    const Icon = taskTypeIcons[task.type as keyof typeof taskTypeIcons] || FileText;
+                    return (
+                      <div 
+                        key={task.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30 group"
+                      >
+                        <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab" />
+                        <Badge variant="outline" className="shrink-0 font-mono text-xs">
+                          D{task.day_offset >= 0 ? '+' : ''}{task.day_offset}
+                        </Badge>
+                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Icon className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{task.title}</p>
+                          {task.observation && (
+                            <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
+                              <Lightbulb className="h-3 w-3" />
+                              {task.observation}
+                            </p>
+                          )}
+                          {task.recommended_message && (
+                            <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                              <FileEdit className="h-3 w-3" />
+                              Mensagem pronta para enviar
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {taskTypeLabels[task.type as keyof typeof taskTypeLabels] || task.type}
+                          </p>
+                        </div>
+                        {canEdit && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDeleteTask(task.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         )}
                       </div>
-                      {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDeleteTask(task.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -153,40 +203,93 @@ export function CadencesTab() {
 
       {/* Add Task Dialog */}
       <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nova Tarefa</DialogTitle>
+            <DialogTitle>Adicionar Tarefa</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Dia (offset)</Label>
-              <Input
-                type="number"
-                value={newTask.dayOffset}
-                onChange={(e) => setNewTask({ ...newTask, dayOffset: parseInt(e.target.value) || 0 })}
-              />
-              <p className="text-xs text-muted-foreground">Dias após entrada no estágio. Ex: 0 = mesmo dia, 1 = próximo dia</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Dia</Label>
+                <Input
+                  type="number"
+                  value={newTask.dayOffset}
+                  onChange={(e) => setNewTask({ ...newTask, dayOffset: parseInt(e.target.value) || 0 })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  0 = dia da entrada, -1 = dia anterior
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select 
+                  value={newTask.type} 
+                  onValueChange={(v) => setNewTask({ ...newTask, type: v as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="call">Ligação</SelectItem>
+                    <SelectItem value="message">Mensagem</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="note">Observação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div className="space-y-2">
               <Label>Título</Label>
               <Input
                 value={newTask.title}
                 onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                placeholder="Ex: Fazer ligação de apresentação"
+                placeholder="Ex: Primeira ligação de apresentação"
               />
             </div>
+
             <div className="space-y-2">
               <Label>Descrição (opcional)</Label>
-              <Textarea
+              <Input
                 value={newTask.description}
                 onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                 placeholder="Instruções adicionais..."
               />
             </div>
-            <Button onClick={handleAddTask} className="w-full" disabled={!newTask.title || createTask.isPending}>
-              {createTask.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-              Adicionar Tarefa
-            </Button>
+
+            {newTask.type === 'message' && (
+              <div className="space-y-2">
+                <Label>Mensagem Recomendada</Label>
+                <Textarea
+                  value={newTask.recommendedMessage}
+                  onChange={(e) => setNewTask({ ...newTask, recommendedMessage: e.target.value })}
+                  placeholder="Olá {nome}, tudo bem? Gostaria de..."
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use {'{nome}'} para inserir o nome do lead automaticamente
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Observação Interna (dica para o corretor)</Label>
+              <Input
+                value={newTask.observation}
+                onChange={(e) => setNewTask({ ...newTask, observation: e.target.value })}
+                placeholder="Mencionar a promoção do mês..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setTaskDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAddTask} disabled={createTask.isPending}>
+                {createTask.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Adicionar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

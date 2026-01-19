@@ -1,54 +1,342 @@
 import { useState } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import AppLayout from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, TrendingUp, Users, Calendar } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock, TrendingUp, Download, Calendar } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  useTelephonyMetrics, 
+  useTelephonyRanking, 
+  useOrganizationCalls,
+  formatCallDuration, 
+  formatTotalTime 
+} from "@/hooks/use-telephony";
+import { useUsers } from "@/hooks/use-users";
+import { useTeams } from "@/hooks/use-teams";
 
-const mockCalls = [
-  { id: 1, type: "incoming", number: "(11) 99999-1234", agent: "João Silva", duration: "5:32", status: "answered", date: "2024-01-15 10:30" },
-  { id: 2, type: "outgoing", number: "(11) 98888-5678", agent: "Maria Santos", duration: "3:15", status: "answered", date: "2024-01-15 11:45" },
-  { id: 3, type: "missed", number: "(11) 97777-9012", agent: "Pedro Costa", duration: "0:00", status: "missed", date: "2024-01-15 14:20" },
-];
-
-const mockStats = { totalCalls: 1250, answered: 1100, missed: 150, avgDuration: "4:32", avgWaitTime: "0:45" };
-const mockAgentStats = [
-  { name: "João Silva", calls: 320, answered: 300, missed: 20, avgDuration: "5:15", satisfaction: 4.8 },
-  { name: "Maria Santos", calls: 280, answered: 265, missed: 15, avgDuration: "4:45", satisfaction: 4.9 },
-];
+type PeriodType = 'today' | 'week' | 'month' | 'custom';
 
 export default function TelephonyReports() {
-  const { t } = useLanguage();
-  const [period, setPeriod] = useState("month");
-  const getCallIcon = (type: string) => { switch (type) { case "incoming": return <PhoneIncoming className="h-4 w-4 text-green-500" />; case "outgoing": return <PhoneOutgoing className="h-4 w-4 text-blue-500" />; case "missed": return <PhoneMissed className="h-4 w-4 text-destructive" />; default: return <Phone className="h-4 w-4" />; } };
+  const [period, setPeriod] = useState<PeriodType>('week');
+  const [selectedUserId, setSelectedUserId] = useState<string>('all');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
+
+  const { data: users } = useUsers();
+  const { data: teams } = useTeams();
+
+  const getDateRange = () => {
+    const now = new Date();
+    switch (period) {
+      case 'today':
+        return { startDate: startOfDay(now), endDate: endOfDay(now) };
+      case 'week':
+        return { startDate: startOfWeek(now, { locale: ptBR }), endDate: endOfWeek(now, { locale: ptBR }) };
+      case 'month':
+        return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+      default:
+        return { startDate: subDays(now, 30), endDate: now };
+    }
+  };
+
+  const dateRange = getDateRange();
+
+  const { data: metrics, isLoading: metricsLoading } = useTelephonyMetrics({
+    ...dateRange,
+    userId: selectedUserId !== 'all' ? selectedUserId : undefined,
+    teamId: selectedTeamId !== 'all' ? selectedTeamId : undefined,
+  });
+
+  const { data: ranking, isLoading: rankingLoading } = useTelephonyRanking({
+    ...dateRange,
+    teamId: selectedTeamId !== 'all' ? selectedTeamId : undefined,
+    limit: 10,
+  });
+
+  const { data: recentCalls, isLoading: callsLoading } = useOrganizationCalls({
+    ...dateRange,
+    userId: selectedUserId !== 'all' ? selectedUserId : undefined,
+    limit: 20,
+  });
 
   return (
-    <AppLayout>
+    <AppLayout title="Relatórios de Telefonia">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div><h1 className="text-3xl font-bold">{t("telephonyReports")}</h1><p className="text-muted-foreground">Análise detalhada das ligações</p></div>
-          <div className="flex items-center gap-2">
-            <Select value={period} onValueChange={setPeriod}><SelectTrigger className="w-[180px]"><Calendar className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="today">Hoje</SelectItem><SelectItem value="week">Esta semana</SelectItem><SelectItem value="month">Este mês</SelectItem></SelectContent></Select>
-            <Button variant="outline"><Download className="mr-2 h-4 w-4" />Exportar</Button>
-          </div>
+        <p className="text-muted-foreground">Métricas e análises de chamadas</p>
+        
+        {/* Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Período</label>
+                <div className="flex gap-2">
+                  {(['today', 'week', 'month'] as PeriodType[]).map((p) => (
+                    <Button
+                      key={p}
+                      variant={period === p ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPeriod(p)}
+                    >
+                      {p === 'today' ? 'Hoje' : p === 'week' ? 'Semana' : 'Mês'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Corretor</label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Todos os corretores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os corretores</SelectItem>
+                    {users?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Equipe</label>
+                <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Todas as equipes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as equipes</SelectItem>
+                    {teams?.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPI Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Total de Ligações"
+            value={metrics?.totalCalls || 0}
+            icon={Phone}
+            loading={metricsLoading}
+          />
+          <MetricCard
+            title="Ligações Atendidas"
+            value={metrics?.answeredCalls || 0}
+            subtitle={`${metrics?.answerRate || 0}% taxa de atendimento`}
+            icon={PhoneIncoming}
+            loading={metricsLoading}
+            iconColor="text-green-500"
+          />
+          <MetricCard
+            title="Ligações Perdidas"
+            value={metrics?.missedCalls || 0}
+            icon={PhoneMissed}
+            loading={metricsLoading}
+            iconColor="text-destructive"
+          />
+          <MetricCard
+            title="Tempo Total em Linha"
+            value={formatTotalTime(metrics?.talkTimeTotal || 0)}
+            subtitle={`Média: ${formatCallDuration(metrics?.talkTimeAvg || 0)}`}
+            icon={Clock}
+            loading={metricsLoading}
+            isTime
+          />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <Card><CardHeader className="pb-2"><CardDescription>Total de Ligações</CardDescription><CardTitle className="text-2xl">{mockStats.totalCalls}</CardTitle></CardHeader><CardContent><div className="flex items-center text-sm text-green-600"><TrendingUp className="mr-1 h-4 w-4" />+12% vs período anterior</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardDescription>Atendidas</CardDescription><CardTitle className="text-2xl text-green-600">{mockStats.answered}</CardTitle></CardHeader><CardContent><div className="text-sm text-muted-foreground">{((mockStats.answered / mockStats.totalCalls) * 100).toFixed(1)}% do total</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardDescription>Perdidas</CardDescription><CardTitle className="text-2xl text-destructive">{mockStats.missed}</CardTitle></CardHeader><CardContent><div className="text-sm text-muted-foreground">{((mockStats.missed / mockStats.totalCalls) * 100).toFixed(1)}% do total</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardDescription>Duração Média</CardDescription><CardTitle className="text-2xl">{mockStats.avgDuration}</CardTitle></CardHeader><CardContent><div className="flex items-center text-sm text-muted-foreground"><Clock className="mr-1 h-4 w-4" />minutos</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardDescription>Tempo de Espera</CardDescription><CardTitle className="text-2xl">{mockStats.avgWaitTime}</CardTitle></CardHeader><CardContent><div className="flex items-center text-sm text-muted-foreground"><Clock className="mr-1 h-4 w-4" />média</div></CardContent></Card>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Broker Ranking */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Ranking de Corretores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rankingLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : ranking && ranking.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">#</TableHead>
+                      <TableHead>Corretor</TableHead>
+                      <TableHead className="text-right">Ligações</TableHead>
+                      <TableHead className="text-right">Atendidas</TableHead>
+                      <TableHead className="text-right">Tempo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ranking.map((broker, index) => (
+                      <TableRow key={broker.userId}>
+                        <TableCell className="font-medium">
+                          {index + 1}º
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={broker.avatarUrl || undefined} />
+                              <AvatarFallback>
+                                {broker.userName?.charAt(0) || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{broker.userName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {broker.totalCalls}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {broker.answeredCalls}
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({broker.answerRate}%)
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatTotalTime(broker.talkTimeTotal)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhum dado disponível para o período
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Calls */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Ligações Recentes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {callsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : recentCalls && recentCalls.length > 0 ? (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {recentCalls.map((call) => (
+                    <div
+                      key={call.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-1.5 rounded-full ${
+                          call.status === 'missed' || call.status === 'no_answer'
+                            ? 'bg-destructive/10 text-destructive'
+                            : call.direction === 'inbound'
+                            ? 'bg-blue-500/10 text-blue-500'
+                            : 'bg-green-500/10 text-green-500'
+                        }`}>
+                          {call.status === 'missed' || call.status === 'no_answer' ? (
+                            <PhoneMissed className="h-4 w-4" />
+                          ) : call.direction === 'inbound' ? (
+                            <PhoneIncoming className="h-4 w-4" />
+                          ) : (
+                            <PhoneOutgoing className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {(call.lead as any)?.name || call.phone_to || 'Desconhecido'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(call.user as any)?.name || 'N/A'} • {call.initiated_at && format(new Date(call.initiated_at), "dd/MM HH:mm")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={
+                          call.status === 'missed' || call.status === 'no_answer' 
+                            ? 'destructive' 
+                            : 'secondary'
+                        }>
+                          {call.status === 'ended' || call.status === 'answered' ? 'Atendida' : 
+                           call.status === 'missed' || call.status === 'no_answer' ? 'Perdida' : 
+                           call.status}
+                        </Badge>
+                        {call.duration_seconds && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatCallDuration(call.duration_seconds)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  Nenhuma ligação no período
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
-        <Tabs defaultValue="calls" className="space-y-4">
-          <TabsList><TabsTrigger value="calls">Histórico de Ligações</TabsTrigger><TabsTrigger value="agents">Performance por Agente</TabsTrigger></TabsList>
-          <TabsContent value="calls"><Card><CardHeader><CardTitle>Ligações Recentes</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Tipo</TableHead><TableHead>Número</TableHead><TableHead>Agente</TableHead><TableHead>Duração</TableHead><TableHead>Status</TableHead><TableHead>Data/Hora</TableHead></TableRow></TableHeader><TableBody>{mockCalls.map((call) => (<TableRow key={call.id}><TableCell>{getCallIcon(call.type)}</TableCell><TableCell className="font-mono">{call.number}</TableCell><TableCell>{call.agent}</TableCell><TableCell>{call.duration}</TableCell><TableCell><Badge variant={call.status === "answered" ? "default" : "destructive"}>{call.status === "answered" ? "Atendida" : "Perdida"}</Badge></TableCell><TableCell className="text-muted-foreground">{call.date}</TableCell></TableRow>))}</TableBody></Table></CardContent></Card></TabsContent>
-          <TabsContent value="agents"><Card><CardHeader><CardTitle>Performance dos Agentes</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Agente</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Atendidas</TableHead><TableHead className="text-right">Perdidas</TableHead><TableHead className="text-right">Duração Média</TableHead><TableHead className="text-right">Satisfação</TableHead></TableRow></TableHeader><TableBody>{mockAgentStats.map((agent) => (<TableRow key={agent.name}><TableCell className="font-medium">{agent.name}</TableCell><TableCell className="text-right">{agent.calls}</TableCell><TableCell className="text-right text-green-600">{agent.answered}</TableCell><TableCell className="text-right text-destructive">{agent.missed}</TableCell><TableCell className="text-right">{agent.avgDuration}</TableCell><TableCell className="text-right"><Badge variant="outline">⭐ {agent.satisfaction}</Badge></TableCell></TableRow>))}</TableBody></Table></CardContent></Card></TabsContent>
-        </Tabs>
       </div>
     </AppLayout>
+  );
+}
+
+interface MetricCardProps {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  loading?: boolean;
+  iconColor?: string;
+  isTime?: boolean;
+}
+
+function MetricCard({ title, value, subtitle, icon: Icon, loading, iconColor = "text-primary", isTime }: MetricCardProps) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className={`h-4 w-4 ${iconColor}`} />
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-8 w-24" />
+        ) : (
+          <>
+            <div className={`font-bold ${isTime ? 'text-xl' : 'text-2xl'}`}>
+              {value}
+            </div>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

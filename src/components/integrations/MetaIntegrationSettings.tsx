@@ -56,7 +56,8 @@ import {
   FileText,
 } from "lucide-react";
 import { toast } from "sonner";
-import { usePipelines, useStages } from "@/hooks/use-pipelines";
+import { usePipelines } from "@/hooks/use-stages";
+import { useStages } from "@/hooks/use-stages";
 import {
   useMetaIntegrations,
   useMetaGetAuthUrl,
@@ -69,13 +70,17 @@ import {
   MetaIntegration,
 } from "@/hooks/use-meta-integration";
 import { MetaFormManager } from "./MetaFormManager";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function MetaIntegrationSettings() {
+  const { t } = useLanguage();
+  const meta = t.settings.integrations.meta;
+
   const STATUS_OPTIONS = [
-    { value: "novo", label: "Novo" },
-    { value: "contatado", label: "Contatado" },
-    { value: "qualificado", label: "Qualificado" },
-    { value: "negociando", label: "Negociando" },
+    { value: "novo", label: meta.statusNew },
+    { value: "contatado", label: meta.statusContacted },
+    { value: "qualificado", label: meta.statusQualified },
+    { value: "negociando", label: meta.statusNegotiating },
   ];
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,6 +92,7 @@ export function MetaIntegrationSettings() {
   const [editingPage, setEditingPage] = useState<string | null>(null);
   const [expandedIntegrations, setExpandedIntegrations] = useState<Set<string>>(new Set());
   
+  // Form state
   const [selectedPageId, setSelectedPageId] = useState("");
   const [selectedPipelineId, setSelectedPipelineId] = useState("");
   const [selectedStageId, setSelectedStageId] = useState("");
@@ -103,6 +109,7 @@ export function MetaIntegrationSettings() {
   const disconnectPage = useMetaDisconnectPage();
   const togglePage = useMetaTogglePage();
 
+  // Handle OAuth callback
   useEffect(() => {
     const code = searchParams.get("code");
     if (code && !isConnecting) {
@@ -120,9 +127,10 @@ export function MetaIntegrationSettings() {
       setUserToken(result.user_token);
       setShowPageSelector(true);
       
+      // Clear code from URL
       setSearchParams({});
     } catch (error) {
-      toast.error("Erro ao conectar com Meta");
+      toast.error(meta.errorConnecting);
     } finally {
       setIsConnecting(false);
     }
@@ -133,19 +141,21 @@ export function MetaIntegrationSettings() {
       const redirectUri = `${window.location.origin}/settings/integrations/meta`;
       const result = await getAuthUrl.mutateAsync(redirectUri);
       
+      // Open in new tab to bypass iframe restrictions
       const popup = window.open(result.auth_url, '_blank', 'width=600,height=700,scrollbars=yes');
       
+      // Fallback if popup was blocked
       if (!popup || popup.closed || typeof popup.closed === 'undefined') {
         window.location.href = result.auth_url;
       }
     } catch (error) {
-      toast.error("Erro ao iniciar autenticação");
+      toast.error(meta.errorStarting);
     }
   };
 
   const handleConnectPage = async () => {
     if (!selectedPageId || !selectedPipelineId || !selectedStageId) {
-      toast.error("Preencha todos os campos obrigatórios");
+      toast.error(meta.fillAllFields);
       return;
     }
 
@@ -163,7 +173,7 @@ export function MetaIntegrationSettings() {
 
   const handleUpdatePage = async () => {
     if (!editingPage || !selectedPipelineId || !selectedStageId) {
-      toast.error("Preencha todos os campos obrigatórios");
+      toast.error(meta.fillAllFields);
       return;
     }
 
@@ -229,9 +239,9 @@ export function MetaIntegrationSettings() {
               <Facebook className="h-6 w-6 text-blue-500" />
             </div>
             <div>
-              <CardTitle>Meta Lead Ads</CardTitle>
+              <CardTitle>{meta.title}</CardTitle>
               <CardDescription>
-                Receba leads automaticamente do Facebook e Instagram
+                {meta.description}
               </CardDescription>
             </div>
           </div>
@@ -243,14 +253,14 @@ export function MetaIntegrationSettings() {
                 <>
                   <CheckCircle2 className="h-5 w-5 text-orange-500" />
                   <span className="text-sm font-medium text-orange-600">
-                    {integrations.length} página(s) conectada(s)
+                    {integrations.length} {meta.pagesConnected}
                   </span>
                 </>
               ) : (
                 <>
                   <AlertCircle className="h-5 w-5 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    Nenhuma página conectada
+                    {meta.noPageConnected}
                   </span>
                 </>
               )}
@@ -264,7 +274,7 @@ export function MetaIntegrationSettings() {
               ) : (
                 <Link className="mr-2 h-4 w-4" />
               )}
-              {hasConnectedPages ? "Adicionar Página" : "Conectar"}
+              {hasConnectedPages ? meta.addPage : meta.connect}
             </Button>
           </div>
         </CardContent>
@@ -290,24 +300,24 @@ export function MetaIntegrationSettings() {
                         <div className="flex items-center gap-2">
                           <h4 className="font-semibold">{integration.page_name}</h4>
                           <Badge variant={integration.is_connected ? "default" : "secondary"}>
-                            {integration.is_connected ? "Ativo" : "Inativo"}
+                            {integration.is_connected ? t.common.active : t.common.inactive}
                           </Badge>
                         </div>
                         
                         {integration.pipeline_id && (
                           <p className="text-sm text-muted-foreground">
-                            Pipeline configurado • Status: {integration.default_status || "Novo"}
+                            {meta.pipelineConfigured} • {meta.status}: {integration.default_status || meta.statusNew}
                           </p>
                         )}
                         
                         <div className="flex items-center gap-4 mt-2">
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <Users className="h-4 w-4" />
-                            <span>{integration.leads_received || 0} leads recebidos</span>
+                            <span>{integration.leads_received || 0} {meta.leadsReceived}</span>
                           </div>
                           {integration.last_lead_at && (
                             <span className="text-xs text-muted-foreground">
-                              Último lead: {new Date(integration.last_lead_at).toLocaleDateString()}
+                              {meta.lastLead}: {new Date(integration.last_lead_at).toLocaleDateString()}
                             </span>
                           )}
                         </div>
@@ -325,13 +335,13 @@ export function MetaIntegrationSettings() {
                       <CollapsibleTrigger asChild>
                         <Button variant="outline" size="sm">
                           <FileText className="h-4 w-4 mr-2" />
-                          Formulários
+                          {meta.forms}
                           <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${expandedIntegrations.has(integration.id) ? 'rotate-180' : ''}`} />
                         </Button>
                       </CollapsibleTrigger>
                       
                       <Switch
-                        checked={integration.is_connected ?? false}
+                        checked={integration.is_connected}
                         onCheckedChange={(checked) => 
                           togglePage.mutate({ pageId: integration.page_id!, isActive: checked })
                         }
@@ -353,17 +363,17 @@ export function MetaIntegrationSettings() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Desconectar Página</AlertDialogTitle>
+                            <AlertDialogTitle>{meta.disconnectPage}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Tem certeza que deseja desconectar esta página? Você não receberá mais leads desta página.
+                              {meta.disconnectConfirm}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => disconnectPage.mutate(integration.page_id!)}
                             >
-                              Desconectar
+                              {meta.disconnect}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -387,18 +397,18 @@ export function MetaIntegrationSettings() {
       <Dialog open={showPageSelector} onOpenChange={setShowPageSelector}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Conectar Página</DialogTitle>
+            <DialogTitle>{meta.connectPage}</DialogTitle>
             <DialogDescription>
-              Selecione a página e configure o destino dos leads
+              {meta.changeDestination}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Página do Facebook</Label>
+              <Label>{meta.facebookPage}</Label>
               <Select value={selectedPageId} onValueChange={setSelectedPageId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma página" />
+                  <SelectValue placeholder={meta.selectPage} />
                 </SelectTrigger>
                 <SelectContent>
                   {availablePages.map((page) => (
@@ -411,13 +421,13 @@ export function MetaIntegrationSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Pipeline Padrão</Label>
+              <Label>{meta.defaultPipeline}</Label>
               <Select value={selectedPipelineId} onValueChange={(v) => {
                 setSelectedPipelineId(v);
                 setSelectedStageId("");
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um pipeline" />
+                  <SelectValue placeholder={meta.selectPipeline} />
                 </SelectTrigger>
                 <SelectContent>
                   {pipelines?.map((pipeline) => (
@@ -428,19 +438,19 @@ export function MetaIntegrationSettings() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Você pode configurar destinos diferentes por formulário depois
+                {meta.pipelineNote}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>Etapa Inicial</Label>
+              <Label>{meta.initialStage}</Label>
               <Select 
                 value={selectedStageId} 
                 onValueChange={setSelectedStageId}
                 disabled={!selectedPipelineId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma etapa" />
+                  <SelectValue placeholder={meta.selectStage} />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredStages.map((stage) => (
@@ -453,7 +463,7 @@ export function MetaIntegrationSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Status do Lead</Label>
+              <Label>{meta.leadStatus}</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
                   <SelectValue />
@@ -471,7 +481,7 @@ export function MetaIntegrationSettings() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPageSelector(false)}>
-              Cancelar
+              {t.common.cancel}
             </Button>
             <Button 
               onClick={handleConnectPage}
@@ -480,7 +490,7 @@ export function MetaIntegrationSettings() {
               {connectPage.isPending ? (
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Conectar Página
+              {meta.connectButton}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -490,21 +500,21 @@ export function MetaIntegrationSettings() {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Configurar Página</DialogTitle>
+            <DialogTitle>{meta.configurePage}</DialogTitle>
             <DialogDescription>
-              Altere o destino padrão dos leads desta página
+              {meta.changeDestination}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Pipeline Padrão</Label>
+              <Label>{meta.defaultPipeline}</Label>
               <Select value={selectedPipelineId} onValueChange={(v) => {
                 setSelectedPipelineId(v);
                 setSelectedStageId("");
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um pipeline" />
+                  <SelectValue placeholder={meta.selectPipeline} />
                 </SelectTrigger>
                 <SelectContent>
                   {pipelines?.map((pipeline) => (
@@ -517,14 +527,14 @@ export function MetaIntegrationSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Etapa Inicial</Label>
+              <Label>{meta.initialStage}</Label>
               <Select 
                 value={selectedStageId} 
                 onValueChange={setSelectedStageId}
                 disabled={!selectedPipelineId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma etapa" />
+                  <SelectValue placeholder={meta.selectStage} />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredStages.map((stage) => (
@@ -537,7 +547,7 @@ export function MetaIntegrationSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Status do Lead</Label>
+              <Label>{meta.leadStatus}</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
                   <SelectValue />
@@ -555,7 +565,7 @@ export function MetaIntegrationSettings() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancelar
+              {t.common.cancel}
             </Button>
             <Button 
               onClick={handleUpdatePage}
@@ -564,7 +574,7 @@ export function MetaIntegrationSettings() {
               {updatePage.isPending ? (
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Salvar
+              {t.common.save}
             </Button>
           </DialogFooter>
         </DialogContent>

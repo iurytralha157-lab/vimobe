@@ -1,9 +1,19 @@
 import { useState, useMemo } from 'react';
-import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from 'date-fns';
+import { subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfQuarter, startOfYear, subMonths } from 'date-fns';
 
-export type DatePreset = 'today' | '7days' | '30days' | 'this_month' | 'last_month' | '90days' | 'this_year' | 'custom';
+export type DatePreset = 
+  | 'today' 
+  | 'yesterday' 
+  | 'last7days' 
+  | 'last30days' 
+  | 'thisMonth' 
+  | 'lastMonth' 
+  | 'thisQuarter' 
+  | 'thisYear'
+  | 'custom';
 
 export interface DashboardFilters {
+  datePreset: DatePreset;
   dateRange: { from: Date; to: Date };
   teamId: string | null;
   userId: string | null;
@@ -17,81 +27,84 @@ export interface DatePresetOption {
 
 export const datePresetOptions: DatePresetOption[] = [
   { value: 'today', label: 'Hoje' },
-  { value: '7days', label: 'Últimos 7 dias' },
-  { value: '30days', label: 'Últimos 30 dias' },
-  { value: 'this_month', label: 'Este mês' },
-  { value: 'last_month', label: 'Mês passado' },
-  { value: '90days', label: 'Últimos 90 dias' },
-  { value: 'this_year', label: 'Este ano' },
+  { value: 'yesterday', label: 'Ontem' },
+  { value: 'last7days', label: 'Últimos 7 dias' },
+  { value: 'last30days', label: 'Últimos 30 dias' },
+  { value: 'thisMonth', label: 'Este mês' },
+  { value: 'lastMonth', label: 'Mês anterior' },
+  { value: 'thisQuarter', label: 'Este trimestre' },
+  { value: 'thisYear', label: 'Este ano' },
   { value: 'custom', label: 'Personalizado' },
 ];
 
 export const sourceOptions = [
-  { value: 'all', label: 'Todas as origens' },
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'google', label: 'Google' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'indicacao', label: 'Indicação' },
+  { value: 'all', label: 'Todas origens' },
+  { value: 'meta', label: 'Meta Ads' },
   { value: 'site', label: 'Site' },
-  { value: 'outros', label: 'Outros' },
+  { value: 'wordpress', label: 'WordPress' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'manual', label: 'Manual' },
 ];
 
-function getDateRangeFromPreset(preset: DatePreset): { from: Date; to: Date } {
+export function getDateRangeFromPreset(preset: DatePreset): { from: Date; to: Date } {
   const now = new Date();
   
   switch (preset) {
     case 'today':
       return { from: startOfDay(now), to: endOfDay(now) };
-    case '7days':
+    case 'yesterday':
+      const yesterday = subDays(now, 1);
+      return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
+    case 'last7days':
       return { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
-    case '30days':
+    case 'last30days':
       return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
-    case 'this_month':
-      return { from: startOfMonth(now), to: endOfMonth(now) };
-    case 'last_month':
+    case 'thisMonth':
+      return { from: startOfMonth(now), to: endOfDay(now) };
+    case 'lastMonth':
       const lastMonth = subMonths(now, 1);
       return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
-    case '90days':
-      return { from: startOfDay(subDays(now, 89)), to: endOfDay(now) };
-    case 'this_year':
+    case 'thisQuarter':
+      return { from: startOfQuarter(now), to: endOfDay(now) };
+    case 'thisYear':
       return { from: startOfYear(now), to: endOfDay(now) };
+    case 'custom':
     default:
-      return { from: startOfMonth(now), to: endOfDay(now) };
+      return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
   }
 }
 
 export function useDashboardFilters() {
-  const [datePreset, setDatePreset] = useState<DatePreset>('30days');
+  const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
 
-  const filters = useMemo<DashboardFilters>(() => {
-    const dateRange = datePreset === 'custom' && customDateRange 
-      ? customDateRange 
-      : getDateRangeFromPreset(datePreset);
+  const dateRange = useMemo(() => {
+    if (datePreset === 'custom' && customDateRange) {
+      return customDateRange;
+    }
+    return getDateRangeFromPreset(datePreset);
+  }, [datePreset, customDateRange]);
 
-    return {
-      dateRange,
-      teamId,
-      userId,
-      source: source === 'all' ? null : source,
-    };
-  }, [datePreset, customDateRange, teamId, userId, source]);
-
-  const hasActiveFilters = useMemo(() => {
-    return datePreset !== '30days' || teamId !== null || userId !== null || (source !== null && source !== 'all');
-  }, [datePreset, teamId, userId, source]);
+  const filters: DashboardFilters = useMemo(() => ({
+    datePreset,
+    dateRange,
+    teamId,
+    userId,
+    source,
+  }), [datePreset, dateRange, teamId, userId, source]);
 
   const clearFilters = () => {
-    setDatePreset('30days');
+    setDatePreset('last30days');
     setCustomDateRange(null);
     setTeamId(null);
     setUserId(null);
     setSource(null);
   };
+
+  const hasActiveFilters = teamId !== null || userId !== null || source !== null || datePreset !== 'last30days';
 
   return {
     filters,

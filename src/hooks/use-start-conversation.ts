@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
 import { formatPhoneForWhatsApp } from "@/lib/phone-utils";
 
@@ -72,7 +72,11 @@ export function useStartConversation() {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
     },
     onError: (error: Error) => {
-      toast.error("Erro ao iniciar conversa: " + error.message);
+      toast({
+        title: "Erro ao iniciar conversa",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 }
@@ -84,6 +88,7 @@ export function useFindConversationByPhone() {
       const cleanPhone = formatPhoneForWhatsApp(phone);
       
       // Buscar por telefone no remote_jid ou contact_phone
+      // Using array result with limit(1) instead of maybeSingle to avoid "Cannot coerce" error
       const { data, error } = await supabase
         .from("whatsapp_conversations")
         .select(`

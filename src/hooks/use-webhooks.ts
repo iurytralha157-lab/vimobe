@@ -1,79 +1,100 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-export interface Webhook {
+export interface WebhookIntegration {
   id: string;
-  name: string;
-  url: string;
-  events: string[];
-  is_active: boolean | null;
-  secret: string | null;
   organization_id: string;
+  name: string;
+  type: 'incoming' | 'outgoing';
+  api_token: string;
+  webhook_url: string | null;
+  target_pipeline_id: string | null;
+  target_team_id: string | null;
+  target_stage_id: string | null;
+  target_tag_ids: string[];
+  target_property_id: string | null;
+  field_mapping: Record<string, string>;
+  is_active: boolean;
+  leads_received: number;
+  last_lead_at: string | null;
   last_triggered_at: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  trigger_events: string[];
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  pipeline?: { id: string; name: string };
+  team?: { id: string; name: string };
+  stage?: { id: string; name: string; color: string };
+  property?: { id: string; code: string; title: string | null };
 }
 
 export function useWebhooks() {
-  const { organization } = useAuth();
-
   return useQuery({
-    queryKey: ["webhooks", organization?.id],
+    queryKey: ['webhooks'],
     queryFn: async () => {
-      if (!organization?.id) return [];
-
       const { data, error } = await supabase
-        .from("webhooks")
-        .select("*")
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: false });
+        .from('webhooks_integrations')
+        .select(`
+          *,
+          pipeline:pipelines(id, name),
+          team:teams(id, name),
+          stage:stages(id, name, color),
+          property:properties(id, code, title)
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Webhook[];
+      return data as WebhookIntegration[];
     },
-    enabled: !!organization?.id,
   });
 }
 
 export function useCreateWebhook() {
-  const { organization } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
+    mutationFn: async (webhook: {
       name: string;
       type: 'incoming' | 'outgoing';
       target_pipeline_id?: string;
-      target_stage_id?: string;
       target_team_id?: string;
+      target_stage_id?: string;
       target_tag_ids?: string[];
       target_property_id?: string;
+      field_mapping?: Record<string, string>;
+      webhook_url?: string;
+      trigger_events?: string[];
     }) => {
-      if (!organization?.id) throw new Error("Organization required");
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Não autenticado');
 
-      const { data: webhook, error } = await supabase
-        .from("webhooks")
+      const { data: profile } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', userData.user.id)
+        .single();
+
+      if (!profile?.organization_id) throw new Error('Organização não encontrada');
+
+      const { data, error } = await supabase
+        .from('webhooks_integrations')
         .insert({
-          organization_id: organization.id,
-          name: data.name,
-          events: [data.type],
-          url: "",
-          is_active: true,
+          organization_id: profile.organization_id,
+          ...webhook,
         })
         .select()
         .single();
 
       if (error) throw error;
-      return webhook;
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
-      toast.success("Webhook criado com sucesso");
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+      toast.success('Webhook criado com sucesso!');
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Erro ao criar webhook");
+    onError: (error: any) => {
+      toast.error('Erro ao criar webhook: ' + error.message);
     },
   });
 }
@@ -82,30 +103,38 @@ export function useUpdateWebhook() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
+    mutationFn: async ({
+      id,
+      ...updates
+    }: {
       id: string;
       name?: string;
+      is_active?: boolean;
       target_pipeline_id?: string | null;
-      target_stage_id?: string | null;
       target_team_id?: string | null;
+      target_stage_id?: string | null;
       target_tag_ids?: string[];
       target_property_id?: string | null;
+      field_mapping?: Record<string, string>;
+      webhook_url?: string;
+      trigger_events?: string[];
     }) => {
-      const { id, ...updates } = data;
-
-      const { error } = await supabase
-        .from("webhooks")
-        .update({ name: updates.name })
-        .eq("id", id);
+      const { data, error } = await supabase
+        .from('webhooks_integrations')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
-      toast.success("Webhook atualizado");
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+      toast.success('Webhook atualizado!');
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Erro ao atualizar webhook");
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar webhook: ' + error.message);
     },
   });
 }
@@ -115,15 +144,19 @@ export function useDeleteWebhook() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("webhooks").delete().eq("id", id);
+      const { error } = await supabase
+        .from('webhooks_integrations')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
-      toast.success("Webhook excluído");
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+      toast.success('Webhook removido!');
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Erro ao excluir webhook");
+    onError: (error: any) => {
+      toast.error('Erro ao remover webhook: ' + error.message);
     },
   });
 }
@@ -134,17 +167,18 @@ export function useToggleWebhook() {
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase
-        .from("webhooks")
+        .from('webhooks_integrations')
         .update({ is_active })
-        .eq("id", id);
+        .eq('id', id);
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+      toast.success(variables.is_active ? 'Webhook ativado!' : 'Webhook desativado!');
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Erro ao atualizar status");
+    onError: (error: any) => {
+      toast.error('Erro ao alterar webhook: ' + error.message);
     },
   });
 }
@@ -154,19 +188,25 @@ export function useRegenerateToken() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Generate new token (32 bytes hex)
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      const newToken = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+
       const { error } = await supabase
-        .from("webhooks")
-        .update({ secret: crypto.randomUUID() })
-        .eq("id", id);
+        .from('webhooks_integrations')
+        .update({ api_token: newToken })
+        .eq('id', id);
 
       if (error) throw error;
+      return newToken;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["webhooks"] });
-      toast.success("Token regenerado");
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+      toast.success('Token regenerado!');
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Erro ao regenerar token");
+    onError: (error: any) => {
+      toast.error('Erro ao regenerar token: ' + error.message);
     },
   });
 }

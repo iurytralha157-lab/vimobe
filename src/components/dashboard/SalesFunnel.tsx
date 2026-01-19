@@ -120,8 +120,8 @@ export function SalesFunnel({ data, isLoading }: SalesFunnelProps) {
                           {item.value}
                         </div>
                       </div>
-                      <div className="w-20 sm:w-24 text-right flex-shrink-0">
-                        <p className="text-[10px] sm:text-xs font-medium truncate">{item.name}</p>
+                      <div className="w-24 text-right flex-shrink-0">
+                        <p className="text-xs font-medium truncate">{item.name}</p>
                         <p className="text-[10px] text-muted-foreground">{item.percentage}%</p>
                       </div>
                     </div>

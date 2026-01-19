@@ -8,10 +8,19 @@ import { Slider } from '@/components/ui/slider';
 import { Save, Upload, Loader2, Sun, Moon, Maximize2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useSystemSettings } from '@/hooks/use-system-settings';
+
+interface SystemSettings {
+  id: string;
+  logo_url_light: string | null;
+  logo_url_dark: string | null;
+  default_whatsapp: string | null;
+  logo_width: number | null;
+  logo_height: number | null;
+}
 
 export default function AdminSettings() {
-  const { data: settingsData, isLoading: loading, refetch } = useSystemSettings();
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingSize, setSavingSize] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
@@ -21,36 +30,30 @@ export default function AdminSettings() {
   const [logoHeight, setLogoHeight] = useState(40);
 
   useEffect(() => {
-    if (settingsData) {
-      setWhatsapp('');
-      setLogoWidth(settingsData.logo_width || 140);
-      setLogoHeight(settingsData.logo_height || 40);
-    }
-  }, [settingsData]);
+    fetchSettings();
+  }, []);
 
-  const updateSetting = async (key: string, value: string | number) => {
-    // Check if setting exists
-    const { data: existing } = await supabase
+  const fetchSettings = async () => {
+    const { data, error } = await supabase
       .from('system_settings')
-      .select('id')
-      .eq('key', key)
+      .select('*')
+      .limit(1)
       .single();
 
-    if (existing) {
-      const { error } = await supabase
-        .from('system_settings')
-        .update({ value: value as any })
-        .eq('key', key);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from('system_settings')
-        .insert({ key, value: value as any });
-      if (error) throw error;
+    if (error) {
+      console.error('Error fetching settings:', error);
+    } else if (data) {
+      setSettings(data as SystemSettings);
+      setWhatsapp(data.default_whatsapp || '');
+      setLogoWidth(data.logo_width || 140);
+      setLogoHeight(data.logo_height || 40);
     }
+    setLoading(false);
   };
 
   const handleUploadLogo = async (file: File, type: 'light' | 'dark') => {
+    if (!settings) return;
+
     const setUploading = type === 'light' ? setUploadingLight : setUploadingDark;
     setUploading(true);
 
@@ -68,11 +71,17 @@ export default function AdminSettings() {
         .from('logos')
         .getPublicUrl(path);
 
-      const settingKey = type === 'light' ? 'logo_url_light' : 'logo_url_dark';
-      await updateSetting(settingKey, publicUrl);
+      const updateField = type === 'light' ? 'logo_url_light' : 'logo_url_dark';
+      
+      const { error: updateError } = await supabase
+        .from('system_settings')
+        .update({ [updateField]: publicUrl })
+        .eq('id', settings.id);
 
+      if (updateError) throw updateError;
+
+      setSettings(prev => prev ? { ...prev, [updateField]: publicUrl } : null);
       toast.success(`Logo ${type === 'light' ? 'clara' : 'escura'} atualizada!`);
-      refetch();
     } catch (error: any) {
       toast.error('Erro ao fazer upload: ' + error.message);
     } finally {
@@ -81,9 +90,16 @@ export default function AdminSettings() {
   };
 
   const handleSaveWhatsapp = async () => {
+    if (!settings) return;
+
     setSaving(true);
     try {
-      await updateSetting('default_whatsapp', whatsapp);
+      const { error } = await supabase
+        .from('system_settings')
+        .update({ default_whatsapp: whatsapp })
+        .eq('id', settings.id);
+
+      if (error) throw error;
       toast.success('WhatsApp atualizado!');
     } catch (error: any) {
       toast.error('Erro ao salvar: ' + error.message);
@@ -93,12 +109,18 @@ export default function AdminSettings() {
   };
 
   const handleSaveLogoSize = async () => {
+    if (!settings) return;
+
     setSavingSize(true);
     try {
-      await updateSetting('logo_width', logoWidth);
-      await updateSetting('logo_height', logoHeight);
+      const { error } = await supabase
+        .from('system_settings')
+        .update({ logo_width: logoWidth, logo_height: logoHeight })
+        .eq('id', settings.id);
+
+      if (error) throw error;
+      setSettings(prev => prev ? { ...prev, logo_width: logoWidth, logo_height: logoHeight } : null);
       toast.success('Tamanho da logo atualizado!');
-      refetch();
     } catch (error: any) {
       toast.error('Erro ao salvar: ' + error.message);
     } finally {
@@ -139,9 +161,9 @@ export default function AdminSettings() {
                 <div 
                   className="w-48 h-24 rounded-lg bg-white border-2 border-dashed border-border flex items-center justify-center overflow-hidden"
                 >
-                  {settingsData?.logo_url_light ? (
+                  {settings?.logo_url_light ? (
                     <img 
-                      src={settingsData.logo_url_light} 
+                      src={settings.logo_url_light} 
                       alt="Logo Light" 
                       style={{ maxWidth: logoWidth, maxHeight: logoHeight }}
                       className="object-contain"
@@ -190,9 +212,9 @@ export default function AdminSettings() {
                 <div 
                   className="w-48 h-24 rounded-lg bg-slate-900 border-2 border-dashed border-border flex items-center justify-center overflow-hidden"
                 >
-                  {settingsData?.logo_url_dark ? (
+                  {settings?.logo_url_dark ? (
                     <img 
-                      src={settingsData.logo_url_dark} 
+                      src={settings.logo_url_dark} 
                       alt="Logo Dark" 
                       style={{ maxWidth: logoWidth, maxHeight: logoHeight }}
                       className="object-contain"
@@ -280,9 +302,9 @@ export default function AdminSettings() {
               <div className="mt-4 p-4 bg-muted/50 rounded-lg">
                 <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização</Label>
                 <div className="flex items-center justify-center h-20 bg-background rounded border">
-                  {settingsData?.logo_url_light ? (
+                  {settings?.logo_url_light ? (
                     <img 
-                      src={settingsData.logo_url_light} 
+                      src={settings.logo_url_light} 
                       alt="Preview" 
                       style={{ maxWidth: logoWidth, maxHeight: logoHeight }}
                       className="object-contain"

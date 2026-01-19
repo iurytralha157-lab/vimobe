@@ -1,64 +1,613 @@
-import { useState } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import AppLayout from "@/components/layout/AppLayout";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, QrCode, CheckCircle2, XCircle, RefreshCw, Smartphone, Bot, Clock, Send, Settings2 } from "lucide-react";
-import { toast } from "sonner";
-
-const quickReplies = [
-  { id: 1, trigger: "/oi", message: "Olá! Bem-vindo à nossa imobiliária. Como posso ajudá-lo hoje?" },
-  { id: 2, trigger: "/horario", message: "Nosso horário de atendimento é de segunda a sexta, das 9h às 18h." },
-];
+import { 
+  Plus, 
+  Smartphone, 
+  QrCode, 
+  Trash2, 
+  LogOut, 
+  Users, 
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Copy
+} from "lucide-react";
+import { 
+  useWhatsAppSessions, 
+  useCreateWhatsAppSession, 
+  useDeleteWhatsAppSession,
+  useGetQRCode,
+  useGetConnectionStatus,
+  useLogoutSession,
+  useSessionAccess,
+  useGrantSessionAccess,
+  useRevokeSessionAccess,
+  WhatsAppSession
+} from "@/hooks/use-whatsapp-sessions";
+import { useOrganizationUsers } from "@/hooks/use-users";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function WhatsAppSettings() {
-  const { t } = useLanguage();
-  const [isConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: sessions, isLoading } = useWhatsAppSessions();
+  const { data: users } = useOrganizationUsers();
+  const createSession = useCreateWhatsAppSession();
+  const deleteSession = useDeleteWhatsAppSession();
+  const getQRCode = useGetQRCode();
+  const getConnectionStatus = useGetConnectionStatus();
+  const logoutSession = useLogoutSession();
 
-  const handleConnect = () => { setIsConnecting(true); setTimeout(() => { setIsConnecting(false); toast.info("Escaneie o QR Code com seu WhatsApp"); }, 1000); };
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [instanceName, setInstanceName] = useState("");
+  const [selectedSession, setSelectedSession] = useState<WhatsAppSession | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [isRefreshingQr, setIsRefreshingQr] = useState(false);
+  const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
+
+  const webhookUrl = `https://ulodfqdmoalttgbxrutj.supabase.co/functions/v1/evolution-webhook`;
+
+  // Refs para evitar stale closures no polling
+  const selectedSessionRef = useRef(selectedSession);
+  const qrDialogOpenRef = useRef(qrDialogOpen);
+  
+  useEffect(() => {
+    selectedSessionRef.current = selectedSession;
+    qrDialogOpenRef.current = qrDialogOpen;
+  }, [selectedSession, qrDialogOpen]);
+
+  // Function to check connection via Evolution API
+  const checkConnection = useCallback(async (instanceName: string, sessionId: string): Promise<boolean | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: { action: "getConnectionStatus", instanceName },
+      });
+
+      if (error) throw error;
+      if (!data?.success) return null;
+
+      const result = data.data;
+      console.log("checkConnection result:", result);
+      
+      // Evolution API returns state: "open" when connected
+      const isConnected = 
+        result?.state === "open" ||
+        result?.connected === true ||
+        result?.instance?.state === "open";
+      
+      if (isConnected) {
+        // Update status in database
+        const { error: updateError } = await supabase
+          .from("whatsapp_sessions")
+          .update({ 
+            status: "connected", 
+            phone_number: result?.instance?.wuid?.split("@")[0] || null,
+            last_health_check: new Date().toISOString(),
+            health_check_failures: 0
+          })
+          .eq("id", sessionId);
+        
+        if (updateError) {
+          console.error("Failed to update session status:", updateError);
+        }
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.log("Polling check failed:", error);
+      return null;
+    }
+  }, []);
+
+  // Verificar conexão manualmente (botão "Verificar")
+  const handleVerifyConnection = async (session: WhatsAppSession) => {
+    setVerifyingSessionId(session.id);
+    
+    try {
+      const connected = await checkConnection(session.instance_name, session.id);
+      
+      if (connected === true) {
+        toast({ 
+          title: "✅ Conectado!", 
+          description: "WhatsApp está online" 
+        });
+      } else {
+        // Atualizar para disconnected se não conectado
+        await supabase
+          .from("whatsapp_sessions")
+          .update({ status: "disconnected" })
+          .eq("id", session.id);
+        toast({ 
+          title: "⚠️ Desconectado", 
+          description: "WhatsApp não está conectado" 
+        });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+    } catch (error) {
+      console.error("Error verifying connection:", error);
+      toast({ 
+        title: "Erro", 
+        description: "Não foi possível verificar a conexão",
+        variant: "destructive"
+      });
+    } finally {
+      setVerifyingSessionId(null);
+    }
+  };
+
+  // Polling para verificar conexão automaticamente quando o QR dialog está aberto
+  useEffect(() => {
+    if (!qrDialogOpen || !selectedSession) return;
+    
+    const pollInterval = setInterval(async () => {
+      if (!qrDialogOpenRef.current || !selectedSessionRef.current) {
+        clearInterval(pollInterval);
+        return;
+      }
+      
+      const connected = await checkConnection(
+        selectedSessionRef.current.instance_name, 
+        selectedSessionRef.current.id
+      );
+      
+      if (connected === true) {
+        toast({ 
+          title: "Conectado!", 
+          description: "WhatsApp conectado com sucesso" 
+        });
+        setQrDialogOpen(false);
+        setQrCode(null);
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+        clearInterval(pollInterval);
+      }
+    }, 5000);
+    
+    // Limpar interval ao fechar o dialog
+    return () => clearInterval(pollInterval);
+  }, [qrDialogOpen, selectedSession?.id, checkConnection, queryClient]);
+  const handleCreateSession = async () => {
+    if (!instanceName.trim()) return;
+
+    try {
+      const result = await createSession.mutateAsync(instanceName.trim());
+      setCreateDialogOpen(false);
+      setInstanceName("");
+      
+      // Open QR dialog
+      setSelectedSession(result.session);
+      setQrDialogOpen(true);
+      
+      // Get QR code (webhook is now configured in startSession)
+      await refreshQRCode(instanceName.trim());
+    } catch (error) {
+      console.error("Error creating session:", error);
+    }
+  };
+
+  const refreshQRCode = async (instanceName: string) => {
+    setIsRefreshingQr(true);
+    try {
+      const data = await getQRCode.mutateAsync(instanceName);
+      // Handle different response formats from WPPConnect
+      if (data?.qrcode) {
+        setQrCode(data.qrcode);
+      } else if (data?.base64) {
+        setQrCode(data.base64);
+      } else if (data?.code) {
+        setQrCode(data.code);
+      } else {
+        console.log("QR Code response:", data);
+      }
+    } catch (error) {
+      console.error("Error getting QR code:", error);
+    } finally {
+      setIsRefreshingQr(false);
+    }
+  };
+
+  const checkConnectionStatus = async (session: WhatsAppSession) => {
+    try {
+      const data = await getConnectionStatus.mutateAsync(session.instance_name);
+      if (data?.state === "open") {
+        toast({
+          title: "Conectado!",
+          description: "WhatsApp conectado com sucesso",
+        });
+        setQrDialogOpen(false);
+        setQrCode(null);
+      }
+    } catch (error) {
+      console.error("Error checking status:", error);
+    }
+  };
+
+  const handleOpenQRDialog = async (session: WhatsAppSession) => {
+    setSelectedSession(session);
+    setQrDialogOpen(true);
+    await refreshQRCode(session.instance_name);
+  };
+
+  const handleOpenAccessDialog = (session: WhatsAppSession) => {
+    setSelectedSession(session);
+    setAccessDialogOpen(true);
+  };
+
+  const handleDeleteSession = async () => {
+    if (!selectedSession) return;
+    await deleteSession.mutateAsync(selectedSession);
+    setDeleteDialogOpen(false);
+    setSelectedSession(null);
+  };
+
+  const handleLogout = async (session: WhatsAppSession) => {
+    await logoutSession.mutateAsync(session);
+  };
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    toast({
+      title: "Copiado!",
+      description: "URL do webhook copiada para a área de transferência",
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "connected":
+        return <Badge className="bg-orange-500 hover:bg-orange-600"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>;
+      case "connecting":
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Conectando</Badge>;
+      default:
+        return <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" />Desconectado</Badge>;
+    }
+  };
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div><h1 className="text-3xl font-bold">{t("whatsappSettings")}</h1><p className="text-muted-foreground">Configure a integração com WhatsApp</p></div>
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3"><div className="p-2 bg-green-500/10 rounded-lg"><MessageSquare className="h-6 w-6 text-green-500" /></div><div><CardTitle>WhatsApp Business</CardTitle><CardDescription>Conecte seu WhatsApp para enviar e receber mensagens</CardDescription></div></div>
-                  <Badge variant={isConnected ? "default" : "secondary"}>{isConnected ? (<><CheckCircle2 className="mr-1 h-3 w-3" />Conectado</>) : (<><XCircle className="mr-1 h-3 w-3" />Desconectado</>)}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isConnected ? (
-                  <div className="space-y-4"><div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg"><Smartphone className="h-10 w-10 text-green-500" /><div><p className="font-medium">+55 11 99999-9999</p><p className="text-sm text-muted-foreground">Conectado há 2 dias</p></div></div><div className="flex gap-2"><Button variant="outline">Desconectar</Button><Button variant="outline"><RefreshCw className="mr-2 h-4 w-4" />Reconectar</Button></div></div>
-                ) : (
-                  <div className="text-center py-8">{isConnecting ? (<><div className="w-48 h-48 mx-auto mb-4 bg-muted rounded-lg flex items-center justify-center"><QrCode className="h-32 w-32 text-muted-foreground" /></div><p className="text-sm text-muted-foreground mb-4">Escaneie o QR Code com seu WhatsApp</p><Button variant="outline" onClick={() => setIsConnecting(false)}>Cancelar</Button></>) : (<><MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><h3 className="font-semibold mb-2">Conecte seu WhatsApp</h3><p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">Ao conectar, você poderá enviar e receber mensagens diretamente pelo sistema.</p><Button onClick={handleConnect} className="bg-green-600 hover:bg-green-700"><QrCode className="mr-2 h-4 w-4" />Gerar QR Code</Button></>)}</div>
-                )}
-              </CardContent>
-            </Card>
-            <Tabs defaultValue="quick-replies">
-              <TabsList><TabsTrigger value="quick-replies">Respostas Rápidas</TabsTrigger><TabsTrigger value="bot">Chatbot</TabsTrigger><TabsTrigger value="schedule">Horário de Atendimento</TabsTrigger></TabsList>
-              <TabsContent value="quick-replies" className="mt-4"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Send className="h-5 w-5" />Respostas Rápidas</CardTitle><CardDescription>Configure atalhos para mensagens frequentes.</CardDescription></CardHeader><CardContent className="space-y-4">{quickReplies.map((reply) => (<div key={reply.id} className="p-4 border rounded-lg"><div className="flex items-center gap-2 mb-2"><Badge variant="secondary" className="font-mono">{reply.trigger}</Badge></div><p className="text-sm text-muted-foreground">{reply.message}</p></div>))}<Separator /><div className="space-y-4"><h4 className="font-medium">Adicionar nova resposta</h4><div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Gatilho</Label><Input placeholder="/comando" /></div><div className="space-y-2"><Label>Mensagem</Label><Input placeholder="Mensagem a ser enviada" /></div></div><Button>Adicionar Resposta</Button></div></CardContent></Card></TabsContent>
-              <TabsContent value="bot" className="mt-4"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5" />Chatbot</CardTitle><CardDescription>Configure respostas automáticas para mensagens recebidas</CardDescription></CardHeader><CardContent className="space-y-4"><div className="flex items-center justify-between p-4 border rounded-lg"><div><Label>Ativar Chatbot</Label><p className="text-xs text-muted-foreground">Responder automaticamente fora do horário de atendimento</p></div><Switch /></div><div className="space-y-2"><Label>Mensagem de boas-vindas</Label><Textarea placeholder="Olá! Obrigado por entrar em contato..." rows={3} /></div><Button>Salvar Configurações</Button></CardContent></Card></TabsContent>
-              <TabsContent value="schedule" className="mt-4"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />Horário de Atendimento</CardTitle><CardDescription>Defina quando sua equipe está disponível</CardDescription></CardHeader><CardContent className="space-y-4">{["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"].map((day) => (<div key={day} className="flex items-center gap-4"><Switch defaultChecked={day !== "Domingo"} /><span className="w-24 font-medium">{day}</span><Input type="time" defaultValue="09:00" className="w-32" disabled={day === "Domingo"} /><span className="text-muted-foreground">às</span><Input type="time" defaultValue={day === "Sábado" ? "13:00" : "18:00"} className="w-32" disabled={day === "Domingo"} /></div>))}<Button className="mt-4">Salvar Horários</Button></CardContent></Card></TabsContent>
-            </Tabs>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Conexões WhatsApp</h1>
+            <p className="text-muted-foreground">
+              Gerencie suas conexões de WhatsApp via Evolution API
+            </p>
           </div>
-          <div className="space-y-6">
-            <Card><CardHeader><CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5" />Configurações</CardTitle></CardHeader><CardContent className="space-y-4"><div className="flex items-center justify-between"><div><Label>Notificações</Label><p className="text-xs text-muted-foreground">Notificar novas mensagens</p></div><Switch defaultChecked /></div><Separator /><div className="flex items-center justify-between"><div><Label>Som de notificação</Label><p className="text-xs text-muted-foreground">Tocar som ao receber mensagem</p></div><Switch defaultChecked /></div></CardContent></Card>
-            <Card><CardHeader><CardTitle>Estatísticas</CardTitle></CardHeader><CardContent className="space-y-3"><div className="flex justify-between"><span className="text-muted-foreground">Mensagens enviadas (mês)</span><span className="font-semibold">0</span></div><div className="flex justify-between"><span className="text-muted-foreground">Mensagens recebidas (mês)</span><span className="font-semibold">0</span></div></CardContent></Card>
-          </div>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Conexão
+          </Button>
         </div>
+
+        {/* Webhook Info */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">URL do Webhook</CardTitle>
+            <CardDescription>
+              Configure esta URL na sua instância Evolution API para receber mensagens
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Input value={webhookUrl} readOnly className="font-mono text-sm" />
+              <Button variant="outline" size="icon" onClick={copyWebhookUrl}>
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sessions List */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : sessions?.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Smartphone className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhuma conexão</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                Conecte seu primeiro WhatsApp para começar a receber mensagens
+              </p>
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Conectar WhatsApp
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sessions?.map((session) => (
+              <Card key={session.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={session.profile_picture || undefined} />
+                        <AvatarFallback>
+                          <Smartphone className="w-4 h-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <CardTitle className="text-base">{session.instance_name}</CardTitle>
+                        <CardDescription>
+                          {session.status === "connected" 
+                            ? (session.phone_number || session.profile_name || "Conectado") 
+                            : "Não conectado"}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    {getStatusBadge(session.status)}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-sm text-muted-foreground">
+                    Responsável: {session.owner?.name || "—"}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {session.status !== "connected" && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleOpenQRDialog(session)}
+                      >
+                        <QrCode className="w-4 h-4 mr-1" />
+                        QR Code
+                      </Button>
+                    )}
+                    {session.status === "connected" && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleLogout(session)}
+                      >
+                        <LogOut className="w-4 h-4 mr-1" />
+                        Desconectar
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleVerifyConnection(session)}
+                      disabled={verifyingSessionId === session.id}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-1 ${verifyingSessionId === session.id ? "animate-spin" : ""}`} />
+                      Verificar
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleOpenAccessDialog(session)}
+                    >
+                      <Users className="w-4 h-4 mr-1" />
+                      Acessos
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSession(session);
+                        setDeleteDialogOpen(true);
+                      }}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Create Session Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova Conexão WhatsApp</DialogTitle>
+              <DialogDescription>
+                Dê um nome para identificar esta conexão
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome da Instância</Label>
+                <Input
+                  value={instanceName}
+                  onChange={(e) => setInstanceName(e.target.value)}
+                  placeholder="Ex: Vendas, Suporte, Marketing..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleCreateSession} 
+                disabled={!instanceName.trim() || createSession.isPending}
+              >
+                {createSession.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Criar e Conectar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* QR Code Dialog */}
+        <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Escanear QR Code</DialogTitle>
+              <DialogDescription>
+                Abra o WhatsApp no seu celular e escaneie o código abaixo
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center py-6">
+              {isRefreshingQr || getQRCode.isPending ? (
+                <div className="w-64 h-64 flex items-center justify-center bg-muted rounded-lg">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : qrCode ? (
+                <img 
+                  src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                  alt="QR Code"
+                  className="w-64 h-64 rounded-lg"
+                />
+              ) : (
+                <div className="w-64 h-64 flex items-center justify-center bg-muted rounded-lg">
+                  <p className="text-muted-foreground text-center px-4">
+                    Não foi possível gerar o QR Code
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => selectedSession && refreshQRCode(selectedSession.instance_name)}
+                  disabled={isRefreshingQr}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingQr ? "animate-spin" : ""}`} />
+                  Atualizar
+                </Button>
+                <Button
+                  onClick={() => selectedSession && checkConnectionStatus(selectedSession)}
+                  disabled={getConnectionStatus.isPending}
+                >
+                  {getConnectionStatus.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Verificar Conexão
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Access Control Dialog */}
+        <AccessControlDialog
+          open={accessDialogOpen}
+          onOpenChange={setAccessDialogOpen}
+          session={selectedSession}
+          users={users || []}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Excluir Conexão</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir a conexão "{selectedSession?.instance_name}"? 
+                Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteSession}
+                disabled={deleteSession.isPending}
+              >
+                {deleteSession.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Excluir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
+  );
+}
+
+function AccessControlDialog({
+  open,
+  onOpenChange,
+  session,
+  users,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  session: WhatsAppSession | null;
+  users: Array<{ id: string; name: string; email: string }>;
+}) {
+  const { data: accessList, isLoading } = useSessionAccess(session?.id || null);
+  const grantAccess = useGrantSessionAccess();
+  const revokeAccess = useRevokeSessionAccess();
+
+  const accessMap = new Map(accessList?.map(a => [a.user_id, a]));
+
+  const handleToggleAccess = async (userId: string, hasAccess: boolean) => {
+    if (!session) return;
+
+    if (hasAccess) {
+      await revokeAccess.mutateAsync({ sessionId: session.id, userId });
+    } else {
+      await grantAccess.mutateAsync({ sessionId: session.id, userId });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Gerenciar Acessos</DialogTitle>
+          <DialogDescription>
+            Selecione quais usuários podem ver e enviar mensagens
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-80">
+          <div className="space-y-3 py-4">
+            {users
+              .filter(u => u.id !== session?.owner_user_id)
+              .map((user) => {
+                const access = accessMap.get(user.id);
+                const hasAccess = !!access;
+
+                return (
+                  <div key={user.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-8 h-8">
+                        <AvatarFallback>{user.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+                    </div>
+                    <Checkbox
+                      checked={hasAccess}
+                      onCheckedChange={() => handleToggleAccess(user.id, hasAccess)}
+                      disabled={grantAccess.isPending || revokeAccess.isPending}
+                    />
+                  </div>
+                );
+              })}
+          </div>
+        </ScrollArea>
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

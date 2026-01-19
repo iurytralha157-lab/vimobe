@@ -49,11 +49,12 @@ export function useToggleLeadTask() {
       if (is_done && leadId) {
         await supabase.from('activities').insert({
           lead_id: leadId,
-          type: 'task_completed',
+          type: data.type, // 'call', 'message', 'email', 'note'
           content: data.title,
           user_id: user.user?.id,
           metadata: {
             task_id: data.id,
+            task_type: data.type,
             day_offset: data.day_offset,
           },
         });
@@ -78,6 +79,7 @@ export function useCreateLeadTask() {
     mutationFn: async (task: {
       lead_id: string;
       day_offset: number;
+      type: 'call' | 'message' | 'email' | 'note';
       title: string;
       description?: string;
       due_date?: string;
@@ -110,12 +112,14 @@ export function useCompleteCadenceTask() {
       leadId, 
       templateTaskId,
       dayOffset,
+      type,
       title,
       description 
     }: { 
       leadId: string; 
       templateTaskId: string;
       dayOffset: number;
+      type: 'call' | 'message' | 'email' | 'note';
       title: string;
       description?: string;
     }) => {
@@ -128,6 +132,7 @@ export function useCompleteCadenceTask() {
         .eq('lead_id', leadId)
         .eq('title', title)
         .eq('day_offset', dayOffset)
+        .eq('type', type)
         .maybeSingle();
       
       let taskData;
@@ -153,11 +158,12 @@ export function useCompleteCadenceTask() {
         if (newIsDone) {
           await supabase.from('activities').insert({
             lead_id: leadId,
-            type: 'task_completed',
+            type: type,
             content: title,
             user_id: user.user?.id,
             metadata: {
               task_id: data.id,
+              task_type: type,
               day_offset: dayOffset,
             },
           });
@@ -169,6 +175,7 @@ export function useCompleteCadenceTask() {
           .insert({
             lead_id: leadId,
             day_offset: dayOffset,
+            type,
             title,
             description,
             is_done: true,
@@ -184,11 +191,12 @@ export function useCompleteCadenceTask() {
         // Create activity
         await supabase.from('activities').insert({
           lead_id: leadId,
-          type: 'task_completed',
+          type: type,
           content: title,
           user_id: user.user?.id,
           metadata: {
             task_id: data.id,
+            task_type: type,
             day_offset: dayOffset,
           },
         });

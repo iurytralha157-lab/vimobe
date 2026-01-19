@@ -1,46 +1,24 @@
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  MoreHorizontal,
-  Phone,
-  Mail,
+} from '@/components/ui/dropdown-menu';
+import { 
+  MoreHorizontal, 
+  Phone, 
+  Mail, 
   ExternalLink,
   UserCircle,
   Calendar,
   MessageCircle,
-} from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-interface ContactTag {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface Contact {
-  id: string;
-  name: string;
-  phone?: string | null;
-  email?: string | null;
-  stage_name?: string | null;
-  stage_color?: string | null;
-  assignee_name?: string | null;
-  assignee_avatar?: string | null;
-  source: string;
-  tags?: ContactTag[];
-  created_at: string;
-  last_interaction_at?: string | null;
-  last_interaction_channel?: string | null;
-  last_interaction_preview?: string | null;
-}
+} from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { Contact } from '@/hooks/use-contacts-list';
 
 interface ContactCardProps {
   contact: Contact;
@@ -50,12 +28,7 @@ interface ContactCardProps {
 
 export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCardProps) {
   const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
@@ -66,8 +39,8 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
           <p className="font-medium truncate">{contact.name}</p>
           <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
             {contact.phone && (
-              <a
-                href={`tel:${contact.phone}`}
+              <a 
+                href={`tel:${contact.phone}`} 
                 className="flex items-center gap-1 hover:text-foreground"
               >
                 <Phone className="h-3 w-3" />
@@ -75,8 +48,8 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
               </a>
             )}
             {contact.email && (
-              <a
-                href={`mailto:${contact.email}`}
+              <a 
+                href={`mailto:${contact.email}`} 
                 className="flex items-center gap-1 hover:text-foreground"
               >
                 <Mail className="h-3 w-3" />
@@ -98,11 +71,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
             </DropdownMenuItem>
             {contact.phone && (
               <DropdownMenuItem asChild>
-                <a
-                  href={`https://wa.me/${contact.phone.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank">
                   <Phone className="h-4 w-4 mr-2" />
                   WhatsApp
                 </a>
@@ -123,17 +92,17 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
       {/* Stage + Assignee Row */}
       <div className="flex items-center gap-3 flex-wrap">
         {contact.stage_name ? (
-          <Badge
-            variant="outline"
+          <Badge 
+            variant="outline" 
             className="gap-1.5"
-            style={{
+            style={{ 
               borderColor: contact.stage_color || undefined,
-              color: contact.stage_color || undefined,
+              color: contact.stage_color || undefined
             }}
           >
-            <div
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: contact.stage_color || undefined }}
+            <div 
+              className="h-2 w-2 rounded-full" 
+              style={{ backgroundColor: contact.stage_color || undefined }} 
             />
             {contact.stage_name}
           </Badge>
@@ -151,9 +120,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
                 {getInitials(contact.assignee_name)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-sm text-muted-foreground">
-              {contact.assignee_name.split(" ")[0]}
-            </span>
+            <span className="text-sm text-muted-foreground">{contact.assignee_name.split(' ')[0]}</span>
           </div>
         ) : (
           <span className="text-muted-foreground text-sm flex items-center gap-1">
@@ -168,9 +135,9 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
         {/* Tags */}
         {contact.tags && contact.tags.length > 0 && (
           <div className="flex gap-1">
-            {contact.tags.slice(0, 2).map((tag) => (
-              <Badge
-                key={tag.id}
+            {contact.tags.slice(0, 2).map(tag => (
+              <Badge 
+                key={tag.id} 
                 variant="secondary"
                 className="text-xs"
                 style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
@@ -194,7 +161,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
         {/* Date */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
           <Calendar className="h-3 w-3" />
-          {format(new Date(contact.created_at), "dd/MM/yy", { locale: ptBR })}
+          {format(new Date(contact.created_at), 'dd/MM/yy', { locale: ptBR })}
         </div>
       </div>
 
@@ -202,16 +169,16 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
       {contact.last_interaction_at && (
         <div className="pt-2 border-t">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {contact.last_interaction_channel === "whatsapp" && (
+            {contact.last_interaction_channel === 'whatsapp' && (
               <MessageCircle className="h-3 w-3" />
             )}
             <span className="truncate flex-1">
-              {contact.last_interaction_preview || "Interação registrada"}
+              {contact.last_interaction_preview || 'Interação registrada'}
             </span>
             <span className="shrink-0">
-              {formatDistanceToNow(new Date(contact.last_interaction_at), {
-                addSuffix: true,
-                locale: ptBR,
+              {formatDistanceToNow(new Date(contact.last_interaction_at), { 
+                addSuffix: true, 
+                locale: ptBR 
               })}
             </span>
           </div>

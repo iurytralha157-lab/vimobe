@@ -6,7 +6,7 @@ interface SuperAdminRouteProps {
 }
 
 export function SuperAdminRoute({ children }: SuperAdminRouteProps) {
-  const { user, isLoading: loading, isSuperAdmin } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
 
   if (loading) {
     return (

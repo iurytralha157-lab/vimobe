@@ -81,7 +81,7 @@ export function UserFilter({ users, selectedUserId, onUserSelect, showAllOption 
                   <Check
                     className={cn(
                       "ml-auto h-4 w-4",
-                      selectedUserId === null ? "opacity-100" : "opacity-0"
+                      !selectedUserId ? "opacity-100" : "opacity-0"
                     )}
                   />
                 </CommandItem>

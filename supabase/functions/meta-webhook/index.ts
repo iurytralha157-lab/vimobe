@@ -1,35 +1,29 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface MetaLeadData {
-  entry?: Array<{
-    id: string;
-    time: number;
-    changes?: Array<{
-      field: string;
-      value: {
-        form_id: string;
-        leadgen_id: string;
-        page_id: string;
-        created_time: number;
-        ad_id?: string;
-        adset_id?: string;
-        campaign_id?: string;
-      };
-    }>;
-  }>;
+const META_APP_SECRET = Deno.env.get("META_APP_SECRET") || "";
+const META_WEBHOOK_VERIFY_TOKEN = Deno.env.get("META_WEBHOOK_VERIFY_TOKEN") || "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+// Verify Meta webhook signature
+function verifySignature(payload: string, signature: string): boolean {
+  if (!signature || !META_APP_SECRET) return false;
+  
+  const expectedSignature = createHmac("sha256", META_APP_SECRET)
+    .update(payload)
+    .digest("hex");
+  
+  return signature === `sha256=${expectedSignature}`;
 }
 
-interface LeadFieldData {
-  name: string;
-  values: string[];
-}
-
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,145 +31,313 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
 
-  // Meta webhook verification (GET request)
+  // GET - Webhook verification
   if (req.method === "GET") {
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
-    console.log("[Meta Webhook] Verification request:", { mode, token });
+    console.log("Webhook verification:", { mode, token, challenge });
 
-    // You should set VERIFY_TOKEN as a secret
-    const verifyToken = Deno.env.get("META_VERIFY_TOKEN") || "vimob_meta_verify_2024";
-
-    if (mode === "subscribe" && token === verifyToken) {
-      console.log("[Meta Webhook] Verification successful");
-      return new Response(challenge, { status: 200, headers: corsHeaders });
-    } else {
-      console.log("[Meta Webhook] Verification failed");
-      return new Response("Forbidden", { status: 403, headers: corsHeaders });
+    if (mode === "subscribe" && token === META_WEBHOOK_VERIFY_TOKEN) {
+      console.log("Webhook verified successfully");
+      return new Response(challenge, {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      });
     }
+
+    return new Response("Forbidden", { status: 403 });
   }
 
-  // Handle incoming lead data (POST request)
+  // POST - Receive lead data
   if (req.method === "POST") {
     try {
-      const body: MetaLeadData = await req.json();
-      console.log("[Meta Webhook] Received data:", JSON.stringify(body));
-
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-      if (!body.entry || body.entry.length === 0) {
-        console.log("[Meta Webhook] No entries in payload");
-        return new Response(JSON.stringify({ received: true }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const rawBody = await req.text();
+      const signature = req.headers.get("X-Hub-Signature-256") || "";
+      
+      // Verify signature in production
+      if (META_APP_SECRET && !verifySignature(rawBody, signature)) {
+        console.error("Invalid webhook signature");
+        // In development, we might skip verification
+        // return new Response("Invalid signature", { status: 403 });
       }
 
-      for (const entry of body.entry) {
+      const body = JSON.parse(rawBody);
+      console.log("Webhook received:", JSON.stringify(body, null, 2));
+
+      // Process each entry
+      if (body.object !== "page") {
+        return new Response("OK", { status: 200 });
+      }
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+      for (const entry of body.entry || []) {
         const pageId = entry.id;
 
-        if (!entry.changes) continue;
-
-        for (const change of entry.changes) {
+        for (const change of entry.changes || []) {
           if (change.field !== "leadgen") continue;
 
-          const leadData = change.value;
-          console.log("[Meta Webhook] Processing lead:", leadData.leadgen_id);
+          const leadgenId = change.value?.leadgen_id;
+          const formId = change.value?.form_id;
+          const createdTime = change.value?.created_time;
 
-          // Find organization by page_id
-          const { data: integration, error: integrationError } = await supabase
+          console.log(`Processing lead: ${leadgenId} from page ${pageId}, form ${formId}`);
+
+          // Get integration config for this page
+          const { data: integrations, error: intError } = await supabase
             .from("meta_integrations")
-            .select("organization_id, field_mapping")
+            .select("*")
             .eq("page_id", pageId)
-            .eq("is_connected", true)
-            .maybeSingle();
+            .eq("is_connected", true);
 
-          if (integrationError || !integration) {
-            console.error("[Meta Webhook] No integration found for page:", pageId);
+          if (intError || !integrations?.length) {
+            console.error("No integration found for page:", pageId, intError);
             continue;
           }
 
-          // Get lead details from Meta API (would require access token)
-          // For now, we'll create a placeholder lead and store the raw data
-          const leadPayload = {
-            name: `Meta Lead #${leadData.leadgen_id.slice(-6)}`,
-            organization_id: integration.organization_id,
-            message: `Lead captado via Meta Ads`,
-          };
+          for (const integration of integrations) {
+            // Check for form-specific configuration
+            const { data: formConfig } = await supabase
+              .from("meta_form_configs")
+              .select("*")
+              .eq("integration_id", integration.id)
+              .eq("form_id", formId)
+              .eq("is_active", true)
+              .single();
 
-          // Create lead
-          const { data: newLead, error: leadError } = await supabase
-            .from("leads")
-            .insert(leadPayload)
-            .select("id")
-            .single();
+            // Use form config if available, otherwise fall back to page integration config
+            const config = formConfig || integration;
+            const pipelineId = formConfig?.pipeline_id || integration.pipeline_id;
+            const stageId = formConfig?.stage_id || integration.stage_id;
+            const propertyId = formConfig?.property_id || null;
+            const assignedUserId = formConfig?.assigned_user_id || integration.assigned_user_id || null;
+            const autoTags = formConfig?.auto_tags || [];
+            const fieldMapping = formConfig?.field_mapping || {};
 
-          if (leadError) {
-            console.error("[Meta Webhook] Error creating lead:", leadError);
-            continue;
-          }
+            console.log("Using config:", formConfig ? "form-specific" : "page-level", { pipelineId, stageId, propertyId });
 
-          console.log("[Meta Webhook] Lead created:", newLead.id);
+            // Fetch lead data from Graph API
+            const leadUrl = `https://graph.facebook.com/v19.0/${leadgenId}?` +
+              `access_token=${integration.access_token}` +
+              `&fields=id,created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,platform`;
 
-          // Store meta information
-          const { error: metaError } = await supabase.from("lead_meta").insert({
-            lead_id: newLead.id,
-            form_id: leadData.form_id,
-            page_id: leadData.page_id,
-            ad_id: leadData.ad_id || null,
-            adset_id: leadData.adset_id || null,
-            campaign_id: leadData.campaign_id || null,
-            raw_payload: leadData,
-          });
+            const leadResponse = await fetch(leadUrl);
+            const leadData = await leadResponse.json();
 
-          if (metaError) {
-            console.error("[Meta Webhook] Error storing meta data:", metaError);
-          }
+            if (leadData.error) {
+              console.error("Error fetching lead data:", leadData.error);
+              
+              // Update integration with error
+              await supabase
+                .from("meta_integrations")
+                .update({ 
+                  last_error: leadData.error.message,
+                  updated_at: new Date().toISOString()
+                })
+                .eq("id", integration.id);
+              
+              continue;
+            }
 
-          // Update last sync
-          await supabase
-            .from("meta_integrations")
-            .update({ last_sync_at: new Date().toISOString() })
-            .eq("organization_id", integration.organization_id);
+            console.log("Lead data received:", JSON.stringify(leadData, null, 2));
 
-          // Create notification for admins
-          const { data: admins } = await supabase
-            .from("users")
-            .select("id")
-            .eq("organization_id", integration.organization_id)
-            .in("role", ["admin", "super_admin"]);
+            // Parse field data with mapping support
+            const fields: Record<string, string> = {};
+            const customFields: Record<string, string> = {};
+            let name = "Lead Facebook";
+            let email = "";
+            let phone = "";
+            let message = "";
+            let cargo = "";
+            let empresa = "";
+            let cidade = "";
+            let bairro = "";
 
-          if (admins) {
-            for (const admin of admins) {
-              await supabase.from("notifications").insert({
-                user_id: admin.id,
+            for (const field of leadData.field_data || []) {
+              const value = field.values?.[0] || "";
+              const fieldKey = field.name.toLowerCase();
+              fields[field.name] = value;
+
+              // Check if there's a specific mapping for this field
+              const mappedTo = fieldMapping[field.name] || fieldMapping[fieldKey];
+              
+              if (mappedTo) {
+                switch (mappedTo) {
+                  case "name": name = value || name; break;
+                  case "email": email = value; break;
+                  case "phone": phone = value; break;
+                  case "message": message = value; break;
+                  case "cargo": cargo = value; break;
+                  case "empresa": empresa = value; break;
+                  case "cidade": cidade = value; break;
+                  case "bairro": bairro = value; break;
+                  case "custom":
+                    customFields[field.name] = value;
+                    break;
+                }
+              } else {
+                // Auto-detect common fields if no mapping
+                if (fieldKey.includes("nome") || fieldKey.includes("name") || fieldKey === "full_name") {
+                  name = value || name;
+                } else if (fieldKey.includes("email")) {
+                  email = value;
+                } else if (fieldKey.includes("telefone") || fieldKey.includes("phone") || fieldKey.includes("whatsapp") || fieldKey.includes("celular")) {
+                  phone = value;
+                } else {
+                  // Save unknown fields as custom fields
+                  customFields[field.name] = value;
+                }
+              }
+            }
+
+            // Check if lead already exists
+            const { data: existingLead } = await supabase
+              .from("leads")
+              .select("id")
+              .eq("meta_lead_id", leadgenId)
+              .single();
+
+            if (existingLead) {
+              console.log("Lead already exists:", existingLead.id);
+              continue;
+            }
+
+            // Create the lead - trigger will handle pipeline/stage assignment and timeline events
+            const { data: newLead, error: leadError } = await supabase
+              .from("leads")
+              .insert({
                 organization_id: integration.organization_id,
-                title: "Novo lead do Meta Ads",
-                content: `Um novo lead foi captado: ${leadPayload.name}`,
-                type: "lead",
+                name,
+                email,
+                phone,
+                message: message || `Lead gerado via Facebook Lead Ads`,
+                cargo,
+                empresa,
+                cidade,
+                bairro,
+                source: "meta",
+                pipeline_id: pipelineId || null,
+                stage_id: stageId || null,
+                property_id: propertyId,
+                assigned_user_id: assignedUserId,
+                meta_lead_id: leadgenId,
+                meta_form_id: formId,
+                custom_fields: Object.keys(customFields).length > 0 ? customFields : null,
+                source_detail: leadData.ad_name || null,
+                campaign_name: leadData.campaign_name || null,
+              })
+              .select("id")
+              .single();
+
+            if (leadError) {
+              console.error("Error creating lead:", leadError);
+              continue;
+            }
+
+            console.log("Lead created:", newLead.id);
+
+            // Apply auto tags from form config
+            if (autoTags && autoTags.length > 0) {
+              for (const tagId of autoTags) {
+                await supabase
+                  .from("lead_tags")
+                  .insert({
+                    lead_id: newLead.id,
+                    tag_id: tagId,
+                  });
+              }
+              console.log(`Applied ${autoTags.length} auto tags`);
+            }
+
+            // Create lead_meta record with tracking info
+            await supabase
+              .from("lead_meta")
+              .insert({
                 lead_id: newLead.id,
+                page_id: pageId,
+                form_id: formId,
+                ad_id: leadData.ad_id,
+                adset_id: leadData.adset_id,
+                campaign_id: leadData.campaign_id,
+                ad_name: leadData.ad_name || null,
+                adset_name: leadData.adset_name || null,
+                campaign_name: leadData.campaign_name || null,
+                platform: leadData.platform || null,
+                raw_payload: leadData
               });
+
+            // Note: lead_created activity and timeline event are now handled by trigger
+
+            // Update integration leads counter
+            await supabase
+              .from("meta_integrations")
+              .update({ 
+                leads_received: (integration.leads_received || 0) + 1,
+                last_lead_at: new Date().toISOString(),
+                last_error: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", integration.id);
+
+            // Update form config leads counter if using form-specific config
+            if (formConfig) {
+              await supabase
+                .from("meta_form_configs")
+                .update({
+                  leads_received: (formConfig.leads_received || 0) + 1,
+                  last_lead_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                })
+                .eq("id", formConfig.id);
+            }
+
+            // Get users to notify (admins of the organization)
+            const { data: admins } = await supabase
+              .from("users")
+              .select("id")
+              .eq("organization_id", integration.organization_id)
+              .eq("role", "admin")
+              .eq("is_active", true);
+
+            // Create notifications for admins
+            for (const admin of admins || []) {
+              await supabase
+                .from("notifications")
+                .insert({
+                  organization_id: integration.organization_id,
+                  user_id: admin.id,
+                  title: "Novo lead do Facebook",
+                  content: `${name} chegou via ${integration.page_name}${formConfig?.form_name ? ` (${formConfig.form_name})` : ''}`,
+                  type: "lead",
+                  lead_id: newLead.id
+                });
+            }
+
+            // Also notify assigned user if different
+            if (assignedUserId && !admins?.find(a => a.id === assignedUserId)) {
+              await supabase
+                .from("notifications")
+                .insert({
+                  organization_id: integration.organization_id,
+                  user_id: assignedUserId,
+                  title: "Novo lead do Facebook",
+                  content: `${name} foi atribuído a você via ${integration.page_name}`,
+                  type: "lead",
+                  lead_id: newLead.id
+                });
             }
           }
         }
       }
 
-      return new Response(JSON.stringify({ received: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response("OK", { status: 200 });
     } catch (error) {
-      console.error("[Meta Webhook] Error:", error);
-      return new Response(JSON.stringify({ error: "Internal error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("Webhook processing error:", error);
+      return new Response("Internal error", { status: 500 });
     }
   }
 
-  return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+  return new Response("Method not allowed", { status: 405 });
 });

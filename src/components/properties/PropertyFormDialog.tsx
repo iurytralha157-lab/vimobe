@@ -1,552 +1,587 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { ImageUploader } from "./ImageUploader";
-import { FeatureSelector } from "./FeatureSelector";
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, Loader2 } from 'lucide-react';
+import { Property } from '@/hooks/use-properties';
+import { ImageUploader } from './ImageUploader';
+import { FeatureSelector } from './FeatureSelector';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-interface PropertyFormData {
+interface FormData {
   title: string;
   tipo_de_imovel: string;
   tipo_de_negocio: string;
   status: string;
   destaque: boolean;
-  preco: string;
-  area_util: string;
-  area_total: string;
-  quartos: string;
-  suites: string;
-  banheiros: string;
-  vagas: string;
-  andar: string;
-  ano_construcao: string;
-  cep: string;
   endereco: string;
   numero: string;
   complemento: string;
   bairro: string;
   cidade: string;
   uf: string;
-  condominio: string;
-  iptu: string;
-  taxa_de_servico: string;
-  seguro_incendio: string;
+  cep: string;
+  quartos: string;
+  suites: string;
+  banheiros: string;
+  vagas: string;
+  area_util: string;
+  area_total: string;
   mobilia: string;
   regra_pet: boolean;
+  andar: string;
+  ano_construcao: string;
+  preco: string;
+  condominio: string;
+  iptu: string;
+  seguro_incendio: string;
+  taxa_de_servico: string;
   descricao: string;
+  imagem_principal: string;
+  fotos: string[];
   video_imovel: string;
+  detalhes_extras: string[];
+  proximidades: string[];
 }
 
 interface PropertyFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  property?: any;
-  onSubmit: (data: any) => Promise<void>;
-  isSubmitting?: boolean;
+  editingProperty: Property | null;
+  formData: FormData;
+  setFormData: (data: FormData) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  propertyTypes: string[];
+  features: { id: string; name: string }[];
+  proximities: { id: string; name: string }[];
+  loadingFeatures: boolean;
+  loadingProximities: boolean;
+  onAddPropertyType: () => void;
+  onAddFeature: (name: string) => Promise<void>;
+  onAddProximity: (name: string) => Promise<void>;
+  isCreating: boolean;
+  isUpdating: boolean;
+  isCreatingType: boolean;
+  newTypeName: string;
+  setNewTypeName: (name: string) => void;
+  showAddType: boolean;
+  setShowAddType: (show: boolean) => void;
+  defaultFeatures: string[];
+  defaultProximities: string[];
 }
-
-const TIPO_IMOVEL_OPTIONS = [
-  { value: "apartamento", label: "Apartamento" },
-  { value: "casa", label: "Casa" },
-  { value: "comercial", label: "Comercial" },
-  { value: "terreno", label: "Terreno" },
-  { value: "rural", label: "Rural" },
-  { value: "cobertura", label: "Cobertura" },
-  { value: "kitnet", label: "Kitnet" },
-  { value: "loft", label: "Loft" },
-];
-
-const TIPO_NEGOCIO_OPTIONS = [
-  { value: "venda", label: "Venda" },
-  { value: "aluguel", label: "Aluguel" },
-  { value: "venda_aluguel", label: "Venda e Aluguel" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "disponivel", label: "Disponível" },
-  { value: "reservado", label: "Reservado" },
-  { value: "vendido", label: "Vendido" },
-  { value: "alugado", label: "Alugado" },
-];
-
-const MOBILIA_OPTIONS = [
-  { value: "sem_mobilia", label: "Sem mobília" },
-  { value: "semi_mobiliado", label: "Semi-mobiliado" },
-  { value: "mobiliado", label: "Mobiliado" },
-];
-
-const UF_OPTIONS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
-  "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
-  "SP", "SE", "TO",
-];
-
-const DEFAULT_FEATURES = [
-  "Ar condicionado",
-  "Piscina",
-  "Churrasqueira",
-  "Academia",
-  "Salão de festas",
-  "Playground",
-  "Portaria 24h",
-  "Elevador",
-  "Varanda",
-  "Quintal",
-  "Área de serviço",
-  "Closet",
-];
 
 export function PropertyFormDialog({
   open,
   onOpenChange,
-  property,
+  editingProperty,
+  formData,
+  setFormData,
   onSubmit,
-  isSubmitting,
+  propertyTypes,
+  features,
+  proximities,
+  loadingFeatures,
+  loadingProximities,
+  onAddPropertyType,
+  onAddFeature,
+  onAddProximity,
+  isCreating,
+  isUpdating,
+  isCreatingType,
+  newTypeName,
+  setNewTypeName,
+  showAddType,
+  setShowAddType,
+  defaultFeatures,
+  defaultProximities,
 }: PropertyFormDialogProps) {
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState("geral");
-  const [mainImage, setMainImage] = useState<string | null>(null);
-  const [galleryImages, setGalleryImages] = useState<string[]>([]);
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-  const [availableFeatures, setAvailableFeatures] = useState(DEFAULT_FEATURES);
-  const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  const { register, handleSubmit, setValue, watch, reset } = useForm<PropertyFormData>({
-    defaultValues: {
-      title: "",
-      tipo_de_imovel: "",
-      tipo_de_negocio: "",
-      status: "disponivel",
-      destaque: false,
-      preco: "",
-      area_util: "",
-      area_total: "",
-      quartos: "",
-      suites: "",
-      banheiros: "",
-      vagas: "",
-      andar: "",
-      ano_construcao: "",
-      cep: "",
-      endereco: "",
-      numero: "",
-      complemento: "",
-      bairro: "",
-      cidade: "",
-      uf: "",
-      condominio: "",
-      iptu: "",
-      taxa_de_servico: "",
-      seguro_incendio: "",
-      mobilia: "",
-      regra_pet: false,
-      descricao: "",
-      video_imovel: "",
-    },
-  });
-
-  useEffect(() => {
-    if (property) {
-      reset({
-        title: property.title || "",
-        tipo_de_imovel: property.tipo_de_imovel || "",
-        tipo_de_negocio: property.tipo_de_negocio || "",
-        status: property.status || "disponivel",
-        destaque: property.destaque || false,
-        preco: property.preco?.toString() || "",
-        area_util: property.area_util?.toString() || "",
-        area_total: property.area_total?.toString() || "",
-        quartos: property.quartos?.toString() || "",
-        suites: property.suites?.toString() || "",
-        banheiros: property.banheiros?.toString() || "",
-        vagas: property.vagas?.toString() || "",
-        andar: property.andar?.toString() || "",
-        ano_construcao: property.ano_construcao?.toString() || "",
-        cep: property.cep || "",
-        endereco: property.endereco || "",
-        numero: property.numero || "",
-        complemento: property.complemento || "",
-        bairro: property.bairro || "",
-        cidade: property.cidade || "",
-        uf: property.uf || "",
-        condominio: property.condominio?.toString() || "",
-        iptu: property.iptu?.toString() || "",
-        taxa_de_servico: property.taxa_de_servico?.toString() || "",
-        seguro_incendio: property.seguro_incendio?.toString() || "",
-        mobilia: property.mobilia || "",
-        regra_pet: property.regra_pet || false,
-        descricao: property.descricao || "",
-        video_imovel: property.video_imovel || "",
-      });
-      setMainImage(property.imagem_principal || null);
-      setGalleryImages(property.fotos || []);
-    } else {
-      reset();
-      setMainImage(null);
-      setGalleryImages([]);
-      setSelectedFeatures([]);
-    }
-  }, [property, reset]);
-
-  const handleCepBlur = async () => {
-    const cep = watch("cep")?.replace(/\D/g, "");
-    if (cep?.length !== 8) return;
-
-    setIsLoadingCep(true);
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await response.json();
-
-      if (!data.erro) {
-        setValue("endereco", data.logradouro || "");
-        setValue("bairro", data.bairro || "");
-        setValue("cidade", data.localidade || "");
-        setValue("uf", data.uf || "");
-      }
-    } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
-    } finally {
-      setIsLoadingCep(false);
-    }
-  };
-
-  const handleFormSubmit = async (data: PropertyFormData) => {
-    await onSubmit({
-      ...data,
-      preco: data.preco ? parseFloat(data.preco) : null,
-      area_util: data.area_util ? parseFloat(data.area_util) : null,
-      area_total: data.area_total ? parseFloat(data.area_total) : null,
-      quartos: data.quartos ? parseInt(data.quartos) : null,
-      suites: data.suites ? parseInt(data.suites) : null,
-      banheiros: data.banheiros ? parseInt(data.banheiros) : null,
-      vagas: data.vagas ? parseInt(data.vagas) : null,
-      andar: data.andar ? parseInt(data.andar) : null,
-      ano_construcao: data.ano_construcao ? parseInt(data.ano_construcao) : null,
-      condominio: data.condominio ? parseFloat(data.condominio) : null,
-      iptu: data.iptu ? parseFloat(data.iptu) : null,
-      taxa_de_servico: data.taxa_de_servico ? parseFloat(data.taxa_de_servico) : null,
-      seguro_incendio: data.seguro_incendio ? parseFloat(data.seguro_incendio) : null,
-      imagem_principal: mainImage,
-      fotos: galleryImages,
+  const handleImagesChange = (images: string[], mainImage: string) => {
+    setFormData({ 
+      ...formData, 
+      fotos: images,
+      imagem_principal: mainImage 
     });
   };
 
-  const handleAddFeature = (feature: string) => {
-    if (!availableFeatures.includes(feature)) {
-      setAvailableFeatures([...availableFeatures, feature]);
-    }
-  };
-
   const formContent = (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
-          <TabsTrigger value="geral">Geral</TabsTrigger>
-          <TabsTrigger value="local">Local</TabsTrigger>
-          <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-          <TabsTrigger value="extras">Extras</TabsTrigger>
-          <TabsTrigger value="valores" className="hidden lg:flex">Valores</TabsTrigger>
-          <TabsTrigger value="descricao" className="hidden lg:flex">Descrição</TabsTrigger>
-          <TabsTrigger value="midia" className="hidden lg:flex">Mídia</TabsTrigger>
+    <form onSubmit={onSubmit} className="flex flex-col h-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <TabsList className={`grid w-full mb-4 ${isMobile ? 'grid-cols-4 gap-1' : 'grid-cols-7'}`}>
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">Geral</TabsTrigger>
+          <TabsTrigger value="location" className="text-xs sm:text-sm">Local</TabsTrigger>
+          <TabsTrigger value="details" className="text-xs sm:text-sm">Detalhes</TabsTrigger>
+          <TabsTrigger value="extras" className="text-xs sm:text-sm">Extras</TabsTrigger>
+          {!isMobile && (
+            <>
+              <TabsTrigger value="values" className="text-xs sm:text-sm">Valores</TabsTrigger>
+              <TabsTrigger value="description" className="text-xs sm:text-sm">Descrição</TabsTrigger>
+              <TabsTrigger value="media" className="text-xs sm:text-sm">Mídia</TabsTrigger>
+            </>
+          )}
         </TabsList>
-
-        <div className="lg:hidden mt-2">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="valores">Valores</TabsTrigger>
-            <TabsTrigger value="descricao">Descrição</TabsTrigger>
-            <TabsTrigger value="midia">Mídia</TabsTrigger>
+        
+        {isMobile && (
+          <TabsList className="grid grid-cols-3 w-full mb-4 gap-1">
+            <TabsTrigger value="values" className="text-xs">Valores</TabsTrigger>
+            <TabsTrigger value="description" className="text-xs">Descrição</TabsTrigger>
+            <TabsTrigger value="media" className="text-xs">Mídia</TabsTrigger>
           </TabsList>
-        </div>
+        )}
 
-        <TabsContent value="geral" className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label>Título *</Label>
-            <Input {...register("title")} placeholder="Ex: Apartamento 3 quartos no Jardins" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Tipo de Imóvel</Label>
-              <Select value={watch("tipo_de_imovel")} onValueChange={(v) => setValue("tipo_de_imovel", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPO_IMOVEL_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tipo de Negócio</Label>
-              <Select value={watch("tipo_de_negocio")} onValueChange={(v) => setValue("tipo_de_negocio", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPO_NEGOCIO_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={watch("status")} onValueChange={(v) => setValue("status", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Destaque</Label>
-              <div className="flex items-center space-x-2 pt-2">
-                <Switch
-                  checked={watch("destaque")}
-                  onCheckedChange={(v) => setValue("destaque", v)}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {watch("destaque") ? "Sim" : "Não"}
-                </span>
+        <div className="flex-1 overflow-y-auto">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-4 m-0">
+            {editingProperty && (
+              <div className="space-y-2">
+                <Label>Código</Label>
+                <Input value={editingProperty.code} readOnly className="bg-muted font-mono" />
               </div>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="local" className="space-y-4 mt-4">
-          <div className="grid grid-cols-3 gap-4">
+            )}
             <div className="space-y-2">
-              <Label>CEP</Label>
-              <div className="relative">
-                <Input
-                  {...register("cep")}
-                  placeholder="00000-000"
-                  onBlur={handleCepBlur}
-                />
-                {isLoadingCep && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
+              <Label>Título do Imóvel</Label>
+              <Input 
+                placeholder="Ex: Apartamento 3 quartos..."
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Tipo de Imóvel</Label>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 text-xs"
+                    onClick={() => setShowAddType(!showAddType)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
+                {showAddType && (
+                  <div className="flex gap-2 mb-2">
+                    <Input 
+                      placeholder="Novo tipo..."
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      className="h-8"
+                      onClick={onAddPropertyType}
+                      disabled={isCreatingType}
+                    >
+                      OK
+                    </Button>
+                  </div>
                 )}
+                <Select 
+                  value={formData.tipo_de_imovel} 
+                  onValueChange={(v) => setFormData({ ...formData, tipo_de_imovel: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {propertyTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de Negócio</Label>
+                <Select 
+                  value={formData.tipo_de_negocio} 
+                  onValueChange={(v) => setFormData({ ...formData, tipo_de_negocio: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Venda">Venda</SelectItem>
+                    <SelectItem value="Aluguel">Aluguel</SelectItem>
+                    <SelectItem value="Temporada">Temporada</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="space-y-2 col-span-2">
-              <Label>Endereço</Label>
-              <Input {...register("endereco")} placeholder="Rua, Avenida..." />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select 
+                  value={formData.status} 
+                  onValueChange={(v) => setFormData({ ...formData, status: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="inativo">Inativo</SelectItem>
+                    <SelectItem value="vendido">Vendido</SelectItem>
+                    <SelectItem value="alugado">Alugado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <Label>Imóvel em Destaque</Label>
+                <Switch 
+                  checked={formData.destaque}
+                  onCheckedChange={(checked) => setFormData({ ...formData, destaque: checked })}
+                />
+              </div>
             </div>
-          </div>
+          </TabsContent>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Número</Label>
-              <Input {...register("numero")} placeholder="123" />
+          {/* Location Tab */}
+          <TabsContent value="location" className="space-y-4 m-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Endereço</Label>
+                <Input 
+                  placeholder="Rua, Avenida..."
+                  value={formData.endereco}
+                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Número</Label>
+                <Input 
+                  placeholder="123"
+                  value={formData.numero}
+                  onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2">
               <Label>Complemento</Label>
-              <Input {...register("complemento")} placeholder="Apt 101, Bloco A..." />
+              <Input 
+                placeholder="Apto 101, Bloco A..."
+                value={formData.complemento}
+                onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
+              />
             </div>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Bairro</Label>
+                <Input 
+                  placeholder="Jardins"
+                  value={formData.bairro}
+                  onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cidade</Label>
+                <Input 
+                  placeholder="São Paulo"
+                  value={formData.cidade}
+                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>CEP</Label>
+                <Input 
+                  placeholder="00000-000"
+                  value={formData.cep}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    const formatted = value.length > 5 ? `${value.slice(0, 5)}-${value.slice(5)}` : value;
+                    setFormData({ ...formData, cep: formatted });
+                  }}
+                  onBlur={async () => {
+                    const cep = formData.cep.replace(/\D/g, '');
+                    if (cep.length === 8) {
+                      try {
+                        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                        const data = await res.json();
+                        if (!data.erro) {
+                          setFormData({
+                            ...formData,
+                            endereco: data.logradouro || formData.endereco,
+                            bairro: data.bairro || formData.bairro,
+                            cidade: data.localidade || formData.cidade,
+                            uf: data.uf || formData.uf,
+                          });
+                        }
+                      } catch {}
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">Digite o CEP para preencher automaticamente</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Estado (UF)</Label>
+                <Input 
+                  placeholder="SP"
+                  maxLength={2}
+                  value={formData.uf}
+                  onChange={(e) => setFormData({ ...formData, uf: e.target.value.toUpperCase() })}
+                />
+              </div>
+            </div>
+          </TabsContent>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Bairro</Label>
-              <Input {...register("bairro")} placeholder="Bairro" />
+          {/* Details Tab */}
+          <TabsContent value="details" className="space-y-4 m-0">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Quartos</Label>
+                <Input 
+                  type="number" 
+                  placeholder="3"
+                  value={formData.quartos}
+                  onChange={(e) => setFormData({ ...formData, quartos: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Suítes</Label>
+                <Input 
+                  type="number" 
+                  placeholder="1"
+                  value={formData.suites}
+                  onChange={(e) => setFormData({ ...formData, suites: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Banheiros</Label>
+                <Input 
+                  type="number" 
+                  placeholder="2"
+                  value={formData.banheiros}
+                  onChange={(e) => setFormData({ ...formData, banheiros: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vagas</Label>
+                <Input 
+                  type="number" 
+                  placeholder="2"
+                  value={formData.vagas}
+                  onChange={(e) => setFormData({ ...formData, vagas: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Cidade</Label>
-              <Input {...register("cidade")} placeholder="Cidade" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Área Útil (m²)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="120"
+                  value={formData.area_util}
+                  onChange={(e) => setFormData({ ...formData, area_util: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Área Total (m²)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="150"
+                  value={formData.area_total}
+                  onChange={(e) => setFormData({ ...formData, area_total: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>UF</Label>
-              <Select value={watch("uf")} onValueChange={(v) => setValue("uf", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="UF" />
-                </SelectTrigger>
-                <SelectContent>
-                  {UF_OPTIONS.map((uf) => (
-                    <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Andar</Label>
+                <Input 
+                  type="number" 
+                  placeholder="5"
+                  value={formData.andar}
+                  onChange={(e) => setFormData({ ...formData, andar: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Ano de Construção</Label>
+                <Input 
+                  type="number" 
+                  placeholder="2020"
+                  value={formData.ano_construcao}
+                  onChange={(e) => setFormData({ ...formData, ano_construcao: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="detalhes" className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Quartos</Label>
-              <Input type="number" {...register("quartos")} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Suítes</Label>
-              <Input type="number" {...register("suites")} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Banheiros</Label>
-              <Input type="number" {...register("banheiros")} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Vagas</Label>
-              <Input type="number" {...register("vagas")} placeholder="0" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Área útil (m²)</Label>
-              <Input type="number" {...register("area_util")} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Área total (m²)</Label>
-              <Input type="number" {...register("area_total")} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Andar</Label>
-              <Input type="number" {...register("andar")} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Ano construção</Label>
-              <Input type="number" {...register("ano_construcao")} placeholder="2020" />
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="extras" className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Mobília</Label>
-              <Select value={watch("mobilia")} onValueChange={(v) => setValue("mobilia", v)}>
+              <Select 
+                value={formData.mobilia} 
+                onValueChange={(v) => setFormData({ ...formData, mobilia: v })}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {MOBILIA_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
+                  <SelectItem value="Mobiliado">Mobiliado</SelectItem>
+                  <SelectItem value="Semi-mobiliado">Semi-mobiliado</SelectItem>
+                  <SelectItem value="Sem mobília">Sem mobília</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Aceita pet</Label>
-              <div className="flex items-center space-x-2 pt-2">
-                <Switch
-                  checked={watch("regra_pet")}
-                  onCheckedChange={(v) => setValue("regra_pet", v)}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {watch("regra_pet") ? "Sim" : "Não"}
-                </span>
-              </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <Label>Aceita Pet</Label>
+              <Switch 
+                checked={formData.regra_pet}
+                onCheckedChange={(checked) => setFormData({ ...formData, regra_pet: checked })}
+              />
             </div>
-          </div>
+          </TabsContent>
 
-          <FeatureSelector
-            label="Características"
-            availableFeatures={availableFeatures}
-            selectedFeatures={selectedFeatures}
-            onSelect={setSelectedFeatures}
-            onAddNew={handleAddFeature}
-            placeholder="Adicionar característica"
-          />
-        </TabsContent>
+          {/* Extras Tab */}
+          <TabsContent value="extras" className="space-y-6 m-0">
+            <FeatureSelector
+              title="Detalhes Extras do Imóvel"
+              options={features.length > 0 ? features.map(f => f.name) : defaultFeatures}
+              selected={formData.detalhes_extras}
+              onChange={(selected) => setFormData({ ...formData, detalhes_extras: selected })}
+              allowAdd
+              onAddNew={onAddFeature}
+              isLoading={loadingFeatures}
+            />
 
-        <TabsContent value="valores" className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-4">
+            <Separator />
+
+            <FeatureSelector
+              title="Proximidades"
+              options={proximities.length > 0 ? proximities.map(p => p.name) : defaultProximities}
+              selected={formData.proximidades}
+              onChange={(selected) => setFormData({ ...formData, proximidades: selected })}
+              allowAdd
+              onAddNew={onAddProximity}
+              isLoading={loadingProximities}
+            />
+          </TabsContent>
+
+          {/* Values Tab */}
+          <TabsContent value="values" className="space-y-4 m-0">
             <div className="space-y-2">
               <Label>Preço (R$)</Label>
-              <Input type="number" {...register("preco")} placeholder="500000" />
+              <Input 
+                type="number" 
+                placeholder="500000"
+                value={formData.preco}
+                onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Condomínio (R$)</Label>
-              <Input type="number" {...register("condominio")} placeholder="800" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Condomínio (R$)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="800"
+                  value={formData.condominio}
+                  onChange={(e) => setFormData({ ...formData, condominio: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>IPTU (R$)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="200"
+                  value={formData.iptu}
+                  onChange={(e) => setFormData({ ...formData, iptu: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Seguro Incêndio (R$)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="50"
+                  value={formData.seguro_incendio}
+                  onChange={(e) => setFormData({ ...formData, seguro_incendio: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Taxa de Serviço (R$)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="100"
+                  value={formData.taxa_de_servico}
+                  onChange={(e) => setFormData({ ...formData, taxa_de_servico: e.target.value })}
+                />
+              </div>
+            </div>
+          </TabsContent>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* Description Tab */}
+          <TabsContent value="description" className="space-y-4 m-0">
             <div className="space-y-2">
-              <Label>IPTU (R$/ano)</Label>
-              <Input type="number" {...register("iptu")} placeholder="2400" />
+              <Label>Descrição do Imóvel</Label>
+              <Textarea 
+                placeholder="Descreva o imóvel com detalhes..."
+                value={formData.descricao}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                rows={isMobile ? 8 : 12}
+                className={isMobile ? 'min-h-[200px]' : 'min-h-[300px]'}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Taxa de serviço</Label>
-              <Input type="number" {...register("taxa_de_servico")} placeholder="0" />
-            </div>
-            <div className="space-y-2">
-              <Label>Seguro incêndio</Label>
-              <Input type="number" {...register("seguro_incendio")} placeholder="0" />
-            </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="descricao" className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label>Descrição do imóvel</Label>
-            <Textarea
-              {...register("descricao")}
-              placeholder="Descreva as principais características e diferenciais do imóvel..."
-              rows={8}
+          {/* Media Tab */}
+          <TabsContent value="media" className="space-y-4 m-0">
+            <ImageUploader 
+              images={formData.fotos}
+              mainImage={formData.imagem_principal}
+              onImagesChange={handleImagesChange}
+              organizationId={editingProperty?.organization_id}
+              propertyId={editingProperty?.id}
             />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="midia" className="space-y-4 mt-4">
-          <ImageUploader
-            mainImage={mainImage}
-            galleryImages={galleryImages}
-            onMainImageChange={setMainImage}
-            onGalleryChange={setGalleryImages}
-            propertyId={property?.id}
-          />
-
-          <div className="space-y-2">
-            <Label>URL do vídeo (YouTube/Vimeo)</Label>
-            <Input {...register("video_imovel")} placeholder="https://youtube.com/watch?v=..." />
-          </div>
-        </TabsContent>
+            <div className="space-y-2">
+              <Label>Vídeo do Imóvel (URL)</Label>
+              <Input 
+                placeholder="https://youtube.com/watch?v=..."
+                value={formData.video_imovel}
+                onChange={(e) => setFormData({ ...formData, video_imovel: e.target.value })}
+              />
+            </div>
+          </TabsContent>
+        </div>
       </Tabs>
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
+      <div className="flex justify-end gap-2 pt-4 border-t mt-4">
         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {property ? "Salvar alterações" : "Criar imóvel"}
+        <Button type="submit" disabled={isCreating || isUpdating}>
+          {(isCreating || isUpdating) && (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          )}
+          {editingProperty ? 'Salvar' : 'Cadastrar'}
         </Button>
       </div>
     </form>
@@ -554,14 +589,16 @@ export function PropertyFormDialog({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle>{property ? "Editar Imóvel" : "Novo Imóvel"}</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto">{formContent}</div>
-        </DrawerContent>
-      </Drawer>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[95vh] flex flex-col p-0">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle>{editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-4">
+            {formContent}
+          </div>
+        </SheetContent>
+      </Sheet>
     );
   }
 
@@ -569,9 +606,11 @@ export function PropertyFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{property ? "Editar Imóvel" : "Novo Imóvel"}</DialogTitle>
+          <DialogTitle>{editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}</DialogTitle>
         </DialogHeader>
-        {formContent}
+        <div className="mt-4">
+          {formContent}
+        </div>
       </DialogContent>
     </Dialog>
   );

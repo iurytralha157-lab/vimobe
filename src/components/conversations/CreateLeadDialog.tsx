@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -11,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
@@ -18,258 +17,248 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, User, Phone, Mail, MessageSquare, Building2 } from "lucide-react";
-import { usePipelines, useStages } from "@/hooks/use-pipelines";
-import { useProperties } from "@/hooks/use-properties";
+import { Loader2, UserPlus, Building2 } from "lucide-react";
+import { usePipelines, useStages } from "@/hooks/use-stages";
 import { useCreateLead } from "@/hooks/use-leads";
-import { useToast } from "@/hooks/use-toast";
-import { formatPhoneForDisplay } from "@/lib/phone-utils";
-
-interface CreateLeadFormData {
-  name: string;
-  phone: string;
-  email: string;
-  message: string;
-  pipeline_id: string;
-  stage_id: string;
-  property_id: string;
-}
+import { useProperties } from "@/hooks/use-properties";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface CreateLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultPhone?: string;
-  defaultName?: string;
-  onSuccess?: (leadId: string) => void;
+  contactPhone?: string;
+  contactName?: string;
 }
 
 export function CreateLeadDialog({
   open,
   onOpenChange,
-  defaultPhone,
-  defaultName,
-  onSuccess,
+  contactPhone,
+  contactName,
 }: CreateLeadDialogProps) {
-  const { toast } = useToast();
-  const { data: pipelines, isLoading: loadingPipelines } = usePipelines();
-  const { data: properties, isLoading: loadingProperties } = useProperties();
+  const { profile } = useAuth();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
+  const [selectedStageId, setSelectedStageId] = useState<string>("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
+
+  const { data: pipelines = [], isLoading: loadingPipelines } = usePipelines();
+  const { data: stages = [], isLoading: loadingStages } = useStages(selectedPipelineId || undefined);
+  const { data: properties = [], isLoading: loadingProperties } = useProperties();
   const createLead = useCreateLead();
 
-  const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
-  const { data: stages, isLoading: loadingStages } = useStages(selectedPipelineId);
-
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CreateLeadFormData>({
-    defaultValues: {
-      name: defaultName || "",
-      phone: defaultPhone || "",
-      email: "",
-      message: "",
-      pipeline_id: "",
-      stage_id: "",
-      property_id: "",
-    },
-  });
-
-  // Set defaults when dialog opens
+  // Set initial values when dialog opens
   useEffect(() => {
     if (open) {
-      if (defaultPhone) {
-        setValue("phone", formatPhoneForDisplay(defaultPhone));
-      }
-      if (defaultName) {
-        setValue("name", defaultName);
-      }
-      // Set default pipeline
-      if (pipelines?.length && !watch("pipeline_id")) {
-        const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
-        if (defaultPipeline) {
-          setSelectedPipelineId(defaultPipeline.id);
-          setValue("pipeline_id", defaultPipeline.id);
-        }
+      setName(contactName || "");
+      setPhone(contactPhone || "");
+      setEmail("");
+      setMessage("");
+      setSelectedPropertyId("");
+      
+      // Select default pipeline
+      const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
+      if (defaultPipeline) {
+        setSelectedPipelineId(defaultPipeline.id);
       }
     }
-  }, [open, defaultPhone, defaultName, pipelines, setValue, watch]);
+  }, [open, contactName, contactPhone, pipelines]);
 
-  // Set first stage when pipeline changes
+  // Select first stage when pipeline changes
   useEffect(() => {
-    if (stages?.length && selectedPipelineId) {
-      const firstStage = stages[0];
-      if (firstStage) {
-        setValue("stage_id", firstStage.id);
-      }
+    if (stages.length > 0) {
+      const firstStage = stages.sort((a, b) => a.position - b.position)[0];
+      setSelectedStageId(firstStage.id);
+    } else {
+      setSelectedStageId("");
     }
-  }, [stages, selectedPipelineId, setValue]);
+  }, [stages]);
 
-  const handlePipelineChange = (pipelineId: string) => {
-    setSelectedPipelineId(pipelineId);
-    setValue("pipeline_id", pipelineId);
-    setValue("stage_id", ""); // Reset stage when pipeline changes
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Por favor, informe o nome do lead",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Get property code if property is selected
+      const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+      
+      await createLead.mutateAsync({
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+        email: email.trim() || undefined,
+        message: message.trim() || undefined,
+        pipeline_id: selectedPipelineId || undefined,
+        stage_id: selectedStageId || undefined,
+        property_code: selectedProperty?.code || undefined,
+        source: "whatsapp",
+        assigned_user_id: profile?.id,
+      });
+
+      toast({
+        title: "Lead criado",
+        description: "O lead foi criado com sucesso",
+      });
+
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error creating lead:", error);
+      toast({
+        title: "Erro ao criar lead",
+        description: "Não foi possível criar o lead",
+        variant: "destructive",
+      });
+    }
   };
 
-  const onSubmit = async (data: CreateLeadFormData) => {
-    try {
-      const result = await createLead.mutateAsync({
-        name: data.name,
-        phone: data.phone || undefined,
-        email: data.email || undefined,
-        message: data.message || undefined,
-        pipeline_id: data.pipeline_id || undefined,
-        stage_id: data.stage_id || undefined,
-        property_id: data.property_id || undefined,
-      });
-
-      toast({
-        title: "Lead criado!",
-        description: `${data.name} foi adicionado com sucesso.`,
-      });
-
-      reset();
-      onOpenChange(false);
-      
-      if (onSuccess && result?.id) {
-        onSuccess(result.id);
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar lead",
-        description: error instanceof Error ? error.message : "Tente novamente.",
-      });
-    }
+  // Format property display
+  const formatPropertyOption = (property: { code: string; title?: string | null; endereco?: string | null; bairro?: string | null; cidade?: string | null }) => {
+    const parts = [property.code];
+    if (property.title) parts.push(property.title);
+    else if (property.endereco) parts.push(property.endereco);
+    if (property.bairro) parts.push(property.bairro);
+    return parts.join(" - ");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Criar Lead</DialogTitle>
-          <DialogDescription>
-            Adicione um novo lead a partir desta conversa
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5" />
+            Criar Lead
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Name */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Pipeline Selection */}
           <div className="space-y-2">
-            <Label htmlFor="name" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Nome *
-            </Label>
-            <Input
-              id="name"
-              {...register("name", { required: "Nome é obrigatório" })}
-              placeholder="Nome do contato"
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
-            )}
-          </div>
-
-          {/* Phone & Email */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                Telefone
-              </Label>
-              <Input
-                id="phone"
-                {...register("phone")}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                E-mail
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                {...register("email")}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-          </div>
-
-          {/* Pipeline & Stage */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Pipeline</Label>
-              <Select
-                value={watch("pipeline_id")}
-                onValueChange={handlePipelineChange}
-                disabled={loadingPipelines}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines?.map((pipeline) => (
-                    <SelectItem key={pipeline.id} value={pipeline.id}>
-                      {pipeline.name}
-                      {pipeline.is_default && " (Padrão)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Etapa</Label>
-              <Select
-                value={watch("stage_id")}
-                onValueChange={(v) => setValue("stage_id", v)}
-                disabled={!selectedPipelineId || loadingStages}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {stages?.map((stage) => (
-                    <SelectItem key={stage.id} value={stage.id}>
-                      {stage.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Property */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Imóvel de interesse
-            </Label>
+            <Label>Pipeline</Label>
             <Select
-              value={watch("property_id")}
-              onValueChange={(v) => setValue("property_id", v)}
-              disabled={loadingProperties}
+              value={selectedPipelineId}
+              onValueChange={setSelectedPipelineId}
+              disabled={loadingPipelines}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione um imóvel (opcional)" />
+                <SelectValue placeholder="Selecione um pipeline" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
-                {properties?.map((property) => (
-                  <SelectItem key={property.id} value={property.id}>
-                    {property.code} - {property.title || "Sem título"}
+                {pipelines.map((pipeline) => (
+                  <SelectItem key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
+                    {pipeline.is_default && " (Padrão)"}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* Stage Selection */}
+          <div className="space-y-2">
+            <Label>Etapa</Label>
+            <Select
+              value={selectedStageId}
+              onValueChange={setSelectedStageId}
+              disabled={loadingStages || !selectedPipelineId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma etapa" />
+              </SelectTrigger>
+              <SelectContent>
+                {stages
+                  .sort((a, b) => a.position - b.position)
+                  .map((stage) => (
+                    <SelectItem key={stage.id} value={stage.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: stage.color || "#888" }}
+                        />
+                        {stage.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Property Selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              Imóvel de Interesse
+            </Label>
+            <Select
+              value={selectedPropertyId}
+              onValueChange={(value) => setSelectedPropertyId(value === "none" ? "" : value)}
+              disabled={loadingProperties}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um imóvel (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum</SelectItem>
+                {properties.map((property) => (
+                  <SelectItem key={property.id} value={property.id}>
+                    {formatPropertyOption(property)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Name */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome *</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nome do lead"
+              required
+            />
+          </div>
+
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefone</Label>
+            <PhoneInput
+              value={phone}
+              onChange={setPhone}
+            />
+          </div>
+
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@exemplo.com"
+            />
+          </div>
+
           {/* Message */}
           <div className="space-y-2">
-            <Label htmlFor="message" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Observações
-            </Label>
+            <Label htmlFor="message">Observação</Label>
             <Textarea
               id="message"
-              {...register("message")}
-              placeholder="Adicione observações sobre este lead..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Observações sobre o lead..."
               rows={3}
             />
           </div>
@@ -285,7 +274,7 @@ export function CreateLeadDialog({
             </Button>
             <Button type="submit" disabled={createLead.isPending}>
               {createLead.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Criar Lead
             </Button>

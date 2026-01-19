@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { useOrganizations, useSuperAdminStats } from '@/hooks/use-super-admin';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -19,8 +19,7 @@ import { AdminStatusChart } from '@/components/admin/AdminStatusChart';
 import { AdminAlerts } from '@/components/admin/AdminAlerts';
 
 export default function AdminDashboard() {
-  const { data: organizations, isLoading: loadingOrgs } = useOrganizations();
-  const { data: stats } = useSuperAdminStats();
+  const { organizations, stats, loadingOrgs } = useSuperAdmin();
   const navigate = useNavigate();
 
   const recentOrgs = organizations?.slice(0, 5) || [];
@@ -39,7 +38,7 @@ export default function AdminDashboard() {
   };
 
   // Calculate estimated MRR (assuming $99/month per active org)
-  const estimatedMRR = ((stats?.activeOrganizations || 0) * 99);
+  const estimatedMRR = (stats.activeOrganizations * 99);
 
   return (
     <AdminLayout title="Dashboard">
@@ -54,9 +53,9 @@ export default function AdminDashboard() {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalOrganizations || 0}</div>
+              <div className="text-2xl font-bold">{stats.totalOrganizations}</div>
               <p className="text-xs text-muted-foreground">
-                {stats?.activeOrganizations || 0} ativas
+                {stats.activeOrganizations} ativas
               </p>
             </CardContent>
           </Card>
@@ -69,7 +68,7 @@ export default function AdminDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+              <div className="text-2xl font-bold">{stats.totalUsers}</div>
               <p className="text-xs text-muted-foreground">
                 em todas as organizações
               </p>
@@ -84,7 +83,7 @@ export default function AdminDashboard() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.trialOrganizations || 0}</div>
+              <div className="text-2xl font-bold">{stats.trialOrganizations}</div>
               <p className="text-xs text-muted-foreground">
                 período de teste
               </p>
@@ -99,7 +98,7 @@ export default function AdminDashboard() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.suspendedOrganizations || 0}</div>
+              <div className="text-2xl font-bold">{stats.suspendedOrganizations}</div>
               <p className="text-xs text-muted-foreground">
                 organizações suspensas
               </p>
@@ -134,7 +133,7 @@ export default function AdminDashboard() {
           {organizations && organizations.length > 0 && (
             <AdminGrowthChart organizations={organizations} />
           )}
-          <AdminStatusChart stats={stats || { totalOrganizations: 0, activeOrganizations: 0, trialOrganizations: 0, suspendedOrganizations: 0, totalUsers: 0, totalLeads: 0 }} />
+          <AdminStatusChart stats={stats} />
         </div>
 
         {/* Recent Organizations */}
