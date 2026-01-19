@@ -54,6 +54,7 @@ export default function Onboarding() {
           name: wizardData.organizationName,
           segment: wizardData.segment,
           accent_color: wizardData.accentColor,
+          created_by: user.id,
         })
         .select()
         .single();

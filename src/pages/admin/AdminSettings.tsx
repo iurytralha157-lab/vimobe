@@ -8,18 +8,27 @@ import { Slider } from '@/components/ui/slider';
 import { Save, Upload, Loader2, Sun, Moon, Maximize2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
-interface SystemSettings {
+interface SystemSettingsValue {
+  logo_url_light?: string | null;
+  logo_url_dark?: string | null;
+  default_whatsapp?: string | null;
+  logo_width?: number | null;
+  logo_height?: number | null;
+}
+
+interface SystemSettingsRow {
   id: string;
-  logo_url_light: string | null;
-  logo_url_dark: string | null;
-  default_whatsapp: string | null;
-  logo_width: number | null;
-  logo_height: number | null;
+  key: string;
+  value: Json;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [settings, setSettings] = useState<{ id: string } & SystemSettingsValue | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingSize, setSavingSize] = useState(false);
@@ -43,12 +52,44 @@ export default function AdminSettings() {
     if (error) {
       console.error('Error fetching settings:', error);
     } else if (data) {
-      setSettings(data as SystemSettings);
-      setWhatsapp(data.default_whatsapp || '');
-      setLogoWidth(data.logo_width || 140);
-      setLogoHeight(data.logo_height || 40);
+      const row = data as SystemSettingsRow;
+      const value = (row.value || {}) as SystemSettingsValue;
+      setSettings({
+        id: row.id,
+        logo_url_light: value.logo_url_light || null,
+        logo_url_dark: value.logo_url_dark || null,
+        default_whatsapp: value.default_whatsapp || null,
+        logo_width: value.logo_width || null,
+        logo_height: value.logo_height || null,
+      });
+      setWhatsapp(value.default_whatsapp || '');
+      setLogoWidth(value.logo_width || 140);
+      setLogoHeight(value.logo_height || 40);
     }
     setLoading(false);
+  };
+
+  const updateSettingsValue = async (updates: Partial<SystemSettingsValue>) => {
+    if (!settings) return;
+
+    const currentValue = {
+      logo_url_light: settings.logo_url_light,
+      logo_url_dark: settings.logo_url_dark,
+      default_whatsapp: settings.default_whatsapp,
+      logo_width: settings.logo_width,
+      logo_height: settings.logo_height,
+    };
+
+    const newValue = { ...currentValue, ...updates };
+
+    const { error } = await supabase
+      .from('system_settings')
+      .update({ value: newValue as unknown as Json })
+      .eq('id', settings.id);
+
+    if (error) throw error;
+
+    setSettings(prev => prev ? { ...prev, ...updates } : null);
   };
 
   const handleUploadLogo = async (file: File, type: 'light' | 'dark') => {
@@ -72,15 +113,8 @@ export default function AdminSettings() {
         .getPublicUrl(path);
 
       const updateField = type === 'light' ? 'logo_url_light' : 'logo_url_dark';
-      
-      const { error: updateError } = await supabase
-        .from('system_settings')
-        .update({ [updateField]: publicUrl })
-        .eq('id', settings.id);
+      await updateSettingsValue({ [updateField]: publicUrl });
 
-      if (updateError) throw updateError;
-
-      setSettings(prev => prev ? { ...prev, [updateField]: publicUrl } : null);
       toast.success(`Logo ${type === 'light' ? 'clara' : 'escura'} atualizada!`);
     } catch (error: any) {
       toast.error('Erro ao fazer upload: ' + error.message);
@@ -94,12 +128,7 @@ export default function AdminSettings() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('system_settings')
-        .update({ default_whatsapp: whatsapp })
-        .eq('id', settings.id);
-
-      if (error) throw error;
+      await updateSettingsValue({ default_whatsapp: whatsapp });
       toast.success('WhatsApp atualizado!');
     } catch (error: any) {
       toast.error('Erro ao salvar: ' + error.message);
@@ -113,13 +142,7 @@ export default function AdminSettings() {
 
     setSavingSize(true);
     try {
-      const { error } = await supabase
-        .from('system_settings')
-        .update({ logo_width: logoWidth, logo_height: logoHeight })
-        .eq('id', settings.id);
-
-      if (error) throw error;
-      setSettings(prev => prev ? { ...prev, logo_width: logoWidth, logo_height: logoHeight } : null);
+      await updateSettingsValue({ logo_width: logoWidth, logo_height: logoHeight });
       toast.success('Tamanho da logo atualizado!');
     } catch (error: any) {
       toast.error('Erro ao salvar: ' + error.message);

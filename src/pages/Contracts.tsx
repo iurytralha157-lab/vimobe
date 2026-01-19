@@ -44,7 +44,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContractStatusBadge } from '@/components/financial/ContractStatusBadge';
 import { ContractForm } from '@/components/financial/ContractForm';
-import { useContracts, useActivateContract, useDeleteContract } from '@/hooks/use-contracts';
+import { useContracts, useActivateContract, useDeleteContract, Contract } from '@/hooks/use-contracts';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatCurrency, formatDate, exportToExcel, prepareContractsExport } from '@/lib/export-financial';
 import { 
@@ -68,12 +68,13 @@ import { toast } from 'sonner';
 
 // Mobile Contract Card
 function ContractCard({ contract, onActivate, onEdit, onDelete }: {
-  contract: any;
+  contract: Contract;
   onActivate: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const getTypeLabel = (type: string) => {
+  const getTypeLabel = (type: string | null) => {
+    if (!type) return '-';
     const types: Record<string, string> = {
       sale: 'Venda',
       rent: 'Locação',
@@ -89,21 +90,20 @@ function ContractCard({ contract, onActivate, onEdit, onDelete }: {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Badge variant="outline" className="text-xs shrink-0">
-                {contract.contract_number}
+                {contract.contract_number || contract.id.slice(0, 8)}
               </Badge>
               <Badge variant="secondary" className="text-xs">
-                {getTypeLabel(contract.type)}
+                {getTypeLabel(contract.contract_type)}
               </Badge>
             </div>
             <div className="flex items-center gap-2 mt-2">
               <User className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="font-medium text-sm truncate">{contract.client_name}</span>
+              <span className="font-medium text-sm truncate">
+                {contract.lead?.name || 'Sem cliente'}
+              </span>
             </div>
-            {contract.client_email && (
-              <p className="text-xs text-muted-foreground ml-6">{contract.client_email}</p>
-            )}
           </div>
-          <ContractStatusBadge status={contract.status} />
+          <ContractStatusBadge status={contract.status || 'draft'} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-3">
@@ -113,16 +113,16 @@ function ContractCard({ contract, onActivate, onEdit, onDelete }: {
               {contract.property.code}
             </div>
           )}
-          {contract.start_date && (
+          {contract.signing_date && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              {formatDate(contract.start_date)}
+              {formatDate(contract.signing_date)}
             </div>
           )}
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t">
-          <p className="font-bold text-primary">{formatCurrency(contract.total_value)}</p>
+          <p className="font-bold text-primary">{formatCurrency(contract.value)}</p>
           <div className="flex items-center gap-2">
             {contract.status === 'draft' && (
               <Button variant="outline" size="sm" onClick={onActivate}>
@@ -149,7 +149,7 @@ export default function Contracts() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingContract, setEditingContract] = useState<any>(null);
+  const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   const { data: contracts, isLoading } = useContracts({
@@ -160,10 +160,12 @@ export default function Contracts() {
   const activateContract = useActivateContract();
   const deleteContract = useDeleteContract();
 
-  const filteredContracts = contracts?.filter(contract => 
-    contract.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contract.contract_number.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredContracts = contracts?.filter(contract => {
+    const leadName = contract.lead?.name?.toLowerCase() || '';
+    const contractNumber = contract.contract_number?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+    return leadName.includes(query) || contractNumber.includes(query);
+  }) || [];
 
   const handleExport = () => {
     if (!filteredContracts.length) {
@@ -187,7 +189,7 @@ export default function Contracts() {
     }
   };
 
-  const handleEdit = (contract: any) => {
+  const handleEdit = (contract: Contract) => {
     setEditingContract(contract);
     setIsFormOpen(true);
   };
@@ -197,7 +199,8 @@ export default function Contracts() {
     setEditingContract(null);
   };
 
-  const getTypeLabel = (type: string) => {
+  const getTypeLabel = (type: string | null) => {
+    if (!type) return '-';
     const types: Record<string, string> = {
       sale: 'Venda',
       rent: 'Locação',
@@ -207,12 +210,6 @@ export default function Contracts() {
   };
 
   const activeFilterCount = (typeFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
-
-  const FormWrapper = isMobile ? Sheet : Dialog;
-  const FormContent = isMobile ? SheetContent : DialogContent;
-  const FormHeader = isMobile ? SheetHeader : DialogHeader;
-  const FormTitle = isMobile ? SheetTitle : DialogTitle;
-  const FormDescription = isMobile ? SheetDescription : DialogDescription;
 
   return (
     <AppLayout>
@@ -358,12 +355,12 @@ export default function Contracts() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Número</TableHead>
-                    <TableHead>Cliente</TableHead>
+                    <TableHead>Lead</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Imóvel</TableHead>
-                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Data Início</TableHead>
+                    <TableHead>Data Assinatura</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -377,26 +374,23 @@ export default function Contracts() {
                   ) : (
                     filteredContracts.map((contract) => (
                       <TableRow key={contract.id}>
-                        <TableCell className="font-medium">{contract.contract_number}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{contract.client_name}</p>
-                            {contract.client_email && (
-                              <p className="text-xs text-muted-foreground">{contract.client_email}</p>
-                            )}
-                          </div>
+                        <TableCell className="font-medium">
+                          {contract.contract_number || contract.id.slice(0, 8)}
                         </TableCell>
-                        <TableCell>{getTypeLabel(contract.type)}</TableCell>
+                        <TableCell>
+                          <p className="font-medium">{contract.lead?.name || '-'}</p>
+                        </TableCell>
+                        <TableCell>{getTypeLabel(contract.contract_type)}</TableCell>
                         <TableCell>
                           {contract.property?.code || '-'}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(contract.total_value)}
+                          {formatCurrency(contract.value)}
                         </TableCell>
                         <TableCell>
-                          <ContractStatusBadge status={contract.status} />
+                          <ContractStatusBadge status={contract.status || 'draft'} />
                         </TableCell>
-                        <TableCell>{formatDate(contract.start_date)}</TableCell>
+                        <TableCell>{formatDate(contract.signing_date)}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -450,17 +444,15 @@ export default function Contracts() {
                   {editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
                 </SheetDescription>
               </SheetHeader>
-              <ScrollArea className="h-[calc(90vh-100px)]">
-                <div className="px-1">
-                  <ContractForm
-                    contract={editingContract}
-                    onSuccess={handleFormSuccess}
-                    onCancel={() => {
-                      setIsFormOpen(false);
-                      setEditingContract(null);
-                    }}
-                  />
-                </div>
+              <ScrollArea className="h-[calc(100%-80px)] mt-4 pr-4">
+                <ContractForm 
+                  contract={editingContract} 
+                  onSuccess={handleFormSuccess}
+                  onCancel={() => {
+                    setIsFormOpen(false);
+                    setEditingContract(null);
+                  }}
+                />
               </ScrollArea>
             </SheetContent>
           </Sheet>
@@ -476,8 +468,8 @@ export default function Contracts() {
                   {editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
                 </DialogDescription>
               </DialogHeader>
-              <ContractForm
-                contract={editingContract}
+              <ContractForm 
+                contract={editingContract} 
                 onSuccess={handleFormSuccess}
                 onCancel={() => {
                   setIsFormOpen(false);

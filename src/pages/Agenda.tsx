@@ -46,7 +46,7 @@ export default function Agenda() {
     const dayEnd = endOfDay(selectedDate);
     
     return events.filter((event) => {
-      const eventDate = new Date(event.start_at);
+      const eventDate = new Date(event.start_time);
       return eventDate >= dayStart && eventDate <= dayEnd;
     });
   }, [events, selectedDate]);
@@ -58,8 +58,8 @@ export default function Agenda() {
     
     return events
       .filter((event) => {
-        const eventDate = new Date(event.start_at);
-        return eventDate >= today && eventDate <= nextWeek && !event.is_completed;
+        const eventDate = new Date(event.start_time);
+        return eventDate >= today && eventDate <= nextWeek && event.status !== 'completed';
       })
       .slice(0, 10);
   }, [events]);
@@ -157,13 +157,13 @@ export default function Agenda() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-accent/50 rounded-lg">
                   <p className="text-2xl font-bold text-primary">
-                    {events.filter(e => !e.is_completed).length}
+                    {events.filter(e => e.status !== 'completed').length}
                   </p>
                   <p className="text-xs text-muted-foreground">Pendentes</p>
                 </div>
                 <div className="text-center p-3 bg-success/10 rounded-lg">
                   <p className="text-2xl font-bold text-success">
-                    {events.filter(e => e.is_completed).length}
+                    {events.filter(e => e.status === 'completed').length}
                   </p>
                   <p className="text-xs text-muted-foreground">Concluídas</p>
                 </div>
@@ -186,7 +186,7 @@ export default function Agenda() {
                       onClick={() => handleEditEvent(event)}
                     >
                       <div className="text-sm font-medium text-muted-foreground w-12">
-                        {format(new Date(event.start_at), 'HH:mm')}
+                        {format(new Date(event.start_time), 'HH:mm')}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{event.title}</p>
