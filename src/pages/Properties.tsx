@@ -142,6 +142,7 @@ export default function Properties() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Remove detalhes_extras and proximidades as they don't exist in the database schema
     const propertyData = {
       title: formData.title || null,
       tipo_de_imovel: formData.tipo_de_imovel,
@@ -174,8 +175,6 @@ export default function Properties() {
       imagem_principal: formData.imagem_principal || null,
       fotos: formData.fotos,
       video_imovel: formData.video_imovel || null,
-      detalhes_extras: formData.detalhes_extras,
-      proximidades: formData.proximidades,
     };
     
     if (editingProperty) {
