@@ -201,9 +201,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('Auth event:', event, 'Session:', !!session);
         
-        // Logout ou sessão expirada - limpar tudo
-        if (event === 'SIGNED_OUT' || !session) {
+        // Logout ou sessão expirada - limpar tudo e NÃO processar mais nada
+        if (event === 'SIGNED_OUT') {
           clearAllStates();
+          return;
+        }
+        
+        // Se não tem sessão, limpar estados
+        if (!session) {
+          clearAllStates();
+          return;
+        }
+        
+        // Ignorar TOKEN_REFRESHED se já fizemos logout manualmente
+        // Verificar se o storage foi limpo (indicativo de logout manual)
+        const storageKey = `sb-iemalzlfnbouobyjwlwi-auth-token`;
+        const hasToken = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey);
+        if (!hasToken && event === 'TOKEN_REFRESHED') {
+          console.log('Ignorando TOKEN_REFRESHED - logout foi realizado');
           return;
         }
         
@@ -256,12 +271,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setImpersonating(null);
     localStorage.removeItem('impersonating');
     
-    // Depois tenta limpar no servidor (scope: 'local' evita erro 403 se sessão expirada)
+    // Limpar storage do Supabase manualmente para garantir que tokens sejam removidos
+    const storageKey = `sb-iemalzlfnbouobyjwlwi-auth-token`;
+    localStorage.removeItem(storageKey);
+    sessionStorage.removeItem(storageKey);
+    
+    // Tentar signOut global (invalida refresh token no servidor)
+    // Se falhar (sessão já expirada), não importa - tokens já foram limpos
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (error) {
       console.log('Logout server-side falhou (sessão provavelmente já expirada):', error);
-      // Não importa - estados já foram limpos localmente
     }
   };
 
