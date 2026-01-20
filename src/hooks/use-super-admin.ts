@@ -103,6 +103,7 @@ export function useSuperAdmin() {
     onSuccess: (data) => {
       toast.success(`Organização "${data.organization.name}" criada com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
     onError: (error) => {
       toast.error('Erro ao criar organização: ' + error.message);
@@ -156,6 +157,7 @@ export function useSuperAdmin() {
     onSuccess: () => {
       toast.success('Organização excluída com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
     onError: (error) => {
       toast.error('Erro ao excluir organização: ' + error.message);
@@ -205,6 +207,54 @@ export function useSuperAdmin() {
     },
   });
 
+  // Update user (activate/deactivate)
+  const updateUser = useMutation({
+    mutationFn: async (data: { 
+      userId: string; 
+      is_active?: boolean;
+      organization_id?: string | null;
+    }) => {
+      const { userId, ...updates } = data;
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar usuário: ' + error.message);
+    },
+  });
+
+  // Delete user via edge function
+  const deleteUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: result, error } = await supabase.functions.invoke('manage-user', {
+        body: { action: 'delete', userId },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Erro ao excluir usuário');
+      }
+
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir usuário: ' + error.message);
+    },
+  });
+
   // Get stats
   const stats = {
     totalOrganizations: organizations?.length || 0,
@@ -224,5 +274,7 @@ export function useSuperAdmin() {
     updateOrganization,
     updateModuleAccess,
     deleteOrganization,
+    updateUser,
+    deleteUser,
   };
 }
