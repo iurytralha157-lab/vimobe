@@ -24,6 +24,7 @@ interface KPIData {
   closedLeads: number;
   avgResponseTime: string;
   totalSalesValue: number;
+  pendingCommissions: number;
   leadsTrend: number;
   conversionTrend: number;
   closedTrend: number;
@@ -188,12 +189,12 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
       value: data.conversionRate,
       trend: data.conversionTrend,
       icon: Target,
-      tooltip: 'Taxa de conversão (fechados/total)',
+      tooltip: 'Taxa de conversão (ganhos/total)',
       format: 'percent',
       accentColor: 'chart-2',
     },
     {
-      title: 'Fechados',
+      title: 'Ganhos',
       value: data.closedLeads,
       trend: data.closedTrend,
       icon: CheckCircle2,
@@ -209,28 +210,38 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
       format: 'time',
       accentColor: 'chart-4',
     },
-    {
-      title: 'Vendas',
-      value: data.totalSalesValue,
-      icon: DollarSign,
-      tooltip: `Valor total em vendas - ${periodLabel}`,
-      format: 'currency',
-      accentColor: 'chart-5',
-    },
   ];
 
-  const mainKpis = kpis.slice(0, 4);
-  const salesKpi = kpis.find(k => k.title === 'Vendas');
+  const salesKpi: KPICardItemProps = {
+    title: 'Vendas (VGV)',
+    value: data.totalSalesValue,
+    icon: DollarSign,
+    tooltip: `Valor total em vendas (VGV) - ${periodLabel}`,
+    format: 'currency',
+    accentColor: 'chart-5',
+  };
+
+  const commissionsKpi: KPICardItemProps = {
+    title: 'Comissões Pendentes',
+    value: data.pendingCommissions,
+    icon: DollarSign,
+    tooltip: 'Total de comissões a pagar (forecast + aprovadas)',
+    format: 'currency',
+    accentColor: 'chart-1',
+  };
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        {mainKpis.map((kpi) => (
+        {kpis.map((kpi) => (
           <KPICardItem key={kpi.title} {...kpi} />
         ))}
       </div>
-      {salesKpi && (
-        <KPICardItem {...salesKpi} isHighlighted />
+      {/* Sales VGV Card - Highlighted */}
+      <KPICardItem {...salesKpi} isHighlighted />
+      {/* Pending Commissions Card */}
+      {data.pendingCommissions > 0 && (
+        <KPICardItem {...commissionsKpi} />
       )}
     </div>
   );

@@ -18,6 +18,7 @@ export interface EnhancedDashboardStats {
   closedLeads: number;
   avgResponseTime: string;
   totalSalesValue: number;
+  pendingCommissions: number;
   leadsTrend: number;
   conversionTrend: number;
   closedTrend: number;
@@ -101,10 +102,10 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       const previousFrom = subDays(currentFrom, periodDays);
       const previousTo = subDays(currentTo, periodDays);
       
-      // Build base query for current period
+      // Build base query for current period - using deal_status for accurate conversion tracking
       let query = supabase
         .from('leads')
-        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, stages!inner(stage_key)')
+        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status')
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString());
 
@@ -142,6 +143,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           closedLeads: 0,
           avgResponseTime: '--',
           totalSalesValue: 0,
+          pendingCommissions: 0,
           leadsTrend: 0,
           conversionTrend: 0,
           closedTrend: 0,
@@ -151,7 +153,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       // Fetch previous period data for trends
       let previousQuery = supabase
         .from('leads')
-        .select('id, stage_id, stages!inner(stage_key)')
+        .select('id, deal_status')
         .gte('created_at', previousFrom.toISOString())
         .lte('created_at', previousTo.toISOString());
       
@@ -167,26 +169,32 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       
       const { data: previousLeads } = await previousQuery;
 
-      // Calculate current stats
+      // Fetch pending commissions
+      const { data: commissions } = await supabase
+        .from('commissions')
+        .select('amount, status')
+        .in('status', ['forecast', 'approved']);
+      
+      const pendingCommissions = commissions
+        ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
+
+      // Calculate current stats using deal_status instead of stage_key
       const totalLeads = leads?.length || 0;
-      const closedLeads = leads?.filter((l: any) => 
-        l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed' || l.stages?.stage_key === 'fechamento'
-      ).length || 0;
+      const closedLeads = leads?.filter((l: any) => l.deal_status === 'won').length || 0;
       
       const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
       
+      // Calculate total sales from won leads (using valor_interesse)
       const totalSalesValue = leads?.reduce((sum: number, l: any) => {
-        if (l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed' || l.stages?.stage_key === 'fechamento') {
+        if (l.deal_status === 'won') {
           return sum + (l.valor_interesse || 0);
         }
         return sum;
       }, 0) || 0;
 
-      // Calculate previous stats for trends
+      // Calculate previous stats for trends using deal_status
       const prevTotalLeads = previousLeads?.length || 0;
-      const prevClosedLeads = previousLeads?.filter((l: any) => 
-        l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed' || l.stages?.stage_key === 'fechamento'
-      ).length || 0;
+      const prevClosedLeads = previousLeads?.filter((l: any) => l.deal_status === 'won').length || 0;
       const prevConversionRate = prevTotalLeads > 0 ? Math.round((prevClosedLeads / prevTotalLeads) * 100) : 0;
 
       // Calculate trends (percentage change from previous period)
@@ -253,6 +261,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         closedLeads,
         avgResponseTime,
         totalSalesValue,
+        pendingCommissions,
         leadsTrend,
         conversionTrend,
         closedTrend,
@@ -343,16 +352,17 @@ export function useTopBrokers(filters?: DashboardFilters) {
   return useQuery({
     queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.teamId],
     queryFn: async (): Promise<TopBroker[]> => {
-      // Get leads with closed status
+      // Get leads with won status using deal_status
       let query = supabase
         .from('leads')
         .select(`
           assigned_user_id,
           valor_interesse,
-          stages!inner(stage_key),
+          deal_status,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
         `)
-        .not('assigned_user_id', 'is', null);
+        .not('assigned_user_id', 'is', null)
+        .eq('deal_status', 'won');
 
       if (filters?.dateRange) {
         query = query
@@ -367,12 +377,8 @@ export function useTopBrokers(filters?: DashboardFilters) {
         return [];
       }
 
-      // Filter closed leads and aggregate by user
-      const closedLeads = leads.filter((l: any) => 
-        l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed'
-      );
-
-      const brokerStats = closedLeads.reduce((acc: Record<string, TopBroker>, lead: any) => {
+      // Aggregate won leads by user
+      const brokerStats = leads.reduce((acc: Record<string, TopBroker>, lead: any) => {
         const userId = lead.assigned_user_id;
         if (!userId || !lead.user) return acc;
 

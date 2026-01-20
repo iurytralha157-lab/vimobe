@@ -44,7 +44,7 @@ export function useBrokerPerformance(dateRange?: DateRange) {
       if (usersError) throw usersError;
       if (!users || users.length === 0) return [];
 
-      // Fetch all leads assigned to users in the date range
+      // Fetch all leads assigned to users in the date range - using deal_status for accurate tracking
       const { data: leads, error: leadsError } = await supabase
         .from('leads')
         .select(`
@@ -52,7 +52,9 @@ export function useBrokerPerformance(dateRange?: DateRange) {
           assigned_user_id,
           created_at,
           stage_id,
-          stages!inner (
+          deal_status,
+          valor_interesse,
+          stages (
             stage_key
           )
         `)
@@ -100,20 +102,21 @@ export function useBrokerPerformance(dateRange?: DateRange) {
         const userLeads = leads?.filter(l => l.assigned_user_id === user.id) || [];
         const totalLeads = userLeads.length;
 
-        // Closed leads (stage_key = 'closed' or 'won')
-        const closedLeads = userLeads.filter(l => {
-          const stage = l.stages as { stage_key: string } | null;
-          return stage?.stage_key === 'closed' || stage?.stage_key === 'won';
-        }).length;
+        // Closed leads using deal_status = 'won' (more accurate than stage_key)
+        const closedLeads = userLeads.filter(l => l.deal_status === 'won').length;
 
         // Conversion rate
         const conversionRate = totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
 
-        // Active leads (not closed/lost)
-        const activeLeads = userLeads.filter(l => {
-          const stage = l.stages as { stage_key: string } | null;
-          return stage?.stage_key !== 'closed' && stage?.stage_key !== 'won' && stage?.stage_key !== 'lost';
-        }).length;
+        // Active leads (deal_status = 'open' or null)
+        const activeLeads = userLeads.filter(l => 
+          !l.deal_status || l.deal_status === 'open'
+        ).length;
+        
+        // Total sales from won leads (using valor_interesse)
+        const totalSalesFromLeads = userLeads
+          .filter(l => l.deal_status === 'won')
+          .reduce((sum, l) => sum + (l.valor_interesse || 0), 0);
 
         // Calculate average response time
         const responseTimes: number[] = [];
@@ -138,9 +141,10 @@ export function useBrokerPerformance(dateRange?: DateRange) {
           ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
           : null;
 
-        // Total sales
+        // Total sales - prioritize leads valor_interesse, fallback to contracts
         const userContracts = contracts?.filter(c => c.created_by === user.id) || [];
-        const totalSales = userContracts.reduce((sum, c) => sum + ((c as any).value || 0), 0);
+        const totalSalesFromContracts = userContracts.reduce((sum, c) => sum + ((c as any).value || 0), 0);
+        const totalSales = totalSalesFromLeads > 0 ? totalSalesFromLeads : totalSalesFromContracts;
 
         // Total commissions
         const userCommissions = commissions?.filter(c => c.user_id === user.id) || [];

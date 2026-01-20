@@ -25,6 +25,7 @@ import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useLeadMeta } from '@/hooks/use-lead-meta';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useFloatingChat } from '@/contexts/FloatingChatContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { EventsList } from '@/components/schedule/EventsList';
@@ -32,6 +33,7 @@ import { EventForm } from '@/components/schedule/EventForm';
 import { toast } from 'sonner';
 import { formatPhoneForDisplay } from '@/lib/phone-utils';
 import { TagSelectorPopoverContent } from '@/components/ui/tag-selector';
+import { useCreateCommissionOnWon } from '@/hooks/use-create-commission';
 const sourceLabels: Record<string, string> = {
   meta: 'Meta Ads',
   wordpress: 'WordPress',
@@ -185,6 +187,8 @@ export function LeadDetailDialog({
   const updateLead = useUpdateLead();
   const addTag = useAddLeadTag();
   const removeTag = useRemoveLeadTag();
+  const createCommission = useCreateCommissionOnWon();
+  const { profile } = useAuth();
   const handleEditScheduleEvent = (event: ScheduleEvent) => {
     setEditingScheduleEvent(event);
     setScheduleFormOpen(true);
@@ -442,11 +446,24 @@ export function LeadDetailDialog({
           <Select 
             value={lead.deal_status || 'open'} 
             onValueChange={async (value) => {
+              const previousStatus = lead.deal_status;
               await updateLead.mutateAsync({
                 id: lead.id,
                 deal_status: value,
                 lost_reason: value === 'lost' ? '' : null
               } as any);
+              
+              // Auto-create commission when status changes to 'won'
+              if (value === 'won' && previousStatus !== 'won' && profile?.organization_id) {
+                createCommission.mutate({
+                  leadId: lead.id,
+                  organizationId: profile.organization_id,
+                  userId: lead.assigned_user_id,
+                  propertyId: lead.property_id,
+                  valorInteresse: lead.valor_interesse
+                });
+              }
+              
               refetchStages();
             }}
           >
