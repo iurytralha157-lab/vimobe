@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
           })
           .eq("id", message.conversation_id);
 
-        // ===== FIRST RESPONSE TRACKING =====
+        // ===== FIRST RESPONSE & FIRST TOUCH TRACKING =====
         // Get the conversation to check if it has a lead_id
         const { data: convData } = await supabase
           .from("whatsapp_conversations")
@@ -211,6 +211,17 @@ Deno.serve(async (req) => {
         if (convData?.lead_id) {
           try {
             console.log(`Triggering first response calculation for lead ${convData.lead_id}`);
+            
+            // Mark first_touch_at for pool system (only if not already set)
+            await supabase
+              .from("leads")
+              .update({ first_touch_at: new Date().toISOString() })
+              .eq("id", convData.lead_id)
+              .is("first_touch_at", null);
+            
+            console.log(`Marked first touch for lead ${convData.lead_id}`);
+            
+            // Call calculate-first-response for SLA tracking
             await fetch(`${SUPABASE_URL}/functions/v1/calculate-first-response`, {
               method: "POST",
               headers: {
