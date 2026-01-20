@@ -18,8 +18,11 @@ export interface OrganizationWithStats {
 }
 
 export function useSuperAdmin() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
+
+  // Only enable queries when auth is not loading and user is super admin
+  const isReady = !authLoading && isSuperAdmin === true;
 
   // Fetch all organizations with stats
   const { data: organizations, isLoading: loadingOrgs } = useQuery({
@@ -57,7 +60,7 @@ export function useSuperAdmin() {
 
       return orgStats;
     },
-    enabled: isSuperAdmin,
+    enabled: isReady,
   });
 
   // Fetch all users across organizations
@@ -75,7 +78,7 @@ export function useSuperAdmin() {
       if (error) throw error;
       return data || [];
     },
-    enabled: isSuperAdmin,
+    enabled: isReady,
   });
 
   // Create new organization with admin user via edge function
