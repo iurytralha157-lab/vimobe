@@ -124,7 +124,15 @@ export default function Auth() {
 
           {/* LOGO + SUBTÍTULO */}
           <div className="flex flex-col items-center mb-5">
-            <img src="/logo.png" alt="Vetter CRM" className="h-16 w-auto mb-4" />
+            <img 
+              src="/logo.png" 
+              alt="Vetter CRM" 
+              className="h-16 w-auto mb-4" 
+              width={175}
+              height={64}
+              fetchPriority="high"
+              decoding="async"
+            />
             <p className="text-center text-xs text-foreground">
               {mode === 'login' 
                 ? 'Acesse seu sistema de gestão imobiliário' 
