@@ -108,12 +108,58 @@ Deno.serve(async (req) => {
     // Check if email already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select('id, organization_id, name')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
-      return new Response(JSON.stringify({ error: 'Um usuário com este email já existe' }), {
+      // If user exists without organization, add them to the current org
+      if (!existingUser.organization_id) {
+        const { error: updateError } = await supabaseAdmin
+          .from('users')
+          .update({
+            organization_id: targetOrgId,
+            role: role as 'admin' | 'user',
+            name: name || existingUser.name,
+            phone: phone || null,
+            endereco: endereco || null,
+            is_active: true,
+          })
+          .eq('id', existingUser.id);
+
+        if (updateError) {
+          console.error('Error updating orphan user:', updateError);
+          return new Response(JSON.stringify({ error: updateError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        console.log(`Orphan user ${email} added to org ${org.name}`);
+        return new Response(JSON.stringify({ 
+          success: true, 
+          user: {
+            id: existingUser.id,
+            email,
+            name: name || existingUser.name,
+            role,
+          },
+          wasOrphan: true,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // User already belongs to an organization
+      if (existingUser.organization_id === targetOrgId) {
+        return new Response(JSON.stringify({ error: 'Este usuário já pertence a esta organização' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: 'Este usuário já pertence a outra organização' }), {
         status: 409,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
