@@ -53,7 +53,7 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization } = useAuth();
   
   // Ainda carregando autenticação
   if (loading) {
@@ -78,12 +78,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Super admin sem impersonation e sem org -> admin panel
-  if (isSuperAdmin && !impersonating && !profile?.organization_id) {
+  // Super admin NEVER goes to onboarding - always to admin panel when no org
+  if (isSuperAdmin && !impersonating && !organization) {
     return <Navigate to="/admin" replace />;
   }
 
-  // Usuário regular sem organização -> onboarding
+  // Usuário regular sem organização -> onboarding (never super admin)
   if (!isSuperAdmin && profile && !profile.organization_id) {
     return <Navigate to="/onboarding" replace />;
   }
