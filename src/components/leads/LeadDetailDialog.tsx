@@ -485,14 +485,16 @@ export function LeadDetailDialog({
           {/* Lost reason inline input */}
           {lead.deal_status === 'lost' && (
             <Input 
-              value={lead.lost_reason || ''} 
-              onChange={async (e) => {
-                await updateLead.mutateAsync({
-                  id: lead.id,
-                  lost_reason: e.target.value
-                } as any);
+              defaultValue={lead.lost_reason || ''} 
+              onBlur={async (e) => {
+                if (e.target.value !== (lead.lost_reason || '')) {
+                  await updateLead.mutateAsync({
+                    id: lead.id,
+                    lost_reason: e.target.value
+                  } as any);
+                  refetchStages();
+                }
               }}
-              onBlur={() => refetchStages()}
               placeholder="Motivo da perda..."
               className="mt-2 rounded-xl text-sm border-red-200 dark:border-red-800"
             />

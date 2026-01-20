@@ -12,6 +12,7 @@ const LEAD_PIPELINE_FIELDS = `
   id, name, phone, email, source, created_at, 
   stage_id, assigned_user_id, pipeline_id, message,
   stage_entered_at,
+  deal_status, valor_interesse, property_id, lost_reason, won_at, lost_at,
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url)
 `;
 
