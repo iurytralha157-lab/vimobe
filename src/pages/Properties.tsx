@@ -54,6 +54,7 @@ interface FormData {
   iptu: string;
   seguro_incendio: string;
   taxa_de_servico: string;
+  commission_percentage: string;
   descricao: string;
   imagem_principal: string;
   fotos: string[];
@@ -90,6 +91,7 @@ const initialFormData: FormData = {
   iptu: '',
   seguro_incendio: '',
   taxa_de_servico: '',
+  commission_percentage: '',
   descricao: '',
   imagem_principal: '',
   fotos: [],
@@ -217,6 +219,7 @@ export default function Properties() {
       iptu: property.iptu?.toString() || '',
       seguro_incendio: property.seguro_incendio?.toString() || '',
       taxa_de_servico: property.taxa_de_servico?.toString() || '',
+      commission_percentage: (property as any).commission_percentage?.toString() || '',
       descricao: property.descricao || '',
       imagem_principal: property.imagem_principal || '',
       fotos: (property.fotos as string[]) || [],

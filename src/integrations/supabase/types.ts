@@ -1427,8 +1427,11 @@ export type Database = {
         Row: {
           assigned_user_id: string | null
           created_at: string
+          deal_status: string | null
           email: string | null
           id: string
+          lost_at: string | null
+          lost_reason: string | null
           message: string | null
           name: string
           organization_id: string
@@ -1440,12 +1443,17 @@ export type Database = {
           stage_entered_at: string | null
           stage_id: string | null
           updated_at: string
+          valor_interesse: number | null
+          won_at: string | null
         }
         Insert: {
           assigned_user_id?: string | null
           created_at?: string
+          deal_status?: string | null
           email?: string | null
           id?: string
+          lost_at?: string | null
+          lost_reason?: string | null
           message?: string | null
           name: string
           organization_id: string
@@ -1457,12 +1465,17 @@ export type Database = {
           stage_entered_at?: string | null
           stage_id?: string | null
           updated_at?: string
+          valor_interesse?: number | null
+          won_at?: string | null
         }
         Update: {
           assigned_user_id?: string | null
           created_at?: string
+          deal_status?: string | null
           email?: string | null
           id?: string
+          lost_at?: string | null
+          lost_reason?: string | null
           message?: string | null
           name?: string
           organization_id?: string
@@ -1474,6 +1487,8 @@ export type Database = {
           stage_entered_at?: string | null
           stage_id?: string | null
           updated_at?: string
+          valor_interesse?: number | null
+          won_at?: string | null
         }
         Relationships: [
           {
@@ -1869,6 +1884,7 @@ export type Database = {
           cep: string | null
           cidade: string | null
           code: string
+          commission_percentage: number | null
           complemento: string | null
           condominio: number | null
           created_at: string
@@ -1907,6 +1923,7 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           code: string
+          commission_percentage?: number | null
           complemento?: string | null
           condominio?: number | null
           created_at?: string
@@ -1945,6 +1962,7 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           code?: string
+          commission_percentage?: number | null
           complemento?: string | null
           condominio?: number | null
           created_at?: string
