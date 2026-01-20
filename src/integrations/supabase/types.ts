@@ -1709,37 +1709,52 @@ export type Database = {
       organizations: {
         Row: {
           accent_color: string | null
+          admin_notes: string | null
           created_at: string
           created_by: string | null
           id: string
+          is_active: boolean
+          last_access_at: string | null
           logo_size: number | null
           logo_url: string | null
+          max_users: number
           name: string
           segment: string | null
+          subscription_status: string
           theme_mode: string | null
           updated_at: string
         }
         Insert: {
           accent_color?: string | null
+          admin_notes?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          is_active?: boolean
+          last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
+          max_users?: number
           name: string
           segment?: string | null
+          subscription_status?: string
           theme_mode?: string | null
           updated_at?: string
         }
         Update: {
           accent_color?: string | null
+          admin_notes?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          is_active?: boolean
+          last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
+          max_users?: number
           name?: string
           segment?: string | null
+          subscription_status?: string
           theme_mode?: string | null
           updated_at?: string
         }

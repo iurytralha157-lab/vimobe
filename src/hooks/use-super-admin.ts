@@ -86,24 +86,16 @@ export function useSuperAdmin() {
       adminName: string; 
       adminPassword: string;
     }) => {
-      const { data: session } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-organization-admin`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session?.access_token}`,
-          },
-          body: JSON.stringify(data),
-        }
-      );
+      const { data: result, error } = await supabase.functions.invoke('create-organization-admin', {
+        body: data,
+      });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao criar organização');
+      if (error) {
+        throw new Error(error.message || 'Erro ao criar organização');
+      }
+
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
       return result;
@@ -147,24 +139,16 @@ export function useSuperAdmin() {
   // Delete organization via edge function (bypasses RLS)
   const deleteOrganization = useMutation({
     mutationFn: async (organizationId: string) => {
-      const { data: session } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-organization`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.session?.access_token}`,
-          },
-          body: JSON.stringify({ organizationId }),
-        }
-      );
+      const { data: result, error } = await supabase.functions.invoke('delete-organization', {
+        body: { organizationId },
+      });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao excluir organização');
+      if (error) {
+        throw new Error(error.message || 'Erro ao excluir organização');
+      }
+
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
       return result;
