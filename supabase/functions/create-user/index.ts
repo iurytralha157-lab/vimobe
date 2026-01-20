@@ -137,10 +137,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Create user profile in users table
+    // 2. Create/update user profile in users table (upsert to handle auth trigger race condition)
     const { error: userError } = await supabaseAdmin
       .from('users')
-      .insert({
+      .upsert({
         id: authData.user.id,
         email,
         name,
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
         role: role as 'admin' | 'user',
         organization_id: targetOrgId,
         is_active: true,
-      });
+      }, { onConflict: 'id' });
 
     if (userError) {
       // Rollback: delete auth user
