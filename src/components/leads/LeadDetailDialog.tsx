@@ -31,6 +31,7 @@ import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
 import { toast } from 'sonner';
 import { formatPhoneForDisplay } from '@/lib/phone-utils';
+import { TagSelectorPopoverContent } from '@/components/ui/tag-selector';
 const sourceLabels: Record<string, string> = {
   meta: 'Meta Ads',
   wordpress: 'WordPress',
@@ -436,44 +437,39 @@ export function LeadDetailDialog({
           </PopoverContent>
         </Popover>
 
-        {/* Tags Row */}
-        {(lead.tags?.length > 0 || availableTags.length > 0) && <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            {lead.tags?.slice(0, 3).map((tag: any) => <Badge key={tag.id} className="flex items-center gap-1 pr-1 py-0.5 text-xs rounded-full" style={{
-          backgroundColor: `${tag.color}15`,
-          color: tag.color,
-          borderColor: `${tag.color}30`
-        }}>
-                <div className="h-1.5 w-1.5 rounded-full" style={{
-            backgroundColor: tag.color
-          }} />
-                {tag.name}
-                <button onClick={() => handleRemoveTag(tag.id)} className="ml-0.5 p-0.5 hover:bg-black/10 rounded-full">
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>)}
-            {lead.tags?.length > 3 && <Badge variant="secondary" className="text-xs py-0.5">
-                +{lead.tags.length - 3}
-              </Badge>}
-            <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 px-2 rounded-full text-xs border border-dashed">
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-2" align="start">
-                {availableTags.length === 0 ? <p className="text-sm text-muted-foreground text-center py-2">
-                    Nenhuma tag disponível
-                  </p> : <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {availableTags.map(tag => <button key={tag.id} onClick={() => handleAddTag(tag.id)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent text-left text-sm">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{
-                  backgroundColor: tag.color
-                }} />
-                        {tag.name}
-                      </button>)}
-                  </div>}
-              </PopoverContent>
-            </Popover>
-          </div>}
+        {/* Tags Row - Using TagSelector for inline creation */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          {lead.tags?.slice(0, 3).map((tag: any) => <Badge key={tag.id} className="flex items-center gap-1 pr-1 py-0.5 text-xs rounded-full" style={{
+            backgroundColor: `${tag.color}15`,
+            color: tag.color,
+            borderColor: `${tag.color}30`
+          }}>
+            <div className="h-1.5 w-1.5 rounded-full" style={{
+              backgroundColor: tag.color
+            }} />
+            {tag.name}
+            <button onClick={() => handleRemoveTag(tag.id)} className="ml-0.5 p-0.5 hover:bg-black/10 rounded-full">
+              <X className="h-2.5 w-2.5" />
+            </button>
+          </Badge>)}
+          {lead.tags?.length > 3 && <Badge variant="secondary" className="text-xs py-0.5">
+            +{lead.tags.length - 3}
+          </Badge>}
+          <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 px-2 rounded-full text-xs border border-dashed">
+                <Plus className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="start">
+              <TagSelectorPopoverContent
+                availableTags={availableTags}
+                onAddTag={handleAddTag}
+                onClose={() => setTagPopoverOpen(false)}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
 
         {/* First Response Badge - Compact */}
         {lead.first_response_seconds !== null && lead.first_response_seconds !== undefined && <div className="flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-yellow-500/20 w-fit">
