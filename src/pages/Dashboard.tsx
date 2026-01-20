@@ -87,6 +87,7 @@ export default function Dashboard() {
     closedLeads: 0,
     avgResponseTime: '--',
     totalSalesValue: 0,
+    pendingCommissions: 0,
     leadsTrend: 0,
     conversionTrend: 0,
     closedTrend: 0,
