@@ -59,7 +59,11 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
+  Tags,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ContactCard } from '@/components/contacts/ContactCard';
 import { MobileFilters } from '@/components/contacts/MobileFilters';
@@ -91,6 +95,10 @@ export default function Contacts() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
   const [pageInputValue, setPageInputValue] = useState('1');
+  
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   // Pagination & Sort states
   const [page, setPage] = useState(1);
@@ -152,6 +160,35 @@ export default function Contacts() {
     setCreatedFrom('');
     setCreatedTo('');
     setPage(1);
+  };
+
+  // Clear selection when data changes
+  const clearSelection = () => setSelectedIds(new Set());
+  
+  const toggleSelectAll = () => {
+    if (selectedIds.size === contacts.length && contacts.length > 0) {
+      clearSelection();
+    } else {
+      setSelectedIds(new Set(contacts.map(c => c.id)));
+    }
+  };
+  
+  const toggleSelectOne = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+  
+  const handleBulkDelete = async () => {
+    for (const id of selectedIds) {
+      await deleteLead.mutateAsync(id);
+    }
+    clearSelection();
+    setBulkDeleteDialogOpen(false);
   };
 
   const hasActiveFilters = search || selectedPipeline !== 'all' || selectedStage !== 'all' || 
@@ -430,6 +467,12 @@ export default function Contacts() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={selectedIds.size === contacts.length && contacts.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-accent/50 transition-colors"
                     onClick={() => handleSort('name')}
@@ -491,7 +534,19 @@ export default function Contacts() {
               ) : (
                 <tbody>
                   {contacts.map((contact) => (
-                    <TableRow key={contact.id} className="cursor-pointer hover:bg-accent/50">
+                    <TableRow 
+                      key={contact.id} 
+                      className={cn(
+                        "cursor-pointer hover:bg-accent/50",
+                        selectedIds.has(contact.id) && "bg-accent/30"
+                      )}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(contact.id)}
+                          onCheckedChange={() => toggleSelectOne(contact.id)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <p className="font-medium">{contact.name}</p>
@@ -777,6 +832,61 @@ export default function Contacts() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        
+        {/* Bulk Delete Confirmation */}
+        <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir {selectedIds.size} contato(s)?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Todos os dados relacionados a estes contatos 
+                (histórico, tarefas, atividades, mensagens) serão removidos permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleBulkDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir {selectedIds.size} contato(s)
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        
+        {/* Bulk Action Bar */}
+        {selectedIds.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
+            <Card className="shadow-lg border-primary/20">
+              <CardContent className="flex items-center gap-4 py-3 px-5">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {selectedIds.size} selecionado(s)
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-border" />
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={() => setBulkDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={clearSelection}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Cancelar
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
