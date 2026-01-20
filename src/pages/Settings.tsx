@@ -113,12 +113,13 @@ export default function Settings() {
     
     setDeletingUser(true);
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userToDelete.id);
+      // Use Edge Function to properly delete user from both auth and public tables
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: userToDelete.id }
+      });
       
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao excluir usuário');
       
       toast.success('Usuário excluído com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['organization-users'] });

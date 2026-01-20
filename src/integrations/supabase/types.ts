@@ -3339,6 +3339,10 @@ export type Database = {
         }[]
       }
       normalize_phone: { Args: { phone_input: string }; Returns: string }
+      redistribute_lead_from_pool: {
+        Args: { p_lead_id: string; p_reason?: string }
+        Returns: Json
+      }
       user_belongs_to_organization: {
         Args: { org_id: string }
         Returns: boolean
