@@ -19,6 +19,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -40,7 +50,8 @@ import {
   Settings2,
   ExternalLink,
   MessageCircle,
-  Smartphone
+  Smartphone,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -85,6 +96,9 @@ export default function Settings() {
   const [newUserEndereco, setNewUserEndereco] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
   const [creatingUser, setCreatingUser] = useState(false);
+  const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   const handleToggleUserActive = async (userId: string, currentValue: boolean) => {
     await updateUser.mutateAsync({ id: userId, is_active: !currentValue });
@@ -92,6 +106,29 @@ export default function Settings() {
 
   const handleUpdateUserRole = async (userId: string, role: 'admin' | 'user') => {
     await updateUser.mutateAsync({ id: userId, role });
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    setDeletingUser(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success('Usuário excluído com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['organization-users'] });
+      setDeleteUserDialogOpen(false);
+      setUserToDelete(null);
+    } catch (error: any) {
+      toast.error('Erro ao excluir usuário: ' + error.message);
+    } finally {
+      setDeletingUser(false);
+    }
   };
 
   const handleCreateUser = async () => {
@@ -391,7 +428,7 @@ export default function Settings() {
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                           {profile?.role === 'admin' ? (
                             <>
                               <Select 
@@ -412,6 +449,18 @@ export default function Settings() {
                                 onCheckedChange={() => handleToggleUserActive(user.id, user.is_active || false)}
                                 disabled={user.id === profile?.id}
                               />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => {
+                                  setUserToDelete({ id: user.id, name: user.name });
+                                  setDeleteUserDialogOpen(true);
+                                }}
+                                disabled={user.id === profile?.id}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </>
                           ) : (
                             <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
@@ -425,6 +474,30 @@ export default function Settings() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Delete User Confirmation Dialog */}
+            <AlertDialog open={deleteUserDialogOpen} onOpenChange={setDeleteUserDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir o usuário <strong>{userToDelete?.name}</strong>? 
+                    Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deletingUser}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleDeleteUser}
+                    disabled={deletingUser}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deletingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
 
           {/* Meta Integration Tab */}
