@@ -102,30 +102,26 @@ export default function Settings() {
 
     setCreatingUser(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            name: newUserName.trim(),
-            email: newUserEmail.trim(),
-            phone: newUserPhone.trim() || undefined,
-            endereco: newUserEndereco.trim() || undefined,
-            role: newUserRole,
-          }),
-        }
-      );
+      if (sessionError || !session?.access_token) {
+        toast.error('Sua sessão expirou. Por favor, faça login novamente.');
+        window.location.href = '/auth';
+        return;
+      }
+      
+      const { data: result, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          name: newUserName.trim(),
+          email: newUserEmail.trim(),
+          phone: newUserPhone.trim() || undefined,
+          endereco: newUserEndereco.trim() || undefined,
+          role: newUserRole,
+        },
+      });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao criar usuário');
+      if (error) {
+        throw new Error(error.message || 'Erro ao criar usuário');
       }
 
       toast.success(`Usuário criado! Senha padrão: ${result.defaultPassword}`);
@@ -137,7 +133,13 @@ export default function Settings() {
       setNewUserEndereco('');
       setNewUserRole('user');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao criar usuário');
+      const errorMessage = error.message || 'Erro ao criar usuário';
+      if (errorMessage.includes('SESSION_EXPIRED') || errorMessage.includes('Unauthorized')) {
+        toast.error('Sua sessão expirou. Por favor, faça login novamente.');
+        window.location.href = '/auth';
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setCreatingUser(false);
     }
