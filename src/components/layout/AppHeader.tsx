@@ -234,7 +234,15 @@ export function AppHeader({ title }: AppHeaderProps) {
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              onClick={signOut}
+              onClick={async () => {
+                try {
+                  await signOut();
+                } catch (error) {
+                  console.error('Erro no logout:', error);
+                }
+                // Sempre navegar para /auth após tentativa de logout
+                window.location.href = '/auth';
+              }}
               className="text-destructive focus:text-destructive cursor-pointer"
             >
               <LogOut className="h-4 w-4 mr-2" />
