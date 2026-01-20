@@ -91,16 +91,22 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   return useQuery({
     queryKey: ['enhanced-dashboard-stats', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
     queryFn: async (): Promise<EnhancedDashboardStats> => {
+      // Calculate date ranges for current and previous periods
+      const now = new Date();
+      const currentFrom = filters?.dateRange?.from || subDays(now, 30);
+      const currentTo = filters?.dateRange?.to || now;
+      
+      // Calculate previous period (same duration, before current period)
+      const periodDays = Math.ceil((currentTo.getTime() - currentFrom.getTime()) / (1000 * 60 * 60 * 24));
+      const previousFrom = subDays(currentFrom, periodDays);
+      const previousTo = subDays(currentTo, periodDays);
+      
+      // Build base query for current period
       let query = supabase
         .from('leads')
-        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, stages!inner(stage_key)');
-
-      // Apply date filter
-      if (filters?.dateRange) {
-        query = query
-          .gte('created_at', filters.dateRange.from.toISOString())
-          .lte('created_at', filters.dateRange.to.toISOString());
-      }
+        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, stages!inner(stage_key)')
+        .gte('created_at', currentFrom.toISOString())
+        .lte('created_at', currentTo.toISOString());
 
       // Apply user filter
       if (filters?.userId) {
@@ -113,15 +119,15 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       }
 
       // Apply team filter
+      let memberIds: string[] = [];
       if (filters?.teamId) {
-        // Get team members first
         const { data: teamMembers } = await supabase
           .from('team_members')
           .select('user_id')
           .eq('team_id', filters.teamId);
         
         if (teamMembers && teamMembers.length > 0) {
-          const memberIds = teamMembers.map(m => m.user_id);
+          memberIds = teamMembers.map(m => m.user_id);
           query = query.in('assigned_user_id', memberIds);
         }
       }
@@ -142,31 +148,114 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         };
       }
 
+      // Fetch previous period data for trends
+      let previousQuery = supabase
+        .from('leads')
+        .select('id, stage_id, stages!inner(stage_key)')
+        .gte('created_at', previousFrom.toISOString())
+        .lte('created_at', previousTo.toISOString());
+      
+      if (filters?.userId) {
+        previousQuery = previousQuery.eq('assigned_user_id', filters.userId);
+      }
+      if (filters?.source) {
+        previousQuery = previousQuery.eq('source', filters.source as any);
+      }
+      if (memberIds.length > 0) {
+        previousQuery = previousQuery.in('assigned_user_id', memberIds);
+      }
+      
+      const { data: previousLeads } = await previousQuery;
+
+      // Calculate current stats
       const totalLeads = leads?.length || 0;
       const closedLeads = leads?.filter((l: any) => 
-        l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed'
+        l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed' || l.stages?.stage_key === 'fechamento'
       ).length || 0;
       
       const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
       
       const totalSalesValue = leads?.reduce((sum: number, l: any) => {
-        if (l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed') {
+        if (l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed' || l.stages?.stage_key === 'fechamento') {
           return sum + (l.valor_interesse || 0);
         }
         return sum;
       }, 0) || 0;
 
-      // TODO: Calculate real trends comparing with previous period
-      // For now, using mock data
+      // Calculate previous stats for trends
+      const prevTotalLeads = previousLeads?.length || 0;
+      const prevClosedLeads = previousLeads?.filter((l: any) => 
+        l.stages?.stage_key === 'won' || l.stages?.stage_key === 'closed' || l.stages?.stage_key === 'fechamento'
+      ).length || 0;
+      const prevConversionRate = prevTotalLeads > 0 ? Math.round((prevClosedLeads / prevTotalLeads) * 100) : 0;
+
+      // Calculate trends (percentage change from previous period)
+      const leadsTrend = prevTotalLeads > 0 
+        ? Math.round(((totalLeads - prevTotalLeads) / prevTotalLeads) * 100) 
+        : totalLeads > 0 ? 100 : 0;
+      
+      const conversionTrend = prevConversionRate > 0 
+        ? conversionRate - prevConversionRate 
+        : conversionRate;
+      
+      const closedTrend = prevClosedLeads > 0 
+        ? Math.round(((closedLeads - prevClosedLeads) / prevClosedLeads) * 100) 
+        : closedLeads > 0 ? 100 : 0;
+
+      // Calculate average response time from activities
+      let avgResponseTime = '--';
+      try {
+        const leadIds = leads?.map((l: any) => l.id) || [];
+        if (leadIds.length > 0) {
+          const { data: activities } = await supabase
+            .from('activities')
+            .select('lead_id, created_at')
+            .in('lead_id', leadIds.slice(0, 100)) // Limit for performance
+            .order('created_at', { ascending: true });
+          
+          if (activities && activities.length > 0) {
+            // Get first activity for each lead
+            const firstActivities = new Map<string, Date>();
+            activities.forEach((a: any) => {
+              if (!firstActivities.has(a.lead_id)) {
+                firstActivities.set(a.lead_id, new Date(a.created_at));
+              }
+            });
+            
+            // Calculate response times
+            const responseTimes: number[] = [];
+            leads?.forEach((lead: any) => {
+              const firstActivity = firstActivities.get(lead.id);
+              if (firstActivity) {
+                const leadCreated = new Date(lead.created_at);
+                const diff = firstActivity.getTime() - leadCreated.getTime();
+                if (diff > 0) {
+                  responseTimes.push(diff);
+                }
+              }
+            });
+            
+            if (responseTimes.length > 0) {
+              const avgMs = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+              const hours = Math.floor(avgMs / (1000 * 60 * 60));
+              const minutes = Math.floor((avgMs % (1000 * 60 * 60)) / (1000 * 60));
+              avgResponseTime = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error calculating avg response time:', e);
+      }
+
       return {
         totalLeads,
         conversionRate,
         closedLeads,
-        avgResponseTime: '2h 30m', // TODO: Calculate from activities
+        avgResponseTime,
         totalSalesValue,
-        leadsTrend: Math.round(Math.random() * 20) - 5,
-        conversionTrend: Math.round(Math.random() * 10) - 3,
-        closedTrend: Math.round(Math.random() * 15) - 5,
+        leadsTrend,
+        conversionTrend,
+        closedTrend,
       };
     },
     staleTime: 1000 * 60 * 5,
