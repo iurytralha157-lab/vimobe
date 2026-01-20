@@ -43,8 +43,8 @@ import {
 import { useWebhooks, useCreateWebhook, useUpdateWebhook, useDeleteWebhook, useToggleWebhook, useRegenerateToken } from '@/hooks/use-webhooks';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useTeams } from '@/hooks/use-teams';
-import { useTags } from '@/hooks/use-tags';
 import { useProperties } from '@/hooks/use-properties';
+import { InlineTagSelector } from '@/components/ui/tag-selector';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -53,7 +53,6 @@ export function WebhooksTab() {
   const { data: webhooks = [], isLoading } = useWebhooks();
   const { data: pipelines = [] } = usePipelines();
   const { data: teams = [] } = useTeams();
-  const { data: tags = [] } = useTags();
   const { data: properties = [] } = useProperties();
   const createWebhook = useCreateWebhook();
   const updateWebhook = useUpdateWebhook();
@@ -517,37 +516,17 @@ export function WebhooksTab() {
 
             <div className="space-y-2">
               <Label>Tags Automáticas</Label>
-              <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[42px]">
-                {tags.length === 0 ? (
-                  <span className="text-sm text-muted-foreground">Nenhuma tag disponível</span>
-                ) : (
-                  tags.map((tag) => {
-                    const isSelected = formData.target_tag_ids.includes(tag.id);
-                    return (
-                      <Badge
-                        key={tag.id}
-                        variant={isSelected ? "default" : "outline"}
-                        className="cursor-pointer transition-all"
-                        style={{
-                          backgroundColor: isSelected ? tag.color : 'transparent',
-                          borderColor: tag.color,
-                          color: isSelected ? 'white' : tag.color,
-                        }}
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            target_tag_ids: isSelected
-                              ? prev.target_tag_ids.filter(id => id !== tag.id)
-                              : [...prev.target_tag_ids, tag.id]
-                          }));
-                        }}
-                      >
-                        {tag.name}
-                      </Badge>
-                    );
-                  })
-                )}
-              </div>
+              <InlineTagSelector
+                selectedTagIds={formData.target_tag_ids}
+                onToggleTag={(tagId) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    target_tag_ids: prev.target_tag_ids.includes(tagId)
+                      ? prev.target_tag_ids.filter(id => id !== tagId)
+                      : [...prev.target_tag_ids, tagId]
+                  }));
+                }}
+              />
               <p className="text-xs text-muted-foreground">
                 Clique nas tags para selecioná-las. Serão aplicadas automaticamente aos leads recebidos.
               </p>

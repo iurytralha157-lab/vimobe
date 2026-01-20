@@ -23,10 +23,10 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Search, X } from "lucide-react";
 import { usePipelines, useStages } from "@/hooks/use-stages";
-import { useTags } from "@/hooks/use-tags";
 import { useProperties } from "@/hooks/use-properties";
 import { useUsers } from "@/hooks/use-users";
 import { useSaveFormConfig, MetaForm, MetaFormConfig } from "@/hooks/use-meta-forms";
+import { InlineTagSelector } from "@/components/ui/tag-selector";
 
 interface MetaFormConfigDialogProps {
   open: boolean;
@@ -76,7 +76,6 @@ export function MetaFormConfigDialog({
   // Data hooks
   const { data: pipelines } = usePipelines();
   const { data: stages } = useStages(pipelineId || undefined);
-  const { data: tags } = useTags();
   const { data: properties } = useProperties();
   const { data: users } = useUsers();
   const saveConfig = useSaveFormConfig();
@@ -310,27 +309,10 @@ export function MetaFormConfigDialog({
                 Estas tags serão automaticamente aplicadas aos leads
               </p>
               
-              <div className="flex flex-wrap gap-2">
-                {tags?.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    style={{
-                      backgroundColor: selectedTags.includes(tag.id) ? tag.color : undefined,
-                      borderColor: tag.color,
-                    }}
-                    onClick={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                  </Badge>
-                ))}
-                {(!tags || tags.length === 0) && (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma tag criada. Crie tags em Gestão do CRM.
-                  </p>
-                )}
-              </div>
+              <InlineTagSelector
+                selectedTagIds={selectedTags}
+                onToggleTag={toggleTag}
+              />
             </div>
 
             <Separator />
