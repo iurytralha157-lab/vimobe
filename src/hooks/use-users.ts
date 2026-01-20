@@ -28,15 +28,32 @@ export function useUpdateUser() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<User> & { id: string }) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('users')
         .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+        .eq('id', id);
       
       if (error) throw error;
-      return data;
+      
+      // Sync with user_roles table if role changed
+      if (updates.role) {
+        // Remove old roles first (admin/user, keep super_admin)
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', id)
+          .in('role', ['admin', 'user']);
+        
+        // Add new role
+        await supabase
+          .from('user_roles')
+          .insert({ 
+            user_id: id, 
+            role: updates.role as 'admin' | 'user'
+          });
+      }
+      
+      return { id, ...updates };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-users'] });
