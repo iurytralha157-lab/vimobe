@@ -60,6 +60,7 @@ interface FormData {
   iptu: string;
   seguro_incendio: string;
   taxa_de_servico: string;
+  commission_percentage: string;
   descricao: string;
   imagem_principal: string;
   fotos: string[];
@@ -533,6 +534,26 @@ export function PropertyFormDialog({
                   placeholder="100"
                   value={formData.taxa_de_servico}
                   onChange={(e) => setFormData({ ...formData, taxa_de_servico: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            {/* Commission Percentage Field */}
+            <div className="p-4 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
+              <div className="space-y-2">
+                <Label className="text-orange-700 dark:text-orange-300">Comissão da Imobiliária (%)</Label>
+                <p className="text-xs text-orange-600 dark:text-orange-400">
+                  Percentual que a construtora/proprietário paga para a imobiliária
+                </p>
+                <Input 
+                  type="number" 
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  placeholder="5"
+                  value={formData.commission_percentage}
+                  onChange={(e) => setFormData({ ...formData, commission_percentage: e.target.value })}
+                  className="border-orange-200 dark:border-orange-700 focus:border-orange-400"
                 />
               </div>
             </div>

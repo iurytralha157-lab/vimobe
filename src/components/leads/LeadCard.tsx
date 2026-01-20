@@ -7,7 +7,9 @@ import {
   Clock,
   CheckCircle,
   User,
-  Zap
+  Zap,
+  Trophy,
+  XCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
@@ -23,6 +25,13 @@ import {
 import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { formatPhoneForDisplay } from '@/lib/phone-utils';
 import { SlaBadge } from './SlaBadge';
+
+// Deal status labels and colors
+const dealStatusConfig = {
+  open: { label: 'Aberto', color: 'bg-muted text-muted-foreground', icon: null },
+  won: { label: 'Ganho', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300', icon: Trophy },
+  lost: { label: 'Perdido', color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300', icon: XCircle },
+};
 
 interface LeadCardProps {
   lead: any;
@@ -126,21 +135,43 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
           )}
           onClick={onClick}
         >
-          {/* Tags - primeira tag em destaque */}
-          {lead.tags && lead.tags.length > 0 && (
-            <div className="flex items-center gap-1 mb-2">
+          {/* Deal Status Badge + Tags */}
+          <div className="flex items-center gap-1 mb-2 flex-wrap">
+            {/* Deal Status Badge */}
+            {lead.deal_status && lead.deal_status !== 'open' && (
               <Badge 
                 variant="secondary" 
-                className="text-[9px] px-1.5 py-0 font-medium"
-                style={{ backgroundColor: `${lead.tags[0].color}20`, color: lead.tags[0].color, borderColor: lead.tags[0].color }}
+                className={cn(
+                  "text-[9px] px-1.5 py-0 font-medium flex items-center gap-0.5",
+                  dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color
+                )}
               >
-                {lead.tags[0].name}
+                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.icon && (
+                  (() => {
+                    const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
+                    return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
+                  })()
+                )}
+                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.label}
               </Badge>
-              {lead.tags.length > 1 && (
-                <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>
-              )}
-            </div>
-          )}
+            )}
+            
+            {/* Tags - primeira tag em destaque */}
+            {lead.tags && lead.tags.length > 0 && (
+              <>
+                <Badge 
+                  variant="secondary" 
+                  className="text-[9px] px-1.5 py-0 font-medium"
+                  style={{ backgroundColor: `${lead.tags[0].color}20`, color: lead.tags[0].color, borderColor: lead.tags[0].color }}
+                >
+                  {lead.tags[0].name}
+                </Badge>
+                {lead.tags.length > 1 && (
+                  <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Nome do Lead + Avatar com foto do WhatsApp */}
           <div className="flex items-start justify-between mb-2">

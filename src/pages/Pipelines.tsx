@@ -63,8 +63,19 @@ import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
 import { useAssignLeadRoundRobin } from '@/hooks/use-assign-lead-roundrobin';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
+import { useStageVGV } from '@/hooks/use-vgv';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+// Helper to format currency compactly
+const formatCompactCurrency = (value: number): string => {
+  if (value >= 1000000) {
+    return `R$${(value / 1000000).toFixed(1)}M`;
+  } else if (value >= 1000) {
+    return `R$${(value / 1000).toFixed(0)}K`;
+  }
+  return `R$${value.toFixed(0)}`;
+};
 
 export default function Pipelines() {
   const location = useLocation();
@@ -120,10 +131,19 @@ export default function Pipelines() {
   const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined);
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
+  const { data: stageVGVData = [] } = useStageVGV(selectedPipelineId || undefined);
   const createLead = useCreateLead();
   const assignLeadRoundRobin = useAssignLeadRoundRobin();
   const canEditPipeline = useCanEditCadences();
   
+  // Create a map for quick VGV lookup by stage
+  const stageVGVMap = useMemo(() => {
+    const map = new Map<string, { totalVGV: number; openVGV: number }>();
+    for (const item of stageVGVData) {
+      map.set(item.stageId, { totalVGV: item.totalVGV, openVGV: item.openVGV });
+    }
+    return map;
+  }, [stageVGVData]);
   
   const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
   const isLoading = pipelinesLoading || stagesLoading;
@@ -571,6 +591,24 @@ export default function Pipelines() {
                       >
                         {stage.leads?.length || 0}
                       </Badge>
+                      {/* VGV Badge */}
+                      {stageVGVMap.get(stage.id)?.openVGV ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge 
+                                variant="outline" 
+                                className="text-[10px] shrink-0 bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800"
+                              >
+                                {formatCompactCurrency(stageVGVMap.get(stage.id)?.openVGV || 0)}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">VGV em aberto neste estágio</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button 

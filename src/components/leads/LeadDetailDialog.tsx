@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
@@ -952,6 +952,67 @@ export function LeadDetailDialog({
 
           {/* Deal Tab */}
           {activeTab === 'deal' && <div className="space-y-4">
+              {/* Deal Status Section */}
+              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Status do Negócio</Label>
+                  <Select 
+                    value={lead.deal_status || 'open'} 
+                    onValueChange={async (value) => {
+                      await updateLead.mutateAsync({
+                        id: lead.id,
+                        deal_status: value,
+                        lost_reason: value === 'lost' ? '' : null
+                      } as any);
+                      refetchStages();
+                    }}
+                  >
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Selecionar status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">
+                        <span className="flex items-center gap-2">
+                          <CircleDot className="h-4 w-4 text-muted-foreground" />
+                          Aberto
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="won">
+                        <span className="flex items-center gap-2">
+                          <Trophy className="h-4 w-4 text-emerald-600" />
+                          Ganho
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="lost">
+                        <span className="flex items-center gap-2">
+                          <XCircle className="h-4 w-4 text-red-600" />
+                          Perdido
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Lost Reason - show only when status is lost */}
+                {lead.deal_status === 'lost' && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Motivo da Perda</Label>
+                    <Input 
+                      value={lead.lost_reason || ''} 
+                      onChange={async (e) => {
+                        await updateLead.mutateAsync({
+                          id: lead.id,
+                          lost_reason: e.target.value
+                        } as any);
+                      }}
+                      onBlur={() => refetchStages()}
+                      placeholder="Ex: Preço alto, escolheu concorrente..."
+                      className="rounded-xl"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
                 <div>
                   <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
@@ -1004,7 +1065,25 @@ export function LeadDetailDialog({
                 </div>
               </div>
 
-              {lead.valor_interesse > 0 && <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-4">
+              {/* Deal Status Summary Card */}
+              {lead.deal_status === 'won' && lead.valor_interesse > 0 && (
+                <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30 border border-emerald-200 dark:border-emerald-800 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                      <Trophy className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
+                        R$ {lead.valor_interesse.toLocaleString('pt-BR')}
+                      </p>
+                      <p className="text-sm text-emerald-600 dark:text-emerald-400">Negócio Fechado!</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {lead.deal_status !== 'won' && lead.valor_interesse > 0 && (
+                <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
                       <DollarSign className="h-6 w-6 text-primary" />
@@ -1016,7 +1095,8 @@ export function LeadDetailDialog({
                       <p className="text-sm text-muted-foreground">Valor de interesse</p>
                     </div>
                   </div>
-                </div>}
+                </div>
+              )}
             </div>}
 
           {/* History Tab */}
@@ -1533,6 +1613,67 @@ export function LeadDetailDialog({
           {/* Deal Tab */}
           <TabsContent value="deal" className="p-6 mt-0">
             <div className="space-y-4">
+              {/* Deal Status Section */}
+              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-2 block">Status do Negócio</Label>
+                  <Select 
+                    value={lead.deal_status || 'open'} 
+                    onValueChange={async (value) => {
+                      await updateLead.mutateAsync({
+                        id: lead.id,
+                        deal_status: value,
+                        lost_reason: value === 'lost' ? '' : null
+                      } as any);
+                      refetchStages();
+                    }}
+                  >
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Selecionar status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">
+                        <span className="flex items-center gap-2">
+                          <CircleDot className="h-4 w-4 text-muted-foreground" />
+                          Aberto
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="won">
+                        <span className="flex items-center gap-2">
+                          <Trophy className="h-4 w-4 text-emerald-600" />
+                          Ganho
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="lost">
+                        <span className="flex items-center gap-2">
+                          <XCircle className="h-4 w-4 text-red-600" />
+                          Perdido
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Lost Reason - show only when status is lost */}
+                {lead.deal_status === 'lost' && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Motivo da Perda</Label>
+                    <Input 
+                      value={lead.lost_reason || ''} 
+                      onChange={async (e) => {
+                        await updateLead.mutateAsync({
+                          id: lead.id,
+                          lost_reason: e.target.value
+                        } as any);
+                      }}
+                      onBlur={() => refetchStages()}
+                      placeholder="Ex: Preço alto, escolheu concorrente..."
+                      className="rounded-xl"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
                 <div>
                   <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
@@ -1585,7 +1726,25 @@ export function LeadDetailDialog({
                 </div>
               </div>
 
-              {lead.valor_interesse > 0 && <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-4">
+              {/* Deal Status Summary Card */}
+              {lead.deal_status === 'won' && lead.valor_interesse > 0 && (
+                <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30 border border-emerald-200 dark:border-emerald-800 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                      <Trophy className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
+                        R$ {lead.valor_interesse.toLocaleString('pt-BR')}
+                      </p>
+                      <p className="text-sm text-emerald-600 dark:text-emerald-400">Negócio Fechado!</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {lead.deal_status !== 'won' && lead.valor_interesse > 0 && (
+                <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
                       <DollarSign className="h-6 w-6 text-primary" />
@@ -1597,7 +1756,8 @@ export function LeadDetailDialog({
                       <p className="text-sm text-muted-foreground">Valor de interesse</p>
                     </div>
                   </div>
-                </div>}
+                </div>
+              )}
             </div>
           </TabsContent>
 
