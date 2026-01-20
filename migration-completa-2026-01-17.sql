@@ -4,7 +4,7 @@
 -- Versão: Consolidada com todas as 77 migrações
 -- ============================================
 -- INSTRUÇÕES DE EXECUÇÃO:
--- 1. Acesse o SQL Editor do Supabase externo
+-- 1. Acesse o SQL Editor dos s Supabase externo
 -- 2. Execute este arquivo em PARTES (recomendado):
 --    - Parte 1: Extensões e ENUMs (linhas 1-50)
 --    - Parte 2: Funções Auxiliares (linhas 51-500)
