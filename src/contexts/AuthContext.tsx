@@ -147,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setImpersonating(null);
     localStorage.removeItem('impersonating');
+    setOrganization(null); // Clear org immediately to prevent onboarding redirect
     
     // Refresh to load original profile without organization
     if (user) {
