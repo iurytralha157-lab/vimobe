@@ -437,6 +437,68 @@ export function LeadDetailDialog({
           </PopoverContent>
         </Popover>
 
+        {/* Deal Status Selector - Prominent */}
+        <div className="mt-3">
+          <Select 
+            value={lead.deal_status || 'open'} 
+            onValueChange={async (value) => {
+              await updateLead.mutateAsync({
+                id: lead.id,
+                deal_status: value,
+                lost_reason: value === 'lost' ? '' : null
+              } as any);
+              refetchStages();
+            }}
+          >
+            <SelectTrigger 
+              className={cn(
+                "w-full rounded-xl font-medium text-sm border-2",
+                lead.deal_status === 'won' && "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-300",
+                lead.deal_status === 'lost' && "bg-red-50 border-red-300 text-red-700 dark:bg-red-950/30 dark:border-red-700 dark:text-red-300",
+                (!lead.deal_status || lead.deal_status === 'open') && "bg-muted/50 border-muted-foreground/20"
+              )}
+            >
+              <SelectValue placeholder="Status do Negócio" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">
+                <span className="flex items-center gap-2">
+                  <CircleDot className="h-4 w-4 text-muted-foreground" />
+                  Aberto
+                </span>
+              </SelectItem>
+              <SelectItem value="won">
+                <span className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-emerald-600" />
+                  Ganho
+                </span>
+              </SelectItem>
+              <SelectItem value="lost">
+                <span className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  Perdido
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {/* Lost reason inline input */}
+          {lead.deal_status === 'lost' && (
+            <Input 
+              value={lead.lost_reason || ''} 
+              onChange={async (e) => {
+                await updateLead.mutateAsync({
+                  id: lead.id,
+                  lost_reason: e.target.value
+                } as any);
+              }}
+              onBlur={() => refetchStages()}
+              placeholder="Motivo da perda..."
+              className="mt-2 rounded-xl text-sm border-red-200 dark:border-red-800"
+            />
+          )}
+        </div>
+
         {/* Tags Row - Using TagSelector for inline creation */}
         <div className="flex flex-wrap items-center gap-1.5 mt-3">
           {lead.tags?.slice(0, 3).map((tag: any) => <Badge key={tag.id} className="flex items-center gap-1 pr-1 py-0.5 text-xs rounded-full" style={{
@@ -1130,6 +1192,55 @@ export function LeadDetailDialog({
               <SourceIcon className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs text-muted-foreground">{sourceLabels[lead.source] || lead.source}</span>
             </div>
+            <span className="text-muted-foreground/50">•</span>
+            {/* Deal Status Badge */}
+            <Select 
+              value={lead.deal_status || 'open'} 
+              onValueChange={async (value) => {
+                await updateLead.mutateAsync({
+                  id: lead.id,
+                  deal_status: value,
+                  lost_reason: value === 'lost' ? '' : null
+                } as any);
+                refetchStages();
+              }}
+            >
+              <SelectTrigger 
+                className={cn(
+                  "h-7 w-auto gap-1.5 rounded-full text-xs font-medium border-0 px-3",
+                  lead.deal_status === 'won' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
+                  lead.deal_status === 'lost' && "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+                  (!lead.deal_status || lead.deal_status === 'open') && "bg-muted text-muted-foreground"
+                )}
+              >
+                {lead.deal_status === 'won' && <Trophy className="h-3 w-3" />}
+                {lead.deal_status === 'lost' && <XCircle className="h-3 w-3" />}
+                {(!lead.deal_status || lead.deal_status === 'open') && <CircleDot className="h-3 w-3" />}
+                <span>
+                  {lead.deal_status === 'won' ? 'Ganho' : lead.deal_status === 'lost' ? 'Perdido' : 'Aberto'}
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="open">
+                  <span className="flex items-center gap-2">
+                    <CircleDot className="h-4 w-4 text-muted-foreground" />
+                    Aberto
+                  </span>
+                </SelectItem>
+                <SelectItem value="won">
+                  <span className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-emerald-600" />
+                    Ganho
+                  </span>
+                </SelectItem>
+                <SelectItem value="lost">
+                  <span className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    Perdido
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center gap-4">
