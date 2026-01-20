@@ -26,17 +26,25 @@ Deno.serve(async (req) => {
     // Verify the caller is authenticated
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+      console.error('Missing authorization header');
+      return new Response(JSON.stringify({ 
+        error: 'Token de autenticação não fornecido. Por favor, faça login novamente.',
+        code: 'MISSING_AUTH_HEADER'
+      }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user: callerUser } } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
-    if (!callerUser) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    if (authError || !callerUser) {
+      console.error('Auth validation failed:', authError?.message || 'User not found');
+      return new Response(JSON.stringify({ 
+        error: 'Sua sessão expirou. Por favor, faça login novamente.',
+        code: 'SESSION_EXPIRED'
+      }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -166,7 +174,7 @@ Deno.serve(async (req) => {
     }
 
     // 1. Create auth user with default password
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: DEFAULT_PASSWORD,
       email_confirm: true,
@@ -175,9 +183,9 @@ Deno.serve(async (req) => {
       },
     });
 
-    if (authError) {
-      console.error('Error creating auth user:', authError);
-      return new Response(JSON.stringify({ error: authError.message }), {
+    if (createAuthError || !authData.user) {
+      console.error('Error creating auth user:', createAuthError);
+      return new Response(JSON.stringify({ error: createAuthError?.message || 'Erro ao criar usuário' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
