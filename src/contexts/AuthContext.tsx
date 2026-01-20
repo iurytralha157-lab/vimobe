@@ -50,8 +50,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  startImpersonate: (orgId: string, orgName: string) => void;
-  stopImpersonate: () => void;
+  startImpersonate: (orgId: string, orgName: string) => Promise<void>;
+  stopImpersonate: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,24 +117,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const startImpersonate = (orgId: string, orgName: string) => {
-    const session: ImpersonateSession = { orgId, orgName };
-    setImpersonating(session);
-    localStorage.setItem('impersonating', JSON.stringify(session));
-    
-    // Refresh to load the impersonated org
+  const startImpersonate = async (orgId: string, orgName: string) => {
+    // Update the super admin's organization_id in the users table
     if (user) {
-      fetchProfile(user.id);
+      await supabase
+        .from('users')
+        .update({ organization_id: orgId })
+        .eq('id', user.id);
+    }
+    
+    const impersonateSession: ImpersonateSession = { orgId, orgName };
+    setImpersonating(impersonateSession);
+    localStorage.setItem('impersonating', JSON.stringify(impersonateSession));
+    
+    // Refresh to load the impersonated org with updated organization_id
+    if (user) {
+      await fetchProfile(user.id);
     }
   };
 
-  const stopImpersonate = () => {
+  const stopImpersonate = async () => {
+    // Restore the super admin's organization_id to null
+    if (user) {
+      await supabase
+        .from('users')
+        .update({ organization_id: null })
+        .eq('id', user.id);
+    }
+    
     setImpersonating(null);
     localStorage.removeItem('impersonating');
     
-    // Refresh to load original org
+    // Refresh to load original profile without organization
     if (user) {
-      fetchProfile(user.id);
+      await fetchProfile(user.id);
     }
   };
 

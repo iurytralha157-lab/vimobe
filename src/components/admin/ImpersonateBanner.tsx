@@ -9,8 +9,8 @@ export function ImpersonateBanner() {
 
   if (!impersonating) return null;
 
-  const handleStopImpersonate = () => {
-    stopImpersonate();
+  const handleStopImpersonate = async () => {
+    await stopImpersonate();
     navigate('/admin');
   };
 
