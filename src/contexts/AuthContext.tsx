@@ -167,16 +167,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const clearAllStates = () => {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setOrganization(null);
+      setIsSuperAdmin(false);
+      setImpersonating(null);
+      localStorage.removeItem('impersonating');
+    };
+
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (!isMounted) return;
       
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      // Se houve erro ou sessão inválida, limpar tudo
+      if (error || !session) {
+        console.log('Sessão inválida na inicialização:', error?.message);
+        clearAllStates();
+        setLoading(false);
+        return;
       }
       
+      setSession(session);
+      setUser(session.user);
+      
+      await fetchProfile(session.user.id);
       setLoading(false);
     });
 
@@ -184,16 +199,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (event, session) => {
         if (!isMounted) return;
         
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setOrganization(null);
-          setIsSuperAdmin(false);
+        console.log('Auth event:', event, 'Session:', !!session);
+        
+        // Logout ou sessão expirada - limpar tudo
+        if (event === 'SIGNED_OUT' || !session) {
+          clearAllStates();
+          return;
         }
+        
+        // Sessão válida
+        setSession(session);
+        setUser(session.user);
+        
+        // Usar setTimeout para evitar deadlock do Supabase
+        setTimeout(() => {
+          if (isMounted) {
+            fetchProfile(session.user.id);
+          }
+        }, 0);
       }
     );
 
@@ -223,12 +246,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Limpar estados PRIMEIRO (antes de qualquer await)
+    // Isso garante que o logout funcione mesmo se a sessão já expirou no servidor
+    setUser(null);
+    setSession(null);
     setProfile(null);
     setOrganization(null);
     setIsSuperAdmin(false);
     setImpersonating(null);
     localStorage.removeItem('impersonating');
+    
+    // Depois tenta limpar no servidor (scope: 'local' evita erro 403 se sessão expirada)
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.log('Logout server-side falhou (sessão provavelmente já expirada):', error);
+      // Não importa - estados já foram limpos localmente
+    }
   };
 
   const refreshProfile = async () => {
