@@ -3193,6 +3193,10 @@ export type Database = {
         Returns: boolean
       }
       can_manage_session: { Args: { session_id: string }; Returns: boolean }
+      create_default_stages_for_pipeline: {
+        Args: { p_org_id: string; p_pipeline_id: string }
+        Returns: undefined
+      }
       create_notification: {
         Args: {
           p_content: string
