@@ -241,10 +241,8 @@ export function TagSelector({
                     ))
                   ) : (
                     !searchTerm.trim() && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhuma tag disponível
-                        <br />
-                        <span className="text-xs">Digite para criar uma nova</span>
+                      <p className="text-sm text-muted-foreground text-center py-3 px-2">
+                        Digite acima para criar uma nova tag
                       </p>
                     )
                   )}
@@ -479,9 +477,8 @@ export function TagSelectorPopoverContent({
               </button>
             ))
           ) : !searchTerm.trim() ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma tag disponível<br />
-              <span className="text-xs">Digite para criar</span>
+            <p className="text-sm text-muted-foreground text-center py-3 px-2">
+              Digite acima para criar uma nova tag
             </p>
           ) : null}
         </div>
