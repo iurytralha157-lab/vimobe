@@ -2878,6 +2878,108 @@ export type Database = {
           },
         ]
       }
+      webhooks_integrations: {
+        Row: {
+          api_token: string
+          created_at: string
+          field_mapping: Json | null
+          id: string
+          is_active: boolean
+          last_lead_at: string | null
+          last_triggered_at: string | null
+          leads_received: number
+          name: string
+          organization_id: string
+          target_pipeline_id: string | null
+          target_property_id: string | null
+          target_stage_id: string | null
+          target_tag_ids: string[] | null
+          target_team_id: string | null
+          trigger_events: string[] | null
+          type: string
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          api_token?: string
+          created_at?: string
+          field_mapping?: Json | null
+          id?: string
+          is_active?: boolean
+          last_lead_at?: string | null
+          last_triggered_at?: string | null
+          leads_received?: number
+          name: string
+          organization_id: string
+          target_pipeline_id?: string | null
+          target_property_id?: string | null
+          target_stage_id?: string | null
+          target_tag_ids?: string[] | null
+          target_team_id?: string | null
+          trigger_events?: string[] | null
+          type?: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          api_token?: string
+          created_at?: string
+          field_mapping?: Json | null
+          id?: string
+          is_active?: boolean
+          last_lead_at?: string | null
+          last_triggered_at?: string | null
+          leads_received?: number
+          name?: string
+          organization_id?: string
+          target_pipeline_id?: string | null
+          target_property_id?: string | null
+          target_stage_id?: string | null
+          target_tag_ids?: string[] | null
+          target_team_id?: string | null
+          trigger_events?: string[] | null
+          type?: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhooks_integrations_target_pipeline_id_fkey"
+            columns: ["target_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhooks_integrations_target_property_id_fkey"
+            columns: ["target_property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhooks_integrations_target_stage_id_fkey"
+            columns: ["target_stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhooks_integrations_target_team_id_fkey"
+            columns: ["target_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_conversations: {
         Row: {
           archived_at: string | null
