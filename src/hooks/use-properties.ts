@@ -87,7 +87,7 @@ export function useCreateProperty() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (property: Omit<Partial<Property>, 'id' | 'code' | 'organization_id' | 'created_at' | 'updated_at'> & { detalhes_extras?: string[]; proximidades?: string[] }) => {
+    mutationFn: async (propertyInput: Omit<Partial<Property>, 'id' | 'code' | 'organization_id' | 'created_at' | 'updated_at'>) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Usuário não autenticado');
       
@@ -109,12 +109,12 @@ export function useCreateProperty() {
       
       if (!organizationId) throw new Error('Organização não encontrada');
       
-      const code = await generatePropertyCode(organizationId, property.tipo_de_imovel || 'Apartamento');
+      const code = await generatePropertyCode(organizationId, propertyInput.tipo_de_imovel || 'Apartamento');
       
       const { data, error } = await supabase
         .from('properties')
         .insert({
-          ...property,
+          ...propertyInput,
           code,
           organization_id: organizationId,
         })
@@ -138,7 +138,7 @@ export function useUpdateProperty() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Property> & { id: string; detalhes_extras?: string[]; proximidades?: string[] }) => {
+    mutationFn: async ({ id, ...updates }: Partial<Property> & { id: string }) => {
       const { data, error } = await supabase
         .from('properties')
         .update(updates)
