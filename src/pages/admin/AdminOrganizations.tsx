@@ -95,8 +95,8 @@ export default function AdminOrganizations() {
     setShowPassword(false);
   };
 
-  const handleImpersonate = (orgId: string, orgName: string) => {
-    startImpersonate(orgId, orgName);
+  const handleImpersonate = async (orgId: string, orgName: string) => {
+    await startImpersonate(orgId, orgName);
     navigate('/dashboard');
   };
 
