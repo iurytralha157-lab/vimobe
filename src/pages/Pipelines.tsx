@@ -19,7 +19,10 @@ import {
   Trash2,
   Clock,
   Calendar,
-  Tags
+  Tags,
+  Trophy,
+  XCircle,
+  CircleDot
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
@@ -89,6 +92,7 @@ export default function Pipelines() {
   const [newLeadForm, setNewLeadForm] = useState({ name: '', phone: '', email: '', message: '' });
   const [filterUser, setFilterUser] = useState<string | undefined>(undefined);
   const [filterTag, setFilterTag] = useState<string>('all');
+  const [filterDealStatus, setFilterDealStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [editingStageName, setEditingStageName] = useState('');
@@ -324,6 +328,12 @@ export default function Pipelines() {
           if (!leadTagIds.includes(filterTag)) return false;
         }
         
+        // Deal status filter
+        if (filterDealStatus && filterDealStatus !== 'all') {
+          const leadStatus = lead.deal_status || 'open';
+          if (leadStatus !== filterDealStatus) return false;
+        }
+        
         // Date filter
         if (lead.created_at) {
           const leadDate = parseISO(lead.created_at);
@@ -335,7 +345,7 @@ export default function Pipelines() {
         return true;
       }),
     }));
-  }, [stages, filterUser, filterTag, deferredSearch, dateRange]);
+  }, [stages, filterUser, filterTag, filterDealStatus, deferredSearch, dateRange]);
 
   if (isLoading) {
     return (
@@ -510,6 +520,36 @@ export default function Pipelines() {
                     </div>
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            {/* Deal Status Filter */}
+            <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <span className="flex items-center gap-2">Todos Status</span>
+                </SelectItem>
+                <SelectItem value="open">
+                  <span className="flex items-center gap-2">
+                    <CircleDot className="h-4 w-4 text-muted-foreground" />
+                    Aberto
+                  </span>
+                </SelectItem>
+                <SelectItem value="won">
+                  <span className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-emerald-600" />
+                    Ganho
+                  </span>
+                </SelectItem>
+                <SelectItem value="lost">
+                  <span className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    Perdido
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
             
