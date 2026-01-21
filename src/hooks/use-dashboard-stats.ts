@@ -98,6 +98,22 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   return useQuery({
     queryKey: ['enhanced-dashboard-stats', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
     queryFn: async (): Promise<EnhancedDashboardStats> => {
+      // Get current user info to check role
+      const { data: { user } } = await supabase.auth.getUser();
+      let currentUserRole = 'user';
+      let currentUserId = user?.id;
+      
+      if (user?.id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        currentUserRole = userData?.role || 'user';
+      }
+      
+      const isAdmin = currentUserRole === 'admin';
+      
       // Calculate date ranges for current and previous periods
       const now = new Date();
       const currentFrom = filters?.dateRange?.from || subDays(now, 30);
@@ -115,8 +131,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString());
 
-      // Apply user filter
-      if (filters?.userId) {
+      // Role-based filter: non-admins only see their own leads
+      if (!isAdmin && currentUserId) {
+        query = query.eq('assigned_user_id', currentUserId);
+      } else if (filters?.userId) {
+        // Admin can filter by specific user
         query = query.eq('assigned_user_id', filters.userId);
       }
 
@@ -125,9 +144,9 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         query = query.eq('source', filters.source as any);
       }
 
-      // Apply team filter
+      // Apply team filter (only for admins)
       let memberIds: string[] = [];
-      if (filters?.teamId) {
+      if (isAdmin && filters?.teamId) {
         const { data: teamMembers } = await supabase
           .from('team_members')
           .select('user_id')
@@ -168,7 +187,10 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .gte('created_at', previousFrom.toISOString())
         .lte('created_at', previousTo.toISOString());
       
-      if (filters?.userId) {
+      // Role-based filter for previous period
+      if (!isAdmin && currentUserId) {
+        previousQuery = previousQuery.eq('assigned_user_id', currentUserId);
+      } else if (filters?.userId) {
         previousQuery = previousQuery.eq('assigned_user_id', filters.userId);
       }
       if (filters?.source) {
@@ -325,14 +347,36 @@ export function useLeadsChartData() {
   return useQuery({
     queryKey: ['leads-chart-data'],
     queryFn: async () => {
+      // Get current user info to check role
+      const { data: { user } } = await supabase.auth.getUser();
+      let currentUserRole = 'user';
+      let currentUserId = user?.id;
+      
+      if (user?.id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        currentUserRole = userData?.role || 'user';
+      }
+      
+      const isAdmin = currentUserRole === 'admin';
       const sevenDaysAgo = subDays(new Date(), 7).toISOString();
       
-      // Query otimizada: apenas campos necessários
-      const { data: leads } = await (supabase as any)
+      // Query with role-based visibility
+      let query = supabase
         .from('leads')
-        .select('created_at, source')
+        .select('created_at, source, assigned_user_id')
         .gte('created_at', sevenDaysAgo)
         .order('created_at');
+      
+      // Non-admins only see their own leads
+      if (!isAdmin && currentUserId) {
+        query = query.eq('assigned_user_id', currentUserId);
+      }
+      
+      const { data: leads } = await query;
       
       const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
       const chartData: ChartDataPoint[] = [];
@@ -461,26 +505,64 @@ export function useUpcomingTasks() {
   return useQuery({
     queryKey: ['upcoming-tasks'],
     queryFn: async (): Promise<UpcomingTask[]> => {
-      const { data, error } = await supabase
+      // Get current user info to check role
+      const { data: { user } } = await supabase.auth.getUser();
+      let currentUserRole = 'user';
+      let currentUserId = user?.id;
+      
+      if (user?.id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        currentUserRole = userData?.role || 'user';
+      }
+      
+      const isAdmin = currentUserRole === 'admin';
+      
+      // For non-admins, first get their lead IDs
+      let leadIds: string[] = [];
+      if (!isAdmin && currentUserId) {
+        const { data: userLeads } = await supabase
+          .from('leads')
+          .select('id')
+          .eq('assigned_user_id', currentUserId);
+        leadIds = (userLeads || []).map((l: any) => l.id);
+        
+        if (leadIds.length === 0) {
+          return [];
+        }
+      }
+      
+      let query = supabase
         .from('lead_tasks')
         .select(`
           id,
           title,
           type,
           due_date,
+          lead_id,
           lead:leads(id, name)
         `)
         .eq('is_done', false)
         .not('due_date', 'is', null)
         .order('due_date', { ascending: true })
-        .limit(5);
+        .limit(10);
+      
+      // Non-admins only see tasks for their leads
+      if (!isAdmin && leadIds.length > 0) {
+        query = query.in('lead_id', leadIds);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching upcoming tasks:', error);
         return [];
       }
 
-      return (data || []).map((task: any) => ({
+      return (data || []).slice(0, 5).map((task: any) => ({
         id: task.id,
         title: task.title,
         type: task.type || 'task',
