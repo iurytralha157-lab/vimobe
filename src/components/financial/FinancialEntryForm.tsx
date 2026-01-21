@@ -1,9 +1,11 @@
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Form,
   FormControl,
@@ -11,6 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import {
   Select,
@@ -21,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { useCreateFinancialEntry, useUpdateFinancialEntry } from '@/hooks/use-financial';
 import { useContracts } from '@/hooks/use-contracts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Repeat, CreditCard } from 'lucide-react';
 
 const formSchema = z.object({
   type: z.enum(['receivable', 'payable']),
@@ -32,6 +35,12 @@ const formSchema = z.object({
   payment_method: z.string().optional(),
   contract_id: z.string().optional(),
   notes: z.string().optional(),
+  // Installments
+  has_installments: z.boolean().optional(),
+  total_installments: z.coerce.number().min(2).max(120).optional(),
+  // Recurring
+  is_recurring: z.boolean().optional(),
+  recurring_type: z.enum(['monthly', 'weekly', 'yearly']).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -58,17 +67,38 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
       payment_method: entry?.payment_method || '',
       contract_id: entry?.contract_id || '',
       notes: entry?.notes || '',
+      has_installments: (entry?.total_installments && entry.total_installments > 1) || false,
+      total_installments: entry?.total_installments || undefined,
+      is_recurring: entry?.is_recurring || false,
+      recurring_type: entry?.recurring_type || undefined,
     },
   });
 
   const watchType = form.watch('type');
+  const watchHasInstallments = form.watch('has_installments');
+  const watchIsRecurring = form.watch('is_recurring');
 
   const categoryOptions = watchType === 'receivable' 
     ? ['Vendas', 'Comissões', 'Aluguéis', 'Outros Recebimentos']
     : ['Despesas Operacionais', 'Marketing', 'Folha de Pagamento', 'Impostos', 'Outros Pagamentos'];
 
+  // Reset conflicting fields
+  React.useEffect(() => {
+    if (watchHasInstallments) {
+      form.setValue('is_recurring', false);
+      form.setValue('recurring_type', undefined);
+    }
+  }, [watchHasInstallments, form]);
+
+  React.useEffect(() => {
+    if (watchIsRecurring) {
+      form.setValue('has_installments', false);
+      form.setValue('total_installments', undefined);
+    }
+  }, [watchIsRecurring, form]);
+
   const onSubmit = async (values: FormValues) => {
-    const payload = {
+    const basePayload = {
       type: values.type,
       category: values.category || null,
       description: values.description,
@@ -78,12 +108,31 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
       contract_id: values.contract_id || null,
       notes: values.notes || null,
       status: 'pending',
+      is_recurring: values.is_recurring || false,
+      recurring_type: values.is_recurring ? values.recurring_type : null,
+      total_installments: values.has_installments ? values.total_installments : null,
+      installment_number: values.has_installments ? 1 : null,
     };
 
     if (entry) {
-      await updateEntry.mutateAsync({ id: entry.id, ...payload });
+      await updateEntry.mutateAsync({ id: entry.id, ...basePayload });
     } else {
-      await createEntry.mutateAsync(payload);
+      // If has installments, create multiple entries
+      if (values.has_installments && values.total_installments && values.total_installments > 1) {
+        const baseDate = new Date(values.due_date);
+        for (let i = 0; i < values.total_installments; i++) {
+          const dueDate = new Date(baseDate);
+          dueDate.setMonth(dueDate.getMonth() + i);
+          await createEntry.mutateAsync({
+            ...basePayload,
+            due_date: dueDate.toISOString().split('T')[0],
+            installment_number: i + 1,
+            description: `${values.description} (${i + 1}/${values.total_installments})`,
+          });
+        }
+      } else {
+        await createEntry.mutateAsync(basePayload);
+      }
     }
     onSuccess();
   };
@@ -248,6 +297,112 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
               </FormItem>
             )}
           />
+        </div>
+
+        {/* Installments & Recurring Section */}
+        <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Repeat className="h-4 w-4" />
+            <span>Parcelamento e Recorrência</span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Installments */}
+            <FormField
+              control={form.control}
+              name="has_installments"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm">Parcelar</FormLabel>
+                    <FormDescription className="text-xs">
+                      Dividir em várias parcelas
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={watchIsRecurring}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {watchHasInstallments && (
+              <FormField
+                control={form.control}
+                name="total_installments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Parcelas</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={2}
+                        max={120}
+                        placeholder="Ex: 12"
+                        value={field.value ?? ''}
+                        onChange={e => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Recurring */}
+            <FormField
+              control={form.control}
+              name="is_recurring"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-sm">Conta Recorrente</FormLabel>
+                    <FormDescription className="text-xs">
+                      Repete automaticamente
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={watchHasInstallments}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {watchIsRecurring && (
+              <FormField
+                control={form.control}
+                name="recurring_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Frequência</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                        <SelectItem value="yearly">Anual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
         </div>
 
         <FormField
