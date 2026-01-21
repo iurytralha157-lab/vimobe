@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log('Received webhook data:', JSON.stringify(body));
 
-    // Apply field mapping
-    const fieldMapping = webhook.field_mapping || {
+    // Apply field mapping - use default if field_mapping is null, undefined or empty object
+    const defaultMapping = {
       name: 'name',
       phone: 'phone',
       email: 'email',
@@ -70,6 +70,12 @@ Deno.serve(async (req) => {
       finalidade_compra: 'finalidade_compra',
       procura_financiamento: 'procura_financiamento',
     };
+    
+    const fieldMapping = (webhook.field_mapping && Object.keys(webhook.field_mapping).length > 0)
+      ? webhook.field_mapping
+      : defaultMapping;
+    
+    console.log('Using field mapping:', JSON.stringify(fieldMapping));
 
     const mappedData: Record<string, any> = {};
     for (const [targetField, sourceField] of Object.entries(fieldMapping)) {
@@ -103,14 +109,6 @@ Deno.serve(async (req) => {
         assigned_user_id: null,
         property_id: webhook.target_property_id || null,
         source: 'webhook',
-        source_detail: webhook.name,
-        // Novos campos de qualificação
-        renda_familiar: mappedData.renda_familiar || null,
-        trabalha: mappedData.trabalha === true || mappedData.trabalha === 'true' || mappedData.trabalha === 'sim' ? true : (mappedData.trabalha === false || mappedData.trabalha === 'false' || mappedData.trabalha === 'nao' ? false : null),
-        profissao: mappedData.profissao || null,
-        faixa_valor_imovel: mappedData.faixa_valor_imovel || null,
-        finalidade_compra: mappedData.finalidade_compra || null,
-        procura_financiamento: mappedData.procura_financiamento === true || mappedData.procura_financiamento === 'true' || mappedData.procura_financiamento === 'sim' ? true : (mappedData.procura_financiamento === false || mappedData.procura_financiamento === 'false' || mappedData.procura_financiamento === 'nao' ? false : null),
       })
       .select()
       .single();
