@@ -25,6 +25,16 @@ export interface Contract {
   value: number | null;
   commission_percentage: number | null;
   commission_value: number | null;
+  // Novos campos adicionados na migration
+  client_name?: string | null;
+  client_email?: string | null;
+  client_phone?: string | null;
+  client_document?: string | null;
+  down_payment?: number | null;
+  installments?: number | null;
+  payment_conditions?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   signing_date?: string | null;
   closing_date?: string | null;
   notes?: string | null;

@@ -71,14 +71,14 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: contract?.type || 'sale',
+      type: contract?.contract_type || 'sale', // Lê 'contract_type' do banco
       client_name: contract?.client_name || '',
       client_email: contract?.client_email || '',
       client_phone: contract?.client_phone || '',
       client_document: contract?.client_document || '',
       property_id: contract?.property_id || '',
       lead_id: contract?.lead_id || '',
-      total_value: contract?.total_value || 0,
+      total_value: contract?.value || 0, // Lê 'value' do banco
       down_payment: contract?.down_payment || 0,
       installments: contract?.installments || 1,
       payment_conditions: contract?.payment_conditions || '',
@@ -91,14 +91,14 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
 
   const onSubmit = async (values: FormValues) => {
     const contractData = {
-      type: values.type,
+      contract_type: values.type, // Mapeia 'type' do form para 'contract_type' no banco
       client_name: values.client_name,
       client_email: values.client_email || null,
       client_phone: values.client_phone || null,
       client_document: values.client_document || null,
       property_id: values.property_id || null,
       lead_id: values.lead_id || null,
-      total_value: values.total_value,
+      value: values.total_value, // Mapeia 'total_value' do form para 'value' no banco
       down_payment: values.down_payment || null,
       installments: values.installments || null,
       payment_conditions: values.payment_conditions || null,
