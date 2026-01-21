@@ -263,39 +263,39 @@ export function useFinancialDashboard() {
       // Fetch all pending receivables
       const { data: receivables } = await supabase
         .from('financial_entries')
-        .select('value, due_date')
+        .select('amount, due_date')
         .eq('type', 'receivable')
         .eq('status', 'pending');
 
       // Fetch all pending payables
       const { data: payables } = await supabase
         .from('financial_entries')
-        .select('value, due_date')
+        .select('amount, due_date')
         .eq('type', 'payable')
         .eq('status', 'pending');
 
       // Fetch commissions
       const { data: commissions } = await supabase
         .from('commissions')
-        .select('calculated_value, status');
+        .select('amount, status');
 
       // Calculate totals
-      const receivablesTyped = receivables as unknown as { amount: number; due_date: string }[] || [];
-      const payablesTyped = payables as unknown as { amount: number; due_date: string }[] || [];
-      const commissionsTyped = commissions as unknown as { calculated_value: number; status: string }[] || [];
+      const receivablesTyped = receivables as { amount: number; due_date: string }[] || [];
+      const payablesTyped = payables as { amount: number; due_date: string }[] || [];
+      const commissionsTyped = commissions as { amount: number; status: string }[] || [];
 
-      const receivable30 = receivablesTyped.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.amount), 0);
-      const receivable60 = receivablesTyped.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.amount), 0);
-      const receivable90 = receivablesTyped.filter(r => new Date(r.due_date) <= days90).reduce((sum, r) => sum + Number(r.amount), 0);
-      const totalPayable = payablesTyped.reduce((sum, p) => sum + Number(p.amount), 0);
+      const receivable30 = receivablesTyped.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const receivable60 = receivablesTyped.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const receivable90 = receivablesTyped.filter(r => new Date(r.due_date) <= days90).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const totalPayable = payablesTyped.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-      const forecastCommissions = commissionsTyped.filter(c => c.status === 'forecast' || c.status === 'approved').reduce((sum, c) => sum + Number(c.calculated_value), 0);
-      const paidCommissions = commissionsTyped.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.calculated_value), 0);
-      const pendingCommissions = commissionsTyped.filter(c => c.status === 'approved').reduce((sum, c) => sum + Number(c.calculated_value), 0);
+      const forecastCommissions = commissionsTyped.filter(c => c.status === 'forecast' || c.status === 'pending').reduce((sum, c) => sum + Number(c.amount || 0), 0);
+      const paidCommissions = commissionsTyped.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.amount || 0), 0);
+      const pendingCommissions = commissionsTyped.filter(c => c.status === 'pending').reduce((sum, c) => sum + Number(c.amount || 0), 0);
 
-      // Overdue entries
-      const overdueReceivables = receivablesTyped.filter(r => new Date(r.due_date) < today).length;
-      const overduePayables = payablesTyped.filter(p => new Date(p.due_date) < today).length;
+      // Overdue entries (sum values, not count)
+      const overdueReceivables = receivablesTyped.filter(r => new Date(r.due_date) < today).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const overduePayables = payablesTyped.filter(p => new Date(p.due_date) < today).reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
       return {
         receivable30,
