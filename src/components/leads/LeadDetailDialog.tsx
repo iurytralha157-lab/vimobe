@@ -1276,10 +1276,56 @@ export function LeadDetailDialog({
             
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-xl font-semibold truncate">{lead.name}</DialogTitle>
-              {lead.empresa && <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span className="truncate">{lead.empresa}</span>
-                </p>}
+              <div className="flex items-center gap-2 mt-1">
+                {lead.empresa && <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span className="truncate">{lead.empresa}</span>
+                  </p>}
+                {/* Assignee Selector */}
+                <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent">
+                      <User className="h-3.5 w-3.5" />
+                      <span>{lead.assigned_user?.name || 'Sem responsável'}</span>
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-52 p-2" align="start">
+                    <div className="space-y-1 max-h-60 overflow-y-auto">
+                      <button
+                        onClick={() => handleAssignUser(null)}
+                        className={cn(
+                          "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm transition-colors",
+                          !lead.assigned_user_id && "bg-accent"
+                        )}
+                      >
+                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                          <User className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                        <span className="text-muted-foreground">Sem responsável</span>
+                      </button>
+                      {allUsers.map((user: any) => (
+                        <button
+                          key={user.id}
+                          onClick={() => handleAssignUser(user.id)}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm transition-colors",
+                            lead.assigned_user_id === user.id && "bg-accent"
+                          )}
+                        >
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={user.avatar_url} alt={user.name} />
+                            <AvatarFallback className="text-xs">
+                              {user.name?.[0]?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{user.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             
             {/* Quick Actions - Premium pills */}
@@ -1961,7 +2007,7 @@ export function LeadDetailDialog({
   }
   return <>
       <Dialog open={!!lead} onOpenChange={() => onClose()}>
-        <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden animate-scale-in">
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden animate-scale-in">
           <DesktopContent />
         </DialogContent>
       </Dialog>
