@@ -93,8 +93,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create lead - trigger will handle pipeline/stage assignment, round-robin, and timeline events
-    // Only pass pipeline/stage if explicitly configured on webhook
+    // Determine the stage_id: use configured one or get first stage of pipeline
+    let stageId = webhook.target_stage_id;
+    const pipelineId = webhook.target_pipeline_id;
+    
+    if (!stageId && pipelineId) {
+      // Get first stage of the pipeline (lowest position)
+      const { data: firstStage } = await supabase
+        .from('stages')
+        .select('id')
+        .eq('pipeline_id', pipelineId)
+        .order('position', { ascending: true })
+        .limit(1)
+        .single();
+      
+      if (firstStage) {
+        stageId = firstStage.id;
+        console.log('Auto-assigned to first stage:', stageId);
+      }
+    }
+
+    // Create lead
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
@@ -103,12 +122,12 @@ Deno.serve(async (req) => {
         phone: mappedData.phone || null,
         email: mappedData.email || null,
         message: mappedData.message || null,
-        pipeline_id: webhook.target_pipeline_id || null,
-        stage_id: webhook.target_stage_id || null,
-        // Note: assigned_user_id is left null - trigger will use round-robin if configured
+        pipeline_id: pipelineId || null,
+        stage_id: stageId || null,
         assigned_user_id: null,
         property_id: webhook.target_property_id || null,
         source: 'webhook',
+        stage_entered_at: stageId ? new Date().toISOString() : null,
       })
       .select()
       .single();
