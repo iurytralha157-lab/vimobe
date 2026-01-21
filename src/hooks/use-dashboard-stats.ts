@@ -22,6 +22,12 @@ export interface EnhancedDashboardStats {
   leadsTrend: number;
   conversionTrend: number;
   closedTrend: number;
+  // Financial data
+  totalReceivables: number;
+  totalPayables: number;
+  overdueReceivables: number;
+  overduePayables: number;
+  paidCommissions: number;
 }
 
 export interface ChartDataPoint {
@@ -147,6 +153,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           leadsTrend: 0,
           conversionTrend: 0,
           closedTrend: 0,
+          totalReceivables: 0,
+          totalPayables: 0,
+          overdueReceivables: 0,
+          overduePayables: 0,
+          paidCommissions: 0,
         };
       }
 
@@ -169,14 +180,47 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       
       const { data: previousLeads } = await previousQuery;
 
-      // Fetch pending commissions
+      // Fetch commissions
       const { data: commissions } = await supabase
         .from('commissions')
-        .select('amount, status')
-        .in('status', ['forecast', 'approved']);
+        .select('amount, status');
       
       const pendingCommissions = commissions
+        ?.filter(c => c.status === 'forecast' || c.status === 'approved')
         ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
+      
+      const paidCommissions = commissions
+        ?.filter(c => c.status === 'paid')
+        ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
+
+      // Fetch financial entries
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const { data: financialEntries } = await supabase
+        .from('financial_entries')
+        .select('type, amount, status, due_date')
+        .gte('due_date', currentFrom.toISOString().split('T')[0])
+        .lte('due_date', currentTo.toISOString().split('T')[0]);
+
+      const receivables = financialEntries?.filter(e => e.type === 'receivable') || [];
+      const payables = financialEntries?.filter(e => e.type === 'payable') || [];
+      
+      const totalReceivables = receivables
+        .filter(e => e.status === 'pending')
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      
+      const totalPayables = payables
+        .filter(e => e.status === 'pending')
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      
+      const overdueReceivables = receivables
+        .filter(e => e.status === 'pending' && e.due_date && e.due_date < todayStr)
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      
+      const overduePayables = payables
+        .filter(e => e.status === 'pending' && e.due_date && e.due_date < todayStr)
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
       // Calculate current stats using deal_status instead of stage_key
       const totalLeads = leads?.length || 0;
@@ -265,6 +309,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         leadsTrend,
         conversionTrend,
         closedTrend,
+        totalReceivables,
+        totalPayables,
+        overdueReceivables,
+        overduePayables,
+        paidCommissions,
       };
     },
     staleTime: 1000 * 60 * 5,
