@@ -91,6 +91,11 @@ export default function Dashboard() {
     leadsTrend: 0,
     conversionTrend: 0,
     closedTrend: 0,
+    totalReceivables: 0,
+    totalPayables: 0,
+    overdueReceivables: 0,
+    overduePayables: 0,
+    paidCommissions: 0,
   };
 
   return (
