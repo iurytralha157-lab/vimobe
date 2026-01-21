@@ -61,25 +61,37 @@ export type Database = {
       }
       assignments_log: {
         Row: {
+          assigned_at: string | null
           assigned_user_id: string | null
           created_at: string
           id: string
           lead_id: string
+          organization_id: string | null
+          reason: string | null
           round_robin_id: string | null
+          user_id: string | null
         }
         Insert: {
+          assigned_at?: string | null
           assigned_user_id?: string | null
           created_at?: string
           id?: string
           lead_id: string
+          organization_id?: string | null
+          reason?: string | null
           round_robin_id?: string | null
+          user_id?: string | null
         }
         Update: {
+          assigned_at?: string | null
           assigned_user_id?: string | null
           created_at?: string
           id?: string
           lead_id?: string
+          organization_id?: string | null
+          reason?: string | null
           round_robin_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -97,10 +109,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "assignments_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "assignments_log_round_robin_id_fkey"
             columns: ["round_robin_id"]
             isOneToOne: false
             referencedRelation: "round_robins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1961,6 +1987,7 @@ export type Database = {
       pipelines: {
         Row: {
           created_at: string
+          default_round_robin_id: string | null
           id: string
           is_default: boolean | null
           name: string
@@ -1968,6 +1995,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_round_robin_id?: string | null
           id?: string
           is_default?: boolean | null
           name: string
@@ -1975,12 +2003,20 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_round_robin_id?: string | null
           id?: string
           is_default?: boolean | null
           name?: string
           organization_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pipelines_default_round_robin_id_fkey"
+            columns: ["default_round_robin_id"]
+            isOneToOne: false
+            referencedRelation: "round_robins"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pipelines_organization_id_fkey"
             columns: ["organization_id"]
@@ -2322,6 +2358,7 @@ export type Database = {
       round_robin_members: {
         Row: {
           id: string
+          leads_count: number | null
           position: number
           round_robin_id: string
           team_id: string | null
@@ -2330,6 +2367,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          leads_count?: number | null
           position?: number
           round_robin_id: string
           team_id?: string | null
@@ -2338,6 +2376,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          leads_count?: number | null
           position?: number
           round_robin_id?: string
           team_id?: string | null
@@ -2371,20 +2410,29 @@ export type Database = {
       round_robin_rules: {
         Row: {
           id: string
+          is_active: boolean | null
+          match: Json | null
           match_type: string
           match_value: string
+          priority: number | null
           round_robin_id: string
         }
         Insert: {
           id?: string
+          is_active?: boolean | null
+          match?: Json | null
           match_type: string
           match_value: string
+          priority?: number | null
           round_robin_id: string
         }
         Update: {
           id?: string
+          is_active?: boolean | null
+          match?: Json | null
           match_type?: string
           match_value?: string
+          priority?: number | null
           round_robin_id?: string
         }
         Relationships: [
@@ -3545,6 +3593,7 @@ export type Database = {
       get_user_team_ids: { Args: never; Returns: string[] }
       handle_lead_intake: { Args: { p_lead_id: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
+      is_member_available: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_team_leader:
         | { Args: never; Returns: boolean }
@@ -3589,6 +3638,10 @@ export type Database = {
       }
       normalize_phone: { Args: { phone_input: string }; Returns: string }
       notify_financial_entries: { Args: never; Returns: undefined }
+      pick_round_robin_for_lead: {
+        Args: { p_lead_id: string }
+        Returns: string
+      }
       redistribute_lead_from_pool: {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: Json
