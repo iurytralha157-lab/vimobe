@@ -66,7 +66,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-// Mobile Contract Card
+// Mobile Contract Card - Melhorado para mobile
 function ContractCard({ contract, onActivate, onEdit, onDelete }: {
   contract: Contract;
   onActivate: () => void;
@@ -84,56 +84,56 @@ function ContractCard({ contract, onActivate, onEdit, onDelete }: {
   };
 
   return (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
+    <Card className="mb-2 sm:mb-3">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="outline" className="text-xs shrink-0">
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <Badge variant="outline" className="text-[10px] sm:text-xs h-5 shrink-0">
                 {contract.contract_number || contract.id.slice(0, 8)}
               </Badge>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">
                 {getTypeLabel(contract.contract_type)}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <User className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="font-medium text-sm truncate">
-                {contract.lead?.name || 'Sem cliente'}
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="font-medium text-xs sm:text-sm truncate">
+                {contract.client_name || contract.lead?.name || 'Sem cliente'}
               </span>
             </div>
           </div>
           <ContractStatusBadge status={contract.status || 'draft'} />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
           {contract.property?.code && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
               <Building2 className="h-3 w-3" />
               {contract.property.code}
             </div>
           )}
           {contract.signing_date && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
               {formatDate(contract.signing_date)}
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-3 border-t">
-          <p className="font-bold text-primary">{formatCurrency(contract.value)}</p>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between pt-2 sm:pt-3 border-t gap-2">
+          <p className="font-bold text-primary text-sm sm:text-base">{formatCurrency(contract.value)}</p>
+          <div className="flex items-center gap-1.5">
             {contract.status === 'draft' && (
-              <Button variant="outline" size="sm" onClick={onActivate}>
-                <PlayCircle className="h-4 w-4 mr-1" />
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onActivate}>
+                <PlayCircle className="h-3.5 w-3.5 mr-1" />
                 Ativar
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={onEdit}>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onEdit}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="text-destructive" onClick={onDelete}>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={onDelete}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

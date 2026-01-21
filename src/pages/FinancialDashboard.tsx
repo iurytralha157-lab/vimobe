@@ -61,16 +61,16 @@ export default function FinancialDashboard() {
           <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças</p>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {/* KPI Cards - Grid mais compacto no mobile */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
           <FinancialCard
-            title="A Receber (30 dias)"
+            title="A Receber (30d)"
             value={formatCurrency(data?.receivable30 || 0)}
             icon={TrendingUp}
             variant="success"
           />
           <FinancialCard
-            title="A Receber (60 dias)"
+            title="A Receber (60d)"
             value={formatCurrency(data?.receivable60 || 0)}
             icon={Calendar}
           />
@@ -81,16 +81,16 @@ export default function FinancialDashboard() {
             variant="warning"
           />
           <FinancialCard
-            title="Comissões Pendentes"
+            title="Comissões Pend."
             value={formatCurrency(data?.pendingCommissions || 0)}
             icon={DollarSign}
           />
         </div>
 
         {/* Second Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
           <FinancialCard
-            title="Comissões Previstas"
+            title="Comissões Prev."
             value={formatCurrency(data?.forecastCommissions || 0)}
             icon={Clock}
           />
@@ -107,37 +107,37 @@ export default function FinancialDashboard() {
             variant="destructive"
           />
           <FinancialCard
-            title="A Receber (90 dias)"
+            title="A Receber (90d)"
             value={formatCurrency(data?.receivable90 || 0)}
             icon={Calendar}
           />
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:gap-6">
           {/* Monthly Cash Flow - Full Width */}
           <Card>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="text-base md:text-lg">Fluxo de Caixa Mensal</CardTitle>
-              <CardDescription className="text-xs md:text-sm">Receitas vs Despesas (últimos 6 meses)</CardDescription>
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-sm sm:text-base md:text-lg">Fluxo de Caixa Mensal</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Receitas vs Despesas (últimos 6 meses)</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
               {data?.monthlyData && data.monthlyData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[250px] md:h-[350px]">
+                <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px]">
                   <BarChart data={data.monthlyData}>
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
+                    <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 9 }} width={35} />
                     <ChartTooltip 
                       content={<ChartTooltipContent />} 
                       formatter={(value) => formatCurrency(value as number)}
                     />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Bar dataKey="receitas" name="Receitas" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="despesas" name="Despesas" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ChartContainer>
               ) : (
-                <div className="h-[250px] md:h-[350px] flex items-center justify-center text-muted-foreground text-sm">
+                <div className="h-[200px] sm:h-[280px] md:h-[350px] flex items-center justify-center text-muted-foreground text-sm">
                   Nenhum dado disponível
                 </div>
               )}
@@ -145,16 +145,16 @@ export default function FinancialDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           {/* Revenue by Type */}
           <Card>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="text-base md:text-lg">Receita por Tipo de Negócio</CardTitle>
-              <CardDescription className="text-xs md:text-sm">Distribuição das receitas</CardDescription>
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-sm sm:text-base md:text-lg">Receita por Tipo</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Distribuição das receitas</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
               {pieData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[200px] md:h-[300px]">
+                <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px]">
                   <PieChart>
                     <Pie
                       data={pieData}
@@ -162,19 +162,20 @@ export default function FinancialDashboard() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={typeof window !== 'undefined' && window.innerWidth < 768 ? 60 : 100}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={typeof window !== 'undefined' && window.innerWidth < 640 ? 50 : window.innerWidth < 768 ? 70 : 100}
+                      label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
                     >
                       {pieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                   </PieChart>
                 </ChartContainer>
               ) : (
-                <div className="h-[200px] md:h-[300px] flex items-center justify-center text-muted-foreground text-sm">
+                <div className="h-[180px] sm:h-[250px] md:h-[300px] flex items-center justify-center text-muted-foreground text-sm">
                   Nenhum dado disponível
                 </div>
               )}
@@ -183,19 +184,19 @@ export default function FinancialDashboard() {
 
           {/* Pending vs Paid Comparison */}
           <Card>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="text-base md:text-lg">Resumo Atual</CardTitle>
-              <CardDescription className="text-xs md:text-sm">Valores pendentes vs pagos</CardDescription>
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-sm sm:text-base md:text-lg">Resumo Atual</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Valores pendentes</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[200px] md:h-[300px]">
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
+              <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px]">
                 <BarChart data={[
-                  { name: 'A Receber', value: data?.receivable30 || 0, fill: 'hsl(var(--success))' },
-                  { name: 'A Pagar', value: data?.totalPayable || 0, fill: 'hsl(var(--destructive))' },
+                  { name: 'Receber', value: data?.receivable30 || 0, fill: 'hsl(var(--success))' },
+                  { name: 'Pagar', value: data?.totalPayable || 0, fill: 'hsl(var(--destructive))' },
                   { name: 'Comissões', value: data?.pendingCommissions || 0, fill: 'hsl(var(--primary))' },
                 ]}>
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 9 }} width={35} />
                   <ChartTooltip 
                     content={<ChartTooltipContent />} 
                     formatter={(value) => formatCurrency(value as number)}
@@ -208,44 +209,44 @@ export default function FinancialDashboard() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           <Card>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-destructive" />
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
                 Valores em Atraso
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3 md:space-y-4">
-                <div className="flex justify-between items-center p-2.5 md:p-3 bg-destructive/5 rounded-lg">
-                  <span className="text-xs md:text-sm">A Receber Vencido</span>
-                  <span className="font-bold text-destructive text-sm md:text-base">{formatCurrency(data?.overdueReceivables || 0)}</span>
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-destructive/5 rounded-lg">
+                  <span className="text-xs sm:text-sm">A Receber Vencido</span>
+                  <span className="font-bold text-destructive text-xs sm:text-sm md:text-base">{formatCurrency(data?.overdueReceivables || 0)}</span>
                 </div>
-                <div className="flex justify-between items-center p-2.5 md:p-3 bg-destructive/5 rounded-lg">
-                  <span className="text-xs md:text-sm">A Pagar Vencido</span>
-                  <span className="font-bold text-destructive text-sm md:text-base">{formatCurrency(data?.overduePayables || 0)}</span>
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-destructive/5 rounded-lg">
+                  <span className="text-xs sm:text-sm">A Pagar Vencido</span>
+                  <span className="font-bold text-destructive text-xs sm:text-sm md:text-base">{formatCurrency(data?.overduePayables || 0)}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg">
+                <DollarSign className="h-4 w-4 text-primary" />
                 Resumo de Comissões
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3 md:space-y-4">
-                <div className="flex justify-between items-center p-2.5 md:p-3 bg-muted/50 rounded-lg">
-                  <span className="text-xs md:text-sm">Previstas</span>
-                  <span className="font-bold text-sm md:text-base">{formatCurrency(data?.forecastCommissions || 0)}</span>
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-muted/50 rounded-lg">
+                  <span className="text-xs sm:text-sm">Previstas</span>
+                  <span className="font-bold text-xs sm:text-sm md:text-base">{formatCurrency(data?.forecastCommissions || 0)}</span>
                 </div>
-                <div className="flex justify-between items-center p-2.5 md:p-3 bg-success/10 rounded-lg">
-                  <span className="text-xs md:text-sm">Pagas</span>
-                  <span className="font-bold text-success text-sm md:text-base">{formatCurrency(data?.paidCommissions || 0)}</span>
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-success/10 rounded-lg">
+                  <span className="text-xs sm:text-sm">Pagas</span>
+                  <span className="font-bold text-success text-xs sm:text-sm md:text-base">{formatCurrency(data?.paidCommissions || 0)}</span>
                 </div>
               </div>
             </CardContent>
