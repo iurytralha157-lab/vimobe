@@ -29,9 +29,9 @@ import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
   type: z.enum(['receivable', 'payable']),
-  category_id: z.string().optional(),
+  category: z.string().optional(),
   description: z.string().min(1, 'Descrição é obrigatória'),
-  value: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  amount: z.number().min(0.01, 'Valor deve ser maior que zero'),
   due_date: z.string().min(1, 'Data de vencimento é obrigatória'),
   competence_date: z.string().optional(),
   payment_method: z.string().optional(),
@@ -63,9 +63,9 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: entry?.type || 'receivable',
-      category_id: entry?.category_id || '',
+      category: entry?.category || '',
       description: entry?.description || '',
-      value: entry?.value || 0,
+      amount: entry?.amount || 0,
       due_date: entry?.due_date?.split('T')[0] || '',
       competence_date: entry?.competence_date?.split('T')[0] || '',
       payment_method: entry?.payment_method || '',
@@ -82,14 +82,17 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
   const watchType = form.watch('type');
   const watchHasInstallments = form.watch('has_installments');
 
-  const filteredCategories = categories?.filter(c => (watchType === 'receivable' ? 'income' : 'expense') === c.type) || [];
+  // Categories are text-based now, so we use predefined options based on type
+  const categoryOptions = watchType === 'receivable' 
+    ? ['Vendas', 'Comissões', 'Aluguéis', 'Outros Recebimentos']
+    : ['Despesas Operacionais', 'Marketing', 'Folha de Pagamento', 'Impostos', 'Outros Pagamentos'];
 
   const onSubmit = async (values: FormValues) => {
     const payload: any = {
       type: values.type,
-      category_id: values.category_id || null,
+      category: values.category || null,
       description: values.description,
-      value: values.value,
+      amount: values.amount,
       due_date: values.due_date,
       competence_date: values.competence_date || null,
       payment_method: values.payment_method || null,
@@ -139,7 +142,7 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
 
           <FormField
             control={form.control}
-            name="category_id"
+            name="category"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
@@ -150,9 +153,9 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {filteredCategories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
+                    {categoryOptions.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -180,7 +183,7 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="value"
+            name="amount"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Valor (R$)</FormLabel>
