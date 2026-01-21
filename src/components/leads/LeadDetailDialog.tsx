@@ -10,7 +10,7 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -1401,9 +1401,9 @@ export function LeadDetailDialog({
         </div>
 
         {/* Pipeline Timeline - Premium Stepper */}
-        <div className="mt-5">
-          <ScrollArea className="w-full">
-            <div className="flex items-center gap-0 pb-2 min-w-max">
+        <div className="mt-5 overflow-hidden">
+          <ScrollArea className="w-full" type="scroll">
+            <div className="flex items-center gap-0 pb-2">
               {stages.map((stage, idx) => {
               const isActive = stage.id === lead.stage_id;
               const isPast = idx < currentStageIndex;
@@ -1418,6 +1418,7 @@ export function LeadDetailDialog({
                   </div>;
             })}
             </div>
+            <ScrollBar orientation="horizontal" className="h-1.5" />
           </ScrollArea>
         </div>
       </div>
