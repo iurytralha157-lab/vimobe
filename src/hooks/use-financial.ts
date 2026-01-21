@@ -17,28 +17,19 @@ export interface FinancialEntry {
   type: 'payable' | 'receivable';
   category?: string;
   contract_id?: string;
-  property_id?: string;
-  related_person_type?: 'client' | 'broker' | 'supplier';
-  related_person_id?: string;
-  related_person_name?: string;
-  description: string;
+  lead_id?: string;
+  broker_id?: string;
+  description?: string;
   amount: number;
-  due_date: string;
-  competence_date?: string;
+  due_date?: string;
+  paid_date?: string;
   payment_method?: string;
-  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
-  paid_at?: string;
-  paid_value?: number;
-  installment_number: number;
-  total_installments: number;
-  parent_entry_id?: string;
-  attachments: string[];
+  status?: string;
   notes?: string;
   created_by?: string;
-  created_at: string;
-  updated_at: string;
-  contract?: { contract_number: string };
-  property?: { code: string; title: string };
+  created_at?: string;
+  updated_at?: string;
+  contract?: { contract_number?: string };
 }
 
 export function useFinancialCategories() {
@@ -132,50 +123,29 @@ export function useCreateFinancialEntry() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: Partial<FinancialEntry> & { generateInstallments?: boolean }) => {
-      const { generateInstallments, ...entryData } = data;
+    mutationFn: async (data: Partial<FinancialEntry>) => {
       const orgId = organization?.id || profile?.organization_id;
       
-      if (generateInstallments && entryData.total_installments && entryData.total_installments > 1) {
-        const entries = [];
-        const baseDate = new Date(entryData.due_date!);
-        const installmentAmount = entryData.amount! / entryData.total_installments;
+      const { data: result, error } = await supabase
+        .from('financial_entries')
+        .insert({
+          type: data.type,
+          category: data.category,
+          description: data.description,
+          amount: data.amount,
+          due_date: data.due_date,
+          payment_method: data.payment_method,
+          contract_id: data.contract_id || null,
+          notes: data.notes,
+          status: data.status || 'pending',
+          organization_id: orgId,
+          created_by: user?.id,
+        } as never)
+        .select()
+        .single();
 
-        for (let i = 0; i < entryData.total_installments; i++) {
-          const dueDate = new Date(baseDate);
-          dueDate.setMonth(dueDate.getMonth() + i);
-          
-          entries.push({
-            ...entryData,
-            organization_id: orgId,
-            created_by: user?.id,
-            amount: installmentAmount,
-            installment_number: i + 1,
-            due_date: dueDate.toISOString().split('T')[0],
-          });
-        }
-
-        const { data: result, error } = await supabase
-          .from('financial_entries')
-          .insert(entries as never[])
-          .select();
-
-        if (error) throw error;
-        return result;
-      } else {
-        const { data: result, error } = await supabase
-          .from('financial_entries')
-          .insert({
-            ...entryData,
-            organization_id: orgId,
-            created_by: user?.id,
-          } as never)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return result;
-      }
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-entries'] });

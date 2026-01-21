@@ -147,8 +147,8 @@ export default function FinancialEntries() {
   const deleteEntry = useDeleteFinancialEntry();
 
   const filteredEntries = entries?.filter(entry => 
-    entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    entry.related_person_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    entry.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    entry.category?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
   const handleExport = () => {
@@ -165,7 +165,7 @@ export default function FinancialEntries() {
     if (!payDialog.entry) return;
     await markAsPaid.mutateAsync({
       id: payDialog.entry.id,
-      paid_value: parseFloat(paidValue) || payDialog.entry.value,
+      paid_value: parseFloat(paidValue) || payDialog.entry.amount,
     });
     setPayDialog({ open: false, entry: null });
     setPaidValue('');
@@ -362,8 +362,8 @@ export default function FinancialEntries() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{entry.description}</p>
-                            {entry.related_person_name && (
-                              <p className="text-xs text-muted-foreground">{entry.related_person_name}</p>
+                            {entry.category && (
+                              <p className="text-xs text-muted-foreground">{entry.category}</p>
                             )}
                           </div>
                         </TableCell>
@@ -380,11 +380,7 @@ export default function FinancialEntries() {
                         <TableCell>
                           <EntryStatusBadge status={entry.status} />
                         </TableCell>
-                        <TableCell>
-                          {entry.installment_number && entry.total_installments
-                            ? `${entry.installment_number}/${entry.total_installments}`
-                            : '-'}
-                        </TableCell>
+                        <TableCell>-</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
