@@ -23,11 +23,10 @@ Deno.serve(async (req) => {
     // Find events starting in the next 5-10 minutes that haven't been notified
     const { data: upcomingEvents, error: eventsError } = await supabase
       .from("schedule_events")
-      .select("id, user_id, organization_id, title, start_at, lead_id, reminder_5min_sent")
-      .eq("is_completed", false)
-      .eq("reminder_5min_sent", false)
-      .gte("start_at", fiveMinutesFromNow.toISOString())
-      .lte("start_at", tenMinutesFromNow.toISOString());
+      .select("id, user_id, organization_id, title, start_time, lead_id")
+      .neq("status", "cancelled")
+      .gte("start_time", fiveMinutesFromNow.toISOString())
+      .lte("start_time", tenMinutesFromNow.toISOString());
 
     if (eventsError) throw eventsError;
 
@@ -35,29 +34,35 @@ Deno.serve(async (req) => {
 
     // Send 5-minute reminders
     for (const event of upcomingEvents || []) {
-      const startTime = new Date(event.start_at);
+      const startTime = new Date(event.start_time);
       const formattedTime = startTime.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
         timeZone: "America/Sao_Paulo",
       });
 
+      // Check if already notified
+      const { data: existingNotif } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("user_id", event.user_id)
+        .ilike("title", "%5 minutos%")
+        .ilike("content", `%${event.title}%`)
+        .gte("created_at", new Date(now.getTime() - 60 * 60 * 1000).toISOString())
+        .limit(1);
+      
+      if (existingNotif && existingNotif.length > 0) continue;
+
       // Create notification
       await supabase.from("notifications").insert({
         user_id: event.user_id,
         organization_id: event.organization_id,
-        title: "Atividade em 5 minutos!",
+        title: "⏰ Atividade em 5 minutos!",
         content: `${event.title} começa às ${formattedTime}`,
         type: "task",
         lead_id: event.lead_id,
         is_read: false,
       });
-
-      // Mark as notified
-      await supabase
-        .from("schedule_events")
-        .update({ reminder_5min_sent: true })
-        .eq("id", event.id);
 
       console.log(`Sent 5-min reminder for event: ${event.title}`);
     }
@@ -67,11 +72,10 @@ Deno.serve(async (req) => {
     
     const { data: startingNowEvents, error: nowEventsError } = await supabase
       .from("schedule_events")
-      .select("id, user_id, organization_id, title, start_at, lead_id, reminder_sent")
-      .eq("is_completed", false)
-      .eq("reminder_sent", false)
-      .gte("start_at", oneMinuteAgo.toISOString())
-      .lte("start_at", now.toISOString());
+      .select("id, user_id, organization_id, title, start_time, lead_id")
+      .neq("status", "cancelled")
+      .gte("start_time", oneMinuteAgo.toISOString())
+      .lte("start_time", now.toISOString());
 
     if (nowEventsError) throw nowEventsError;
 
@@ -79,21 +83,27 @@ Deno.serve(async (req) => {
 
     // Send "starting now" notifications
     for (const event of startingNowEvents || []) {
+      // Check if already notified
+      const { data: existingNotif } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("user_id", event.user_id)
+        .ilike("title", "%começando%")
+        .ilike("content", `%${event.title}%`)
+        .gte("created_at", new Date(now.getTime() - 60 * 60 * 1000).toISOString())
+        .limit(1);
+      
+      if (existingNotif && existingNotif.length > 0) continue;
+
       await supabase.from("notifications").insert({
         user_id: event.user_id,
         organization_id: event.organization_id,
-        title: "Atividade começando agora!",
+        title: "🔔 Atividade começando agora!",
         content: event.title,
         type: "task",
         lead_id: event.lead_id,
         is_read: false,
       });
-
-      // Mark as notified
-      await supabase
-        .from("schedule_events")
-        .update({ reminder_sent: true })
-        .eq("id", event.id);
 
       console.log(`Sent "starting now" notification for event: ${event.title}`);
     }
