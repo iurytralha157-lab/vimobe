@@ -260,6 +260,10 @@ export function useFinancialDashboard() {
       const days90 = new Date(today);
       days90.setDate(days90.getDate() + 90);
 
+      // Calculate 6 months ago for historical data
+      const sixMonthsAgo = new Date(today);
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
       // Fetch all pending receivables
       const { data: receivables } = await supabase
         .from('financial_entries')
@@ -274,6 +278,13 @@ export function useFinancialDashboard() {
         .eq('type', 'payable')
         .eq('status', 'pending');
 
+      // Fetch all paid entries for the last 6 months (for cash flow chart)
+      const { data: paidEntries } = await supabase
+        .from('financial_entries')
+        .select('amount, type, paid_date')
+        .eq('status', 'paid')
+        .gte('paid_date', sixMonthsAgo.toISOString().split('T')[0]);
+
       // Fetch commissions
       const { data: commissions } = await supabase
         .from('commissions')
@@ -283,6 +294,7 @@ export function useFinancialDashboard() {
       const receivablesTyped = receivables as { amount: number; due_date: string }[] || [];
       const payablesTyped = payables as { amount: number; due_date: string }[] || [];
       const commissionsTyped = commissions as { amount: number; status: string }[] || [];
+      const paidEntriesTyped = paidEntries as { amount: number; type: string; paid_date: string }[] || [];
 
       const receivable30 = receivablesTyped.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.amount || 0), 0);
       const receivable60 = receivablesTyped.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.amount || 0), 0);
@@ -297,6 +309,37 @@ export function useFinancialDashboard() {
       const overdueReceivables = receivablesTyped.filter(r => new Date(r.due_date) < today).reduce((sum, r) => sum + Number(r.amount || 0), 0);
       const overduePayables = payablesTyped.filter(p => new Date(p.due_date) < today).reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
+      // Build monthly cash flow data for the last 6 months
+      const monthlyData: { month: string; receitas: number; despesas: number }[] = [];
+      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(today);
+        date.setMonth(date.getMonth() - i);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        
+        const monthReceitas = paidEntriesTyped
+          .filter(e => {
+            const paidDate = new Date(e.paid_date);
+            return e.type === 'receivable' && paidDate.getMonth() === month && paidDate.getFullYear() === year;
+          })
+          .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+        const monthDespesas = paidEntriesTyped
+          .filter(e => {
+            const paidDate = new Date(e.paid_date);
+            return e.type === 'payable' && paidDate.getMonth() === month && paidDate.getFullYear() === year;
+          })
+          .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+        monthlyData.push({
+          month: `${monthNames[month]}/${String(year).slice(2)}`,
+          receitas: monthReceitas,
+          despesas: monthDespesas,
+        });
+      }
+
       return {
         receivable30,
         receivable60,
@@ -307,6 +350,7 @@ export function useFinancialDashboard() {
         pendingCommissions,
         overdueReceivables,
         overduePayables,
+        monthlyData,
       };
     },
     enabled: !!profile?.organization_id,

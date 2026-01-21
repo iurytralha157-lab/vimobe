@@ -31,15 +31,11 @@ export default function FinancialDashboard() {
     { name: 'Despesas', value: data?.totalPayable || 0, fill: 'hsl(var(--chart-2))' },
   ].filter(d => d.value > 0);
 
-  const chartConfig = {
-    receivable: { label: 'Receitas', color: 'hsl(var(--success))' },
-    payable: { label: 'Despesas', color: 'hsl(var(--destructive))' },
-  };
 
-  const cashFlowData = [
-    { month: 'Receitas', value: data?.receivable30 || 0, fill: 'hsl(var(--success))' },
-    { month: 'Despesas', value: data?.totalPayable || 0, fill: 'hsl(var(--destructive))' },
-  ];
+  const chartConfig = {
+    receitas: { label: 'Receitas', color: 'hsl(var(--success))' },
+    despesas: { label: 'Despesas', color: 'hsl(var(--destructive))' },
+  };
   
   const totalOverdue = (data?.overdueReceivables || 0) + (data?.overduePayables || 0);
 
@@ -118,6 +114,37 @@ export default function FinancialDashboard() {
         </div>
 
         {/* Charts */}
+        <div className="grid grid-cols-1 gap-4 md:gap-6">
+          {/* Monthly Cash Flow - Full Width */}
+          <Card>
+            <CardHeader className="pb-2 md:pb-4">
+              <CardTitle className="text-base md:text-lg">Fluxo de Caixa Mensal</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Receitas vs Despesas (últimos 6 meses)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {data?.monthlyData && data.monthlyData.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[250px] md:h-[350px]">
+                  <BarChart data={data.monthlyData}>
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />} 
+                      formatter={(value) => formatCurrency(value as number)}
+                    />
+                    <Legend />
+                    <Bar dataKey="receitas" name="Receitas" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="despesas" name="Despesas" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              ) : (
+                <div className="h-[250px] md:h-[350px] flex items-center justify-center text-muted-foreground text-sm">
+                  Nenhum dado disponível
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Revenue by Type */}
           <Card>
@@ -154,16 +181,20 @@ export default function FinancialDashboard() {
             </CardContent>
           </Card>
 
-          {/* Cash Flow */}
+          {/* Pending vs Paid Comparison */}
           <Card>
             <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="text-base md:text-lg">Fluxo de Caixa</CardTitle>
-              <CardDescription className="text-xs md:text-sm">Receitas vs Despesas (próximos 30 dias)</CardDescription>
+              <CardTitle className="text-base md:text-lg">Resumo Atual</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Valores pendentes vs pagos</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[200px] md:h-[300px]">
-                <BarChart data={cashFlowData}>
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <BarChart data={[
+                  { name: 'A Receber', value: data?.receivable30 || 0, fill: 'hsl(var(--success))' },
+                  { name: 'A Pagar', value: data?.totalPayable || 0, fill: 'hsl(var(--destructive))' },
+                  { name: 'Comissões', value: data?.pendingCommissions || 0, fill: 'hsl(var(--primary))' },
+                ]}>
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
                   <ChartTooltip 
                     content={<ChartTooltipContent />} 
