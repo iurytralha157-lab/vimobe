@@ -3,8 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Upload, X, Loader2, Image as ImageIcon, Star } from 'lucide-react';
+import { Upload, X, Loader2, Image as ImageIcon, Star, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd';
 
 interface ImageUploaderProps {
   images: string[];
@@ -27,8 +33,6 @@ export function ImageUploader({
   const uploadFile = async (file: File): Promise<string | null> => {
     const fileExt = file.name.split('.').pop();
     
-    // Estrutura segura: /orgs/{org_id}/properties/{property_id}/...
-    // Se não tiver org_id, buscar do usuário logado
     let orgId = organizationId;
     if (!orgId) {
       const { data: user } = await supabase.auth.getUser();
@@ -96,6 +100,7 @@ export function ImageUploader({
     const newUrls: string[] = [];
     
     try {
+      // Maintain the order files were selected
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (!file.type.startsWith('image/')) {
@@ -110,6 +115,7 @@ export function ImageUploader({
       }
       
       if (newUrls.length > 0) {
+        // Append new images at the end, maintaining selection order
         const updatedImages = [...images, ...newUrls];
         onImagesChange(updatedImages, mainImage);
         toast.success(`${newUrls.length} imagem(s) adicionada(s) à galeria!`);
@@ -138,6 +144,23 @@ export function ImageUploader({
     }
     onImagesChange(updatedImages, url);
     toast.success('Imagem promovida para principal!');
+  };
+
+  // Handle drag end for reordering
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) return;
+
+    const reorderedImages = Array.from(images);
+    const [movedImage] = reorderedImages.splice(sourceIndex, 1);
+    reorderedImages.splice(destinationIndex, 0, movedImage);
+
+    onImagesChange(reorderedImages, mainImage);
+    toast.success('Ordem das imagens atualizada!');
   };
 
   return (
@@ -214,7 +237,9 @@ export function ImageUploader({
       {/* Gallery Section */}
       <div className="space-y-3">
         <Label className="text-base font-medium">Galeria de Fotos</Label>
-        <p className="text-sm text-muted-foreground">Adicione mais fotos do imóvel para exibir na galeria</p>
+        <p className="text-sm text-muted-foreground">
+          Adicione mais fotos do imóvel. Arraste para reordenar.
+        </p>
         
         {/* Upload area */}
         <label className={cn(
@@ -245,46 +270,79 @@ export function ImageUploader({
           />
         </label>
 
-        {/* Gallery grid */}
+        {/* Draggable Gallery grid */}
         {images.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {images.map((url, index) => (
-              <div 
-                key={url} 
-                className="relative aspect-square rounded-lg overflow-hidden group border"
-              >
-                <img 
-                  src={url} 
-                  alt={`Foto ${index + 1}`} 
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Overlay - always visible on mobile, hover on desktop */}
-                <div className="absolute inset-0 bg-black/50 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-opacity flex items-center justify-center gap-1">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => promoteToMain(url)}
-                    title="Promover para principal"
-                  >
-                    <Star className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => removeFromGallery(url)}
-                    title="Remover"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="gallery" direction="horizontal">
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+                >
+                  {images.map((url, index) => (
+                    <Draggable key={url} draggableId={url} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={cn(
+                            "relative aspect-square rounded-lg overflow-hidden group border",
+                            snapshot.isDragging && "ring-2 ring-primary shadow-lg"
+                          )}
+                        >
+                          {/* Drag handle */}
+                          <div
+                            {...provided.dragHandleProps}
+                            className="absolute top-1 left-1 z-10 p-1 rounded bg-black/50 cursor-grab active:cursor-grabbing"
+                          >
+                            <GripVertical className="h-4 w-4 text-white" />
+                          </div>
+
+                          {/* Position indicator */}
+                          <div className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-black/60 text-white text-xs font-medium">
+                            {index + 1}
+                          </div>
+
+                          <img 
+                            src={url} 
+                            alt={`Foto ${index + 1}`} 
+                            className="w-full h-full object-cover"
+                          />
+                          
+                          {/* Overlay - always visible on mobile, hover on desktop */}
+                          <div className="absolute inset-0 bg-black/50 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-opacity flex items-end justify-center gap-1 p-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => promoteToMain(url)}
+                              title="Promover para principal"
+                            >
+                              <Star className="h-3 w-3 mr-1" />
+                              Principal
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => removeFromGallery(url)}
+                              title="Remover"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         ) : (
           <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
             <ImageIcon className="h-8 w-8 text-muted-foreground" />

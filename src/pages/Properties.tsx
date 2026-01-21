@@ -16,6 +16,7 @@ import { usePropertyFeatures, useCreatePropertyFeature, useSeedDefaultFeatures, 
 import { usePropertyProximities, useCreatePropertyProximity, useSeedDefaultProximities, DEFAULT_PROXIMITIES } from '@/hooks/use-property-proximities';
 import { PropertyCard } from '@/components/properties/PropertyCard';
 import { PropertyFormDialog } from '@/components/properties/PropertyFormDialog';
+import { PropertyPreviewDialog } from '@/components/properties/PropertyPreviewDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const formatPrice = (value: number | null, tipo: string | null) => {
@@ -104,6 +105,8 @@ export default function Properties() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [previewProperty, setPreviewProperty] = useState<Property | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [newTypeName, setNewTypeName] = useState('');
   const [showAddType, setShowAddType] = useState(false);
@@ -353,6 +356,10 @@ export default function Properties() {
               property={property}
               onEdit={openEdit}
               onDelete={handleDelete}
+              onPreview={(p) => {
+                setPreviewProperty(p);
+                setPreviewOpen(true);
+              }}
               formatPrice={formatPrice}
             />
           ))}
@@ -386,6 +393,14 @@ export default function Properties() {
           setShowAddType={setShowAddType}
           defaultFeatures={DEFAULT_FEATURES}
           defaultProximities={DEFAULT_PROXIMITIES}
+        />
+
+        {/* Preview Dialog */}
+        <PropertyPreviewDialog
+          property={previewProperty}
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          formatPrice={formatPrice}
         />
       </div>
     </AppLayout>

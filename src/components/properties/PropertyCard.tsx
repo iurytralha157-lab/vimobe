@@ -26,10 +26,11 @@ interface PropertyCardProps {
   property: Property;
   onEdit: (property: Property) => void;
   onDelete: (id: string) => void;
+  onPreview: (property: Property) => void;
   formatPrice: (value: number | null, tipo: string | null) => string;
 }
 
-export function PropertyCard({ property, onEdit, onDelete, formatPrice }: PropertyCardProps) {
+export function PropertyCard({ property, onEdit, onDelete, onPreview, formatPrice }: PropertyCardProps) {
   return (
     <Card className="overflow-hidden card-hover">
       <div className="aspect-[4/3] bg-muted relative">
@@ -75,7 +76,7 @@ export function PropertyCard({ property, onEdit, onDelete, formatPrice }: Proper
                 <Pencil className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPreview(property)}>
                 <Eye className="h-4 w-4 mr-2" />
                 Visualizar
               </DropdownMenuItem>
