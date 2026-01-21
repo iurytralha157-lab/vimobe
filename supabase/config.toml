@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.notification-scheduler]
 verify_jwt = false
+
+[functions.recurring-entries-generator]
+verify_jwt = false
