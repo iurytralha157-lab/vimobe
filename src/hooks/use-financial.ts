@@ -91,8 +91,7 @@ export function useFinancialEntries(filters?: { type?: string; status?: string; 
         .from('financial_entries')
         .select(`
           *,
-          contract:contracts(contract_number),
-          property:properties(code, title)
+          contract:contracts(contract_number)
         `)
         .order('due_date', { ascending: true });
 
