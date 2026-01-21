@@ -1401,18 +1401,18 @@ export function LeadDetailDialog({
         </div>
 
         {/* Pipeline Timeline - Premium Stepper */}
-        <div className="mt-5 overflow-hidden">
+        <div className="mt-4 overflow-hidden">
           <ScrollArea className="w-full" type="scroll">
-            <div className="flex items-center gap-0 pb-2">
+            <div className="flex items-center gap-0 pb-2 pr-4">
               {stages.map((stage, idx) => {
               const isActive = stage.id === lead.stage_id;
               const isPast = idx < currentStageIndex;
               const isFirst = idx === 0;
               return <div key={stage.id} className="flex items-center shrink-0">
-                    {!isFirst && <div className={cn("w-8 h-0.5 transition-colors", isPast ? "bg-gradient-to-r from-primary to-primary" : isActive ? "bg-gradient-to-r from-primary to-border" : "bg-border/50")} />}
-                    <button onClick={() => handleMoveToStage(stage.id)} className={cn("relative h-8 px-4 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5", isActive ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" : isPast ? "bg-primary/15 text-primary hover:bg-primary/25" : "text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent hover:border-border/50")}>
-                      {isPast && <Check className="h-3 w-3" />}
-                      {isActive && <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground animate-pulse" />}
+                    {!isFirst && <div className={cn("w-4 h-0.5 transition-colors", isPast ? "bg-primary" : isActive ? "bg-gradient-to-r from-primary to-border" : "bg-border/50")} />}
+                    <button onClick={() => handleMoveToStage(stage.id)} className={cn("relative h-6 px-2.5 rounded-full text-[10px] font-medium transition-all whitespace-nowrap flex items-center gap-1", isActive ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" : isPast ? "bg-primary/15 text-primary hover:bg-primary/25" : "text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent hover:border-border/50")}>
+                      {isPast && <Check className="h-2.5 w-2.5" />}
+                      {isActive && <div className="h-1 w-1 rounded-full bg-primary-foreground animate-pulse" />}
                       {stage.name}
                     </button>
                   </div>;
