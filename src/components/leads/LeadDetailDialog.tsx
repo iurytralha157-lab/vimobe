@@ -2007,7 +2007,7 @@ export function LeadDetailDialog({
   }
   return <>
       <Dialog open={!!lead} onOpenChange={() => onClose()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden animate-scale-in">
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] p-0 overflow-hidden animate-scale-in">
           <DesktopContent />
         </DialogContent>
       </Dialog>
