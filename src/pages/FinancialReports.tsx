@@ -153,10 +153,10 @@ export default function FinancialReports() {
   const paidEntries = filteredEntries.filter(e => e.status === 'paid');
   const overdueEntries = entries?.filter(e => e.status === 'overdue' || (e.status === 'pending' && new Date(e.due_date) < new Date())) || [];
 
-  const totalReceivables = receivables.reduce((sum, e) => sum + (e.value || 0), 0);
-  const totalPayables = payables.reduce((sum, e) => sum + (e.value || 0), 0);
-  const totalPaid = paidEntries.reduce((sum, e) => sum + (e.paid_value || e.value || 0), 0);
-  const totalOverdue = overdueEntries.reduce((sum, e) => sum + (e.value || 0), 0);
+  const totalReceivables = receivables.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalPayables = payables.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalPaid = paidEntries.reduce((sum, e) => sum + (e.paid_value || e.amount || 0), 0);
+  const totalOverdue = overdueEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const handleExportExcel = () => {
     let data: any[] = [];
@@ -297,7 +297,7 @@ export default function FinancialReports() {
                           {entry.type === 'receivable' ? 'Receita' : 'Despesa'}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(entry.value)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(entry.amount)}</TableCell>
                       <TableCell>{formatDate(entry.due_date)}</TableCell>
                       <TableCell>
                         <span className={`text-sm ${entry.status === 'paid' ? 'text-success' : entry.status === 'overdue' ? 'text-destructive' : 'text-warning'}`}>
@@ -401,7 +401,7 @@ export default function FinancialReports() {
                         {entry.type === 'receivable' ? 'Recebimento' : 'Pagamento'}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(entry.paid_value || entry.value)}</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(entry.paid_value || entry.amount)}</TableCell>
                     <TableCell>{formatDate(entry.paid_at)}</TableCell>
                   </TableRow>
                 ))
@@ -462,7 +462,7 @@ export default function FinancialReports() {
                             {entry.type === 'receivable' ? 'Receber' : 'Pagar'}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right font-medium text-destructive">{formatCurrency(entry.value)}</TableCell>
+                        <TableCell className="text-right font-medium text-destructive">{formatCurrency(entry.amount)}</TableCell>
                         <TableCell className="text-destructive">{formatDate(entry.due_date)}</TableCell>
                         <TableCell>{entry.related_person_name || '-'}</TableCell>
                       </TableRow>

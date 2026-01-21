@@ -100,7 +100,7 @@ function EntryCard({ entry, onPay, onEdit, onDelete }: {
           </div>
           <div className="text-right shrink-0">
             <p className={`font-bold ${entry.type === 'receivable' ? 'text-success' : 'text-destructive'}`}>
-              {formatCurrency(entry.value)}
+              {formatCurrency(entry.amount)}
             </p>
             <p className="text-xs text-muted-foreground flex items-center justify-end gap-1 mt-1">
               <Calendar className="h-3 w-3" />
@@ -323,7 +323,7 @@ export default function FinancialEntries() {
                   key={entry.id}
                   entry={entry}
                   onPay={() => {
-                    setPaidValue(entry.value.toString());
+                    setPaidValue(entry.amount.toString());
                     setPayDialog({ open: true, entry });
                   }}
                   onEdit={() => handleEdit(entry)}
@@ -372,9 +372,9 @@ export default function FinancialEntries() {
                             {entry.type === 'receivable' ? 'Receber' : 'Pagar'}
                           </span>
                         </TableCell>
-                        <TableCell>{entry.category?.name || '-'}</TableCell>
+                        <TableCell>{entry.category || '-'}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(entry.value)}
+                          {formatCurrency(entry.amount)}
                         </TableCell>
                         <TableCell>{formatDate(entry.due_date)}</TableCell>
                         <TableCell>
@@ -395,7 +395,7 @@ export default function FinancialEntries() {
                             <DropdownMenuContent align="end" className="bg-popover">
                               {entry.status === 'pending' && (
                                 <DropdownMenuItem onClick={() => {
-                                  setPaidValue(entry.value.toString());
+                                  setPaidValue(entry.amount.toString());
                                   setPayDialog({ open: true, entry });
                                 }}>
                                   <CheckCircle2 className="h-4 w-4 mr-2" />

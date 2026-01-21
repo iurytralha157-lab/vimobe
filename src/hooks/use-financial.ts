@@ -15,14 +15,14 @@ export interface FinancialEntry {
   id: string;
   organization_id: string;
   type: 'payable' | 'receivable';
-  category_id?: string;
+  category?: string;
   contract_id?: string;
   property_id?: string;
   related_person_type?: 'client' | 'broker' | 'supplier';
   related_person_id?: string;
   related_person_name?: string;
   description: string;
-  value: number;
+  amount: number;
   due_date: string;
   competence_date?: string;
   payment_method?: string;
@@ -37,8 +37,7 @@ export interface FinancialEntry {
   created_by?: string;
   created_at: string;
   updated_at: string;
-  category?: FinancialCategory;
-  contract?: { contract_number: string; client_name: string };
+  contract?: { contract_number: string };
   property?: { code: string; title: string };
 }
 
@@ -101,8 +100,7 @@ export function useFinancialEntries(filters?: { type?: string; status?: string; 
         .from('financial_entries')
         .select(`
           *,
-          category:financial_categories(id, name, type),
-          contract:contracts(contract_number, client_name),
+          contract:contracts(contract_number),
           property:properties(code, title)
         `)
         .order('due_date', { ascending: true });
@@ -141,7 +139,7 @@ export function useCreateFinancialEntry() {
       if (generateInstallments && entryData.total_installments && entryData.total_installments > 1) {
         const entries = [];
         const baseDate = new Date(entryData.due_date!);
-        const installmentValue = entryData.value! / entryData.total_installments;
+        const installmentAmount = entryData.amount! / entryData.total_installments;
 
         for (let i = 0; i < entryData.total_installments; i++) {
           const dueDate = new Date(baseDate);
@@ -151,7 +149,7 @@ export function useCreateFinancialEntry() {
             ...entryData,
             organization_id: orgId,
             created_by: user?.id,
-            value: installmentValue,
+            amount: installmentAmount,
             installment_number: i + 1,
             due_date: dueDate.toISOString().split('T')[0],
           });
@@ -306,14 +304,14 @@ export function useFinancialDashboard() {
         .select('calculated_value, status');
 
       // Calculate totals
-      const receivablesTyped = receivables as unknown as { value: number; due_date: string }[] || [];
-      const payablesTyped = payables as unknown as { value: number; due_date: string }[] || [];
+      const receivablesTyped = receivables as unknown as { amount: number; due_date: string }[] || [];
+      const payablesTyped = payables as unknown as { amount: number; due_date: string }[] || [];
       const commissionsTyped = commissions as unknown as { calculated_value: number; status: string }[] || [];
 
-      const receivable30 = receivablesTyped.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.value), 0);
-      const receivable60 = receivablesTyped.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.value), 0);
-      const receivable90 = receivablesTyped.filter(r => new Date(r.due_date) <= days90).reduce((sum, r) => sum + Number(r.value), 0);
-      const totalPayable = payablesTyped.reduce((sum, p) => sum + Number(p.value), 0);
+      const receivable30 = receivablesTyped.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.amount), 0);
+      const receivable60 = receivablesTyped.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.amount), 0);
+      const receivable90 = receivablesTyped.filter(r => new Date(r.due_date) <= days90).reduce((sum, r) => sum + Number(r.amount), 0);
+      const totalPayable = payablesTyped.reduce((sum, p) => sum + Number(p.amount), 0);
 
       const forecastCommissions = commissionsTyped.filter(c => c.status === 'forecast' || c.status === 'approved').reduce((sum, c) => sum + Number(c.calculated_value), 0);
       const paidCommissions = commissionsTyped.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.calculated_value), 0);
