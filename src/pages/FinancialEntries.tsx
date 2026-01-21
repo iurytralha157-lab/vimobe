@@ -63,7 +63,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-// Mobile Entry Card Component
+// Mobile Entry Card Component - Melhorado para mobile
 function EntryCard({ entry, onPay, onEdit, onDelete }: { 
   entry: any; 
   onPay: () => void;
@@ -71,54 +71,54 @@ function EntryCard({ entry, onPay, onEdit, onDelete }: {
   onDelete: () => void;
 }) {
   return (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
+    <Card className="mb-2 sm:mb-3">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-1.5 mb-1">
               {entry.type === 'receivable' ? (
-                <TrendingUp className="h-4 w-4 text-success shrink-0" />
+                <TrendingUp className="h-3.5 w-3.5 text-success shrink-0" />
               ) : (
-                <TrendingDown className="h-4 w-4 text-destructive shrink-0" />
+                <TrendingDown className="h-3.5 w-3.5 text-destructive shrink-0" />
               )}
-              <span className="font-medium text-sm truncate">{entry.description}</span>
+              <span className="font-medium text-xs sm:text-sm truncate">{entry.description}</span>
             </div>
             {entry.related_person_name && (
-              <p className="text-xs text-muted-foreground mb-2">{entry.related_person_name}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mb-1.5 truncate">{entry.related_person_name}</p>
             )}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={entry.type === 'receivable' ? 'default' : 'secondary'} className="text-xs">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge variant={entry.type === 'receivable' ? 'default' : 'secondary'} className="text-[10px] sm:text-xs h-5">
                 {entry.type === 'receivable' ? 'Receber' : 'Pagar'}
               </Badge>
               <EntryStatusBadge status={entry.status} />
               {entry.installment_number && entry.total_installments && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-[10px] sm:text-xs h-5">
                   {entry.installment_number}/{entry.total_installments}
                 </Badge>
               )}
             </div>
           </div>
           <div className="text-right shrink-0">
-            <p className={`font-bold ${entry.type === 'receivable' ? 'text-success' : 'text-destructive'}`}>
+            <p className={`font-bold text-sm sm:text-base ${entry.type === 'receivable' ? 'text-success' : 'text-destructive'}`}>
               {formatCurrency(entry.amount)}
             </p>
-            <p className="text-xs text-muted-foreground flex items-center justify-end gap-1 mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center justify-end gap-1 mt-0.5">
               <Calendar className="h-3 w-3" />
               {formatDate(entry.due_date)}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+        <div className="flex items-center gap-1.5 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t">
           {entry.status === 'pending' && (
-            <Button variant="outline" size="sm" className="flex-1" onClick={onPay}>
-              <CheckCircle2 className="h-4 w-4 mr-1" />
+            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={onPay}>
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
               Pagar
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={onEdit}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onEdit}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="text-destructive" onClick={onDelete}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={onDelete}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

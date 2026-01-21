@@ -70,7 +70,7 @@ import { useForm } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
-// Mobile Commission Card
+// Mobile Commission Card - Melhorado para mobile
 function CommissionCard({ commission, onApprove, onPay, onCancel }: {
   commission: any;
   onApprove: () => void;
@@ -78,15 +78,15 @@ function CommissionCard({ commission, onApprove, onPay, onCancel }: {
   onCancel: () => void;
 }) {
   return (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
+    <Card className="mb-2 sm:mb-3">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <User className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="font-medium text-sm truncate">{commission.user?.name || '-'}</span>
+              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+              <span className="font-medium text-xs sm:text-sm truncate">{commission.user?.name || '-'}</span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground">
               {commission.contract?.contract_number && (
                 <span className="flex items-center gap-1">
                   <FileText className="h-3 w-3" />
@@ -104,43 +104,43 @@ function CommissionCard({ commission, onApprove, onPay, onCancel }: {
           <CommissionStatusBadge status={commission.status} />
         </div>
         
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Base</p>
-            <p className="text-sm font-medium">{formatCurrency(commission.base_value)}</p>
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-2 sm:mb-3 bg-muted/30 rounded-lg p-2">
+          <div className="text-center">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Base</p>
+            <p className="text-xs sm:text-sm font-medium truncate">{formatCurrency(commission.base_value)}</p>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">%</p>
-            <p className="text-sm font-medium">{commission.percentage ? `${commission.percentage}%` : '-'}</p>
+          <div className="text-center border-x border-border/50">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">%</p>
+            <p className="text-xs sm:text-sm font-medium">{commission.percentage ? `${commission.percentage}%` : '-'}</p>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Comissão</p>
-            <p className="text-sm font-bold text-primary">{formatCurrency(commission.calculated_value)}</p>
+          <div className="text-center">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Comissão</p>
+            <p className="text-xs sm:text-sm font-bold text-primary truncate">{formatCurrency(commission.calculated_value)}</p>
           </div>
         </div>
 
         {commission.forecast_date && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3">
+          <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mb-2">
             <Calendar className="h-3 w-3" />
             Previsão: {formatDate(commission.forecast_date)}
           </p>
         )}
 
-        <div className="flex items-center gap-2 pt-3 border-t">
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t">
           {commission.status === 'forecast' && (
-            <Button variant="outline" size="sm" className="flex-1" onClick={onApprove}>
-              <CheckCircle2 className="h-4 w-4 mr-1" />
+            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={onApprove}>
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
               Aprovar
             </Button>
           )}
           {commission.status === 'approved' && (
-            <Button size="sm" className="flex-1" onClick={onPay}>
-              <DollarSign className="h-4 w-4 mr-1" />
+            <Button size="sm" className="flex-1 h-8 text-xs" onClick={onPay}>
+              <DollarSign className="h-3.5 w-3.5 mr-1" />
               Pagar
             </Button>
           )}
           {(commission.status === 'forecast' || commission.status === 'approved') && (
-            <Button variant="ghost" size="sm" className="text-destructive" onClick={onCancel}>
+            <Button variant="ghost" size="sm" className="text-destructive h-8 w-8 p-0" onClick={onCancel}>
               <XCircle className="h-4 w-4" />
             </Button>
           )}
@@ -150,32 +150,32 @@ function CommissionCard({ commission, onApprove, onPay, onCancel }: {
   );
 }
 
-// Mobile Rule Card
+// Mobile Rule Card - Melhorado para mobile
 function RuleCard({ rule, onEdit, onDelete }: {
   rule: any;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   return (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <p className="font-medium text-sm">{rule.name}</p>
-            <div className="flex items-center gap-2 flex-wrap mt-2">
-              <Badge variant="outline" className="text-xs">
+    <Card className="mb-2 sm:mb-3">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-xs sm:text-sm truncate">{rule.name}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1.5 sm:mt-2">
+              <Badge variant="outline" className="text-[10px] sm:text-xs h-5">
                 {rule.business_type === 'sale' ? 'Venda' : 
                  rule.business_type === 'rental' ? 'Locação' : 
                  rule.business_type === 'service' ? 'Serviço' : 'Todos'}
               </Badge>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">
                 {rule.commission_type === 'percentage' 
                   ? `${rule.commission_value}%` 
                   : formatCurrency(rule.commission_value)}
               </Badge>
               <Badge 
                 variant={rule.is_active ? 'default' : 'secondary'} 
-                className={`text-xs ${rule.is_active ? 'bg-success text-success-foreground' : ''}`}
+                className={`text-[10px] sm:text-xs h-5 ${rule.is_active ? 'bg-success text-success-foreground' : ''}`}
               >
                 {rule.is_active ? 'Ativa' : 'Inativa'}
               </Badge>
@@ -183,7 +183,7 @@ function RuleCard({ rule, onEdit, onDelete }: {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -402,33 +402,33 @@ export default function Commissions() {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold">Comissões</h1>
-            <p className="text-sm text-muted-foreground">Gerencie comissões e repasses aos corretores</p>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Comissões</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Gerencie comissões e repasses</p>
           </div>
-          <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={handleExport}>
-            <Download className="h-4 w-4 mr-1 md:mr-2" />
-            <span className="hidden sm:inline">Exportar</span>
+          <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={handleExport} className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-1.5" />
+            Exportar
           </Button>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <ScrollArea className="w-full">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="pending" className="text-xs md:text-sm">
-                <span className="hidden sm:inline">Repasses </span>Pendentes
+          <ScrollArea className="w-full pb-2">
+            <TabsList className="w-full sm:w-auto inline-flex">
+              <TabsTrigger value="pending" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
+                Pendentes
               </TabsTrigger>
-              <TabsTrigger value="history" className="text-xs md:text-sm">
-                <span className="hidden sm:inline">Histórico de </span>Repasses
+              <TabsTrigger value="history" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
+                Histórico
               </TabsTrigger>
-              <TabsTrigger value="forecast" className="text-xs md:text-sm">
+              <TabsTrigger value="forecast" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
                 Previsão
               </TabsTrigger>
-              <TabsTrigger value="rules" className="text-xs md:text-sm">
+              <TabsTrigger value="rules" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
                 Regras
               </TabsTrigger>
             </TabsList>
@@ -438,21 +438,21 @@ export default function Commissions() {
           {['pending', 'history', 'forecast'].map((tab) => (
             <TabsContent key={tab} value={tab}>
               <Card>
-                <CardHeader className="pb-3 md:pb-4">
+                <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 md:pb-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
                       placeholder="Buscar corretor ou contrato..." 
-                      className="pl-9"
+                      className="pl-9 h-9 sm:h-10 text-sm"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
                 </CardHeader>
-                <CardContent className="p-0 md:p-0">
+                <CardContent className="p-2 sm:p-3 md:p-4 pt-0">
                   {commissionsLoading ? (
-                    <div className="p-4 space-y-3">
-                      {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 md:h-12" />)}
+                    <div className="space-y-2 sm:space-y-3">
+                      {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 sm:h-24 md:h-12" />)}
                     </div>
                   ) : isMobile ? (
                     <div className="p-4">
