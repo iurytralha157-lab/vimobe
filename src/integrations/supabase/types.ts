@@ -637,44 +637,88 @@ export type Database = {
       commissions: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
+          base_value: number | null
+          calculated_value: number | null
+          contract_id: string | null
           created_at: string | null
+          forecast_date: string | null
           id: string
           lead_id: string | null
           notes: string | null
           organization_id: string
           paid_at: string | null
+          paid_by: string | null
+          payment_proof: string | null
           percentage: number | null
+          property_id: string | null
+          rule_id: string | null
           status: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          base_value?: number | null
+          calculated_value?: number | null
+          contract_id?: string | null
           created_at?: string | null
+          forecast_date?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
           organization_id: string
           paid_at?: string | null
+          paid_by?: string | null
+          payment_proof?: string | null
           percentage?: number | null
+          property_id?: string | null
+          rule_id?: string | null
           status?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          base_value?: number | null
+          calculated_value?: number | null
+          contract_id?: string | null
           created_at?: string | null
+          forecast_date?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
           organization_id?: string
           paid_at?: string | null
+          paid_by?: string | null
+          payment_proof?: string | null
           percentage?: number | null
+          property_id?: string | null
+          rule_id?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "commissions_lead_id_fkey"
             columns: ["lead_id"]
@@ -687,6 +731,27 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "commission_rules"
             referencedColumns: ["id"]
           },
           {
@@ -766,6 +831,10 @@ export type Database = {
       contracts: {
         Row: {
           attachments: Json | null
+          client_document: string | null
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
           closing_date: string | null
           commission_percentage: number | null
           commission_value: number | null
@@ -773,18 +842,27 @@ export type Database = {
           contract_type: string | null
           created_at: string | null
           created_by: string | null
+          down_payment: number | null
+          end_date: string | null
           id: string
+          installments: number | null
           lead_id: string | null
           notes: string | null
           organization_id: string
+          payment_conditions: string | null
           property_id: string | null
           signing_date: string | null
+          start_date: string | null
           status: string | null
           updated_at: string | null
           value: number | null
         }
         Insert: {
           attachments?: Json | null
+          client_document?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           closing_date?: string | null
           commission_percentage?: number | null
           commission_value?: number | null
@@ -792,18 +870,27 @@ export type Database = {
           contract_type?: string | null
           created_at?: string | null
           created_by?: string | null
+          down_payment?: number | null
+          end_date?: string | null
           id?: string
+          installments?: number | null
           lead_id?: string | null
           notes?: string | null
           organization_id: string
+          payment_conditions?: string | null
           property_id?: string | null
           signing_date?: string | null
+          start_date?: string | null
           status?: string | null
           updated_at?: string | null
           value?: number | null
         }
         Update: {
           attachments?: Json | null
+          client_document?: string | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
           closing_date?: string | null
           commission_percentage?: number | null
           commission_value?: number | null
@@ -811,12 +898,17 @@ export type Database = {
           contract_type?: string | null
           created_at?: string | null
           created_by?: string | null
+          down_payment?: number | null
+          end_date?: string | null
           id?: string
+          installments?: number | null
           lead_id?: string | null
           notes?: string | null
           organization_id?: string
+          payment_conditions?: string | null
           property_id?: string | null
           signing_date?: string | null
+          start_date?: string | null
           status?: string | null
           updated_at?: string | null
           value?: number | null
@@ -907,6 +999,7 @@ export type Database = {
           notes: string | null
           organization_id: string
           paid_date: string | null
+          paid_value: number | null
           parent_entry_id: string | null
           payment_method: string | null
           recurring_type: string | null
@@ -931,6 +1024,7 @@ export type Database = {
           notes?: string | null
           organization_id: string
           paid_date?: string | null
+          paid_value?: number | null
           parent_entry_id?: string | null
           payment_method?: string | null
           recurring_type?: string | null
@@ -955,6 +1049,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           paid_date?: string | null
+          paid_value?: number | null
           parent_entry_id?: string | null
           payment_method?: string | null
           recurring_type?: string | null

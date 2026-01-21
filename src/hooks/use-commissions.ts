@@ -169,7 +169,11 @@ export function useCommissions(filters?: { status?: string; userId?: string }) {
             .select('id, name, email')
             .eq('id', commission.user_id)
             .single();
-          return { ...commission, user };
+          
+          // Garantir que calculated_value existe (fallback para amount se necessário)
+          const calculatedValue = commission.calculated_value ?? (commission as any).amount ?? 0;
+          
+          return { ...commission, user, calculated_value: calculatedValue };
         })
       );
 

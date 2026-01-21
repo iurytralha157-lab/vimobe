@@ -201,7 +201,7 @@ export function useMarkEntryAsPaid() {
         .from('financial_entries')
         .update({
           status: 'paid',
-          paid_at: new Date().toISOString(),
+          paid_date: new Date().toISOString().split('T')[0], // Corrigido: usa paid_date (date) ao invés de paid_at
           paid_value,
         } as never)
         .eq('id', id)
