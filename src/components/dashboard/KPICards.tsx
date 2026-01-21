@@ -6,9 +6,6 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  AlertTriangle,
   LucideIcon
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -233,8 +230,6 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
     accentColor: 'chart-5',
   };
 
-  const hasOverdue = (data.overdueReceivables || 0) > 0 || (data.overduePayables || 0) > 0;
-
   return (
     <div className="space-y-3">
       {/* Lead KPIs */}
@@ -246,66 +241,6 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
 
       {/* Sales VGV Card - Highlighted */}
       <KPICardItem {...salesKpi} isHighlighted />
-
-      {/* Financial Summary Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        <KPICardItem
-          title="A Receber"
-          value={data.totalReceivables || 0}
-          icon={ArrowUpCircle}
-          tooltip={`Total a receber no período - ${periodLabel}`}
-          format="currency"
-          accentColor="chart-3"
-        />
-        <KPICardItem
-          title="A Pagar"
-          value={data.totalPayables || 0}
-          icon={ArrowDownCircle}
-          tooltip={`Total a pagar no período - ${periodLabel}`}
-          format="currency"
-          accentColor="destructive"
-        />
-        <KPICardItem
-          title="Comissões Pendentes"
-          value={data.pendingCommissions || 0}
-          icon={DollarSign}
-          tooltip="Comissões a pagar (forecast + aprovadas)"
-          format="currency"
-          accentColor="chart-1"
-        />
-        <KPICardItem
-          title="Comissões Pagas"
-          value={data.paidCommissions || 0}
-          icon={CheckCircle2}
-          tooltip="Total de comissões já pagas"
-          format="currency"
-          accentColor="chart-2"
-        />
-      </div>
-
-      {/* Overdue Alert */}
-      {hasOverdue && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-destructive">Contas Vencidas</p>
-                <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
-                  {(data.overdueReceivables || 0) > 0 && (
-                    <span>A receber: {formatValue(data.overdueReceivables || 0, 'currency')}</span>
-                  )}
-                  {(data.overduePayables || 0) > 0 && (
-                    <span>A pagar: {formatValue(data.overduePayables || 0, 'currency')}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
