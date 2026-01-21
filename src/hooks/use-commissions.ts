@@ -141,6 +141,8 @@ export function useCommissions(filters?: { status?: string; userId?: string }) {
   return useQuery({
     queryKey: ['commissions', profile?.organization_id, filters],
     queryFn: async () => {
+      if (!profile?.organization_id) return [];
+
       let query = supabase
         .from('commissions')
         .select(`
@@ -148,6 +150,7 @@ export function useCommissions(filters?: { status?: string; userId?: string }) {
           contract:contracts(contract_number, client_name),
           property:properties(code, title)
         `)
+        .eq('organization_id', profile.organization_id)
         .order('created_at', { ascending: false });
 
       if (filters?.status) {
@@ -171,7 +174,7 @@ export function useCommissions(filters?: { status?: string; userId?: string }) {
             .single();
           
           // Garantir que calculated_value existe (fallback para amount se necessário)
-          const calculatedValue = commission.calculated_value ?? (commission as any).amount ?? 0;
+          const calculatedValue = (commission as any).amount ?? commission.calculated_value ?? 0;
           
           return { ...commission, user, calculated_value: calculatedValue };
         })
@@ -284,16 +287,20 @@ export function useCommissionsByBroker() {
   return useQuery({
     queryKey: ['commissions-by-broker', profile?.organization_id],
     queryFn: async () => {
+      if (!profile?.organization_id) return [];
+
       const { data, error } = await supabase
         .from('commissions')
-        .select('user_id, calculated_value, status');
+        .select('user_id, amount, calculated_value, status')
+        .eq('organization_id', profile.organization_id);
 
       if (error) throw error;
 
-      const commissionsTyped = data as unknown as { user_id: string; calculated_value: number; status: string }[];
+      const commissionsTyped = data as unknown as { user_id: string; amount: number; calculated_value: number; status: string }[];
 
       // Get unique user IDs
       const userIds = [...new Set(commissionsTyped.map(c => c.user_id))];
+      if (userIds.length === 0) return [];
 
       // Fetch user details
       const { data: users } = await supabase
@@ -317,7 +324,8 @@ export function useCommissionsByBroker() {
           };
         }
         
-        const value = Number(item.calculated_value);
+        // Use amount as primary, fallback to calculated_value
+        const value = Number(item.amount ?? item.calculated_value ?? 0);
         acc[userId].total += value;
         
         if (item.status === 'forecast') acc[userId].forecast += value;
