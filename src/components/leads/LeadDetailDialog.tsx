@@ -1286,7 +1286,7 @@ export function LeadDetailDialog({
                   <PopoverTrigger asChild>
                     <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent">
                       <User className="h-3.5 w-3.5" />
-                      <span>{lead.assigned_user?.name || 'Sem responsável'}</span>
+                      <span>{lead.assignee?.name || 'Sem responsável'}</span>
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </PopoverTrigger>
