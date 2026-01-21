@@ -44,6 +44,7 @@ export function FloatingChat() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const {
     data: sessions,
     isLoading: loadingSessions
@@ -294,22 +295,28 @@ export function FloatingChat() {
         </div>
       </ScrollArea>
     </div>;
-  const MessageInput = ({
-    mobile = false
-  }: {
-    mobile?: boolean;
-  }) => <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-6")}>
+  const renderMessageInput = (mobile = false) => (
+    <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-6")}>
       <div className="flex items-center gap-2">
         <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" />
         <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
           <Paperclip className="h-5 w-5" />
         </Button>
-          <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={handleKeyPress} className={cn("flex-1", mobile ? "h-11" : "h-10")} />
-          <Button size="icon" className={cn(mobile ? "h-10 w-10" : "h-10 w-10")} onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending}>
+        <Input 
+          ref={messageInputRef}
+          placeholder="Digite sua mensagem..." 
+          value={messageText} 
+          onChange={(e) => setMessageText(e.target.value)} 
+          onKeyDown={handleKeyPress} 
+          className={cn("flex-1", mobile ? "h-11" : "h-10")}
+          autoComplete="off"
+        />
+        <Button size="icon" className={cn(mobile ? "h-10 w-10" : "h-10 w-10")} onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending}>
           {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
-    </div>;
+    </div>
+  );
   const ConversationFilters = () => <div className="p-4 space-y-3 border-b shrink-0 bg-card">
       {connectedSessions.length > 1 && <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
           <SelectTrigger className="h-9">
@@ -409,9 +416,9 @@ export function FloatingChat() {
 
             {/* Content */}
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
-              {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? <>
+            {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? <>
                   <MessagesView />
-                  <MessageInput mobile />
+                  {renderMessageInput(true)}
                 </> : <>
                   <ConversationFilters />
                   <ConversationList />
@@ -430,7 +437,7 @@ export function FloatingChat() {
       {!isMinimized && <>
           {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? <>
               <MessagesView />
-              <MessageInput />
+              {renderMessageInput(false)}
             </> : <>
               <ConversationFilters />
               <ConversationList />
