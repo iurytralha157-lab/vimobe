@@ -460,12 +460,13 @@ export function useSendWhatsAppMessage() {
       // Snapshot previous value
       const previousMessages = queryClient.getQueryData<WhatsAppMessage[]>(["whatsapp-messages", conversationId]);
 
-      // Create optimistic message
-      const optimisticMessage: WhatsAppMessage = {
+      // Create optimistic message with client_message_id for deduplication
+      const optimisticMessage: WhatsAppMessage & { client_message_id?: string } = {
         id: optimisticId,
         conversation_id: conversationId,
         session_id: variables.conversation.session_id,
         message_id: optimisticId,
+        client_message_id: optimisticId, // Important for deduplication with realtime
         from_me: true,
         content: variables.text,
         message_type: variables.mediaType || "text",
