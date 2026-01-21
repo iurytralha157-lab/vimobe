@@ -30,6 +30,13 @@ export interface FinancialEntry {
   created_at?: string;
   updated_at?: string;
   contract?: { contract_number?: string };
+  // Installments
+  installment_number?: number;
+  total_installments?: number;
+  // Recurring
+  is_recurring?: boolean;
+  recurring_type?: 'monthly' | 'weekly' | 'yearly';
+  parent_entry_id?: string;
 }
 
 export function useFinancialCategories() {

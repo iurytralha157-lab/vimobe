@@ -901,12 +901,17 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          installment_number: number | null
+          is_recurring: boolean | null
           lead_id: string | null
           notes: string | null
           organization_id: string
           paid_date: string | null
+          parent_entry_id: string | null
           payment_method: string | null
+          recurring_type: string | null
           status: string | null
+          total_installments: number | null
           type: string
           updated_at: string | null
         }
@@ -920,12 +925,17 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          installment_number?: number | null
+          is_recurring?: boolean | null
           lead_id?: string | null
           notes?: string | null
           organization_id: string
           paid_date?: string | null
+          parent_entry_id?: string | null
           payment_method?: string | null
+          recurring_type?: string | null
           status?: string | null
+          total_installments?: number | null
           type: string
           updated_at?: string | null
         }
@@ -939,12 +949,17 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          installment_number?: number | null
+          is_recurring?: boolean | null
           lead_id?: string | null
           notes?: string | null
           organization_id?: string
           paid_date?: string | null
+          parent_entry_id?: string | null
           payment_method?: string | null
+          recurring_type?: string | null
           status?: string | null
+          total_installments?: number | null
           type?: string
           updated_at?: string | null
         }
@@ -982,6 +997,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_parent_entry_id_fkey"
+            columns: ["parent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
             referencedColumns: ["id"]
           },
         ]
