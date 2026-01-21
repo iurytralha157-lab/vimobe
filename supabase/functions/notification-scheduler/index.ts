@@ -291,6 +291,155 @@ Deno.serve(async (req) => {
       console.log(`Sent overdue notification for task: ${task.title} - Lead: ${lead.name}`);
     }
 
+    // ============================================
+    // 4. CONTAS FINANCEIRAS - Vencendo hoje, em 3 dias e atrasadas
+    // ============================================
+    let financialDueTodayNotified = 0;
+    let financialOverdueNotified = 0;
+    let financialUpcomingNotified = 0;
+
+    // A) Contas que vencem HOJE
+    const { data: entriesDueToday, error: dueTodayError } = await supabase
+      .from("financial_entries")
+      .select("id, organization_id, type, description, amount, due_date")
+      .eq("status", "pending")
+      .eq("due_date", today.toISOString().split('T')[0]);
+
+    if (!dueTodayError && entriesDueToday) {
+      console.log(`Found ${entriesDueToday.length} financial entries due today`);
+      
+      for (const entry of entriesDueToday) {
+        const typeLabel = entry.type === 'payable' ? 'A Pagar' : 'A Receber';
+        const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.amount);
+        
+        // Get admins of this organization
+        const { data: admins } = await supabase
+          .from("users")
+          .select("id")
+          .eq("organization_id", entry.organization_id)
+          .eq("role", "admin");
+        
+        for (const admin of admins || []) {
+          // Check if already notified today
+          const { data: existing } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("user_id", admin.id)
+            .ilike("title", "%vence hoje%")
+            .ilike("content", `%${entry.description}%`)
+            .gte("created_at", today.toISOString())
+            .limit(1);
+          
+          if (!existing || existing.length === 0) {
+            await supabase.from("notifications").insert({
+              user_id: admin.id,
+              organization_id: entry.organization_id,
+              title: "⚠️ Conta vence hoje!",
+              content: `${typeLabel}: ${entry.description} - ${formattedAmount}`,
+              type: "commission",
+              is_read: false,
+            });
+            financialDueTodayNotified++;
+          }
+        }
+      }
+    }
+
+    // B) Contas ATRASADAS (venceram ontem ou antes)
+    const { data: overdueEntries, error: overdueError } = await supabase
+      .from("financial_entries")
+      .select("id, organization_id, type, description, amount, due_date")
+      .eq("status", "pending")
+      .lt("due_date", today.toISOString().split('T')[0]);
+
+    if (!overdueError && overdueEntries) {
+      console.log(`Found ${overdueEntries.length} overdue financial entries`);
+      
+      for (const entry of overdueEntries) {
+        const typeLabel = entry.type === 'payable' ? 'A Pagar' : 'A Receber';
+        const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.amount);
+        const dueDate = new Date(entry.due_date);
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        const { data: admins } = await supabase
+          .from("users")
+          .select("id")
+          .eq("organization_id", entry.organization_id)
+          .eq("role", "admin");
+        
+        for (const admin of admins || []) {
+          const { data: existing } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("user_id", admin.id)
+            .ilike("title", "%atraso%")
+            .ilike("content", `%${entry.description}%`)
+            .gte("created_at", today.toISOString())
+            .limit(1);
+          
+          if (!existing || existing.length === 0) {
+            await supabase.from("notifications").insert({
+              user_id: admin.id,
+              organization_id: entry.organization_id,
+              title: "🚨 Conta em atraso!",
+              content: `${typeLabel}: ${entry.description} - ${formattedAmount} (${daysOverdue} dia${daysOverdue > 1 ? 's' : ''} em atraso)`,
+              type: "commission",
+              is_read: false,
+            });
+            financialOverdueNotified++;
+          }
+        }
+      }
+    }
+
+    // C) Contas que vencem em 3 dias (alerta antecipado)
+    const threeDaysFromNow = new Date(today);
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    
+    const { data: upcomingEntries, error: upcomingError } = await supabase
+      .from("financial_entries")
+      .select("id, organization_id, type, description, amount, due_date")
+      .eq("status", "pending")
+      .eq("due_date", threeDaysFromNow.toISOString().split('T')[0]);
+
+    if (!upcomingError && upcomingEntries) {
+      console.log(`Found ${upcomingEntries.length} financial entries due in 3 days`);
+      
+      for (const entry of upcomingEntries) {
+        const typeLabel = entry.type === 'payable' ? 'A Pagar' : 'A Receber';
+        const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.amount);
+        
+        const { data: admins } = await supabase
+          .from("users")
+          .select("id")
+          .eq("organization_id", entry.organization_id)
+          .eq("role", "admin");
+        
+        for (const admin of admins || []) {
+          const { data: existing } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("user_id", admin.id)
+            .ilike("title", "%vence em 3 dias%")
+            .ilike("content", `%${entry.description}%`)
+            .gte("created_at", today.toISOString())
+            .limit(1);
+          
+          if (!existing || existing.length === 0) {
+            await supabase.from("notifications").insert({
+              user_id: admin.id,
+              organization_id: entry.organization_id,
+              title: "📅 Conta vence em 3 dias",
+              content: `${typeLabel}: ${entry.description} - ${formattedAmount}`,
+              type: "commission",
+              is_read: false,
+            });
+            financialUpcomingNotified++;
+          }
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -300,6 +449,9 @@ Deno.serve(async (req) => {
           tasksDueToday: tasksDueTodayNotified,
           tasksDueTomorrow: tasksDueTomorrowNotified,
           overdueTasks: overdueTasksNotified,
+          financialDueToday: financialDueTodayNotified,
+          financialOverdue: financialOverdueNotified,
+          financialUpcoming: financialUpcomingNotified,
         }
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

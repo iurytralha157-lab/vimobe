@@ -3576,6 +3576,7 @@ export type Database = {
         }[]
       }
       normalize_phone: { Args: { phone_input: string }; Returns: string }
+      notify_financial_entries: { Args: never; Returns: undefined }
       redistribute_lead_from_pool: {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: Json

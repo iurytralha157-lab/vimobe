@@ -633,6 +633,48 @@ async function handleMessagesUpsert(
           } catch (triggerError) {
             console.error("Error calling automation trigger:", triggerError);
           }
+
+          // ===== NOTIFY USERS ABOUT NEW WHATSAPP MESSAGE =====
+          try {
+            // Find lead associated with this conversation
+            let leadInfo = null;
+            if (conversation.lead_id) {
+              const { data: lead } = await supabase
+                .from("leads")
+                .select("id, name, assigned_user_id, organization_id")
+                .eq("id", conversation.lead_id)
+                .single();
+              leadInfo = lead;
+            } else {
+              // Try to find lead by phone
+              const normalizedPhone = contactPhone.replace(/\D/g, '');
+              const { data: lead } = await supabase
+                .from("leads")
+                .select("id, name, assigned_user_id, organization_id")
+                .eq("organization_id", session.organization_id)
+                .or(`phone.eq.${normalizedPhone},phone.eq.55${normalizedPhone},phone.ilike.%${normalizedPhone}`)
+                .limit(1)
+                .maybeSingle();
+              leadInfo = lead;
+            }
+
+            if (leadInfo?.assigned_user_id) {
+              // Notify assigned user
+              const messagePreview = content.length > 50 ? content.substring(0, 50) + "..." : content;
+              await supabase.from("notifications").insert({
+                user_id: leadInfo.assigned_user_id,
+                organization_id: session.organization_id,
+                title: "💬 Nova mensagem no WhatsApp",
+                content: `${contactName}: "${messagePreview}"`,
+                type: "message",
+                lead_id: leadInfo.id,
+                is_read: false,
+              });
+              console.log(`Notification sent to assigned user ${leadInfo.assigned_user_id} for WhatsApp message`);
+            }
+          } catch (notifError) {
+            console.error("Error sending WhatsApp message notification:", notifError);
+          }
         }
 
         // ===== FIRST RESPONSE TRACKING =====
