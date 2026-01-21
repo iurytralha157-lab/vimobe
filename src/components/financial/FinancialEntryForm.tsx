@@ -1,15 +1,12 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -22,8 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFinancialCategories, useCreateFinancialEntry, useUpdateFinancialEntry } from '@/hooks/use-financial';
-import { useProperties } from '@/hooks/use-properties';
+import { useCreateFinancialEntry, useUpdateFinancialEntry } from '@/hooks/use-financial';
 import { useContracts } from '@/hooks/use-contracts';
 import { Loader2 } from 'lucide-react';
 
@@ -31,17 +27,11 @@ const formSchema = z.object({
   type: z.enum(['receivable', 'payable']),
   category: z.string().optional(),
   description: z.string().min(1, 'Descrição é obrigatória'),
-  amount: z.number().min(0.01, 'Valor deve ser maior que zero'),
+  amount: z.coerce.number().min(0.01, 'Valor deve ser maior que zero'),
   due_date: z.string().min(1, 'Data de vencimento é obrigatória'),
-  competence_date: z.string().optional(),
   payment_method: z.string().optional(),
-  property_id: z.string().optional(),
   contract_id: z.string().optional(),
-  related_person_name: z.string().optional(),
-  related_person_type: z.string().optional(),
   notes: z.string().optional(),
-  has_installments: z.boolean().default(false),
-  installments_count: z.number().min(2).max(60).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -53,8 +43,6 @@ interface FinancialEntryFormProps {
 }
 
 export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntryFormProps) {
-  const { data: categories } = useFinancialCategories();
-  const { data: properties } = useProperties();
   const { data: contracts } = useContracts();
   const createEntry = useCreateFinancialEntry();
   const updateEntry = useUpdateFinancialEntry();
@@ -65,43 +53,31 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
       type: entry?.type || 'receivable',
       category: entry?.category || '',
       description: entry?.description || '',
-      amount: entry?.amount || 0,
+      amount: entry?.amount || undefined,
       due_date: entry?.due_date?.split('T')[0] || '',
-      competence_date: entry?.competence_date?.split('T')[0] || '',
       payment_method: entry?.payment_method || '',
-      property_id: entry?.property_id || '',
       contract_id: entry?.contract_id || '',
-      related_person_name: entry?.related_person_name || '',
-      related_person_type: entry?.related_person_type || '',
       notes: entry?.notes || '',
-      has_installments: false,
-      installments_count: 2,
     },
   });
 
   const watchType = form.watch('type');
-  const watchHasInstallments = form.watch('has_installments');
 
-  // Categories are text-based now, so we use predefined options based on type
   const categoryOptions = watchType === 'receivable' 
     ? ['Vendas', 'Comissões', 'Aluguéis', 'Outros Recebimentos']
     : ['Despesas Operacionais', 'Marketing', 'Folha de Pagamento', 'Impostos', 'Outros Pagamentos'];
 
   const onSubmit = async (values: FormValues) => {
-    const payload: any = {
+    const payload = {
       type: values.type,
       category: values.category || null,
       description: values.description,
       amount: values.amount,
       due_date: values.due_date,
-      competence_date: values.competence_date || null,
       payment_method: values.payment_method || null,
-      property_id: values.property_id || null,
       contract_id: values.contract_id || null,
-      related_person_name: values.related_person_name || null,
-      related_person_type: values.related_person_type || null,
       notes: values.notes || null,
-      installments: values.has_installments ? values.installments_count : undefined,
+      status: 'pending',
     };
 
     if (entry) {
@@ -191,9 +167,13 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
                   <Input 
                     type="number" 
                     step="0.01" 
-                    min="0"
-                    {...field}
-                    onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                    min="0.01"
+                    placeholder="0,00"
+                    value={field.value ?? ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      field.onChange(val === '' ? undefined : parseFloat(val));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -219,20 +199,6 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="competence_date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Competência</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="payment_method"
             render={({ field }) => (
               <FormItem>
@@ -250,34 +216,6 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
                     <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
                     <SelectItem value="debit_card">Cartão de Débito</SelectItem>
                     <SelectItem value="cash">Dinheiro</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="property_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Imóvel (opcional)</FormLabel>
-                <Select onValueChange={(val) => field.onChange(val === 'none' ? '' : val)} value={field.value || 'none'}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {properties?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.code} - {p.title || p.endereco}
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -311,93 +249,6 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
             )}
           />
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="related_person_name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pessoa Relacionada</FormLabel>
-                <FormControl>
-                  <Input placeholder="Nome" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="related_person_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tipo de Pessoa</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="client">Cliente</SelectItem>
-                    <SelectItem value="broker">Corretor</SelectItem>
-                    <SelectItem value="supplier">Fornecedor</SelectItem>
-                    <SelectItem value="owner">Proprietário</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {!entry && (
-          <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-            <FormField
-              control={form.control}
-              name="has_installments"
-              render={({ field }) => (
-                <FormItem className="flex items-center gap-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Parcelar este lançamento</FormLabel>
-                    <FormDescription className="text-xs">
-                      O valor será dividido em parcelas mensais
-                    </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {watchHasInstallments && (
-              <FormField
-                control={form.control}
-                name="installments_count"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de Parcelas</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min={2} 
-                        max={60}
-                        {...field}
-                        onChange={e => field.onChange(parseInt(e.target.value) || 2)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </div>
-        )}
 
         <FormField
           control={form.control}

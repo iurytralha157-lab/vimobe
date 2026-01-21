@@ -155,7 +155,7 @@ export default function FinancialReports() {
 
   const totalReceivables = receivables.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalPayables = payables.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalPaid = paidEntries.reduce((sum, e) => sum + (e.paid_value || e.amount || 0), 0);
+  const totalPaid = paidEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalOverdue = overdueEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const handleExportExcel = () => {
@@ -401,8 +401,8 @@ export default function FinancialReports() {
                         {entry.type === 'receivable' ? 'Recebimento' : 'Pagamento'}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(entry.paid_value || entry.amount)}</TableCell>
-                    <TableCell>{formatDate(entry.paid_at)}</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(entry.amount)}</TableCell>
+                    <TableCell>{formatDate(entry.paid_date)}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -464,7 +464,7 @@ export default function FinancialReports() {
                         </TableCell>
                         <TableCell className="text-right font-medium text-destructive">{formatCurrency(entry.amount)}</TableCell>
                         <TableCell className="text-destructive">{formatDate(entry.due_date)}</TableCell>
-                        <TableCell>{entry.related_person_name || '-'}</TableCell>
+                        <TableCell>{entry.category || '-'}</TableCell>
                       </TableRow>
                     ))
                   )}
