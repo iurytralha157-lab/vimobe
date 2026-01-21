@@ -5,13 +5,11 @@ import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnel } from '@/components/dashboard/SalesFunnel';
 import { LeadSourcesChart } from '@/components/dashboard/LeadSourcesChart';
-import { LeadEvolutionChart } from '@/components/dashboard/LeadEvolutionChart';
 import { TopBrokersWidget } from '@/components/dashboard/TopBrokersWidget';
 import { UpcomingTasksWidget } from '@/components/dashboard/UpcomingTasksWidget';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
-  useLeadsChartData, 
   useFunnelData, 
   useLeadSourcesData,
   useTopBrokers,
@@ -47,7 +45,6 @@ export default function Dashboard() {
 
   // Data hooks
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
-  const { data: chartData = [], isLoading: chartLoading } = useLeadsChartData();
   const { data: funnelData = [], isLoading: funnelLoading } = useFunnelData();
   const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData();
   const { data: topBrokers = [], isLoading: brokersLoading } = useTopBrokers(filters);
@@ -151,11 +148,8 @@ export default function Dashboard() {
             <TabsContent value="sources" className="mt-3">
               <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
             </TabsContent>
-          </Tabs>
+        </Tabs>
         </div>
-
-        {/* Lead Evolution Chart */}
-        <LeadEvolutionChart data={chartData} isLoading={chartLoading} />
 
         {/* Bottom Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
