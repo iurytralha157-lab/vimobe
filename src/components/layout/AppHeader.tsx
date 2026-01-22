@@ -47,7 +47,7 @@ export function AppHeader({ title }: AppHeaderProps) {
   };
 
   return (
-    <header className="h-12 flex items-center px-4 lg:px-6 mx-3 mt-3 bg-card border rounded-xl shadow-sm">
+    <header className="h-12 flex items-center px-4 lg:px-6 mx-3 mt-3">
       {/* Mobile menu */}
       {isMobile && (
         <div className="flex items-center">
