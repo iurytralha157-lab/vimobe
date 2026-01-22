@@ -10,95 +10,77 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { MobileSidebar } from './MobileSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 const notificationIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
   task: CheckSquare,
   contract: FileText,
   commission: DollarSign,
   system: Bell,
-  info: Info,
+  info: Info
 };
-
 interface AppHeaderProps {
   title?: string;
 }
-
-export function AppHeader({ title }: AppHeaderProps) {
-  const { profile, organization, signOut, isSuperAdmin } = useAuth();
-  const { theme, setTheme } = useTheme();
+export function AppHeader({
+  title
+}: AppHeaderProps) {
+  const {
+    profile,
+    organization,
+    signOut,
+    isSuperAdmin
+  } = useAuth();
+  const {
+    theme,
+    setTheme
+  } = useTheme();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { data: notifications = [], isLoading } = useNotifications();
-  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
+  const {
+    data: notifications = [],
+    isLoading
+  } = useNotifications();
+  const {
+    data: unreadCount = 0
+  } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-
   const handleNotificationClick = (notification: any) => {
     markRead.mutate(notification.id);
     if (notification.lead_id) {
       navigate(`/crm/pipelines?lead_id=${notification.lead_id}`);
     }
   };
-
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
-
-  return (
-    <header className="h-16 bg-background border-b border-border flex items-center justify-between px-4 lg:px-6">
+  return <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-white">
       <div className="flex items-center gap-3">
         {/* Mobile menu */}
         {isMobile && <MobileSidebar />}
         
-        {title && (
-          <h1 className="text-lg lg:text-xl font-semibold text-foreground">{title}</h1>
-        )}
-        {!title && !isMobile && (
-          <div className="flex items-center gap-2">
+        {title && <h1 className="text-lg lg:text-xl font-semibold text-foreground">{title}</h1>}
+        {!title && !isMobile && <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Bem-vindo,</span>
             <span className="font-medium text-foreground">{profile?.name?.split(' ')[0] || 'Usuário'}</span>
-            {organization && (
-              <>
+            {organization && <>
                 <span className="text-muted-foreground">•</span>
                 <span className="text-muted-foreground">{organization.name}</span>
-              </>
-            )}
-          </div>
-        )}
+              </>}
+          </div>}
       </div>
 
       <div className="flex items-center gap-2 lg:gap-4">
         {/* Search - hidden on mobile */}
-        {!isMobile && (
-          <div className="relative w-64">
+        {!isMobile && <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar leads, imóveis..."
-              className="pl-9 bg-secondary border-0"
-            />
-          </div>
-        )}
+            <Input placeholder="Buscar leads, imóveis..." className="pl-9 bg-secondary border-0" />
+          </div>}
 
         {/* Theme toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          {theme === 'dark' ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
+        <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="text-muted-foreground hover:text-foreground">
+          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
         {/* Notifications */}
@@ -106,35 +88,23 @@ export function AppHeader({ title }: AppHeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
               <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+              {unreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                   {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
+                </span>}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8} collisionPadding={16} className="w-[calc(100vw-2rem)] sm:w-80 max-w-[380px] bg-popover">
             <div className="px-4 py-3 border-b border-border">
               <p className="font-medium">Notificações</p>
             </div>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
+            {isLoading ? <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : notifications.length > 0 ? (
-              <>
-                {notifications.slice(0, 5).map((notification) => {
-                  const NotificationIcon = notificationIcons[notification.type] || Bell;
-                  return (
-                    <DropdownMenuItem 
-                      key={notification.id} 
-                      className="p-3 cursor-pointer"
-                      onClick={() => handleNotificationClick(notification)}
-                    >
+              </div> : notifications.length > 0 ? <>
+                {notifications.slice(0, 5).map(notification => {
+              const NotificationIcon = notificationIcons[notification.type] || Bell;
+              return <DropdownMenuItem key={notification.id} className="p-3 cursor-pointer" onClick={() => handleNotificationClick(notification)}>
                       <div className={`flex items-start gap-3 w-full ${notification.is_read ? 'opacity-60' : ''}`}>
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                          notification.is_read ? 'bg-muted' : 'bg-primary/10'
-                        }`}>
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${notification.is_read ? 'bg-muted' : 'bg-primary/10'}`}>
                           <NotificationIcon className={`h-4 w-4 ${notification.is_read ? 'text-muted-foreground' : 'text-primary'}`} />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -142,48 +112,31 @@ export function AppHeader({ title }: AppHeaderProps) {
                             <p className={`text-sm truncate ${!notification.is_read ? 'font-semibold' : ''}`}>
                               {notification.title}
                             </p>
-                            {!notification.is_read && (
-                              <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                            )}
+                            {!notification.is_read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
                           </div>
-                          {notification.content && (
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.content}</p>
-                          )}
+                          {notification.content && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.content}</p>}
                           <p className="text-xs text-muted-foreground mt-1">
-                            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: ptBR })}
+                            {formatDistanceToNow(new Date(notification.created_at), {
+                        addSuffix: true,
+                        locale: ptBR
+                      })}
                           </p>
                         </div>
                       </div>
-                    </DropdownMenuItem>
-                  );
-                })}
+                    </DropdownMenuItem>;
+            })}
                 <DropdownMenuSeparator />
                 <div className="p-2 flex gap-2">
-                  {unreadCount > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="flex-1 text-xs"
-                      onClick={() => markAllRead.mutate()}
-                    >
+                  {unreadCount > 0 && <Button variant="ghost" size="sm" className="flex-1 text-xs" onClick={() => markAllRead.mutate()}>
                       Marcar todas como lidas
-                    </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="flex-1 text-xs"
-                    onClick={() => navigate('/notifications')}
-                  >
+                    </Button>}
+                  <Button variant="ghost" size="sm" className="flex-1 text-xs" onClick={() => navigate('/notifications')}>
                     Ver todas
                   </Button>
                 </div>
-              </>
-            ) : (
-              <div className="py-8 text-center text-sm text-muted-foreground">
+              </> : <div className="py-8 text-center text-sm text-muted-foreground">
                 Nenhuma notificação
-              </div>
-            )}
+              </div>}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -209,48 +162,33 @@ export function AppHeader({ title }: AppHeaderProps) {
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => navigate('/settings')}
-              className="cursor-pointer"
-            >
+            <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
               <Settings className="h-4 w-4 mr-2" />
               Configurações
             </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => navigate('/help')}
-              className="cursor-pointer"
-            >
+            <DropdownMenuItem onClick={() => navigate('/help')} className="cursor-pointer">
               <HelpCircle className="h-4 w-4 mr-2" />
               Ajuda
             </DropdownMenuItem>
-            {isSuperAdmin && (
-              <DropdownMenuItem 
-                onClick={() => navigate('/admin')}
-                className="cursor-pointer"
-              >
+            {isSuperAdmin && <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer">
                 <Shield className="h-4 w-4 mr-2" />
                 Super Admin
-              </DropdownMenuItem>
-            )}
+              </DropdownMenuItem>}
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={async () => {
-                try {
-                  await signOut();
-                } catch (error) {
-                  console.error('Erro no logout:', error);
-                }
-                // Sempre navegar para /auth após tentativa de logout
-                window.location.href = '/auth';
-              }}
-              className="text-destructive focus:text-destructive cursor-pointer"
-            >
+            <DropdownMenuItem onClick={async () => {
+            try {
+              await signOut();
+            } catch (error) {
+              console.error('Erro no logout:', error);
+            }
+            // Sempre navegar para /auth após tentativa de logout
+            window.location.href = '/auth';
+          }} className="text-destructive focus:text-destructive cursor-pointer">
               <LogOut className="h-4 w-4 mr-2" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
-  );
+    </header>;
 }
