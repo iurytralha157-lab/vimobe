@@ -69,124 +69,97 @@ export function DashboardFilters({
     : users;
 
   return (
-    <div className="p-3 bg-card rounded-lg border space-y-2">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {/* Date Filter - Using the new unified component */}
-        <DateFilterPopover
-          datePreset={datePreset}
-          onDatePresetChange={onDatePresetChange}
-          customDateRange={customDateRange}
-          onCustomDateRangeChange={onCustomDateRangeChange}
-          triggerClassName="h-9 w-full text-xs sm:text-sm justify-start"
-        />
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {/* Date Filter */}
+      <DateFilterPopover
+        datePreset={datePreset}
+        onDatePresetChange={onDatePresetChange}
+        customDateRange={customDateRange}
+        onCustomDateRangeChange={onCustomDateRangeChange}
+        triggerClassName="h-8 w-auto min-w-[140px] text-xs justify-start"
+      />
 
-        {/* Team Filter - Only for admin/team leader */}
-        {availableTeams.length > 0 ? (
-          <Select
-            value={teamId || 'all'}
-            onValueChange={(value) => {
-              onTeamChange(value === 'all' ? null : value);
-              onUserChange(null);
-            }}
-          >
-            <SelectTrigger className={cn(
-              "h-9 w-full text-xs sm:text-sm",
-              teamId && "border-primary text-primary"
-            )}>
-              <Users className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-              <SelectValue placeholder="Equipe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas equipes</SelectItem>
-              {availableTeams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Select
-            value={userId || 'all'}
-            onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
-          >
-            <SelectTrigger className={cn(
-              "h-9 w-full text-xs sm:text-sm",
-              userId && "border-primary text-primary"
-            )}>
-              <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-              <SelectValue placeholder="Corretor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {availableUsers.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* User Filter - Show only if team filter exists */}
-        {availableTeams.length > 0 && (
-          <Select
-            value={userId || 'all'}
-            onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
-          >
-            <SelectTrigger className={cn(
-              "h-9 w-full text-xs sm:text-sm",
-              userId && "border-primary text-primary"
-            )}>
-              <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-              <SelectValue placeholder="Corretor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {availableUsers.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Source Filter */}
+      {/* Team Filter - Only for admin/team leader */}
+      {availableTeams.length > 0 && (
         <Select
-          value={source || 'all'}
-          onValueChange={(value) => onSourceChange(value === 'all' ? null : value)}
+          value={teamId || 'all'}
+          onValueChange={(value) => {
+            onTeamChange(value === 'all' ? null : value);
+            onUserChange(null);
+          }}
         >
           <SelectTrigger className={cn(
-            "h-9 w-full text-xs sm:text-sm",
-            source && "border-primary text-primary"
+            "h-8 w-auto min-w-[120px] text-xs",
+            teamId && "border-primary text-primary"
           )}>
-            <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-            <SelectValue placeholder="Origem" />
+            <Users className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+            <SelectValue placeholder="Equipe" />
           </SelectTrigger>
           <SelectContent>
-            {sourceOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
+            <SelectItem value="all">Todas equipes</SelectItem>
+            {availableTeams.map((team) => (
+              <SelectItem key={team.id} value={team.id}>
+                {team.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      </div>
+      )}
+
+      {/* User Filter */}
+      <Select
+        value={userId || 'all'}
+        onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
+      >
+        <SelectTrigger className={cn(
+          "h-8 w-auto min-w-[110px] text-xs",
+          userId && "border-primary text-primary"
+        )}>
+          <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+          <SelectValue placeholder="Corretor" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos</SelectItem>
+          {availableUsers.map((user) => (
+            <SelectItem key={user.id} value={user.id}>
+              {user.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Source Filter */}
+      <Select
+        value={source || 'all'}
+        onValueChange={(value) => onSourceChange(value === 'all' ? null : value)}
+      >
+        <SelectTrigger className={cn(
+          "h-8 w-auto min-w-[110px] text-xs",
+          source && "border-primary text-primary"
+        )}>
+          <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+          <SelectValue placeholder="Origem" />
+        </SelectTrigger>
+        <SelectContent>
+          {sourceOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {/* Clear Filters */}
       {hasActiveFilters && (
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-muted-foreground hover:text-foreground text-xs"
-            onClick={onClear}
-          >
-            <X className="h-3.5 w-3.5 mr-1" />
-            Limpar filtros
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2 text-muted-foreground hover:text-foreground text-xs"
+          onClick={onClear}
+        >
+          <X className="h-3.5 w-3.5 mr-1" />
+          Limpar
+        </Button>
       )}
     </div>
   );
