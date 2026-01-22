@@ -121,6 +121,64 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existingUser) {
+      // Check if the user exists in auth.users
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(existingUser.id);
+      
+      // If user exists in public.users but NOT in auth.users, create auth entry
+      if (!authUser?.user) {
+        console.log(`User ${email} exists in users table but not in auth. Creating auth entry...`);
+        
+        // Create auth user with the SAME ID as the existing users table record
+        const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
+          id: existingUser.id,
+          email,
+          password: DEFAULT_PASSWORD,
+          email_confirm: true,
+          user_metadata: { name: name || existingUser.name },
+        });
+        
+        if (createAuthError) {
+          console.error('Error creating auth user for existing profile:', createAuthError);
+          return new Response(JSON.stringify({ error: createAuthError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        // Update profile data
+        const { error: updateError } = await supabaseAdmin
+          .from('users')
+          .update({
+            organization_id: existingUser.organization_id || targetOrgId,
+            role: role as 'admin' | 'user',
+            name: name || existingUser.name,
+            phone: phone || null,
+            endereco: endereco || null,
+            is_active: true,
+          })
+          .eq('id', existingUser.id);
+
+        if (updateError) {
+          console.error('Error updating user profile:', updateError);
+        }
+        
+        console.log(`Auth entry created for orphan user: ${email}`);
+        return new Response(JSON.stringify({ 
+          success: true, 
+          user: {
+            id: existingUser.id,
+            email,
+            name: name || existingUser.name,
+            role,
+          },
+          wasAuthOrphan: true,
+          defaultPassword: DEFAULT_PASSWORD,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       // If user exists without organization, add them to the current org
       if (!existingUser.organization_id) {
         const { error: updateError } = await supabaseAdmin
