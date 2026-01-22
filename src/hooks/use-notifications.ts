@@ -67,9 +67,11 @@ export function useNotifications() {
   useEffect(() => {
     if (!profile?.id) return;
 
-    // Preload notification sound
+    // Preload notification sounds
     const notificationSound = new Audio('/sounds/notification.mp3');
+    const newLeadSound = new Audio('/sounds/new-lead.mp3');
     notificationSound.volume = 0.5;
+    newLeadSound.volume = 0.7; // Slightly louder for new leads
 
     const channel = supabase
       .channel('notifications-realtime')
@@ -86,10 +88,16 @@ export function useNotifications() {
           
           const newNotification = payload.new as Notification;
           
-          // Play notification sound
-          notificationSound.play().catch((err) => {
-            console.log('Could not play notification sound:', err);
-          });
+          // Play different sound based on notification type
+          if (newNotification.type === 'lead') {
+            newLeadSound.play().catch((err) => {
+              console.log('Could not play new lead sound:', err);
+            });
+          } else {
+            notificationSound.play().catch((err) => {
+              console.log('Could not play notification sound:', err);
+            });
+          }
 
           // Send browser push notification
           sendBrowserNotification(newNotification.title, {
