@@ -6,6 +6,9 @@ export type ModuleName =
   | 'crm' 
   | 'financial' 
   | 'properties' 
+  | 'plans'      // Telecom: Planos de Serviço
+  | 'coverage'   // Telecom: Áreas de Cobertura
+  | 'telecom'    // Telecom: Clientes
   | 'whatsapp' 
   | 'agenda' 
   | 'cadences'
