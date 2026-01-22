@@ -1,4 +1,4 @@
-import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Menu } from 'lucide-react';
+import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, ChevronLeft, ChevronRight, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
@@ -63,7 +63,8 @@ export function AppHeader({ title }: AppHeaderProps) {
   };
 
   return (
-    <header className="h-14 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card sticky top-0 z-40">
+    <header className="h-14 border-b border-border flex items-center px-4 lg:px-6 bg-card sticky top-0 z-40">
+      {/* Logo + Toggle (left side) */}
       <div className="flex items-center gap-3">
         {/* Mobile menu */}
         {isMobile && <MobileSidebar />}
@@ -87,29 +88,34 @@ export function AppHeader({ title }: AppHeaderProps) {
               </div>
             )}
             
-            {/* Toggle button - right side of logo */}
+            {/* Toggle button with chevron arrows */}
             <Button 
               variant="ghost" 
               size="icon" 
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={toggleCollapsed}
             >
-              <Menu className="h-5 w-5" />
+              {collapsed ? (
+                <ChevronRight className="h-5 w-5" />
+              ) : (
+                <ChevronLeft className="h-5 w-5" />
+              )}
             </Button>
           </div>
         )}
-        
-        {/* Page title or welcome message */}
-        {title ? (
-          <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-        ) : !isMobile && (
-          <span className="text-muted-foreground hidden lg:inline">
-            Olá, <span className="text-foreground font-medium">{profile?.name?.split(' ')[0] || 'Usuário'}</span>
-          </span>
-        )}
       </div>
+      
+      {/* Page title - separated with spacing */}
+      {title ? (
+        <h1 className="text-lg font-semibold text-foreground ml-6">{title}</h1>
+      ) : !isMobile && (
+        <span className="text-muted-foreground hidden lg:inline ml-6">
+          Olá, <span className="text-foreground font-medium">{profile?.name?.split(' ')[0] || 'Usuário'}</span>
+        </span>
+      )}
 
-      <div className="flex items-center gap-2 lg:gap-3">
+      {/* Right side actions */}
+      <div className="flex items-center gap-2 lg:gap-3 ml-auto">
         {/* Theme toggle */}
         <Button 
           variant="ghost" 
