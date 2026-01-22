@@ -196,9 +196,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // IMPORTANT: Wait for fetchProfile to complete (including super admin check)
         // before setting loading to false
-        await fetchProfile(session.user.id);
+        const profileLoaded = await fetchProfile(session.user.id);
         
         if (isMounted) {
+          // Se profile não carregou, limpar sessão (força re-login)
+          if (!profileLoaded) {
+            console.error('Failed to load profile, clearing session');
+            clearAllStates();
+          }
           setLoading(false);
         }
       } catch (error) {
