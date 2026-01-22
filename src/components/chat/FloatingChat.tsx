@@ -8,11 +8,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Mic, Video, FileText, User, Phone, Users, Paperclip, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, WhatsAppConversation, WhatsAppMessage } from "@/hooks/use-whatsapp-conversations";
-import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
+import { useWhatsAppSessions, WhatsAppSession } from "@/hooks/use-whatsapp-sessions";
 import { useStartConversation, useFindConversationByPhone } from "@/hooks/use-start-conversation";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,8 @@ export function FloatingChat() {
   const [hideGroups, setHideGroups] = useState(() => {
     return localStorage.getItem("whatsapp-hide-groups-floating") === "true";
   });
+  const [showSessionSelector, setShowSessionSelector] = useState(false);
+  const [pendingStartData, setPendingStartData] = useState<{phone: string, leadName?: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
@@ -86,10 +89,29 @@ export function FloatingChat() {
 
   // Handle pending phone (abrir nova conversa)
   useEffect(() => {
-    if (pendingPhone && selectedSessionId) {
-      handleStartConversation(pendingPhone, pendingLeadName || undefined);
+    if (pendingPhone && sessions?.length) {
+      const connected = sessions.filter(s => s.status === "connected");
+      
+      if (connected.length === 0) {
+        toast({
+          title: "Nenhuma sessão conectada",
+          description: "Conecte um WhatsApp em Configurações → WhatsApp",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (connected.length === 1) {
+        // Apenas uma sessão conectada: selecionar automaticamente
+        setSelectedSessionId(connected[0].id);
+        handleStartConversation(pendingPhone, pendingLeadName || undefined);
+      } else {
+        // Múltiplas sessões conectadas: mostrar diálogo de seleção
+        setPendingStartData({ phone: pendingPhone, leadName: pendingLeadName || undefined });
+        setShowSessionSelector(true);
+      }
     }
-  }, [pendingPhone, selectedSessionId]);
+  }, [pendingPhone, sessions]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -117,6 +139,16 @@ export function FloatingChat() {
       });
     }
   }, [activeConversation?.id]);
+
+  const handleSessionSelect = (session: WhatsAppSession) => {
+    setSelectedSessionId(session.id);
+    setShowSessionSelector(false);
+    if (pendingStartData) {
+      handleStartConversationWithSession(pendingStartData.phone, session.id, pendingStartData.leadName);
+      setPendingStartData(null);
+    }
+  };
+
   const handleStartConversation = async (phone: string, leadName?: string) => {
     if (!selectedSessionId) {
       toast({
@@ -126,6 +158,10 @@ export function FloatingChat() {
       });
       return;
     }
+    await handleStartConversationWithSession(phone, selectedSessionId, leadName);
+  };
+
+  const handleStartConversationWithSession = async (phone: string, sessionId: string, leadName?: string) => {
     try {
       // Primeiro tenta encontrar conversa existente
       const existing = await findConversation.mutateAsync(phone);
@@ -137,7 +173,7 @@ export function FloatingChat() {
       // Se não existe, criar nova
       const newConversation = await startConversation.mutateAsync({
         phone,
-        sessionId: selectedSessionId,
+        sessionId,
         leadName
       });
       openConversation(newConversation);
@@ -240,6 +276,58 @@ export function FloatingChat() {
   const unreadCount = conversations?.reduce((acc, c) => acc + (c.unread_count || 0), 0) || 0;
   const connectedSessions = sessions?.filter(s => s.status === "connected") || [];
   const hasConnectedSession = connectedSessions.length > 0;
+
+  // Session Selector Dialog Component
+  const SessionSelectorDialog = () => (
+    <Dialog open={showSessionSelector} onOpenChange={(open) => {
+      if (!open) {
+        setShowSessionSelector(false);
+        setPendingStartData(null);
+      }
+    }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-primary" />
+            Escolher Instância WhatsApp
+          </DialogTitle>
+          <DialogDescription>
+            Selecione qual instância usar para enviar mensagem para{" "}
+            <span className="font-medium text-foreground">
+              {pendingStartData?.leadName || pendingStartData?.phone}
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-2 mt-4">
+          {connectedSessions.map(session => (
+            <Button
+              key={session.id}
+              variant="outline"
+              className="w-full justify-start h-auto py-3 px-4 hover:bg-accent"
+              onClick={() => handleSessionSelect(session)}
+            >
+              <div className="flex items-center gap-3 w-full">
+                <div className="w-3 h-3 rounded-full bg-green-500 shrink-0 animate-pulse" />
+                <div className="flex flex-col items-start flex-1 min-w-0">
+                  <span className="font-medium truncate">
+                    {session.instance_name}
+                  </span>
+                  {session.phone_number && (
+                    <span className="text-xs text-muted-foreground">
+                      {session.phone_number}
+                    </span>
+                  )}
+                </div>
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              </div>
+            </Button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (!isOpen) return null;
 
   // Shared content components
@@ -401,49 +489,69 @@ export function FloatingChat() {
 
   // Mobile version - use Drawer with balloon effect
   if (isMobile) {
-    return <Drawer open={isOpen} onOpenChange={open => !open && closeChat()}>
-        <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-1.5 max-w-full overflow-hidden">
-          {/* Hidden title for accessibility */}
-          <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
-          
-          {/* Inner wrapper for balloon effect */}
-          <div className={cn("flex flex-col", "h-[88vh]", "w-full", "max-w-full", "bg-card", "rounded-2xl", "shadow-2xl", "overflow-hidden", "border", "animate-drawer-slide-up")}>
-            {/* Custom handle */}
-            <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted-foreground/30 shrink-0" />
+    return (
+      <>
+        <SessionSelectorDialog />
+        <Drawer open={isOpen} onOpenChange={open => !open && closeChat()}>
+          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-1.5 max-w-full overflow-hidden">
+            {/* Hidden title for accessibility */}
+            <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
             
-            {/* Header */}
-            <ChatHeader mobile />
+            {/* Inner wrapper for balloon effect */}
+            <div className={cn("flex flex-col", "h-[88vh]", "w-full", "max-w-full", "bg-card", "rounded-2xl", "shadow-2xl", "overflow-hidden", "border", "animate-drawer-slide-up")}>
+              {/* Custom handle */}
+              <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted-foreground/30 shrink-0" />
+              
+              {/* Header */}
+              <ChatHeader mobile />
 
-            {/* Content */}
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
-            {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? <>
-                  <MessagesView />
-                  {renderMessageInput(true)}
-                </> : <>
-                  <ConversationFilters />
-                  <ConversationList />
-                </>}
+              {/* Content */}
+              <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
+                {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
+                  <>
+                    <MessagesView />
+                    {renderMessageInput(true)}
+                  </>
+                ) : (
+                  <>
+                    <ConversationFilters />
+                    <ConversationList />
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        </DrawerContent>
-      </Drawer>;
+          </DrawerContent>
+        </Drawer>
+      </>
+    );
   }
 
   // Desktop version - floating window
-  return <div className={cn("fixed bottom-4 right-4 z-50", "bg-card", "border border-border", "rounded-2xl", "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]", "ring-1 ring-border", "transition-all duration-300 ease-out", "flex flex-col overflow-hidden", "animate-scale-in", isMinimized ? "w-80 h-14" : "w-[420px] h-[600px]")}>
-      {/* Header */}
-      <ChatHeader />
+  return (
+    <>
+      <SessionSelectorDialog />
+      <div className={cn("fixed bottom-4 right-4 z-50", "bg-card", "border border-border", "rounded-2xl", "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]", "ring-1 ring-border", "transition-all duration-300 ease-out", "flex flex-col overflow-hidden", "animate-scale-in", isMinimized ? "w-80 h-14" : "w-[420px] h-[600px]")}>
+        {/* Header */}
+        <ChatHeader />
 
-      {!isMinimized && <>
-          {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? <>
-              <MessagesView />
-              {renderMessageInput(false)}
-            </> : <>
-              <ConversationFilters />
-              <ConversationList />
-            </>}
-        </>}
-    </div>;
+        {!isMinimized && (
+          <>
+            {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
+              <>
+                <MessagesView />
+                {renderMessageInput(false)}
+              </>
+            ) : (
+              <>
+                <ConversationFilters />
+                <ConversationList />
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  );
 }
 function ChatMessageBubble({
   message,
