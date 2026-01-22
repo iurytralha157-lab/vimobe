@@ -50,90 +50,55 @@ function sendBrowserNotification(title: string, options?: NotificationOptions) {
       notification.close();
     };
 
-    // Auto close after 10 seconds
     setTimeout(() => notification.close(), 10000);
   }
 }
-
-// Audio manager for notifications
-class NotificationAudioManager {
-  private notificationSound: HTMLAudioElement | null = null;
-  private newLeadSound: HTMLAudioElement | null = null;
-  private isUnlocked = false;
-
-  constructor() {
-    if (typeof window !== 'undefined') {
-      this.notificationSound = new Audio('/sounds/notification.mp3');
-      this.newLeadSound = new Audio('/sounds/new-lead.mp3');
-      this.notificationSound.volume = 0.5;
-      this.newLeadSound.volume = 0.7;
-      
-      // Preload audio files
-      this.notificationSound.load();
-      this.newLeadSound.load();
-    }
-  }
-
-  unlock() {
-    if (this.isUnlocked) return;
-    
-    // Play and immediately pause to unlock audio on user interaction
-    const unlockSound = (audio: HTMLAudioElement | null) => {
-      if (!audio) return;
-      audio.play().then(() => {
-        audio.pause();
-        audio.currentTime = 0;
-      }).catch(() => {});
-    };
-
-    unlockSound(this.notificationSound);
-    unlockSound(this.newLeadSound);
-    this.isUnlocked = true;
-    console.log('Audio unlocked for notifications');
-  }
-
-  playNotification() {
-    if (this.notificationSound) {
-      this.notificationSound.currentTime = 0;
-      this.notificationSound.play().catch((err) => {
-        console.log('Could not play notification sound:', err);
-      });
-    }
-  }
-
-  playNewLead() {
-    if (this.newLeadSound) {
-      this.newLeadSound.currentTime = 0;
-      this.newLeadSound.play().catch((err) => {
-        console.log('Could not play new lead sound:', err);
-      });
-    }
-  }
-}
-
-// Singleton audio manager
-const audioManager = new NotificationAudioManager();
 
 export function useNotifications() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const audioUnlockedRef = useRef(false);
+  const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
+  const newLeadSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio elements
+  useEffect(() => {
+    notificationSoundRef.current = new Audio('/sounds/notification.mp3');
+    newLeadSoundRef.current = new Audio('/sounds/new-lead.mp3');
+    notificationSoundRef.current.volume = 0.5;
+    newLeadSoundRef.current.volume = 0.7;
+    
+    // Preload
+    notificationSoundRef.current.load();
+    newLeadSoundRef.current.load();
+  }, []);
 
   // Request notification permission and unlock audio on first interaction
   useEffect(() => {
     requestNotificationPermission();
     
-    // Unlock audio on first user interaction
     const handleInteraction = () => {
-      audioManager.unlock();
-      document.removeEventListener('click', handleInteraction);
-      document.removeEventListener('keydown', handleInteraction);
-      document.removeEventListener('touchstart', handleInteraction);
+      if (audioUnlockedRef.current) return;
+      
+      // Unlock audio by playing and pausing
+      const unlockSound = (audio: HTMLAudioElement | null) => {
+        if (!audio) return;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }).catch(() => {});
+      };
+
+      unlockSound(notificationSoundRef.current);
+      unlockSound(newLeadSoundRef.current);
+      audioUnlockedRef.current = true;
+      console.log('Audio unlocked for notifications');
     };
 
-    document.addEventListener('click', handleInteraction, { once: true });
-    document.addEventListener('keydown', handleInteraction, { once: true });
-    document.addEventListener('touchstart', handleInteraction, { once: true });
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
 
     return () => {
       document.removeEventListener('click', handleInteraction);
@@ -142,12 +107,11 @@ export function useNotifications() {
     };
   }, []);
 
-  // Subscribe to realtime notifications with sound and push
+  // Subscribe to realtime notifications
   useEffect(() => {
     if (!profile?.id) return;
 
     const setupChannel = () => {
-      // Remove existing channel if any
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
@@ -167,36 +131,37 @@ export function useNotifications() {
             
             const newNotification = payload.new as Notification;
             
-            // Play different sound based on notification type
+            // Play sound based on type
             if (newNotification.type === 'lead') {
-              audioManager.playNewLead();
+              if (newLeadSoundRef.current) {
+                newLeadSoundRef.current.currentTime = 0;
+                newLeadSoundRef.current.play().catch(console.log);
+              }
               
-              // Show toast for new lead
               toast.success('🆕 Novo Lead!', {
                 description: newNotification.content || newNotification.title,
                 duration: 10000,
               });
             } else {
-              audioManager.playNotification();
+              if (notificationSoundRef.current) {
+                notificationSoundRef.current.currentTime = 0;
+                notificationSoundRef.current.play().catch(console.log);
+              }
               
-              // Show toast for other notifications
               toast(newNotification.title, {
                 description: newNotification.content || undefined,
                 duration: 5000,
               });
             }
 
-            // Send browser push notification
             sendBrowserNotification(newNotification.title, {
               body: newNotification.content || undefined,
               data: { lead_id: newNotification.lead_id },
             });
 
-            // Invalidate notification queries
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
             queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
             
-            // Also invalidate leads/stages for immediate update on Pipelines page
             if (newNotification.type === 'lead') {
               queryClient.invalidateQueries({ queryKey: ['leads'] });
               queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
@@ -206,9 +171,7 @@ export function useNotifications() {
         )
         .subscribe((status) => {
           console.log('📡 Notifications channel status:', status);
-          
           if (status === 'CHANNEL_ERROR') {
-            console.log('⚠️ Channel error, will retry in 3 seconds...');
             setTimeout(() => setupChannel(), 3000);
           }
         });
@@ -240,7 +203,7 @@ export function useNotifications() {
       return data as Notification[];
     },
     enabled: !!profile?.id,
-    refetchInterval: 30000, // Polling backup every 30 seconds
+    refetchInterval: 30000,
   });
 }
 
@@ -248,7 +211,6 @@ export function useUnreadNotificationsCount() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
 
-  // Subscribe to realtime for count updates
   useEffect(() => {
     if (!profile?.id) return;
 
@@ -286,7 +248,7 @@ export function useUnreadNotificationsCount() {
       return count || 0;
     },
     enabled: !!profile?.id,
-    refetchInterval: 30000, // Polling backup
+    refetchInterval: 30000,
   });
 }
 
