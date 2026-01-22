@@ -92,7 +92,7 @@ export function AppSidebar() {
 
   return (
     <aside className={cn(
-      "h-[calc(100vh-68px)] bg-card rounded-xl border shadow-sm",
+      "h-[calc(100%-24px)] bg-card rounded-xl border shadow-sm",
       "flex flex-col transition-all duration-300",
       "m-3 flex-shrink-0",
       collapsed ? "w-16" : "w-56"
