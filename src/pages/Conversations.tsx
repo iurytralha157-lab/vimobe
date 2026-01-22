@@ -22,6 +22,7 @@ import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { useTags, Tag as TagType } from "@/hooks/use-tags";
 import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
+
 export default function Conversations() {
   const isMobile = useIsMobile();
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
@@ -215,7 +216,7 @@ export default function Conversations() {
 
   // Mobile: Show either conversation list OR chat (not both)
   if (isMobile) {
-    return <AppLayout>
+    return <AppLayout title="Conversas">
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
           {selectedConversation ?
         // Mobile Chat View
@@ -359,7 +360,7 @@ export default function Conversations() {
   }
 
   // Desktop Layout
-  return <AppLayout>
+  return <AppLayout title="Conversas">
       <div className="flex h-[calc(100vh-7rem)] bg-background rounded-lg border overflow-hidden">
         {/* Sidebar */}
         <aside className="w-[350px] min-w-[350px] max-w-[350px] border-r bg-card flex flex-col overflow-hidden">

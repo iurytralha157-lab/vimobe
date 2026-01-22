@@ -53,7 +53,7 @@ export function AppHeader({ title }: AppHeaderProps) {
       
       {/* Page title - aligned with content */}
       {title && (
-        <h1 className="text-lg font-semibold text-foreground ml-2 lg:ml-0">{title}</h1>
+        <h1 className="text-xl font-semibold text-foreground ml-2 lg:ml-0">{title}</h1>
       )}
 
       {/* Right side actions - floating pill */}
