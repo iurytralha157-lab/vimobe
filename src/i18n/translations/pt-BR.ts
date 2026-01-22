@@ -49,6 +49,9 @@ export const ptBR = {
     logout: 'Sair',
     whatsapp: 'WhatsApp',
     automations: 'Automações',
+    plans: 'Planos',
+    coverage: 'Localidades',
+    telecomCustomers: 'Clientes',
   },
 
   // Settings

@@ -49,6 +49,9 @@ export const en = {
     logout: 'Logout',
     whatsapp: 'WhatsApp',
     automations: 'Automations',
+    plans: 'Service Plans',
+    coverage: 'Coverage Areas',
+    telecomCustomers: 'Customers',
   },
 
   // Settings

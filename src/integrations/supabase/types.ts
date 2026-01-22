@@ -970,6 +970,50 @@ export type Database = {
           },
         ]
       }
+      coverage_areas: {
+        Row: {
+          city: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          neighborhood: string
+          organization_id: string
+          uf: string
+          updated_at: string | null
+          zone: string | null
+        }
+        Insert: {
+          city: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          neighborhood: string
+          organization_id: string
+          uf: string
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Update: {
+          city?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          neighborhood?: string
+          organization_id?: string
+          uf?: string
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coverage_areas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_categories: {
         Row: {
           color: string | null
@@ -2575,6 +2619,62 @@ export type Database = {
           },
         ]
       }
+      service_plans: {
+        Row: {
+          category: string
+          code: string
+          created_at: string | null
+          description: string | null
+          features: string[] | null
+          id: string
+          is_active: boolean | null
+          is_promo: boolean | null
+          name: string
+          organization_id: string
+          price: number | null
+          speed_mb: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_promo?: boolean | null
+          name: string
+          organization_id: string
+          price?: number | null
+          speed_mb?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_promo?: boolean | null
+          name?: string
+          organization_id?: string
+          price?: number | null
+          speed_mb?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_automations: {
         Row: {
           action_config: Json | null
@@ -2845,6 +2945,106 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telecom_customers: {
+        Row: {
+          address: string | null
+          cep: string | null
+          city: string | null
+          complement: string | null
+          cpf_cnpj: string | null
+          created_at: string | null
+          due_day: number | null
+          email: string | null
+          external_id: string | null
+          id: string
+          installation_date: string | null
+          name: string
+          neighborhood: string | null
+          notes: string | null
+          number: string | null
+          organization_id: string
+          phone: string | null
+          plan_id: string | null
+          plan_value: number | null
+          seller_id: string | null
+          status: string | null
+          uf: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          cep?: string | null
+          city?: string | null
+          complement?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          due_day?: number | null
+          email?: string | null
+          external_id?: string | null
+          id?: string
+          installation_date?: string | null
+          name: string
+          neighborhood?: string | null
+          notes?: string | null
+          number?: string | null
+          organization_id: string
+          phone?: string | null
+          plan_id?: string | null
+          plan_value?: number | null
+          seller_id?: string | null
+          status?: string | null
+          uf?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          cep?: string | null
+          city?: string | null
+          complement?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          due_day?: number | null
+          email?: string | null
+          external_id?: string | null
+          id?: string
+          installation_date?: string | null
+          name?: string
+          neighborhood?: string | null
+          notes?: string | null
+          number?: string | null
+          organization_id?: string
+          phone?: string | null
+          plan_id?: string | null
+          plan_value?: number | null
+          seller_id?: string | null
+          status?: string | null
+          uf?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telecom_customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telecom_customers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "service_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telecom_customers_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
