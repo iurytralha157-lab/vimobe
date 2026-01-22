@@ -13,6 +13,8 @@ import { Json } from '@/integrations/supabase/types';
 interface SystemSettingsValue {
   logo_url_light?: string | null;
   logo_url_dark?: string | null;
+  favicon_url_light?: string | null;
+  favicon_url_dark?: string | null;
   default_whatsapp?: string | null;
   logo_width?: number | null;
   logo_height?: number | null;
@@ -35,6 +37,8 @@ export default function AdminSettings() {
   const [whatsapp, setWhatsapp] = useState('');
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingDark, setUploadingDark] = useState(false);
+  const [uploadingFaviconLight, setUploadingFaviconLight] = useState(false);
+  const [uploadingFaviconDark, setUploadingFaviconDark] = useState(false);
   const [logoWidth, setLogoWidth] = useState(140);
   const [logoHeight, setLogoHeight] = useState(40);
 
@@ -58,6 +62,8 @@ export default function AdminSettings() {
         id: row.id,
         logo_url_light: value.logo_url_light || null,
         logo_url_dark: value.logo_url_dark || null,
+        favicon_url_light: value.favicon_url_light || null,
+        favicon_url_dark: value.favicon_url_dark || null,
         default_whatsapp: value.default_whatsapp || null,
         logo_width: value.logo_width || null,
         logo_height: value.logo_height || null,
@@ -75,6 +81,8 @@ export default function AdminSettings() {
     const currentValue = {
       logo_url_light: settings.logo_url_light,
       logo_url_dark: settings.logo_url_dark,
+      favicon_url_light: settings.favicon_url_light,
+      favicon_url_dark: settings.favicon_url_dark,
       default_whatsapp: settings.default_whatsapp,
       logo_width: settings.logo_width,
       logo_height: settings.logo_height,
@@ -116,6 +124,37 @@ export default function AdminSettings() {
       await updateSettingsValue({ [updateField]: publicUrl });
 
       toast.success(`Logo ${type === 'light' ? 'clara' : 'escura'} atualizada!`);
+    } catch (error: any) {
+      toast.error('Erro ao fazer upload: ' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUploadFavicon = async (file: File, type: 'light' | 'dark') => {
+    if (!settings) return;
+
+    const setUploading = type === 'light' ? setUploadingFaviconLight : setUploadingFaviconDark;
+    setUploading(true);
+
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `system/favicon-${type}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(path);
+
+      const updateField = type === 'light' ? 'favicon_url_light' : 'favicon_url_dark';
+      await updateSettingsValue({ [updateField]: publicUrl });
+
+      toast.success(`Ícone ${type === 'light' ? 'claro' : 'escuro'} atualizado!`);
     } catch (error: any) {
       toast.error('Erro ao fazer upload: ' + error.message);
     } finally {
@@ -272,6 +311,112 @@ export default function AdminSettings() {
                   <p className="text-xs text-muted-foreground mt-1">
                     Recomendado: fundo transparente ou escuro
                   </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Favicon Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ícone da Sidebar (Favicon)</CardTitle>
+            <CardDescription>
+              Ícone pequeno exibido na sidebar quando recolhida.
+              Recomendado: 32x32px ou 40x40px com fundo transparente.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Light Theme Favicon */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Sun className="h-4 w-4" />
+                Ícone para Tema Claro
+              </Label>
+              <div className="flex items-center gap-4">
+                <div 
+                  className="w-16 h-16 rounded-lg bg-white border-2 border-dashed border-border flex items-center justify-center overflow-hidden"
+                >
+                  {settings?.favicon_url_light ? (
+                    <img 
+                      src={settings.favicon_url_light} 
+                      alt="Favicon Light" 
+                      className="w-10 h-10 object-contain"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground text-xs">Sem ícone</span>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    id="favicon-light-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadFavicon(file, 'light');
+                    }}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('favicon-light-upload')?.click()}
+                    disabled={uploadingFaviconLight}
+                  >
+                    {uploadingFaviconLight ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Upload Ícone Claro
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Dark Theme Favicon */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Moon className="h-4 w-4" />
+                Ícone para Tema Escuro
+              </Label>
+              <div className="flex items-center gap-4">
+                <div 
+                  className="w-16 h-16 rounded-lg bg-slate-900 border-2 border-dashed border-border flex items-center justify-center overflow-hidden"
+                >
+                  {settings?.favicon_url_dark ? (
+                    <img 
+                      src={settings.favicon_url_dark} 
+                      alt="Favicon Dark" 
+                      className="w-10 h-10 object-contain"
+                    />
+                  ) : (
+                    <span className="text-slate-400 text-xs">Sem ícone</span>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    id="favicon-dark-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadFavicon(file, 'dark');
+                    }}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('favicon-dark-upload')?.click()}
+                    disabled={uploadingFaviconDark}
+                  >
+                    {uploadingFaviconDark ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Upload Ícone Escuro
+                  </Button>
                 </div>
               </div>
             </div>

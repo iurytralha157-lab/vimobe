@@ -5,6 +5,8 @@ import { Json } from '@/integrations/supabase/types';
 interface SystemSettingsValue {
   logo_url_light?: string | null;
   logo_url_dark?: string | null;
+  favicon_url_light?: string | null;
+  favicon_url_dark?: string | null;
   default_whatsapp?: string | null;
   logo_width?: number | null;
   logo_height?: number | null;
@@ -20,6 +22,8 @@ interface SystemSettings {
   // Convenience accessors from value
   logo_url_light?: string | null;
   logo_url_dark?: string | null;
+  favicon_url_light?: string | null;
+  favicon_url_dark?: string | null;
   default_whatsapp?: string | null;
   logo_width?: number | null;
   logo_height?: number | null;
@@ -44,6 +48,8 @@ export function useSystemSettings() {
         ...data,
         logo_url_light: value.logo_url_light || null,
         logo_url_dark: value.logo_url_dark || null,
+        favicon_url_light: value.favicon_url_light || null,
+        favicon_url_dark: value.favicon_url_dark || null,
         default_whatsapp: value.default_whatsapp || null,
         logo_width: value.logo_width || null,
         logo_height: value.logo_height || null,

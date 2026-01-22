@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,9 @@ import { useState, useMemo } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { useSystemSettings } from '@/hooks/use-system-settings';
+import { useTheme } from 'next-themes';
+import { Button } from '@/components/ui/button';
 
 interface NavItem {
   icon: React.ElementType;
@@ -52,8 +55,28 @@ export function AppSidebar() {
   const { profile, isSuperAdmin } = useAuth();
   const { t } = useLanguage();
   const { hasModule } = useOrganizationModules();
-  const { collapsed } = useSidebar();
+  const { collapsed, toggleCollapsed } = useSidebar();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
+  const { data: systemSettings } = useSystemSettings();
+  const { resolvedTheme } = useTheme();
+
+  // Get the appropriate logo/favicon based on theme
+  const logoUrl = useMemo(() => {
+    if (!systemSettings) return null;
+    return resolvedTheme === 'dark' 
+      ? systemSettings.logo_url_dark || systemSettings.logo_url_light
+      : systemSettings.logo_url_light || systemSettings.logo_url_dark;
+  }, [systemSettings, resolvedTheme]);
+
+  const faviconUrl = useMemo(() => {
+    if (!systemSettings) return null;
+    return resolvedTheme === 'dark' 
+      ? systemSettings.favicon_url_dark || systemSettings.favicon_url_light
+      : systemSettings.favicon_url_light || systemSettings.favicon_url_dark;
+  }, [systemSettings, resolvedTheme]);
+
+  const logoWidth = systemSettings?.logo_width || 140;
+  const logoHeight = systemSettings?.logo_height || 40;
 
   // Filter nav items based on enabled modules and user role
   const navItems = useMemo(() => {
@@ -92,13 +115,74 @@ export function AppSidebar() {
 
   return (
     <aside className={cn(
-      "h-[calc(100%-24px)] bg-card rounded-xl border shadow-sm",
+      "h-[calc(100%-24px)] bg-card rounded-xl border shadow-sm relative",
       "flex flex-col transition-all duration-300",
       "m-3 flex-shrink-0",
       collapsed ? "w-16" : "w-56"
     )}>
+      {/* Header with Logo and Toggle */}
+      <div className={cn(
+        "flex items-center border-b px-3 py-3",
+        collapsed ? "justify-center" : "justify-between"
+      )}>
+        {collapsed ? (
+          // Collapsed: Show favicon only
+          <div className="h-8 w-8 flex items-center justify-center">
+            {faviconUrl ? (
+              <img 
+                src={faviconUrl} 
+                alt="Icon" 
+                className="h-8 w-8 object-contain"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+                V
+              </div>
+            )}
+          </div>
+        ) : (
+          // Expanded: Show full logo + toggle button
+          <>
+            <div className="flex items-center">
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Logo" 
+                  style={{ maxWidth: logoWidth, maxHeight: logoHeight }}
+                  className="object-contain"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+                  V
+                </div>
+              )}
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={toggleCollapsed}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
+
+      {/* Floating toggle button when collapsed */}
+      {collapsed && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute -right-3 top-14 z-50 h-6 w-6 rounded-full bg-card border shadow-md flex items-center justify-center"
+          onClick={toggleCollapsed}
+        >
+          <ChevronRight className="h-3 w-3" />
+        </Button>
+      )}
+
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-thin">
         <ul className="space-y-1">
           {navItems.map(item => (
             <li key={item.path}>
@@ -145,7 +229,8 @@ export function AppSidebar() {
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
                     "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30 font-medium",
                     (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && 
-                    "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30"
+                    "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30",
+                    collapsed && "justify-center"
                   )}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -158,7 +243,7 @@ export function AppSidebar() {
       </nav>
 
       {/* Bottom items */}
-      <div className="py-4 px-2">
+      <div className="py-3 px-2 border-t">
         <ul className="space-y-1">
           {computedBottomItems.map(item => (
             <li key={item.path}>
@@ -167,7 +252,8 @@ export function AppSidebar() {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                   "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30",
-                  location.pathname === item.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30"
+                  location.pathname === item.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30",
+                  collapsed && "justify-center"
                 )}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
