@@ -1,4 +1,4 @@
-import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, ChevronLeft, ChevronRight, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield } from 'lucide-react';
+import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
@@ -10,9 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import { MobileSidebar } from './MobileSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useSidebar } from '@/contexts/SidebarContext';
-import { useSystemSettings } from '@/hooks/use-system-settings';
-import { useMemo } from 'react';
 
 const notificationIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
@@ -28,28 +25,15 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ title }: AppHeaderProps) {
-  const { profile, organization, signOut, isSuperAdmin } = useAuth();
+  const { profile, signOut, isSuperAdmin } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { collapsed, toggleCollapsed } = useSidebar();
-  const { data: systemSettings } = useSystemSettings();
   
   const { data: notifications = [], isLoading } = useNotifications();
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-
-  // Get the appropriate logo based on theme
-  const logoUrl = useMemo(() => {
-    if (resolvedTheme === 'dark' && systemSettings?.logo_url_dark) {
-      return systemSettings.logo_url_dark;
-    }
-    if (systemSettings?.logo_url_light) {
-      return systemSettings.logo_url_light;
-    }
-    return null;
-  }, [resolvedTheme, systemSettings]);
 
   const handleNotificationClick = (notification: any) => {
     markRead.mutate(notification.id);
@@ -63,76 +47,46 @@ export function AppHeader({ title }: AppHeaderProps) {
   };
 
   return (
-    <header className="h-14 border-b border-border flex items-center px-4 lg:px-6 bg-card sticky top-0 z-40">
-      {/* Logo + Toggle (left side) */}
-      <div className="flex items-center gap-3">
-        {/* Mobile menu */}
-        {isMobile && <MobileSidebar />}
-        
-        {/* Logo - always visible and static */}
-        {!isMobile && (
-          <div className="flex items-center gap-3">
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="object-contain" 
-                style={{
-                  maxWidth: systemSettings?.logo_width || 120,
-                  maxHeight: systemSettings?.logo_height || 32
-                }}
-              />
-            ) : (
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">V</span>
-              </div>
-            )}
-            
-            {/* Toggle button with chevron arrows */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={toggleCollapsed}
-            >
-              {collapsed ? (
-                <ChevronRight className="h-5 w-5" />
-              ) : (
-                <ChevronLeft className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
+    <header className="h-14 flex items-center px-4 lg:px-6 bg-background sticky top-0 z-40">
+      {/* Mobile menu */}
+      {isMobile && (
+        <div className="flex items-center">
+          <MobileSidebar />
+        </div>
+      )}
       
-      {/* Page title - separated with spacing */}
+      {/* Page title - aligned with content */}
       {title ? (
-        <h1 className="text-lg font-semibold text-foreground ml-6">{title}</h1>
+        <h1 className="text-lg font-semibold text-foreground ml-2 lg:ml-0">{title}</h1>
       ) : !isMobile && (
-        <span className="text-muted-foreground hidden lg:inline ml-6">
+        <span className="text-muted-foreground hidden lg:inline">
           Olá, <span className="text-foreground font-medium">{profile?.name?.split(' ')[0] || 'Usuário'}</span>
         </span>
       )}
 
-      {/* Right side actions */}
-      <div className="flex items-center gap-2 lg:gap-3 ml-auto">
+      {/* Right side actions - floating pill */}
+      <div className="flex items-center gap-1.5 lg:gap-2 ml-auto bg-card border rounded-full px-2 py-1.5 shadow-sm">
         {/* Theme toggle */}
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
-          className="text-muted-foreground hover:text-foreground"
+          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+          className="h-8 w-8 rounded-full"
         >
-          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {resolvedTheme === 'dark' ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
         </Button>
 
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-              <Bell className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
+              <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -214,17 +168,21 @@ export function AppHeader({ title }: AppHeaderProps) {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-secondary">
-              <Avatar className="h-8 w-8">
+            <Button variant="ghost" className="h-8 gap-2 pl-1 pr-2 rounded-full">
+              <Avatar className="h-6 w-6">
                 <AvatarImage src={profile?.avatar_url || undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {profile?.name ? getInitials(profile.name) : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium text-foreground hidden sm:inline">
-                {profile?.name || 'Usuário'}
-              </span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              {!isMobile && (
+                <>
+                  <span className="text-sm font-medium max-w-[100px] truncate">
+                    {profile?.name?.split(' ')[0] || 'Usuário'}
+                  </span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8} collisionPadding={16} className="w-48 bg-popover">
