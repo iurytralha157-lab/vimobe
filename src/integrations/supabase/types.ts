@@ -3608,7 +3608,7 @@ export type Database = {
       get_user_led_team_ids: { Args: never; Returns: string[] }
       get_user_organization_id: { Args: never; Returns: string }
       get_user_team_ids: { Args: never; Returns: string[] }
-      handle_lead_intake: { Args: { p_lead_id: string }; Returns: Json }
+      handle_lead_intake: { Args: { p_lead_id: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_member_available: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
