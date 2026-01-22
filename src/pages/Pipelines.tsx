@@ -271,6 +271,7 @@ export default function Pipelines() {
     e.preventDefault();
     await createLead.mutateAsync({
       ...newLeadForm,
+      pipeline_id: selectedPipelineId || undefined,
       stage_id: newLeadStageId || undefined,
     });
     setNewLeadDialogOpen(false);
