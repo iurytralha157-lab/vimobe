@@ -55,7 +55,7 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization } = useAuth();
   
-  // Ainda carregando autenticação
+  // Ainda carregando autenticação OU perfil
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -69,22 +69,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // User existe mas profile ainda não carregou - aguardar
-  if (!profile && !isSuperAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Carregando perfil...</div>
-      </div>
-    );
+  // Se profile não carregou após loading=false, significa erro
+  // Redirecionar para auth para re-autenticar
+  if (!profile) {
+    console.error('Profile failed to load - redirecting to auth');
+    return <Navigate to="/auth" replace />;
   }
 
-  // Super admin NEVER goes to onboarding - always to admin panel when no org
+  // Super admin sem organização vai para painel admin
   if (isSuperAdmin && !impersonating && !organization) {
     return <Navigate to="/admin" replace />;
   }
 
-  // Usuário regular sem organização -> onboarding (never super admin)
-  if (!isSuperAdmin && profile && !profile.organization_id) {
+  // Usuário regular sem organização -> onboarding
+  if (!isSuperAdmin && !profile.organization_id) {
     return <Navigate to="/onboarding" replace />;
   }
   
