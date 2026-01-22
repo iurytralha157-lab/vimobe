@@ -22,7 +22,6 @@ import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { useTags, Tag as TagType } from "@/hooks/use-tags";
 import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 export default function Conversations() {
   const isMobile = useIsMobile();
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
@@ -189,38 +188,38 @@ export default function Conversations() {
     if (isYesterday(d)) return "Ontem";
     return format(d, "dd/MM");
   };
-
   const retryMediaDownload = async (messageId: string) => {
     try {
       await supabase.functions.invoke("media-worker", {
-        body: { message_id: messageId, force: true }
+        body: {
+          message_id: messageId,
+          force: true
+        }
       });
       toast({
         title: "Tentando novamente",
-        description: "Aguarde enquanto baixamos a mídia...",
+        description: "Aguarde enquanto baixamos a mídia..."
       });
     } catch (error) {
       console.error("Error retrying media download:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível tentar novamente",
+        description: "Não foi possível tentar novamente"
       });
     }
   };
-
   const handleBackToList = () => {
     setSelectedConversation(null);
   };
 
   // Mobile: Show either conversation list OR chat (not both)
   if (isMobile) {
-    return (
-      <AppLayout>
+    return <AppLayout>
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
-          {selectedConversation ? (
-            // Mobile Chat View
-            <div className="flex flex-col h-full">
+          {selectedConversation ?
+        // Mobile Chat View
+        <div className="flex flex-col h-full">
               {/* Mobile Chat Header */}
               <header className="h-14 px-3 border-b flex items-center justify-between bg-card shrink-0">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -237,21 +236,15 @@ export default function Conversations() {
                     <p className="font-medium text-sm truncate text-foreground">
                       {selectedConversation.lead?.name || (selectedConversation.contact_name && selectedConversation.contact_name !== selectedConversation.contact_phone ? selectedConversation.contact_name : formatPhoneForDisplay(selectedConversation.contact_phone || ""))}
                     </p>
-                    {selectedConversation.contact_presence === 'composing' ? (
-                      <p className="text-xs text-primary animate-pulse">digitando...</p>
-                    ) : selectedConversation.contact_presence === 'recording' ? (
-                      <p className="text-xs text-primary animate-pulse">🎤 gravando...</p>
-                    ) : null}
+                    {selectedConversation.contact_presence === 'composing' ? <p className="text-xs text-primary animate-pulse">digitando...</p> : selectedConversation.contact_presence === 'recording' ? <p className="text-xs text-primary animate-pulse">🎤 gravando...</p> : null}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {selectedConversation.lead && (
-                    <Button variant="ghost" size="sm" className="h-8 text-xs px-2" asChild>
+                  {selectedConversation.lead && <Button variant="ghost" size="sm" className="h-8 text-xs px-2" asChild>
                       <Link to={`/crm/pipelines?lead=${selectedConversation.lead.id}`}>
                         <User className="w-3.5 h-3.5" />
                       </Link>
-                    </Button>
-                  )}
+                    </Button>}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -277,32 +270,12 @@ export default function Conversations() {
               <div className="flex-1 overflow-hidden min-h-0">
                 <ScrollArea className="h-full">
                   <div className="p-3 space-y-2 bg-secondary min-h-full">
-                    {loadingMessages ? (
-                      <div className="flex items-center justify-center py-12">
+                    {loadingMessages ? <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : messages?.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12">
+                      </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
                         <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">Nenhuma mensagem</p>
-                      </div>
-                    ) : messages?.map(msg => (
-                      <MessageBubble
-                        key={msg.id}
-                        content={msg.content}
-                        messageType={msg.message_type}
-                        mediaUrl={msg.media_url}
-                        mediaMimeType={msg.media_mime_type}
-                        mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null}
-                        mediaError={msg.media_error}
-                        fromMe={msg.from_me}
-                        status={msg.status}
-                        sentAt={msg.sent_at}
-                        senderName={msg.sender_name}
-                        isGroup={selectedConversation.is_group}
-                        onRetryMedia={() => retryMediaDownload(msg.id)}
-                      />
-                    ))}
+                      </div> : messages?.map(msg => <MessageBubble key={msg.id} content={msg.content} messageType={msg.message_type} mediaUrl={msg.media_url} mediaMimeType={msg.media_mime_type} mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null} mediaError={msg.media_error} fromMe={msg.from_me} status={msg.status} sentAt={msg.sent_at} senderName={msg.sender_name} isGroup={selectedConversation.is_group} onRetryMedia={() => retryMediaDownload(msg.id)} />)}
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
@@ -321,10 +294,9 @@ export default function Conversations() {
                   </Button>
                 </div>
               </footer>
-            </div>
-          ) : (
-            // Mobile Conversation List
-            <div className="flex flex-col h-full">
+            </div> :
+        // Mobile Conversation List
+        <div className="flex flex-col h-full">
               {/* Mobile Header with Filters */}
               <div className="p-3 border-b space-y-2 bg-card shrink-0">
                 <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
@@ -333,11 +305,9 @@ export default function Conversations() {
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
                     <SelectItem value="all">Todos os canais</SelectItem>
-                    {sessions?.map(session => (
-                      <SelectItem key={session.id} value={session.id}>
+                    {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
                         {session.instance_name}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                   </SelectContent>
                 </Select>
 
@@ -361,50 +331,35 @@ export default function Conversations() {
               {/* Mobile Conversation List */}
               <ScrollArea className="flex-1">
                 <div className="divide-y">
-                  {loadingConversations ? (
-                    <div className="flex items-center justify-center py-12">
+                  {loadingConversations ? <div className="flex items-center justify-center py-12">
                       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : filteredConversations?.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 px-4">
+                    </div> : filteredConversations?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
                       <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
                       <p className="text-sm text-muted-foreground">Nenhuma conversa</p>
-                    </div>
-                  ) : filteredConversations?.map(conv => (
-                    <ConversationItem
-                      key={conv.id}
-                      conversation={conv}
-                      isSelected={false}
-                      onClick={() => setSelectedConversation(conv)}
-                      formatTime={formatConversationTime}
-                      onArchive={() => handleArchive(conv)}
-                      onDelete={() => handleDelete(conv)}
-                      availableTags={availableTags || []}
-                      onAddTag={tagId => conv.lead && addLeadTag.mutate({ leadId: conv.lead.id, tagId })}
-                      onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({ leadId: conv.lead.id, tagId })}
-                      onCreateLead={() => {
-                        setCreateLeadContact({
-                          phone: conv.contact_phone || undefined,
-                          name: conv.contact_name || undefined
-                        });
-                        setCreateLeadOpen(true);
-                      }}
-                    />
-                  ))}
+                    </div> : filteredConversations?.map(conv => <ConversationItem key={conv.id} conversation={conv} isSelected={false} onClick={() => setSelectedConversation(conv)} formatTime={formatConversationTime} onArchive={() => handleArchive(conv)} onDelete={() => handleDelete(conv)} availableTags={availableTags || []} onAddTag={tagId => conv.lead && addLeadTag.mutate({
+                leadId: conv.lead.id,
+                tagId
+              })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
+                leadId: conv.lead.id,
+                tagId
+              })} onCreateLead={() => {
+                setCreateLeadContact({
+                  phone: conv.contact_phone || undefined,
+                  name: conv.contact_name || undefined
+                });
+                setCreateLeadOpen(true);
+              }} />)}
                 </div>
               </ScrollArea>
-            </div>
-          )}
+            </div>}
         </div>
 
         <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />
-      </AppLayout>
-    );
+      </AppLayout>;
   }
 
   // Desktop Layout
-  return (
-    <AppLayout>
+  return <AppLayout>
       <div className="flex h-[calc(100vh-7rem)] bg-background rounded-lg border overflow-hidden">
         {/* Sidebar */}
         <aside className="w-[350px] min-w-[350px] max-w-[350px] border-r bg-card flex flex-col overflow-hidden">
@@ -530,23 +485,7 @@ export default function Conversations() {
                       </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
                         <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">Nenhuma mensagem</p>
-                      </div> : messages?.map(msg => (
-                        <MessageBubble
-                          key={msg.id}
-                          content={msg.content}
-                          messageType={msg.message_type}
-                          mediaUrl={msg.media_url}
-                          mediaMimeType={msg.media_mime_type}
-                          mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null}
-                          mediaError={msg.media_error}
-                          fromMe={msg.from_me}
-                          status={msg.status}
-                          sentAt={msg.sent_at}
-                          senderName={msg.sender_name}
-                          isGroup={selectedConversation.is_group}
-                          onRetryMedia={() => retryMediaDownload(msg.id)}
-                        />
-                      ))}
+                      </div> : messages?.map(msg => <MessageBubble key={msg.id} content={msg.content} messageType={msg.message_type} mediaUrl={msg.media_url} mediaMimeType={msg.media_mime_type} mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null} mediaError={msg.media_error} fromMe={msg.from_me} status={msg.status} sentAt={msg.sent_at} senderName={msg.sender_name} isGroup={selectedConversation.is_group} onRetryMedia={() => retryMediaDownload(msg.id)} />)}
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
@@ -565,7 +504,7 @@ export default function Conversations() {
                   </Button>
                 </div>
               </footer>
-            </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-primary-foreground">
               <MessageSquare className="w-12 h-12 mb-3 opacity-50" />
               <p className="font-medium">Selecione uma conversa</p>
               <p className="text-sm">para começar a enviar mensagens</p>
@@ -574,10 +513,8 @@ export default function Conversations() {
       </div>
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />
-    </AppLayout>
-  );
+    </AppLayout>;
 }
-
 function ConversationItem({
   conversation,
   isSelected,
