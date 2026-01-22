@@ -149,6 +149,12 @@
     @apply border-border;
   }
 
+  /* iOS PWA Safe Area Support */
+  html {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   html {
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
