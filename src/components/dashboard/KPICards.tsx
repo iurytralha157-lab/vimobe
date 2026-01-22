@@ -231,16 +231,24 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
   };
 
   return (
-    <div className="space-y-3">
-      {/* Lead KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+    <div className="space-y-3 lg:space-y-0">
+      {/* Desktop: 5 colunas, todos juntos */}
+      <div className="hidden lg:grid lg:grid-cols-5 gap-3">
         {kpis.map((kpi) => (
           <KPICardItem key={kpi.title} {...kpi} />
         ))}
+        <KPICardItem {...salesKpi} />
       </div>
-
-      {/* Sales VGV Card - Highlighted */}
-      <KPICardItem {...salesKpi} isHighlighted />
+      
+      {/* Mobile: Layout original com VGV destacado */}
+      <div className="lg:hidden space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          {kpis.map((kpi) => (
+            <KPICardItem key={kpi.title} {...kpi} />
+          ))}
+        </div>
+        <KPICardItem {...salesKpi} isHighlighted />
+      </div>
     </div>
   );
 }
