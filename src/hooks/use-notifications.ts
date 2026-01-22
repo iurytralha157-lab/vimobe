@@ -81,24 +81,36 @@ export function useNotifications() {
     const handleInteraction = () => {
       if (audioUnlockedRef.current) return;
       
-      // Unlock audio by playing and pausing
+      // Mark as unlocked FIRST to prevent multiple attempts
+      audioUnlockedRef.current = true;
+      
+      // Unlock audio by playing silent (volume 0) and pausing immediately
       const unlockSound = (audio: HTMLAudioElement | null) => {
         if (!audio) return;
+        const originalVolume = audio.volume;
+        audio.volume = 0; // Silent unlock
         audio.play().then(() => {
           audio.pause();
           audio.currentTime = 0;
-        }).catch(() => {});
+          audio.volume = originalVolume; // Restore volume
+        }).catch(() => {
+          audio.volume = originalVolume;
+        });
       };
 
       unlockSound(notificationSoundRef.current);
       unlockSound(newLeadSoundRef.current);
-      audioUnlockedRef.current = true;
       console.log('Audio unlocked for notifications');
+      
+      // Remove listeners after unlock
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
     };
 
-    document.addEventListener('click', handleInteraction);
-    document.addEventListener('keydown', handleInteraction);
-    document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('click', handleInteraction, { once: false });
+    document.addEventListener('keydown', handleInteraction, { once: false });
+    document.addEventListener('touchstart', handleInteraction, { once: false });
 
     return () => {
       document.removeEventListener('click', handleInteraction);
@@ -131,8 +143,15 @@ export function useNotifications() {
             
             const newNotification = payload.new as Notification;
             
-            // Play sound based on type
-            if (newNotification.type === 'lead') {
+            // Play sound based on type - only for important notifications
+            // Skip WhatsApp message notifications (type: 'whatsapp' or 'message')
+            const isWhatsAppNotification = newNotification.type === 'whatsapp' || newNotification.type === 'message';
+            
+            if (isWhatsAppNotification) {
+              // Silent notification for WhatsApp - no sound, just update queries
+              console.log('WhatsApp notification received (silent):', newNotification.title);
+            } else if (newNotification.type === 'lead') {
+              // New lead - play cha-ching sound
               if (newLeadSoundRef.current) {
                 newLeadSoundRef.current.currentTime = 0;
                 newLeadSoundRef.current.play().catch(console.log);
@@ -143,6 +162,7 @@ export function useNotifications() {
                 duration: 10000,
               });
             } else {
+              // Other important notifications (financial, system, etc.)
               if (notificationSoundRef.current) {
                 notificationSoundRef.current.currentTime = 0;
                 notificationSoundRef.current.play().catch(console.log);
