@@ -29,6 +29,9 @@ import {
   Receipt,
   FileText,
   Zap,
+  Package,
+  MapPin,
+  UserCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -59,7 +62,13 @@ const allNavItems: NavItem[] = [
       { icon: BarChart3, labelKey: 'reports', path: '/financeiro/relatorios' },
     ]
   },
+  // Imobiliária module
   { icon: Building2, labelKey: 'properties', path: '/properties', module: 'properties' },
+  // Telecom modules
+  { icon: Package, labelKey: 'plans', path: '/plans', module: 'plans' },
+  { icon: MapPin, labelKey: 'coverage', path: '/coverage', module: 'coverage' },
+  { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom' },
+  // Admin modules
   { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'crm', adminOnly: true },
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
   { icon: Calendar, labelKey: 'schedule', path: '/agenda', module: 'agenda' },

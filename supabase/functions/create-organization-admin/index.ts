@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { name, adminEmail, adminName, adminPassword } = await req.json();
+    const { name, segment = 'imobiliario', adminEmail, adminName, adminPassword } = await req.json();
 
     if (!name || !adminEmail || !adminName || !adminPassword) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -74,11 +74,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Create the organization
+    // Validate segment
+    const validSegments = ['imobiliario', 'telecom', 'servicos'];
+    if (!validSegments.includes(segment)) {
+      return new Response(JSON.stringify({ error: 'Invalid segment' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 1. Create the organization with segment
     const { data: org, error: orgError } = await supabaseAdmin
       .from('organizations')
       .insert({
         name,
+        segment,
       })
       .select()
       .single();
@@ -141,40 +151,75 @@ Deno.serve(async (req) => {
         role: 'admin',
       }, { onConflict: 'user_id,role' });
 
-    // 4. Create default modules for the org
-    const defaultModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
-    await supabaseAdmin
-      .from('organization_modules')
-      .insert(defaultModules.map(module => ({
+    // 4. Create modules based on segment
+    let enabledModules: string[] = [];
+    let disabledModules: string[] = [];
+
+    if (segment === 'telecom') {
+      enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports'];
+      disabledModules = ['properties', 'cadences'];
+    } else if (segment === 'imobiliario') {
+      enabledModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
+      disabledModules = ['plans', 'coverage', 'telecom'];
+    } else {
+      // servicos - basic modules
+      enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
+      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences'];
+    }
+
+    const allModuleRecords = [
+      ...enabledModules.map(module => ({
         organization_id: org.id,
         module_name: module,
         is_enabled: true,
-      })));
+      })),
+      ...disabledModules.map(module => ({
+        organization_id: org.id,
+        module_name: module,
+        is_enabled: false,
+      })),
+    ];
 
-    // 5. Create default pipeline for the organization
+    await supabaseAdmin
+      .from('organization_modules')
+      .insert(allModuleRecords);
+
+    // 5. Create default pipeline for the organization based on segment
+    const pipelineName = segment === 'telecom' ? 'Pipeline Telecom' : 'Pipeline Principal';
     const { data: pipeline } = await supabaseAdmin
       .from('pipelines')
       .insert({
         organization_id: org.id,
-        name: 'Pipeline Principal',
+        name: pipelineName,
         is_default: true,
       })
       .select()
       .single();
 
     if (pipeline) {
-      // Create default stages
-      const defaultStages = [
-        { name: 'Novo', stage_key: 'novo', color: '#3B82F6', position: 0 },
-        { name: 'Qualificação', stage_key: 'qualificacao', color: '#F59E0B', position: 1 },
-        { name: 'Proposta', stage_key: 'proposta', color: '#8B5CF6', position: 2 },
-        { name: 'Negociação', stage_key: 'negociacao', color: '#EC4899', position: 3 },
-        { name: 'Fechado', stage_key: 'fechado', color: '#10B981', position: 4 },
-      ];
+      // Create stages based on segment
+      let stages;
+      if (segment === 'telecom') {
+        stages = [
+          { name: 'Novo', stage_key: 'novo', color: '#3B82F6', position: 0 },
+          { name: 'Análise Viabilidade', stage_key: 'viabilidade', color: '#F59E0B', position: 1 },
+          { name: 'Agendado', stage_key: 'agendado', color: '#8B5CF6', position: 2 },
+          { name: 'Instalação', stage_key: 'instalacao', color: '#EC4899', position: 3 },
+          { name: 'Ativado', stage_key: 'ativado', color: '#10B981', position: 4 },
+        ];
+      } else {
+        stages = [
+          { name: 'Novo', stage_key: 'novo', color: '#3B82F6', position: 0 },
+          { name: 'Qualificação', stage_key: 'qualificacao', color: '#F59E0B', position: 1 },
+          { name: 'Proposta', stage_key: 'proposta', color: '#8B5CF6', position: 2 },
+          { name: 'Negociação', stage_key: 'negociacao', color: '#EC4899', position: 3 },
+          { name: 'Fechado', stage_key: 'fechado', color: '#10B981', position: 4 },
+        ];
+      }
 
       await supabaseAdmin
         .from('stages')
-        .insert(defaultStages.map(stage => ({
+        .insert(stages.map(stage => ({
           ...stage,
           pipeline_id: pipeline.id,
         })));

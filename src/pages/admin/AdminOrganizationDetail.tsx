@@ -48,12 +48,15 @@ import {
 } from '@/components/ui/dialog';
 
 const ALL_MODULES = [
-  { name: 'crm', label: 'CRM (Pipelines, Contatos, Cadências)' },
+  { name: 'crm', label: 'CRM (Pipelines, Contatos)' },
   { name: 'financial', label: 'Financeiro (Dashboard, Contas, Contratos, Comissões)' },
-  { name: 'properties', label: 'Imóveis' },
+  { name: 'properties', label: 'Imóveis', segment: 'imobiliario' },
+  { name: 'plans', label: 'Planos de Serviços', segment: 'telecom' },
+  { name: 'coverage', label: 'Áreas de Cobertura', segment: 'telecom' },
+  { name: 'telecom', label: 'Clientes Telecom', segment: 'telecom' },
   { name: 'whatsapp', label: 'WhatsApp' },
   { name: 'agenda', label: 'Agenda' },
-  { name: 'cadences', label: 'Cadências' },
+  { name: 'cadences', label: 'Cadências', segment: 'imobiliario' },
   { name: 'tags', label: 'Tags' },
   { name: 'round_robin', label: 'Distribuição (Round Robin)' },
   { name: 'reports', label: 'Relatórios' },

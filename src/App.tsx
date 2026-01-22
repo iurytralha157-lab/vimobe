@@ -31,6 +31,11 @@ import BrokerPerformancePage from "./pages/BrokerPerformance";
 import MetaSettings from "./pages/MetaSettings";
 import Automations from "./pages/Automations";
 
+// Telecom pages
+import ServicePlans from "./pages/ServicePlans";
+import CoverageAreas from "./pages/CoverageAreas";
+import TelecomCustomers from "./pages/TelecomCustomers";
+
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrganizations from "./pages/admin/AdminOrganizations";
@@ -189,6 +194,11 @@ function AppRoutes() {
           <Route path="/financeiro/comissoes" element={<ProtectedRoute><Commissions /></ProtectedRoute>} />
           <Route path="/financeiro/relatorios" element={<ProtectedRoute><FinancialReports /></ProtectedRoute>} />
           <Route path="/reports/performance" element={<ProtectedRoute><AdminRoute><BrokerPerformancePage /></AdminRoute></ProtectedRoute>} />
+          
+          {/* Telecom Module */}
+          <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
+          <Route path="/coverage" element={<ProtectedRoute><CoverageAreas /></ProtectedRoute>} />
+          <Route path="/telecom/customers" element={<ProtectedRoute><TelecomCustomers /></ProtectedRoute>} />
           
           {/* Automations */}
           <Route path="/automations" element={<ProtectedRoute><AdminRoute><Automations /></AdminRoute></ProtectedRoute>} />

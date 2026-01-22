@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,7 +38,13 @@ const allNavItems: NavItem[] = [
       { icon: BarChart3, labelKey: 'reports', path: '/financeiro/relatorios' }
     ]
   },
+  // Imobiliária module
   { icon: Building2, labelKey: 'properties', path: '/properties', module: 'properties' },
+  // Telecom modules
+  { icon: Package, labelKey: 'plans', path: '/plans', module: 'plans' },
+  { icon: MapPin, labelKey: 'coverage', path: '/coverage', module: 'coverage' },
+  { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom' },
+  // Admin modules
   { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'crm', adminOnly: true },
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
   { icon: Calendar, labelKey: 'schedule', path: '/agenda', module: 'agenda' },
