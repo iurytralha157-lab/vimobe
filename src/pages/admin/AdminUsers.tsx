@@ -135,7 +135,7 @@ export default function AdminUsers() {
           </div>
           
           <Select value={filterOrg} onValueChange={setFilterOrg}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Organização" />
             </SelectTrigger>
             <SelectContent>
@@ -152,7 +152,7 @@ export default function AdminUsers() {
           </Select>
 
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -193,7 +193,7 @@ export default function AdminUsers() {
                 {filteredUsers.map((user) => (
                   <div 
                     key={user.id} 
-                    className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg transition-colors gap-3 ${
                       !user.organization_id && user.role !== 'super_admin' 
                         ? 'border-destructive/50 bg-destructive/5' 
                         : 'hover:bg-muted/50'
@@ -212,7 +212,7 @@ export default function AdminUsers() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {/* Organization */}
                       {user.organization ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -293,7 +293,7 @@ export default function AdminUsers() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
             <AlertDialogDescription>
