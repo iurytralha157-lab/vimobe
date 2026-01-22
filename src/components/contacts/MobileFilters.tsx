@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/select';
 import { Filter, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { DatePreset } from '@/hooks/use-dashboard-filters';
 
 interface MobileFiltersProps {
   search: string;
@@ -32,10 +34,10 @@ interface MobileFiltersProps {
   setSelectedTag: (value: string) => void;
   selectedSource: string;
   setSelectedSource: (value: string) => void;
-  createdFrom: string;
-  setCreatedFrom: (value: string) => void;
-  createdTo: string;
-  setCreatedTo: (value: string) => void;
+  datePreset: DatePreset | null;
+  onDatePresetChange: (preset: DatePreset | null) => void;
+  customDateRange: { from: Date; to: Date } | null;
+  onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
   pipelines: { id: string; name: string }[];
   stages: { id: string; name: string }[];
   users: { id: string; name: string }[];
@@ -58,10 +60,10 @@ export function MobileFilters({
   setSelectedTag,
   selectedSource,
   setSelectedSource,
-  createdFrom,
-  setCreatedFrom,
-  createdTo,
-  setCreatedTo,
+  datePreset,
+  onDatePresetChange,
+  customDateRange,
+  onCustomDateRangeChange,
   pipelines,
   stages,
   users,
@@ -203,23 +205,17 @@ export function MobileFilters({
               </Select>
             </div>
 
-            {/* Date Range */}
+            {/* Date Range - Using nice DateFilterPopover */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Período</label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="date"
-                  placeholder="De"
-                  value={createdFrom}
-                  onChange={(e) => setCreatedFrom(e.target.value)}
-                />
-                <Input
-                  type="date"
-                  placeholder="Até"
-                  value={createdTo}
-                  onChange={(e) => setCreatedTo(e.target.value)}
-                />
-              </div>
+              <DateFilterPopover
+                datePreset={datePreset || 'last30days'}
+                onDatePresetChange={(preset) => onDatePresetChange(preset)}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={onCustomDateRangeChange}
+                triggerClassName="w-full justify-start"
+                defaultPreset="last30days"
+              />
             </div>
           </div>
 
