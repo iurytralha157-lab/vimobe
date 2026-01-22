@@ -1,4 +1,4 @@
-import { useState, useDeferredValue } from 'react';
+import { useState, useDeferredValue, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
@@ -70,7 +70,7 @@ import { MobileFilters } from '@/components/contacts/MobileFilters';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog';
@@ -79,6 +79,8 @@ import { EmptyState } from '@/components/contacts/EmptyState';
 import { useContactsList, type ContactListFilters } from '@/hooks/use-contacts-list';
 import { exportContacts } from '@/lib/export-contacts';
 import { useLeads, useLead, useDeleteLead } from '@/hooks/use-leads';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
 
 export default function Contacts() {
   const isMobile = useIsMobile();
@@ -89,8 +91,8 @@ export default function Contacts() {
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [createdFrom, setCreatedFrom] = useState<string>('');
-  const [createdTo, setCreatedTo] = useState<string>('');
+  const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
@@ -109,6 +111,17 @@ export default function Contacts() {
   // Debounce search
   const deferredSearch = useDeferredValue(search);
 
+  // Calculate date range from preset or custom range
+  const dateRange = useMemo(() => {
+    if (customDateRange) {
+      return customDateRange;
+    }
+    if (datePreset) {
+      return getDateRangeFromPreset(datePreset);
+    }
+    return null;
+  }, [datePreset, customDateRange]);
+
   // Build filters
   const filters: ContactListFilters = {
     search: deferredSearch || undefined,
@@ -118,8 +131,8 @@ export default function Contacts() {
     unassigned: selectedAssignee === 'unassigned',
     tagId: selectedTag !== 'all' ? selectedTag : undefined,
     source: selectedSource !== 'all' ? selectedSource : undefined,
-    createdFrom: createdFrom ? `${createdFrom}T00:00:00` : undefined,
-    createdTo: createdTo ? `${createdTo}T23:59:59` : undefined,
+    createdFrom: dateRange ? format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+    createdTo: dateRange ? format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
     sortBy,
     sortDir,
     page,
@@ -157,8 +170,8 @@ export default function Contacts() {
     setSelectedAssignee('all');
     setSelectedTag('all');
     setSelectedSource('all');
-    setCreatedFrom('');
-    setCreatedTo('');
+    setDatePreset(null);
+    setCustomDateRange(null);
     setPage(1);
   };
 
@@ -192,7 +205,7 @@ export default function Contacts() {
   };
 
   const hasActiveFilters = search || selectedPipeline !== 'all' || selectedStage !== 'all' || 
-    selectedAssignee !== 'all' || selectedTag !== 'all' || selectedSource !== 'all' || createdFrom || createdTo;
+    selectedAssignee !== 'all' || selectedTag !== 'all' || selectedSource !== 'all' || datePreset || customDateRange;
 
   const activeFilterCount = [
     selectedPipeline !== 'all',
@@ -200,8 +213,7 @@ export default function Contacts() {
     selectedAssignee !== 'all',
     selectedTag !== 'all',
     selectedSource !== 'all',
-    createdFrom,
-    createdTo,
+    datePreset || customDateRange,
   ].filter(Boolean).length;
 
   const getInitials = (name: string) => {
@@ -287,10 +299,10 @@ export default function Contacts() {
             setSelectedTag={handleFilterChange(setSelectedTag)}
             selectedSource={selectedSource}
             setSelectedSource={handleFilterChange(setSelectedSource)}
-            createdFrom={createdFrom}
-            setCreatedFrom={handleFilterChange(setCreatedFrom)}
-            createdTo={createdTo}
-            setCreatedTo={handleFilterChange(setCreatedTo)}
+            datePreset={datePreset}
+            onDatePresetChange={handleFilterChange(setDatePreset)}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
             pipelines={pipelines}
             stages={stages}
             users={users}
@@ -389,24 +401,16 @@ export default function Contacts() {
                   </SelectContent>
                 </Select>
 
-                {/* Date Filters */}
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="date"
-                    placeholder="De"
-                    value={createdFrom}
-                    onChange={(e) => handleFilterChange(setCreatedFrom)(e.target.value)}
-                    className="w-[140px]"
-                  />
-                  <span className="text-muted-foreground">até</span>
-                  <Input
-                    type="date"
-                    placeholder="Até"
-                    value={createdTo}
-                    onChange={(e) => handleFilterChange(setCreatedTo)(e.target.value)}
-                    className="w-[140px]"
-                  />
-                </div>
+                {/* Date Filter - Using the nice DateFilterPopover */}
+                <DateFilterPopover
+                  datePreset={datePreset || 'last30days'}
+                  onDatePresetChange={(preset) => {
+                    handleFilterChange(setDatePreset)(preset);
+                  }}
+                  customDateRange={customDateRange}
+                  onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
+                  defaultPreset="last30days"
+                />
 
                 {hasActiveFilters && (
                   <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -464,343 +468,289 @@ export default function Contacts() {
             </div>
           ) : (
             // Desktop Table
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={selectedIds.size === contacts.length && contacts.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => handleSort('name')}
-                  >
-                    <span className="flex items-center">
-                      Contato
-                      <SortIcon column="name" />
-                    </span>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => handleSort('stage')}
-                  >
-                    <span className="flex items-center">
-                      Estágio
-                      <SortIcon column="stage" />
-                    </span>
-                  </TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Fonte</TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => handleSort('last_interaction_at')}
-                  >
-                    <span className="flex items-center">
-                      Última Interação
-                      <SortIcon column="last_interaction_at" />
-                    </span>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => handleSort('created_at')}
-                  >
-                    <span className="flex items-center">
-                      Data
-                      <SortIcon column="created_at" />
-                    </span>
-                  </TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-
+            <div className="overflow-x-auto">
               {isLoading ? (
-                <TableSkeleton rows={10} />
+                <TableSkeleton />
               ) : contacts.length === 0 ? (
-                <tbody>
-                  <tr>
-                    <td colSpan={8}>
-                      <EmptyState
-                        hasActiveFilters={!!hasActiveFilters}
-                        onImport={() => setImportDialogOpen(true)}
-                        onCreate={() => {/* TODO: Open create dialog */}}
-                        onClearFilters={clearFilters}
-                      />
-                    </td>
-                  </tr>
-                </tbody>
+                <EmptyState
+                  hasActiveFilters={!!hasActiveFilters}
+                  onImport={() => setImportDialogOpen(true)}
+                  onCreate={() => {/* TODO: Open create dialog */}}
+                  onClearFilters={clearFilters}
+                />
               ) : (
-                <tbody>
-                  {contacts.map((contact) => (
-                    <TableRow 
-                      key={contact.id} 
-                      className={cn(
-                        "cursor-pointer hover:bg-accent/50",
-                        selectedIds.has(contact.id) && "bg-accent/30"
-                      )}
-                    >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedIds.has(contact.id)}
-                          onCheckedChange={() => toggleSelectOne(contact.id)}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox 
+                          checked={selectedIds.size === contacts.length && contacts.length > 0}
+                          onCheckedChange={toggleSelectAll}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-medium">{contact.name}</p>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            {contact.phone && (
-                              <a 
-                                href={`tel:${contact.phone}`} 
-                                className="flex items-center gap-1 hover:text-foreground"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Phone className="h-3 w-3" />
-                                {contact.phone}
-                              </a>
-                            )}
-                            {contact.email && (
-                              <a 
-                                href={`mailto:${contact.email}`} 
-                                className="flex items-center gap-1 hover:text-foreground"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Mail className="h-3 w-3" />
-                                {contact.email}
-                              </a>
-                            )}
-                          </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="flex items-center">
+                          Nome <SortIcon column="name" />
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {contact.stage_name ? (
-                          <Badge 
-                            variant="outline" 
-                            className="gap-1.5"
-                            style={{ 
-                              borderColor: contact.stage_color || undefined,
-                              color: contact.stage_color || undefined
-                            }}
-                          >
-                            <div 
-                              className="h-2 w-2 rounded-full" 
-                              style={{ backgroundColor: contact.stage_color || undefined }} 
-                            />
-                            {contact.stage_name}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {contact.assignee_name ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={contact.assignee_avatar || undefined} />
-                              <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-                                {getInitials(contact.assignee_name)}
+                      </TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Pipeline / Estágio</TableHead>
+                      <TableHead>Responsável</TableHead>
+                      <TableHead>Tags</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleSort('created_at')}
+                      >
+                        <div className="flex items-center">
+                          Criado em <SortIcon column="created_at" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <tbody>
+                    {contacts.map((contact) => (
+                      <TableRow key={contact.id} className="cursor-pointer hover:bg-muted/30">
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox 
+                            checked={selectedIds.has(contact.id)}
+                            onCheckedChange={() => toggleSelectOne(contact.id)}
+                          />
+                        </TableCell>
+                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                {getInitials(contact.name)}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-sm">{contact.assignee_name.split(' ')[0]}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm flex items-center gap-1">
-                            <UserCircle className="h-4 w-4" />
-                            Sem responsável
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {(contact.tags || []).slice(0, 2).map(tag => (
-                            <Badge 
-                              key={tag.id} 
-                              variant="secondary"
-                              className="text-xs"
-                              style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                            >
-                              {tag.name}
-                            </Badge>
-                          ))}
-                          {(contact.tags?.length || 0) > 2 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{(contact.tags?.length || 0) - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {sourceLabels[contact.source] || contact.source}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {contact.last_interaction_at ? (
-                          <div className="space-y-0.5">
-                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                              {contact.last_interaction_preview || 'Interação registrada'}
-                            </p>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              {contact.last_interaction_channel === 'whatsapp' && (
-                                <MessageCircle className="h-3 w-3" />
+                            <div>
+                              <p className="font-medium text-foreground">{contact.name}</p>
+                              {contact.source && (
+                                <p className="text-xs text-muted-foreground">
+                                  {sourceLabels[contact.source] || contact.source}
+                                </p>
                               )}
-                              {formatDistanceToNow(new Date(contact.last_interaction_at), { 
-                                addSuffix: true, 
-                                locale: ptBR 
-                              })}
                             </div>
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(contact.created_at), 'dd/MM/yy', { locale: ptBR })}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedContactId(contact.id)}>
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Ver detalhes
-                            </DropdownMenuItem>
+                        </TableCell>
+                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                          <div className="space-y-1">
                             {contact.phone && (
-                              <DropdownMenuItem asChild>
-                                <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank">
-                                  <Phone className="h-4 w-4 mr-2" />
-                                  WhatsApp
-                                </a>
-                              </DropdownMenuItem>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Phone className="h-3 w-3" />
+                                {contact.phone}
+                              </div>
                             )}
                             {contact.email && (
-                              <DropdownMenuItem asChild>
-                                <a href={`mailto:${contact.email}`}>
-                                  <Mail className="h-4 w-4 mr-2" />
-                                  Enviar email
-                                </a>
-                              </DropdownMenuItem>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Mail className="h-3 w-3" />
+                                {contact.email}
+                              </div>
                             )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => setDeleteContactId(contact.id)}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </tbody>
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                          <div className="space-y-1">
+                            {contact.stage_name && (
+                              <Badge variant="outline" className="text-xs">
+                                {contact.stage_name}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                          {contact.assignee_name ? (
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={contact.assignee_avatar || undefined} />
+                                <AvatarFallback className="text-[10px] bg-secondary">
+                                  {getInitials(contact.assignee_name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{contact.assignee_name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Sem responsável</span>
+                          )}
+                        </TableCell>
+                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                          <div className="flex flex-wrap gap-1">
+                            {contact.tags?.slice(0, 2).map((tag: any) => (
+                              <Badge 
+                                key={tag.id} 
+                                variant="secondary"
+                                className="text-[10px] px-1.5"
+                                style={{ 
+                                  backgroundColor: `${tag.color}20`,
+                                  color: tag.color,
+                                  borderColor: tag.color
+                                }}
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))}
+                            {contact.tags && contact.tags.length > 2 && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5">
+                                +{contact.tags.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                          <div className="text-sm">
+                            <p>{format(new Date(contact.created_at), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(contact.created_at), { addSuffix: true, locale: ptBR })}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setSelectedContactId(contact.id)}>
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Ver detalhes
+                              </DropdownMenuItem>
+                              {contact.phone && (
+                                <DropdownMenuItem asChild>
+                                  <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                    <MessageCircle className="h-4 w-4 mr-2" />
+                                    WhatsApp
+                                  </a>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleteContactId(contact.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </tbody>
+                </Table>
               )}
-            </Table>
-          )}
-
-          {/* Pagination - Compact style */}
-          {totalPages > 0 && (
-            <div className="flex items-center justify-between border-t px-4 py-3">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
-                {totalCount} itens
-              </span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => { setPage(1); setPageInputValue('1'); }}
-                  disabled={page === 1}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => { const newPage = Math.max(1, page - 1); setPage(newPage); setPageInputValue(String(newPage)); }}
-                  disabled={page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex items-center gap-2 mx-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={totalPages}
-                    value={pageInputValue}
-                    onChange={(e) => setPageInputValue(e.target.value)}
-                    onBlur={() => {
-                      const parsed = parseInt(pageInputValue, 10);
-                      if (!isNaN(parsed) && parsed >= 1 && parsed <= totalPages) {
-                        setPage(parsed);
-                      } else {
-                        setPageInputValue(String(page));
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const parsed = parseInt(pageInputValue, 10);
-                        if (!isNaN(parsed) && parsed >= 1 && parsed <= totalPages) {
-                          setPage(parsed);
-                        } else {
-                          setPageInputValue(String(page));
-                        }
-                      }
-                    }}
-                    className="w-12 h-8 text-center px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    de {totalPages}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => { const newPage = Math.min(totalPages, page + 1); setPage(newPage); setPageInputValue(String(newPage)); }}
-                  disabled={page === totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => { setPage(totalPages); setPageInputValue(String(totalPages)); }}
-                  disabled={page === totalPages}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
             </div>
           )}
         </Card>
 
-        {/* Import Dialog */}
-        <ImportContactsDialog 
-          open={importDialogOpen} 
-          onOpenChange={setImportDialogOpen} 
-        />
+        {/* Bulk Actions Bar */}
+        {selectedIds.size > 0 && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background border rounded-lg shadow-lg p-3 flex items-center gap-4 z-50">
+            <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Excluir
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              Cancelar
+            </Button>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Página {page} de {totalPages}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              {/* Page Input */}
+              <div className="flex items-center gap-1 mx-2">
+                <Input
+                  type="text"
+                  value={pageInputValue}
+                  onChange={(e) => setPageInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const num = parseInt(pageInputValue);
+                      if (!isNaN(num) && num >= 1 && num <= totalPages) {
+                        setPage(num);
+                      } else {
+                        setPageInputValue(String(page));
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    const num = parseInt(pageInputValue);
+                    if (!isNaN(num) && num >= 1 && num <= totalPages) {
+                      setPage(num);
+                    } else {
+                      setPageInputValue(String(page));
+                    }
+                  }}
+                  className="w-12 h-8 text-center p-1"
+                />
+                <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Lead Detail Dialog */}
         {selectedLead && (
           <LeadDetailDialog
             lead={selectedLead}
             stages={stages}
+            onClose={() => setSelectedContactId(null)}
             allTags={tags}
             allUsers={users}
-            onClose={() => setSelectedContactId(null)}
             refetchStages={() => {}}
           />
         )}
@@ -809,84 +759,54 @@ export default function Contacts() {
         <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir contato?</AlertDialogTitle>
+              <AlertDialogTitle>Excluir contato</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Todos os dados relacionados a este contato 
-                (histórico, tarefas, atividades, mensagens) serão removidos permanentemente.
+                Tem certeza que deseja excluir este contato? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => {
+                className="bg-destructive hover:bg-destructive/90"
+                onClick={async () => {
                   if (deleteContactId) {
-                    deleteLead.mutate(deleteContactId, {
-                      onSuccess: () => setDeleteContactId(null),
-                    });
+                    await deleteLead.mutateAsync(deleteContactId);
+                    setDeleteContactId(null);
                   }
                 }}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Excluir
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        
-        {/* Bulk Delete Confirmation */}
+
+        {/* Bulk Delete Confirmation Dialog */}
         <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir {selectedIds.size} contato(s)?</AlertDialogTitle>
+              <AlertDialogTitle>Excluir {selectedIds.size} contatos</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Todos os dados relacionados a estes contatos 
-                (histórico, tarefas, atividades, mensagens) serão removidos permanentemente.
+                Tem certeza que deseja excluir {selectedIds.size} contatos selecionados? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
+                className="bg-destructive hover:bg-destructive/90"
                 onClick={handleBulkDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Excluir {selectedIds.size} contato(s)
+                Excluir {selectedIds.size} contatos
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        
-        {/* Bulk Action Bar */}
-        {selectedIds.size > 0 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
-            <Card className="shadow-lg border-primary/20">
-              <CardContent className="flex items-center gap-4 py-3 px-5">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">
-                    {selectedIds.size} selecionado(s)
-                  </span>
-                </div>
-                <div className="h-4 w-px bg-border" />
-                <Button 
-                  size="sm" 
-                  variant="destructive"
-                  onClick={() => setBulkDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={clearSelection}
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Cancelar
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+
+        {/* Import Dialog */}
+        <ImportContactsDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+        />
       </div>
     </AppLayout>
   );
