@@ -142,7 +142,7 @@ export default function AdminOrganizations() {
                 Nova Organização
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Criar Nova Organização</DialogTitle>
                 <DialogDescription>
@@ -260,7 +260,7 @@ export default function AdminOrganizations() {
                 {filteredOrgs.map((org) => (
                   <div 
                     key={org.id} 
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3"
                   >
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -277,7 +277,7 @@ export default function AdminOrganizations() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                       {getStatusBadge(org.subscription_status, org.is_active)}
                       
                       <DropdownMenu>
@@ -331,7 +331,7 @@ export default function AdminOrganizations() {
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir Organização</AlertDialogTitle>
               <AlertDialogDescription className="space-y-4">

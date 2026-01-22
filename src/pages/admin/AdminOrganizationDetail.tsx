@@ -187,23 +187,23 @@ export default function AdminOrganizationDetail() {
     <AdminLayout title={org.name}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <Button variant="ghost" onClick={() => navigate('/admin/organizations')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
-          <Button variant="outline" onClick={handleImpersonate}>
+          <Button variant="outline" onClick={handleImpersonate} className="w-full sm:w-auto">
             <Eye className="h-4 w-4 mr-2" />
             Entrar como Admin
           </Button>
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="general">Geral</TabsTrigger>
-            <TabsTrigger value="modules">Módulos</TabsTrigger>
-            <TabsTrigger value="users">Usuários</TabsTrigger>
-            <TabsTrigger value="invites">Convites</TabsTrigger>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            <TabsTrigger value="general" className="flex-1 sm:flex-none">Geral</TabsTrigger>
+            <TabsTrigger value="modules" className="flex-1 sm:flex-none">Módulos</TabsTrigger>
+            <TabsTrigger value="users" className="flex-1 sm:flex-none">Usuários</TabsTrigger>
+            <TabsTrigger value="invites" className="flex-1 sm:flex-none">Convites</TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
@@ -287,9 +287,9 @@ export default function AdminOrganizationDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {ALL_MODULES.map((module) => (
-                    <div key={module.name} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                       <div>
                         <p className="font-medium">{module.label}</p>
                       </div>
@@ -334,7 +334,7 @@ export default function AdminOrganizationDetail() {
                 ) : (
                   <div className="space-y-2">
                     {orgUsers?.map((user) => (
-                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <Users className="h-5 w-5 text-primary" />
@@ -344,7 +344,7 @@ export default function AdminOrganizationDetail() {
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                             {user.role === 'admin' ? 'Administrador' : 'Usuário'}
                           </Badge>
@@ -363,7 +363,7 @@ export default function AdminOrganizationDetail() {
           {/* Invites Tab */}
           <TabsContent value="invites" className="space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle>Convites Pendentes</CardTitle>
                   <CardDescription>
@@ -377,7 +377,7 @@ export default function AdminOrganizationDetail() {
                       Novo Convite
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Convidar Usuário</DialogTitle>
                       <DialogDescription>
@@ -437,7 +437,7 @@ export default function AdminOrganizationDetail() {
                 ) : (
                   <div className="space-y-2">
                     {invitations?.map((invite) => (
-                      <div key={invite.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <Mail className="h-5 w-5 text-primary" />
@@ -452,7 +452,7 @@ export default function AdminOrganizationDetail() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant={invite.role === 'admin' ? 'default' : 'secondary'}>
                             {invite.role === 'admin' ? 'Administrador' : 'Usuário'}
                           </Badge>

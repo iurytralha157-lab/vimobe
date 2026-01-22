@@ -44,7 +44,7 @@ export default function AdminDashboard() {
     <AdminLayout title="Dashboard">
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -129,7 +129,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {organizations && organizations.length > 0 && (
             <AdminGrowthChart organizations={organizations} />
           )}
@@ -163,7 +163,7 @@ export default function AdminDashboard() {
                 {recentOrgs.map((org) => (
                   <div 
                     key={org.id} 
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors gap-3"
                     onClick={() => navigate(`/admin/organizations/${org.id}`)}
                   >
                     <div className="flex items-center gap-4">
@@ -177,9 +177,9 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                       {getStatusBadge(org.subscription_status)}
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
                         {formatDistanceToNow(new Date(org.created_at), { 
                           addSuffix: true,
                           locale: ptBR 
