@@ -63,7 +63,7 @@ export function AppHeader({ title }: AppHeaderProps) {
   };
 
   return (
-    <header className="h-14 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card">
+    <header className="h-14 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card sticky top-0 z-40">
       <div className="flex items-center gap-3">
         {/* Mobile menu */}
         {isMobile && <MobileSidebar />}
