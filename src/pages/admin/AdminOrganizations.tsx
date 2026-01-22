@@ -59,6 +59,7 @@ export default function AdminOrganizations() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [newOrg, setNewOrg] = useState({
     name: '',
+    segment: 'imobiliario' as 'imobiliario' | 'telecom' | 'servicos',
     adminEmail: '',
     adminName: '',
     adminPassword: '',
@@ -91,7 +92,7 @@ export default function AdminOrganizations() {
     }
     await createOrganization.mutateAsync(newOrg);
     setCreateDialogOpen(false);
-    setNewOrg({ name: '', adminEmail: '', adminName: '', adminPassword: '' });
+    setNewOrg({ name: '', segment: 'imobiliario', adminEmail: '', adminName: '', adminPassword: '' });
     setShowPassword(false);
   };
 
@@ -157,6 +158,24 @@ export default function AdminOrganizations() {
                     onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
                     placeholder="Ex: Imobiliária XYZ"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="segment">Tipo de Negócio</Label>
+                  <select
+                    id="segment"
+                    value={newOrg.segment}
+                    onChange={(e) => setNewOrg({ ...newOrg, segment: e.target.value as any })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="imobiliario">Imobiliária</option>
+                    <option value="telecom">Telecom / Internet</option>
+                    <option value="servicos">Serviços Gerais</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {newOrg.segment === 'imobiliario' && 'Módulos: Imóveis, Cadências, CRM Imobiliário'}
+                    {newOrg.segment === 'telecom' && 'Módulos: Planos, Localidades, Clientes Telecom'}
+                    {newOrg.segment === 'servicos' && 'Módulos: CRM Básico, Financeiro, Agenda'}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="adminName">Nome do Administrador</Label>

@@ -85,6 +85,7 @@ export function useSuperAdmin() {
   const createOrganization = useMutation({
     mutationFn: async (data: { 
       name: string; 
+      segment?: 'imobiliario' | 'telecom' | 'servicos';
       adminEmail: string; 
       adminName: string; 
       adminPassword: string;
