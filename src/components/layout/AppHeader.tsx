@@ -180,7 +180,7 @@ export function AppHeader({ title }: AppHeaderProps) {
           <DropdownMenuContent align="end" sideOffset={8} collisionPadding={16} className="w-48 bg-popover">
             <div className="px-3 py-2">
               <p className="text-sm font-medium">{profile?.name}</p>
-              <p className="text-[10px] text-muted-foreground">{profile?.email}</p>
+              <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">

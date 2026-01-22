@@ -84,19 +84,16 @@ export function useNotifications() {
       // Mark as unlocked FIRST to prevent multiple attempts
       audioUnlockedRef.current = true;
       
-      // Unlock audio by playing completely muted and pausing immediately
+      // Unlock audio by playing silent (volume 0) and pausing immediately
       const unlockSound = (audio: HTMLAudioElement | null) => {
         if (!audio) return;
         const originalVolume = audio.volume;
-        audio.muted = true; // Force mute during unlock
-        audio.volume = 0;
+        audio.volume = 0; // Silent unlock
         audio.play().then(() => {
           audio.pause();
           audio.currentTime = 0;
-          audio.muted = false; // Restore after unlock complete
-          audio.volume = originalVolume;
+          audio.volume = originalVolume; // Restore volume
         }).catch(() => {
-          audio.muted = false;
           audio.volume = originalVolume;
         });
       };

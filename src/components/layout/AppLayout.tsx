@@ -17,10 +17,7 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
   const isMobile = useIsMobile();
 
   return (
-    <div 
-      className="h-screen flex w-full bg-background overflow-hidden"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-    >
+    <div className="h-screen flex w-full bg-background overflow-hidden">
       {/* Desktop sidebar fixa */}
       {!isMobile && (
         <div className="flex-shrink-0">

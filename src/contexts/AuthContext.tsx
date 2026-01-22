@@ -177,48 +177,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('impersonating');
     };
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
-        
-        // Se houve erro ou sessão inválida, limpar tudo
-        if (error || !session) {
-          console.log('Sessão inválida na inicialização:', error?.message);
-          clearAllStates();
-          setLoading(false);
-          return;
-        }
-        
-        setSession(session);
-        setUser(session.user);
-        
-        // IMPORTANT: Wait for fetchProfile to complete (including super admin check)
-        // before setting loading to false
-        const profileLoaded = await fetchProfile(session.user.id);
-        
-        if (isMounted) {
-          // Se profile não carregou, limpar sessão (força re-login)
-          if (!profileLoaded) {
-            console.error('Failed to load profile, clearing session');
-            clearAllStates();
-          }
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (isMounted) {
-          clearAllStates();
-          setLoading(false);
-        }
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (!isMounted) return;
+      
+      // Se houve erro ou sessão inválida, limpar tudo
+      if (error || !session) {
+        console.log('Sessão inválida na inicialização:', error?.message);
+        clearAllStates();
+        setLoading(false);
+        return;
       }
-    };
-
-    initializeAuth();
+      
+      setSession(session);
+      setUser(session.user);
+      
+      await fetchProfile(session.user.id);
+      setLoading(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!isMounted) return;
         
         console.log('Auth event:', event, 'Session:', !!session);
@@ -226,14 +204,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Logout ou sessão expirada - limpar tudo e NÃO processar mais nada
         if (event === 'SIGNED_OUT') {
           clearAllStates();
-          setLoading(false);
           return;
         }
         
         // Se não tem sessão, limpar estados
         if (!session) {
           clearAllStates();
-          setLoading(false);
           return;
         }
         
@@ -250,17 +226,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session.user);
         
-        // For SIGNED_IN event, set loading true and wait for profile
-        if (event === 'SIGNED_IN') {
-          setLoading(true);
-          await fetchProfile(session.user.id);
+        // Usar setTimeout para evitar deadlock do Supabase
+        setTimeout(() => {
           if (isMounted) {
-            setLoading(false);
+            fetchProfile(session.user.id);
           }
-        } else {
-          // For other events (TOKEN_REFRESHED), just refresh profile in background
-          fetchProfile(session.user.id);
-        }
+        }, 0);
       }
     );
 
