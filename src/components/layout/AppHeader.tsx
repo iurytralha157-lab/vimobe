@@ -47,13 +47,9 @@ export function AppHeader({ title }: AppHeaderProps) {
   };
 
   return (
-    <header className="h-12 flex items-center px-4 lg:px-6 mx-3 mt-3">
+    <header className="h-12 flex items-center px-2 lg:px-6 mx-3 mt-3">
       {/* Mobile menu */}
-      {isMobile && (
-        <div className="flex items-center">
-          <MobileSidebar />
-        </div>
-      )}
+      {isMobile && <MobileSidebar />}
       
       {/* Page title - aligned with content */}
       {title && (
