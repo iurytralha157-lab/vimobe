@@ -183,7 +183,7 @@ export function AppSidebar() {
   };
   return <aside className={cn("h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 fixed top-0 left-0 z-40", collapsed ? "w-16" : "w-64")}>
       {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border bg-primary-foreground">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border bg-card">
         {!collapsed && <div className="flex items-center flex-1">
             {logoUrl ? <img src={logoUrl} alt="Logo" className="rounded-lg object-contain" style={{
           maxWidth: systemSettings?.logo_width || 140,
@@ -198,7 +198,7 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin bg-primary-foreground">
+      <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin bg-card">
         <ul className="space-y-1">
           {navItems.map(item => <li key={item.path}>
               {item.children && !collapsed ? <Collapsible open={isMenuOpen(item.path) || isActiveParent(item)} onOpenChange={() => toggleMenu(item.path)}>
@@ -224,7 +224,7 @@ export function AppSidebar() {
       </nav>
 
       {/* Bottom items */}
-      <div className="py-4 px-2 border-t border-sidebar-border bg-primary-foreground">
+      <div className="py-4 px-2 border-t border-sidebar-border bg-card">
         <ul className="space-y-1">
           {computedBottomItems.map(item => <li key={item.path}>
               <NavLink to={item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", location.pathname === item.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30")}>

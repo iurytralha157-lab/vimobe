@@ -55,7 +55,7 @@ export function AppHeader({
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
-  return <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-white">
+  return <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card">
       <div className="flex items-center gap-3">
         {/* Mobile menu */}
         {isMobile && <MobileSidebar />}
