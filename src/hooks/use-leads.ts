@@ -397,6 +397,14 @@ export function useDeleteLead() {
   
   return useMutation({
     mutationFn: async (id: string) => {
+      // Delete related notifications first to avoid FK constraint violation
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('lead_id', id);
+      
+      if (notifError) throw notifError;
+
       const { error } = await supabase
         .from('leads')
         .delete()
