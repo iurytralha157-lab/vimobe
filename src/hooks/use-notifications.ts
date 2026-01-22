@@ -4,6 +4,9 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+// Global flag to prevent audio unlock from re-triggering on navigation
+let globalAudioUnlocked = false;
+
 export interface Notification {
   id: string;
   user_id: string;
@@ -78,39 +81,47 @@ export function useNotifications() {
   useEffect(() => {
     requestNotificationPermission();
     
+    // Skip if already unlocked globally (survives navigation)
+    if (globalAudioUnlocked) return;
+    
     const handleInteraction = () => {
-      if (audioUnlockedRef.current) return;
+      // Check global flag first to prevent any re-triggering
+      if (globalAudioUnlocked) return;
       
-      // Mark as unlocked FIRST to prevent multiple attempts
+      // Mark as unlocked GLOBALLY and locally BEFORE any operations
+      globalAudioUnlocked = true;
       audioUnlockedRef.current = true;
       
-      // Unlock audio by playing silent (volume 0) and pausing immediately
+      // Remove listeners IMMEDIATELY to prevent any further triggers
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+      
+      // Unlock audio silently (volume 0) - no audible sound
       const unlockSound = (audio: HTMLAudioElement | null) => {
         if (!audio) return;
-        const originalVolume = audio.volume;
-        audio.volume = 0; // Silent unlock
+        audio.volume = 0;
         audio.play().then(() => {
           audio.pause();
           audio.currentTime = 0;
-          audio.volume = originalVolume; // Restore volume
-        }).catch(() => {
-          audio.volume = originalVolume;
-        });
+        }).catch(() => {});
       };
 
       unlockSound(notificationSoundRef.current);
       unlockSound(newLeadSoundRef.current);
-      console.log('Audio unlocked for notifications');
       
-      // Remove listeners after unlock
-      document.removeEventListener('click', handleInteraction);
-      document.removeEventListener('keydown', handleInteraction);
-      document.removeEventListener('touchstart', handleInteraction);
+      // Restore volume AFTER unlock with a small delay
+      setTimeout(() => {
+        if (notificationSoundRef.current) notificationSoundRef.current.volume = 0.5;
+        if (newLeadSoundRef.current) newLeadSoundRef.current.volume = 0.7;
+      }, 100);
+      
+      console.log('Audio unlocked for notifications');
     };
 
-    document.addEventListener('click', handleInteraction, { once: false });
-    document.addEventListener('keydown', handleInteraction, { once: false });
-    document.addEventListener('touchstart', handleInteraction, { once: false });
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
 
     return () => {
       document.removeEventListener('click', handleInteraction);
