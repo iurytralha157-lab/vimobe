@@ -31,7 +31,7 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
         <AppHeader title={title} />
         
         {/* Conteúdo da página */}
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto px-4 md:px-6 py-3 md:py-4">
           {children}
         </main>
       </div>

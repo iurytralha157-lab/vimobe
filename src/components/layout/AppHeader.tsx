@@ -56,12 +56,8 @@ export function AppHeader({ title }: AppHeaderProps) {
       )}
       
       {/* Page title - aligned with content */}
-      {title ? (
+      {title && (
         <h1 className="text-lg font-semibold text-foreground ml-2 lg:ml-0">{title}</h1>
-      ) : !isMobile && (
-        <span className="text-muted-foreground hidden lg:inline">
-          Olá, <span className="text-foreground font-medium">{profile?.name?.split(' ')[0] || 'Usuário'}</span>
-        </span>
       )}
 
       {/* Right side actions - floating pill */}
