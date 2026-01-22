@@ -6,6 +6,7 @@ import { FloatingChatProvider } from '@/contexts/FloatingChatContext';
 import { FloatingChat } from '@/components/chat/FloatingChat';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -37,6 +38,9 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
       {/* Floating WhatsApp Chat */}
       <FloatingChatButton />
       <FloatingChat />
+      
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 }
