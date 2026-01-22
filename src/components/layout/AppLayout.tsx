@@ -17,14 +17,18 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
   const isMobile = useIsMobile();
 
   return (
-    <div className="min-h-screen flex flex-col w-full bg-background">
+    <div className="h-screen flex flex-col w-full bg-background overflow-hidden">
       {/* Header fixo no topo com logo */}
       <AppHeader title={title} />
       
-      {/* Área de conteúdo com sidebar flutuante */}
+      {/* Área de conteúdo com sidebar fixa */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Desktop sidebar flutuante */}
-        {!isMobile && <AppSidebar />}
+        {/* Desktop sidebar fixa */}
+        {!isMobile && (
+          <div className="flex-shrink-0">
+            <AppSidebar />
+          </div>
+        )}
         
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}
