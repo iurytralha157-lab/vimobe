@@ -348,16 +348,27 @@ Deno.serve(async (req) => {
 
         if (customerRecords.length === 0) continue
 
-        const { error: customersError } = await supabase
+        // Use insert with returning to track inserted rows
+        const { data: insertedData, error: customersError } = await supabase
           .from('telecom_customers')
-          .upsert(customerRecords, { 
-            onConflict: 'organization_id,external_id',
-            ignoreDuplicates: false 
-          })
+          .insert(customerRecords)
+          .select('id')
 
         if (customersError) {
-          console.error(`Error inserting customer batch ${i}-${i + batchSize}:`, customersError)
-          results.customers.errors += customerRecords.length
+          // Try upsert as fallback (for updates)
+          const { error: upsertError } = await supabase
+            .from('telecom_customers')
+            .upsert(customerRecords, { 
+              onConflict: 'organization_id,external_id',
+              ignoreDuplicates: false 
+            })
+          
+          if (upsertError) {
+            console.error(`Error inserting customer batch ${i}-${i + batchSize}:`, upsertError)
+            results.customers.errors += customerRecords.length
+          } else {
+            results.customers.inserted += customerRecords.length
+          }
         } else {
           results.customers.inserted += customerRecords.length
         }

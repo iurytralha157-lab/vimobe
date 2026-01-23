@@ -43,6 +43,7 @@ import AdminOrganizationDetail from "./pages/admin/AdminOrganizationDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminAudit from "./pages/admin/AdminAudit";
+import ImportCristiano from "./pages/admin/ImportCristiano";
 import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient({
@@ -171,6 +172,7 @@ function AppRoutes() {
           <Route path="/admin/users" element={<SuperAdminRoute><AdminUsers /></SuperAdminRoute>} />
           <Route path="/admin/settings" element={<SuperAdminRoute><AdminSettings /></SuperAdminRoute>} />
           <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
+          <Route path="/admin/import-cristiano" element={<SuperAdminRoute><ImportCristiano /></SuperAdminRoute>} />
           
           {/* Regular Routes */}
           <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
