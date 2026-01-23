@@ -84,6 +84,8 @@ export default function Settings() {
   const totalMetaLeadsReceived = 0; // leads_received column doesn't exist in DB
   const isMetaConnected = metaIntegrations.length > 0;
   const hasWhatsAppModule = hasModule('whatsapp');
+  const hasWebhooksModule = hasModule('webhooks');
+  const hasWordpressModule = hasModule('wordpress');
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [orgName, setOrgName] = useState(organization?.name || '');
@@ -272,18 +274,22 @@ export default function Settings() {
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.usersTab}</span>
             </TabsTrigger>
-            <TabsTrigger value="webhooks" className="gap-2">
-              <Webhook className="h-4 w-4" />
-              <span className="hidden sm:inline">Webhooks</span>
-            </TabsTrigger>
+            {hasWebhooksModule && (
+              <TabsTrigger value="webhooks" className="gap-2">
+                <Webhook className="h-4 w-4" />
+                <span className="hidden sm:inline">Webhooks</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="meta" className="gap-2">
               <Facebook className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.meta}</span>
             </TabsTrigger>
-            <TabsTrigger value="wordpress" className="gap-2">
-              <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.settings.wordpress}</span>
-            </TabsTrigger>
+            {hasWordpressModule && (
+              <TabsTrigger value="wordpress" className="gap-2">
+                <Globe className="h-4 w-4" />
+                <span className="hidden sm:inline">{t.settings.wordpress}</span>
+              </TabsTrigger>
+            )}
             {hasWhatsAppModule && (
               <TabsTrigger value="whatsapp" className="gap-2">
                 <Smartphone className="h-4 w-4" />
