@@ -196,7 +196,7 @@ function AppRoutes() {
           <Route path="/financeiro/contratos" element={<ProtectedRoute><AdminRoute><Contracts /></AdminRoute></ProtectedRoute>} />
           <Route path="/financeiro/comissoes" element={<ProtectedRoute><AdminRoute><Commissions /></AdminRoute></ProtectedRoute>} />
           <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
-          <Route path="/reports/performance" element={<ProtectedRoute><AdminRoute><BrokerPerformancePage /></AdminRoute></ProtectedRoute>} />
+          <Route path="/reports/performance" element={<ProtectedRoute><BrokerPerformancePage /></ProtectedRoute>} />
           
           {/* Telecom Module */}
           <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
