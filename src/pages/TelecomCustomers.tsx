@@ -204,23 +204,23 @@ export default function TelecomCustomers() {
                 className="pl-9"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter || "all"} onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 {TELECOM_CUSTOMER_STATUSES.map(s => (
                   <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={planFilter} onValueChange={setPlanFilter}>
+            <Select value={planFilter || "all"} onValueChange={(v) => setPlanFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Plano" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os planos</SelectItem>
+                <SelectItem value="all">Todos os planos</SelectItem>
                 {plans.map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.code} - {p.name}</SelectItem>
                 ))}
