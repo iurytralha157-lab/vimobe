@@ -31,6 +31,7 @@ interface Organization {
   accent_color: string;
   is_active?: boolean;
   subscription_status?: string;
+  segment?: 'imobiliario' | 'telecom' | 'servicos' | null;
 }
 
 interface ImpersonateSession {

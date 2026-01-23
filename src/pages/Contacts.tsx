@@ -104,9 +104,11 @@ export default function Contacts() {
 
   // Pagination & Sort states
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(30);
   const [sortBy, setSortBy] = useState<ContactListFilters['sortBy']>('created_at');
   const [sortDir, setSortDir] = useState<ContactListFilters['sortDir']>('desc');
+  
+  const PAGE_SIZE_OPTIONS = [5, 10, 30, 50, 100];
 
   // Debounce search
   const deferredSearch = useDeferredValue(search);
@@ -667,11 +669,28 @@ export default function Contacts() {
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Página {page} de {totalPages}
-            </p>
+        {(totalPages > 1 || totalCount > 0) && (
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                Página {page} de {totalPages || 1}
+              </p>
+              <Select 
+                value={String(pageSize)} 
+                onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+              >
+                <SelectTrigger className="h-8 w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map(size => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size} por pág
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
