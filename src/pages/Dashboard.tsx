@@ -3,8 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
-import { SalesFunnel } from '@/components/dashboard/SalesFunnel';
-import { LeadSourcesChart } from '@/components/dashboard/LeadSourcesChart';
+import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { TopBrokersWidget } from '@/components/dashboard/TopBrokersWidget';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
 import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
@@ -12,8 +11,6 @@ import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionCh
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
-  useFunnelData, 
-  useLeadSourcesData,
   useTopBrokers,
   useDealsEvolutionData,
 } from '@/hooks/use-dashboard-stats';
@@ -47,8 +44,6 @@ export default function Dashboard() {
 
   // Data hooks - Imobiliário
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
-  const { data: funnelData = [], isLoading: funnelLoading } = useFunnelData(filters);
-  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(filters);
   const { data: topBrokersData, isLoading: brokersLoading } = useTopBrokers(filters);
   const topBrokers = topBrokersData?.brokers || [];
   const isBrokersFallback = topBrokersData?.isFallbackMode || false;
@@ -57,6 +52,9 @@ export default function Dashboard() {
   // Data hooks - Telecom
   const { data: telecomStats, isLoading: telecomStatsLoading } = useTelecomDashboardStats(filters);
   const { data: telecomEvolutionData = [], isLoading: telecomEvolutionLoading } = useTelecomEvolutionData(filters);
+
+  // Funnel with pipeline selector (shared between both segments)
+  const { funnelComponent, sourcesComponent } = SalesFunnelWithPipeline({ filters });
 
   const periodLabel = datePresetOptions.find(o => o.value === datePreset)?.label || 'Período selecionado';
 
@@ -126,22 +124,43 @@ export default function Dashboard() {
 
         {/* Charts Section - Conditional based on segment */}
         {isTelecom ? (
-          /* Telecom: Only Evolution Chart */
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="lg:col-span-2">
-              <TelecomEvolutionChart 
-                data={telecomEvolutionData} 
-                isLoading={telecomEvolutionLoading} 
-              />
+          /* Telecom: Evolution Chart + Funnel + Sources */
+          <>
+            {/* Evolução de Clientes */}
+            <TelecomEvolutionChart 
+              data={telecomEvolutionData} 
+              isLoading={telecomEvolutionLoading} 
+            />
+
+            {/* Funnel + Sources - Desktop */}
+            <div className="hidden lg:grid lg:grid-cols-2 gap-4">
+              {funnelComponent}
+              {sourcesComponent}
             </div>
-          </div>
+
+            {/* Funnel + Sources - Mobile: Tabs */}
+            <div className="lg:hidden">
+              <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
+                <TabsList className="w-full grid grid-cols-2">
+                  <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
+                  <TabsTrigger value="sources" className="text-xs">Origens</TabsTrigger>
+                </TabsList>
+                <TabsContent value="funnel" className="mt-3">
+                  {funnelComponent}
+                </TabsContent>
+                <TabsContent value="sources" className="mt-3">
+                  {sourcesComponent}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </>
         ) : (
           /* Imobiliário: Funnel + Sources + Evolution + Top Brokers */
           <>
             {/* Charts - Desktop: Side by Side, Mobile: Tabs */}
             <div className="hidden lg:grid lg:grid-cols-2 gap-4">
-              <SalesFunnel data={funnelData} isLoading={funnelLoading} />
-              <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+              {funnelComponent}
+              {sourcesComponent}
             </div>
 
             {/* Charts - Mobile: Tabs */}
@@ -152,10 +171,10 @@ export default function Dashboard() {
                   <TabsTrigger value="sources" className="text-xs">Origens</TabsTrigger>
                 </TabsList>
                 <TabsContent value="funnel" className="mt-3">
-                  <SalesFunnel data={funnelData} isLoading={funnelLoading} />
+                  {funnelComponent}
                 </TabsContent>
                 <TabsContent value="sources" className="mt-3">
-                  <LeadSourcesChart data={sourcesData} isLoading={sourcesLoading} />
+                  {sourcesComponent}
                 </TabsContent>
               </Tabs>
             </div>
