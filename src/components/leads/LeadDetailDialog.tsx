@@ -1434,17 +1434,12 @@ export function LeadDetailDialog({
                 Tag
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-52 p-2" align="start">
-              {availableTags.length === 0 ? <p className="text-sm text-muted-foreground text-center py-3">
-                  Nenhuma tag disponível
-                </p> : <div className="space-y-1">
-                  {availableTags.map(tag => <button key={tag.id} onClick={() => handleAddTag(tag.id)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-accent text-left text-sm transition-colors">
-                      <div className="w-3 h-3 rounded-full shadow-sm" style={{
-                  backgroundColor: tag.color
-                }} />
-                      {tag.name}
-                    </button>)}
-                </div>}
+            <PopoverContent className="w-64 p-0" align="start">
+              <TagSelectorPopoverContent
+                availableTags={availableTags}
+                onAddTag={handleAddTag}
+                onClose={() => setTagPopoverOpen(false)}
+              />
             </PopoverContent>
           </Popover>
         </div>
