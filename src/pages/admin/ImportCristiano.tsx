@@ -203,10 +203,7 @@ export default function ImportCristiano() {
         
         const { data, error } = await supabase
           .from('telecom_customers')
-          .upsert(records, { 
-            onConflict: 'organization_id,external_id',
-            ignoreDuplicates: false 
-          })
+          .insert(records)
           .select('id');
         
         if (error) {
