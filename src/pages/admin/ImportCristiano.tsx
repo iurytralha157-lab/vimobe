@@ -189,15 +189,16 @@ export default function ImportCristiano() {
         city: findCol(['city', 'cidade']),
         neighborhood: findCol(['neighborhood', 'bairro']),
         address: findCol(['address', 'endereço', 'endereco']),
-        plan_code: findCol(['plan_code', 'plano', 'codigo_plano']),
+        plan_code: findCol(['plan_code', 'plano', 'codigo_plano', 'TIPO DE PRODUTO']),
         plan_value: findCol(['plan_value', 'valor', 'mensalidade']),
-        due_day: findCol(['due_day', 'vencimento', 'dia_vencimento']),
-        seller: findCol(['seller', 'vendedor']),
+        due_day: findCol(['due_day', 'vencimento', 'dia_vencimento', 'dia_de_devido']),
+        seller: findCol(['seller', 'vendedor', 'seller_id']),
         chip_category: findCol(['chip_category', 'cat_chip', 'categoria_chip']),
         chip_quantity: findCol(['chip_quantity', 'qtd_chip', 'quantidade_chip']),
-        mesh_repeater: findCol(['mesh_repeater', 'repetidor']),
+        mesh_repeater: findCol(['mesh_repeater', 'repetidor', 'REPETIDOR MESH']),
         mesh_quantity: findCol(['mesh_quantity', 'qtd_rept', 'quantidade_repetidor']),
         is_combo: findCol(['is_combo', 'combo']),
+        notes: findCol(['notes', 'observacao', 'obs']),
       };
       
       console.log('Column mapping:', colMap);
