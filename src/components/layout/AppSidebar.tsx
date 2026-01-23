@@ -92,6 +92,8 @@ export function AppSidebar() {
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
       // Hide Contacts menu for telecom segment
       if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
+      // Hide Performance for non-admins in imobiliário segment (keep visible for telecom)
+      if (item.path === '/reports/performance' && organization?.segment !== 'telecom' && profile?.role !== 'admin' && !isSuperAdmin) return false;
       return true;
     });
   }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
