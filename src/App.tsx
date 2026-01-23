@@ -10,6 +10,7 @@ import { SuperAdminRoute } from "@/components/guards/SuperAdminRoute";
 import { AdminRoute } from "@/components/guards/AdminRoute";
 import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
 import { useForceRefreshListener } from "@/hooks/use-force-refresh";
+import { PublicSiteProvider, usePublicSiteContext } from "@/contexts/PublicSiteContext";
 
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -49,17 +50,36 @@ import AdminAudit from "./pages/admin/AdminAudit";
 import ImportCristiano from "./pages/admin/ImportCristiano";
 import Notifications from "./pages/Notifications";
 
+// Public site pages
+import PublicSiteLayout from "./pages/public/PublicSiteLayout";
+import PublicHome from "./pages/public/PublicHome";
+import PublicProperties from "./pages/public/PublicProperties";
+import PublicPropertyDetail from "./pages/public/PublicPropertyDetail";
+import PublicAbout from "./pages/public/PublicAbout";
+import PublicContact from "./pages/public/PublicContact";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 2, // 2 minutos - dados considerados frescos
-      gcTime: 1000 * 60 * 10, // 10 minutos - tempo de garbage collection
-      refetchOnWindowFocus: false, // Não re-fetch ao focar janela
-      refetchOnMount: false, // Não re-fetch ao montar (usa cache)
-      retry: 1, // Apenas 1 retry em caso de erro
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 10,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      retry: 1,
     },
   },
 });
+
+// Helper to check if current hostname is a public site domain
+function isPublicSiteDomain(): boolean {
+  const hostname = window.location.hostname;
+  return !(
+    hostname === 'localhost' ||
+    hostname.includes('lovable.app') ||
+    hostname.includes('lovable.dev') ||
+    hostname.includes('127.0.0.1')
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization } = useAuth();
@@ -219,22 +239,83 @@ function AppRoutes() {
   );
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <LanguageProvider>
-              <AppRoutes />
-            </LanguageProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+// Public site routes component
+function PublicSiteRoutes() {
+  const { organizationId, siteConfig, isLoading, error } = usePublicSiteContext();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (error || !organizationId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Site não encontrado</h1>
+          <p className="text-muted-foreground">O domínio acessado não está configurado.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<PublicSiteLayout />}>
+        <Route index element={<PublicHome />} />
+        <Route path="imoveis" element={<PublicProperties />} />
+        <Route path="imoveis/:code" element={<PublicPropertyDetail />} />
+        <Route path="sobre" element={<PublicAbout />} />
+        <Route path="contato" element={<PublicContact />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+const App = () => {
+  const isPublicSite = isPublicSiteDomain();
+
+  // If accessing from a custom domain, render public site
+  if (isPublicSite) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <PublicSiteProvider>
+                <PublicSiteRoutes />
+              </PublicSiteProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  // Regular CRM app
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <LanguageProvider>
+                <AppRoutes />
+              </LanguageProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
