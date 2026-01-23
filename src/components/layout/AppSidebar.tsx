@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,6 +53,7 @@ const allNavItems: NavItem[] = [
 ];
 
 const bottomItems: NavItem[] = [
+  { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true },
   { icon: Settings, labelKey: 'settings', path: '/settings' },
   { icon: HelpCircle, labelKey: 'help', path: '/help' }
 ];
@@ -98,14 +99,17 @@ export function AppSidebar() {
     });
   }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
 
-  // Add Super Admin link for super admins
+  // Filter bottom items based on user role
   const computedBottomItems = useMemo(() => {
-    const items = [...bottomItems];
+    let items = bottomItems.filter(item => {
+      if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      return true;
+    });
     if (isSuperAdmin) {
-      items.unshift({ icon: Shield, labelKey: 'superAdmin', path: '/admin' });
+      items = [{ icon: Shield, labelKey: 'superAdmin', path: '/admin' }, ...items];
     }
     return items;
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, profile?.role]);
 
   const getLabel = (labelKey: string): string => {
     return (t.nav as Record<string, string>)[labelKey] || labelKey;

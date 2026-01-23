@@ -52,6 +52,7 @@ export const ptBR = {
     plans: 'Planos',
     coverage: 'Localidades',
     telecomCustomers: 'Clientes',
+    mySite: 'Meu Site',
   },
 
   // Settings
