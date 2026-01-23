@@ -1742,6 +1742,89 @@ export type Database = {
           },
         ]
       }
+      media_jobs: {
+        Row: {
+          attempts: number | null
+          conversation_id: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          media_mime_type: string | null
+          media_type: string
+          message_id: string
+          message_key: Json | null
+          next_retry_at: string | null
+          organization_id: string
+          session_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          conversation_id: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          media_mime_type?: string | null
+          media_type: string
+          message_id: string
+          message_key?: Json | null
+          next_retry_at?: string | null
+          organization_id: string
+          session_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          conversation_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          media_mime_type?: string | null
+          media_type?: string
+          message_id?: string
+          message_key?: Json | null
+          next_retry_at?: string | null
+          organization_id?: string
+          session_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_jobs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_jobs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_jobs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_availability: {
         Row: {
           created_at: string | null
