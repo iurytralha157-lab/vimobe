@@ -140,10 +140,12 @@ export function TopBrokersWidget({ brokers, isLoading, isFallbackMode }: TopBrok
                 </p>
               </div>
 
-              {/* Value */}
-              <span className="text-xs font-medium text-primary">
-                {formatCurrency(broker.salesValue)}
-              </span>
+              {/* Value - only show when not in fallback mode */}
+              {!isFallbackMode && (
+                <span className="text-xs font-medium text-primary">
+                  {formatCurrency(broker.salesValue)}
+                </span>
+              )}
             </div>
           );
         })}
