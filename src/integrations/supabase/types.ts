@@ -3021,6 +3021,7 @@ export type Database = {
           id: string
           installation_date: string | null
           is_combo: boolean | null
+          lead_id: string | null
           mesh_quantity: number | null
           mesh_repeater: string | null
           name: string
@@ -3054,6 +3055,7 @@ export type Database = {
           id?: string
           installation_date?: string | null
           is_combo?: boolean | null
+          lead_id?: string | null
           mesh_quantity?: number | null
           mesh_repeater?: string | null
           name: string
@@ -3087,6 +3089,7 @@ export type Database = {
           id?: string
           installation_date?: string | null
           is_combo?: boolean | null
+          lead_id?: string | null
           mesh_quantity?: number | null
           mesh_repeater?: string | null
           name?: string
@@ -3104,6 +3107,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "telecom_customers_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "telecom_customers_organization_id_fkey"
             columns: ["organization_id"]
