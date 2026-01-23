@@ -3028,6 +3028,7 @@ export type Database = {
           number: string | null
           organization_id: string
           phone: string | null
+          plan_code: string | null
           plan_id: string | null
           plan_value: number | null
           seller_id: string | null
@@ -3059,6 +3060,7 @@ export type Database = {
           number?: string | null
           organization_id: string
           phone?: string | null
+          plan_code?: string | null
           plan_id?: string | null
           plan_value?: number | null
           seller_id?: string | null
@@ -3090,6 +3092,7 @@ export type Database = {
           number?: string | null
           organization_id?: string
           phone?: string | null
+          plan_code?: string | null
           plan_id?: string | null
           plan_value?: number | null
           seller_id?: string | null

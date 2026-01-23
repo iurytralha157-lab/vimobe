@@ -339,6 +339,7 @@ export default function ImportCristiano() {
             contract_date: customer.contract_date,
             installation_date: customer.installation_date,
             plan_id: planId,
+            plan_code: customer.plan_code,
             plan_value: customer.plan_value,
             due_day: customer.due_day,
             chip_category: customer.chip_category,
@@ -346,6 +347,7 @@ export default function ImportCristiano() {
             mesh_repeater: customer.mesh_repeater,
             mesh_quantity: customer.mesh_quantity,
             is_combo: customer.is_combo,
+            seller_id: customer.seller_name,
             notes: customer.seller_name ? `Vendedor: ${customer.seller_name}` : null,
           };
         });
