@@ -543,6 +543,33 @@ export type Database = {
           },
         ]
       }
+      available_permissions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          name?: string
+        }
+        Relationships: []
+      }
       cadence_tasks_template: {
         Row: {
           cadence_template_id: string
@@ -1908,6 +1935,79 @@ export type Database = {
           },
         ]
       }
+      organization_role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          organization_role_id: string
+          permission_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_role_id: string
+          permission_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_role_id?: string
+          permission_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_role_permissions_organization_role_id_fkey"
+            columns: ["organization_role_id"]
+            isOneToOne: false
+            referencedRelation: "organization_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_roles: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           accent_color: string | null
@@ -3163,6 +3263,42 @@ export type Database = {
           },
         ]
       }
+      user_organization_roles: {
+        Row: {
+          created_at: string
+          id: string
+          organization_role_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_role_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_organization_roles_organization_role_id_fkey"
+            columns: ["organization_role_id"]
+            isOneToOne: false
+            referencedRelation: "organization_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_organization_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           id: string
@@ -3910,6 +4046,15 @@ export type Database = {
       }
       get_user_led_team_ids: { Args: never; Returns: string[] }
       get_user_organization_id: { Args: never; Returns: string }
+      get_user_organization_role: {
+        Args: { p_user_id?: string }
+        Returns: {
+          permissions: string[]
+          role_color: string
+          role_id: string
+          role_name: string
+        }[]
+      }
       get_user_team_ids: { Args: never; Returns: string[] }
       handle_lead_intake: { Args: { p_lead_id: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
@@ -3971,6 +4116,10 @@ export type Database = {
         Returns: boolean
       }
       user_has_organization: { Args: never; Returns: boolean }
+      user_has_permission: {
+        Args: { p_permission_key: string; p_user_id?: string }
+        Returns: boolean
+      }
       user_has_session_access: {
         Args: { session_id: string }
         Returns: boolean

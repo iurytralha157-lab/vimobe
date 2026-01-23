@@ -51,7 +51,8 @@ import {
   ExternalLink,
   MessageCircle,
   Smartphone,
-  Trash2
+  Trash2,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -65,8 +66,14 @@ import { ProfileTab } from '@/components/settings/ProfileTab';
 import { OrganizationTab } from '@/components/settings/OrganizationTab';
 import { WebhooksTab } from '@/components/settings/WebhooksTab';
 import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
+import { RolesTab } from '@/components/settings/RolesTab';
 import { Webhook } from 'lucide-react';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
+import { 
+  useOrganizationRoles, 
+  useUserOrganizationRoles, 
+  useAssignUserRole 
+} from '@/hooks/use-organization-roles';
 
 export default function Settings() {
   const { profile, organization, refreshProfile } = useAuth();
@@ -78,6 +85,11 @@ export default function Settings() {
   const { data: metaIntegrations = [], isLoading: metaLoading } = useMetaIntegrations();
   const queryClient = useQueryClient();
   const { hasModule } = useOrganizationModules();
+  
+  // Funções/roles customizadas
+  const { data: organizationRoles = [] } = useOrganizationRoles();
+  const { data: userOrgRoles = [] } = useUserOrganizationRoles();
+  const assignUserRole = useAssignUserRole();
   
   // Calcular métricas Meta
   const activeMetaPages = metaIntegrations.filter(i => i.is_connected);
@@ -101,6 +113,17 @@ export default function Settings() {
   const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
+
+  // Helper para obter a função customizada de um usuário
+  const getUserCustomRole = (userId: string) => {
+    const assignment = userOrgRoles.find(uor => uor.user_id === userId);
+    if (!assignment) return null;
+    return organizationRoles.find(r => r.id === assignment.organization_role_id);
+  };
+
+  const handleAssignRole = async (userId: string, roleId: string | null) => {
+    await assignUserRole.mutateAsync({ userId, roleId });
+  };
 
   const handleToggleUserActive = async (userId: string, currentValue: boolean) => {
     await updateUser.mutateAsync({ id: userId, is_active: !currentValue });
@@ -274,6 +297,12 @@ export default function Settings() {
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.usersTab}</span>
             </TabsTrigger>
+            {profile?.role === 'admin' && (
+              <TabsTrigger value="roles" className="gap-2">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Funções</span>
+              </TabsTrigger>
+            )}
             {hasWebhooksModule && (
               <TabsTrigger value="webhooks" className="gap-2">
                 <Webhook className="h-4 w-4" />
@@ -311,6 +340,11 @@ export default function Settings() {
           {/* Webhooks Tab */}
           <TabsContent value="webhooks">
             <WebhooksTab />
+          </TabsContent>
+
+          {/* Roles Tab */}
+          <TabsContent value="roles">
+            <RolesTab />
           </TabsContent>
 
           {/* Users Tab */}
@@ -431,19 +465,33 @@ export default function Settings() {
                               {!user.is_active && (
                                 <Badge variant="secondary" className="text-xs">{t.common.inactive}</Badge>
                               )}
+                              {/* Mostrar função customizada */}
+                              {user.role !== 'admin' && getUserCustomRole(user.id) && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  style={{ 
+                                    borderColor: getUserCustomRole(user.id)?.color,
+                                    color: getUserCustomRole(user.id)?.color 
+                                  }}
+                                >
+                                  {getUserCustomRole(user.id)?.name}
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
                           {profile?.role === 'admin' ? (
                             <>
+                              {/* Tipo de usuário (admin/user) */}
                               <Select 
                                 value={user.role} 
                                 onValueChange={(v) => handleUpdateUserRole(user.id, v as 'admin' | 'user')}
                                 disabled={user.id === profile?.id}
                               >
-                                <SelectTrigger className="w-32">
+                                <SelectTrigger className="w-28">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -451,6 +499,34 @@ export default function Settings() {
                                   <SelectItem value="user">{t.settings.users.user}</SelectItem>
                                 </SelectContent>
                               </Select>
+                              
+                              {/* Função customizada (apenas para não-admins) */}
+                              {user.role !== 'admin' && organizationRoles.length > 0 && (
+                                <Select 
+                                  value={getUserCustomRole(user.id)?.id || 'none'}
+                                  onValueChange={(v) => handleAssignRole(user.id, v === 'none' ? null : v)}
+                                  disabled={user.id === profile?.id}
+                                >
+                                  <SelectTrigger className="w-32">
+                                    <SelectValue placeholder="Função..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Sem função</SelectItem>
+                                    {organizationRoles.map(role => (
+                                      <SelectItem key={role.id} value={role.id}>
+                                        <div className="flex items-center gap-2">
+                                          <div 
+                                            className="w-2 h-2 rounded-full" 
+                                            style={{ backgroundColor: role.color }}
+                                          />
+                                          {role.name}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              
                               <Switch 
                                 checked={user.is_active || false} 
                                 onCheckedChange={() => handleToggleUserActive(user.id, user.is_active || false)}
@@ -470,9 +546,22 @@ export default function Settings() {
                               </Button>
                             </>
                           ) : (
-                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                              {user.role === 'admin' ? t.settings.users.admin : t.settings.users.user}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                                {user.role === 'admin' ? t.settings.users.admin : t.settings.users.user}
+                              </Badge>
+                              {user.role !== 'admin' && getUserCustomRole(user.id) && (
+                                <Badge 
+                                  variant="outline"
+                                  style={{ 
+                                    borderColor: getUserCustomRole(user.id)?.color,
+                                    color: getUserCustomRole(user.id)?.color 
+                                  }}
+                                >
+                                  {getUserCustomRole(user.id)?.name}
+                                </Badge>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
