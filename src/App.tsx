@@ -190,12 +190,12 @@ function AppRoutes() {
           <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
           
-          {/* Financial Module */}
-          <Route path="/financeiro" element={<ProtectedRoute><FinancialDashboard /></ProtectedRoute>} />
-          <Route path="/financeiro/contas" element={<ProtectedRoute><FinancialEntries /></ProtectedRoute>} />
-          <Route path="/financeiro/contratos" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
-          <Route path="/financeiro/comissoes" element={<ProtectedRoute><Commissions /></ProtectedRoute>} />
-          <Route path="/financeiro/relatorios" element={<ProtectedRoute><FinancialReports /></ProtectedRoute>} />
+          {/* Financial Module - Admin Only */}
+          <Route path="/financeiro" element={<ProtectedRoute><AdminRoute><FinancialDashboard /></AdminRoute></ProtectedRoute>} />
+          <Route path="/financeiro/contas" element={<ProtectedRoute><AdminRoute><FinancialEntries /></AdminRoute></ProtectedRoute>} />
+          <Route path="/financeiro/contratos" element={<ProtectedRoute><AdminRoute><Contracts /></AdminRoute></ProtectedRoute>} />
+          <Route path="/financeiro/comissoes" element={<ProtectedRoute><AdminRoute><Commissions /></AdminRoute></ProtectedRoute>} />
+          <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
           <Route path="/reports/performance" element={<ProtectedRoute><AdminRoute><BrokerPerformancePage /></AdminRoute></ProtectedRoute>} />
           
           {/* Telecom Module */}
