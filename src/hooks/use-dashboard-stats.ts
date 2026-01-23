@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { subDays, format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DashboardFilters } from './use-dashboard-filters';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface DealsEvolutionPoint {
   date: string;
@@ -418,15 +419,28 @@ export function useLeadsChartData() {
 }
 
 // Usa RPC otimizada para dados do funil COM filtros
+// IMPORTANTE: Aplica filtro de role - corretores só veem seus próprios leads
 export function useFunnelData(filters?: DashboardFilters) {
+  const { user } = useAuth();
+  
   return useQuery({
-    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, user?.id],
     queryFn: async () => {
+      // Determina o userId: se um filtro foi passado usa ele, senão verifica role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user?.id || '')
+        .single();
+      
+      const isAdmin = userData?.role === 'admin';
+      const effectiveUserId = filters?.userId || (!isAdmin ? user?.id : null);
+      
       const { data, error } = await (supabase as any).rpc('get_funnel_data', {
         p_date_from: filters?.dateRange?.from?.toISOString() || null,
         p_date_to: filters?.dateRange?.to?.toISOString() || null,
         p_team_id: filters?.teamId || null,
-        p_user_id: filters?.userId || null,
+        p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
       });
       
@@ -455,15 +469,28 @@ export function useFunnelData(filters?: DashboardFilters) {
 }
 
 // Usa RPC otimizada para dados de fontes de leads COM filtros
+// IMPORTANTE: Aplica filtro de role - corretores só veem seus próprios leads
 export function useLeadSourcesData(filters?: DashboardFilters) {
+  const { user } = useAuth();
+  
   return useQuery({
-    queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, user?.id],
     queryFn: async () => {
+      // Determina o userId: se um filtro foi passado usa ele, senão verifica role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user?.id || '')
+        .single();
+      
+      const isAdmin = userData?.role === 'admin';
+      const effectiveUserId = filters?.userId || (!isAdmin ? user?.id : null);
+      
       const { data, error } = await (supabase as any).rpc('get_lead_sources_data', {
         p_date_from: filters?.dateRange?.from?.toISOString() || null,
         p_date_to: filters?.dateRange?.to?.toISOString() || null,
         p_team_id: filters?.teamId || null,
-        p_user_id: filters?.userId || null,
+        p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
       });
       
