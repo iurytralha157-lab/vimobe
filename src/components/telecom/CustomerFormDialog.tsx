@@ -52,6 +52,8 @@ const defaultFormData: CreateTelecomCustomerInput = {
   uf: '',
   cep: '',
   plan_id: null,
+  plan_code: null,
+  contracted_plan: null,
   plan_value: null,
   due_day: 10,
   seller_id: null,
@@ -97,6 +99,8 @@ export function CustomerFormDialog({
         uf: customer.uf || '',
         cep: customer.cep || '',
         plan_id: customer.plan_id,
+        plan_code: customer.plan_code,
+        contracted_plan: customer.contracted_plan,
         plan_value: customer.plan_value,
         due_day: customer.due_day || 10,
         seller_id: customer.seller_id,
@@ -303,9 +307,22 @@ export function CustomerFormDialog({
             <div className="space-y-3">
               <h4 className="font-medium text-sm text-muted-foreground">Plano e Contrato</h4>
               
+              {formData.contracted_plan && (
+                <div className="space-y-2">
+                  <Label htmlFor="contracted_plan">Plano Contratado (Original)</Label>
+                  <Input
+                    id="contracted_plan"
+                    value={formData.contracted_plan || ''}
+                    readOnly
+                    className="bg-muted"
+                    placeholder="Nome do plano da planilha"
+                  />
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="plan_id">Plano</Label>
+                  <Label htmlFor="plan_id">Plano Vinculado</Label>
                   <Select
                     value={formData.plan_id || ''}
                     onValueChange={handlePlanChange}

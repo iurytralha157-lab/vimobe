@@ -20,6 +20,7 @@ interface Customer {
   contract_date: string | null;
   installation_date: string | null;
   plan_code: string | null;
+  contracted_plan: string | null;
   plan_value: number | null;
   due_day: number | null;
   seller_name: string | null;
@@ -189,7 +190,8 @@ export default function ImportCristiano() {
         city: findCol(['city', 'cidade']),
         neighborhood: findCol(['neighborhood', 'bairro']),
         address: findCol(['address', 'endereço', 'endereco']),
-        plan_code: findCol(['plan_code', 'plano', 'codigo_plano', 'TIPO DE PRODUTO']),
+        plan_code: findCol(['plan_code', 'TIPO DE PRODUTO']),
+        contracted_plan: findCol(['contracted_plan', 'PLANO CONTRATADO']),
         plan_value: findCol(['plan_value', 'valor', 'mensalidade']),
         due_day: findCol(['due_day', 'vencimento', 'dia_vencimento', 'dia_de_devido']),
         seller: findCol(['seller', 'vendedor', 'seller_id']),
@@ -287,6 +289,7 @@ export default function ImportCristiano() {
           contract_date: parseDate(colMap.contract_date >= 0 ? cols[colMap.contract_date] : ''),
           installation_date: parseDate(colMap.installation_date >= 0 ? cols[colMap.installation_date] : cols[6]),
           plan_code: (colMap.plan_code >= 0 ? cols[colMap.plan_code] : cols[14])?.trim() || null,
+          contracted_plan: (colMap.contracted_plan >= 0 ? cols[colMap.contracted_plan] : '')?.trim() || null,
           plan_value: parseCurrency(colMap.plan_value >= 0 ? cols[colMap.plan_value] : cols[15]),
           due_day: parseInt((colMap.due_day >= 0 ? cols[colMap.due_day] : cols[21])?.trim() || '0', 10) || null,
           seller_name: (colMap.seller >= 0 ? cols[colMap.seller] : cols[11])?.trim() || null,
@@ -302,16 +305,20 @@ export default function ImportCristiano() {
       setResults(prev => ({ ...prev, skipped: skippedCount }));
       setStatus(`Encontrados ${customers.length} clientes. Buscando planos...`);
       
-      // Get plan lookup
+      // Get plan lookup - busca por name para fazer match com PLANO CONTRATADO
       const { data: plans } = await supabase
         .from('service_plans')
-        .select('id, code')
+        .select('id, code, name, price')
         .eq('organization_id', ORGANIZATION_ID);
       
-      const planLookup = new Map<string, string>();
+      // Lookup por nome do plano (case-insensitive e trimmed)
+      const planLookupByName = new Map<string, { id: string; code: string; price: number | null }>();
       plans?.forEach(plan => {
-        planLookup.set(plan.code, plan.id);
+        const normalizedName = plan.name.toLowerCase().trim();
+        planLookupByName.set(normalizedName, { id: plan.id, code: plan.code, price: plan.price });
       });
+      
+      console.log('Planos cadastrados:', plans?.map(p => p.name));
       
       setStatus(`Importando em lotes de ${BATCH_SIZE}...`);
       
@@ -324,7 +331,25 @@ export default function ImportCristiano() {
         const batch = customers.slice(i, i + BATCH_SIZE);
         
         const records = batch.map(customer => {
-          const planId = customer.plan_code ? planLookup.get(customer.plan_code) : null;
+          // Match pelo nome do plano contratado (PLANO CONTRATADO)
+          let planId: string | null = null;
+          let planValue = customer.plan_value;
+          
+          if (customer.contracted_plan) {
+            const normalizedContractedPlan = customer.contracted_plan.toLowerCase().trim();
+            const matchedPlan = planLookupByName.get(normalizedContractedPlan);
+            
+            if (matchedPlan) {
+              planId = matchedPlan.id;
+              // Se não tiver valor na planilha, usa o valor do plano cadastrado
+              if (planValue === null) {
+                planValue = matchedPlan.price;
+              }
+              console.log(`Match encontrado: "${customer.contracted_plan}" -> ${matchedPlan.id}`);
+            } else {
+              console.log(`Plano não encontrado: "${customer.contracted_plan}"`);
+            }
+          }
           
           return {
             organization_id: ORGANIZATION_ID,
@@ -340,7 +365,8 @@ export default function ImportCristiano() {
             installation_date: customer.installation_date,
             plan_id: planId,
             plan_code: customer.plan_code,
-            plan_value: customer.plan_value,
+            contracted_plan: customer.contracted_plan,
+            plan_value: planValue,
             due_day: customer.due_day,
             chip_category: customer.chip_category,
             chip_quantity: customer.chip_quantity,

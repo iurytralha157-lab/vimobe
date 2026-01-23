@@ -20,6 +20,7 @@ export interface TelecomCustomer {
   cep: string | null;
   plan_id: string | null;
   plan_code: string | null;
+  contracted_plan: string | null;
   plan_value: number | null;
   due_day: number | null;
   seller_id: string | null;
@@ -61,6 +62,8 @@ export interface CreateTelecomCustomerInput {
   uf?: string | null;
   cep?: string | null;
   plan_id?: string | null;
+  plan_code?: string | null;
+  contracted_plan?: string | null;
   plan_value?: number | null;
   due_day?: number | null;
   seller_id?: string | null;
