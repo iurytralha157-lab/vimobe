@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.recurring-entries-generator]
 verify_jwt = false
+
+[functions.seed-organization-data]
+verify_jwt = false
