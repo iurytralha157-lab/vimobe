@@ -96,26 +96,33 @@ export function ImageUploader({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
+    // Filter valid image files first
+    const validFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} não é uma imagem válida`);
+      } else {
+        validFiles.push(file);
+      }
+    }
+    
+    if (validFiles.length === 0) {
+      e.target.value = '';
+      return;
+    }
+    
     setUploadingGallery(true);
-    const newUrls: string[] = [];
     
     try {
-      // Maintain the order files were selected
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith('image/')) {
-          toast.error(`${file.name} não é uma imagem válida`);
-          continue;
-        }
-        
-        const url = await uploadFile(file);
-        if (url) {
-          newUrls.push(url);
-        }
-      }
+      // Upload all files in parallel for speed
+      const uploadPromises = validFiles.map(file => uploadFile(file));
+      const results = await Promise.all(uploadPromises);
+      
+      // Filter out failed uploads (nulls) while maintaining order
+      const newUrls = results.filter((url): url is string => url !== null);
       
       if (newUrls.length > 0) {
-        // Append new images at the end, maintaining selection order
         const updatedImages = [...images, ...newUrls];
         onImagesChange(updatedImages, mainImage);
         toast.success(`${newUrls.length} imagem(s) adicionada(s) à galeria!`);
