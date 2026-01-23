@@ -61,7 +61,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage } from '@/hooks/use-stages';
-import { useCreateLead } from '@/hooks/use-leads';
+import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
 import { useAssignLeadRoundRobin } from '@/hooks/use-assign-lead-roundrobin';
@@ -89,7 +89,7 @@ export default function Pipelines() {
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [newLeadDialogOpen, setNewLeadDialogOpen] = useState(false);
   const [newLeadStageId, setNewLeadStageId] = useState<string | null>(null);
-  const [newLeadForm, setNewLeadForm] = useState({ name: '', phone: '', email: '', message: '' });
+  // newLeadForm agora é gerenciado pelo CreateLeadDialog
   const [filterUser, setFilterUser] = useState<string | undefined>(undefined);
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterDealStatus, setFilterDealStatus] = useState<string>('all');
@@ -136,7 +136,7 @@ export default function Pipelines() {
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
   const { data: stageVGVData = [] } = useStageVGV(selectedPipelineId || undefined);
-  const createLead = useCreateLead();
+  // createLead agora é gerenciado pelo CreateLeadDialog
   const assignLeadRoundRobin = useAssignLeadRoundRobin();
   const canEditPipeline = useCanEditCadences();
   
@@ -267,17 +267,7 @@ export default function Pipelines() {
     }
   };
 
-  const handleCreateLead = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await createLead.mutateAsync({
-      ...newLeadForm,
-      pipeline_id: selectedPipelineId || undefined,
-      stage_id: newLeadStageId || undefined,
-    });
-    setNewLeadDialogOpen(false);
-    setNewLeadForm({ name: '', phone: '', email: '', message: '' });
-    setNewLeadStageId(null);
-  };
+  // handleCreateLead agora é gerenciado pelo CreateLeadDialog
 
   const openNewLeadDialog = (stageId?: string) => {
     setNewLeadStageId(stageId || null);
@@ -752,57 +742,12 @@ export default function Pipelines() {
         />
 
         {/* New Lead Dialog */}
-        <Dialog open={newLeadDialogOpen} onOpenChange={setNewLeadDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Novo Lead</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateLead} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Nome *</Label>
-                <Input
-                  value={newLeadForm.name}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, name: e.target.value })}
-                  placeholder="Nome do lead"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <PhoneInput
-                  value={newLeadForm.phone}
-                  onChange={(value) => setNewLeadForm({ ...newLeadForm, phone: value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={newLeadForm.email}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, email: e.target.value })}
-                  placeholder="email@exemplo.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Mensagem</Label>
-                <Input
-                  value={newLeadForm.message}
-                  onChange={(e) => setNewLeadForm({ ...newLeadForm, message: e.target.value })}
-                  placeholder="Interesse, observações..."
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setNewLeadDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createLead.isPending}>
-                  {createLead.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Criar Lead
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <CreateLeadDialog 
+          open={newLeadDialogOpen} 
+          onOpenChange={setNewLeadDialogOpen}
+          defaultStageId={newLeadStageId}
+          defaultPipelineId={selectedPipelineId}
+        />
 
         {/* New Pipeline Dialog */}
         <Dialog open={newPipelineDialogOpen} onOpenChange={setNewPipelineDialogOpen}>
