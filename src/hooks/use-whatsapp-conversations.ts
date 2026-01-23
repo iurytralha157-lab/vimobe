@@ -160,6 +160,10 @@ export function useWhatsAppConversations(sessionId?: string, filters?: Conversat
       return conversations;
     },
     enabled: !!profile?.organization_id,
+    // Fallback polling: refetch every 15s if realtime fails
+    refetchInterval: 15000,
+    refetchIntervalInBackground: false,
+    staleTime: 5000,
   });
 }
 
@@ -204,6 +208,12 @@ export function useWhatsAppMessages(conversationId: string | null) {
       return data as WhatsAppMessage[];
     },
     enabled: !!conversationId,
+    // Fallback polling: refetch every 10s if realtime fails
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
+    staleTime: 0, // Always consider data stale to ensure freshness
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Subscribe to realtime updates with INCREMENTAL updates (not full refetch)
