@@ -135,9 +135,12 @@ export function TopBrokersWidget({ brokers, isLoading, isFallbackMode }: TopBrok
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{broker.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {broker.closedLeads} {isFallbackMode ? 'leads' : (broker.closedLeads === 1 ? 'venda' : 'vendas')}
-                </p>
+                {/* Só mostra quantidade quando tem vendas (não fallback mode) */}
+                {!isFallbackMode && (
+                  <p className="text-xs text-muted-foreground">
+                    {broker.closedLeads} {broker.closedLeads === 1 ? 'venda' : 'vendas'}
+                  </p>
+                )}
               </div>
 
               {/* Value - only show when not in fallback mode */}

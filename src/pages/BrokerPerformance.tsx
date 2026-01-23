@@ -212,12 +212,10 @@ export default function BrokerPerformance() {
                   <TableRow>
                     <TableHead className="w-[60px]">Pos.</TableHead>
                     <TableHead>Corretor</TableHead>
-                    <TableHead className="text-center">Leads</TableHead>
                     <TableHead className="text-center">Conversão</TableHead>
                     <TableHead className="text-center">Tempo Médio</TableHead>
                     <TableHead className="text-right">Vendas</TableHead>
                     <TableHead className="text-right">Comissões</TableHead>
-                    <TableHead className="text-center">Ativos</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -236,11 +234,6 @@ export default function BrokerPerformance() {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="secondary">
-                          {broker.totalLeads}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
                         <Badge 
                           variant={broker.conversionRate >= 30 ? "default" : broker.conversionRate >= 15 ? "secondary" : "outline"}
                         >
@@ -255,11 +248,6 @@ export default function BrokerPerformance() {
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(broker.totalCommissions)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline">
-                          {broker.activeLeads}
-                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
