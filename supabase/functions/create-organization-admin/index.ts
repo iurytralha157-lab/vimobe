@@ -152,20 +152,20 @@ Deno.serve(async (req) => {
       }, { onConflict: 'user_id,role' });
 
     // 4. Create modules based on segment
-    // Note: 'automations' is always disabled by default - super admin must enable it manually
+    // Note: 'automations' and 'site' are always disabled by default - super admin must enable them manually
     let enabledModules: string[] = [];
     let disabledModules: string[] = [];
 
     if (segment === 'telecom') {
       enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'cadences', 'automations', 'performance', 'wordpress', 'webhooks'];
+      disabledModules = ['properties', 'cadences', 'automations', 'performance', 'wordpress', 'webhooks', 'site'];
     } else if (segment === 'imobiliario') {
       enabledModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'wordpress', 'webhooks'];
+      disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'wordpress', 'webhooks', 'site'];
     } else {
       // servicos - basic modules
       enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'wordpress', 'webhooks'];
+      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'wordpress', 'webhooks', 'site'];
     }
 
     const allModuleRecords = [

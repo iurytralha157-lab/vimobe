@@ -18,7 +18,8 @@ export type ModuleName =
   | 'automations'  // Automações
   | 'performance'  // Performance de Corretores
   | 'wordpress'    // Integração WordPress
-  | 'webhooks';    // Webhooks
+  | 'webhooks'     // Webhooks
+  | 'site';        // Site Integrado
 
 // Default modules that are enabled if no explicit record exists
 // Note: 'automations' is disabled by default and must be explicitly enabled by super admin

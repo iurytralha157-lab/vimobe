@@ -53,7 +53,7 @@ const allNavItems: NavItem[] = [
 ];
 
 const bottomItems: NavItem[] = [
-  { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true },
+  { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true, module: 'site' },
   { icon: Settings, labelKey: 'settings', path: '/settings' },
   { icon: HelpCircle, labelKey: 'help', path: '/help' }
 ];
@@ -99,17 +99,18 @@ export function AppSidebar() {
     });
   }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
 
-  // Filter bottom items based on user role
+  // Filter bottom items based on user role and modules
   const computedBottomItems = useMemo(() => {
     let items = bottomItems.filter(item => {
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      if (item.module && !hasModule(item.module as any)) return false;
       return true;
     });
     if (isSuperAdmin) {
       items = [{ icon: Shield, labelKey: 'superAdmin', path: '/admin' }, ...items];
     }
     return items;
-  }, [isSuperAdmin, profile?.role]);
+  }, [isSuperAdmin, profile?.role, hasModule]);
 
   const getLabel = (labelKey: string): string => {
     return (t.nav as Record<string, string>)[labelKey] || labelKey;
