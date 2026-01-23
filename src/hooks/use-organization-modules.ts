@@ -30,9 +30,9 @@ const DEFAULT_ENABLED_MODULES: ModuleName[] = [
 ];
 
 export function useOrganizationModules() {
-  const { organization, isSuperAdmin } = useAuth();
+  const { organization, isSuperAdmin, loading: authLoading } = useAuth();
 
-  const { data: modules, isLoading } = useQuery({
+  const { data: modules, isLoading: modulesLoading } = useQuery({
     queryKey: ['organization-modules', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return [];
@@ -52,10 +52,19 @@ export function useOrganizationModules() {
     enabled: !!organization?.id,
   });
 
+  // Consider loading if auth is still loading OR if we have an org but modules aren't loaded yet
+  const isLoading = authLoading || (!!organization?.id && modulesLoading);
+
   // Check if a specific module is enabled
   const hasModule = (moduleName: ModuleName): boolean => {
-    // Super admin always has access to all modules
-    if (isSuperAdmin) return true;
+    // Super admin always has access to all modules when impersonating
+    if (isSuperAdmin && organization?.id) return true;
+    
+    // If still loading, assume module is available to prevent flicker
+    if (isLoading) return true;
+    
+    // If no organization, no modules available
+    if (!organization?.id) return false;
     
     // If no modules configured, use defaults (all enabled)
     if (!modules || modules.length === 0) {
