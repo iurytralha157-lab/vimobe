@@ -35,6 +35,7 @@ import Automations from "./pages/Automations";
 import ServicePlans from "./pages/ServicePlans";
 import CoverageAreas from "./pages/CoverageAreas";
 import TelecomCustomers from "./pages/TelecomCustomers";
+import TelecomBilling from "./pages/TelecomBilling";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -201,6 +202,7 @@ function AppRoutes() {
           <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
           <Route path="/coverage" element={<ProtectedRoute><CoverageAreas /></ProtectedRoute>} />
           <Route path="/telecom/customers" element={<ProtectedRoute><TelecomCustomers /></ProtectedRoute>} />
+          <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
           
           {/* Automations */}
           <Route path="/automations" element={<ProtectedRoute><AdminRoute><Automations /></AdminRoute></ProtectedRoute>} />

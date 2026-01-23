@@ -25,6 +25,12 @@ export interface TelecomCustomer {
   seller_id: string | null;
   status: string;
   installation_date: string | null;
+  contract_date: string | null;
+  chip_category: string | null;
+  chip_quantity: number | null;
+  mesh_repeater: string | null;
+  mesh_quantity: number | null;
+  is_combo: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -55,8 +61,26 @@ export interface CreateTelecomCustomerInput {
   seller_id?: string | null;
   status?: string;
   installation_date?: string | null;
+  contract_date?: string | null;
+  chip_category?: string | null;
+  chip_quantity?: number | null;
+  mesh_repeater?: string | null;
+  mesh_quantity?: number | null;
+  is_combo?: boolean;
   notes?: string | null;
 }
+
+export const CHIP_CATEGORIES = [
+  { value: 'CONVENCIONAL', label: 'Convencional' },
+  { value: 'PROMOCIONAL', label: 'Promocional' },
+  { value: 'SEM_CHIP', label: 'Sem Chip' },
+] as const;
+
+export const MESH_REPEATER_OPTIONS = [
+  { value: 'NO_ATO', label: 'No Ato' },
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'SEM_REPETIDOR', label: 'Sem Repetidor' },
+] as const;
 
 export const TELECOM_CUSTOMER_STATUSES = [
   { value: 'NOVO', label: 'Novo', color: 'bg-blue-500' },

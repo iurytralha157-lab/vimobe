@@ -23,10 +23,13 @@ import { useServicePlans } from '@/hooks/use-service-plans';
 import { useCoverageUFs, useCoverageCities, useCoverageNeighborhoods } from '@/hooks/use-coverage-areas';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { 
-  TELECOM_CUSTOMER_STATUSES, 
+  TELECOM_CUSTOMER_STATUSES,
+  CHIP_CATEGORIES,
+  MESH_REPEATER_OPTIONS,
   type TelecomCustomer, 
   type CreateTelecomCustomerInput 
 } from '@/hooks/use-telecom-customers';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface CustomerFormDialogProps {
   open: boolean;
@@ -54,6 +57,12 @@ const defaultFormData: CreateTelecomCustomerInput = {
   seller_id: null,
   status: 'NOVO',
   installation_date: null,
+  contract_date: null,
+  chip_category: null,
+  chip_quantity: 0,
+  mesh_repeater: null,
+  mesh_quantity: 0,
+  is_combo: false,
   notes: '',
 };
 
@@ -93,6 +102,12 @@ export function CustomerFormDialog({
         seller_id: customer.seller_id,
         status: customer.status,
         installation_date: customer.installation_date,
+        contract_date: customer.contract_date,
+        chip_category: customer.chip_category,
+        chip_quantity: customer.chip_quantity || 0,
+        mesh_repeater: customer.mesh_repeater,
+        mesh_quantity: customer.mesh_quantity || 0,
+        is_combo: customer.is_combo || false,
         notes: customer.notes || '',
       });
     } else {
@@ -357,6 +372,18 @@ export function CustomerFormDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="contract_date">Data Contratação</Label>
+                  <Input
+                    id="contract_date"
+                    type="date"
+                    value={formData.contract_date || ''}
+                    onChange={(e) => setFormData({ ...formData, contract_date: e.target.value || null })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="installation_date">Data Instalação</Label>
                   <Input
                     id="installation_date"
@@ -365,23 +392,97 @@ export function CustomerFormDialog({
                     onChange={(e) => setFormData({ ...formData, installation_date: e.target.value || null })}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seller_id">Vendedor</Label>
+                  <Select
+                    value={formData.seller_id || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, seller_id: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Equipamentos */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm text-muted-foreground">Equipamentos</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="chip_category">Categoria do Chip</Label>
+                  <Select
+                    value={formData.chip_category || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, chip_category: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {CHIP_CATEGORIES.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="chip_quantity">Qtd. Chips</Label>
+                  <Input
+                    id="chip_quantity"
+                    type="number"
+                    min="0"
+                    value={formData.chip_quantity ?? 0}
+                    onChange={(e) => setFormData({ ...formData, chip_quantity: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="seller_id">Vendedor</Label>
-                <Select
-                  value={formData.seller_id || ''}
-                  onValueChange={(value) => setFormData({ ...formData, seller_id: value || null })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o vendedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map(user => (
-                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mesh_repeater">Repetidor Mesh</Label>
+                  <Select
+                    value={formData.mesh_repeater || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, mesh_repeater: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {MESH_REPEATER_OPTIONS.map(m => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mesh_quantity">Qtd. Repetidores</Label>
+                  <Input
+                    id="mesh_quantity"
+                    type="number"
+                    min="0"
+                    value={formData.mesh_quantity ?? 0}
+                    onChange={(e) => setFormData({ ...formData, mesh_quantity: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_combo"
+                  checked={formData.is_combo || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_combo: checked === true })}
+                />
+                <Label htmlFor="is_combo" className="font-normal">Cliente possui Combo</Label>
               </div>
             </div>
 
