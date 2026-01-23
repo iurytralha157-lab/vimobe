@@ -12,6 +12,7 @@ import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Chec
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DnsVerificationStatus } from "@/components/site/DnsVerificationStatus";
 
 export default function SiteSettings() {
   const { profile } = useAuth();
@@ -272,16 +273,11 @@ Registro A (www):
                         onChange={(e) => setFormData({ ...formData, custom_domain: e.target.value.toLowerCase() })}
                         disabled={!isAdmin}
                       />
-                      {site?.domain_verified ? (
-                        <p className="text-sm text-green-600 flex items-center gap-1">
-                          <Check className="w-4 h-4" />
-                          Domínio verificado
-                        </p>
-                      ) : formData.custom_domain ? (
-                        <p className="text-sm text-amber-600">
-                          Aguardando verificação DNS
-                        </p>
-                      ) : null}
+                      <DnsVerificationStatus 
+                        domain={formData.custom_domain}
+                        isVerified={site?.domain_verified || false}
+                        verifiedAt={site?.domain_verified_at}
+                      />
                     </div>
 
                     {formData.custom_domain && !site?.domain_verified && (
