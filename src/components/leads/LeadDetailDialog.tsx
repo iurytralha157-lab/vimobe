@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
@@ -28,6 +28,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
+import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
@@ -355,8 +356,8 @@ export function LeadDetailDialog({
     badge: scheduleEvents.length > 0 ? scheduleEvents.length.toString() : null
   }, {
     id: 'contact',
-    label: 'Contato',
-    icon: Contact
+    label: isTelecom ? 'Cliente' : 'Contato',
+    icon: isTelecom ? UserCheck : Contact
   }, {
     id: 'deal',
     label: 'Negócio',
@@ -687,19 +688,23 @@ export function LeadDetailDialog({
             </div>}
 
           {/* Contact Tab */}
-          {activeTab === 'contact' && <div className="space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Contact className="h-3.5 w-3.5 text-primary" />
+          {activeTab === 'contact' && (
+            isTelecom ? (
+              <TelecomCustomerTab lead={lead} onSaved={refetchStages} />
+            ) : (
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Contact className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <h3 className="font-medium text-sm">Dados do contato</h3>
                   </div>
-                  <h3 className="font-medium text-sm">Dados do contato</h3>
-                </div>
-                {!isEditingContact ? <Button variant="ghost" size="sm" onClick={() => {
-              setActiveTab('contact');
-              setIsEditingContact(true);
-            }} className="h-8 px-3 rounded-full">
+                  {!isEditingContact ? <Button variant="ghost" size="sm" onClick={() => {
+                    setActiveTab('contact');
+                    setIsEditingContact(true);
+                  }} className="h-8 px-3 rounded-full">
                     <FileEdit className="h-3.5 w-3.5 mr-1" />
                     Editar
                   </Button> : <div className="flex gap-2">
@@ -711,7 +716,7 @@ export function LeadDetailDialog({
                       Salvar
                     </Button>
                   </div>}
-              </div>
+                </div>
 
               {/* Contact Info */}
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
@@ -1032,7 +1037,9 @@ export function LeadDetailDialog({
                   </div>
                 </div>
               </div>
-            </div>}
+            </div>
+            )
+          )}
 
           {/* Deal Tab */}
           {activeTab === 'deal' && <div className="space-y-4">
@@ -1620,18 +1627,21 @@ export function LeadDetailDialog({
 
           {/* Contact Tab */}
           <TabsContent value="contact" className="p-6 mt-0">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Contact className="h-3.5 w-3.5 text-primary" />
+            {isTelecom ? (
+              <TelecomCustomerTab lead={lead} onSaved={refetchStages} />
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Contact className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <h3 className="font-medium text-sm">Dados do contato</h3>
                   </div>
-                  <h3 className="font-medium text-sm">Dados do contato</h3>
-                </div>
-                {!isEditingContact ? <Button variant="ghost" size="sm" onClick={() => {
-                setActiveTab('contact');
-                setIsEditingContact(true);
-              }} className="h-8 px-3 rounded-full">
+                  {!isEditingContact ? <Button variant="ghost" size="sm" onClick={() => {
+                    setActiveTab('contact');
+                    setIsEditingContact(true);
+                  }} className="h-8 px-3 rounded-full">
                     <FileEdit className="h-3.5 w-3.5 mr-1" />
                     Editar
                   </Button> : <div className="flex gap-2">
@@ -1643,10 +1653,10 @@ export function LeadDetailDialog({
                       Salvar
                     </Button>
                   </div>}
-              </div>
+                </div>
 
-              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
-                {isEditingContact ? <>
+                <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
+                  {isEditingContact ? <>
                     {/* Informações Pessoais */}
                     <div className="space-y-3">
                       <Label className="text-sm font-medium flex items-center gap-2">
@@ -1657,37 +1667,37 @@ export function LeadDetailDialog({
                         <div className="space-y-1.5 col-span-2">
                           <Label className="text-xs text-muted-foreground">Nome</Label>
                           <Input value={editForm.name} onChange={e => setEditForm({
-                        ...editForm,
-                        name: e.target.value
-                      })} placeholder="Nome completo" />
+                            ...editForm,
+                            name: e.target.value
+                          })} placeholder="Nome completo" />
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Telefone</Label>
                           <PhoneInput value={editForm.phone} onChange={value => setEditForm({
-                        ...editForm,
-                        phone: value
-                      })} />
+                            ...editForm,
+                            phone: value
+                          })} />
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Email</Label>
                           <Input value={editForm.email} onChange={e => setEditForm({
-                        ...editForm,
-                        email: e.target.value
-                      })} placeholder="email@exemplo.com" type="email" />
+                            ...editForm,
+                            email: e.target.value
+                          })} placeholder="email@exemplo.com" type="email" />
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Cargo</Label>
                           <Input value={editForm.cargo} onChange={e => setEditForm({
-                        ...editForm,
-                        cargo: e.target.value
-                      })} placeholder="Cargo" />
+                            ...editForm,
+                            cargo: e.target.value
+                          })} placeholder="Cargo" />
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Empresa</Label>
                           <Input value={editForm.empresa} onChange={e => setEditForm({
-                        ...editForm,
-                        empresa: e.target.value
-                      })} placeholder="Empresa" />
+                            ...editForm,
+                            empresa: e.target.value
+                          })} placeholder="Empresa" />
                         </div>
                       </div>
                     </div>
@@ -1702,9 +1712,9 @@ export function LeadDetailDialog({
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Renda Familiar</Label>
                           <Select value={editForm.renda_familiar || 'none'} onValueChange={v => setEditForm({
-                        ...editForm,
-                        renda_familiar: v === 'none' ? '' : v
-                      })}>
+                            ...editForm,
+                            renda_familiar: v === 'none' ? '' : v
+                          })}>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
@@ -1722,9 +1732,9 @@ export function LeadDetailDialog({
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Trabalha?</Label>
                           <Select value={editForm.trabalha ? 'sim' : 'nao'} onValueChange={v => setEditForm({
-                        ...editForm,
-                        trabalha: v === 'sim'
-                      })}>
+                            ...editForm,
+                            trabalha: v === 'sim'
+                          })}>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
@@ -1737,32 +1747,30 @@ export function LeadDetailDialog({
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Profissão</Label>
                           <Input value={editForm.profissao} onChange={e => setEditForm({
-                        ...editForm,
-                        profissao: e.target.value
-                      })} placeholder="Ex: Engenheiro, Médico..." />
+                            ...editForm,
+                            profissao: e.target.value
+                          })} placeholder="Ex: Engenheiro, Médico..." />
                         </div>
-                        {!isTelecom && (
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
-                            <Select value={editForm.faixa_valor_imovel || 'none'} onValueChange={v => setEditForm({
-                              ...editForm,
-                              faixa_valor_imovel: v === 'none' ? '' : v
-                            })}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Não informado</SelectItem>
-                                <SelectItem value="ate_200k">Até R$ 200.000</SelectItem>
-                                <SelectItem value="200k_400k">R$ 200.000 - R$ 400.000</SelectItem>
-                                <SelectItem value="400k_600k">R$ 400.000 - R$ 600.000</SelectItem>
-                                <SelectItem value="600k_1m">R$ 600.000 - R$ 1.000.000</SelectItem>
-                                <SelectItem value="1m_2m">R$ 1.000.000 - R$ 2.000.000</SelectItem>
-                                <SelectItem value="acima_2m">Acima de R$ 2.000.000</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
+                          <Select value={editForm.faixa_valor_imovel || 'none'} onValueChange={v => setEditForm({
+                            ...editForm,
+                            faixa_valor_imovel: v === 'none' ? '' : v
+                          })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Não informado</SelectItem>
+                              <SelectItem value="ate_200k">Até R$ 200.000</SelectItem>
+                              <SelectItem value="200k_400k">R$ 200.000 - R$ 400.000</SelectItem>
+                              <SelectItem value="400k_600k">R$ 400.000 - R$ 600.000</SelectItem>
+                              <SelectItem value="600k_1m">R$ 600.000 - R$ 1.000.000</SelectItem>
+                              <SelectItem value="1m_2m">R$ 1.000.000 - R$ 2.000.000</SelectItem>
+                              <SelectItem value="acima_2m">Acima de R$ 2.000.000</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Finalidade da Compra</Label>
                           <Input value={editForm.finalidade_compra} onChange={e => setEditForm({
@@ -1770,23 +1778,21 @@ export function LeadDetailDialog({
                             finalidade_compra: e.target.value
                           })} placeholder="Ex: Moradia, Investimento..." />
                         </div>
-                        {!isTelecom && (
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
-                            <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({
-                              ...editForm,
-                              procura_financiamento: v === 'sim'
-                            })}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="nao">Não</SelectItem>
-                                <SelectItem value="sim">Sim</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
+                          <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({
+                            ...editForm,
+                            procura_financiamento: v === 'sim'
+                          })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="nao">Não</SelectItem>
+                              <SelectItem value="sim">Sim</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                   </> : <>
@@ -1800,37 +1806,38 @@ export function LeadDetailDialog({
                       </div>
                     </div>
                     {lead.phone && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Phone className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Telefone</p>
-                          <p className="text-sm font-medium truncate">{formatPhoneForDisplay(lead.phone)}</p>
-                        </div>
-                      </div>}
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Phone className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">Telefone</p>
+                        <p className="text-sm font-medium truncate">{formatPhoneForDisplay(lead.phone)}</p>
+                      </div>
+                    </div>}
                     {lead.email && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Mail className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Email</p>
-                          <p className="text-sm font-medium truncate">{lead.email}</p>
-                        </div>
-                      </div>}
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">Email</p>
+                        <p className="text-sm font-medium truncate">{lead.email}</p>
+                      </div>
+                    </div>}
                     {(lead.cargo || lead.empresa) && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Briefcase className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Profissional</p>
-                          <p className="text-sm font-medium truncate">
-                            {[lead.cargo, lead.empresa].filter(Boolean).join(' • ')}
-                          </p>
-                        </div>
-                      </div>}
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Briefcase className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">Profissional</p>
+                        <p className="text-sm font-medium truncate">
+                          {[lead.cargo, lead.empresa].filter(Boolean).join(' • ')}
+                        </p>
+                      </div>
+                    </div>}
                   </>}
+                </div>
               </div>
-            </div>
+            )}
           </TabsContent>
 
           {/* Deal Tab */}
