@@ -3012,6 +3012,7 @@ export type Database = {
           city: string | null
           complement: string | null
           contract_date: string | null
+          contracted_plan: string | null
           cpf_cnpj: string | null
           created_at: string | null
           due_day: number | null
@@ -3044,6 +3045,7 @@ export type Database = {
           city?: string | null
           complement?: string | null
           contract_date?: string | null
+          contracted_plan?: string | null
           cpf_cnpj?: string | null
           created_at?: string | null
           due_day?: number | null
@@ -3076,6 +3078,7 @@ export type Database = {
           city?: string | null
           complement?: string | null
           contract_date?: string | null
+          contracted_plan?: string | null
           cpf_cnpj?: string | null
           created_at?: string | null
           due_day?: number | null
