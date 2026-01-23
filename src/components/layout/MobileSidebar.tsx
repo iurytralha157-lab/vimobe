@@ -80,7 +80,7 @@ const allNavItems: NavItem[] = [
 ];
 
 const bottomItems: NavItem[] = [
-  { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true },
+  { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true, module: 'site' },
   { icon: Settings, labelKey: 'settings', path: '/settings' },
   { icon: HelpCircle, labelKey: 'help', path: '/help' },
 ];
@@ -119,13 +119,14 @@ export function MobileSidebar() {
     });
   }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
 
-  // Filter bottom items based on user role
+  // Filter bottom items based on user role and modules
   const computedBottomItems = useMemo(() => {
     return bottomItems.filter(item => {
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      if (item.module && !hasModule(item.module as any)) return false;
       return true;
     });
-  }, [profile?.role, isSuperAdmin]);
+  }, [profile?.role, isSuperAdmin, hasModule]);
 
   // Helper to get label from translation
   const getLabel = (labelKey: string): string => {

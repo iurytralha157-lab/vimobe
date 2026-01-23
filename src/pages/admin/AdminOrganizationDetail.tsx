@@ -60,6 +60,7 @@ const ALL_MODULES = [
   { name: 'properties', label: 'Imóveis', segment: 'imobiliario', category: 'segment' },
   { name: 'cadences', label: 'Cadências', segment: 'imobiliario', category: 'segment' },
   { name: 'performance', label: 'Performance de Corretores', segment: 'imobiliario', category: 'segment' },
+  { name: 'site', label: 'Site Integrado', segment: 'imobiliario', category: 'segment' },
   // Telecom
   { name: 'plans', label: 'Planos de Serviços', segment: 'telecom', category: 'segment' },
   { name: 'coverage', label: 'Áreas de Cobertura', segment: 'telecom', category: 'segment' },
