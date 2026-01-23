@@ -32,6 +32,9 @@ import {
   Package,
   MapPin,
   UserCheck,
+  Globe,
+  Settings,
+  HelpCircle,
 } from 'lucide-react';
 
 interface NavItem {
@@ -76,7 +79,11 @@ const allNavItems: NavItem[] = [
   { icon: Zap, labelKey: 'automations', path: '/automations', module: 'automations', adminOnly: true },
 ];
 
-
+const bottomItems: NavItem[] = [
+  { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true },
+  { icon: Settings, labelKey: 'settings', path: '/settings' },
+  { icon: HelpCircle, labelKey: 'help', path: '/help' },
+];
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -111,6 +118,14 @@ export function MobileSidebar() {
       return true;
     });
   }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
+
+  // Filter bottom items based on user role
+  const computedBottomItems = useMemo(() => {
+    return bottomItems.filter(item => {
+      if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      return true;
+    });
+  }, [profile?.role, isSuperAdmin]);
 
   // Helper to get label from translation
   const getLabel = (labelKey: string): string => {
@@ -237,6 +252,28 @@ export function MobileSidebar() {
             })}
           </ul>
         </nav>
+
+        {/* Bottom items */}
+        <div className="py-3 px-3 border-t border-border">
+          <ul className="space-y-1">
+            {computedBottomItems.map(item => (
+              <li key={item.path}>
+                <button
+                  onClick={() => handleNavigation(item.path)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === item.path
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{getLabel(item.labelKey)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </SheetContent>
     </Sheet>
   );

@@ -52,6 +52,7 @@ export const en = {
     plans: 'Service Plans',
     coverage: 'Coverage Areas',
     telecomCustomers: 'Customers',
+    mySite: 'My Site',
   },
 
   // Settings
