@@ -41,6 +41,11 @@ function parseDate(dateStr: string): string | null {
   
   if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
   
+  // Validate date components
+  if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900 || year > 2100) {
+    return null; // Invalid date - skip it
+  }
+  
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
