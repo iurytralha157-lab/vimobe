@@ -420,11 +420,11 @@ export function useLeadsChartData() {
 
 // Usa RPC otimizada para dados do funil COM filtros
 // IMPORTANTE: Aplica filtro de role - corretores só veem seus próprios leads
-export function useFunnelData(filters?: DashboardFilters) {
+export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | null) {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, user?.id],
+    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, pipelineId, user?.id],
     queryFn: async () => {
       // Determina o userId: se um filtro foi passado usa ele, senão verifica role
       const { data: userData } = await supabase
@@ -442,6 +442,7 @@ export function useFunnelData(filters?: DashboardFilters) {
         p_team_id: filters?.teamId || null,
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
+        p_pipeline_id: pipelineId || null,
       });
       
       if (error) {
@@ -470,11 +471,11 @@ export function useFunnelData(filters?: DashboardFilters) {
 
 // Usa RPC otimizada para dados de fontes de leads COM filtros
 // IMPORTANTE: Aplica filtro de role - corretores só veem seus próprios leads
-export function useLeadSourcesData(filters?: DashboardFilters) {
+export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: string | null) {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, user?.id],
+    queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, pipelineId, user?.id],
     queryFn: async () => {
       // Determina o userId: se um filtro foi passado usa ele, senão verifica role
       const { data: userData } = await supabase
@@ -492,6 +493,7 @@ export function useLeadSourcesData(filters?: DashboardFilters) {
         p_team_id: filters?.teamId || null,
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
+        p_pipeline_id: pipelineId || null,
       });
       
       if (error) {

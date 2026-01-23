@@ -3849,6 +3849,7 @@ export type Database = {
         Args: {
           p_date_from?: string
           p_date_to?: string
+          p_pipeline_id?: string
           p_source?: string
           p_team_id?: string
           p_user_id?: string
@@ -3865,6 +3866,7 @@ export type Database = {
         Args: {
           p_date_from?: string
           p_date_to?: string
+          p_pipeline_id?: string
           p_source?: string
           p_team_id?: string
           p_user_id?: string
