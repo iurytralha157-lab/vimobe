@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.verify-domain-dns]
 verify_jwt = false
+
+[functions.firecrawl-scrape]
+verify_jwt = false

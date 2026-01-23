@@ -1,8 +1,9 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
-import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, X } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, X, MessageCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 export default function PublicSiteLayout() {
   const { siteConfig, isLoading, error } = usePublicSiteContext();
@@ -55,24 +56,21 @@ export default function PublicSiteLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
-      <header 
-        className="sticky top-0 z-50 bg-white shadow-sm"
-        style={{ borderBottom: `3px solid ${siteConfig.primary_color}` }}
-      >
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 md:h-20">
+          <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3">
               {siteConfig.logo_url ? (
                 <img 
                   src={siteConfig.logo_url} 
                   alt={siteConfig.site_title} 
-                  className="h-10 md:h-12 w-auto object-contain"
+                  className="h-12 md:h-14 w-auto object-contain"
                 />
               ) : (
                 <span 
-                  className="text-xl md:text-2xl font-bold"
-                  style={{ color: siteConfig.secondary_color }}
+                  className="text-2xl md:text-3xl font-bold"
+                  style={{ color: siteConfig.primary_color }}
                 >
                   {siteConfig.site_title}
                 </span>
@@ -80,21 +78,27 @@ export default function PublicSiteLayout() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
+            <nav className="hidden lg:flex items-center gap-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
-                  className={`text-sm font-medium transition-colors hover:text-orange-500 ${
-                    isActive(link.href) ? 'text-orange-500' : 'text-gray-700'
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    isActive(link.href) 
+                      ? 'text-white' 
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                   style={{ 
-                    color: isActive(link.href) ? siteConfig.primary_color : undefined,
+                    backgroundColor: isActive(link.href) ? siteConfig.primary_color : undefined,
                   }}
                 >
                   {link.label}
                 </Link>
               ))}
+            </nav>
+
+            {/* Desktop CTA */}
+            <div className="hidden lg:flex items-center gap-3">
               {siteConfig.whatsapp && (
                 <a
                   href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
@@ -102,67 +106,114 @@ export default function PublicSiteLayout() {
                   rel="noopener noreferrer"
                 >
                   <Button 
-                    size="sm"
-                    style={{ backgroundColor: siteConfig.primary_color }}
-                    className="text-white hover:opacity-90"
+                    className="rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 gap-2"
+                    style={{ backgroundColor: '#25D366' }}
                   >
-                    <Phone className="w-4 h-4 mr-2" />
-                    Fale Conosco
+                    <MessageCircle className="w-4 h-4" />
+                    WhatsApp
                   </Button>
                 </a>
               )}
-            </nav>
+              {siteConfig.phone && (
+                <a href={`tel:${siteConfig.phone}`}>
+                  <Button 
+                    variant="outline"
+                    className="rounded-full border-2 gap-2"
+                    style={{ borderColor: siteConfig.primary_color, color: siteConfig.primary_color }}
+                  >
+                    <Phone className="w-4 h-4" />
+                    {siteConfig.phone}
+                  </Button>
+                </a>
+              )}
+            </div>
 
             {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6 text-gray-700" />
-              ) : (
-                <Menu className="w-6 h-6 text-gray-700" />
-              )}
-            </button>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                  <Menu className="w-6 h-6 text-gray-700" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80 p-0">
+                <div className="flex flex-col h-full">
+                  {/* Mobile Header */}
+                  <div className="p-6 border-b">
+                    {siteConfig.logo_url ? (
+                      <img 
+                        src={siteConfig.logo_url} 
+                        alt={siteConfig.site_title} 
+                        className="h-10 w-auto object-contain"
+                      />
+                    ) : (
+                      <span 
+                        className="text-xl font-bold"
+                        style={{ color: siteConfig.primary_color }}
+                      >
+                        {siteConfig.site_title}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mobile Navigation */}
+                  <nav className="flex-1 p-4">
+                    <div className="space-y-1">
+                      {navLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          to={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center justify-between px-4 py-3 rounded-xl text-base font-medium transition-all ${
+                            isActive(link.href) 
+                              ? 'text-white' 
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                          style={{ 
+                            backgroundColor: isActive(link.href) ? siteConfig.primary_color : undefined,
+                          }}
+                        >
+                          {link.label}
+                          <ChevronRight className="w-5 h-5 opacity-50" />
+                        </Link>
+                      ))}
+                    </div>
+                  </nav>
+
+                  {/* Mobile CTAs */}
+                  <div className="p-4 border-t space-y-3">
+                    {siteConfig.whatsapp && (
+                      <a
+                        href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <Button 
+                          className="w-full rounded-xl text-white gap-2"
+                          style={{ backgroundColor: '#25D366' }}
+                        >
+                          <MessageCircle className="w-5 h-5" />
+                          WhatsApp
+                        </Button>
+                      </a>
+                    )}
+                    {siteConfig.phone && (
+                      <a href={`tel:${siteConfig.phone}`} className="block">
+                        <Button 
+                          variant="outline"
+                          className="w-full rounded-xl gap-2"
+                        >
+                          <Phone className="w-5 h-5" />
+                          Ligar Agora
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t">
-            <nav className="flex flex-col px-4 py-4 gap-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={`px-4 py-3 rounded-lg text-sm font-medium ${
-                    isActive(link.href) 
-                      ? 'bg-orange-50 text-orange-600' 
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {siteConfig.whatsapp && (
-                <a
-                  href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2"
-                >
-                  <Button 
-                    className="w-full text-white"
-                    style={{ backgroundColor: siteConfig.primary_color }}
-                  >
-                    <Phone className="w-4 h-4 mr-2" />
-                    Fale Conosco
-                  </Button>
-                </a>
-              )}
-            </nav>
-          </div>
-        )}
       </header>
 
       {/* Main Content */}
@@ -170,74 +221,45 @@ export default function PublicSiteLayout() {
         <Outlet />
       </main>
 
+      {/* Floating WhatsApp Button - Mobile */}
+      {siteConfig.whatsapp && (
+        <a
+          href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="lg:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-green-500 text-white shadow-lg flex items-center justify-center hover:bg-green-600 transition-colors"
+        >
+          <MessageCircle className="w-7 h-7" />
+        </a>
+      )}
+
       {/* Footer */}
-      <footer 
-        className="text-white"
-        style={{ backgroundColor: siteConfig.secondary_color }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* About */}
-            <div>
+      <footer className="bg-gray-900 text-white">
+        {/* Main Footer */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+            {/* Brand */}
+            <div className="lg:col-span-1">
               {siteConfig.logo_url ? (
                 <img 
                   src={siteConfig.logo_url} 
                   alt={siteConfig.site_title} 
-                  className="h-12 w-auto object-contain mb-4 brightness-0 invert"
+                  className="h-14 w-auto object-contain mb-4 brightness-0 invert"
                 />
               ) : (
-                <h3 className="text-xl font-bold mb-4">{siteConfig.site_title}</h3>
+                <h3 className="text-2xl font-bold mb-4">{siteConfig.site_title}</h3>
               )}
-              <p className="text-gray-300 text-sm leading-relaxed">
+              <p className="text-gray-400 text-sm leading-relaxed mb-6">
                 {siteConfig.site_description || `Encontre o imóvel dos seus sonhos com a ${siteConfig.organization_name}.`}
               </p>
-            </div>
-
-            {/* Contact */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Contato</h3>
-              <div className="space-y-3">
-                {siteConfig.phone && (
-                  <a 
-                    href={`tel:${siteConfig.phone}`}
-                    className="flex items-center gap-2 text-gray-300 hover:text-white text-sm"
-                  >
-                    <Phone className="w-4 h-4" />
-                    {siteConfig.phone}
-                  </a>
-                )}
-                {siteConfig.email && (
-                  <a 
-                    href={`mailto:${siteConfig.email}`}
-                    className="flex items-center gap-2 text-gray-300 hover:text-white text-sm"
-                  >
-                    <Mail className="w-4 h-4" />
-                    {siteConfig.email}
-                  </a>
-                )}
-                {siteConfig.address && (
-                  <p className="flex items-start gap-2 text-gray-300 text-sm">
-                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>
-                      {siteConfig.address}
-                      {siteConfig.city && `, ${siteConfig.city}`}
-                      {siteConfig.state && ` - ${siteConfig.state}`}
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Social */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Redes Sociais</h3>
-              <div className="flex gap-4">
+              {/* Social Links */}
+              <div className="flex gap-3">
                 {siteConfig.instagram && (
                   <a 
                     href={siteConfig.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
                   >
                     <Instagram className="w-5 h-5" />
                   </a>
@@ -247,7 +269,7 @@ export default function PublicSiteLayout() {
                     href={siteConfig.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
                   >
                     <Facebook className="w-5 h-5" />
                   </a>
@@ -257,7 +279,7 @@ export default function PublicSiteLayout() {
                     href={siteConfig.youtube}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
                   >
                     <Youtube className="w-5 h-5" />
                   </a>
@@ -267,28 +289,107 @@ export default function PublicSiteLayout() {
                     href={siteConfig.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
                   >
                     <Linkedin className="w-5 h-5" />
                   </a>
                 )}
               </div>
             </div>
-          </div>
 
-          <div className="border-t border-white/20 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>© {new Date().getFullYear()} {siteConfig.organization_name}. Todos os direitos reservados.</p>
-            <p className="mt-1">
-              Desenvolvido por{' '}
-              <a 
-                href="https://vimob.com.br" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-white hover:underline"
-              >
-                VIMOB
-              </a>
-            </p>
+            {/* Quick Links */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Navegação</h4>
+              <ul className="space-y-3">
+                {navLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link 
+                      to={link.href}
+                      className="text-gray-400 hover:text-white transition-colors text-sm"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Contato</h4>
+              <ul className="space-y-3">
+                {siteConfig.phone && (
+                  <li>
+                    <a 
+                      href={`tel:${siteConfig.phone}`}
+                      className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors text-sm"
+                    >
+                      <Phone className="w-4 h-4 flex-shrink-0" />
+                      {siteConfig.phone}
+                    </a>
+                  </li>
+                )}
+                {siteConfig.whatsapp && (
+                  <li>
+                    <a 
+                      href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors text-sm"
+                    >
+                      <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                      WhatsApp
+                    </a>
+                  </li>
+                )}
+                {siteConfig.email && (
+                  <li>
+                    <a 
+                      href={`mailto:${siteConfig.email}`}
+                      className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors text-sm"
+                    >
+                      <Mail className="w-4 h-4 flex-shrink-0" />
+                      {siteConfig.email}
+                    </a>
+                  </li>
+                )}
+              </ul>
+            </div>
+
+            {/* Address */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Endereço</h4>
+              {siteConfig.address && (
+                <p className="flex items-start gap-3 text-gray-400 text-sm">
+                  <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    {siteConfig.address}
+                    {siteConfig.city && <><br />{siteConfig.city}</>}
+                    {siteConfig.state && ` - ${siteConfig.state}`}
+                  </span>
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="border-t border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+              <p>© {new Date().getFullYear()} {siteConfig.organization_name}. Todos os direitos reservados.</p>
+              <p>
+                Desenvolvido por{' '}
+                <a 
+                  href="https://vimob.com.br" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-white hover:underline font-medium"
+                >
+                  VIMOB
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </footer>

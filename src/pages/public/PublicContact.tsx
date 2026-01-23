@@ -1,6 +1,6 @@
 import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
 import { submitContactForm } from "@/hooks/use-public-site";
-import { Phone, Mail, MapPin, Instagram, Facebook, Clock } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle, Send, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,144 +45,147 @@ export default function PublicContact() {
     }
   };
 
+  const contactItems = [
+    {
+      icon: Phone,
+      label: "Telefone",
+      value: siteConfig?.phone,
+      href: siteConfig?.phone ? `tel:${siteConfig.phone}` : undefined,
+      color: siteConfig?.primary_color,
+    },
+    {
+      icon: MessageCircle,
+      label: "WhatsApp",
+      value: siteConfig?.whatsapp,
+      href: siteConfig?.whatsapp ? `https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}` : undefined,
+      color: '#25D366',
+      external: true,
+    },
+    {
+      icon: Mail,
+      label: "E-mail",
+      value: siteConfig?.email,
+      href: siteConfig?.email ? `mailto:${siteConfig.email}` : undefined,
+      color: siteConfig?.primary_color,
+    },
+    {
+      icon: MapPin,
+      label: "Endereço",
+      value: siteConfig?.address ? `${siteConfig.address}${siteConfig.city ? `, ${siteConfig.city}` : ''}${siteConfig.state ? ` - ${siteConfig.state}` : ''}` : undefined,
+      color: siteConfig?.primary_color,
+    },
+  ].filter(item => item.value);
+
   return (
     <div className="min-h-screen">
       {/* Hero */}
       <section 
-        className="py-16 md:py-24 text-white"
+        className="py-20 md:py-28 relative overflow-hidden"
         style={{ backgroundColor: siteConfig?.secondary_color }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{ 
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '40px 40px'
+          }}
+        ></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
+          <span 
+            className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
+            style={{ backgroundColor: `${siteConfig?.primary_color}30`, color: siteConfig?.primary_color }}
+          >
+            Contato
+          </span>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
             Entre em Contato
           </h1>
-          <p className="text-white/80 text-lg max-w-3xl">
+          <p className="text-white/70 text-lg md:text-xl max-w-2xl">
             Estamos prontos para ajudá-lo a encontrar o imóvel perfeito. 
-            Fale conosco!
+            Fale conosco por qualquer um dos nossos canais!
           </p>
         </div>
       </section>
 
       {/* Content */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-5 gap-10">
             {/* Contact Info */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Informações de Contato
-              </h2>
+            <div className="lg:col-span-2 space-y-6">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                  Informações de Contato
+                </h2>
+                <p className="text-gray-600">
+                  Escolha a forma de contato que preferir. Responderemos o mais rápido possível!
+                </p>
+              </div>
 
               <div className="space-y-4">
-                {siteConfig?.phone && (
-                  <Card>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${siteConfig?.primary_color}20` }}
-                      >
-                        <Phone 
-                          className="w-5 h-5"
-                          style={{ color: siteConfig?.primary_color }}
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Telefone</p>
+                {contactItems.map((item, index) => (
+                  <Card key={index} className="border-0 rounded-2xl hover:shadow-lg transition-all duration-300 group">
+                    <CardContent className="p-5">
+                      {item.href ? (
                         <a 
-                          href={`tel:${siteConfig.phone}`}
-                          className="font-medium text-gray-900 hover:underline"
+                          href={item.href}
+                          target={item.external ? "_blank" : undefined}
+                          rel={item.external ? "noopener noreferrer" : undefined}
+                          className="flex items-center gap-4"
                         >
-                          {siteConfig.phone}
+                          <div 
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+                            style={{ backgroundColor: `${item.color}15` }}
+                          >
+                            <item.icon 
+                              className="w-6 h-6"
+                              style={{ color: item.color }}
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 font-medium">{item.label}</p>
+                            <p className="font-semibold text-gray-900 group-hover:underline">
+                              {item.value}
+                            </p>
+                          </div>
                         </a>
-                      </div>
+                      ) : (
+                        <div className="flex items-start gap-4">
+                          <div 
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: `${item.color}15` }}
+                          >
+                            <item.icon 
+                              className="w-6 h-6"
+                              style={{ color: item.color }}
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 font-medium">{item.label}</p>
+                            <p className="font-semibold text-gray-900">
+                              {item.value}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                )}
-
-                {siteConfig?.whatsapp && (
-                  <Card>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <Phone className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">WhatsApp</p>
-                        <a 
-                          href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-gray-900 hover:underline"
-                        >
-                          {siteConfig.whatsapp}
-                        </a>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {siteConfig?.email && (
-                  <Card>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${siteConfig?.primary_color}20` }}
-                      >
-                        <Mail 
-                          className="w-5 h-5"
-                          style={{ color: siteConfig?.primary_color }}
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">E-mail</p>
-                        <a 
-                          href={`mailto:${siteConfig.email}`}
-                          className="font-medium text-gray-900 hover:underline"
-                        >
-                          {siteConfig.email}
-                        </a>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {siteConfig?.address && (
-                  <Card>
-                    <CardContent className="p-4 flex items-start gap-4">
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${siteConfig?.primary_color}20` }}
-                      >
-                        <MapPin 
-                          className="w-5 h-5"
-                          style={{ color: siteConfig?.primary_color }}
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Endereço</p>
-                        <p className="font-medium text-gray-900">
-                          {siteConfig.address}
-                          {siteConfig.city && <><br />{siteConfig.city}</>}
-                          {siteConfig.state && ` - ${siteConfig.state}`}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                ))}
               </div>
 
               {/* Social Links */}
               {(siteConfig?.instagram || siteConfig?.facebook) && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Redes Sociais</h3>
+                <div className="pt-6">
+                  <h3 className="font-bold text-gray-900 mb-4">Siga-nos nas redes</h3>
                   <div className="flex gap-3">
                     {siteConfig?.instagram && (
                       <a
                         href={siteConfig.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-3 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                        className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center text-white hover:scale-110 transition-transform"
                       >
-                        <Instagram className="w-5 h-5 text-pink-600" />
+                        <Instagram className="w-6 h-6" />
                       </a>
                     )}
                     {siteConfig?.facebook && (
@@ -190,9 +193,9 @@ export default function PublicContact() {
                         href={siteConfig.facebook}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-3 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                        className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white hover:scale-110 transition-transform"
                       >
-                        <Facebook className="w-5 h-5 text-blue-600" />
+                        <Facebook className="w-6 h-6" />
                       </a>
                     )}
                   </div>
@@ -201,29 +204,35 @@ export default function PublicContact() {
             </div>
 
             {/* Contact Form */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardContent className="p-6 md:p-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                    Envie sua mensagem
-                  </h2>
+            <div className="lg:col-span-3">
+              <Card className="border-0 rounded-3xl shadow-xl">
+                <CardContent className="p-8 md:p-10">
+                  <div className="mb-8">
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                      Envie sua mensagem
+                    </h2>
+                    <p className="text-gray-600">
+                      Preencha o formulário abaixo e entraremos em contato em breve.
+                    </p>
+                  </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid sm:grid-cols-2 gap-4">
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid sm:grid-cols-2 gap-5">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Nome *
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Nome completo *
                         </label>
                         <Input
-                          placeholder="Seu nome completo"
+                          placeholder="Seu nome"
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           required
+                          className="h-12 rounded-xl border-gray-200 focus:border-gray-300"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Telefone *
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Telefone / WhatsApp *
                         </label>
                         <Input
                           type="tel"
@@ -231,12 +240,13 @@ export default function PublicContact() {
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                           required
+                          className="h-12 rounded-xl border-gray-200 focus:border-gray-300"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         E-mail
                       </label>
                       <Input
@@ -244,29 +254,38 @@ export default function PublicContact() {
                         placeholder="seu@email.com"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="h-12 rounded-xl border-gray-200 focus:border-gray-300"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Mensagem
                       </label>
                       <Textarea
-                        placeholder="Como podemos ajudá-lo?"
+                        placeholder="Como podemos ajudá-lo? Descreva o que você procura..."
                         value={formData.message}
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         rows={5}
+                        className="rounded-xl border-gray-200 focus:border-gray-300 resize-none"
                       />
                     </div>
 
                     <Button 
                       type="submit"
                       size="lg"
-                      className="w-full text-white"
+                      className="w-full text-white h-14 text-base font-semibold rounded-xl gap-2 shadow-lg hover:shadow-xl transition-all"
                       style={{ backgroundColor: siteConfig?.primary_color }}
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? 'Enviando...' : 'Enviar Mensagem'}
+                      {isSubmitting ? (
+                        'Enviando...'
+                      ) : (
+                        <>
+                          <Send className="w-5 h-5" />
+                          Enviar Mensagem
+                        </>
+                      )}
                     </Button>
 
                     <p className="text-sm text-gray-500 text-center">
