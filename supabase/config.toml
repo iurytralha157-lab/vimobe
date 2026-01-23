@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.public-site-contact]
 verify_jwt = false
+
+[functions.verify-domain-dns]
+verify_jwt = false
