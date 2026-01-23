@@ -2091,6 +2091,122 @@ export type Database = {
           },
         ]
       }
+      organization_sites: {
+        Row: {
+          about_image_url: string | null
+          about_text: string | null
+          about_title: string | null
+          accent_color: string | null
+          address: string | null
+          city: string | null
+          created_at: string
+          custom_domain: string | null
+          domain_verified: boolean
+          domain_verified_at: string | null
+          email: string | null
+          facebook: string | null
+          favicon_url: string | null
+          google_analytics_id: string | null
+          id: string
+          instagram: string | null
+          is_active: boolean
+          linkedin: string | null
+          logo_url: string | null
+          organization_id: string
+          phone: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
+          site_description: string | null
+          site_title: string | null
+          state: string | null
+          subdomain: string | null
+          updated_at: string
+          whatsapp: string | null
+          youtube: string | null
+        }
+        Insert: {
+          about_image_url?: string | null
+          about_text?: string | null
+          about_title?: string | null
+          accent_color?: string | null
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          domain_verified?: boolean
+          domain_verified_at?: string | null
+          email?: string | null
+          facebook?: string | null
+          favicon_url?: string | null
+          google_analytics_id?: string | null
+          id?: string
+          instagram?: string | null
+          is_active?: boolean
+          linkedin?: string | null
+          logo_url?: string | null
+          organization_id: string
+          phone?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          site_description?: string | null
+          site_title?: string | null
+          state?: string | null
+          subdomain?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          youtube?: string | null
+        }
+        Update: {
+          about_image_url?: string | null
+          about_text?: string | null
+          about_title?: string | null
+          accent_color?: string | null
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          domain_verified?: boolean
+          domain_verified_at?: string | null
+          email?: string | null
+          facebook?: string | null
+          favicon_url?: string | null
+          google_analytics_id?: string | null
+          id?: string
+          instagram?: string | null
+          is_active?: boolean
+          linkedin?: string | null
+          logo_url?: string | null
+          organization_id?: string
+          phone?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
+          site_description?: string | null
+          site_title?: string | null
+          state?: string | null
+          subdomain?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+          youtube?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_sites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           accent_color: string | null
@@ -4193,6 +4309,13 @@ export type Database = {
       redistribute_lead_from_pool: {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: Json
+      }
+      resolve_site_domain: {
+        Args: { p_domain: string }
+        Returns: {
+          organization_id: string
+          site_config: Json
+        }[]
       }
       user_belongs_to_organization: {
         Args: { org_id: string }

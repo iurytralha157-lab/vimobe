@@ -19,6 +19,7 @@ import Contacts from "./pages/Contacts";
 import Properties from "./pages/Properties";
 import CRMManagement from "./pages/CRMManagement";
 import Settings from "./pages/Settings";
+import SiteSettings from "./pages/SiteSettings";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import Conversations from "./pages/Conversations";
@@ -189,7 +190,7 @@ function AppRoutes() {
           <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
           <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/site" element={<ProtectedRoute><AdminRoute><SiteSettings /></AdminRoute></ProtectedRoute>} />
           <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
           <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
