@@ -81,7 +81,7 @@ export function MobileSidebar() {
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile, isSuperAdmin } = useAuth();
+  const { profile, isSuperAdmin, organization } = useAuth();
   const { t } = useLanguage();
   const { hasModule } = useOrganizationModules();
   const { data: systemSettings } = useSystemSettings();
@@ -98,14 +98,16 @@ export function MobileSidebar() {
     return null;
   }, [resolvedTheme, systemSettings]);
 
-  // Filter nav items based on enabled modules and user role
+  // Filter nav items based on enabled modules, user role, and organization segment
   const navItems = useMemo(() => {
     return allNavItems.filter(item => {
       if (item.module && !hasModule(item.module as any)) return false;
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      // Hide Contacts menu for telecom segment
+      if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
       return true;
     });
-  }, [hasModule, profile?.role, isSuperAdmin]);
+  }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
 
   // Helper to get label from translation
   const getLabel = (labelKey: string): string => {

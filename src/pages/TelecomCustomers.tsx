@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,11 @@ import {
   Trash2,
   Loader2,
   Phone,
-  Mail
+  Mail,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
 } from 'lucide-react';
 import { CustomerFormDialog } from '@/components/telecom/CustomerFormDialog';
 import { 
@@ -64,6 +68,11 @@ export default function TelecomCustomers() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [planFilter, setPlanFilter] = useState<string>('');
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
+  const PAGE_SIZE_OPTIONS = [5, 10, 30, 50, 100];
 
   const { data: customers = [], isLoading } = useTelecomCustomers({
     search,
@@ -125,6 +134,13 @@ export default function TelecomCustomers() {
       currency: 'BRL',
     }).format(value);
   };
+
+  // Client-side pagination
+  const totalPages = Math.ceil(customers.length / pageSize);
+  const paginatedCustomers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return customers.slice(start, start + pageSize);
+  }, [customers, page, pageSize]);
 
   return (
     <ModuleGuard module="telecom">
@@ -255,94 +271,162 @@ export default function TelecomCustomers() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Localização</TableHead>
-                    <TableHead>Plano</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-[100px]">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {customers.map(customer => (
-                    <TableRow key={customer.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{customer.name}</p>
-                          {customer.cpf_cnpj && (
-                            <p className="text-xs text-muted-foreground">{customer.cpf_cnpj}</p>
+            <>
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Localização</TableHead>
+                      <TableHead>Plano</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[100px]">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedCustomers.map(customer => (
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{customer.name}</p>
+                            {customer.cpf_cnpj && (
+                              <p className="text-xs text-muted-foreground">{customer.cpf_cnpj}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {customer.phone && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Phone className="h-3 w-3 text-muted-foreground" />
+                                {customer.phone}
+                              </div>
+                            )}
+                            {customer.email && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Mail className="h-3 w-3 text-muted-foreground" />
+                                {customer.email}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {customer.neighborhood && <p>{customer.neighborhood}</p>}
+                            {customer.city && customer.uf && (
+                              <p className="text-muted-foreground">{customer.city}/{customer.uf}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {customer.plan ? (
+                            <Badge variant="outline" title={customer.plan.name}>
+                              {customer.plan.code}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {customer.phone && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Phone className="h-3 w-3 text-muted-foreground" />
-                              {customer.phone}
-                            </div>
-                          )}
-                          {customer.email && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Mail className="h-3 w-3 text-muted-foreground" />
-                              {customer.email}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {customer.neighborhood && <p>{customer.neighborhood}</p>}
-                          {customer.city && customer.uf && (
-                            <p className="text-muted-foreground">{customer.city}/{customer.uf}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {customer.plan ? (
-                          <Badge variant="outline">
-                            {customer.plan.code} - {customer.plan.name}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatCurrency(customer.plan_value)}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(customer.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(customer)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          {isAdmin && (
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(customer.plan_value)}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(customer.status)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleDelete(customer)}
+                              onClick={() => handleEdit(customer)}
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(customer)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+
+              {/* Pagination */}
+              {totalPages > 0 && (
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {customers.length} clientes • Página {page} de {totalPages}
+                    </p>
+                    <Select 
+                      value={String(pageSize)} 
+                      onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}
+                    >
+                      <SelectTrigger className="h-8 w-[100px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAGE_SIZE_OPTIONS.map(size => (
+                          <SelectItem key={size} value={String(size)}>
+                            {size} por pág
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(1)}
+                        disabled={page === 1}
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(totalPages)}
+                        disabled={page === totalPages}
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 

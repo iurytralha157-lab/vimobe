@@ -21,6 +21,7 @@ import { useCadenceTemplates } from '@/hooks/use-cadences';
 import { useActivities } from '@/hooks/use-activities';
 import { useUpdateLead, useAddLeadTag, useRemoveLeadTag } from '@/hooks/use-leads';
 import { useProperties } from '@/hooks/use-properties';
+import { useServicePlans } from '@/hooks/use-service-plans';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useLeadMeta } from '@/hooks/use-lead-meta';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -188,7 +189,9 @@ export function LeadDetailDialog({
   const addTag = useAddLeadTag();
   const removeTag = useRemoveLeadTag();
   const createCommission = useCreateCommissionOnWon();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
+  const { data: servicePlans = [] } = useServicePlans();
+  const isTelecom = organization?.segment === 'telecom';
   const handleEditScheduleEvent = (event: ScheduleEvent) => {
     setEditingScheduleEvent(event);
     setScheduleFormOpen(true);
@@ -1095,53 +1098,92 @@ export function LeadDetailDialog({
               </div>
 
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
-                  <Select value={editForm.property_id || 'none'} onValueChange={value => {
-                const newValue = value === 'none' ? '' : value;
-                const selectedProperty = properties.find((p: any) => p.id === value);
-                const propertyPrice = selectedProperty?.preco || null;
-                setEditForm({
-                  ...editForm,
-                  property_id: newValue,
-                  valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
-                });
-                const updateData: any = {
-                  id: lead.id,
-                  property_id: newValue || null
-                };
-                if (propertyPrice) {
-                  updateData.valor_interesse = propertyPrice;
-                }
-                updateLead.mutateAsync(updateData).then(() => refetchStages());
-              }}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Selecionar imóvel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>
-                          {p.code} - {p.title || p.bairro || 'Sem título'}
-                        </SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* For Telecom: show Plan selection */}
+                {isTelecom ? (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Plano de interesse</Label>
+                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
+                      const newValue = value === 'none' ? '' : value;
+                      const selectedPlan = servicePlans.find((p: any) => p.id === value);
+                      const planPrice = selectedPlan?.price || null;
+                      setEditForm({
+                        ...editForm,
+                        property_id: newValue,
+                        valor_interesse: planPrice ? planPrice.toString() : editForm.valor_interesse
+                      });
+                      const updateData: any = {
+                        id: lead.id,
+                        property_id: newValue || null
+                      };
+                      if (planPrice) {
+                        updateData.valor_interesse = planPrice;
+                      }
+                      updateLead.mutateAsync(updateData).then(() => refetchStages());
+                    }}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Selecionar plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {servicePlans.filter(p => p.is_active).map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.code} - {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
+                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
+                      const newValue = value === 'none' ? '' : value;
+                      const selectedProperty = properties.find((p: any) => p.id === value);
+                      const propertyPrice = selectedProperty?.preco || null;
+                      setEditForm({
+                        ...editForm,
+                        property_id: newValue,
+                        valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
+                      });
+                      const updateData: any = {
+                        id: lead.id,
+                        property_id: newValue || null
+                      };
+                      if (propertyPrice) {
+                        updateData.valor_interesse = propertyPrice;
+                      }
+                      updateLead.mutateAsync(updateData).then(() => refetchStages());
+                    }}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Selecionar imóvel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {properties.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.code} - {p.title || p.bairro || 'Sem título'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-xs text-muted-foreground mb-2 block">Valor de interesse</Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input type="number" value={editForm.valor_interesse} onChange={e => setEditForm({
-                  ...editForm,
-                  valor_interesse: e.target.value
-                })} onBlur={() => {
-                  if (editForm.valor_interesse !== (lead.valor_interesse?.toString() || '')) {
-                    updateLead.mutateAsync({
-                      id: lead.id,
-                      valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null
-                    } as any);
-                  }
-                }} placeholder="0,00" className="pl-9 rounded-xl" />
+                      ...editForm,
+                      valor_interesse: e.target.value
+                    })} onBlur={() => {
+                      if (editForm.valor_interesse !== (lead.valor_interesse?.toString() || '')) {
+                        updateLead.mutateAsync({
+                          id: lead.id,
+                          valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null
+                        } as any);
+                      }
+                    }} placeholder="0,00" className="pl-9 rounded-xl" />
                   </div>
                 </div>
               </div>
@@ -1699,48 +1741,52 @@ export function LeadDetailDialog({
                         profissao: e.target.value
                       })} placeholder="Ex: Engenheiro, Médico..." />
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
-                          <Select value={editForm.faixa_valor_imovel || 'none'} onValueChange={v => setEditForm({
-                        ...editForm,
-                        faixa_valor_imovel: v === 'none' ? '' : v
-                      })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Não informado</SelectItem>
-                              <SelectItem value="ate_200k">Até R$ 200.000</SelectItem>
-                              <SelectItem value="200k_400k">R$ 200.000 - R$ 400.000</SelectItem>
-                              <SelectItem value="400k_600k">R$ 400.000 - R$ 600.000</SelectItem>
-                              <SelectItem value="600k_1m">R$ 600.000 - R$ 1.000.000</SelectItem>
-                              <SelectItem value="1m_2m">R$ 1.000.000 - R$ 2.000.000</SelectItem>
-                              <SelectItem value="acima_2m">Acima de R$ 2.000.000</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {!isTelecom && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
+                            <Select value={editForm.faixa_valor_imovel || 'none'} onValueChange={v => setEditForm({
+                              ...editForm,
+                              faixa_valor_imovel: v === 'none' ? '' : v
+                            })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Não informado</SelectItem>
+                                <SelectItem value="ate_200k">Até R$ 200.000</SelectItem>
+                                <SelectItem value="200k_400k">R$ 200.000 - R$ 400.000</SelectItem>
+                                <SelectItem value="400k_600k">R$ 400.000 - R$ 600.000</SelectItem>
+                                <SelectItem value="600k_1m">R$ 600.000 - R$ 1.000.000</SelectItem>
+                                <SelectItem value="1m_2m">R$ 1.000.000 - R$ 2.000.000</SelectItem>
+                                <SelectItem value="acima_2m">Acima de R$ 2.000.000</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                         <div className="space-y-1.5">
                           <Label className="text-xs text-muted-foreground">Finalidade da Compra</Label>
                           <Input value={editForm.finalidade_compra} onChange={e => setEditForm({
-                        ...editForm,
-                        finalidade_compra: e.target.value
-                      })} placeholder="Ex: Moradia, Investimento..." />
+                            ...editForm,
+                            finalidade_compra: e.target.value
+                          })} placeholder="Ex: Moradia, Investimento..." />
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
-                          <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({
-                        ...editForm,
-                        procura_financiamento: v === 'sim'
-                      })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="nao">Não</SelectItem>
-                              <SelectItem value="sim">Sim</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {!isTelecom && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
+                            <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({
+                              ...editForm,
+                              procura_financiamento: v === 'sim'
+                            })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="nao">Não</SelectItem>
+                                <SelectItem value="sim">Sim</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </> : <>
@@ -1852,53 +1898,92 @@ export function LeadDetailDialog({
               </div>
 
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
-                  <Select value={editForm.property_id || 'none'} onValueChange={value => {
-                  const newValue = value === 'none' ? '' : value;
-                  const selectedProperty = properties.find((p: any) => p.id === value);
-                  const propertyPrice = selectedProperty?.preco || null;
-                  setEditForm({
-                    ...editForm,
-                    property_id: newValue,
-                    valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
-                  });
-                  const updateData: any = {
-                    id: lead.id,
-                    property_id: newValue || null
-                  };
-                  if (propertyPrice) {
-                    updateData.valor_interesse = propertyPrice;
-                  }
-                  updateLead.mutateAsync(updateData).then(() => refetchStages());
-                }}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Selecionar imóvel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>
-                          {p.code} - {p.title || p.bairro || 'Sem título'}
-                        </SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* For Telecom: show Plan selection */}
+                {isTelecom ? (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Plano de interesse</Label>
+                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
+                      const newValue = value === 'none' ? '' : value;
+                      const selectedPlan = servicePlans.find((p: any) => p.id === value);
+                      const planPrice = selectedPlan?.price || null;
+                      setEditForm({
+                        ...editForm,
+                        property_id: newValue,
+                        valor_interesse: planPrice ? planPrice.toString() : editForm.valor_interesse
+                      });
+                      const updateData: any = {
+                        id: lead.id,
+                        property_id: newValue || null
+                      };
+                      if (planPrice) {
+                        updateData.valor_interesse = planPrice;
+                      }
+                      updateLead.mutateAsync(updateData).then(() => refetchStages());
+                    }}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Selecionar plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {servicePlans.filter(p => p.is_active).map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.code} - {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
+                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
+                      const newValue = value === 'none' ? '' : value;
+                      const selectedProperty = properties.find((p: any) => p.id === value);
+                      const propertyPrice = selectedProperty?.preco || null;
+                      setEditForm({
+                        ...editForm,
+                        property_id: newValue,
+                        valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
+                      });
+                      const updateData: any = {
+                        id: lead.id,
+                        property_id: newValue || null
+                      };
+                      if (propertyPrice) {
+                        updateData.valor_interesse = propertyPrice;
+                      }
+                      updateLead.mutateAsync(updateData).then(() => refetchStages());
+                    }}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Selecionar imóvel" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {properties.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.code} - {p.title || p.bairro || 'Sem título'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-xs text-muted-foreground mb-2 block">Valor de interesse</Label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input type="number" value={editForm.valor_interesse} onChange={e => setEditForm({
-                    ...editForm,
-                    valor_interesse: e.target.value
-                  })} onBlur={() => {
-                    if (editForm.valor_interesse !== (lead.valor_interesse?.toString() || '')) {
-                      updateLead.mutateAsync({
-                        id: lead.id,
-                        valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null
-                      } as any);
-                    }
-                  }} placeholder="0,00" className="pl-9 rounded-xl" />
+                      ...editForm,
+                      valor_interesse: e.target.value
+                    })} onBlur={() => {
+                      if (editForm.valor_interesse !== (lead.valor_interesse?.toString() || '')) {
+                        updateLead.mutateAsync({
+                          id: lead.id,
+                          valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null
+                        } as any);
+                      }
+                    }} placeholder="0,00" className="pl-9 rounded-xl" />
                   </div>
                 </div>
               </div>
