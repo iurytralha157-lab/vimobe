@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
-import { PipelineDateFilter } from '@/components/pipelines/PipelineDateFilter';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { LeadCard } from '@/components/leads/LeadCard';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
@@ -323,9 +323,9 @@ export default function Pipelines() {
         if (deferredSearch && !lead.name.toLowerCase().includes(deferredSearch.toLowerCase()) && 
             !lead.phone?.includes(deferredSearch)) return false;
         
-        // Tag filter
+        // Tag filter - use lead.tags (populated by useStagesWithLeads)
         if (filterTag && filterTag !== 'all') {
-          const leadTagIds = lead.lead_tags?.map((lt: any) => lt.tag_id) || [];
+          const leadTagIds = lead.tags?.map((t: any) => t.id) || [];
           if (!leadTagIds.includes(filterTag)) return false;
         }
         
@@ -472,95 +472,108 @@ export default function Pipelines() {
               )}
             </div>
             
-            {/* Search & Filter */}
-            <div className="relative max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar lead..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+            {/* Compact Filters - Dashboard Style */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar lead..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 w-40 pl-8 text-xs"
+                />
+              </div>
+
+              {/* Date Filter */}
+              <DateFilterPopover
+                datePreset={datePreset}
+                onDatePresetChange={setDatePreset}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={setCustomDateRange}
+                triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start"
               />
-            </div>
-            {isAdmin ? (
-              <Select value={filterUser} onValueChange={setFilterUser}>
-                <SelectTrigger className="w-40">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Responsável" />
+
+              {/* Responsible Filter */}
+              {isAdmin ? (
+                <Select value={filterUser} onValueChange={setFilterUser}>
+                  <SelectTrigger className={cn(
+                    "h-8 w-auto min-w-[110px] text-xs",
+                    filterUser && filterUser !== 'all' && "border-primary text-primary"
+                  )}>
+                    <Filter className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {users.map(user => (
+                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8">
+                  <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs">{profile?.name}</span>
+                </div>
+              )}
+
+              {/* Tag Filter */}
+              <Select value={filterTag} onValueChange={setFilterTag}>
+                <SelectTrigger className={cn(
+                  "h-8 w-auto min-w-[100px] text-xs",
+                  filterTag && filterTag !== 'all' && "border-primary text-primary"
+                )}>
+                  <Tags className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                  <SelectValue placeholder="Tags" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                  <SelectItem value="all">Todas tags</SelectItem>
+                  {allTags.map(tag => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full" 
+                          style={{ backgroundColor: tag.color }} 
+                        />
+                        {tag.name}
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            ) : (
-              <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-muted/50">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{profile?.name}</span>
-              </div>
-            )}
 
-            {/* Tag Filter */}
-            <Select value={filterTag} onValueChange={setFilterTag}>
-              <SelectTrigger className="w-40">
-                <Tags className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Tags" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {allTags.map(tag => (
-                  <SelectItem key={tag.id} value={tag.id}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: tag.color }} 
-                      />
-                      {tag.name}
-                    </div>
+              {/* Deal Status Filter */}
+              <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                <SelectTrigger className={cn(
+                  "h-8 w-auto min-w-[100px] text-xs",
+                  filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
+                )}>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos status</SelectItem>
+                  <SelectItem value="open">
+                    <span className="flex items-center gap-2">
+                      <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
+                      Aberto
+                    </span>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Deal Status Filter */}
-            <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  <span className="flex items-center gap-2">Todos Status</span>
-                </SelectItem>
-                <SelectItem value="open">
-                  <span className="flex items-center gap-2">
-                    <CircleDot className="h-4 w-4 text-muted-foreground" />
-                    Aberto
-                  </span>
-                </SelectItem>
-                <SelectItem value="won">
-                  <span className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-emerald-600" />
-                    Ganho
-                  </span>
-                </SelectItem>
-                <SelectItem value="lost">
-                  <span className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-red-600" />
-                    Perdido
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {/* Date Filter */}
-            <PipelineDateFilter
-              datePreset={datePreset}
-              onDatePresetChange={setDatePreset}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-            />
+                  <SelectItem value="won">
+                    <span className="flex items-center gap-2">
+                      <Trophy className="h-3.5 w-3.5 text-emerald-600" />
+                      Ganho
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="lost">
+                    <span className="flex items-center gap-2">
+                      <XCircle className="h-3.5 w-3.5 text-red-600" />
+                      Perdido
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <Button size="sm" onClick={() => openNewLeadDialog()}>
             <Plus className="h-4 w-4 mr-2" />
