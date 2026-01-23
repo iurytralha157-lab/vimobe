@@ -83,3 +83,12 @@ verify_jwt = false
 
 [functions.seed-organization-data]
 verify_jwt = false
+
+[functions.resolve-site-domain]
+verify_jwt = false
+
+[functions.public-site-data]
+verify_jwt = false
+
+[functions.public-site-contact]
+verify_jwt = false

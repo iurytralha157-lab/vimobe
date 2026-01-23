@@ -1,0 +1,152 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+export interface OrganizationSite {
+  id: string;
+  organization_id: string;
+  is_active: boolean;
+  subdomain: string | null;
+  custom_domain: string | null;
+  domain_verified: boolean;
+  domain_verified_at: string | null;
+  site_title: string | null;
+  site_description: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  accent_color: string | null;
+  whatsapp: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  youtube: string | null;
+  linkedin: string | null;
+  about_title: string | null;
+  about_text: string | null;
+  about_image_url: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  seo_keywords: string | null;
+  google_analytics_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useOrganizationSite() {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ['organization-site', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return null;
+
+      const { data, error } = await supabase
+        .from('organization_sites')
+        .select('*')
+        .eq('organization_id', organization.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as OrganizationSite | null;
+    },
+    enabled: !!organization?.id,
+  });
+}
+
+export function useCreateOrganizationSite() {
+  const queryClient = useQueryClient();
+  const { organization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: Partial<OrganizationSite>) => {
+      if (!organization?.id) throw new Error('No organization');
+
+      const { data: site, error } = await supabase
+        .from('organization_sites')
+        .insert({
+          organization_id: organization.id,
+          ...data,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return site;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-site'] });
+      toast.success('Site criado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Error creating site:', error);
+      toast.error('Erro ao criar site');
+    },
+  });
+}
+
+export function useUpdateOrganizationSite() {
+  const queryClient = useQueryClient();
+  const { organization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: Partial<OrganizationSite>) => {
+      if (!organization?.id) throw new Error('No organization');
+
+      const { data: site, error } = await supabase
+        .from('organization_sites')
+        .update(data)
+        .eq('organization_id', organization.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return site;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-site'] });
+      toast.success('Site atualizado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Error updating site:', error);
+      toast.error('Erro ao atualizar site');
+    },
+  });
+}
+
+export function useUploadSiteAsset() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'favicon' | 'about' }) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `site-${type}-${Date.now()}.${fileExt}`;
+      const filePath = `sites/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-site'] });
+    },
+    onError: (error) => {
+      console.error('Error uploading asset:', error);
+      toast.error('Erro ao fazer upload');
+    },
+  });
+}
