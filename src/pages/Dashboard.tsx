@@ -6,24 +6,18 @@ import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnel } from '@/components/dashboard/SalesFunnel';
 import { LeadSourcesChart } from '@/components/dashboard/LeadSourcesChart';
 import { TopBrokersWidget } from '@/components/dashboard/TopBrokersWidget';
-import { UpcomingTasksWidget } from '@/components/dashboard/UpcomingTasksWidget';
+import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
   useFunnelData, 
   useLeadSourcesData,
   useTopBrokers,
-  useUpcomingTasks,
+  useDealsEvolutionData,
 } from '@/hooks/use-dashboard-stats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
 
   // Filters
@@ -50,33 +44,7 @@ export default function Dashboard() {
   const { data: topBrokersData, isLoading: brokersLoading } = useTopBrokers(filters);
   const topBrokers = topBrokersData?.brokers || [];
   const isBrokersFallback = topBrokersData?.isFallbackMode || false;
-  const { data: upcomingTasks = [], isLoading: tasksLoading } = useUpcomingTasks();
-
-  // Complete task mutation
-  const completeTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      const { error } = await supabase
-        .from('lead_tasks')
-        .update({ 
-          is_done: true, 
-          done_at: new Date().toISOString() 
-        })
-        .eq('id', taskId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['upcoming-tasks'] });
-      toast.success('Tarefa concluída!');
-    },
-    onError: () => {
-      toast.error('Erro ao concluir tarefa');
-    },
-  });
-
-  const handleTaskClick = (leadId: string) => {
-    navigate(`/conversas?leadId=${leadId}`);
-  };
+  const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
 
   const periodLabel = datePresetOptions.find(o => o.value === datePreset)?.label || 'Período selecionado';
 
@@ -151,12 +119,7 @@ export default function Dashboard() {
         {/* Bottom Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} isFallbackMode={isBrokersFallback} />
-          <UpcomingTasksWidget 
-            tasks={upcomingTasks} 
-            isLoading={tasksLoading}
-            onComplete={(taskId) => completeTaskMutation.mutate(taskId)}
-            onTaskClick={handleTaskClick}
-          />
+          <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
         </div>
       </div>
     </AppLayout>

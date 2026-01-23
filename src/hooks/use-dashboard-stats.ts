@@ -1,7 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { subDays, format } from 'date-fns';
+import { subDays, format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { DashboardFilters } from './use-dashboard-filters';
+
+export interface DealsEvolutionPoint {
+  date: string;
+  ganhos: number;
+  perdas: number;
+  abertos: number;
+}
 
 export interface DashboardStats {
   totalLeads: number;
@@ -669,5 +677,128 @@ export function useUpcomingTasks() {
       }));
     },
     staleTime: 1000 * 60 * 2, // 2 minutos
+  });
+}
+
+// Deals evolution (ganhos, perdas, em aberto) grouped by time
+export function useDealsEvolutionData(filters?: DashboardFilters) {
+  return useQuery({
+    queryKey: ['deals-evolution', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryFn: async (): Promise<DealsEvolutionPoint[]> => {
+      // Get current user info to check role
+      const { data: { user } } = await supabase.auth.getUser();
+      let currentUserRole = 'user';
+      let currentUserId = user?.id;
+      
+      if (user?.id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        currentUserRole = userData?.role || 'user';
+      }
+      
+      const isAdmin = currentUserRole === 'admin';
+      
+      // Calculate date range
+      const now = new Date();
+      const dateFrom = filters?.dateRange?.from || subDays(now, 30);
+      const dateTo = filters?.dateRange?.to || now;
+      const daysDiff = differenceInDays(dateTo, dateFrom);
+      
+      // Build base query
+      let query = supabase
+        .from('leads')
+        .select('id, created_at, deal_status, assigned_user_id, source')
+        .gte('created_at', dateFrom.toISOString())
+        .lte('created_at', dateTo.toISOString());
+
+      // Role-based filter: non-admins only see their own leads
+      if (!isAdmin && currentUserId) {
+        query = query.eq('assigned_user_id', currentUserId);
+      } else if (filters?.userId) {
+        query = query.eq('assigned_user_id', filters.userId);
+      }
+
+      // Apply source filter
+      if (filters?.source) {
+        query = query.eq('source', filters.source as any);
+      }
+
+      // Apply team filter (only for admins)
+      if (isAdmin && filters?.teamId) {
+        const { data: teamMembers } = await supabase
+          .from('team_members')
+          .select('user_id')
+          .eq('team_id', filters.teamId);
+        
+        if (teamMembers && teamMembers.length > 0) {
+          const memberIds = teamMembers.map(m => m.user_id);
+          query = query.in('assigned_user_id', memberIds);
+        }
+      }
+
+      const { data: leads, error } = await query;
+
+      if (error) {
+        console.error('Error fetching deals evolution:', error);
+        return [];
+      }
+
+      if (!leads || leads.length === 0) {
+        return [];
+      }
+
+      // Determine grouping strategy based on date range
+      let intervals: Date[];
+      let formatLabel: (date: Date) => string;
+
+      if (daysDiff <= 7) {
+        // Group by day
+        intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
+        formatLabel = (date) => format(date, 'EEE', { locale: ptBR });
+      } else if (daysDiff <= 31) {
+        // Group by day with short date
+        intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
+        formatLabel = (date) => format(date, 'dd/MM', { locale: ptBR });
+      } else if (daysDiff <= 90) {
+        // Group by week
+        intervals = eachWeekOfInterval({ start: dateFrom, end: dateTo }, { weekStartsOn: 1 });
+        formatLabel = (date) => format(date, "'Sem' w", { locale: ptBR });
+      } else {
+        // Group by month
+        intervals = eachMonthOfInterval({ start: dateFrom, end: dateTo });
+        formatLabel = (date) => format(date, 'MMM', { locale: ptBR });
+      }
+
+      // Limit intervals to prevent too many points
+      if (intervals.length > 12) {
+        const step = Math.ceil(intervals.length / 12);
+        intervals = intervals.filter((_, i) => i % step === 0);
+      }
+
+      // Group leads by interval
+      const result: DealsEvolutionPoint[] = intervals.map((intervalStart, index) => {
+        const intervalEnd = index < intervals.length - 1 
+          ? intervals[index + 1] 
+          : dateTo;
+        
+        const intervalLeads = leads.filter((lead: any) => {
+          const leadDate = new Date(lead.created_at);
+          return leadDate >= intervalStart && leadDate < intervalEnd;
+        });
+
+        return {
+          date: formatLabel(intervalStart),
+          ganhos: intervalLeads.filter((l: any) => l.deal_status === 'won').length,
+          perdas: intervalLeads.filter((l: any) => l.deal_status === 'lost').length,
+          abertos: intervalLeads.filter((l: any) => l.deal_status === 'open' || !l.deal_status).length,
+        };
+      });
+
+      return result;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
