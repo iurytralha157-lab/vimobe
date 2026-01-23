@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import type { ServicePlan } from './use-service-plans';
 
 export interface TelecomCustomer {
   id: string;
@@ -20,6 +19,7 @@ export interface TelecomCustomer {
   uf: string | null;
   cep: string | null;
   plan_id: string | null;
+  plan_code: string | null;
   plan_value: number | null;
   due_day: number | null;
   seller_id: string | null;
@@ -35,11 +35,16 @@ export interface TelecomCustomer {
   created_at: string;
   updated_at: string;
   // Joined relations
-  plan?: ServicePlan;
+  plan?: {
+    id: string;
+    name: string;
+    code: string;
+    price: number;
+  } | null;
   seller?: {
     id: string;
     name: string;
-  };
+  } | null;
 }
 
 export interface CreateTelecomCustomerInput {
