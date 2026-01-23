@@ -2949,12 +2949,69 @@ export type Database = {
           },
         ]
       }
+      telecom_billing: {
+        Row: {
+          amount: number | null
+          billing_month: string
+          billing_status: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          payment_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          billing_month: string
+          billing_status?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          payment_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          billing_month?: string
+          billing_status?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          payment_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telecom_billing_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "telecom_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telecom_billing_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telecom_customers: {
         Row: {
           address: string | null
           cep: string | null
+          chip_category: string | null
+          chip_quantity: number | null
           city: string | null
           complement: string | null
+          contract_date: string | null
           cpf_cnpj: string | null
           created_at: string | null
           due_day: number | null
@@ -2962,6 +3019,9 @@ export type Database = {
           external_id: string | null
           id: string
           installation_date: string | null
+          is_combo: boolean | null
+          mesh_quantity: number | null
+          mesh_repeater: string | null
           name: string
           neighborhood: string | null
           notes: string | null
@@ -2978,8 +3038,11 @@ export type Database = {
         Insert: {
           address?: string | null
           cep?: string | null
+          chip_category?: string | null
+          chip_quantity?: number | null
           city?: string | null
           complement?: string | null
+          contract_date?: string | null
           cpf_cnpj?: string | null
           created_at?: string | null
           due_day?: number | null
@@ -2987,6 +3050,9 @@ export type Database = {
           external_id?: string | null
           id?: string
           installation_date?: string | null
+          is_combo?: boolean | null
+          mesh_quantity?: number | null
+          mesh_repeater?: string | null
           name: string
           neighborhood?: string | null
           notes?: string | null
@@ -3003,8 +3069,11 @@ export type Database = {
         Update: {
           address?: string | null
           cep?: string | null
+          chip_category?: string | null
+          chip_quantity?: number | null
           city?: string | null
           complement?: string | null
+          contract_date?: string | null
           cpf_cnpj?: string | null
           created_at?: string | null
           due_day?: number | null
@@ -3012,6 +3081,9 @@ export type Database = {
           external_id?: string | null
           id?: string
           installation_date?: string | null
+          is_combo?: boolean | null
+          mesh_quantity?: number | null
+          mesh_repeater?: string | null
           name?: string
           neighborhood?: string | null
           notes?: string | null

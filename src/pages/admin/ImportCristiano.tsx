@@ -17,11 +17,19 @@ interface Customer {
   neighborhood: string | null;
   address: string | null;
   status: string;
+  contract_date: string | null;
   installation_date: string | null;
   plan_code: string | null;
   plan_value: number | null;
   due_day: number | null;
   seller_name: string | null;
+  chip_category: string | null;
+  chip_quantity: number | null;
+  mesh_repeater: string | null;
+  mesh_quantity: number | null;
+  is_combo: boolean;
+  // Billing data por mês
+  billing_data: Record<string, { billing_status: string; payment_status: string }>;
 }
 
 // Parse Brazilian date format to ISO
@@ -75,6 +83,41 @@ function mapStatus(status: string): string {
   return 'NOVO';
 }
 
+// Map chip category
+function mapChipCategory(value: string): string | null {
+  const s = value?.trim().toUpperCase() || '';
+  if (s.includes('CONVENCIONAL')) return 'CONVENCIONAL';
+  if (s.includes('PROMOCIONAL')) return 'PROMOCIONAL';
+  if (s.includes('SEM') || s === '' || s === '-') return 'SEM_CHIP';
+  return s || null;
+}
+
+// Map mesh repeater
+function mapMeshRepeater(value: string): string | null {
+  const s = value?.trim().toUpperCase() || '';
+  if (s.includes('NO ATO') || s.includes('NOATO')) return 'NO_ATO';
+  if (s.includes('NORMAL')) return 'NORMAL';
+  if (s.includes('SEM') || s === '' || s === '-') return 'SEM_REPETIDOR';
+  return s || null;
+}
+
+// Map billing/payment status
+function mapBillingStatus(value: string): string {
+  const s = value?.trim().toUpperCase() || '';
+  if (s.includes('COBRADO') && !s.includes('NÃO')) return 'COBRADO';
+  return 'NAO_COBRADO';
+}
+
+function mapPaymentStatus(value: string): string {
+  const s = value?.trim().toUpperCase() || '';
+  if (s.includes('PAGO') || s === 'PAGO') return 'PAGO';
+  if (s.includes('VENCIDO')) return 'VENCIDO';
+  if (s.includes('RENEGOCIADO')) return 'RENEGOCIADO';
+  if (s.includes('CHURN')) return 'CHURN';
+  if (s.includes('CANCELADO')) return 'CANCELADO';
+  return 'PENDENTE';
+}
+
 // Parse CSV line handling quoted values
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -100,7 +143,9 @@ export default function ImportCristiano() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<{ inserted: number; errors: number; skipped: number }>({ inserted: 0, errors: 0, skipped: 0 });
+  const [results, setResults] = useState<{ inserted: number; errors: number; skipped: number; billings: number }>({ 
+    inserted: 0, errors: 0, skipped: 0, billings: 0 
+  });
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -108,7 +153,7 @@ export default function ImportCristiano() {
 
     setLoading(true);
     setProgress(0);
-    setResults({ inserted: 0, errors: 0, skipped: 0 });
+    setResults({ inserted: 0, errors: 0, skipped: 0, billings: 0 });
     
     try {
       const text = await file.text();
@@ -120,49 +165,140 @@ export default function ImportCristiano() {
         return;
       }
 
+      setStatus('Analisando cabeçalhos...');
+      
+      // Parse header to find column indices
+      const headers = parseCSVLine(lines[0]);
+      console.log('Headers found:', headers);
+      
+      // Find column indices by header name (case insensitive)
+      const findCol = (names: string[]): number => {
+        return headers.findIndex(h => 
+          names.some(n => h.toLowerCase().includes(n.toLowerCase()))
+        );
+      };
+      
+      const colMap = {
+        external_id: findCol(['external_id', 'id_externo', 'cod']),
+        name: findCol(['name', 'nome', 'cliente']),
+        phone: findCol(['phone', 'telefone', 'cel']),
+        status: findCol(['status']),
+        contract_date: findCol(['contract_date', 'data_contrato', 'contratação']),
+        installation_date: findCol(['installation_date', 'data_instalação', 'instalação']),
+        uf: findCol(['uf', 'estado']),
+        city: findCol(['city', 'cidade']),
+        neighborhood: findCol(['neighborhood', 'bairro']),
+        address: findCol(['address', 'endereço', 'endereco']),
+        plan_code: findCol(['plan_code', 'plano', 'codigo_plano']),
+        plan_value: findCol(['plan_value', 'valor', 'mensalidade']),
+        due_day: findCol(['due_day', 'vencimento', 'dia_vencimento']),
+        seller: findCol(['seller', 'vendedor']),
+        chip_category: findCol(['chip_category', 'cat_chip', 'categoria_chip']),
+        chip_quantity: findCol(['chip_quantity', 'qtd_chip', 'quantidade_chip']),
+        mesh_repeater: findCol(['mesh_repeater', 'repetidor']),
+        mesh_quantity: findCol(['mesh_quantity', 'qtd_rept', 'quantidade_repetidor']),
+        is_combo: findCol(['is_combo', 'combo']),
+      };
+      
+      console.log('Column mapping:', colMap);
+
       setStatus('Analisando CSV...');
       
       // Parse customers
       const customers: Customer[] = [];
       const seenIds = new Set<string>();
+      let skippedCount = 0;
+      
+      // Find billing month columns (looking for patterns like JAN/25, FEV/25, etc)
+      const billingMonthCols: { col: number; month: string }[] = [];
+      const monthPatterns = [
+        { pattern: /JAN.*\/(\d{2,4})/i, month: '01' },
+        { pattern: /FEV.*\/(\d{2,4})/i, month: '02' },
+        { pattern: /MAR.*\/(\d{2,4})/i, month: '03' },
+        { pattern: /ABR.*\/(\d{2,4})/i, month: '04' },
+        { pattern: /MAI.*\/(\d{2,4})/i, month: '05' },
+        { pattern: /JUN.*\/(\d{2,4})/i, month: '06' },
+        { pattern: /JUL.*\/(\d{2,4})/i, month: '07' },
+        { pattern: /AGO.*\/(\d{2,4})/i, month: '08' },
+        { pattern: /SET.*\/(\d{2,4})/i, month: '09' },
+        { pattern: /OUT.*\/(\d{2,4})/i, month: '10' },
+        { pattern: /NOV.*\/(\d{2,4})/i, month: '11' },
+        { pattern: /DEZ.*\/(\d{2,4})/i, month: '12' },
+      ];
+      
+      headers.forEach((h, idx) => {
+        for (const mp of monthPatterns) {
+          const match = h.match(mp.pattern);
+          if (match) {
+            let year = parseInt(match[1], 10);
+            if (year < 100) year = 2000 + year;
+            billingMonthCols.push({ 
+              col: idx, 
+              month: `${year}-${mp.month}-01` 
+            });
+            break;
+          }
+        }
+      });
+      
+      console.log('Billing month columns:', billingMonthCols);
       
       for (let i = 1; i < lines.length; i++) {
         const cols = parseCSVLine(lines[i]);
-        if (cols.length < 15) continue;
         
-        const name = cols[2]?.trim();
+        const name = colMap.name >= 0 ? cols[colMap.name]?.trim() : cols[2]?.trim();
         if (!name) continue;
         
-        const externalId = cols[1]?.trim();
+        const externalId = colMap.external_id >= 0 ? cols[colMap.external_id]?.trim() : cols[1]?.trim();
         
         // Skip duplicates
         if (externalId && seenIds.has(externalId)) {
-          setResults(prev => ({ ...prev, skipped: prev.skipped + 1 }));
+          skippedCount++;
           continue;
         }
         if (externalId) {
           seenIds.add(externalId);
         }
         
-        const city = cols[8]?.trim().replace(/_/g, ' ');
+        const city = (colMap.city >= 0 ? cols[colMap.city] : cols[8])?.trim().replace(/_/g, ' ');
+        
+        // Parse billing data
+        const billing_data: Record<string, { billing_status: string; payment_status: string }> = {};
+        for (const bc of billingMonthCols) {
+          const val = cols[bc.col]?.trim() || '';
+          if (val) {
+            billing_data[bc.month] = {
+              billing_status: mapBillingStatus(val),
+              payment_status: mapPaymentStatus(val),
+            };
+          }
+        }
         
         customers.push({
           external_id: externalId || null,
           name,
-          phone: cols[3]?.trim() || null,
-          uf: cols[7]?.trim() || null,
+          phone: (colMap.phone >= 0 ? cols[colMap.phone] : cols[3])?.trim() || null,
+          uf: (colMap.uf >= 0 ? cols[colMap.uf] : cols[7])?.trim() || null,
           city: city || null,
-          neighborhood: cols[9]?.trim() || null,
-          address: cols[10]?.trim() || null,
-          status: mapStatus(cols[5]),
-          installation_date: parseDate(cols[6]),
-          plan_code: cols[14]?.trim() || null,
-          plan_value: parseCurrency(cols[15]),
-          due_day: parseInt(cols[21]?.trim() || '0', 10) || null,
-          seller_name: cols[11]?.trim() || null,
+          neighborhood: (colMap.neighborhood >= 0 ? cols[colMap.neighborhood] : cols[9])?.trim() || null,
+          address: (colMap.address >= 0 ? cols[colMap.address] : cols[10])?.trim() || null,
+          status: mapStatus(colMap.status >= 0 ? cols[colMap.status] : cols[5]),
+          contract_date: parseDate(colMap.contract_date >= 0 ? cols[colMap.contract_date] : ''),
+          installation_date: parseDate(colMap.installation_date >= 0 ? cols[colMap.installation_date] : cols[6]),
+          plan_code: (colMap.plan_code >= 0 ? cols[colMap.plan_code] : cols[14])?.trim() || null,
+          plan_value: parseCurrency(colMap.plan_value >= 0 ? cols[colMap.plan_value] : cols[15]),
+          due_day: parseInt((colMap.due_day >= 0 ? cols[colMap.due_day] : cols[21])?.trim() || '0', 10) || null,
+          seller_name: (colMap.seller >= 0 ? cols[colMap.seller] : cols[11])?.trim() || null,
+          chip_category: mapChipCategory(colMap.chip_category >= 0 ? cols[colMap.chip_category] : ''),
+          chip_quantity: parseInt((colMap.chip_quantity >= 0 ? cols[colMap.chip_quantity] : '')?.trim() || '0', 10) || null,
+          mesh_repeater: mapMeshRepeater(colMap.mesh_repeater >= 0 ? cols[colMap.mesh_repeater] : ''),
+          mesh_quantity: parseInt((colMap.mesh_quantity >= 0 ? cols[colMap.mesh_quantity] : '')?.trim() || '0', 10) || null,
+          is_combo: (colMap.is_combo >= 0 ? cols[colMap.is_combo] : '')?.trim().toUpperCase() === 'SIM',
+          billing_data,
         });
       }
       
+      setResults(prev => ({ ...prev, skipped: skippedCount }));
       setStatus(`Encontrados ${customers.length} clientes. Buscando planos...`);
       
       // Get plan lookup
@@ -180,6 +316,7 @@ export default function ImportCristiano() {
       
       let inserted = 0;
       let errors = 0;
+      const insertedCustomerIds: { external_id: string | null; id: string }[] = [];
       
       // Process in batches
       for (let i = 0; i < customers.length; i += BATCH_SIZE) {
@@ -198,10 +335,16 @@ export default function ImportCristiano() {
             neighborhood: customer.neighborhood,
             address: customer.address,
             status: customer.status,
+            contract_date: customer.contract_date,
             installation_date: customer.installation_date,
             plan_id: planId,
             plan_value: customer.plan_value,
             due_day: customer.due_day,
+            chip_category: customer.chip_category,
+            chip_quantity: customer.chip_quantity,
+            mesh_repeater: customer.mesh_repeater,
+            mesh_quantity: customer.mesh_quantity,
+            is_combo: customer.is_combo,
             notes: customer.seller_name ? `Vendedor: ${customer.seller_name}` : null,
           };
         });
@@ -209,24 +352,89 @@ export default function ImportCristiano() {
         const { data, error } = await supabase
           .from('telecom_customers')
           .insert(records)
-          .select('id');
+          .select('id, external_id');
         
         if (error) {
           console.error(`Error batch ${i}-${i + BATCH_SIZE}:`, error);
           errors += batch.length;
         } else {
           inserted += data?.length || 0;
+          if (data) {
+            insertedCustomerIds.push(...data);
+          }
         }
         
-        const percent = Math.round(((i + batch.length) / customers.length) * 100);
+        const percent = Math.round(((i + batch.length) / customers.length) * 50);
         setProgress(percent);
-        setStatus(`Importando... ${i + batch.length}/${customers.length}`);
-        setResults({ inserted, errors, skipped: results.skipped });
+        setStatus(`Importando clientes... ${i + batch.length}/${customers.length}`);
       }
       
       setResults(prev => ({ ...prev, inserted, errors }));
+      
+      // Now import billing data
+      setStatus('Importando dados de cobrança...');
+      
+      // Create a map of external_id to customer_id
+      const customerIdMap = new Map<string, string>();
+      insertedCustomerIds.forEach(c => {
+        if (c.external_id) {
+          customerIdMap.set(c.external_id, c.id);
+        }
+      });
+      
+      // Build billing records
+      const billingRecords: {
+        organization_id: string;
+        customer_id: string;
+        billing_month: string;
+        billing_status: string;
+        payment_status: string;
+      }[] = [];
+      
+      customers.forEach(customer => {
+        if (!customer.external_id) return;
+        const customerId = customerIdMap.get(customer.external_id);
+        if (!customerId) return;
+        
+        Object.entries(customer.billing_data).forEach(([month, data]) => {
+          billingRecords.push({
+            organization_id: ORGANIZATION_ID,
+            customer_id: customerId,
+            billing_month: month,
+            billing_status: data.billing_status,
+            payment_status: data.payment_status,
+          });
+        });
+      });
+      
+      let billingsInserted = 0;
+      
+      if (billingRecords.length > 0) {
+        // Insert billing records in batches
+        for (let i = 0; i < billingRecords.length; i += BATCH_SIZE) {
+          const batch = billingRecords.slice(i, i + BATCH_SIZE);
+          
+          const { data, error } = await supabase
+            .from('telecom_billing')
+            .upsert(batch, { onConflict: 'customer_id,billing_month' })
+            .select('id');
+          
+          if (error) {
+            console.error('Billing error:', error);
+          } else {
+            billingsInserted += data?.length || 0;
+          }
+          
+          const percent = 50 + Math.round(((i + batch.length) / billingRecords.length) * 50);
+          setProgress(percent);
+          setStatus(`Importando cobranças... ${i + batch.length}/${billingRecords.length}`);
+        }
+      }
+      
+      setResults(prev => ({ ...prev, billings: billingsInserted }));
+      setProgress(100);
       setStatus('Importação concluída!');
-      toast.success(`Importados ${inserted} clientes. ${errors} erros.`);
+      toast.success(`Importados ${inserted} clientes e ${billingsInserted} cobranças. ${errors} erros.`);
       
     } catch (error) {
       console.error('Import error:', error);
@@ -245,8 +453,19 @@ export default function ImportCristiano() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Selecione o arquivo CSV de clientes para importar na organização do Cristiano.
+            Selecione o arquivo CSV de clientes para importar. Os novos campos serão mapeados automaticamente:
           </p>
+          
+          <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+            <li>Data de contratação (contract_date)</li>
+            <li>Data de instalação (installation_date)</li>
+            <li>Categoria do chip (chip_category)</li>
+            <li>Quantidade de chips (chip_quantity)</li>
+            <li>Repetidor mesh (mesh_repeater)</li>
+            <li>Quantidade de repetidores (mesh_quantity)</li>
+            <li>É combo? (is_combo)</li>
+            <li>Dados de cobrança mensal (colunas JAN/25, FEV/25, etc.)</li>
+          </ul>
           
           <input 
             type="file" 
@@ -272,7 +491,8 @@ export default function ImportCristiano() {
             <div className="p-4 bg-muted rounded-lg">
               <h4 className="font-semibold mb-2">Resultado:</h4>
               <ul className="text-sm space-y-1">
-                <li>✅ Inseridos: {results.inserted}</li>
+                <li>✅ Clientes inseridos: {results.inserted}</li>
+                <li>📅 Cobranças importadas: {results.billings}</li>
                 <li>⏭️ Duplicados ignorados: {results.skipped}</li>
                 <li>❌ Erros: {results.errors}</li>
               </ul>
