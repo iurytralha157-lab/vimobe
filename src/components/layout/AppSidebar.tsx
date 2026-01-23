@@ -30,6 +30,7 @@ const allNavItems: NavItem[] = [
     labelKey: 'financial',
     path: '/financeiro',
     module: 'financial',
+    adminOnly: true,
     children: [
       { icon: TrendingUp, labelKey: 'financialDashboard', path: '/financeiro' },
       { icon: Receipt, labelKey: 'entries', path: '/financeiro/contas' },
