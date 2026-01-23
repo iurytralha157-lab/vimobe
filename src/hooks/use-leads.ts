@@ -120,6 +120,18 @@ export function useCreateLead() {
       property_code?: string;
       assigned_user_id?: string;
       tag_ids?: string[];
+      // Additional profile fields
+      cargo?: string;
+      empresa?: string;
+      profissao?: string;
+      endereco?: string;
+      cidade?: string;
+      uf?: string;
+      renda_familiar?: string;
+      faixa_valor_imovel?: string;
+      valor_interesse?: number | null;
+      property_id?: string;
+      deal_status?: string;
     }) => {
       // Buscar usuário autenticado - org_id é definido pelo trigger enforce_organization_id()
       const { data: user } = await supabase.auth.getUser();
