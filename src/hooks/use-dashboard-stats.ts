@@ -440,12 +440,12 @@ export function useLeadSourcesData() {
   });
 }
 
-// Top Brokers (ranking de corretores)
+// Top Brokers (ranking de corretores) - com fallback para leads totais
 export function useTopBrokers(filters?: DashboardFilters) {
   return useQuery({
     queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.teamId],
     queryFn: async (): Promise<TopBroker[]> => {
-      // Get leads with won status using deal_status
+      // First try: Get leads with won status using deal_status
       let query = supabase
         .from('leads')
         .select(`
@@ -463,15 +463,64 @@ export function useTopBrokers(filters?: DashboardFilters) {
           .lte('created_at', filters.dateRange.to.toISOString());
       }
 
-      const { data: leads, error } = await query;
+      const { data: wonLeads, error } = await query;
 
-      if (error || !leads) {
+      if (error) {
         console.error('Error fetching top brokers:', error);
         return [];
       }
 
-      // Aggregate won leads by user
-      const brokerStats = leads.reduce((acc: Record<string, TopBroker>, lead: any) => {
+      // If we have won leads, use them for ranking
+      if (wonLeads && wonLeads.length > 0) {
+        const brokerStats = wonLeads.reduce((acc: Record<string, TopBroker>, lead: any) => {
+          const userId = lead.assigned_user_id;
+          if (!userId || !lead.user) return acc;
+
+          if (!acc[userId]) {
+            acc[userId] = {
+              id: userId,
+              name: lead.user.name || 'Usuário',
+              avatar_url: lead.user.avatar_url,
+              closedLeads: 0,
+              salesValue: 0,
+            };
+          }
+
+          acc[userId].closedLeads += 1;
+          acc[userId].salesValue += lead.valor_interesse || 0;
+
+          return acc;
+        }, {});
+
+        return Object.values(brokerStats)
+          .sort((a, b) => b.closedLeads - a.closedLeads)
+          .slice(0, 5);
+      }
+
+      // Fallback: No won leads, show ranking by total leads assigned
+      let fallbackQuery = supabase
+        .from('leads')
+        .select(`
+          assigned_user_id,
+          valor_interesse,
+          user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
+        `)
+        .not('assigned_user_id', 'is', null);
+
+      if (filters?.dateRange) {
+        fallbackQuery = fallbackQuery
+          .gte('created_at', filters.dateRange.from.toISOString())
+          .lte('created_at', filters.dateRange.to.toISOString());
+      }
+
+      const { data: allLeads, error: fallbackError } = await fallbackQuery;
+
+      if (fallbackError || !allLeads || allLeads.length === 0) {
+        return [];
+      }
+
+      // Aggregate all leads by user (closedLeads = total leads in fallback mode)
+      const brokerStats = allLeads.reduce((acc: Record<string, TopBroker>, lead: any) => {
         const userId = lead.assigned_user_id;
         if (!userId || !lead.user) return acc;
 
@@ -480,7 +529,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
             id: userId,
             name: lead.user.name || 'Usuário',
             avatar_url: lead.user.avatar_url,
-            closedLeads: 0,
+            closedLeads: 0, // In fallback mode, this represents total leads
             salesValue: 0,
           };
         }
@@ -491,7 +540,6 @@ export function useTopBrokers(filters?: DashboardFilters) {
         return acc;
       }, {});
 
-      // Sort by closedLeads desc
       return Object.values(brokerStats)
         .sort((a, b) => b.closedLeads - a.closedLeads)
         .slice(0, 5);
