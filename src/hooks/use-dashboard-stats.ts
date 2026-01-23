@@ -409,37 +409,75 @@ export function useLeadsChartData() {
   });
 }
 
-// Usa RPC otimizada para dados do funil
-export function useFunnelData() {
+// Usa RPC otimizada para dados do funil COM filtros
+export function useFunnelData(filters?: DashboardFilters) {
   return useQuery({
-    queryKey: ['funnel-data'],
+    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc('get_funnel_data');
+      const { data, error } = await (supabase as any).rpc('get_funnel_data', {
+        p_date_from: filters?.dateRange?.from?.toISOString() || null,
+        p_date_to: filters?.dateRange?.to?.toISOString() || null,
+        p_team_id: filters?.teamId || null,
+        p_user_id: filters?.userId || null,
+        p_source: filters?.source || null,
+      });
       
       if (error) {
         console.error('Error fetching funnel data:', error);
         return [] as FunnelDataPoint[];
       }
       
-      return (data as unknown as FunnelDataPoint[]) || [];
+      // Map the RPC response to the expected format
+      const result = (data || []).map((item: any) => ({
+        name: item.stage_name,
+        value: Number(item.lead_count) || 0,
+        percentage: 0, // Will be calculated in the component
+        stage_key: item.stage_key || item.stage_name,
+      }));
+      
+      // Calculate percentages
+      const total = result.reduce((sum: number, item: FunnelDataPoint) => sum + item.value, 0);
+      return result.map((item: FunnelDataPoint) => ({
+        ...item,
+        percentage: total > 0 ? Math.round((item.value / total) * 100) : 0,
+      })) as FunnelDataPoint[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
-// Usa RPC otimizada para dados de fontes de leads
-export function useLeadSourcesData() {
+// Usa RPC otimizada para dados de fontes de leads COM filtros
+export function useLeadSourcesData(filters?: DashboardFilters) {
   return useQuery({
-    queryKey: ['lead-sources-data'],
+    queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc('get_lead_sources_data');
+      const { data, error } = await (supabase as any).rpc('get_lead_sources_data', {
+        p_date_from: filters?.dateRange?.from?.toISOString() || null,
+        p_date_to: filters?.dateRange?.to?.toISOString() || null,
+        p_team_id: filters?.teamId || null,
+        p_user_id: filters?.userId || null,
+        p_source: filters?.source || null,
+      });
       
       if (error) {
         console.error('Error fetching lead sources:', error);
         return [] as SourceDataPoint[];
       }
       
-      return (data as unknown as SourceDataPoint[]) || [];
+      // Map source names to friendly labels
+      const sourceLabels: Record<string, string> = {
+        'meta': 'Meta Ads',
+        'site': 'Site',
+        'wordpress': 'WordPress',
+        'whatsapp': 'WhatsApp',
+        'manual': 'Manual',
+        'webhook': 'Webhook',
+      };
+      
+      return (data || []).map((item: any) => ({
+        name: sourceLabels[item.source_name] || item.source_name || 'Outros',
+        value: Number(item.lead_count) || 0,
+      })) as SourceDataPoint[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
