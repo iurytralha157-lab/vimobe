@@ -57,6 +57,7 @@ import PublicProperties from "./pages/public/PublicProperties";
 import PublicPropertyDetail from "./pages/public/PublicPropertyDetail";
 import PublicAbout from "./pages/public/PublicAbout";
 import PublicContact from "./pages/public/PublicContact";
+import PreviewSiteWrapper from "./pages/public/PreviewSiteWrapper";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -231,6 +232,9 @@ function AppRoutes() {
           
           {/* Automations */}
           <Route path="/automations" element={<ProtectedRoute><AdminRoute><Automations /></AdminRoute></ProtectedRoute>} />
+          
+          {/* Public Site Preview */}
+          <Route path="/preview-site/*" element={<PreviewSiteWrapper />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
