@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       .insert({
         organization_id: org.id,
         name: pipelineName,
-        is_default: true,
+        is_default: true, // IMPORTANT: Always set default pipeline
       })
       .select()
       .single();

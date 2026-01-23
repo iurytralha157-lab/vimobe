@@ -15,6 +15,7 @@ interface Broker {
 interface TopBrokersWidgetProps {
   brokers: Broker[];
   isLoading?: boolean;
+  isFallbackMode?: boolean; // When true, shows "leads" instead of "vendas"
 }
 
 const positionIcons = [
@@ -55,7 +56,8 @@ function BrokerSkeleton() {
   );
 }
 
-export function TopBrokersWidget({ brokers, isLoading }: TopBrokersWidgetProps) {
+export function TopBrokersWidget({ brokers, isLoading, isFallbackMode }: TopBrokersWidgetProps) {
+  const label = isFallbackMode ? 'leads' : (brokers[0]?.closedLeads === 1 ? 'venda' : 'vendas');
   if (isLoading) {
     return (
       <Card>
@@ -134,7 +136,7 @@ export function TopBrokersWidget({ brokers, isLoading }: TopBrokersWidgetProps) 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{broker.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {broker.closedLeads} {broker.closedLeads === 1 ? 'venda' : 'vendas'}
+                  {broker.closedLeads} {isFallbackMode ? 'leads' : (broker.closedLeads === 1 ? 'venda' : 'vendas')}
                 </p>
               </div>
 
