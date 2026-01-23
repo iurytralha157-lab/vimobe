@@ -47,7 +47,9 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
   const { data: funnelData = [], isLoading: funnelLoading } = useFunnelData();
   const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData();
-  const { data: topBrokers = [], isLoading: brokersLoading } = useTopBrokers(filters);
+  const { data: topBrokersData, isLoading: brokersLoading } = useTopBrokers(filters);
+  const topBrokers = topBrokersData?.brokers || [];
+  const isBrokersFallback = topBrokersData?.isFallbackMode || false;
   const { data: upcomingTasks = [], isLoading: tasksLoading } = useUpcomingTasks();
 
   // Complete task mutation
@@ -148,7 +150,7 @@ export default function Dashboard() {
 
         {/* Bottom Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} />
+          <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} isFallbackMode={isBrokersFallback} />
           <UpcomingTasksWidget 
             tasks={upcomingTasks} 
             isLoading={tasksLoading}

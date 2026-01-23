@@ -57,6 +57,11 @@ export interface TopBroker {
   salesValue: number;
 }
 
+export interface TopBrokersResult {
+  brokers: TopBroker[];
+  isFallbackMode: boolean; // true when showing leads instead of sales
+}
+
 export interface UpcomingTask {
   id: string;
   title: string;
@@ -444,7 +449,7 @@ export function useLeadSourcesData() {
 export function useTopBrokers(filters?: DashboardFilters) {
   return useQuery({
     queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.teamId],
-    queryFn: async (): Promise<TopBroker[]> => {
+    queryFn: async (): Promise<TopBrokersResult> => {
       // First try: Get leads with won status using deal_status
       let query = supabase
         .from('leads')
@@ -467,7 +472,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
 
       if (error) {
         console.error('Error fetching top brokers:', error);
-        return [];
+        return { brokers: [], isFallbackMode: false };
       }
 
       // If we have won leads, use them for ranking
@@ -492,9 +497,12 @@ export function useTopBrokers(filters?: DashboardFilters) {
           return acc;
         }, {});
 
-        return Object.values(brokerStats)
-          .sort((a, b) => b.closedLeads - a.closedLeads)
-          .slice(0, 5);
+        return {
+          brokers: Object.values(brokerStats)
+            .sort((a, b) => b.closedLeads - a.closedLeads)
+            .slice(0, 5),
+          isFallbackMode: false,
+        };
       }
 
       // Fallback: No won leads, show ranking by total leads assigned
@@ -516,7 +524,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
       const { data: allLeads, error: fallbackError } = await fallbackQuery;
 
       if (fallbackError || !allLeads || allLeads.length === 0) {
-        return [];
+        return { brokers: [], isFallbackMode: true };
       }
 
       // Aggregate all leads by user (closedLeads = total leads in fallback mode)
@@ -540,9 +548,12 @@ export function useTopBrokers(filters?: DashboardFilters) {
         return acc;
       }, {});
 
-      return Object.values(brokerStats)
-        .sort((a, b) => b.closedLeads - a.closedLeads)
-        .slice(0, 5);
+      return {
+        brokers: Object.values(brokerStats)
+          .sort((a, b) => b.closedLeads - a.closedLeads)
+          .slice(0, 5),
+        isFallbackMode: true,
+      };
     },
     staleTime: 1000 * 60 * 5,
   });
