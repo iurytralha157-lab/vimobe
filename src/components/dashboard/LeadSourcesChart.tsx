@@ -1,13 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Target } from 'lucide-react';
+import { PieChart as PieChartIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface SourceDataPoint {
   name: string;
@@ -19,8 +14,19 @@ interface LeadSourcesChartProps {
   isLoading?: boolean;
 }
 
-// Gradientes modernos para cada fonte
-const sourceGradients = [
+// Cores vibrantes para o gráfico de pizza (mesma paleta do funil)
+const COLORS = [
+  'hsl(var(--primary))',
+  'hsl(263, 70%, 50%)', // violet
+  'hsl(217, 91%, 60%)', // blue
+  'hsl(160, 84%, 39%)', // emerald
+  'hsl(38, 92%, 50%)',  // amber
+  'hsl(350, 89%, 60%)', // rose
+  'hsl(187, 92%, 42%)', // cyan
+];
+
+// Gradientes para a legenda
+const legendGradients = [
   'from-primary to-primary/80',
   'from-violet-500 to-violet-600',
   'from-blue-500 to-blue-600',
@@ -30,26 +36,42 @@ const sourceGradients = [
   'from-cyan-500 to-cyan-600',
 ];
 
-// Cores de borda/glow
-const sourceBorderColors = [
-  'border-primary/30 shadow-primary/20',
-  'border-violet-500/30 shadow-violet-500/20',
-  'border-blue-500/30 shadow-blue-500/20',
-  'border-emerald-500/30 shadow-emerald-500/20',
-  'border-amber-500/30 shadow-amber-500/20',
-  'border-rose-500/30 shadow-rose-500/20',
-  'border-cyan-500/30 shadow-cyan-500/20',
-];
-
 function ChartSkeleton() {
   return (
-    <div className="space-y-2 py-2">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <Skeleton className="h-8 flex-1 rounded" />
-          <Skeleton className="h-4 w-10" />
-        </div>
-      ))}
+    <div className="flex items-center justify-center py-8">
+      <div className="relative">
+        <Skeleton className="h-32 w-32 rounded-full" />
+        <Skeleton className="absolute inset-4 h-24 w-24 rounded-full bg-background" />
+      </div>
+    </div>
+  );
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    payload: SourceDataPoint & { percentage: number };
+  }>;
+}
+
+function CustomTooltip({ active, payload }: CustomTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  
+  const data = payload[0];
+  
+  return (
+    <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-lg shadow-lg px-3 py-2">
+      <div className="text-xs space-y-1">
+        <p className="font-semibold text-foreground">{data.name}</p>
+        <p className="text-muted-foreground">
+          <span className="text-foreground font-medium">{data.value}</span> leads
+        </p>
+        <p className="text-muted-foreground">
+          <span className="text-foreground font-medium">{data.payload.percentage}%</span> do total
+        </p>
+      </div>
     </div>
   );
 }
@@ -60,7 +82,7 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
       <Card className="overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Target className="h-4 w-4 text-violet-500" />
+            <PieChartIcon className="h-4 w-4 text-violet-500" />
             Origem dos Leads
           </CardTitle>
         </CardHeader>
@@ -76,7 +98,7 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
       <Card className="overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Target className="h-4 w-4 text-violet-500" />
+            <PieChartIcon className="h-4 w-4 text-violet-500" />
             Origem dos Leads
           </CardTitle>
         </CardHeader>
@@ -90,14 +112,19 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
   }
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
-  const maxValue = Math.max(...data.map(d => d.value));
+  
+  // Add percentage to data for tooltip
+  const chartData = data.map(item => ({
+    ...item,
+    percentage: total > 0 ? Math.round((item.value / total) * 100) : 0,
+  }));
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Target className="h-4 w-4 text-violet-500" />
+            <PieChartIcon className="h-4 w-4 text-violet-500" />
             Origem dos Leads
           </CardTitle>
           <span className="text-xs text-muted-foreground">
@@ -106,78 +133,65 @@ export function LeadSourcesChart({ data, isLoading }: LeadSourcesChartProps) {
         </div>
       </CardHeader>
       <CardContent className="pb-3">
-        <TooltipProvider delayDuration={100}>
-          <div className="space-y-1.5">
-            {data.map((item, index) => {
-              const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
-              const widthPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-              const adjustedWidth = Math.max(widthPercent, 20);
-              
-              return (
-                <Tooltip key={item.name}>
-                  <TooltipTrigger asChild>
-                    <div className="group cursor-default">
-                      <div className="flex items-center gap-3">
-                        {/* Barra com gradiente */}
-                        <div 
-                          className="relative flex-1 transition-all duration-200 group-hover:scale-[1.01]"
-                          style={{ width: `${adjustedWidth}%` }}
-                        >
-                          <div
-                            className={cn(
-                              "h-8 rounded flex items-center justify-between px-3",
-                              "bg-gradient-to-r text-white text-sm",
-                              "border shadow-sm transition-all duration-200",
-                              "group-hover:shadow-md",
-                              sourceGradients[index % sourceGradients.length],
-                              sourceBorderColors[index % sourceBorderColors.length]
-                            )}
-                          >
-                            <span className="text-xs font-medium truncate drop-shadow-sm">
-                              {item.name}
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-bold drop-shadow-sm">
-                                {item.value}
-                              </span>
-                              <span className="text-[9px] opacity-80 font-medium bg-white/20 px-1 py-0.5 rounded-full">
-                                {percentage}%
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="bg-popover/95 backdrop-blur-sm">
-                    <div className="text-xs space-y-1">
-                      <p className="font-semibold text-foreground">{item.name}</p>
-                      <p className="text-muted-foreground">
-                        <span className="text-foreground font-medium">{item.value}</span> leads
-                      </p>
-                      <p className="text-muted-foreground">
-                        <span className="text-foreground font-medium">{percentage}%</span> do total
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
+        <div className="flex flex-col lg:flex-row items-center gap-4">
+          {/* Gráfico de Pizza */}
+          <div className="w-full lg:w-1/2 h-[160px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={70}
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                  animationBegin={0}
+                  animationDuration={800}
+                >
+                  {chartData.map((_, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]}
+                      className="transition-all duration-200 hover:opacity-80"
+                      style={{
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                      }}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-        </TooltipProvider>
-        
-        {/* Legenda inferior compacta */}
-        <div className="mt-2 pt-2 border-t border-border/40">
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center">
-            {data.map((item, index) => (
-              <div key={item.name} className="flex items-center gap-1">
-                <div 
-                  className={cn(
-                    "w-2 h-2 rounded-full bg-gradient-to-r",
-                    sourceGradients[index % sourceGradients.length]
-                  )}
-                />
-                <span className="text-[9px] text-muted-foreground">{item.name}</span>
+
+          {/* Legenda lateral */}
+          <div className="w-full lg:w-1/2 space-y-1.5">
+            {chartData.map((item, index) => (
+              <div 
+                key={item.name} 
+                className="flex items-center justify-between group cursor-default hover:bg-muted/50 rounded px-2 py-1 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <div 
+                    className={cn(
+                      "w-3 h-3 rounded-full bg-gradient-to-r shrink-0",
+                      legendGradients[index % legendGradients.length]
+                    )}
+                  />
+                  <span className="text-xs font-medium text-foreground truncate max-w-[100px]">
+                    {item.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-foreground">
+                    {item.value}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                    {item.percentage}%
+                  </span>
+                </div>
               </div>
             ))}
           </div>

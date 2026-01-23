@@ -43,10 +43,10 @@ export default function Dashboard() {
     hasActiveFilters,
   } = useDashboardFilters();
 
-  // Data hooks
+  // Data hooks - todos usando filtros
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
-  const { data: funnelData = [], isLoading: funnelLoading } = useFunnelData();
-  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData();
+  const { data: funnelData = [], isLoading: funnelLoading } = useFunnelData(filters);
+  const { data: sourcesData = [], isLoading: sourcesLoading } = useLeadSourcesData(filters);
   const { data: topBrokersData, isLoading: brokersLoading } = useTopBrokers(filters);
   const topBrokers = topBrokersData?.brokers || [];
   const isBrokersFallback = topBrokersData?.isFallbackMode || false;

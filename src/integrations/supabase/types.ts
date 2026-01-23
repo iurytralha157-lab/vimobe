@@ -3758,19 +3758,32 @@ export type Database = {
           }
       get_dashboard_stats: { Args: never; Returns: Json }
       get_funnel_data: {
-        Args: never
+        Args: {
+          p_date_from?: string
+          p_date_to?: string
+          p_source?: string
+          p_team_id?: string
+          p_user_id?: string
+        }
         Returns: {
-          name: string
-          percentage: number
+          lead_count: number
+          stage_id: string
           stage_key: string
-          value: number
+          stage_name: string
+          stage_order: number
         }[]
       }
       get_lead_sources_data: {
-        Args: never
+        Args: {
+          p_date_from?: string
+          p_date_to?: string
+          p_source?: string
+          p_team_id?: string
+          p_user_id?: string
+        }
         Returns: {
-          name: string
-          value: number
+          lead_count: number
+          source_name: string
         }[]
       }
       get_session_owner: { Args: { session_id: string }; Returns: string }
