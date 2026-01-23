@@ -201,15 +201,19 @@ export default function ImportCristiano() {
           };
         });
         
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('telecom_customers')
-          .insert(records);
+          .upsert(records, { 
+            onConflict: 'organization_id,external_id',
+            ignoreDuplicates: false 
+          })
+          .select('id');
         
         if (error) {
           console.error(`Error batch ${i}-${i + BATCH_SIZE}:`, error);
           errors += batch.length;
         } else {
-          inserted += batch.length;
+          inserted += data?.length || 0;
         }
         
         const percent = Math.round(((i + batch.length) / customers.length) * 100);
