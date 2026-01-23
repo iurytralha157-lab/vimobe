@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SuperAdminRoute } from "@/components/guards/SuperAdminRoute";
 import { AdminRoute } from "@/components/guards/AdminRoute";
 import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
+import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -100,6 +101,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { user, loading, profile, isSuperAdmin, impersonating } = useAuth();
+  
+  // Listen for force refresh broadcasts from admin
+  useForceRefreshListener();
 
   // Determine default redirect for authenticated users
   const getDefaultRedirect = () => {

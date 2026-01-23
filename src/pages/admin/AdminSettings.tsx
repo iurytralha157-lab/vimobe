@@ -5,10 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Save, Upload, Loader2, Sun, Moon, Maximize2 } from 'lucide-react';
+import { Save, Upload, Loader2, Sun, Moon, Maximize2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
+import { useForceRefreshBroadcast } from '@/hooks/use-force-refresh';
 
 interface SystemSettingsValue {
   logo_url_light?: string | null;
@@ -41,6 +42,9 @@ export default function AdminSettings() {
   const [uploadingFaviconDark, setUploadingFaviconDark] = useState(false);
   const [logoWidth, setLogoWidth] = useState(140);
   const [logoHeight, setLogoHeight] = useState(40);
+  const [broadcastingRefresh, setBroadcastingRefresh] = useState(false);
+  
+  const { broadcastRefresh } = useForceRefreshBroadcast();
 
   useEffect(() => {
     fetchSettings();
@@ -517,6 +521,51 @@ export default function AdminSettings() {
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Save className="h-4 w-4 mr-2" />
               Salvar
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Force Refresh Card */}
+        <Card className="border-orange-200 dark:border-orange-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-orange-500" />
+              Forçar Atualização Global
+            </CardTitle>
+            <CardDescription>
+              Força todos os usuários conectados a recarregarem a página, 
+              garantindo que vejam as últimas atualizações do sistema.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+              <p className="text-sm text-orange-800 dark:text-orange-200">
+                ⚠️ <strong>Atenção:</strong> Isso vai desconectar e recarregar a página de todos os usuários 
+                que estão usando o sistema neste momento. Use apenas quando necessário.
+              </p>
+            </div>
+            <Button 
+              variant="outline"
+              className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+              onClick={async () => {
+                setBroadcastingRefresh(true);
+                try {
+                  await broadcastRefresh();
+                  toast.success('Sinal de atualização enviado para todos os usuários!');
+                } catch (error: any) {
+                  toast.error('Erro ao enviar sinal: ' + error.message);
+                } finally {
+                  setBroadcastingRefresh(false);
+                }
+              }}
+              disabled={broadcastingRefresh}
+            >
+              {broadcastingRefresh ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Forçar Atualização para Todos
             </Button>
           </CardContent>
         </Card>
