@@ -47,13 +47,13 @@ interface SalesFunnelProps {
 
 function FunnelSkeleton() {
   return (
-    <div className="flex flex-col items-center space-y-1.5 py-4">
+    <div className="flex flex-col items-center space-y-1 py-2">
       {Array.from({ length: 5 }).map((_, i) => {
         const width = 100 - i * 12;
         return (
           <Skeleton 
             key={i}
-            className="h-10 rounded-lg" 
+            className="h-7 rounded" 
             style={{ width: `${width}%` }}
           />
         );
@@ -89,7 +89,7 @@ export function SalesFunnel({ data, isLoading }: SalesFunnelProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+          <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
             Nenhum dado disponível
           </div>
         </CardContent>
@@ -113,17 +113,14 @@ export function SalesFunnel({ data, isLoading }: SalesFunnelProps) {
           </span>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <TooltipProvider>
-          <div className="flex flex-col items-center space-y-1">
+      <CardContent className="pt-0 pb-3">
+        <TooltipProvider delayDuration={100}>
+          <div className="flex flex-col items-center space-y-0.5">
             {data.map((item, index) => {
               // Calcula a largura baseada na posição (formato de funil)
-              const baseWidth = 100 - (index * (60 / maxStages));
-              const minWidth = 35;
+              const baseWidth = 100 - (index * (55 / maxStages));
+              const minWidth = 40;
               const width = Math.max(baseWidth, minWidth);
-              
-              // Altura dinâmica baseada no valor relativo
-              const heightClass = item.value > 0 ? 'min-h-[44px]' : 'min-h-[36px]';
               
               return (
                 <Tooltip key={item.stage_key || item.name}>
@@ -138,37 +135,36 @@ export function SalesFunnel({ data, isLoading }: SalesFunnelProps) {
                       {/* Barra principal com gradiente */}
                       <div
                         className={cn(
-                          "w-full rounded-lg flex items-center justify-between px-4 py-2.5",
-                          "bg-gradient-to-r text-white font-medium",
-                          "border shadow-lg transition-all duration-300",
-                          "group-hover:shadow-xl",
-                          heightClass,
+                          "w-full rounded flex items-center justify-between px-3 py-1.5",
+                          "bg-gradient-to-r text-white text-sm",
+                          "border shadow-sm transition-all duration-200",
+                          "group-hover:shadow-md",
                           funnelGradients[index % funnelGradients.length],
                           funnelBorderColors[index % funnelBorderColors.length]
                         )}
                       >
                         {/* Nome do estágio */}
-                        <span className="text-xs sm:text-sm font-medium truncate max-w-[45%] drop-shadow-sm">
+                        <span className="text-xs font-medium truncate max-w-[50%] drop-shadow-sm">
                           {item.name}
                         </span>
                         
                         {/* Valor e percentual */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg sm:text-xl font-bold drop-shadow-sm">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-bold drop-shadow-sm">
                             {item.value}
                           </span>
-                          <span className="text-[10px] sm:text-xs opacity-80 font-medium bg-white/20 px-1.5 py-0.5 rounded-full">
+                          <span className="text-[9px] opacity-80 font-medium bg-white/20 px-1 py-0.5 rounded-full">
                             {item.percentage}%
                           </span>
                         </div>
                       </div>
                       
-                      {/* Connector visual (triângulo para próximo estágio) */}
+                      {/* Connector visual (pequeno triângulo) */}
                       {index < data.length - 1 && (
-                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 
-                          border-l-[8px] border-l-transparent 
-                          border-r-[8px] border-r-transparent 
-                          border-t-[6px] border-t-white/30 
+                        <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-0 h-0 
+                          border-l-[5px] border-l-transparent 
+                          border-r-[5px] border-r-transparent 
+                          border-t-[4px] border-t-white/20 
                           z-10"
                         />
                       )}
@@ -191,24 +187,22 @@ export function SalesFunnel({ data, isLoading }: SalesFunnelProps) {
           </div>
         </TooltipProvider>
         
-        {/* Legenda inferior */}
-        <div className="mt-4 pt-3 border-t border-border/50">
-          <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center">
-            {data.slice(0, 4).map((item, index) => (
-              <div key={item.stage_key || item.name} className="flex items-center gap-1.5">
+        {/* Legenda inferior compacta */}
+        <div className="mt-2 pt-2 border-t border-border/40">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 justify-center">
+            {data.slice(0, 5).map((item, index) => (
+              <div key={item.stage_key || item.name} className="flex items-center gap-1">
                 <div 
                   className={cn(
-                    "w-2.5 h-2.5 rounded-full bg-gradient-to-r",
+                    "w-2 h-2 rounded-full bg-gradient-to-r",
                     funnelGradients[index % funnelGradients.length]
                   )}
                 />
-                <span className="text-[10px] text-muted-foreground">{item.name}</span>
+                <span className="text-[9px] text-muted-foreground">{item.name}</span>
               </div>
             ))}
-            {data.length > 4 && (
-              <span className="text-[10px] text-muted-foreground">
-                +{data.length - 4} mais
-              </span>
+            {data.length > 5 && (
+              <span className="text-[9px] text-muted-foreground">+{data.length - 5}</span>
             )}
           </div>
         </div>
