@@ -69,10 +69,10 @@ const allNavItems: NavItem[] = [
   { icon: MapPin, labelKey: 'coverage', path: '/coverage', module: 'coverage' },
   { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom' },
   // Admin modules
-  { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'crm', adminOnly: true },
+  { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'performance', adminOnly: true },
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
   { icon: Calendar, labelKey: 'schedule', path: '/agenda', module: 'agenda' },
-  { icon: Zap, labelKey: 'automations', path: '/automations', module: 'crm', adminOnly: true },
+  { icon: Zap, labelKey: 'automations', path: '/automations', module: 'automations', adminOnly: true },
 ];
 
 

@@ -6,15 +6,19 @@ export type ModuleName =
   | 'crm' 
   | 'financial' 
   | 'properties' 
-  | 'plans'      // Telecom: Planos de Serviço
-  | 'coverage'   // Telecom: Áreas de Cobertura
-  | 'telecom'    // Telecom: Clientes
+  | 'plans'        // Telecom: Planos de Serviço
+  | 'coverage'     // Telecom: Áreas de Cobertura
+  | 'telecom'      // Telecom: Clientes
   | 'whatsapp' 
   | 'agenda' 
   | 'cadences'
   | 'tags'
   | 'round_robin'
-  | 'reports';
+  | 'reports'
+  | 'automations'  // Automações
+  | 'performance'  // Performance de Corretores
+  | 'wordpress'    // Integração WordPress
+  | 'webhooks';    // Webhooks
 
 // Default modules that are enabled if no explicit record exists
 const DEFAULT_ENABLED_MODULES: ModuleName[] = [

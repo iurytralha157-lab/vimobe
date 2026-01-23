@@ -48,18 +48,26 @@ import {
 } from '@/components/ui/dialog';
 
 const ALL_MODULES = [
-  { name: 'crm', label: 'CRM (Pipelines, Contatos)' },
-  { name: 'financial', label: 'Financeiro (Dashboard, Contas, Contratos, Comissões)' },
-  { name: 'properties', label: 'Imóveis', segment: 'imobiliario' },
-  { name: 'plans', label: 'Planos de Serviços', segment: 'telecom' },
-  { name: 'coverage', label: 'Áreas de Cobertura', segment: 'telecom' },
-  { name: 'telecom', label: 'Clientes Telecom', segment: 'telecom' },
-  { name: 'whatsapp', label: 'WhatsApp' },
-  { name: 'agenda', label: 'Agenda' },
-  { name: 'cadences', label: 'Cadências', segment: 'imobiliario' },
-  { name: 'tags', label: 'Tags' },
-  { name: 'round_robin', label: 'Distribuição (Round Robin)' },
-  { name: 'reports', label: 'Relatórios' },
+  // Core
+  { name: 'crm', label: 'CRM (Pipelines, Contatos)', category: 'core' },
+  { name: 'financial', label: 'Financeiro (Dashboard, Contas, Contratos, Comissões)', category: 'core' },
+  { name: 'whatsapp', label: 'WhatsApp', category: 'core' },
+  { name: 'agenda', label: 'Agenda', category: 'core' },
+  { name: 'tags', label: 'Tags', category: 'core' },
+  { name: 'round_robin', label: 'Distribuição (Round Robin)', category: 'core' },
+  { name: 'reports', label: 'Relatórios', category: 'core' },
+  // Imobiliário
+  { name: 'properties', label: 'Imóveis', segment: 'imobiliario', category: 'segment' },
+  { name: 'cadences', label: 'Cadências', segment: 'imobiliario', category: 'segment' },
+  { name: 'performance', label: 'Performance de Corretores', segment: 'imobiliario', category: 'segment' },
+  // Telecom
+  { name: 'plans', label: 'Planos de Serviços', segment: 'telecom', category: 'segment' },
+  { name: 'coverage', label: 'Áreas de Cobertura', segment: 'telecom', category: 'segment' },
+  { name: 'telecom', label: 'Clientes Telecom', segment: 'telecom', category: 'segment' },
+  // Avançado
+  { name: 'automations', label: 'Automações', category: 'advanced' },
+  { name: 'wordpress', label: 'Integração WordPress', category: 'advanced' },
+  { name: 'webhooks', label: 'Webhooks', category: 'advanced' },
 ];
 
 export default function AdminOrganizationDetail() {
@@ -279,16 +287,98 @@ export default function AdminOrganizationDetail() {
 
           {/* Modules Tab */}
           <TabsContent value="modules" className="space-y-6">
+            {/* Core Modules */}
             <Card>
               <CardHeader>
-                <CardTitle>Controle de Módulos</CardTitle>
+                <CardTitle>Módulos Principais</CardTitle>
                 <CardDescription>
-                  Habilite ou desabilite módulos para esta organização
+                  Funcionalidades essenciais do sistema
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {ALL_MODULES.map((module) => (
+                  {ALL_MODULES.filter(m => m.category === 'core').map((module) => (
+                    <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                      <div>
+                        <p className="font-medium">{module.label}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isModuleEnabled(module.name) ? (
+                          <Badge className="bg-green-500">
+                            <Check className="h-3 w-3 mr-1" />
+                            Habilitado
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-500">
+                            <X className="h-3 w-3 mr-1" />
+                            Desabilitado
+                          </Badge>
+                        )}
+                        <Switch
+                          checked={isModuleEnabled(module.name)}
+                          onCheckedChange={(checked) => handleModuleToggle(module.name, checked)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Segment Modules */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Módulos por Segmento</CardTitle>
+                <CardDescription>
+                  Funcionalidades específicas para Imobiliário ou Telecom
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {ALL_MODULES.filter(m => m.category === 'segment').map((module) => (
+                    <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{module.label}</p>
+                        {'segment' in module && module.segment && (
+                          <Badge variant="outline" className="text-xs">
+                            {module.segment === 'imobiliario' ? 'Imobiliário' : 'Telecom'}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isModuleEnabled(module.name) ? (
+                          <Badge className="bg-green-500">
+                            <Check className="h-3 w-3 mr-1" />
+                            Habilitado
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-500">
+                            <X className="h-3 w-3 mr-1" />
+                            Desabilitado
+                          </Badge>
+                        )}
+                        <Switch
+                          checked={isModuleEnabled(module.name)}
+                          onCheckedChange={(checked) => handleModuleToggle(module.name, checked)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Advanced Modules */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Módulos Avançados</CardTitle>
+                <CardDescription>
+                  Automações e integrações externas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {ALL_MODULES.filter(m => m.category === 'advanced').map((module) => (
                     <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                       <div>
                         <p className="font-medium">{module.label}</p>
