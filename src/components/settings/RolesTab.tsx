@@ -1,0 +1,504 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Shield, 
+  Users, 
+  LayoutDashboard,
+  Settings,
+  Loader2,
+  Check
+} from 'lucide-react';
+import { 
+  useOrganizationRoles, 
+  useAvailablePermissions,
+  useRolePermissions,
+  useCreateRole,
+  useUpdateRole,
+  useDeleteRole,
+  useUpdateRolePermissions,
+  type OrganizationRole,
+  type AvailablePermission
+} from '@/hooks/use-organization-roles';
+
+const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; order: number }> = {
+  modules: { label: 'Módulos', icon: LayoutDashboard, order: 1 },
+  leads: { label: 'Leads', icon: Users, order: 2 },
+  data: { label: 'Dados', icon: Shield, order: 3 },
+  settings: { label: 'Configurações', icon: Settings, order: 4 },
+};
+
+const COLOR_OPTIONS = [
+  '#6B7280', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6'
+];
+
+export function RolesTab() {
+  const { data: roles = [], isLoading: rolesLoading } = useOrganizationRoles();
+  const { data: allPermissions = [] } = useAvailablePermissions();
+  
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<OrganizationRole | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<OrganizationRole | null>(null);
+  
+  // Form state
+  const [formName, setFormName] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formColor, setFormColor] = useState('#6B7280');
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+
+  const createRole = useCreateRole();
+  const updateRole = useUpdateRole();
+  const deleteRole = useDeleteRole();
+  const updatePermissions = useUpdateRolePermissions();
+
+  // Quando abrir para edição, carregar permissões da função
+  const { data: rolePermissions = [] } = useRolePermissions(editingRole?.id || null);
+
+  useEffect(() => {
+    if (editingRole && rolePermissions) {
+      setSelectedPermissions(rolePermissions.map(p => p.permission_key));
+    }
+  }, [editingRole, rolePermissions]);
+
+  const resetForm = () => {
+    setFormName('');
+    setFormDescription('');
+    setFormColor('#6B7280');
+    setSelectedPermissions([]);
+    setEditingRole(null);
+  };
+
+  const handleOpenCreate = () => {
+    resetForm();
+    setCreateDialogOpen(true);
+  };
+
+  const handleOpenEdit = (role: OrganizationRole) => {
+    setFormName(role.name);
+    setFormDescription(role.description || '');
+    setFormColor(role.color);
+    setEditingRole(role);
+    setCreateDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formName.trim()) return;
+
+    if (editingRole) {
+      // Atualizar função existente
+      await updateRole.mutateAsync({
+        id: editingRole.id,
+        name: formName.trim(),
+        description: formDescription.trim() || undefined,
+        color: formColor,
+      });
+      // Atualizar permissões
+      await updatePermissions.mutateAsync({
+        roleId: editingRole.id,
+        permissions: selectedPermissions,
+      });
+    } else {
+      // Criar nova função
+      await createRole.mutateAsync({
+        name: formName.trim(),
+        description: formDescription.trim() || undefined,
+        color: formColor,
+        permissions: selectedPermissions,
+      });
+    }
+
+    setCreateDialogOpen(false);
+    resetForm();
+  };
+
+  const handleDelete = async () => {
+    if (!roleToDelete) return;
+    await deleteRole.mutateAsync(roleToDelete.id);
+    setDeleteDialogOpen(false);
+    setRoleToDelete(null);
+  };
+
+  const togglePermission = (key: string) => {
+    setSelectedPermissions(prev => 
+      prev.includes(key) 
+        ? prev.filter(p => p !== key)
+        : [...prev, key]
+    );
+  };
+
+  const toggleCategoryPermissions = (category: string, enabled: boolean) => {
+    const categoryKeys = allPermissions
+      .filter(p => p.category === category)
+      .map(p => p.key);
+    
+    setSelectedPermissions(prev => {
+      if (enabled) {
+        return [...new Set([...prev, ...categoryKeys])];
+      } else {
+        return prev.filter(p => !categoryKeys.includes(p));
+      }
+    });
+  };
+
+  const isCategoryFullySelected = (category: string) => {
+    const categoryKeys = allPermissions
+      .filter(p => p.category === category)
+      .map(p => p.key);
+    return categoryKeys.every(k => selectedPermissions.includes(k));
+  };
+
+  const isCategoryPartiallySelected = (category: string) => {
+    const categoryKeys = allPermissions
+      .filter(p => p.category === category)
+      .map(p => p.key);
+    const selectedCount = categoryKeys.filter(k => selectedPermissions.includes(k)).length;
+    return selectedCount > 0 && selectedCount < categoryKeys.length;
+  };
+
+  // Agrupar permissões por categoria
+  const permissionsByCategory = allPermissions.reduce((acc, perm) => {
+    if (!acc[perm.category]) acc[perm.category] = [];
+    acc[perm.category].push(perm);
+    return acc;
+  }, {} as Record<string, AvailablePermission[]>);
+
+  const sortedCategories = Object.keys(permissionsByCategory).sort(
+    (a, b) => (CATEGORY_CONFIG[a]?.order || 99) - (CATEGORY_CONFIG[b]?.order || 99)
+  );
+
+  const isLoading = createRole.isPending || updateRole.isPending || updatePermissions.isPending;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Funções e Permissões
+          </CardTitle>
+          <CardDescription>
+            Crie funções personalizadas e defina o que cada cargo pode acessar
+          </CardDescription>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button onClick={handleOpenCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Função
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>
+                {editingRole ? 'Editar Função' : 'Nova Função'}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="flex-1 overflow-y-auto space-y-6 py-4">
+              {/* Informações básicas */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome da Função *</Label>
+                    <Input 
+                      placeholder="Ex: Gerente, Supervisor, Vendedor..."
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cor</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {COLOR_OPTIONS.map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            formColor === color 
+                              ? 'border-foreground scale-110' 
+                              : 'border-transparent hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => setFormColor(color)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Textarea 
+                    placeholder="Descreva as responsabilidades dessa função..."
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Permissões */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Permissões</Label>
+                  <span className="text-sm text-muted-foreground">
+                    {selectedPermissions.length} selecionadas
+                  </span>
+                </div>
+
+                <Accordion type="multiple" className="w-full" defaultValue={sortedCategories}>
+                  {sortedCategories.map(category => {
+                    const config = CATEGORY_CONFIG[category] || { label: category, icon: Shield, order: 99 };
+                    const Icon = config.icon;
+                    const isFullySelected = isCategoryFullySelected(category);
+                    const isPartiallySelected = isCategoryPartiallySelected(category);
+
+                    return (
+                      <AccordionItem key={category} value={category}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center gap-3 flex-1">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{config.label}</span>
+                            <div className="flex items-center gap-2 ml-auto mr-4">
+                              {isFullySelected && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Todas
+                                </Badge>
+                              )}
+                              {isPartiallySelected && (
+                                <Badge variant="outline" className="text-xs">
+                                  Parcial
+                                </Badge>
+                              )}
+                              <Switch
+                                checked={isFullySelected}
+                                onCheckedChange={(checked) => toggleCategoryPermissions(category, checked)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 pt-2">
+                            {permissionsByCategory[category].map(permission => (
+                              <div 
+                                key={permission.key}
+                                className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                                onClick={() => togglePermission(permission.key)}
+                              >
+                                <div className={`mt-0.5 h-5 w-5 rounded border flex items-center justify-center transition-colors ${
+                                  selectedPermissions.includes(permission.key)
+                                    ? 'bg-primary border-primary text-primary-foreground'
+                                    : 'border-input'
+                                }`}>
+                                  {selectedPermissions.includes(permission.key) && (
+                                    <Check className="h-3 w-3" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{permission.name}</p>
+                                  <p className="text-xs text-muted-foreground">{permission.description}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-4 border-t">
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isLoading}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={!formName.trim() || isLoading}>
+                {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {editingRole ? 'Salvar Alterações' : 'Criar Função'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+
+      <CardContent>
+        {rolesLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : roles.length === 0 ? (
+          <div className="text-center py-12">
+            <Shield className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="font-medium text-lg mb-2">Nenhuma função criada</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Crie funções personalizadas para controlar o acesso dos seus usuários
+            </p>
+            <Button onClick={handleOpenCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeira Função
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {roles.map(role => (
+              <Card key={role.id} className="relative overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 right-0 h-1"
+                  style={{ backgroundColor: role.color }}
+                />
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: role.color }}
+                      />
+                      <CardTitle className="text-lg">{role.name}</CardTitle>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => handleOpenEdit(role)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {!role.is_system && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setRoleToDelete(role);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {role.description && (
+                    <CardDescription className="text-xs line-clamp-2">
+                      {role.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <RolePermissionsSummary roleId={role.id} />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir função?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a função "{roleToDelete?.name}"? 
+              Usuários com esta função perderão suas permissões associadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteRole.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
+  );
+}
+
+// Componente auxiliar para mostrar resumo de permissões
+function RolePermissionsSummary({ roleId }: { roleId: string }) {
+  const { data: permissions = [], isLoading } = useRolePermissions(roleId);
+  const { data: allPermissions = [] } = useAvailablePermissions();
+
+  if (isLoading) {
+    return <div className="h-8 flex items-center">
+      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+    </div>;
+  }
+
+  if (permissions.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground italic">
+        Nenhuma permissão configurada
+      </p>
+    );
+  }
+
+  // Agrupar por categoria
+  const categoryCounts: Record<string, number> = {};
+  permissions.forEach(p => {
+    const perm = allPermissions.find(ap => ap.key === p.permission_key);
+    if (perm) {
+      categoryCounts[perm.category] = (categoryCounts[perm.category] || 0) + 1;
+    }
+  });
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {Object.entries(categoryCounts).map(([category, count]) => {
+        const config = CATEGORY_CONFIG[category];
+        return (
+          <Badge key={category} variant="secondary" className="text-xs">
+            {config?.label || category}: {count}
+          </Badge>
+        );
+      })}
+    </div>
+  );
+}
