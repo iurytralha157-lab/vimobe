@@ -104,8 +104,13 @@ export function useTelecomCustomers(filters?: {
   status?: string;
   search?: string;
   plan_id?: string;
+  page?: number;
+  limit?: number;
 }) {
   const { organization } = useAuth();
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 30;
+  const offset = (page - 1) * limit;
 
   return useQuery({
     queryKey: ['telecom-customers', organization?.id, filters],
@@ -120,7 +125,8 @@ export function useTelecomCustomers(filters?: {
           seller:users!telecom_customers_seller_id_fkey(id, name)
         `)
         .eq('organization_id', organization.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (filters?.status) {
         query = query.eq('status', filters.status);
@@ -143,18 +149,67 @@ export function useTelecomCustomers(filters?: {
   });
 }
 
+// Hook separado para contar estatísticas usando queries de contagem (sem limite de 1000)
 export function useTelecomCustomerStats() {
-  const { data: customers = [] } = useTelecomCustomers();
+  const { organization } = useAuth();
 
-  const stats = {
-    total: customers.length,
-    instalados: customers.filter(c => c.status === 'INSTALADOS').length,
-    cancelados: customers.filter(c => c.status === 'CANCELADO').length,
-    aguardando: customers.filter(c => c.status === 'AGUARDANDO').length,
-    inadimplentes: customers.filter(c => c.status === 'INADIMPLENTE').length,
-  };
+  return useQuery({
+    queryKey: ['telecom-customer-stats', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) {
+        return {
+          total: 0,
+          instalados: 0,
+          cancelados: 0,
+          aguardando: 0,
+          inadimplentes: 0,
+        };
+      }
 
-  return stats;
+      // Usar count para evitar limite de 1000 rows
+      const [
+        { count: total },
+        { count: instalados },
+        { count: cancelados },
+        { count: aguardando },
+        { count: inadimplentes },
+      ] = await Promise.all([
+        supabase
+          .from('telecom_customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organization.id),
+        supabase
+          .from('telecom_customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organization.id)
+          .eq('status', 'INSTALADOS'),
+        supabase
+          .from('telecom_customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organization.id)
+          .eq('status', 'CANCELADO'),
+        supabase
+          .from('telecom_customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organization.id)
+          .eq('status', 'AGUARDANDO'),
+        supabase
+          .from('telecom_customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organization.id)
+          .eq('status', 'INADIMPLENTE'),
+      ]);
+
+      return {
+        total: total || 0,
+        instalados: instalados || 0,
+        cancelados: cancelados || 0,
+        aguardando: aguardando || 0,
+        inadimplentes: inadimplentes || 0,
+      };
+    },
+    enabled: !!organization?.id,
+  });
 }
 
 export function useCreateTelecomCustomer() {

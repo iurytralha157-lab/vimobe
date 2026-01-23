@@ -78,8 +78,10 @@ export default function TelecomCustomers() {
     search,
     status: statusFilter || undefined,
     plan_id: planFilter || undefined,
+    page,
+    limit: pageSize,
   });
-  const stats = useTelecomCustomerStats();
+  const { data: stats = { total: 0, instalados: 0, cancelados: 0, aguardando: 0, inadimplentes: 0 } } = useTelecomCustomerStats();
   const { data: plans = [] } = useServicePlans();
   
   const createCustomer = useCreateTelecomCustomer();
