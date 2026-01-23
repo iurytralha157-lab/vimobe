@@ -21,6 +21,7 @@ export type ModuleName =
   | 'webhooks';    // Webhooks
 
 // Default modules that are enabled if no explicit record exists
+// Note: 'automations' is disabled by default and must be explicitly enabled by super admin
 const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'crm',
   'financial',
