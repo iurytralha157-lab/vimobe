@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format, addMinutes } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { format, addMinutes, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Phone, 
@@ -59,18 +59,47 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
   const createEvent = useCreateScheduleEvent();
   const updateEvent = useUpdateScheduleEvent();
 
-  const [selectedType, setSelectedType] = useState<EventType>((event?.event_type as EventType) || 'call');
-  const [title, setTitle] = useState(event?.title || '');
-  const [description, setDescription] = useState(event?.description || '');
-  const [selectedUserId, setSelectedUserId] = useState(event?.user_id || defaultUserId || '');
-  const [date, setDate] = useState<Date | undefined>(
-    event?.start_time ? new Date(event.start_time) : defaultDate || getBrasiliaTime()
-  );
-  const [time, setTime] = useState(
-    event?.start_time ? format(new Date(event.start_time), 'HH:mm') : getCurrentTimeForInput()
-  );
+  const [selectedType, setSelectedType] = useState<EventType>('call');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [time, setTime] = useState('');
   const [duration, setDuration] = useState(30);
-  const [isCompleted, setIsCompleted] = useState(event?.status === 'completed');
+  const [isCompleted, setIsCompleted] = useState(false);
+
+  // Reset form when event changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      if (event) {
+        // Editing existing event
+        setSelectedType((event.event_type as EventType) || 'call');
+        setTitle(event.title || '');
+        setDescription(event.description || '');
+        setSelectedUserId(event.user_id || defaultUserId || '');
+        setDate(event.start_time ? new Date(event.start_time) : getBrasiliaTime());
+        setTime(event.start_time ? format(new Date(event.start_time), 'HH:mm') : getCurrentTimeForInput());
+        // Calculate duration from start and end time
+        if (event.start_time && event.end_time) {
+          const calculatedDuration = differenceInMinutes(new Date(event.end_time), new Date(event.start_time));
+          setDuration(calculatedDuration > 0 ? calculatedDuration : 30);
+        } else {
+          setDuration(30);
+        }
+        setIsCompleted(event.status === 'completed');
+      } else {
+        // Creating new event
+        setSelectedType('call');
+        setTitle('');
+        setDescription('');
+        setSelectedUserId(defaultUserId || '');
+        setDate(defaultDate || getBrasiliaTime());
+        setTime(getCurrentTimeForInput());
+        setDuration(30);
+        setIsCompleted(false);
+      }
+    }
+  }, [open, event, defaultUserId, defaultDate]);
 
   const maxDescriptionLength = 280;
   const remainingChars = maxDescriptionLength - description.length;
