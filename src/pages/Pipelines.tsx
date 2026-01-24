@@ -387,12 +387,13 @@ export default function Pipelines() {
     <AppLayout title="Pipeline">
       <div className="flex flex-col h-[calc(100vh-7rem)] overflow-hidden">
         {/* Pipeline Selector + Toolbar */}
-        <div className="flex items-center justify-between mb-4 gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+          {/* Top Row: Pipeline Selector + New Button (mobile) */}
+          <div className="flex items-center justify-between sm:justify-start gap-2">
             {/* Pipeline Selector */}
-            <div className="flex items-center gap-2 border border-primary/30 rounded-lg px-3 py-1.5 bg-primary/5">
-              <Settings className="h-4 w-4 text-primary" />
-              <span className="text-xs text-muted-foreground font-medium">Pipeline</span>
+            <div className="flex items-center gap-1 sm:gap-2 border border-primary/30 rounded-lg px-2 sm:px-3 py-1.5 bg-primary/5">
+              <Settings className="h-4 w-4 text-primary hidden sm:block" />
+              <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Pipeline</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-semibold text-foreground">
@@ -484,113 +485,121 @@ export default function Pipelines() {
               )}
             </div>
             
-            {/* Compact Filters - Dashboard Style */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar lead..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 w-40 pl-8 text-xs"
-                />
-              </div>
-
-              {/* Date Filter */}
-              <DateFilterPopover
-                datePreset={datePreset}
-                onDatePresetChange={setDatePreset}
-                customDateRange={customDateRange}
-                onCustomDateRangeChange={setCustomDateRange}
-                triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start"
+            {/* New Lead Button - Always visible */}
+            <Button size="sm" onClick={() => openNewLeadDialog()} className="sm:hidden">
+              <Plus className="h-4 w-4 mr-1" />
+              <span className="text-xs">{isTelecom ? 'Novo' : 'Lead'}</span>
+            </Button>
+          </div>
+          
+          {/* Filters Row */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            {/* Search */}
+            <div className="relative flex-shrink-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-28 sm:w-40 pl-8 text-xs"
               />
+            </div>
 
-              {/* Responsible Filter */}
-              {isAdmin ? (
-                <Select value={filterUser} onValueChange={setFilterUser}>
-                  <SelectTrigger className={cn(
-                    "h-8 w-auto min-w-[110px] text-xs",
-                    filterUser && filterUser !== 'all' && "border-primary text-primary"
-                  )}>
-                    <Filter className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                    <SelectValue placeholder="Responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {users.map(user => (
-                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8">
-                  <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs">{profile?.name}</span>
-                </div>
-              )}
+            {/* Date Filter */}
+            <DateFilterPopover
+              datePreset={datePreset}
+              onDatePresetChange={setDatePreset}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+              triggerClassName="h-8 w-auto min-w-[100px] sm:min-w-[130px] text-xs justify-start flex-shrink-0"
+            />
 
-              {/* Tag Filter */}
-              <Select value={filterTag} onValueChange={setFilterTag}>
+            {/* Responsible Filter */}
+            {isAdmin ? (
+              <Select value={filterUser} onValueChange={setFilterUser}>
                 <SelectTrigger className={cn(
-                  "h-8 w-auto min-w-[100px] text-xs",
-                  filterTag && filterTag !== 'all' && "border-primary text-primary"
+                  "h-8 w-auto min-w-[90px] sm:min-w-[110px] text-xs flex-shrink-0",
+                  filterUser && filterUser !== 'all' && "border-primary text-primary"
                 )}>
-                  <Tags className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                  <SelectValue placeholder="Tags" />
+                  <Filter className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                  <SelectValue placeholder="Resp." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas tags</SelectItem>
-                  {allTags.map(tag => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2.5 h-2.5 rounded-full" 
-                          style={{ backgroundColor: tag.color }} 
-                        />
-                        {tag.name}
-                      </div>
-                    </SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            ) : (
+              <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8 flex-shrink-0">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs truncate max-w-[60px]">{profile?.name}</span>
+              </div>
+            )}
 
-              {/* Deal Status Filter */}
-              <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-                <SelectTrigger className={cn(
-                  "h-8 w-auto min-w-[100px] text-xs",
-                  filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
-                )}>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos status</SelectItem>
-                  <SelectItem value="open">
-                    <span className="flex items-center gap-2">
-                      <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
-                      Aberto
-                    </span>
+            {/* Tag Filter */}
+            <Select value={filterTag} onValueChange={setFilterTag}>
+              <SelectTrigger className={cn(
+                "h-8 w-auto min-w-[80px] sm:min-w-[100px] text-xs flex-shrink-0",
+                filterTag && filterTag !== 'all' && "border-primary text-primary"
+              )}>
+                <Tags className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                <SelectValue placeholder="Tags" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {allTags.map(tag => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full" 
+                        style={{ backgroundColor: tag.color }} 
+                      />
+                      {tag.name}
+                    </div>
                   </SelectItem>
-                  <SelectItem value="won">
-                    <span className="flex items-center gap-2">
-                      <Trophy className="h-3.5 w-3.5 text-emerald-600" />
-                      Ganho
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="lost">
-                    <span className="flex items-center gap-2">
-                      <XCircle className="h-3.5 w-3.5 text-red-600" />
-                      Perdido
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Deal Status Filter - Hidden on small mobile */}
+            <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+              <SelectTrigger className={cn(
+                "h-8 w-auto min-w-[80px] sm:min-w-[100px] text-xs flex-shrink-0 hidden xs:flex",
+                filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
+              )}>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="open">
+                  <span className="flex items-center gap-2">
+                    <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
+                    Aberto
+                  </span>
+                </SelectItem>
+                <SelectItem value="won">
+                  <span className="flex items-center gap-2">
+                    <Trophy className="h-3.5 w-3.5 text-emerald-600" />
+                    Ganho
+                  </span>
+                </SelectItem>
+                <SelectItem value="lost">
+                  <span className="flex items-center gap-2">
+                    <XCircle className="h-3.5 w-3.5 text-red-600" />
+                    Perdido
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Desktop New Button */}
+            <Button size="sm" onClick={() => openNewLeadDialog()} className="hidden sm:flex flex-shrink-0">
+              <Plus className="h-4 w-4 mr-2" />
+              {newButtonLabel}
+            </Button>
           </div>
-          <Button size="sm" onClick={() => openNewLeadDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {newButtonLabel}
-          </Button>
         </div>
 
         {/* Empty State */}
