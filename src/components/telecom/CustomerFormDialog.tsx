@@ -216,7 +216,7 @@ export function CustomerFormDialog({
                       <SelectValue placeholder="UF" />
                     </SelectTrigger>
                     <SelectContent>
-                      {coverageUFs.map(uf => (
+                      {coverageUFs.filter(uf => uf && uf.trim() !== '').map(uf => (
                         <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                       ))}
                     </SelectContent>
@@ -237,7 +237,7 @@ export function CustomerFormDialog({
                       <SelectValue placeholder="Cidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {coverageCities.map(city => (
+                      {coverageCities.filter(city => city && city.trim() !== '').map(city => (
                         <SelectItem key={city} value={city}>{city}</SelectItem>
                       ))}
                     </SelectContent>
@@ -265,7 +265,7 @@ export function CustomerFormDialog({
                     <SelectValue placeholder="Selecione o bairro" />
                   </SelectTrigger>
                   <SelectContent>
-                    {coverageNeighborhoods.map(n => (
+                    {coverageNeighborhoods.filter(n => n && n.trim() !== '').map(n => (
                       <SelectItem key={n} value={n}>{n}</SelectItem>
                     ))}
                   </SelectContent>
