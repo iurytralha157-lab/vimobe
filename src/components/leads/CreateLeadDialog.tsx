@@ -210,16 +210,16 @@ export function CreateLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-2">
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isTelecom && <UserCheck className="h-5 w-5 text-primary" />}
             {dialogTitle}
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <ScrollArea className="max-h-[calc(90vh-140px)]">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="px-6 pb-4">
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -775,7 +775,7 @@ export function CreateLeadDialog({
             </div>
           </ScrollArea>
 
-          <div className="flex justify-end gap-2 px-6 py-4 border-t bg-muted/30">
+          <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background flex-shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
