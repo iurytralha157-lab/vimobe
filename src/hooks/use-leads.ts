@@ -298,6 +298,8 @@ export function useCreateLead() {
       queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['telecom-customers'] });
+      queryClient.invalidateQueries({ queryKey: ['telecom-customer-stats'] });
       toast.success('Lead criado com sucesso!');
     },
     onError: (error) => {

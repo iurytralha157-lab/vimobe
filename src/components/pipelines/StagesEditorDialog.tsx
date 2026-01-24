@@ -1,0 +1,322 @@
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { GripVertical, Trash2, Loader2, Pencil, Check, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+interface Stage {
+  id: string;
+  name: string;
+  color: string;
+  position: number;
+  lead_count?: number;
+}
+
+interface StagesEditorDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  pipelineId: string;
+  pipelineName: string;
+  stages: Stage[];
+  onStagesUpdated: () => void;
+}
+
+export function StagesEditorDialog({
+  open,
+  onOpenChange,
+  pipelineId,
+  pipelineName,
+  stages: initialStages,
+  onStagesUpdated,
+}: StagesEditorDialogProps) {
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingColor, setEditingColor] = useState('');
+  const [deleteStage, setDeleteStage] = useState<Stage | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Initialize stages from props
+  useEffect(() => {
+    if (open && initialStages.length > 0) {
+      setStages([...initialStages].sort((a, b) => a.position - b.position));
+      setHasChanges(false);
+    }
+  }, [open, initialStages]);
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const fromIndex = result.source.index;
+    const toIndex = result.destination.index;
+
+    if (fromIndex === toIndex) return;
+
+    const newStages = [...stages];
+    const [movedStage] = newStages.splice(fromIndex, 1);
+    newStages.splice(toIndex, 0, movedStage);
+
+    // Update positions
+    const updatedStages = newStages.map((stage, index) => ({
+      ...stage,
+      position: index,
+    }));
+
+    setStages(updatedStages);
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    if (!hasChanges) {
+      onOpenChange(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Update all stages positions in batch
+      const updates = stages.map((stage, index) =>
+        supabase
+          .from('stages')
+          .update({ position: index, name: stage.name, color: stage.color })
+          .eq('id', stage.id)
+      );
+
+      await Promise.all(updates);
+
+      toast.success('Colunas atualizadas com sucesso!');
+      onStagesUpdated();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error('Erro ao salvar: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStartEdit = (stage: Stage) => {
+    setEditingId(stage.id);
+    setEditingName(stage.name);
+    setEditingColor(stage.color);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId || !editingName.trim()) return;
+
+    setStages(stages.map(s => 
+      s.id === editingId 
+        ? { ...s, name: editingName.trim(), color: editingColor }
+        : s
+    ));
+    setEditingId(null);
+    setHasChanges(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName('');
+    setEditingColor('');
+  };
+
+  const handleDeleteStage = async () => {
+    if (!deleteStage) return;
+
+    try {
+      // Check if stage has leads
+      const { count } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('stage_id', deleteStage.id);
+
+      if (count && count > 0) {
+        toast.error(`Esta coluna possui ${count} leads. Mova-os antes de excluir.`);
+        setDeleteStage(null);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('stages')
+        .delete()
+        .eq('id', deleteStage.id);
+
+      if (error) throw error;
+
+      setStages(stages.filter(s => s.id !== deleteStage.id));
+      toast.success('Coluna excluída!');
+      onStagesUpdated();
+    } catch (error: any) {
+      toast.error('Erro ao excluir: ' + error.message);
+    } finally {
+      setDeleteStage(null);
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Colunas</DialogTitle>
+            <DialogDescription>
+              Arraste para reordenar as colunas da pipeline "{pipelineName}"
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[400px] pr-4">
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="stages-list">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="space-y-2"
+                  >
+                    {stages.map((stage, index) => (
+                      <Draggable key={stage.id} draggableId={stage.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={cn(
+                              "flex items-center gap-2 p-3 bg-card border rounded-lg transition-shadow",
+                              snapshot.isDragging && "shadow-lg ring-2 ring-primary"
+                            )}
+                          >
+                            <div
+                              {...provided.dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+                            >
+                              <GripVertical className="h-5 w-5" />
+                            </div>
+
+                            {editingId === stage.id ? (
+                              // Edit mode
+                              <div className="flex-1 flex items-center gap-2">
+                                <input
+                                  type="color"
+                                  value={editingColor}
+                                  onChange={(e) => setEditingColor(e.target.value)}
+                                  className="w-8 h-8 rounded cursor-pointer border-0"
+                                />
+                                <Input
+                                  value={editingName}
+                                  onChange={(e) => setEditingName(e.target.value)}
+                                  className="h-8 flex-1"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveEdit();
+                                    if (e.key === 'Escape') handleCancelEdit();
+                                  }}
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={handleSaveEdit}
+                                >
+                                  <Check className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={handleCancelEdit}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              // View mode
+                              <>
+                                <div
+                                  className="h-4 w-4 rounded-full shrink-0"
+                                  style={{ backgroundColor: stage.color }}
+                                />
+                                <span className="flex-1 font-medium truncate">
+                                  {stage.name}
+                                </span>
+                                {stage.lead_count !== undefined && stage.lead_count > 0 && (
+                                  <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
+                                    {stage.lead_count}
+                                  </span>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleStartEdit(stage)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => setDeleteStage(stage)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          </ScrollArea>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {hasChanges ? 'Salvar Alterações' : 'Fechar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteStage} onOpenChange={(open) => !open && setDeleteStage(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir coluna "{deleteStage?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Certifique-se de que não há leads nesta coluna.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteStage}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
