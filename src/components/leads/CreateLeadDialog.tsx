@@ -9,13 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TagSelector } from '@/components/ui/tag-selector';
-import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck, CreditCard, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useProperties } from '@/hooks/use-properties';
 import { useCreateLead } from '@/hooks/use-leads';
 import { useUpsertTelecomCustomerFromLead } from '@/hooks/use-telecom-customer-by-lead';
+import { useServicePlans } from '@/hooks/use-service-plans';
+import { PAYMENT_METHODS, DUE_DAY_OPTIONS } from '@/hooks/use-telecom-customers';
 
 interface CreateLeadDialogProps {
   open: boolean;
@@ -48,6 +51,7 @@ export function CreateLeadDialog({
   const { data: users = [] } = useOrganizationUsers();
   const { data: pipelines = [] } = usePipelines();
   const { data: properties = [] } = useProperties();
+  const { data: servicePlans = [] } = useServicePlans();
   const createLead = useCreateLead();
   const upsertTelecomCustomer = useUpsertTelecomCustomerFromLead();
 
@@ -62,15 +66,27 @@ export function CreateLeadDialog({
     phone: '',
     email: '',
     message: '',
-    // Professional
+    // Telecom specific - Personal
+    cpf: '',
+    rg: '',
+    birth_date: '',
+    phone2: '',
+    mother_name: '',
+    // Telecom specific - Address
+    endereco: '',
+    cep: '',
+    // Telecom specific - Plan/Contract
+    plan_id: '',
+    due_day: '',
+    payment_method: '',
+    // Professional (Real Estate)
     cargo: '',
     empresa: '',
     profissao: '',
-    // Address
-    endereco: '',
+    // Address (Real Estate)
     cidade: '',
     uf: '',
-    // Financial
+    // Financial (Real Estate)
     renda_familiar: '',
     faixa_valor_imovel: '',
     valor_interesse: '',
@@ -96,10 +112,19 @@ export function CreateLeadDialog({
         phone: '',
         email: '',
         message: '',
+        cpf: '',
+        rg: '',
+        birth_date: '',
+        phone2: '',
+        mother_name: '',
+        endereco: '',
+        cep: '',
+        plan_id: '',
+        due_day: '',
+        payment_method: '',
         cargo: '',
         empresa: '',
         profissao: '',
-        endereco: '',
         cidade: '',
         uf: '',
         renda_familiar: '',
@@ -138,30 +163,26 @@ export function CreateLeadDialog({
         source: 'manual',
       });
       
-      // For Telecom: also create the telecom_customers record
+      // For Telecom: also create the telecom_customers record with all fields
       if (isTelecom && newLead?.id) {
         await upsertTelecomCustomer.mutateAsync({
           leadId: newLead.id,
           name: formData.name,
           phone: formData.phone || null,
+          phone2: formData.phone2 || null,
           email: formData.email || null,
+          cpf_cnpj: formData.cpf || null,
+          rg: formData.rg || null,
+          birth_date: formData.birth_date || null,
+          mother_name: formData.mother_name || null,
+          address: formData.endereco || null,
+          cep: formData.cep || null,
+          plan_id: formData.plan_id || null,
+          due_day: formData.due_day ? parseInt(formData.due_day) : null,
+          payment_method: formData.payment_method || null,
           status: 'NOVO',
         });
       }
-      
-      // If we have additional fields, update the lead separately
-      const additionalFields: Record<string, any> = {};
-      if (formData.cargo) additionalFields.cargo = formData.cargo;
-      if (formData.empresa) additionalFields.empresa = formData.empresa;
-      if (formData.profissao) additionalFields.profissao = formData.profissao;
-      if (formData.endereco) additionalFields.endereco = formData.endereco;
-      if (formData.cidade) additionalFields.cidade = formData.cidade;
-      if (formData.uf) additionalFields.uf = formData.uf;
-      if (formData.renda_familiar) additionalFields.renda_familiar = formData.renda_familiar;
-      if (formData.faixa_valor_imovel) additionalFields.faixa_valor_imovel = formData.faixa_valor_imovel;
-      if (formData.valor_interesse) additionalFields.valor_interesse = parseFloat(formData.valor_interesse) || null;
-      if (formData.property_id) additionalFields.property_id = formData.property_id;
-      if (formData.deal_status !== 'open') additionalFields.deal_status = formData.deal_status;
       
       onOpenChange(false);
     } catch (error) {
@@ -189,90 +210,272 @@ export function CreateLeadDialog({
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-4">
                   <TabsTrigger value="basic" className="text-xs">Básico</TabsTrigger>
-                  <TabsTrigger value="profile" className="text-xs">Perfil</TabsTrigger>
+                  <TabsTrigger value="profile" className="text-xs">
+                    {isTelecom ? 'Contrato' : 'Perfil'}
+                  </TabsTrigger>
                   <TabsTrigger value="management" className="text-xs">Gestão</TabsTrigger>
                 </TabsList>
 
                 {/* Basic Info Tab */}
                 <TabsContent value="basic" className="space-y-4 mt-0">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Nome *</Label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => updateField('name', e.target.value)}
-                        placeholder="Nome do lead"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Telefone</Label>
-                      <PhoneInput
-                        value={formData.phone}
-                        onChange={(value) => updateField('phone', value)}
-                      />
-                    </div>
-                  </div>
+                  {isTelecom ? (
+                    <>
+                      {/* Telecom: Dados do Cliente */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Nome *</Label>
+                          <Input
+                            value={formData.name}
+                            onChange={(e) => updateField('name', e.target.value)}
+                            placeholder="Nome do cliente"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>CPF</Label>
+                          <Input
+                            value={formData.cpf}
+                            onChange={(e) => updateField('cpf', e.target.value)}
+                            placeholder="000.000.000-00"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      placeholder="email@exemplo.com"
-                    />
-                  </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>RG</Label>
+                          <Input
+                            value={formData.rg}
+                            onChange={(e) => updateField('rg', e.target.value)}
+                            placeholder="RG do cliente"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Data de Nascimento
+                          </Label>
+                          <Input
+                            type="date"
+                            value={formData.birth_date}
+                            onChange={(e) => updateField('birth_date', e.target.value)}
+                          />
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>Mensagem / Observações</Label>
-                    <Textarea
-                      value={formData.message}
-                      onChange={(e) => updateField('message', e.target.value)}
-                      placeholder="Interesse, observações iniciais..."
-                      rows={3}
-                    />
-                  </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>WhatsApp</Label>
+                          <PhoneInput
+                            value={formData.phone}
+                            onChange={(value) => updateField('phone', value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Telefone 2</Label>
+                          <PhoneInput
+                            value={formData.phone2}
+                            onChange={(value) => updateField('phone2', value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => updateField('email', e.target.value)}
+                          placeholder="email@exemplo.com"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Nome da Mãe</Label>
+                        <Input
+                          value={formData.mother_name}
+                          onChange={(e) => updateField('mother_name', e.target.value)}
+                          placeholder="Nome completo da mãe"
+                        />
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="sm:col-span-2 space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5" />
+                            Endereço
+                          </Label>
+                          <Input
+                            value={formData.endereco}
+                            onChange={(e) => updateField('endereco', e.target.value)}
+                            placeholder="Rua, número, bairro..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>CEP</Label>
+                          <Input
+                            value={formData.cep}
+                            onChange={(e) => updateField('cep', e.target.value)}
+                            placeholder="00000-000"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Real Estate: Basic Info */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Nome *</Label>
+                          <Input
+                            value={formData.name}
+                            onChange={(e) => updateField('name', e.target.value)}
+                            placeholder="Nome do lead"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Telefone</Label>
+                          <PhoneInput
+                            value={formData.phone}
+                            onChange={(value) => updateField('phone', value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => updateField('email', e.target.value)}
+                          placeholder="email@exemplo.com"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Mensagem / Observações</Label>
+                        <Textarea
+                          value={formData.message}
+                          onChange={(e) => updateField('message', e.target.value)}
+                          placeholder="Interesse, observações iniciais..."
+                          rows={3}
+                        />
+                      </div>
+                    </>
+                  )}
                 </TabsContent>
 
-                {/* Profile Tab */}
+                {/* Profile/Contract Tab */}
                 <TabsContent value="profile" className="space-y-4 mt-0">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Briefcase className="h-3.5 w-3.5" />
-                        Cargo
-                      </Label>
-                      <Input
-                        value={formData.cargo}
-                        onChange={(e) => updateField('cargo', e.target.value)}
-                        placeholder="Ex: Gerente, Diretor..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Building2 className="h-3.5 w-3.5" />
-                        Empresa
-                      </Label>
-                      <Input
-                        value={formData.empresa}
-                        onChange={(e) => updateField('empresa', e.target.value)}
-                        placeholder="Nome da empresa"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Profissão</Label>
-                    <Input
-                      value={formData.profissao}
-                      onChange={(e) => updateField('profissao', e.target.value)}
-                      placeholder="Área de atuação"
-                    />
-                  </div>
-
-                  {!isTelecom && (
+                  {isTelecom ? (
                     <>
+                      {/* Telecom: Contract Info */}
+                      <div className="space-y-2">
+                        <Label>Plano</Label>
+                        <Select 
+                          value={formData.plan_id} 
+                          onValueChange={(v) => updateField('plan_id', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o plano" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {servicePlans.filter(p => p.is_active).map(plan => (
+                              <SelectItem key={plan.id} value={plan.id}>
+                                {plan.name} {plan.price ? `- R$ ${plan.price.toFixed(2)}` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label>Vencimento</Label>
+                        <RadioGroup
+                          value={formData.due_day}
+                          onValueChange={(v) => updateField('due_day', v)}
+                          className="flex flex-wrap gap-4"
+                        >
+                          {DUE_DAY_OPTIONS.map(day => (
+                            <div key={day} className="flex items-center space-x-2">
+                              <RadioGroupItem value={day.toString()} id={`due-${day}`} />
+                              <Label htmlFor={`due-${day}`} className="font-normal cursor-pointer">
+                                {day}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="flex items-center gap-2">
+                          <CreditCard className="h-3.5 w-3.5" />
+                          Forma de Pagamento
+                        </Label>
+                        <RadioGroup
+                          value={formData.payment_method}
+                          onValueChange={(v) => updateField('payment_method', v)}
+                          className="grid grid-cols-2 gap-3"
+                        >
+                          {PAYMENT_METHODS.map(method => (
+                            <div key={method.value} className="flex items-center space-x-2">
+                              <RadioGroupItem value={method.value} id={`payment-${method.value}`} />
+                              <Label htmlFor={`payment-${method.value}`} className="font-normal cursor-pointer">
+                                {method.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Observações</Label>
+                        <Textarea
+                          value={formData.message}
+                          onChange={(e) => updateField('message', e.target.value)}
+                          placeholder="Observações sobre o cliente..."
+                          rows={3}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Real Estate: Profile */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Briefcase className="h-3.5 w-3.5" />
+                            Cargo
+                          </Label>
+                          <Input
+                            value={formData.cargo}
+                            onChange={(e) => updateField('cargo', e.target.value)}
+                            placeholder="Ex: Gerente, Diretor..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Building2 className="h-3.5 w-3.5" />
+                            Empresa
+                          </Label>
+                          <Input
+                            value={formData.empresa}
+                            onChange={(e) => updateField('empresa', e.target.value)}
+                            placeholder="Nome da empresa"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Profissão</Label>
+                        <Input
+                          value={formData.profissao}
+                          onChange={(e) => updateField('profissao', e.target.value)}
+                          placeholder="Área de atuação"
+                        />
+                      </div>
+
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                           <Label className="flex items-center gap-2">
@@ -314,31 +517,31 @@ export function CreateLeadDialog({
                           placeholder="Ex: 500000"
                         />
                       </div>
+
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="sm:col-span-2 space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5" />
+                            Cidade
+                          </Label>
+                          <Input
+                            value={formData.cidade}
+                            onChange={(e) => updateField('cidade', e.target.value)}
+                            placeholder="Cidade"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>UF</Label>
+                          <Input
+                            value={formData.uf}
+                            onChange={(e) => updateField('uf', e.target.value)}
+                            placeholder="SP"
+                            maxLength={2}
+                          />
+                        </div>
+                      </div>
                     </>
                   )}
-
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="sm:col-span-2 space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5" />
-                        Cidade
-                      </Label>
-                      <Input
-                        value={formData.cidade}
-                        onChange={(e) => updateField('cidade', e.target.value)}
-                        placeholder="Cidade"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>UF</Label>
-                      <Input
-                        value={formData.uf}
-                        onChange={(e) => updateField('uf', e.target.value)}
-                        placeholder="SP"
-                        maxLength={2}
-                      />
-                    </div>
-                  </div>
                 </TabsContent>
 
                 {/* Management Tab */}
