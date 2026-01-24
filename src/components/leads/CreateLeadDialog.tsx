@@ -18,6 +18,7 @@ import { useProperties } from '@/hooks/use-properties';
 import { useCreateLead } from '@/hooks/use-leads';
 import { useUpsertTelecomCustomerFromLead } from '@/hooks/use-telecom-customer-by-lead';
 import { useServicePlans } from '@/hooks/use-service-plans';
+import { useCoverageUFs, useCoverageCities, useCoverageNeighborhoods } from '@/hooks/use-coverage-areas';
 import { PAYMENT_METHODS, DUE_DAY_OPTIONS } from '@/hooks/use-telecom-customers';
 
 interface CreateLeadDialogProps {
@@ -104,6 +105,11 @@ export function CreateLeadDialog({
 
   // Get stages for selected pipeline
   const { data: stages = [] } = useStages(formData.pipeline_id || undefined);
+  
+  // Coverage areas for Telecom
+  const coverageUFs = useCoverageUFs();
+  const coverageCities = useCoverageCities(formData.uf);
+  const coverageNeighborhoods = useCoverageNeighborhoods(formData.uf, formData.cidade);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -317,28 +323,66 @@ export function CreateLeadDialog({
                         <div className="grid gap-3 sm:grid-cols-3">
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">UF</Label>
-                            <Input
-                              value={formData.uf}
-                              onChange={(e) => updateField('uf', e.target.value.toUpperCase())}
-                              placeholder="DF"
-                              maxLength={2}
-                            />
+                            <Select 
+                              value={formData.uf} 
+                              onValueChange={(v) => {
+                                updateField('uf', v);
+                                updateField('cidade', '');
+                                updateField('bairro', '');
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {coverageUFs.map(uf => (
+                                  <SelectItem key={uf} value={uf}>
+                                    {uf}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">Cidade</Label>
-                            <Input
-                              value={formData.cidade}
-                              onChange={(e) => updateField('cidade', e.target.value)}
-                              placeholder="Cidade"
-                            />
+                            <Select 
+                              value={formData.cidade} 
+                              onValueChange={(v) => {
+                                updateField('cidade', v);
+                                updateField('bairro', '');
+                              }}
+                              disabled={!formData.uf}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {coverageCities.map(city => (
+                                  <SelectItem key={city} value={city}>
+                                    {city}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">Bairro</Label>
-                            <Input
-                              value={formData.bairro}
-                              onChange={(e) => updateField('bairro', e.target.value)}
-                              placeholder="Bairro"
-                            />
+                            <Select 
+                              value={formData.bairro} 
+                              onValueChange={(v) => updateField('bairro', v)}
+                              disabled={!formData.cidade}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {coverageNeighborhoods.map(neighborhood => (
+                                  <SelectItem key={neighborhood} value={neighborhood}>
+                                    {neighborhood}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
 
