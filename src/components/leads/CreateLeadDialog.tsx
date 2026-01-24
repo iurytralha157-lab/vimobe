@@ -73,7 +73,11 @@ export function CreateLeadDialog({
     phone2: '',
     mother_name: '',
     // Telecom specific - Address
+    uf: '',
+    cidade: '',
+    bairro: '',
     endereco: '',
+    numero: '',
     cep: '',
     // Telecom specific - Plan/Contract
     plan_id: '',
@@ -83,9 +87,7 @@ export function CreateLeadDialog({
     cargo: '',
     empresa: '',
     profissao: '',
-    // Address (Real Estate)
-    cidade: '',
-    uf: '',
+    // Financial (Real Estate)
     // Financial (Real Estate)
     renda_familiar: '',
     faixa_valor_imovel: '',
@@ -117,7 +119,11 @@ export function CreateLeadDialog({
         birth_date: '',
         phone2: '',
         mother_name: '',
+        uf: '',
+        cidade: '',
+        bairro: '',
         endereco: '',
+        numero: '',
         cep: '',
         plan_id: '',
         due_day: '',
@@ -125,8 +131,6 @@ export function CreateLeadDialog({
         cargo: '',
         empresa: '',
         profissao: '',
-        cidade: '',
-        uf: '',
         renda_familiar: '',
         faixa_valor_imovel: '',
         valor_interesse: '',
@@ -175,7 +179,11 @@ export function CreateLeadDialog({
           rg: formData.rg || null,
           birth_date: formData.birth_date || null,
           mother_name: formData.mother_name || null,
+          uf: formData.uf || null,
+          city: formData.cidade || null,
+          neighborhood: formData.bairro || null,
           address: formData.endereco || null,
+          number: formData.numero || null,
           cep: formData.cep || null,
           plan_id: formData.plan_id || null,
           due_day: formData.due_day ? parseInt(formData.due_day) : null,
@@ -299,25 +307,66 @@ export function CreateLeadDialog({
                         />
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-3">
-                        <div className="sm:col-span-2 space-y-2">
-                          <Label className="flex items-center gap-2">
-                            <MapPin className="h-3.5 w-3.5" />
-                            Endereço
-                          </Label>
-                          <Input
-                            value={formData.endereco}
-                            onChange={(e) => updateField('endereco', e.target.value)}
-                            placeholder="Rua, número, bairro..."
-                          />
+                      {/* Address Section */}
+                      <div className="space-y-3 pt-2">
+                        <Label className="flex items-center gap-2 text-sm font-medium">
+                          <MapPin className="h-4 w-4" />
+                          Endereço
+                        </Label>
+                        
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">UF</Label>
+                            <Input
+                              value={formData.uf}
+                              onChange={(e) => updateField('uf', e.target.value.toUpperCase())}
+                              placeholder="DF"
+                              maxLength={2}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Cidade</Label>
+                            <Input
+                              value={formData.cidade}
+                              onChange={(e) => updateField('cidade', e.target.value)}
+                              placeholder="Cidade"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Bairro</Label>
+                            <Input
+                              value={formData.bairro}
+                              onChange={(e) => updateField('bairro', e.target.value)}
+                              placeholder="Bairro"
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label>CEP</Label>
-                          <Input
-                            value={formData.cep}
-                            onChange={(e) => updateField('cep', e.target.value)}
-                            placeholder="00000-000"
-                          />
+
+                        <div className="grid gap-3 sm:grid-cols-6">
+                          <div className="sm:col-span-3 space-y-2">
+                            <Label className="text-xs text-muted-foreground">Endereço</Label>
+                            <Input
+                              value={formData.endereco}
+                              onChange={(e) => updateField('endereco', e.target.value)}
+                              placeholder="Rua, Avenida..."
+                            />
+                          </div>
+                          <div className="sm:col-span-1 space-y-2">
+                            <Label className="text-xs text-muted-foreground">Número</Label>
+                            <Input
+                              value={formData.numero}
+                              onChange={(e) => updateField('numero', e.target.value)}
+                              placeholder="Nº"
+                            />
+                          </div>
+                          <div className="sm:col-span-2 space-y-2">
+                            <Label className="text-xs text-muted-foreground">CEP</Label>
+                            <Input
+                              value={formData.cep}
+                              onChange={(e) => updateField('cep', e.target.value)}
+                              placeholder="00000-000"
+                            />
+                          </div>
                         </div>
                       </div>
                     </>
