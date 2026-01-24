@@ -3305,6 +3305,7 @@ export type Database = {
       telecom_customers: {
         Row: {
           address: string | null
+          birth_date: string | null
           cep: string | null
           chip_category: string | null
           chip_quantity: number | null
@@ -3323,15 +3324,19 @@ export type Database = {
           lead_id: string | null
           mesh_quantity: number | null
           mesh_repeater: string | null
+          mother_name: string | null
           name: string
           neighborhood: string | null
           notes: string | null
           number: string | null
           organization_id: string
+          payment_method: string | null
           phone: string | null
+          phone2: string | null
           plan_code: string | null
           plan_id: string | null
           plan_value: number | null
+          rg: string | null
           seller_id: string | null
           status: string | null
           uf: string | null
@@ -3339,6 +3344,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          birth_date?: string | null
           cep?: string | null
           chip_category?: string | null
           chip_quantity?: number | null
@@ -3357,15 +3363,19 @@ export type Database = {
           lead_id?: string | null
           mesh_quantity?: number | null
           mesh_repeater?: string | null
+          mother_name?: string | null
           name: string
           neighborhood?: string | null
           notes?: string | null
           number?: string | null
           organization_id: string
+          payment_method?: string | null
           phone?: string | null
+          phone2?: string | null
           plan_code?: string | null
           plan_id?: string | null
           plan_value?: number | null
+          rg?: string | null
           seller_id?: string | null
           status?: string | null
           uf?: string | null
@@ -3373,6 +3383,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          birth_date?: string | null
           cep?: string | null
           chip_category?: string | null
           chip_quantity?: number | null
@@ -3391,15 +3402,19 @@ export type Database = {
           lead_id?: string | null
           mesh_quantity?: number | null
           mesh_repeater?: string | null
+          mother_name?: string | null
           name?: string
           neighborhood?: string | null
           notes?: string | null
           number?: string | null
           organization_id?: string
+          payment_method?: string | null
           phone?: string | null
+          phone2?: string | null
           plan_code?: string | null
           plan_id?: string | null
           plan_value?: number | null
+          rg?: string | null
           seller_id?: string | null
           status?: string | null
           uf?: string | null
