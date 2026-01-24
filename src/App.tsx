@@ -224,7 +224,7 @@ function AppRoutes() {
           <Route path="/automations" element={<ProtectedRoute><AdminRoute><Automations /></AdminRoute></ProtectedRoute>} />
           
           {/* Public Site Preview */}
-          <Route path="/preview-site/*" element={<PreviewSiteWrapper />} />
+          <Route path="/site/previsualização/*" element={<PreviewSiteWrapper />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

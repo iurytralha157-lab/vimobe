@@ -159,7 +159,7 @@ function PreviewSiteRoutes() {
         <Route path="sobre" element={<PublicAbout />} />
         <Route path="contato" element={<PublicContact />} />
       </Route>
-      <Route path="*" element={<Navigate to="/preview-site" replace />} />
+      <Route path="*" element={<Navigate to="/site/previsualização" replace />} />
     </Routes>
   );
 }
