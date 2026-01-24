@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
+import { StagesEditorDialog } from '@/components/pipelines/StagesEditorDialog';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { LeadCard } from '@/components/leads/LeadCard';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
@@ -83,8 +84,10 @@ const formatCompactCurrency = (value: number): string => {
 export default function Pipelines() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const isTelecom = organization?.segment === 'telecom';
+  const newButtonLabel = isTelecom ? 'Novo Cliente' : 'Novo Lead';
   
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [newLeadDialogOpen, setNewLeadDialogOpen] = useState(false);
@@ -104,6 +107,7 @@ export default function Pipelines() {
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#6b7280');
   const [slaSettingsOpen, setSlaSettingsOpen] = useState(false);
+  const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
   const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   
@@ -450,6 +454,24 @@ export default function Pipelines() {
                   </Tooltip>
                 </TooltipProvider>
               )}
+              {canEditPipeline && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setStagesEditorOpen(true)}
+                        disabled={!selectedPipelineId}
+                      >
+                        <Settings className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Gerenciar Colunas</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {isAdmin && (
                 <Button
                   variant="ghost"
@@ -567,7 +589,7 @@ export default function Pipelines() {
           </div>
           <Button size="sm" onClick={() => openNewLeadDialog()}>
             <Plus className="h-4 w-4 mr-2" />
-            Novo Lead
+            {newButtonLabel}
           </Button>
         </div>
 
@@ -850,6 +872,24 @@ export default function Pipelines() {
             onOpenChange={setSlaSettingsOpen}
             pipelineId={selectedPipelineId}
             pipelineName={currentPipeline?.name || ''}
+          />
+        )}
+
+        {/* Stages Editor Dialog */}
+        {selectedPipelineId && (
+          <StagesEditorDialog
+            open={stagesEditorOpen}
+            onOpenChange={setStagesEditorOpen}
+            pipelineId={selectedPipelineId}
+            pipelineName={currentPipeline?.name || ''}
+            stages={stages.map(s => ({
+              id: s.id,
+              name: s.name,
+              color: s.color,
+              position: s.position,
+              lead_count: s.leads?.length || 0,
+            }))}
+            onStagesUpdated={() => refetch()}
           />
         )}
       </div>

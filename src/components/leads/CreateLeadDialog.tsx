@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TagSelector } from '@/components/ui/tag-selector';
-import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot } from 'lucide-react';
+import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useProperties } from '@/hooks/use-properties';
 import { useCreateLead } from '@/hooks/use-leads';
+import { useUpsertTelecomCustomerFromLead } from '@/hooks/use-telecom-customer-by-lead';
 
 interface CreateLeadDialogProps {
   open: boolean;
@@ -48,8 +49,11 @@ export function CreateLeadDialog({
   const { data: pipelines = [] } = usePipelines();
   const { data: properties = [] } = useProperties();
   const createLead = useCreateLead();
+  const upsertTelecomCustomer = useUpsertTelecomCustomerFromLead();
 
   const isTelecom = organization?.segment === 'telecom';
+  const dialogTitle = isTelecom ? 'Novo Cliente' : 'Novo Lead';
+  const submitLabel = isTelecom ? 'Criar Cliente' : 'Criar Lead';
 
   // Form state
   const [formData, setFormData] = useState({
@@ -122,7 +126,7 @@ export function CreateLeadDialog({
     e.preventDefault();
     
     try {
-      await createLead.mutateAsync({
+      const newLead = await createLead.mutateAsync({
         name: formData.name,
         phone: formData.phone || undefined,
         email: formData.email || undefined,
@@ -131,9 +135,19 @@ export function CreateLeadDialog({
         stage_id: formData.stage_id || undefined,
         assigned_user_id: formData.assigned_user_id || undefined,
         tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined,
-        // Additional fields passed via source for now
         source: 'manual',
       });
+      
+      // For Telecom: also create the telecom_customers record
+      if (isTelecom && newLead?.id) {
+        await upsertTelecomCustomer.mutateAsync({
+          leadId: newLead.id,
+          name: formData.name,
+          phone: formData.phone || null,
+          email: formData.email || null,
+          status: 'NOVO',
+        });
+      }
       
       // If we have additional fields, update the lead separately
       const additionalFields: Record<string, any> = {};
@@ -163,7 +177,10 @@ export function CreateLeadDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle>Novo Lead</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {isTelecom && <UserCheck className="h-5 w-5 text-primary" />}
+            {dialogTitle}
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
@@ -466,9 +483,9 @@ export function CreateLeadDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createLead.isPending || !formData.name.trim()}>
-              {createLead.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Criar Lead
+            <Button type="submit" disabled={createLead.isPending || upsertTelecomCustomer.isPending || !formData.name.trim()}>
+              {(createLead.isPending || upsertTelecomCustomer.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {submitLabel}
             </Button>
           </div>
         </form>
