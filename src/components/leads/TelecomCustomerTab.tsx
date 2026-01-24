@@ -6,12 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PhoneInput } from '@/components/ui/phone-input';
-import { Loader2, Save, User, MapPin, FileText, Cpu } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Loader2, Save, User, MapPin, FileText, Cpu, CreditCard } from 'lucide-react';
 import { useTelecomCustomerByLead, useUpsertTelecomCustomerFromLead } from '@/hooks/use-telecom-customer-by-lead';
 import { useServicePlans } from '@/hooks/use-service-plans';
 import { useCoverageUFs, useCoverageCities, useCoverageNeighborhoods } from '@/hooks/use-coverage-areas';
 import { useUpdateLead } from '@/hooks/use-leads';
-import { TELECOM_CUSTOMER_STATUSES, CHIP_CATEGORIES, MESH_REPEATER_OPTIONS } from '@/hooks/use-telecom-customers';
+import { TELECOM_CUSTOMER_STATUSES, CHIP_CATEGORIES, MESH_REPEATER_OPTIONS, PAYMENT_METHODS, DUE_DAY_OPTIONS } from '@/hooks/use-telecom-customers';
 
 interface TelecomCustomerTabProps {
   lead: {
@@ -26,8 +27,12 @@ interface TelecomCustomerTabProps {
 interface FormData {
   name: string;
   phone: string;
+  phone2: string;
   email: string;
   cpf_cnpj: string;
+  rg: string;
+  birth_date: string;
+  mother_name: string;
   address: string;
   number: string;
   complement: string;
@@ -38,6 +43,7 @@ interface FormData {
   plan_id: string;
   plan_value: number | null;
   due_day: number | null;
+  payment_method: string;
   status: string;
   contract_date: string;
   installation_date: string;
@@ -52,8 +58,12 @@ interface FormData {
 const defaultFormData: FormData = {
   name: '',
   phone: '',
+  phone2: '',
   email: '',
   cpf_cnpj: '',
+  rg: '',
+  birth_date: '',
+  mother_name: '',
   address: '',
   number: '',
   complement: '',
@@ -64,6 +74,7 @@ const defaultFormData: FormData = {
   plan_id: '',
   plan_value: null,
   due_day: null,
+  payment_method: '',
   status: 'NOVO',
   contract_date: '',
   installation_date: '',
@@ -95,8 +106,12 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
       setFormData({
         name: customer.name || lead.name || '',
         phone: customer.phone || lead.phone || '',
+        phone2: customer.phone2 || '',
         email: customer.email || lead.email || '',
         cpf_cnpj: customer.cpf_cnpj || '',
+        rg: customer.rg || '',
+        birth_date: customer.birth_date || '',
+        mother_name: customer.mother_name || '',
         address: customer.address || '',
         number: customer.number || '',
         complement: customer.complement || '',
@@ -107,6 +122,7 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
         plan_id: customer.plan_id || '',
         plan_value: customer.plan_value,
         due_day: customer.due_day,
+        payment_method: customer.payment_method || '',
         status: customer.status || 'NOVO',
         contract_date: customer.contract_date || '',
         installation_date: customer.installation_date || '',
@@ -167,8 +183,12 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
       leadId: lead.id,
       name: formData.name,
       phone: formData.phone || null,
+      phone2: formData.phone2 || null,
       email: formData.email || null,
       cpf_cnpj: formData.cpf_cnpj || null,
+      rg: formData.rg || null,
+      birth_date: formData.birth_date || null,
+      mother_name: formData.mother_name || null,
       address: formData.address || null,
       number: formData.number || null,
       complement: formData.complement || null,
@@ -179,6 +199,7 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
       plan_id: formData.plan_id || null,
       plan_value: formData.plan_value,
       due_day: formData.due_day,
+      payment_method: formData.payment_method || null,
       status: formData.status,
       contract_date: formData.contract_date || null,
       installation_date: formData.installation_date || null,
@@ -222,7 +243,7 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="cpf_cnpj" className="text-xs">CPF/CNPJ</Label>
+            <Label htmlFor="cpf_cnpj" className="text-xs">CPF</Label>
             <Input
               id="cpf_cnpj"
               value={formData.cpf_cnpj}
@@ -231,11 +252,37 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="phone" className="text-xs">Telefone</Label>
+            <Label htmlFor="rg" className="text-xs">RG</Label>
+            <Input
+              id="rg"
+              value={formData.rg}
+              onChange={e => setFormData(prev => ({ ...prev, rg: e.target.value }))}
+              placeholder="00.000.000-0"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="birth_date" className="text-xs">Data de Nascimento</Label>
+            <Input
+              id="birth_date"
+              type="date"
+              value={formData.birth_date}
+              onChange={e => setFormData(prev => ({ ...prev, birth_date: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone" className="text-xs">WhatsApp</Label>
             <PhoneInput
               value={formData.phone}
               onChange={phone => setFormData(prev => ({ ...prev, phone }))}
-              placeholder="Telefone"
+              placeholder="WhatsApp principal"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="phone2" className="text-xs">Telefone 2</Label>
+            <PhoneInput
+              value={formData.phone2}
+              onChange={phone2 => setFormData(prev => ({ ...prev, phone2 }))}
+              placeholder="Telefone secundário"
             />
           </div>
           <div className="space-y-1.5">
@@ -246,6 +293,15 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
               value={formData.email}
               onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
               placeholder="email@exemplo.com"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="mother_name" className="text-xs">Nome da Mãe</Label>
+            <Input
+              id="mother_name"
+              value={formData.mother_name}
+              onChange={e => setFormData(prev => ({ ...prev, mother_name: e.target.value }))}
+              placeholder="Nome completo da mãe"
             />
           </div>
         </div>
@@ -348,7 +404,7 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
           <FileText className="h-4 w-4" />
           Plano e Contrato
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Plano</Label>
             <Select value={formData.plan_id} onValueChange={handlePlanChange}>
@@ -375,19 +431,45 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
               placeholder="0,00"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="due_day" className="text-xs">Dia Vencimento</Label>
-            <Input
-              id="due_day"
-              type="number"
-              min={1}
-              max={31}
-              value={formData.due_day ?? ''}
-              onChange={e => setFormData(prev => ({ ...prev, due_day: e.target.value ? parseInt(e.target.value) : null }))}
-              placeholder="1-31"
-            />
-          </div>
         </div>
+
+        {/* Due Day Selection */}
+        <div className="space-y-2">
+          <Label className="text-xs">Vencimento</Label>
+          <RadioGroup
+            value={formData.due_day?.toString() || ''}
+            onValueChange={value => setFormData(prev => ({ ...prev, due_day: parseInt(value) }))}
+            className="flex flex-wrap gap-4"
+          >
+            {DUE_DAY_OPTIONS.map(day => (
+              <div key={day} className="flex items-center space-x-2">
+                <RadioGroupItem value={day.toString()} id={`due-day-${day}`} />
+                <Label htmlFor={`due-day-${day}`} className="text-sm cursor-pointer">{day}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        {/* Payment Method Selection */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <CreditCard className="h-4 w-4" />
+            Forma de Pagamento
+          </div>
+          <RadioGroup
+            value={formData.payment_method}
+            onValueChange={payment_method => setFormData(prev => ({ ...prev, payment_method }))}
+            className="grid grid-cols-2 gap-2"
+          >
+            {PAYMENT_METHODS.map(method => (
+              <div key={method.value} className="flex items-center space-x-2">
+                <RadioGroupItem value={method.value} id={`payment-${method.value}`} />
+                <Label htmlFor={`payment-${method.value}`} className="text-sm cursor-pointer">{method.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Status</Label>
