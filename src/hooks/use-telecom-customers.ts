@@ -9,8 +9,12 @@ export interface TelecomCustomer {
   external_id: string | null;
   name: string;
   phone: string | null;
+  phone2: string | null;
   email: string | null;
   cpf_cnpj: string | null;
+  rg: string | null;
+  birth_date: string | null;
+  mother_name: string | null;
   address: string | null;
   number: string | null;
   complement: string | null;
@@ -23,6 +27,7 @@ export interface TelecomCustomer {
   contracted_plan: string | null;
   plan_value: number | null;
   due_day: number | null;
+  payment_method: string | null;
   seller_id: string | null;
   status: string;
   installation_date: string | null;
@@ -52,8 +57,12 @@ export interface CreateTelecomCustomerInput {
   external_id?: string | null;
   name: string;
   phone?: string | null;
+  phone2?: string | null;
   email?: string | null;
   cpf_cnpj?: string | null;
+  rg?: string | null;
+  birth_date?: string | null;
+  mother_name?: string | null;
   address?: string | null;
   number?: string | null;
   complement?: string | null;
@@ -66,6 +75,7 @@ export interface CreateTelecomCustomerInput {
   contracted_plan?: string | null;
   plan_value?: number | null;
   due_day?: number | null;
+  payment_method?: string | null;
   seller_id?: string | null;
   status?: string;
   installation_date?: string | null;
@@ -89,6 +99,15 @@ export const MESH_REPEATER_OPTIONS = [
   { value: 'NORMAL', label: 'Normal' },
   { value: 'SEM_REPETIDOR', label: 'Sem Repetidor' },
 ] as const;
+
+export const PAYMENT_METHODS = [
+  { value: 'credit_card', label: 'Cartão de Crédito' },
+  { value: 'debit_card', label: 'Cartão de Débito' },
+  { value: 'pix_auto', label: 'Pix Automático' },
+  { value: 'boleto_pix', label: 'Boleto ou Pix' },
+] as const;
+
+export const DUE_DAY_OPTIONS = [1, 3, 5, 9, 13, 18] as const;
 
 export const TELECOM_CUSTOMER_STATUSES = [
   { value: 'NOVO', label: 'Novo', color: 'bg-blue-500' },

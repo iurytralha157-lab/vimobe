@@ -26,6 +26,8 @@ import {
   TELECOM_CUSTOMER_STATUSES,
   CHIP_CATEGORIES,
   MESH_REPEATER_OPTIONS,
+  PAYMENT_METHODS,
+  DUE_DAY_OPTIONS,
   type TelecomCustomer, 
   type CreateTelecomCustomerInput 
 } from '@/hooks/use-telecom-customers';
@@ -42,8 +44,12 @@ interface CustomerFormDialogProps {
 const defaultFormData: CreateTelecomCustomerInput = {
   name: '',
   phone: '',
+  phone2: '',
   email: '',
   cpf_cnpj: '',
+  rg: '',
+  birth_date: null,
+  mother_name: '',
   address: '',
   number: '',
   complement: '',
@@ -55,7 +61,8 @@ const defaultFormData: CreateTelecomCustomerInput = {
   plan_code: null,
   contracted_plan: null,
   plan_value: null,
-  due_day: 10,
+  due_day: 5,
+  payment_method: null,
   seller_id: null,
   status: 'NOVO',
   installation_date: null,
@@ -89,8 +96,12 @@ export function CustomerFormDialog({
         external_id: customer.external_id,
         name: customer.name,
         phone: customer.phone || '',
+        phone2: customer.phone2 || '',
         email: customer.email || '',
         cpf_cnpj: customer.cpf_cnpj || '',
+        rg: customer.rg || '',
+        birth_date: customer.birth_date,
+        mother_name: customer.mother_name || '',
         address: customer.address || '',
         number: customer.number || '',
         complement: customer.complement || '',
@@ -102,7 +113,8 @@ export function CustomerFormDialog({
         plan_code: customer.plan_code,
         contracted_plan: customer.contracted_plan,
         plan_value: customer.plan_value,
-        due_day: customer.due_day || 10,
+        due_day: customer.due_day || 5,
+        payment_method: customer.payment_method,
         seller_id: customer.seller_id,
         status: customer.status,
         installation_date: customer.installation_date,
@@ -135,7 +147,7 @@ export function CustomerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{customer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
           <DialogDescription>
@@ -175,7 +187,28 @@ export function CustomerFormDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
+                  <Label htmlFor="rg">RG</Label>
+                  <Input
+                    id="rg"
+                    value={formData.rg || ''}
+                    onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
+                    placeholder="00.000.000-0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="birth_date">Data de Nascimento</Label>
+                  <Input
+                    id="birth_date"
+                    type="date"
+                    value={formData.birth_date || ''}
+                    onChange={(e) => setFormData({ ...formData, birth_date: e.target.value || null })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">WhatsApp</Label>
                   <Input
                     id="phone"
                     value={formData.phone || ''}
@@ -184,6 +217,18 @@ export function CustomerFormDialog({
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="phone2">Telefone 2</Label>
+                  <Input
+                    id="phone2"
+                    value={formData.phone2 || ''}
+                    onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -191,6 +236,15 @@ export function CustomerFormDialog({
                     value={formData.email || ''}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mother_name">Nome da Mãe</Label>
+                  <Input
+                    id="mother_name"
+                    value={formData.mother_name || ''}
+                    onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
+                    placeholder="Nome completo da mãe"
                   />
                 </div>
               </div>
@@ -355,23 +409,43 @@ export function CustomerFormDialog({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="due_day">Dia Vencimento</Label>
+                  <Label htmlFor="due_day">Dia de Vencimento</Label>
                   <Select
-                    value={String(formData.due_day || 10)}
+                    value={String(formData.due_day || 5)}
                     onValueChange={(value) => setFormData({ ...formData, due_day: parseInt(value) })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[5, 10, 15, 20, 25].map(day => (
+                      {DUE_DAY_OPTIONS.map(day => (
                         <SelectItem key={day} value={String(day)}>Dia {day}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment_method">Forma de Pagamento</Label>
+                  <Select
+                    value={formData.payment_method || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, payment_method: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não informado</SelectItem>
+                      {PAYMENT_METHODS.map(pm => (
+                        <SelectItem key={pm.value} value={pm.value}>{pm.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select
@@ -397,9 +471,6 @@ export function CustomerFormDialog({
                     onChange={(e) => setFormData({ ...formData, contract_date: e.target.value || null })}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="installation_date">Data Instalação</Label>
                   <Input
@@ -409,23 +480,24 @@ export function CustomerFormDialog({
                     onChange={(e) => setFormData({ ...formData, installation_date: e.target.value || null })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="seller_id">Vendedor</Label>
-                  <Select
-                    value={formData.seller_id || 'none'}
-                    onValueChange={(value) => setFormData({ ...formData, seller_id: value === 'none' ? null : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o vendedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {users.map(user => (
-                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="seller_id">Responsável</Label>
+                <Select
+                  value={formData.seller_id || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, seller_id: value === 'none' ? null : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {users.map(user => (
+                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
