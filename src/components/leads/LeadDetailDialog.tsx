@@ -66,13 +66,21 @@ const activityTypeLabels: Record<string, string> = {
   message: 'Mensagem enviada',
   email: 'Email enviado',
   note: 'Nota registrada',
-  task_completed: 'Tarefa concluída'
+  task_completed: 'Tarefa concluída',
+  lead_created: 'Lead criado',
+  stage_change: 'Movido de estágio',
+  assignee_changed: 'Responsável alterado',
+  status_change: 'Status alterado'
 };
 const activityTypeIcons: Record<string, typeof Phone> = {
   call: Phone,
   message: MessageCircle,
   email: Mail,
-  note: Building2
+  note: Building2,
+  lead_created: Plus,
+  stage_change: ChevronRight,
+  assignee_changed: UserCheck,
+  status_change: Target
 };
 interface LeadDetailDialogProps {
   lead: any;
@@ -338,7 +346,10 @@ export function LeadDetailDialog({
       // Error handled by mutation
     }
   };
-  const taskActivities = activities.filter((a: any) => ['call', 'message', 'email', 'note', 'task_completed'].includes(a.type));
+  // Mostrar todas as atividades importantes no histórico recente
+  const taskActivities = activities.filter((a: any) => 
+    ['call', 'message', 'email', 'note', 'task_completed', 'lead_created', 'stage_change', 'assignee_changed', 'status_change'].includes(a.type)
+  );
   const SourceIcon = sourceIcons[lead.source] || Target;
 
   // State for roteiro dialog is now at top of component

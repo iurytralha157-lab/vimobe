@@ -23,7 +23,8 @@ import {
   Tags,
   Trophy,
   XCircle,
-  CircleDot
+  CircleDot,
+  RefreshCw
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
@@ -111,6 +112,7 @@ export default function Pipelines() {
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
   const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
   const createPipeline = useCreatePipeline();
@@ -346,6 +348,16 @@ export default function Pipelines() {
   }, [stages, selectedPipelineId, queryClient]);
 
   // handleCreateLead agora é gerenciado pelo CreateLeadDialog
+
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success('Atualizado!', { duration: 1500 });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch]);
 
   const openNewLeadDialog = (stageId?: string) => {
     setNewLeadStageId(stageId || null);
@@ -667,6 +679,24 @@ export default function Pipelines() {
                 </SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* Refresh Button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 flex-shrink-0"
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Atualizar Pipeline</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             
             {/* Desktop New Button */}
             <Button size="sm" onClick={() => openNewLeadDialog()} className="hidden sm:flex flex-shrink-0">
