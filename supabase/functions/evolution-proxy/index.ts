@@ -208,10 +208,33 @@ async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName:
     });
 
     const data = await response.json();
-    console.log("Connection status response:", data);
+    console.log("Connection status response:", { status: response.status, error: response.ok ? null : response.statusText, response: data });
+
+    // Handle 404 - instance doesn't exist
+    if (response.status === 404) {
+      return { 
+        success: true, 
+        data: { 
+          state: "close",
+          status: false,
+          connected: false,
+          instanceNotFound: true,
+          message: "A instância não existe. Por favor, reconecte sua sessão WhatsApp."
+        } 
+      };
+    }
 
     if (!response.ok) {
-      return { success: false, error: data.message || "Failed to get connection status" };
+      // Return disconnected state instead of error for better UX
+      return { 
+        success: true, 
+        data: { 
+          state: "close",
+          status: false,
+          connected: false,
+          error: data.message || "Falha ao verificar conexão"
+        } 
+      };
     }
 
     // Map Evolution v2 status to our format
@@ -229,7 +252,16 @@ async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName:
     };
   } catch (error: unknown) {
     console.error("Get connection status error:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    // Return disconnected state instead of error
+    return { 
+      success: true, 
+      data: { 
+        state: "close",
+        status: false,
+        connected: false,
+        error: error instanceof Error ? error.message : "Erro desconhecido"
+      } 
+    };
   }
 }
 
