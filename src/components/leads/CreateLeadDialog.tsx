@@ -417,28 +417,28 @@ export function CreateLeadDialog({
                       </div>
                     </>
                   ) : (
-                    <>
-                      {/* Real Estate: Basic Info */}
-                      <div className="space-y-2">
-                        <Label>Nome *</Label>
-                        <Input
-                          value={formData.name}
-                          onChange={(e) => updateField('name', e.target.value)}
-                          placeholder="Nome do lead"
-                          required
-                        />
-                      </div>
+                    <div className="space-y-3">
+                      {/* Real Estate: Basic Info - Compact Layout */}
+                      <div className="grid gap-3 grid-cols-2">
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm">Nome *</Label>
+                          <Input
+                            value={formData.name}
+                            onChange={(e) => updateField('name', e.target.value)}
+                            placeholder="Nome do lead"
+                            required
+                          />
+                        </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Telefone</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-sm">Telefone</Label>
                           <PhoneInput
                             value={formData.phone}
                             onChange={(value) => updateField('phone', value)}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label>Email</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-sm">Email</Label>
                           <Input
                             type="email"
                             value={formData.email}
@@ -446,11 +446,9 @@ export function CreateLeadDialog({
                             placeholder="email@exemplo.com"
                           />
                         </div>
-                      </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Fonte</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-sm">Fonte</Label>
                           <Select 
                             value={formData.source || "__none__"} 
                             onValueChange={(v) => updateField('source', v === "__none__" ? '' : v)}
@@ -472,8 +470,8 @@ export function CreateLeadDialog({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Faixa de Imóvel</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-sm">Faixa de Imóvel</Label>
                           <Select 
                             value={formData.faixa_valor_imovel || "__none__"} 
                             onValueChange={(v) => updateField('faixa_valor_imovel', v === "__none__" ? '' : v)}
@@ -491,18 +489,18 @@ export function CreateLeadDialog({
                             </SelectContent>
                           </Select>
                         </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        <Label>Mensagem / Observações</Label>
-                        <Textarea
-                          value={formData.message}
-                          onChange={(e) => updateField('message', e.target.value)}
-                          placeholder="Interesse, observações iniciais..."
-                          rows={4}
-                        />
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm">Observações</Label>
+                          <Textarea
+                            value={formData.message}
+                            onChange={(e) => updateField('message', e.target.value)}
+                            placeholder="Interesse, observações iniciais..."
+                            rows={3}
+                          />
+                        </div>
                       </div>
-                    </>
+                    </div>
                   )}
                 </TabsContent>
 
