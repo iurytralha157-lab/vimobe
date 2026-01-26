@@ -212,7 +212,7 @@ export function CreateLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[90vh] p-0 flex flex-col">
+      <DialogContent className="max-w-lg p-0 flex flex-col max-h-[85vh]">
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isTelecom && <UserCheck className="h-5 w-5 text-primary" />}
@@ -417,28 +417,29 @@ export function CreateLeadDialog({
                       </div>
                     </>
                   ) : (
-                    <div className="space-y-3">
-                      {/* Real Estate: Basic Info - Compact Layout */}
-                      <div className="grid gap-3 grid-cols-2">
-                        <div className="col-span-2 space-y-1.5">
-                          <Label className="text-sm">Nome *</Label>
-                          <Input
-                            value={formData.name}
-                            onChange={(e) => updateField('name', e.target.value)}
-                            placeholder="Nome do lead"
-                            required
-                          />
-                        </div>
+                    <div className="space-y-4">
+                      {/* Real Estate: Basic Info - Clean Layout */}
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium">Nome *</Label>
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => updateField('name', e.target.value)}
+                          placeholder="Nome do lead"
+                          required
+                        />
+                      </div>
 
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label className="text-sm">Telefone</Label>
-                          <PhoneInput
+                          <Label className="text-sm font-medium">Telefone</Label>
+                          <Input
                             value={formData.phone}
-                            onChange={(value) => updateField('phone', value)}
+                            onChange={(e) => updateField('phone', e.target.value)}
+                            placeholder="(00) 00000-0000"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-sm">Email</Label>
+                          <Label className="text-sm font-medium">Email</Label>
                           <Input
                             type="email"
                             value={formData.email}
@@ -446,9 +447,11 @@ export function CreateLeadDialog({
                             placeholder="email@exemplo.com"
                           />
                         </div>
+                      </div>
 
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                          <Label className="text-sm">Fonte</Label>
+                          <Label className="text-sm font-medium">Fonte</Label>
                           <Select 
                             value={formData.source || "__none__"} 
                             onValueChange={(v) => updateField('source', v === "__none__" ? '' : v)}
@@ -462,7 +465,6 @@ export function CreateLeadDialog({
                               <SelectItem value="indicacao">Indicação</SelectItem>
                               <SelectItem value="portais">Portais</SelectItem>
                               <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                              <SelectItem value="telefone">Telefone</SelectItem>
                               <SelectItem value="facebook">Facebook</SelectItem>
                               <SelectItem value="instagram">Instagram</SelectItem>
                               <SelectItem value="google">Google</SelectItem>
@@ -471,7 +473,7 @@ export function CreateLeadDialog({
                           </Select>
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-sm">Faixa de Imóvel</Label>
+                          <Label className="text-sm font-medium">Faixa de Imóvel</Label>
                           <Select 
                             value={formData.faixa_valor_imovel || "__none__"} 
                             onValueChange={(v) => updateField('faixa_valor_imovel', v === "__none__" ? '' : v)}
@@ -489,16 +491,16 @@ export function CreateLeadDialog({
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
 
-                        <div className="col-span-2 space-y-1.5">
-                          <Label className="text-sm">Observações</Label>
-                          <Textarea
-                            value={formData.message}
-                            onChange={(e) => updateField('message', e.target.value)}
-                            placeholder="Interesse, observações iniciais..."
-                            rows={3}
-                          />
-                        </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium">Observações</Label>
+                        <Textarea
+                          value={formData.message}
+                          onChange={(e) => updateField('message', e.target.value)}
+                          placeholder="Interesse, observações iniciais..."
+                          rows={2}
+                        />
                       </div>
                     </div>
                   )}
