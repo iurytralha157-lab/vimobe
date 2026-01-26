@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -8,6 +9,34 @@ export type Activity = Tables<'activities'> & {
 };
 
 export function useActivities(leadId?: string) {
+  const queryClient = useQueryClient();
+  
+  // Real-time subscription for activities updates
+  useEffect(() => {
+    if (!leadId) return;
+    
+    const channel = supabase
+      .channel(`activities-${leadId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'activities',
+          filter: `lead_id=eq.${leadId}`,
+        },
+        () => {
+          // Invalidate query to refetch activities immediately
+          queryClient.invalidateQueries({ queryKey: ['activities', leadId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [leadId, queryClient]);
+
   return useQuery({
     queryKey: ['activities', leadId],
     queryFn: async () => {
