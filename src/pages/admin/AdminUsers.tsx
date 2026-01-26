@@ -214,10 +214,10 @@ export default function AdminUsers() {
                     
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* Organization */}
-                      {user.organization ? (
+                      {user.organization_name ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Building2 className="h-4 w-4" />
-                          <span>{(user.organization as any).name}</span>
+                          <span>{user.organization_name}</span>
                         </div>
                       ) : user.role !== 'super_admin' && (
                         <Badge variant="outline" className="text-destructive border-destructive">

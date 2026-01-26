@@ -4277,6 +4277,36 @@ export type Database = {
       is_team_leader:
         | { Args: never; Returns: boolean }
         | { Args: { check_user_id?: string }; Returns: boolean }
+      list_all_organizations_admin: {
+        Args: never
+        Returns: {
+          admin_notes: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_access_at: string
+          lead_count: number
+          logo_url: string
+          max_users: number
+          name: string
+          subscription_status: string
+          user_count: number
+        }[]
+      }
+      list_all_users_admin: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          organization_name: string
+          role: string
+        }[]
+      }
       list_contacts_paginated: {
         Args: {
           p_assignee_id?: string
