@@ -24,56 +24,24 @@ export function useSuperAdmin() {
   // Only enable queries when auth is not loading and user is super admin
   const isReady = !authLoading && isSuperAdmin === true;
 
-  // Fetch all organizations with stats
+  // Fetch all organizations with stats using RPC that bypasses RLS
   const { data: organizations, isLoading: loadingOrgs } = useQuery({
     queryKey: ['super-admin-organizations'],
     queryFn: async () => {
-      // Get organizations
-      const { data: orgs, error } = await (supabase as any)
-        .from('organizations')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('list_all_organizations_admin');
 
       if (error) throw error;
 
-      // Get user counts per org
-      const { data: userCounts } = await supabase
-        .from('users')
-        .select('organization_id');
-
-      // Get lead counts per org
-      const { data: leadCounts } = await supabase
-        .from('leads')
-        .select('organization_id');
-
-      // Aggregate counts
-      const orgStats: OrganizationWithStats[] = ((orgs || []) as any[]).map(org => ({
-        ...org,
-        is_active: org.is_active ?? true,
-        subscription_status: org.subscription_status ?? 'trial',
-        max_users: org.max_users ?? 10,
-        admin_notes: org.admin_notes ?? null,
-        last_access_at: org.last_access_at ?? null,
-        user_count: userCounts?.filter(u => u.organization_id === org.id).length || 0,
-        lead_count: leadCounts?.filter(l => l.organization_id === org.id).length || 0,
-      }));
-
-      return orgStats;
+      return (data || []) as OrganizationWithStats[];
     },
     enabled: isReady,
   });
 
-  // Fetch all users across organizations
+  // Fetch all users across organizations using RPC that bypasses RLS
   const { data: allUsers, isLoading: loadingUsers } = useQuery({
     queryKey: ['super-admin-users'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          *,
-          organization:organizations(id, name)
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('list_all_users_admin');
 
       if (error) throw error;
       return data || [];
