@@ -155,34 +155,34 @@ export default function Dashboard() {
             </div>
           </>
         ) : (
-          /* Imobiliário: Funnel + Sources + Evolution + Top Brokers */
+          /* Imobiliário: Funnel + Evolution + Top Brokers + Sources */
           <>
-            {/* Charts - Desktop: Side by Side, Mobile: Tabs */}
+            {/* Top Row - Desktop: Funnel + Evolution */}
             <div className="hidden lg:grid lg:grid-cols-2 gap-4">
               {funnelComponent}
-              {sourcesComponent}
+              <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </div>
 
-            {/* Charts - Mobile: Tabs */}
+            {/* Top Row - Mobile: Tabs for Funnel + Evolution */}
             <div className="lg:hidden">
               <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
                 <TabsList className="w-full grid grid-cols-2">
                   <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
-                  <TabsTrigger value="sources" className="text-xs">Origens</TabsTrigger>
+                  <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
                 </TabsList>
                 <TabsContent value="funnel" className="mt-3">
                   {funnelComponent}
                 </TabsContent>
-                <TabsContent value="sources" className="mt-3">
-                  {sourcesComponent}
+                <TabsContent value="evolution" className="mt-3">
+                  <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
                 </TabsContent>
               </Tabs>
             </div>
 
-            {/* Bottom Widgets */}
+            {/* Bottom Widgets - Top Brokers + Sources */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} isFallbackMode={isBrokersFallback} />
-              <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+              {sourcesComponent}
             </div>
           </>
         )}
