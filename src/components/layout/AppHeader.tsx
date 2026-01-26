@@ -62,7 +62,7 @@ export function AppHeader({
       {title && <h1 className="text-xl font-semibold text-foreground ml-2 lg:ml-0">{title}</h1>}
 
       {/* Right side actions - floating pill */}
-      <div className="flex items-center gap-1.5 lg:gap-2 ml-auto bg-card rounded-full px-2 py-1.5 shadow-sm border-0">
+      <div className="flex items-center gap-1.5 lg:gap-2 ml-auto bg-card rounded-full px-2 py-1.5 border-0">
         {/* Theme toggle */}
         <Button variant="ghost" size="icon" onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')} className="h-8 w-8 rounded-full">
           {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
