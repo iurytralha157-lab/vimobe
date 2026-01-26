@@ -313,7 +313,31 @@ export default function Pipelines() {
         },
       });
       
-      toast.success(`Lead movido para ${newStage?.name}`);
+      // Check if destination stage has active automations for dynamic toast
+      const { data: stageAutomations } = await supabase
+        .from('stage_automations')
+        .select('automation_type, action_config')
+        .eq('stage_id', newStageId)
+        .eq('is_active', true);
+      
+      const statusAutomation = stageAutomations?.find(
+        (a: any) => a.automation_type === 'change_deal_status_on_enter'
+      );
+      
+      const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null;
+      if (actionConfig?.deal_status) {
+        const statusLabels: Record<string, string> = {
+          won: 'Ganho',
+          lost: 'Perdido',
+          open: 'Aberto'
+        };
+        const statusLabel = statusLabels[actionConfig.deal_status as string] || actionConfig.deal_status;
+        toast.success(`Lead alterado para ${statusLabel}`, {
+          description: `Movido para ${newStage?.name}`
+        });
+      } else {
+        toast.success(`Lead movido para ${newStage?.name}`);
+      }
     } catch (error: any) {
       // Rollback em caso de erro
       queryClient.setQueryData(queryKey, previousData);
