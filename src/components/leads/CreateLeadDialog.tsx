@@ -737,14 +737,14 @@ export function CreateLeadDialog({
                     <div className="space-y-2">
                       <Label>Imóvel de Interesse</Label>
                       <Select 
-                        value={formData.property_id} 
-                        onValueChange={(v) => updateField('property_id', v)}
+                        value={formData.property_id || "__none__"} 
+                        onValueChange={(v) => updateField('property_id', v === "__none__" ? '' : v)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um imóvel (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="__none__">Nenhum</SelectItem>
                           {properties.slice(0, 50).map(p => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.title} {p.code ? `(${p.code})` : ''}

@@ -219,12 +219,12 @@ export function RuleEditor({
           {/* Pipeline */}
           <div className="space-y-2">
             <Label>Pipeline (opcional)</Label>
-            <Select value={pipelineId} onValueChange={setPipelineId}>
+            <Select value={pipelineId || "__none__"} onValueChange={(v) => setPipelineId(v === "__none__" ? '' : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Qualquer pipeline" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Qualquer pipeline</SelectItem>
+                <SelectItem value="__none__">Qualquer pipeline</SelectItem>
                 {pipelines.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
