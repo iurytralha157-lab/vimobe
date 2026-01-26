@@ -22,7 +22,12 @@ export interface StageAutomation {
   alert_message: string | null;
 }
 
-export type AutomationType = 'move_after_inactivity' | 'send_whatsapp_on_enter' | 'alert_on_inactivity';
+export type AutomationType = 
+  | 'move_after_inactivity' 
+  | 'send_whatsapp_on_enter' 
+  | 'alert_on_inactivity'
+  | 'change_assignee_on_enter'
+  | 'change_deal_status_on_enter';
 
 export interface CreateAutomationData {
   stage_id: string;
@@ -31,6 +36,8 @@ export interface CreateAutomationData {
   target_stage_id?: string | null;
   whatsapp_template?: string | null;
   alert_message?: string | null;
+  target_user_id?: string | null;
+  deal_status?: 'open' | 'won' | 'lost' | null;
   is_active?: boolean;
 }
 
@@ -181,11 +188,21 @@ export function useToggleStageAutomation() {
 export const AUTOMATION_TYPE_LABELS: Record<AutomationType, string> = {
   'move_after_inactivity': 'Mover após inatividade',
   'send_whatsapp_on_enter': 'Enviar WhatsApp ao entrar',
-  'alert_on_inactivity': 'Alertar sobre inatividade'
+  'alert_on_inactivity': 'Alertar sobre inatividade',
+  'change_assignee_on_enter': 'Mudar responsável ao entrar',
+  'change_deal_status_on_enter': 'Alterar status (Ganho/Perdido)'
 };
 
 export const AUTOMATION_TYPE_DESCRIPTIONS: Record<AutomationType, string> = {
   'move_after_inactivity': 'Move o lead automaticamente para outro estágio após X dias sem atividade',
   'send_whatsapp_on_enter': 'Envia uma mensagem automática via WhatsApp quando o lead entra neste estágio',
-  'alert_on_inactivity': 'Cria uma notificação para o corretor quando o lead ficar X dias sem atividade'
+  'alert_on_inactivity': 'Cria uma notificação para o corretor quando o lead ficar X dias sem atividade',
+  'change_assignee_on_enter': 'Muda o responsável do lead automaticamente quando ele entra neste estágio',
+  'change_deal_status_on_enter': 'Altera o status do deal (Aberto, Ganho ou Perdido) quando o lead entra'
+};
+
+export const DEAL_STATUS_LABELS: Record<string, string> = {
+  'open': 'Aberto',
+  'won': 'Ganho',
+  'lost': 'Perdido'
 };
