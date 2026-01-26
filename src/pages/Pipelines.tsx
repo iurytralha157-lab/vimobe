@@ -1,5 +1,6 @@
-import { useState, useEffect, useDeferredValue, useMemo } from 'react';
+import { useState, useEffect, useDeferredValue, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -229,15 +230,56 @@ export default function Pipelines() {
     }
   }, [location.search, stages, navigate]);
 
-  const handleDragEnd = async (result: DropResult) => {
+  const queryClient = useQueryClient();
+
+  const handleDragEnd = useCallback(async (result: DropResult) => {
     const { destination, source, draggableId } = result;
     
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
     
     const newStageId = destination.droppableId;
-    const oldStage = stages.find(s => s.id === source.droppableId);
+    const oldStageId = source.droppableId;
+    const oldStage = stages.find(s => s.id === oldStageId);
     const newStage = stages.find(s => s.id === newStageId);
+    
+    // Optimistic update - atualiza o cache imediatamente
+    const queryKey = ['stages-with-leads', selectedPipelineId];
+    const previousData = queryClient.getQueryData(queryKey);
+    
+    queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
+      if (!old) return old;
+      
+      // Encontra o lead na coluna de origem
+      const sourceStageIndex = old.findIndex(s => s.id === oldStageId);
+      const destStageIndex = old.findIndex(s => s.id === newStageId);
+      
+      if (sourceStageIndex === -1 || destStageIndex === -1) return old;
+      
+      const newStages = old.map(stage => ({
+        ...stage,
+        leads: [...(stage.leads || [])],
+      }));
+      
+      // Remove o lead da coluna de origem
+      const leadIndex = newStages[sourceStageIndex].leads.findIndex((l: any) => l.id === draggableId);
+      if (leadIndex === -1) return old;
+      
+      const [movedLead] = newStages[sourceStageIndex].leads.splice(leadIndex, 1);
+      
+      // Atualiza o stage_id do lead e adiciona na nova coluna
+      const updatedLead = {
+        ...movedLead,
+        stage_id: newStageId,
+        stage_entered_at: new Date().toISOString(),
+        stage: newStages[destStageIndex],
+      };
+      
+      // Insere na posição correta na coluna de destino
+      newStages[destStageIndex].leads.splice(destination.index, 0, updatedLead);
+      
+      return newStages;
+    });
     
     try {
       const { error } = await supabase
@@ -259,17 +301,18 @@ export default function Pipelines() {
         metadata: {
           from_stage: oldStage?.name,
           to_stage: newStage?.name,
-          from_stage_id: source.droppableId,
+          from_stage_id: oldStageId,
           to_stage_id: newStageId,
         },
       });
       
       toast.success(`Lead movido para ${newStage?.name}`);
-      refetch();
     } catch (error: any) {
+      // Rollback em caso de erro
+      queryClient.setQueryData(queryKey, previousData);
       toast.error('Erro ao mover lead: ' + error.message);
     }
-  };
+  }, [stages, selectedPipelineId, queryClient]);
 
   // handleCreateLead agora é gerenciado pelo CreateLeadDialog
 
