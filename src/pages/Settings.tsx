@@ -11,49 +11,10 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PhoneInput } from '@/components/ui/phone-input';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { 
-  Users, 
-  Building2,
-  Plus, 
-  Check, 
-  Facebook,
-  AlertCircle,
-  Globe,
-  Copy,
-  Loader2,
-  Code,
-  Camera,
-  Settings2,
-  ExternalLink,
-  MessageCircle,
-  Smartphone,
-  Trash2,
-  Shield
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Building2, Plus, Check, Facebook, AlertCircle, Globe, Copy, Loader2, Code, Camera, Settings2, ExternalLink, MessageCircle, Smartphone, Trash2, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOrganizationUsers, useUpdateUser } from '@/hooks/use-users';
@@ -69,28 +30,42 @@ import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
 import { RolesTab } from '@/components/settings/RolesTab';
 import { Webhook } from 'lucide-react';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
-import { 
-  useOrganizationRoles, 
-  useUserOrganizationRoles, 
-  useAssignUserRole 
-} from '@/hooks/use-organization-roles';
-
+import { useOrganizationRoles, useUserOrganizationRoles, useAssignUserRole } from '@/hooks/use-organization-roles';
 export default function Settings() {
-  const { profile, organization, refreshProfile } = useAuth();
-  const { data: users = [], isLoading: usersLoading } = useOrganizationUsers();
+  const {
+    profile,
+    organization,
+    refreshProfile
+  } = useAuth();
+  const {
+    data: users = [],
+    isLoading: usersLoading
+  } = useOrganizationUsers();
   const updateUser = useUpdateUser();
-  const { data: wpIntegration, isLoading: wpLoading } = useWordPressIntegration();
+  const {
+    data: wpIntegration,
+    isLoading: wpLoading
+  } = useWordPressIntegration();
   const createWpIntegration = useCreateWordPressIntegration();
   const toggleWpIntegration = useToggleWordPressIntegration();
-  const { data: metaIntegrations = [], isLoading: metaLoading } = useMetaIntegrations();
+  const {
+    data: metaIntegrations = [],
+    isLoading: metaLoading
+  } = useMetaIntegrations();
   const queryClient = useQueryClient();
-  const { hasModule } = useOrganizationModules();
-  
+  const {
+    hasModule
+  } = useOrganizationModules();
+
   // Funções/roles customizadas
-  const { data: organizationRoles = [] } = useOrganizationRoles();
-  const { data: userOrgRoles = [] } = useUserOrganizationRoles();
+  const {
+    data: organizationRoles = []
+  } = useOrganizationRoles();
+  const {
+    data: userOrgRoles = []
+  } = useUserOrganizationRoles();
   const assignUserRole = useAssignUserRole();
-  
+
   // Calcular métricas Meta
   const activeMetaPages = metaIntegrations.filter(i => i.is_connected);
   const totalMetaLeadsReceived = 0; // leads_received column doesn't exist in DB
@@ -102,7 +77,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [orgName, setOrgName] = useState(organization?.name || '');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  
+
   // Form state for new user
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -111,7 +86,10 @@ export default function Settings() {
   const [newUserRole, setNewUserRole] = useState<'admin' | 'user'>('user');
   const [creatingUser, setCreatingUser] = useState(false);
   const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
   // Helper para obter a função customizada de um usuário
@@ -120,34 +98,43 @@ export default function Settings() {
     if (!assignment) return null;
     return organizationRoles.find(r => r.id === assignment.organization_role_id);
   };
-
   const handleAssignRole = async (userId: string, roleId: string | null) => {
-    await assignUserRole.mutateAsync({ userId, roleId });
+    await assignUserRole.mutateAsync({
+      userId,
+      roleId
+    });
   };
-
   const handleToggleUserActive = async (userId: string, currentValue: boolean) => {
-    await updateUser.mutateAsync({ id: userId, is_active: !currentValue });
+    await updateUser.mutateAsync({
+      id: userId,
+      is_active: !currentValue
+    });
   };
-
   const handleUpdateUserRole = async (userId: string, role: 'admin' | 'user') => {
-    await updateUser.mutateAsync({ id: userId, role });
+    await updateUser.mutateAsync({
+      id: userId,
+      role
+    });
   };
-
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
-    
     setDeletingUser(true);
     try {
       // Use Edge Function to properly delete user from both auth and public tables
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId: userToDelete.id }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('delete-user', {
+        body: {
+          userId: userToDelete.id
+        }
       });
-      
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro ao excluir usuário');
-      
       toast.success('Usuário excluído com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['organization-users'] });
+      queryClient.invalidateQueries({
+        queryKey: ['organization-users']
+      });
       setDeleteUserDialogOpen(false);
       setUserToDelete(null);
     } catch (error: any) {
@@ -156,39 +143,43 @@ export default function Settings() {
       setDeletingUser(false);
     }
   };
-
   const handleCreateUser = async () => {
     if (!newUserName.trim() || !newUserEmail.trim()) {
       toast.error('Preencha nome e email');
       return;
     }
-
     setCreatingUser(true);
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      const {
+        data: {
+          session
+        },
+        error: sessionError
+      } = await supabase.auth.getSession();
       if (sessionError || !session?.access_token) {
         toast.error('Sua sessão expirou. Por favor, faça login novamente.');
         window.location.href = '/auth';
         return;
       }
-      
-      const { data: result, error } = await supabase.functions.invoke('create-user', {
+      const {
+        data: result,
+        error
+      } = await supabase.functions.invoke('create-user', {
         body: {
           name: newUserName.trim(),
           email: newUserEmail.trim(),
           phone: newUserPhone.trim() || undefined,
           endereco: newUserEndereco.trim() || undefined,
-          role: newUserRole,
-        },
+          role: newUserRole
+        }
       });
-
       if (error) {
         throw new Error(error.message || 'Erro ao criar usuário');
       }
-
       toast.success(`Usuário criado! Senha padrão: ${result.defaultPassword}`);
-      queryClient.invalidateQueries({ queryKey: ['organization-users'] });
+      queryClient.invalidateQueries({
+        queryKey: ['organization-users']
+      });
       setUserDialogOpen(false);
       setNewUserName('');
       setNewUserEmail('');
@@ -207,33 +198,30 @@ export default function Settings() {
       setCreatingUser(false);
     }
   };
-
   const handleCreateWpIntegration = async () => {
     await createWpIntegration.mutateAsync();
   };
-
   const handleToggleWpIntegration = async () => {
     if (!wpIntegration) return;
-    await toggleWpIntegration.mutateAsync({ id: wpIntegration.id, is_active: !wpIntegration.is_active });
+    await toggleWpIntegration.mutateAsync({
+      id: wpIntegration.id,
+      is_active: !wpIntegration.is_active
+    });
   };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado para a área de transferência!');
   };
-
   const handleSaveOrgName = async () => {
     if (!organization || !orgName.trim()) return;
-    
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('organizations')
-        .update({ name: orgName.trim() })
-        .eq('id', organization.id);
-      
+      const {
+        error
+      } = await supabase.from('organizations').update({
+        name: orgName.trim()
+      }).eq('id', organization.id);
       if (error) throw error;
-      
       await refreshProfile();
       toast.success('Nome da empresa atualizado!');
     } catch (error: any) {
@@ -242,32 +230,29 @@ export default function Settings() {
       setSaving(false);
     }
   };
-
   const handleUploadAvatar = async (file: File) => {
     if (!profile) return;
-    
     setUploadingAvatar(true);
     try {
       const ext = file.name.split('.').pop();
       const path = `avatars/${profile.id}.${ext}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(path, file, { upsert: true });
-      
+      const {
+        error: uploadError
+      } = await supabase.storage.from('logos').upload(path, file, {
+        upsert: true
+      });
       if (uploadError) throw uploadError;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(path);
-      
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile.id);
-      
+      const {
+        data: {
+          publicUrl
+        }
+      } = supabase.storage.from('logos').getPublicUrl(path);
+      const {
+        error: updateError
+      } = await supabase.from('users').update({
+        avatar_url: publicUrl
+      }).eq('id', profile.id);
       if (updateError) throw updateError;
-      
       await refreshProfile();
       toast.success('Foto atualizada!');
     } catch (error: any) {
@@ -276,18 +261,17 @@ export default function Settings() {
       setUploadingAvatar(false);
     }
   };
-
-  const { t } = useLanguage();
+  const {
+    t
+  } = useLanguage();
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wordpress-webhook`;
-
-  return (
-    <AppLayout title={t.settings.title}>
+  return <AppLayout title={t.settings.title}>
       <div className="animate-in">
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="profile" className="gap-2">
               <Camera className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.settings.myProfile}</span>
+              <span className="hidden sm:inline font-extralight">{t.settings.myProfile}</span>
             </TabsTrigger>
             <TabsTrigger value="organization" className="gap-2">
               <Building2 className="h-4 w-4" />
@@ -297,34 +281,26 @@ export default function Settings() {
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.usersTab}</span>
             </TabsTrigger>
-            {profile?.role === 'admin' && (
-              <TabsTrigger value="roles" className="gap-2">
+            {profile?.role === 'admin' && <TabsTrigger value="roles" className="gap-2">
                 <Shield className="h-4 w-4" />
                 <span className="hidden sm:inline">Funções</span>
-              </TabsTrigger>
-            )}
-            {hasWebhooksModule && (
-              <TabsTrigger value="webhooks" className="gap-2">
+              </TabsTrigger>}
+            {hasWebhooksModule && <TabsTrigger value="webhooks" className="gap-2">
                 <Webhook className="h-4 w-4" />
                 <span className="hidden sm:inline">Webhooks</span>
-              </TabsTrigger>
-            )}
+              </TabsTrigger>}
             <TabsTrigger value="meta" className="gap-2">
               <Facebook className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.meta}</span>
             </TabsTrigger>
-            {hasWordpressModule && (
-              <TabsTrigger value="wordpress" className="gap-2">
+            {hasWordpressModule && <TabsTrigger value="wordpress" className="gap-2">
                 <Globe className="h-4 w-4" />
                 <span className="hidden sm:inline">{t.settings.wordpress}</span>
-              </TabsTrigger>
-            )}
-            {hasWhatsAppModule && (
-              <TabsTrigger value="whatsapp" className="gap-2">
+              </TabsTrigger>}
+            {hasWhatsAppModule && <TabsTrigger value="whatsapp" className="gap-2">
                 <Smartphone className="h-4 w-4" />
                 <span className="hidden sm:inline">WhatsApp</span>
-              </TabsTrigger>
-            )}
+              </TabsTrigger>}
           </TabsList>
 
           {/* Profile Tab */}
@@ -355,15 +331,14 @@ export default function Settings() {
                   <CardTitle>{t.settings.users.title}</CardTitle>
                   <CardDescription>{t.settings.users.description}</CardDescription>
                 </div>
-                {profile?.role === 'admin' && (
-                  <Dialog open={userDialogOpen} onOpenChange={(open) => {
-                    setUserDialogOpen(open);
-                    if (!open) {
-                      setNewUserName('');
-                      setNewUserEmail('');
-                      setNewUserRole('user');
-                    }
-                  }}>
+                {profile?.role === 'admin' && <Dialog open={userDialogOpen} onOpenChange={open => {
+                setUserDialogOpen(open);
+                if (!open) {
+                  setNewUserName('');
+                  setNewUserEmail('');
+                  setNewUserRole('user');
+                }
+              }}>
                     <DialogTrigger asChild>
                       <Button>
                         <Plus className="h-4 w-4 mr-2" />
@@ -378,33 +353,21 @@ export default function Settings() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>{t.common.name}</Label>
-                            <Input 
-                              placeholder={t.common.name}
-                              value={newUserName}
-                              onChange={(e) => setNewUserName(e.target.value)}
-                            />
+                            <Input placeholder={t.common.name} value={newUserName} onChange={e => setNewUserName(e.target.value)} />
                           </div>
                           <div className="space-y-2">
                             <Label>{t.common.email}</Label>
-                            <Input 
-                              type="email" 
-                              placeholder="email@company.com" 
-                              value={newUserEmail}
-                              onChange={(e) => setNewUserEmail(e.target.value)}
-                            />
+                            <Input type="email" placeholder="email@company.com" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>{t.common.phone}</Label>
-                            <PhoneInput 
-                              value={newUserPhone}
-                              onChange={setNewUserPhone}
-                            />
+                            <PhoneInput value={newUserPhone} onChange={setNewUserPhone} />
                           </div>
                           <div className="space-y-2">
                             <Label>{t.settings.users.role}</Label>
-                            <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as 'admin' | 'user')}>
+                            <Select value={newUserRole} onValueChange={v => setNewUserRole(v as 'admin' | 'user')}>
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
@@ -417,11 +380,7 @@ export default function Settings() {
                         </div>
                         <div className="space-y-2">
                           <Label>{t.common.address}</Label>
-                          <Input 
-                            placeholder="Endereço completo"
-                            value={newUserEndereco}
-                            onChange={(e) => setNewUserEndereco(e.target.value)}
-                          />
+                          <Input placeholder="Endereço completo" value={newUserEndereco} onChange={e => setNewUserEndereco(e.target.value)} />
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {t.settings.users.tempPassword}: <strong>trocar@2026</strong>
@@ -437,21 +396,13 @@ export default function Settings() {
                         </div>
                       </div>
                     </DialogContent>
-                  </Dialog>
-                )}
+                  </Dialog>}
               </CardHeader>
               <CardContent>
-                {usersLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                {usersLoading ? <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {users.filter(user => user.role !== 'super_admin').map((user) => (
-                      <div 
-                        key={user.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border"
-                      >
+                  </div> : <div className="space-y-4">
+                    {users.filter(user => user.role !== 'super_admin').map(user => <div key={user.id} className="flex items-center justify-between p-4 rounded-lg border border-border">
                         <div className="flex items-center gap-4">
                           <Avatar>
                             <AvatarImage src={user.avatar_url || undefined} />
@@ -462,35 +413,22 @@ export default function Settings() {
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-medium">{user.name}</p>
-                              {!user.is_active && (
-                                <Badge variant="secondary" className="text-xs">{t.common.inactive}</Badge>
-                              )}
+                              {!user.is_active && <Badge variant="secondary" className="text-xs">{t.common.inactive}</Badge>}
                               {/* Mostrar função customizada */}
-                              {user.role !== 'admin' && getUserCustomRole(user.id) && (
-                                <Badge 
-                                  variant="outline" 
-                                  className="text-xs"
-                                  style={{ 
-                                    borderColor: getUserCustomRole(user.id)?.color,
-                                    color: getUserCustomRole(user.id)?.color 
-                                  }}
-                                >
+                              {user.role !== 'admin' && getUserCustomRole(user.id) && <Badge variant="outline" className="text-xs" style={{
+                          borderColor: getUserCustomRole(user.id)?.color,
+                          color: getUserCustomRole(user.id)?.color
+                        }}>
                                   {getUserCustomRole(user.id)?.name}
-                                </Badge>
-                              )}
+                                </Badge>}
                             </div>
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap justify-end">
-                          {profile?.role === 'admin' ? (
-                            <>
+                          {profile?.role === 'admin' ? <>
                               {/* Tipo de usuário (admin/user) */}
-                              <Select 
-                                value={user.role} 
-                                onValueChange={(v) => handleUpdateUserRole(user.id, v as 'admin' | 'user')}
-                                disabled={user.id === profile?.id}
-                              >
+                              <Select value={user.role} onValueChange={v => handleUpdateUserRole(user.id, v as 'admin' | 'user')} disabled={user.id === profile?.id}>
                                 <SelectTrigger className="w-28">
                                   <SelectValue />
                                 </SelectTrigger>
@@ -501,73 +439,47 @@ export default function Settings() {
                               </Select>
                               
                               {/* Função customizada (apenas para não-admins) */}
-                              {user.role !== 'admin' && organizationRoles.length > 0 && (
-                                <Select 
-                                  value={getUserCustomRole(user.id)?.id || 'none'}
-                                  onValueChange={(v) => handleAssignRole(user.id, v === 'none' ? null : v)}
-                                  disabled={user.id === profile?.id}
-                                >
+                              {user.role !== 'admin' && organizationRoles.length > 0 && <Select value={getUserCustomRole(user.id)?.id || 'none'} onValueChange={v => handleAssignRole(user.id, v === 'none' ? null : v)} disabled={user.id === profile?.id}>
                                   <SelectTrigger className="w-32">
                                     <SelectValue placeholder="Função..." />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="none">Sem função</SelectItem>
-                                    {organizationRoles.map(role => (
-                                      <SelectItem key={role.id} value={role.id}>
+                                    {organizationRoles.map(role => <SelectItem key={role.id} value={role.id}>
                                         <div className="flex items-center gap-2">
-                                          <div 
-                                            className="w-2 h-2 rounded-full" 
-                                            style={{ backgroundColor: role.color }}
-                                          />
+                                          <div className="w-2 h-2 rounded-full" style={{
+                                backgroundColor: role.color
+                              }} />
                                           {role.name}
                                         </div>
-                                      </SelectItem>
-                                    ))}
+                                      </SelectItem>)}
                                   </SelectContent>
-                                </Select>
-                              )}
+                                </Select>}
                               
-                              <Switch 
-                                checked={user.is_active || false} 
-                                onCheckedChange={() => handleToggleUserActive(user.id, user.is_active || false)}
-                                disabled={user.id === profile?.id}
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => {
-                                  setUserToDelete({ id: user.id, name: user.name });
-                                  setDeleteUserDialogOpen(true);
-                                }}
-                                disabled={user.id === profile?.id}
-                              >
+                              <Switch checked={user.is_active || false} onCheckedChange={() => handleToggleUserActive(user.id, user.is_active || false)} disabled={user.id === profile?.id} />
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                        setUserToDelete({
+                          id: user.id,
+                          name: user.name
+                        });
+                        setDeleteUserDialogOpen(true);
+                      }} disabled={user.id === profile?.id}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-2">
+                            </> : <div className="flex items-center gap-2">
                               <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                                 {user.role === 'admin' ? t.settings.users.admin : t.settings.users.user}
                               </Badge>
-                              {user.role !== 'admin' && getUserCustomRole(user.id) && (
-                                <Badge 
-                                  variant="outline"
-                                  style={{ 
-                                    borderColor: getUserCustomRole(user.id)?.color,
-                                    color: getUserCustomRole(user.id)?.color 
-                                  }}
-                                >
+                              {user.role !== 'admin' && getUserCustomRole(user.id) && <Badge variant="outline" style={{
+                        borderColor: getUserCustomRole(user.id)?.color,
+                        color: getUserCustomRole(user.id)?.color
+                      }}>
                                   {getUserCustomRole(user.id)?.name}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
+                                </Badge>}
+                            </div>}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </CardContent>
             </Card>
 
@@ -583,11 +495,7 @@ export default function Settings() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={deletingUser}>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleDeleteUser}
-                    disabled={deletingUser}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
+                  <AlertDialogAction onClick={handleDeleteUser} disabled={deletingUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                     {deletingUser && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Excluir
                   </AlertDialogAction>
@@ -609,37 +517,26 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {metaLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                {metaLoading ? <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <>
+                  </div> : <>
                     {/* Status da Conexão */}
                     <div className={`p-4 rounded-lg border ${isMetaConnected ? 'border-success bg-success/5' : 'border-warning bg-warning/5'}`}>
                       <div className="flex items-center gap-3">
-                        {isMetaConnected ? (
-                          <Check className="h-5 w-5 text-success" />
-                        ) : (
-                          <AlertCircle className="h-5 w-5 text-warning" />
-                        )}
+                        {isMetaConnected ? <Check className="h-5 w-5 text-success" /> : <AlertCircle className="h-5 w-5 text-warning" />}
                         <div>
                           <p className="font-medium">
                             {isMetaConnected ? t.settings.integrations.meta.connected : t.settings.integrations.meta.notConnected}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {isMetaConnected 
-                              ? `${activeMetaPages.length} ${t.settings.integrations.meta.activePage} ${metaIntegrations.length} ${t.settings.integrations.meta.pagesConnected}`
-                              : t.settings.integrations.meta.description
-                            }
+                            {isMetaConnected ? `${activeMetaPages.length} ${t.settings.integrations.meta.activePage} ${metaIntegrations.length} ${t.settings.integrations.meta.pagesConnected}` : t.settings.integrations.meta.description}
                           </p>
                         </div>
                       </div>
                     </div>
 
                     {/* Resumo quando conectado */}
-                    {isMetaConnected && (
-                      <div className="grid grid-cols-2 gap-4">
+                    {isMetaConnected && <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 rounded-lg border bg-muted/50">
                           <p className="text-2xl font-bold">{metaIntegrations.length}</p>
                           <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.pagesConnected}</p>
@@ -648,8 +545,7 @@ export default function Settings() {
                           <p className="text-2xl font-bold">{totalMetaLeadsReceived}</p>
                           <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.leadsReceived}</p>
                         </div>
-                      </div>
-                    )}
+                      </div>}
 
                     {/* Botão para página de configuração */}
                     <Button asChild className="w-full gap-2">
@@ -659,8 +555,7 @@ export default function Settings() {
                         <ExternalLink className="h-4 w-4 ml-auto" />
                       </Link>
                     </Button>
-                  </>
-                )}
+                  </>}
               </CardContent>
             </Card>
           </TabsContent>
@@ -678,21 +573,14 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {wpLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                {wpLoading ? <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : wpIntegration ? (
-                  <>
+                  </div> : wpIntegration ? <>
                     {/* Connection Status */}
                     <div className={`p-4 rounded-lg border ${wpIntegration.is_active ? 'border-success bg-success/5' : 'border-warning bg-warning/5'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          {wpIntegration.is_active ? (
-                            <Check className="h-5 w-5 text-success" />
-                          ) : (
-                            <AlertCircle className="h-5 w-5 text-warning" />
-                          )}
+                          {wpIntegration.is_active ? <Check className="h-5 w-5 text-success" /> : <AlertCircle className="h-5 w-5 text-warning" />}
                           <div>
                             <p className="font-medium">
                               {wpIntegration.is_active ? t.settings.integrations.wordpress.enabled : t.settings.integrations.wordpress.disabled}
@@ -702,10 +590,7 @@ export default function Settings() {
                             </p>
                           </div>
                         </div>
-                        <Switch 
-                          checked={wpIntegration.is_active} 
-                          onCheckedChange={handleToggleWpIntegration}
-                        />
+                        <Switch checked={wpIntegration.is_active} onCheckedChange={handleToggleWpIntegration} />
                       </div>
                     </div>
 
@@ -724,20 +609,13 @@ export default function Settings() {
                     <div className="space-y-2">
                       <Label>{t.settings.integrations.wordpress.apiKey}</Label>
                       <div className="flex gap-2">
-                        <Input 
-                          value={wpIntegration.api_token} 
-                          readOnly 
-                          className="font-mono text-sm"
-                          type="password"
-                        />
+                        <Input value={wpIntegration.api_token} readOnly className="font-mono text-sm" type="password" />
                         <Button variant="outline" size="icon" onClick={() => copyToClipboard(wpIntegration.api_token)}>
                           <Copy className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                  </>
-                ) : (
-                  <>
+                  </> : <>
                     <div className="p-4 rounded-lg border border-muted">
                       <div className="flex items-center gap-3">
                         <AlertCircle className="h-5 w-5 text-muted-foreground" />
@@ -754,20 +632,16 @@ export default function Settings() {
                       {createWpIntegration.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                       {t.common.add}
                     </Button>
-                  </>
-                )}
+                  </>}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* WhatsApp Tab */}
-          {hasWhatsAppModule && (
-            <TabsContent value="whatsapp">
+          {hasWhatsAppModule && <TabsContent value="whatsapp">
               <WhatsAppTab />
-            </TabsContent>
-          )}
+            </TabsContent>}
         </Tabs>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 }
