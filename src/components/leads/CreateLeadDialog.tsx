@@ -67,6 +67,7 @@ export function CreateLeadDialog({
     phone: '',
     email: '',
     message: '',
+    source: '',
     // Telecom specific - Personal
     cpf: '',
     rg: '',
@@ -120,6 +121,7 @@ export function CreateLeadDialog({
         phone: '',
         email: '',
         message: '',
+        source: '',
         cpf: '',
         rg: '',
         birth_date: '',
@@ -417,16 +419,17 @@ export function CreateLeadDialog({
                   ) : (
                     <>
                       {/* Real Estate: Basic Info */}
+                      <div className="space-y-2">
+                        <Label>Nome *</Label>
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => updateField('name', e.target.value)}
+                          placeholder="Nome do lead"
+                          required
+                        />
+                      </div>
+
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Nome *</Label>
-                          <Input
-                            value={formData.name}
-                            onChange={(e) => updateField('name', e.target.value)}
-                            placeholder="Nome do lead"
-                            required
-                          />
-                        </div>
                         <div className="space-y-2">
                           <Label>Telefone</Label>
                           <PhoneInput
@@ -434,16 +437,60 @@ export function CreateLeadDialog({
                             onChange={(value) => updateField('phone', value)}
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => updateField('email', e.target.value)}
+                            placeholder="email@exemplo.com"
+                          />
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Email</Label>
-                        <Input
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => updateField('email', e.target.value)}
-                          placeholder="email@exemplo.com"
-                        />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Fonte</Label>
+                          <Select 
+                            value={formData.source || "__none__"} 
+                            onValueChange={(v) => updateField('source', v === "__none__" ? '' : v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Como conheceu?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Não informado</SelectItem>
+                              <SelectItem value="site">Site</SelectItem>
+                              <SelectItem value="indicacao">Indicação</SelectItem>
+                              <SelectItem value="portais">Portais</SelectItem>
+                              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                              <SelectItem value="telefone">Telefone</SelectItem>
+                              <SelectItem value="facebook">Facebook</SelectItem>
+                              <SelectItem value="instagram">Instagram</SelectItem>
+                              <SelectItem value="google">Google</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Faixa de Imóvel</Label>
+                          <Select 
+                            value={formData.faixa_valor_imovel || "__none__"} 
+                            onValueChange={(v) => updateField('faixa_valor_imovel', v === "__none__" ? '' : v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Valor pretendido" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Não informado</SelectItem>
+                              {faixaImovelOptions.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -452,7 +499,7 @@ export function CreateLeadDialog({
                           value={formData.message}
                           onChange={(e) => updateField('message', e.target.value)}
                           placeholder="Interesse, observações iniciais..."
-                          rows={3}
+                          rows={4}
                         />
                       </div>
                     </>
