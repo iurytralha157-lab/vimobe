@@ -13,11 +13,13 @@ import { UserFilter } from '@/components/schedule/UserFilter';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
 import { useAuth } from '@/contexts/AuthContext';
-
 export default function Agenda() {
-  const { profile } = useAuth();
-  const { data: users = [] } = useUsers();
-  
+  const {
+    profile
+  } = useAuth();
+  const {
+    data: users = []
+  } = useUsers();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
@@ -26,26 +28,32 @@ export default function Agenda() {
 
   // Determine date range based on view
   const dateRange = useMemo(() => {
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 0 });
+    const weekStart = startOfWeek(selectedDate, {
+      weekStartsOn: 0
+    });
+    const weekEnd = endOfWeek(selectedDate, {
+      weekStartsOn: 0
+    });
     return {
-      startDate: addDays(weekStart, -35), // Include previous month
-      endDate: addDays(weekEnd, 35), // Include next month
+      startDate: addDays(weekStart, -35),
+      // Include previous month
+      endDate: addDays(weekEnd, 35) // Include next month
     };
   }, [selectedDate]);
-
-  const { data: events = [], isLoading } = useScheduleEvents({
+  const {
+    data: events = [],
+    isLoading
+  } = useScheduleEvents({
     userId: selectedUserId || undefined,
     startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
+    endDate: dateRange.endDate
   });
 
   // Filter events for the selected day (for list view)
   const selectedDayEvents = useMemo(() => {
     const dayStart = startOfDay(selectedDate);
     const dayEnd = endOfDay(selectedDate);
-    
-    return events.filter((event) => {
+    return events.filter(event => {
       const eventDate = new Date(event.start_time);
       return eventDate >= dayStart && eventDate <= dayEnd;
     });
@@ -55,20 +63,15 @@ export default function Agenda() {
   const upcomingEvents = useMemo(() => {
     const today = startOfDay(new Date());
     const nextWeek = addDays(today, 7);
-    
-    return events
-      .filter((event) => {
-        const eventDate = new Date(event.start_time);
-        return eventDate >= today && eventDate <= nextWeek && event.status !== 'completed';
-      })
-      .slice(0, 10);
+    return events.filter(event => {
+      const eventDate = new Date(event.start_time);
+      return eventDate >= today && eventDate <= nextWeek && event.status !== 'completed';
+    }).slice(0, 10);
   }, [events]);
-
   const handleEditEvent = (event: ScheduleEvent) => {
     setEditingEvent(event);
     setEventFormOpen(true);
   };
-
   const handleCloseEventForm = () => {
     setEventFormOpen(false);
     setEditingEvent(null);
@@ -76,9 +79,7 @@ export default function Agenda() {
 
   // Check if user is admin or team leader
   const canFilterUsers = profile?.role === 'admin';
-
-  return (
-    <AppLayout>
+  return <AppLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -90,27 +91,13 @@ export default function Agenda() {
           </div>
 
           <div className="flex items-center gap-3">
-            {canFilterUsers && (
-              <UserFilter
-                users={users}
-                selectedUserId={selectedUserId}
-                onUserSelect={setSelectedUserId}
-              />
-            )}
+            {canFilterUsers && <UserFilter users={users} selectedUserId={selectedUserId} onUserSelect={setSelectedUserId} />}
 
             <div className="flex items-center border rounded-lg p-1">
-              <Button
-                variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('calendar')}
-              >
+              <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')}>
                 <LayoutGrid className="h-4 w-4" />
               </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
+              <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>
                 <List className="h-4 w-4" />
               </Button>
             </div>
@@ -126,24 +113,12 @@ export default function Agenda() {
         <div className="grid lg:grid-cols-[1fr,350px] gap-6">
           {/* Calendar / List view */}
           <div>
-            {viewMode === 'calendar' ? (
-              <CalendarView
-                events={events}
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-              />
-            ) : (
-              <div className="bg-card rounded-xl border p-4">
+            {viewMode === 'calendar' ? <CalendarView events={events} selectedDate={selectedDate} onDateSelect={setSelectedDate} /> : <div className="bg-card rounded-xl border p-4">
                 <h3 className="font-semibold mb-4">
                   Próximas atividades
                 </h3>
-                <EventsList
-                  events={upcomingEvents}
-                  onEditEvent={handleEditEvent}
-                  showUser={canFilterUsers}
-                />
-              </div>
-            )}
+                <EventsList events={upcomingEvents} onEditEvent={handleEditEvent} showUser={canFilterUsers} />
+              </div>}
           </div>
 
           {/* Sidebar */}
@@ -152,7 +127,7 @@ export default function Agenda() {
             <GoogleCalendarConnect />
 
             {/* Quick stats */}
-            <div className="bg-card rounded-xl border p-4 space-y-4">
+            <div className="bg-card rounded-xl p-4 space-y-4 border-0">
               <h3 className="font-semibold">Resumo da semana</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-accent/50 rounded-lg">
@@ -171,52 +146,33 @@ export default function Agenda() {
             </div>
 
             {/* Atividades do dia selecionado */}
-            <div className="bg-card rounded-xl border p-4">
+            <div className="bg-card rounded-xl p-4 border-0">
               <h3 className="font-semibold mb-3">
-                {startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime()
-                  ? 'Hoje'
-                  : format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                {startOfDay(selectedDate).getTime() === startOfDay(new Date()).getTime() ? 'Hoje' : format(selectedDate, "EEEE, dd 'de' MMMM", {
+                locale: ptBR
+              })}
               </h3>
               <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-thin">
-                {selectedDayEvents.length > 0 ? (
-                  selectedDayEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer"
-                      onClick={() => handleEditEvent(event)}
-                    >
+                {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => <div key={event.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent cursor-pointer" onClick={() => handleEditEvent(event)}>
                       <div className="text-sm font-medium text-muted-foreground w-12">
                         {format(new Date(event.start_time), 'HH:mm')}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{event.title}</p>
-                        {event.lead && (
-                          <p className="text-xs text-muted-foreground truncate">
+                        {event.lead && <p className="text-xs text-muted-foreground truncate">
                             {event.lead.name}
-                          </p>
-                        )}
+                          </p>}
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                    </div>) : <p className="text-sm text-muted-foreground text-center py-4">
                     Nenhuma atividade para este dia
-                  </p>
-                )}
+                  </p>}
               </div>
             </div>
           </div>
         </div>
 
         {/* Event form dialog */}
-        <EventForm
-          open={eventFormOpen}
-          onOpenChange={handleCloseEventForm}
-          event={editingEvent}
-          defaultUserId={profile?.id}
-          defaultDate={selectedDate}
-        />
+        <EventForm open={eventFormOpen} onOpenChange={handleCloseEventForm} event={editingEvent} defaultUserId={profile?.id} defaultDate={selectedDate} />
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 }
