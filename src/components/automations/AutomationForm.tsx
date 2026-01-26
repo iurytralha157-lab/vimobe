@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCreateStageAutomation, useUpdateStageAutomation, AutomationType, AUTOMATION_TYPE_LABELS, AUTOMATION_TYPE_DESCRIPTIONS, StageAutomation } from "@/hooks/use-stage-automations";
+import { useCreateStageAutomation, useUpdateStageAutomation, AutomationType, AUTOMATION_TYPE_LABELS, AUTOMATION_TYPE_DESCRIPTIONS, DEAL_STATUS_LABELS, StageAutomation } from "@/hooks/use-stage-automations";
 import { useStages } from "@/hooks/use-stages";
-import { usePipelines } from "@/hooks/use-stages";
-import { Loader2, Info } from "lucide-react";
+import { useOrganizationUsers } from "@/hooks/use-users";
+import { Loader2, Info, User, Trophy, XCircle, Circle } from "lucide-react";
 
 interface AutomationFormProps {
   stageId: string;
@@ -23,8 +23,11 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
   const [targetStageId, setTargetStageId] = useState<string>('');
   const [whatsappTemplate, setWhatsappTemplate] = useState<string>('');
   const [alertMessage, setAlertMessage] = useState<string>('');
+  const [targetUserId, setTargetUserId] = useState<string>('');
+  const [dealStatus, setDealStatus] = useState<'open' | 'won' | 'lost'>('won');
 
   const { data: stages } = useStages(pipelineId);
+  const { data: users } = useOrganizationUsers();
   const createAutomation = useCreateStageAutomation();
   const updateAutomation = useUpdateStageAutomation();
 
@@ -41,28 +44,50 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
       setTargetStageId(automation.target_stage_id || '');
       setWhatsappTemplate(automation.whatsapp_template || '');
       setAlertMessage(automation.alert_message || '');
+      // Parse action_config for new fields
+      const config = automation.action_config as Record<string, unknown> || {};
+      setTargetUserId((config.target_user_id as string) || '');
+      setDealStatus((config.deal_status as 'open' | 'won' | 'lost') || 'won');
     }
   }, [automation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Build action_config based on automation type
+    let actionConfig: Record<string, unknown> = {};
+    
+    if (automationType === 'change_assignee_on_enter') {
+      actionConfig = { target_user_id: targetUserId };
+    } else if (automationType === 'change_deal_status_on_enter') {
+      actionConfig = { deal_status: dealStatus };
+    }
+
     const data = {
       stage_id: stageId,
       automation_type: automationType,
-      trigger_days: automationType !== 'send_whatsapp_on_enter' ? triggerDays : null,
+      trigger_days: (automationType === 'move_after_inactivity' || automationType === 'alert_on_inactivity') ? triggerDays : null,
       target_stage_id: automationType === 'move_after_inactivity' ? targetStageId : null,
       whatsapp_template: automationType === 'send_whatsapp_on_enter' ? whatsappTemplate : null,
       alert_message: automationType === 'alert_on_inactivity' ? alertMessage : null,
+      action_config: Object.keys(actionConfig).length > 0 ? actionConfig : null,
     };
 
     if (isEditing) {
-      await updateAutomation.mutateAsync({ id: automation.id, ...data });
+      await updateAutomation.mutateAsync({ id: automation.id, ...data } as any);
     } else {
-      await createAutomation.mutateAsync(data);
+      await createAutomation.mutateAsync(data as any);
     }
 
     onSuccess?.();
+  };
+
+  const getDealStatusIcon = (status: string) => {
+    switch (status) {
+      case 'won': return <Trophy className="h-4 w-4 text-green-500" />;
+      case 'lost': return <XCircle className="h-4 w-4 text-red-500" />;
+      default: return <Circle className="h-4 w-4 text-blue-500" />;
+    }
   };
 
   return (
@@ -148,6 +173,66 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
             onChange={(e) => setAlertMessage(e.target.value)}
             placeholder="Lead está há X dias sem atendimento"
           />
+        </div>
+      )}
+
+      {/* Target User - for change assignee automation */}
+      {automationType === 'change_assignee_on_enter' && (
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Novo Responsável
+          </Label>
+          <Select value={targetUserId} onValueChange={setTargetUserId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o responsável" />
+            </SelectTrigger>
+            <SelectContent>
+              {users?.map(user => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            O lead será atribuído automaticamente a este usuário ao entrar no estágio
+          </p>
+        </div>
+      )}
+
+      {/* Deal Status - for change status automation */}
+      {automationType === 'change_deal_status_on_enter' && (
+        <div className="space-y-2">
+          <Label>Novo Status do Deal</Label>
+          <Select value={dealStatus} onValueChange={(v) => setDealStatus(v as 'open' | 'won' | 'lost')}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">
+                <div className="flex items-center gap-2">
+                  <Circle className="h-4 w-4 text-blue-500" />
+                  Aberto
+                </div>
+              </SelectItem>
+              <SelectItem value="won">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-green-500" />
+                  Ganho
+                </div>
+              </SelectItem>
+              <SelectItem value="lost">
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  Perdido
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            O status do deal será alterado automaticamente ao entrar neste estágio
+          </p>
         </div>
       )}
 

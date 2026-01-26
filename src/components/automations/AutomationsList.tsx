@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useStageAutomations, useDeleteStageAutomation, useToggleStageAutomation, AUTOMATION_TYPE_LABELS, StageAutomation } from "@/hooks/use-stage-automations";
+import { useStageAutomations, useDeleteStageAutomation, useToggleStageAutomation, AUTOMATION_TYPE_LABELS, DEAL_STATUS_LABELS, StageAutomation } from "@/hooks/use-stage-automations";
 import { useStages } from "@/hooks/use-stages";
-import { Pencil, Trash2, Zap, Clock, MessageSquare, Bell, ArrowRight } from "lucide-react";
+import { useOrganizationUsers } from "@/hooks/use-users";
+import { Pencil, Trash2, Zap, Clock, MessageSquare, Bell, ArrowRight, User, Trophy, XCircle, Circle } from "lucide-react";
 
 interface AutomationsListProps {
   stageId: string;
@@ -17,6 +18,7 @@ interface AutomationsListProps {
 export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsListProps) {
   const { data: automations, isLoading } = useStageAutomations(stageId);
   const { data: stages } = useStages(pipelineId);
+  const { data: users } = useOrganizationUsers();
   const deleteAutomation = useDeleteStageAutomation();
   const toggleAutomation = useToggleStageAutomation();
 
@@ -28,6 +30,10 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
         return <MessageSquare className="h-4 w-4" />;
       case 'alert_on_inactivity':
         return <Bell className="h-4 w-4" />;
+      case 'change_assignee_on_enter':
+        return <User className="h-4 w-4" />;
+      case 'change_deal_status_on_enter':
+        return <Trophy className="h-4 w-4" />;
       default:
         return <Zap className="h-4 w-4" />;
     }
@@ -39,7 +45,23 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
     return stage?.name || 'Estágio desconhecido';
   };
 
+  const getUserName = (userId: string | null) => {
+    if (!userId || !users) return null;
+    const user = users.find(u => u.id === userId);
+    return user?.name || 'Usuário desconhecido';
+  };
+
+  const getDealStatusIcon = (status: string) => {
+    switch (status) {
+      case 'won': return <Trophy className="h-3 w-3 text-green-500" />;
+      case 'lost': return <XCircle className="h-3 w-3 text-red-500" />;
+      default: return <Circle className="h-3 w-3 text-blue-500" />;
+    }
+  };
+
   const getAutomationDescription = (automation: StageAutomation) => {
+    const config = automation.action_config as Record<string, unknown> || {};
+    
     switch (automation.automation_type) {
       case 'move_after_inactivity':
         return (
@@ -59,6 +81,21 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
             <Clock className="h-3 w-3" />
             {automation.trigger_days} dias - {automation.alert_message}
+          </span>
+        );
+      case 'change_assignee_on_enter':
+        return (
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            <User className="h-3 w-3" />
+            → {getUserName(config.target_user_id as string) || 'Não definido'}
+          </span>
+        );
+      case 'change_deal_status_on_enter':
+        const status = config.deal_status as string || 'open';
+        return (
+          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+            {getDealStatusIcon(status)}
+            → {DEAL_STATUS_LABELS[status] || status}
           </span>
         );
       default:
