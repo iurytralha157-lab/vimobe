@@ -120,7 +120,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-3xl shadow-xl p-9">
+        <div className="bg-white rounded-3xl p-9">
 
           {/* LOGO + SUBTÍTULO */}
           <div className="flex flex-col items-center mb-5">
