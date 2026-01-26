@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import type { Json } from "@/integrations/supabase/types";
 
 // Extended type that includes new columns added by migration
 export interface StageAutomation {
@@ -77,6 +78,14 @@ export function useCreateStageAutomation() {
     mutationFn: async (data: CreateAutomationData) => {
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
 
+      // Build action_config based on automation type
+      let actionConfig: Record<string, unknown> = {};
+      if (data.automation_type === 'change_assignee_on_enter' && data.target_user_id) {
+        actionConfig = { target_user_id: data.target_user_id };
+      } else if (data.automation_type === 'change_deal_status_on_enter' && data.deal_status) {
+        actionConfig = { deal_status: data.deal_status };
+      }
+
       const insertData = {
         stage_id: data.stage_id,
         organization_id: profile.organization_id,
@@ -87,6 +96,7 @@ export function useCreateStageAutomation() {
         target_stage_id: data.target_stage_id || null,
         whatsapp_template: data.whatsapp_template || null,
         alert_message: data.alert_message || null,
+        action_config: Object.keys(actionConfig).length > 0 ? (actionConfig as Json) : null,
         is_active: data.is_active ?? true,
       };
 
