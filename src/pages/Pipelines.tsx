@@ -201,8 +201,15 @@ export default function Pipelines() {
       for (const stage of stages) {
         const updatedLead = stage.leads?.find((l: any) => l.id === selectedLead.id);
         if (updatedLead) {
-          // Apenas atualizar se os dados realmente mudaram
-          if (JSON.stringify(updatedLead) !== JSON.stringify(selectedLead)) {
+          // Compare key fields to avoid circular reference issues with JSON.stringify
+          const hasChanged = 
+            updatedLead.stage_id !== selectedLead.stage_id ||
+            updatedLead.deal_status !== selectedLead.deal_status ||
+            updatedLead.assigned_user_id !== selectedLead.assigned_user_id ||
+            updatedLead.name !== selectedLead.name ||
+            updatedLead.updated_at !== selectedLead.updated_at;
+          
+          if (hasChanged) {
             setSelectedLead(updatedLead);
           }
           break;
