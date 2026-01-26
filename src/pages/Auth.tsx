@@ -179,7 +179,7 @@ export default function Auth() {
               <Button 
                 type="submit" 
                 disabled={loading} 
-                className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-lg"
+                className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold"
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Entrar
@@ -238,7 +238,7 @@ export default function Auth() {
               <Button 
                 type="submit" 
                 disabled={loading} 
-                className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-lg"
+                className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold"
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Enviar link de recuperação
