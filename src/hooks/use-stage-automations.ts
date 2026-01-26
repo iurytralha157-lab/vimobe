@@ -39,6 +39,7 @@ export interface CreateAutomationData {
   alert_message?: string | null;
   target_user_id?: string | null;
   deal_status?: 'open' | 'won' | 'lost' | null;
+  action_config?: Record<string, unknown> | null;
   is_active?: boolean;
 }
 
@@ -79,11 +80,21 @@ export function useCreateStageAutomation() {
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
 
       // Build action_config based on automation type
+      // Priority: pre-built action_config > direct fields (deal_status, target_user_id)
       let actionConfig: Record<string, unknown> = {};
-      if (data.automation_type === 'change_assignee_on_enter' && data.target_user_id) {
-        actionConfig = { target_user_id: data.target_user_id };
-      } else if (data.automation_type === 'change_deal_status_on_enter' && data.deal_status) {
-        actionConfig = { deal_status: data.deal_status };
+      
+      if (data.automation_type === 'change_assignee_on_enter') {
+        if (data.action_config && (data.action_config as any).target_user_id) {
+          actionConfig = data.action_config;
+        } else if (data.target_user_id) {
+          actionConfig = { target_user_id: data.target_user_id };
+        }
+      } else if (data.automation_type === 'change_deal_status_on_enter') {
+        if (data.action_config && (data.action_config as any).deal_status) {
+          actionConfig = data.action_config;
+        } else if (data.deal_status) {
+          actionConfig = { deal_status: data.deal_status };
+        }
       }
 
       const insertData = {

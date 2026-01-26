@@ -54,15 +54,6 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Build action_config based on automation type
-    let actionConfig: Record<string, unknown> = {};
-    
-    if (automationType === 'change_assignee_on_enter') {
-      actionConfig = { target_user_id: targetUserId };
-    } else if (automationType === 'change_deal_status_on_enter') {
-      actionConfig = { deal_status: dealStatus };
-    }
-
     const data = {
       stage_id: stageId,
       automation_type: automationType,
@@ -70,7 +61,9 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
       target_stage_id: automationType === 'move_after_inactivity' ? targetStageId : null,
       whatsapp_template: automationType === 'send_whatsapp_on_enter' ? whatsappTemplate : null,
       alert_message: automationType === 'alert_on_inactivity' ? alertMessage : null,
-      action_config: Object.keys(actionConfig).length > 0 ? actionConfig : null,
+      // Pass direct values - hook will build action_config
+      deal_status: automationType === 'change_deal_status_on_enter' ? dealStatus : undefined,
+      target_user_id: automationType === 'change_assignee_on_enter' ? targetUserId : undefined,
     };
 
     if (isEditing) {
