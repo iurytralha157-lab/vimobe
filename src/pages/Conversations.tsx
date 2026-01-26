@@ -22,7 +22,6 @@ import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { useTags, Tag as TagType } from "@/hooks/use-tags";
 import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 export default function Conversations() {
   const isMobile = useIsMobile();
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
@@ -361,7 +360,7 @@ export default function Conversations() {
 
   // Desktop Layout
   return <AppLayout title="Conversas">
-      <div className="flex h-[calc(100vh-7rem)] bg-background rounded-lg border overflow-hidden">
+      <div className="flex h-[calc(100vh-7rem)] bg-background rounded-lg overflow-hidden border-0">
         {/* Sidebar */}
         <aside className="w-[350px] min-w-[350px] max-w-[350px] border-r bg-card flex flex-col overflow-hidden">
           {/* Header com filtros */}
