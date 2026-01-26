@@ -13,12 +13,13 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
   const isMobile = useIsMobile();
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="h-screen flex w-full bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
       {/* Desktop sidebar */}
-      {!isMobile && <AdminSidebar />}
-      
-      {/* Spacer for fixed sidebar - only on desktop */}
-      {!isMobile && <div className="w-64 flex-shrink-0 transition-all duration-300" />}
+      {!isMobile && (
+        <div className="flex-shrink-0">
+          <AdminSidebar />
+        </div>
+      )}
       
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile header with hamburger */}

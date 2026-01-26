@@ -101,8 +101,8 @@ export function AdminMobileSidebar() {
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
                     isActive(item.path)
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "bg-orange-100 dark:bg-orange-900/30 text-foreground"
+                      : "text-muted-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30 hover:text-foreground"
                   )}
                 >
                   <item.icon className="h-5 w-5" />
