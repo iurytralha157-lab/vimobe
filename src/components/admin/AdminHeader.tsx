@@ -44,7 +44,7 @@ export function AdminHeader({ title }: AdminHeaderProps) {
   };
 
   return (
-    <header className="h-14 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-background">
+    <header className="h-12 flex items-center justify-between px-2 lg:px-6 mx-3 mt-3">
       {/* Page title */}
       <h1 className="text-lg lg:text-xl font-semibold">{title || 'Super Admin'}</h1>
 

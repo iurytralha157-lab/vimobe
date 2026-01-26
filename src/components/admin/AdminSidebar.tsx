@@ -12,7 +12,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState, useMemo } from 'react';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
@@ -26,7 +25,7 @@ const navItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
@@ -36,89 +35,131 @@ export function AdminSidebar() {
     const preferredUrl = resolvedTheme === 'dark' 
       ? systemSettings.logo_url_dark 
       : systemSettings.logo_url_light;
-    // Fallback to the other theme's logo if preferred is not set
     return preferredUrl || systemSettings.logo_url_light || systemSettings.logo_url_dark;
+  }, [systemSettings, resolvedTheme]);
+
+  const faviconUrl = useMemo(() => {
+    if (!systemSettings) return null;
+    const preferredUrl = resolvedTheme === 'dark'
+      ? systemSettings.favicon_url_dark
+      : systemSettings.favicon_url_light;
+    return preferredUrl || systemSettings.favicon_url_light || systemSettings.favicon_url_dark;
   }, [systemSettings, resolvedTheme]);
 
   const logoWidth = systemSettings?.logo_width || 140;
   const logoHeight = systemSettings?.logo_height || 40;
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   return (
-    <aside 
-      className={cn(
-        "h-screen bg-sidebar border-r border-sidebar-border flex-col transition-all duration-300 fixed top-0 left-0 z-40 hidden lg:flex",
-        collapsed ? "w-16" : "w-64"
-      )}
-    >
-      {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        {!collapsed && (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                style={{ maxWidth: Math.min(logoWidth, 160), maxHeight: Math.min(logoHeight, 40) }}
-                className="object-contain"
-              />
-            ) : (
-              <>
-                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+    <div className="relative h-[calc(100%-24px)] m-3">
+      <aside 
+        className={cn(
+          "h-full bg-card rounded-xl border shadow-sm flex flex-col transition-all duration-300",
+          collapsed ? "w-16" : "w-56"
+        )}
+      >
+        {/* Logo */}
+        <div className="h-14 flex items-center justify-between px-3 border-b border-border">
+          {!collapsed && (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Logo" 
+                  style={{ maxWidth: Math.min(logoWidth, 140), maxHeight: Math.min(logoHeight, 36) }}
+                  className="object-contain"
+                />
+              ) : (
+                <>
+                  <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                    <Shield className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <span className="font-bold text-foreground">Super Admin</span>
+                </>
+              )}
+            </div>
+          )}
+          {collapsed && (
+            <div className="flex items-center justify-center w-full">
+              {faviconUrl ? (
+                <img 
+                  src={faviconUrl} 
+                  alt="Logo" 
+                  className="h-8 w-8 object-contain"
+                />
+              ) : logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Logo" 
+                  className="h-8 w-8 object-contain"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                   <Shield className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <span className="font-bold text-sidebar-foreground">Super Admin</span>
-              </>
+              )}
+            </div>
+          )}
+          {!collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground flex-shrink-0"
+              onClick={() => setCollapsed(true)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  end={item.path === '/admin'}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    "text-muted-foreground hover:text-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30",
+                    isActive && "bg-orange-100 dark:bg-orange-900/30 text-foreground"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span>{item.label}</span>}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Footer */}
+        <div className="p-2 border-t border-border">
+          <button
+            onClick={signOut}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              "text-destructive hover:bg-destructive/10",
+              collapsed && "justify-center"
             )}
-          </div>
-        )}
-        {collapsed && logoUrl && (
-          <img 
-            src={logoUrl} 
-            alt="Logo" 
-            className="h-8 w-8 object-contain"
-          />
-        )}
-        {collapsed && !logoUrl && (
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <Shield className="h-5 w-5 text-primary-foreground" />
-          </div>
-        )}
+          >
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && <span>Sair</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Floating toggle button when collapsed */}
+      {collapsed && (
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
-          className="h-8 w-8 text-sidebar-foreground/70 hover:text-sidebar-foreground flex-shrink-0"
-          onClick={() => setCollapsed(!collapsed)}
+          className="absolute -right-3 top-4 h-6 w-6 rounded-full border bg-card shadow-sm z-10"
+          onClick={() => setCollapsed(false)}
         >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          <ChevronRight className="h-3 w-3" />
         </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 overflow-y-auto scrollbar-thin">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <NavLink
-                to={item.path}
-                end={item.path === '/admin'}
-                className={({ isActive }) => cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-                  isActive && "nav-active"
-                )}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-    </aside>
+      )}
+    </div>
   );
 }
