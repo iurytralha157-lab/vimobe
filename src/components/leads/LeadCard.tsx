@@ -1,38 +1,34 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Phone, 
-  Mail, 
-  MessageCircle,
-  Clock,
-  CheckCircle,
-  User,
-  Zap,
-  Trophy,
-  XCircle
-} from 'lucide-react';
+import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Draggable } from '@hello-pangea/dnd';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { formatPhoneForDisplay } from '@/lib/phone-utils';
 import { SlaBadge } from './SlaBadge';
 
 // Deal status labels and colors
 const dealStatusConfig = {
-  open: { label: 'Aberto', color: 'bg-muted text-muted-foreground', icon: null },
-  won: { label: 'Ganho', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300', icon: Trophy },
-  lost: { label: 'Perdido', color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300', icon: XCircle },
+  open: {
+    label: 'Aberto',
+    color: 'bg-muted text-muted-foreground',
+    icon: null
+  },
+  won: {
+    label: 'Ganho',
+    color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
+    icon: Trophy
+  },
+  lost: {
+    label: 'Perdido',
+    color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+    icon: XCircle
+  }
 };
-
 interface LeadCardProps {
   lead: any;
   onClick: () => void;
@@ -45,22 +41,22 @@ const formatShortTime = (date: Date): string => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffHrs = Math.floor(diffMs / 3600000);
-  
   if (diffHrs === 0) {
     const diffMins = Math.floor(diffMs / 60000);
     return `${diffMins}min`;
   }
-  
   return `${diffHrs}h`;
 };
-
-export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
-  const { openNewChat } = useFloatingChat();
-  
-  const stageTime = lead.stage_entered_at 
-    ? formatShortTime(new Date(lead.stage_entered_at))
-    : '-';
-
+export function LeadCard({
+  lead,
+  onClick,
+  index,
+  onAssignNow
+}: LeadCardProps) {
+  const {
+    openNewChat
+  } = useFloatingChat();
+  const stageTime = lead.stage_entered_at ? formatShortTime(new Date(lead.stage_entered_at)) : '-';
   const pendingTasks = lead.tasks_count?.pending || 0;
   const completedTasks = lead.tasks_count?.completed || 0;
   const totalTasks = pendingTasks + completedTasks;
@@ -69,13 +65,7 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
   const valorInteresse = lead.valor_interesse || lead.property?.preco;
 
   // Verifica se o lead tem tags de prioridade alta
-  const hasHighPriority = lead.tags?.some(
-    (tag: any) => 
-      tag.name?.toLowerCase().includes('urgente') || 
-      tag.name?.toLowerCase().includes('vip') ||
-      tag.name?.toLowerCase().includes('prioridade') ||
-      tag.name?.toLowerCase().includes('hot')
-  );
+  const hasHighPriority = lead.tags?.some((tag: any) => tag.name?.toLowerCase().includes('urgente') || tag.name?.toLowerCase().includes('vip') || tag.name?.toLowerCase().includes('prioridade') || tag.name?.toLowerCase().includes('hot'));
 
   // Esquema de cores dinâmico baseado na prioridade
   const iconColors = hasHighPriority ? {
@@ -87,7 +77,6 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
     whatsapp: "bg-orange-100 text-orange-600 hover:bg-orange-200 dark:bg-orange-950 dark:text-orange-400",
     email: "bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-400"
   };
-
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
       return `R$${(value / 1000000).toFixed(1)}M`;
@@ -96,14 +85,12 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
     }
     return `R$${value}`;
   };
-
   const handlePhoneClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.phone) {
       window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
     }
   };
-
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.phone) {
@@ -111,7 +98,6 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
       openNewChat(lead.phone, lead.name);
     }
   };
-
   const handleEmailClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.email) {
@@ -120,57 +106,30 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
       window.open(gmailUrl, '_blank');
     }
   };
-
-  return (
-    <Draggable draggableId={lead.id} index={index}>
-      {(provided, snapshot) => (
-        <div 
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className={cn(
-            "bg-card border border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group",
-            "hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5",
-            snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary"
-          )}
-          onClick={onClick}
-        >
+  return <Draggable draggableId={lead.id} index={index}>
+      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             {/* Deal Status Badge */}
-            {lead.deal_status && lead.deal_status !== 'open' && (
-              <Badge 
-                variant="secondary" 
-                className={cn(
-                  "text-[9px] px-1.5 py-0 font-medium flex items-center gap-0.5",
-                  dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color
-                )}
-              >
-                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.icon && (
-                  (() => {
-                    const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
-                    return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
-                  })()
-                )}
+            {lead.deal_status && lead.deal_status !== 'open' && <Badge variant="secondary" className={cn("text-[9px] px-1.5 py-0 font-medium flex items-center gap-0.5", dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color)}>
+                {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.icon && (() => {
+            const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
+            return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
+          })()}
                 {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.label}
-              </Badge>
-            )}
+              </Badge>}
             
             {/* Tags - primeira tag em destaque */}
-            {lead.tags && lead.tags.length > 0 && (
-              <>
-                <Badge 
-                  variant="secondary" 
-                  className="text-[9px] px-1.5 py-0 font-medium"
-                  style={{ backgroundColor: `${lead.tags[0].color}20`, color: lead.tags[0].color, borderColor: lead.tags[0].color }}
-                >
+            {lead.tags && lead.tags.length > 0 && <>
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-medium" style={{
+            backgroundColor: `${lead.tags[0].color}20`,
+            color: lead.tags[0].color,
+            borderColor: lead.tags[0].color
+          }}>
                   {lead.tags[0].name}
                 </Badge>
-                {lead.tags.length > 1 && (
-                  <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>
-                )}
-              </>
-            )}
+                {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
+              </>}
           </div>
 
           {/* Nome do Lead + Avatar com foto do WhatsApp */}
@@ -184,17 +143,13 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
                   </AvatarFallback>
                 </Avatar>
                 {/* Indicador de mensagens não lidas */}
-                {lead.unread_count > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 min-w-4 flex items-center justify-center px-1 text-[9px] font-bold bg-primary text-primary-foreground rounded-full ring-2 ring-card">
+                {lead.unread_count > 0 && <span className="absolute -top-1 -right-1 h-4 min-w-4 flex items-center justify-center px-1 text-[9px] font-bold bg-primary text-primary-foreground rounded-full ring-2 ring-card">
                     {lead.unread_count > 9 ? '9+' : lead.unread_count}
-                  </span>
-                )}
+                  </span>}
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-sm truncate text-foreground">{lead.name}</h4>
-                {lead.phone && (
-                  <p className="text-[11px] text-muted-foreground truncate">{formatPhoneForDisplay(lead.phone)}</p>
-                )}
+                {lead.phone && <p className="text-[11px] text-muted-foreground truncate">{formatPhoneForDisplay(lead.phone)}</p>}
               </div>
             </div>
           </div>
@@ -206,8 +161,7 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
           <TooltipProvider delayDuration={100}>
             <div className="flex items-center gap-1.5 flex-wrap">
               {/* Avatar do responsável ou badge "Sem responsável" */}
-              {lead.assignee ? (
-                <Tooltip>
+              {lead.assignee ? <Tooltip>
                   <TooltipTrigger asChild>
                     <Avatar className="h-6 w-6 ring-2 ring-background shrink-0">
                       <AvatarImage src={lead.assignee.avatar_url} />
@@ -219,40 +173,24 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
                   <TooltipContent side="bottom" className="text-xs">
                     {lead.assignee.name}
                   </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Tooltip>
+                </Tooltip> : <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge 
-                      variant="destructive" 
-                      className="text-[9px] px-1.5 py-0.5 cursor-pointer hover:bg-destructive/90 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAssignNow?.(lead.id);
-                      }}
-                    >
+                    <Badge variant="destructive" className="text-[9px] px-1.5 py-0.5 cursor-pointer hover:bg-destructive/90 transition-colors" onClick={e => {
+                e.stopPropagation();
+                onAssignNow?.(lead.id);
+              }}>
                       Sem responsável
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
                     Clique para atribuir via round-robin
                   </TooltipContent>
-                </Tooltip>
-              )}
+                </Tooltip>}
 
               {/* Ícones de ação */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={handlePhoneClick}
-                    disabled={!hasPhone}
-                    className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center transition-colors",
-                      hasPhone 
-                        ? iconColors.phone 
-                        : "bg-muted text-muted-foreground/50 cursor-not-allowed"
-                    )}
-                  >
+                  <button onClick={handlePhoneClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.phone : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <Phone className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -263,16 +201,7 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={handleWhatsAppClick}
-                    disabled={!hasPhone}
-                    className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center transition-colors",
-                      hasPhone 
-                        ? iconColors.whatsapp 
-                        : "bg-muted text-muted-foreground/50 cursor-not-allowed"
-                    )}
-                  >
+                  <button onClick={handleWhatsAppClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.whatsapp : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <MessageCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -283,16 +212,7 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={handleEmailClick}
-                    disabled={!hasEmail}
-                    className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center transition-colors",
-                      hasEmail 
-                        ? iconColors.email 
-                        : "bg-muted text-muted-foreground/50 cursor-not-allowed"
-                    )}
-                  >
+                  <button onClick={handleEmailClick} disabled={!hasEmail} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasEmail ? iconColors.email : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
                     <Mail className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
@@ -302,8 +222,7 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
               </Tooltip>
 
               {/* Valor do imóvel/interesse */}
-              {valorInteresse > 0 && (
-                <Tooltip>
+              {valorInteresse > 0 && <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950 px-1.5 py-0.5 rounded">
                       {formatCurrency(valorInteresse)}
@@ -312,12 +231,10 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
                   <TooltipContent side="bottom" className="text-xs">
                     Valor: R${valorInteresse.toLocaleString('pt-BR')}
                   </TooltipContent>
-                </Tooltip>
-              )}
+                </Tooltip>}
 
               {/* Primeira Resposta Badge */}
-              {lead.first_response_seconds !== null && lead.first_response_seconds !== undefined ? (
-                <Tooltip>
+              {lead.first_response_seconds !== null && lead.first_response_seconds !== undefined ? <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-1 text-[10px] font-medium text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/50 px-1.5 py-0.5 rounded">
                       <Zap className="h-3 w-3" />
@@ -328,22 +245,14 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
                     1ª resposta: {formatResponseTime(lead.first_response_seconds)}
                     {lead.first_response_is_automation && ' (automação)'}
                   </TooltipContent>
-                </Tooltip>
-              ) : lead.assigned_user_id ? (
-                <>
+                </Tooltip> : lead.assigned_user_id ? <>
                   {/* SLA Badge - shows warning/overdue status */}
-                  <SlaBadge
-                    slaStatus={lead.sla_status}
-                    slaSecondsElapsed={lead.sla_seconds_elapsed}
-                    firstResponseAt={lead.first_response_at}
-                  />
+                  <SlaBadge slaStatus={lead.sla_status} slaSecondsElapsed={lead.sla_seconds_elapsed} firstResponseAt={lead.first_response_at} />
                   
-                </>
-              ) : null}
+                </> : null}
 
               {/* Progresso da cadência */}
-              {totalTasks > 0 && (
-                <Tooltip>
+              {totalTasks > 0 && <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
                       <CheckCircle className="h-3 w-3" />
@@ -353,8 +262,7 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
                   <TooltipContent side="bottom" className="text-xs">
                     {completedTasks} de {totalTasks} atividades concluídas
                   </TooltipContent>
-                </Tooltip>
-              )}
+                </Tooltip>}
 
               {/* Tempo no estágio */}
               <Tooltip>
@@ -370,8 +278,6 @@ export function LeadCard({ lead, onClick, index, onAssignNow }: LeadCardProps) {
               </Tooltip>
             </div>
           </TooltipProvider>
-        </div>
-      )}
-    </Draggable>
-  );
+        </div>}
+    </Draggable>;
 }
