@@ -96,12 +96,12 @@ export function TestRuleDialog({ open, onOpenChange }: TestRuleDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Pipeline</Label>
-              <Select value={pipelineId} onValueChange={setPipelineId}>
+              <Select value={pipelineId || "__none__"} onValueChange={(v) => setPipelineId(v === "__none__" ? '' : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
                   {pipelines.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
