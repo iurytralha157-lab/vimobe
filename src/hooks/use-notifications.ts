@@ -151,6 +151,7 @@ export function useNotifications() {
           },
           (payload) => {
             console.log('🔔 New notification received:', payload);
+            console.log('🔊 Audio unlocked status:', globalAudioUnlocked, audioUnlockedRef.current);
             
             const newNotification = payload.new as Notification;
             
@@ -163,9 +164,15 @@ export function useNotifications() {
               console.log('WhatsApp notification received (silent):', newNotification.title);
             } else if (newNotification.type === 'lead') {
               // New lead - play cha-ching sound
+              console.log('🔔 Playing new-lead sound for:', newNotification.title);
               if (newLeadSoundRef.current) {
                 newLeadSoundRef.current.currentTime = 0;
-                newLeadSoundRef.current.play().catch(console.log);
+                newLeadSoundRef.current.volume = 0.7;
+                newLeadSoundRef.current.play()
+                  .then(() => console.log('✅ New lead sound played successfully'))
+                  .catch((err) => console.log('❌ Failed to play new lead sound:', err));
+              } else {
+                console.log('❌ newLeadSoundRef is null');
               }
               
               toast.success('🆕 Novo Lead!', {
@@ -174,9 +181,13 @@ export function useNotifications() {
               });
             } else {
               // Other important notifications (financial, system, etc.)
+              console.log('🔔 Playing notification sound for:', newNotification.title);
               if (notificationSoundRef.current) {
                 notificationSoundRef.current.currentTime = 0;
-                notificationSoundRef.current.play().catch(console.log);
+                notificationSoundRef.current.volume = 0.5;
+                notificationSoundRef.current.play()
+                  .then(() => console.log('✅ Notification sound played successfully'))
+                  .catch((err) => console.log('❌ Failed to play notification sound:', err));
               }
               
               toast(newNotification.title, {
