@@ -137,13 +137,7 @@ export function LeadCard({
               </>}
           </div>
 
-          {/* Lost Reason - shown when lost */}
-          {isLost && lead.lost_reason && (
-            <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-destructive/10 text-[10px] text-destructive">
-              <XCircle className="h-3 w-3 shrink-0" />
-              <span className="truncate">{lead.lost_reason}</span>
-            </div>
-          )}
+
 
           {/* Nome do Lead + Avatar com foto do WhatsApp */}
           <div className="flex items-start justify-between mb-2">
