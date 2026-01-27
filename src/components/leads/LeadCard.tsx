@@ -108,21 +108,18 @@ export function LeadCard({
   };
   const isLost = lead.deal_status === 'lost';
   const isWon = lead.deal_status === 'won';
-  
   return <Draggable draggableId={lead.id} index={index}>
-      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
+      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             {/* Deal Status Badge */}
-            {lead.deal_status && lead.deal_status !== 'open' && (
-              <span className={cn("text-[9px] px-1.5 py-0.5 font-medium flex items-center gap-0.5 rounded-full", dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color)}>
+            {lead.deal_status && lead.deal_status !== 'open' && <span className={cn("text-[9px] px-1.5 py-0.5 font-medium flex items-center gap-0.5 rounded-full", dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color)}>
                 {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.icon && (() => {
-                  const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
-                  return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
-                })()}
+            const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
+            return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
+          })()}
                 {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.label}
-              </span>
-            )}
+              </span>}
             
             {/* Tags - primeira tag em destaque */}
             {lead.tags && lead.tags.length > 0 && <>
