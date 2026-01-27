@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shuffle, Users, Timer } from 'lucide-react';
+import { Shuffle, Users, Timer, Tags } from 'lucide-react';
 
 // Distribuição components
 import { DistributionTab } from '@/components/crm-management/DistributionTab';
@@ -9,6 +9,8 @@ import { DistributionTab } from '@/components/crm-management/DistributionTab';
 import { TeamsTab } from '@/components/crm-management/TeamsTab';
 // Bolsão component
 import { PoolTab } from '@/components/crm-management/PoolTab';
+// Tags component
+import { TagsTab } from '@/components/crm-management/TagsTab';
 
 export default function CRMManagement() {
   const [activeTab, setActiveTab] = useState('teams');
@@ -39,6 +41,13 @@ export default function CRMManagement() {
               <Timer className="h-4 w-4" />
               Bolsão
             </TabsTrigger>
+            <TabsTrigger 
+              value="tags" 
+              className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              <Tags className="h-4 w-4" />
+              Tags
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="teams" className="mt-0">
@@ -51,6 +60,10 @@ export default function CRMManagement() {
 
           <TabsContent value="pool" className="mt-0">
             <PoolTab />
+          </TabsContent>
+
+          <TabsContent value="tags" className="mt-0">
+            <TagsTab />
           </TabsContent>
         </Tabs>
       </div>
