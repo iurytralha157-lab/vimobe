@@ -35,7 +35,8 @@ export default function Settings() {
   const {
     profile,
     organization,
-    refreshProfile
+    refreshProfile,
+    isSuperAdmin
   } = useAuth();
   const {
     data: users = [],
@@ -281,7 +282,7 @@ export default function Settings() {
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">{t.settings.usersTab}</span>
             </TabsTrigger>
-            {profile?.role === 'admin' && <TabsTrigger value="roles" className="gap-2">
+            {(profile?.role === 'admin' || isSuperAdmin) && <TabsTrigger value="roles" className="gap-2">
                 <Shield className="h-4 w-4" />
                 <span className="hidden sm:inline">Funções</span>
               </TabsTrigger>}
