@@ -11,7 +11,7 @@ import { SimplePeriodFilter } from "@/components/ui/date-filter-popover";
 import { Download, TrendingUp, Clock, Target, DollarSign, Users, Medal } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 type PeriodType = 'month' | 'quarter' | 'year';
 
@@ -78,25 +78,47 @@ export default function BrokerPerformance() {
       .slice(0, 2);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!brokers) return;
 
-    const exportData = brokers.map((broker, index) => ({
-      'Posição': index + 1,
-      'Corretor': broker.userName,
-      'Leads Atribuídos': broker.totalLeads,
-      'Leads Fechados': broker.closedLeads,
-      'Taxa de Conversão (%)': broker.conversionRate.toFixed(1),
-      'Tempo Médio Atendimento (min)': broker.avgResponseTimeMinutes?.toFixed(0) || '-',
-      'Vendas (R$)': broker.totalSales,
-      'Comissões (R$)': broker.totalCommissions,
-      'Leads Ativos': broker.activeLeads
-    }));
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Performance');
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Performance");
-    XLSX.writeFile(wb, `performance-corretores-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    worksheet.columns = [
+      { header: 'Posição', key: 'posicao', width: 10 },
+      { header: 'Corretor', key: 'corretor', width: 25 },
+      { header: 'Leads Atribuídos', key: 'leads_atribuidos', width: 18 },
+      { header: 'Leads Fechados', key: 'leads_fechados', width: 16 },
+      { header: 'Taxa de Conversão (%)', key: 'conversao', width: 20 },
+      { header: 'Tempo Médio Atendimento (min)', key: 'tempo_medio', width: 28 },
+      { header: 'Vendas (R$)', key: 'vendas', width: 18 },
+      { header: 'Comissões (R$)', key: 'comissoes', width: 18 },
+      { header: 'Leads Ativos', key: 'leads_ativos', width: 14 },
+    ];
+
+    brokers.forEach((broker, index) => {
+      worksheet.addRow({
+        posicao: index + 1,
+        corretor: broker.userName,
+        leads_atribuidos: broker.totalLeads,
+        leads_fechados: broker.closedLeads,
+        conversao: broker.conversionRate.toFixed(1),
+        tempo_medio: broker.avgResponseTimeMinutes?.toFixed(0) || '-',
+        vendas: broker.totalSales,
+        comissoes: broker.totalCommissions,
+        leads_ativos: broker.activeLeads,
+      });
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `performance-corretores-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   return (
