@@ -4283,9 +4283,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_member_available: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
-      is_team_leader:
-        | { Args: never; Returns: boolean }
-        | { Args: { check_user_id?: string }; Returns: boolean }
+      is_team_leader: { Args: { check_user_id?: string }; Returns: boolean }
       list_all_organizations_admin: {
         Args: never
         Returns: {
