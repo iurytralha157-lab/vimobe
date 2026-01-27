@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Contract } from '@/hooks/use-contracts';
 import { format as formatDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -39,44 +39,62 @@ function formatDateSafe(date: string | null | undefined): string {
   }
 }
 
-export function exportContracts({ contracts, filename = 'contratos', exportFormat = 'xlsx' }: ExportOptions) {
-  const exportData = contracts.map(contract => ({
-    'Número': contract.contract_number || '',
-    'Tipo': contract.contract_type ? (typeLabels[contract.contract_type] || contract.contract_type) : '',
-    'Status': contract.status ? (statusLabels[contract.status] || contract.status) : '',
-    'Imóvel': contract.property?.code || '',
-    'Valor': formatCurrency(contract.value),
-    'Comissão %': contract.commission_percentage || '',
-    'Valor Comissão': formatCurrency(contract.commission_value),
-    'Data Assinatura': formatDateSafe(contract.signing_date),
-    'Data Fechamento': formatDateSafe(contract.closing_date),
-    'Lead': contract.lead?.name || '',
-    'Observações': contract.notes || '',
-    'Criado em': formatDateSafe(contract.created_at),
-  }));
+export async function exportContracts({ contracts, filename = 'contratos', exportFormat = 'xlsx' }: ExportOptions) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Contratos');
 
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  
-  // Auto-size columns
-  const maxWidths: number[] = [];
-  const headers = Object.keys(exportData[0] || {});
-  
-  headers.forEach((header, i) => {
-    maxWidths[i] = header.length;
-    exportData.forEach(row => {
-      const value = String(row[header as keyof typeof row] || '');
-      maxWidths[i] = Math.max(maxWidths[i], value.length);
+  // Define headers
+  worksheet.columns = [
+    { header: 'Número', key: 'numero', width: 15 },
+    { header: 'Tipo', key: 'tipo', width: 12 },
+    { header: 'Status', key: 'status', width: 12 },
+    { header: 'Imóvel', key: 'imovel', width: 15 },
+    { header: 'Valor', key: 'valor', width: 18 },
+    { header: 'Comissão %', key: 'comissao_pct', width: 12 },
+    { header: 'Valor Comissão', key: 'comissao_valor', width: 18 },
+    { header: 'Data Assinatura', key: 'assinatura', width: 16 },
+    { header: 'Data Fechamento', key: 'fechamento', width: 16 },
+    { header: 'Lead', key: 'lead', width: 20 },
+    { header: 'Observações', key: 'observacoes', width: 30 },
+    { header: 'Criado em', key: 'criado', width: 14 },
+  ];
+
+  // Add data rows
+  contracts.forEach(contract => {
+    worksheet.addRow({
+      numero: contract.contract_number || '',
+      tipo: contract.contract_type ? (typeLabels[contract.contract_type] || contract.contract_type) : '',
+      status: contract.status ? (statusLabels[contract.status] || contract.status) : '',
+      imovel: contract.property?.code || '',
+      valor: formatCurrency(contract.value),
+      comissao_pct: contract.commission_percentage || '',
+      comissao_valor: formatCurrency(contract.commission_value),
+      assinatura: formatDateSafe(contract.signing_date),
+      fechamento: formatDateSafe(contract.closing_date),
+      lead: contract.lead?.name || '',
+      observacoes: contract.notes || '',
+      criado: formatDateSafe(contract.created_at),
     });
   });
 
-  worksheet['!cols'] = maxWidths.map(w => ({ wch: Math.min(w + 2, 50) }));
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Contratos');
-
+  // Generate and download file
   if (exportFormat === 'csv') {
-    XLSX.writeFile(workbook, `${filename}.csv`, { bookType: 'csv' });
+    const buffer = await workbook.csv.writeBuffer();
+    downloadFile(buffer, `${filename}.csv`, 'text/csv;charset=utf-8;');
   } else {
-    XLSX.writeFile(workbook, `${filename}.xlsx`);
+    const buffer = await workbook.xlsx.writeBuffer();
+    downloadFile(buffer, `${filename}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   }
+}
+
+function downloadFile(buffer: ExcelJS.Buffer, filename: string, mimeType: string) {
+  const blob = new Blob([buffer], { type: mimeType });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
