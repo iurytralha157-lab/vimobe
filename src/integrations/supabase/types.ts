@@ -1395,6 +1395,65 @@ export type Database = {
           },
         ]
       }
+      lead_pool_history: {
+        Row: {
+          from_user_id: string | null
+          id: string
+          lead_id: string | null
+          organization_id: string | null
+          reason: string | null
+          redistributed_at: string | null
+          to_user_id: string | null
+        }
+        Insert: {
+          from_user_id?: string | null
+          id?: string
+          lead_id?: string | null
+          organization_id?: string | null
+          reason?: string | null
+          redistributed_at?: string | null
+          to_user_id?: string | null
+        }
+        Update: {
+          from_user_id?: string | null
+          id?: string
+          lead_id?: string | null
+          organization_id?: string | null
+          reason?: string | null
+          redistributed_at?: string | null
+          to_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_pool_history_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_pool_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_pool_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_pool_history_to_user_id_fkey"
+            columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_property_interests: {
         Row: {
           created_at: string | null
@@ -1639,10 +1698,12 @@ export type Database = {
       }
       leads: {
         Row: {
+          assigned_at: string | null
           assigned_user_id: string | null
           created_at: string
           deal_status: string | null
           email: string | null
+          first_touch_at: string | null
           id: string
           lost_at: string | null
           lost_reason: string | null
@@ -1653,6 +1714,7 @@ export type Database = {
           pipeline_id: string | null
           property_code: string | null
           property_id: string | null
+          redistribution_count: number | null
           source: string | null
           stage_entered_at: string | null
           stage_id: string | null
@@ -1661,10 +1723,12 @@ export type Database = {
           won_at: string | null
         }
         Insert: {
+          assigned_at?: string | null
           assigned_user_id?: string | null
           created_at?: string
           deal_status?: string | null
           email?: string | null
+          first_touch_at?: string | null
           id?: string
           lost_at?: string | null
           lost_reason?: string | null
@@ -1675,6 +1739,7 @@ export type Database = {
           pipeline_id?: string | null
           property_code?: string | null
           property_id?: string | null
+          redistribution_count?: number | null
           source?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
@@ -1683,10 +1748,12 @@ export type Database = {
           won_at?: string | null
         }
         Update: {
+          assigned_at?: string | null
           assigned_user_id?: string | null
           created_at?: string
           deal_status?: string | null
           email?: string | null
+          first_touch_at?: string | null
           id?: string
           lost_at?: string | null
           lost_reason?: string | null
@@ -1697,6 +1764,7 @@ export type Database = {
           pipeline_id?: string | null
           property_code?: string | null
           property_id?: string | null
+          redistribution_count?: number | null
           source?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
@@ -4279,7 +4347,7 @@ export type Database = {
         }[]
       }
       get_user_team_ids: { Args: never; Returns: string[] }
-      handle_lead_intake: { Args: { p_lead_id: string }; Returns: undefined }
+      handle_lead_intake: { Args: { p_lead_id: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       is_member_available: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
