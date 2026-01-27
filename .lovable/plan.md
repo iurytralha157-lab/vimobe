@@ -1,109 +1,190 @@
 
-# Plano de Correção: Erro de FK em Automações de Estágio
+# Plano de Correção: Histórico Completo e Reentrada de Leads
 
 ## Diagnóstico Completo
 
-Após análise detalhada do banco de dados e código, identifiquei a **causa raiz** do erro persistente.
+Após análise detalhada, identifiquei **dois problemas principais**:
 
-### Problema Encontrado
+### Problema 1: Histórico não aparece imediatamente
 
-O trigger `execute_stage_automations` é executado **BEFORE INSERT** na tabela `leads`. Quando há automações de estágio configuradas (como `change_assignee_on_enter` ou `change_deal_status_on_enter`), o trigger tenta inserir registros na tabela `activities` usando `NEW.id`.
+**Causa**: O trigger `log_lead_activity` foi modificado para ignorar operações `INSERT` (para evitar race condition com FK), mas isso significa que quando um lead é criado, **nenhuma atividade "Lead criado" é registrada**.
 
-**Porém, em um trigger BEFORE INSERT, o registro do lead ainda não existe no banco de dados**, causando a violação de foreign key:
+**Evidência**: O lead `826c0f64...` foi criado em `03:03:03`, mas a primeira atividade é `lead_reentry` em `03:03:22` - não há atividade de criação.
 
-```
-Key (lead_id)=(...) is not present in table "leads"
-```
+### Problema 2: Reentrada não atualiza completamente o lead
 
-### Dados Confirmados
+**Causa**: O código atual do `generic-webhook` na lógica de reentrada (linhas 123-182):
+- Atualiza apenas nome, email e message
+- **NÃO** atualiza o estágio para o configurado no webhook
+- **NÃO** limpa o responsável para redistribuição via round-robin
+- **NÃO** atualiza o deal_status (se estava "lost", deveria voltar para "open")
 
-- **Webhook ativo**: "Lp 001" envia leads para o estágio "Base"
-- **Automação ativa**: `change_assignee_on_enter` no estágio "Base" 
-- **Trigger problemático**: `execute_stage_automations` (BEFORE INSERT/UPDATE)
-- **Ação problemática**: `INSERT INTO activities` dentro do loop de automações
-
-### Cadeia de Triggers
-
-```text
-INSERT leads
-  └─→ BEFORE: execute_stage_automations
-        └─→ Tenta INSERT activities (FALHA - lead não existe ainda)
-  └─→ AFTER: trigger_lead_intake → handle_lead_intake
-  └─→ AFTER: trigger_log_lead_activity (já corrigido)
-  └─→ AFTER: trigger_notify_new_lead
-```
+**Comportamento esperado pelo usuário**: Quando um lead reentra, ele deve ser tratado "como se tivesse acabado de entrar" - voltar ao estágio configurado, passar pelo round-robin, atualizar status.
 
 ---
 
 ## Solução Proposta
 
-Modificar a função `execute_stage_automations` para **NÃO inserir em `activities`** diretamente durante o trigger. O log será feito pelo trigger `log_lead_activity` (AFTER UPDATE) quando as alterações de `assigned_user_id` ou `deal_status` forem aplicadas.
+### Parte 1: Corrigir Histórico Inicial
 
-### Alterações na Função
+Modificar o trigger `log_lead_activity` para registrar a atividade de criação **usando um AFTER INSERT separado** ou registrar diretamente no webhook/edge function após o INSERT ser commitado.
 
-A função continuará modificando `NEW.assigned_user_id` e `NEW.deal_status` normalmente, mas as linhas que fazem `INSERT INTO activities` serão removidas.
+**Opção escolhida**: Inserir a atividade `lead_created` diretamente no `generic-webhook` APÓS o lead ser criado com sucesso (já que o trigger ignora INSERT).
 
-### Código Atual Problemático
-
-```sql
--- Dentro do LOOP de automações:
-IF v_automation.automation_type = 'change_deal_status_on_enter' THEN
-  NEW.deal_status := v_new_status;
-  -- PROBLEMA: Isso falha em INSERT
-  INSERT INTO public.activities (...) VALUES (NEW.id, ...);
-END IF;
-
-IF v_automation.automation_type = 'change_assignee_on_enter' THEN
-  NEW.assigned_user_id := v_target_user_id;
-  -- PROBLEMA: Isso também falha em INSERT
-  INSERT INTO public.activities (...) VALUES (NEW.id, ...);
-END IF;
+**Alterações no `generic-webhook/index.ts`**:
+```typescript
+// Após linha 231 (após lead criado com sucesso)
+// Registrar atividade de criação manualmente
+await supabase.from('activities').insert({
+  lead_id: lead.id,
+  type: 'lead_created',
+  content: `Lead criado via webhook "${webhook.name}"`,
+  user_id: null,
+  metadata: {
+    source: 'webhook',
+    webhook_id: webhook.id,
+    webhook_name: webhook.name,
+    pipeline_name: webhook.pipeline?.name,
+    stage_name: webhook.stage?.name,
+  }
+});
 ```
 
-### Código Corrigido
+### Parte 2: Reentrada Completa do Lead
 
-```sql
--- Dentro do LOOP de automações:
-IF v_automation.automation_type = 'change_deal_status_on_enter' THEN
-  NEW.deal_status := v_new_status;
-  -- NÃO inserir em activities aqui
-  -- O trigger log_lead_activity vai registrar a mudança
-END IF;
+Modificar a lógica de reentrada no `generic-webhook` para:
 
-IF v_automation.automation_type = 'change_assignee_on_enter' THEN
-  NEW.assigned_user_id := v_target_user_id;
-  -- NÃO inserir em activities aqui
-  -- O trigger log_lead_activity vai registrar a mudança
-END IF;
+1. **Atualizar o estágio** para o configurado no webhook
+2. **Limpar o responsável** para que o round-robin redistribua
+3. **Resetar deal_status** para "open" (se estava "lost" ou "won")
+4. **Atualizar stage_entered_at** para o timestamp atual
+5. **Chamar handle_lead_intake** para redistribuição
+
+**Código atual problemático** (linhas 127-137):
+```typescript
+const updateData: Record<string, any> = {};
+if (mappedData.name && mappedData.name !== 'unknown') updateData.name = mappedData.name;
+if (mappedData.email) updateData.email = mappedData.email;
+if (mappedData.message) updateData.message = mappedData.message;
+```
+
+**Código corrigido**:
+```typescript
+// Determinar estágio de destino
+let targetStageId = webhook.target_stage_id;
+if (!targetStageId && webhook.target_pipeline_id) {
+  const { data: firstStage } = await supabase
+    .from('stages')
+    .select('id')
+    .eq('pipeline_id', webhook.target_pipeline_id)
+    .order('position', { ascending: true })
+    .limit(1)
+    .single();
+  targetStageId = firstStage?.id;
+}
+
+// Preparar dados de atualização completa
+const updateData: Record<string, any> = {
+  // Dados do formulário
+  ...(mappedData.name && mappedData.name !== 'unknown' && { name: mappedData.name }),
+  ...(mappedData.email && { email: mappedData.email }),
+  ...(mappedData.message && { message: mappedData.message }),
+  // Resetar para reprocessamento
+  stage_id: targetStageId || existingLead.stage_id, // Mover para estágio configurado
+  pipeline_id: webhook.target_pipeline_id || existingLead.pipeline_id,
+  assigned_user_id: null, // Limpar para round-robin redistribuir
+  deal_status: 'open', // Resetar status
+  won_at: null,
+  lost_at: null,
+  lost_reason: null,
+  stage_entered_at: new Date().toISOString(),
+  first_touch_at: null, // Resetar timer do bolsão
+};
+
+await supabase
+  .from('leads')
+  .update(updateData)
+  .eq('id', existingLead.id);
+
+// Chamar handle_lead_intake para redistribuição
+await supabase.rpc('handle_lead_intake', { p_lead_id: existingLead.id });
 ```
 
 ---
 
-## Detalhe Técnico
+## Detalhes Técnicos
 
-O trigger `log_lead_activity` (AFTER INSERT/UPDATE) já foi modificado para:
-- Ignorar operações INSERT (evita race condition)
-- Registrar mudanças em `stage_id`, `assigned_user_id` e `deal_status` durante UPDATE
+### Fluxo Completo de Reentrada
 
-Como o `execute_stage_automations` modifica `NEW.assigned_user_id` e `NEW.deal_status` antes do INSERT ser commitado, essas mudanças serão refletidas no registro final. Quando houver qualquer UPDATE subsequente, o `log_lead_activity` registrará as atividades corretamente.
+```text
+Lead existente detectado (mesmo telefone)
+  │
+  ├─→ Atualizar dados (nome, email, message)
+  │
+  ├─→ Mover para estágio do webhook (ex: "Base")
+  │
+  ├─→ Resetar deal_status para "open"
+  │
+  ├─→ Limpar assigned_user_id
+  │
+  ├─→ Registrar atividade "lead_reentry" com detalhes
+  │
+  ├─→ Triggers AFTER UPDATE disparam:
+  │     ├─→ log_lead_activity: registra stage_change, assignee_changed
+  │     └─→ trigger_lead_intake: chama handle_lead_intake para round-robin
+  │
+  └─→ Lead é redistribuído automaticamente
+```
 
-Para automações em INSERT (lead entrando direto no estágio com automação), como a atribuição já está sendo aplicada no registro inserido, não há perda de funcionalidade - apenas o log de atividade não será criado no momento exato da inserção, mas sim quando houver alguma alteração posterior no lead.
+### Atividade de Reentrada Melhorada
+
+```typescript
+await supabase.from('activities').insert({
+  lead_id: existingLead.id,
+  type: 'lead_reentry',
+  content: `Lead reentrou via webhook "${webhook.name}"`,
+  user_id: null,
+  metadata: {
+    source: 'webhook',
+    webhook_id: webhook.id,
+    webhook_name: webhook.name,
+    from_stage_id: oldStageId,
+    to_stage_id: targetStageId,
+    from_status: oldDealStatus,
+    to_status: 'open',
+    previous_assignee_id: oldAssigneeId,
+    new_data: mappedData,
+  }
+});
+```
 
 ---
 
-## Resumo da Migração
+## Resumo das Alterações
 
-| Item | Ação |
-|------|------|
-| Função | `execute_stage_automations` |
-| Tipo | `CREATE OR REPLACE FUNCTION` |
-| Mudança | Remover `INSERT INTO activities` do loop de automações |
-| Impacto | Automações continuam funcionando, logs serão feitos pelo trigger existente |
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/functions/generic-webhook/index.ts` | 1. Adicionar atividade `lead_created` após INSERT bem-sucedido |
+| `supabase/functions/generic-webhook/index.ts` | 2. Reescrever lógica de reentrada para atualização completa |
+| `supabase/functions/generic-webhook/index.ts` | 3. Chamar `handle_lead_intake` após reentrada |
+
+---
+
+## Impacto
+
+- **Histórico**: Leads novos terão atividade "Lead criado" imediatamente visível
+- **Reentrada**: Leads que reentram serão completamente reprocessados:
+  - Voltam ao estágio configurado no webhook
+  - Passam pelo round-robin novamente
+  - Status resetado para "open"
+  - Histórico preservado com todas as interações anteriores
+- **Compatibilidade**: Funciona com qualquer fonte (webhook, Facebook, WhatsApp, etc.)
 
 ---
 
 ## Próximos Passos
 
-1. Aplicar migração para atualizar `execute_stage_automations`
-2. Testar o webhook novamente
-3. Verificar que leads são criados com a atribuição automática funcionando
+1. Atualizar a edge function `generic-webhook`
+2. Fazer deploy
+3. Testar com um lead novo (verificar atividade "Lead criado")
+4. Testar reentrada de lead existente (verificar movimentação + redistribuição)
