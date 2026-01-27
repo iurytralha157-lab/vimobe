@@ -12,6 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableBody,
 } from '@/components/ui/table';
 import {
   Select,
@@ -62,6 +63,9 @@ import {
   Tags,
   CheckSquare,
   Square,
+  Trophy,
+  XCircle,
+  CircleDot,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -163,6 +167,12 @@ export default function Contacts() {
     meta: 'Meta Ads',
     site: 'Site',
     wordpress: 'WordPress',
+  };
+
+  const dealStatusConfig = {
+    open: { label: 'Aberto', icon: CircleDot, className: 'bg-muted text-muted-foreground' },
+    won: { label: 'Ganho', icon: Trophy, className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
+    lost: { label: 'Perdido', icon: XCircle, className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
   };
 
   const clearFilters = () => {
@@ -499,6 +509,7 @@ export default function Contacts() {
                         </div>
                       </TableHead>
                       <TableHead>Contato</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Pipeline / Estágio</TableHead>
                       <TableHead>Responsável</TableHead>
                       <TableHead>Tags</TableHead>
@@ -513,9 +524,22 @@ export default function Contacts() {
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
-                  <tbody>
-                    {contacts.map((contact) => (
-                      <TableRow key={contact.id} className="cursor-pointer hover:bg-muted/30">
+                  <TableBody>
+                    {contacts.map((contact) => {
+                      const isLost = contact.deal_status === 'lost';
+                      const isWon = contact.deal_status === 'won';
+                      const status = contact.deal_status || 'open';
+                      const StatusIcon = dealStatusConfig[status]?.icon || CircleDot;
+                      
+                      return (
+                      <TableRow 
+                        key={contact.id} 
+                        className={cn(
+                          "cursor-pointer hover:bg-muted/30",
+                          isLost && "bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100/50 dark:hover:bg-red-950/30",
+                          isWon && "bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30"
+                        )}
+                      >
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox 
                             checked={selectedIds.has(contact.id)}
@@ -552,6 +576,22 @@ export default function Contacts() {
                                 <Mail className="h-3 w-3" />
                                 {contact.email}
                               </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                          <div className="space-y-1">
+                            <Badge 
+                              variant="secondary" 
+                              className={cn("text-xs gap-1 px-2", dealStatusConfig[status]?.className)}
+                            >
+                              <StatusIcon className="h-3 w-3" />
+                              {dealStatusConfig[status]?.label}
+                            </Badge>
+                            {isLost && contact.lost_reason && (
+                              <p className="text-xs text-red-600 dark:text-red-400 max-w-[150px] truncate" title={contact.lost_reason}>
+                                {contact.lost_reason}
+                              </p>
                             )}
                           </div>
                         </TableCell>
@@ -642,8 +682,9 @@ export default function Contacts() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </tbody>
+                      );
+                    })}
+                  </TableBody>
                 </Table>
               )}
             </div>

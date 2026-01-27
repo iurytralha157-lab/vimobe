@@ -106,8 +106,11 @@ export function LeadCard({
       window.open(gmailUrl, '_blank');
     }
   };
+  const isLost = lead.deal_status === 'lost';
+  const isWon = lead.deal_status === 'won';
+  
   return <Draggable draggableId={lead.id} index={index}>
-      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary")} onClick={onClick}>
+      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/40", isWon && "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             {/* Deal Status Badge */}
@@ -131,6 +134,14 @@ export function LeadCard({
                 {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
               </>}
           </div>
+
+          {/* Lost Reason - shown when lost */}
+          {isLost && lead.lost_reason && (
+            <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-red-100/80 dark:bg-red-900/30 text-[10px] text-red-700 dark:text-red-300">
+              <XCircle className="h-3 w-3 shrink-0" />
+              <span className="truncate">{lead.lost_reason}</span>
+            </div>
+          )}
 
           {/* Nome do Lead + Avatar com foto do WhatsApp */}
           <div className="flex items-start justify-between mb-2">

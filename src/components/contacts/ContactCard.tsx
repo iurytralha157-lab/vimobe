@@ -15,10 +15,21 @@ import {
   UserCircle,
   Calendar,
   MessageCircle,
+  Trophy,
+  XCircle,
+  CircleDot,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import type { Contact } from '@/hooks/use-contacts-list';
+
+// Deal status configuration
+const dealStatusConfig = {
+  open: { label: 'Aberto', icon: CircleDot, className: 'bg-muted text-muted-foreground' },
+  won: { label: 'Ganho', icon: Trophy, className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
+  lost: { label: 'Perdido', icon: XCircle, className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+};
 
 interface ContactCardProps {
   contact: Contact;
@@ -31,8 +42,17 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const isLost = contact.deal_status === 'lost';
+  const isWon = contact.deal_status === 'won';
+  const status = contact.deal_status || 'open';
+  const StatusIcon = dealStatusConfig[status]?.icon || CircleDot;
+
   return (
-    <div className="p-4 border-b last:border-b-0 space-y-3">
+    <div className={cn(
+      "p-4 border-b last:border-b-0 space-y-3 transition-colors",
+      isLost && "bg-red-50/50 dark:bg-red-950/20",
+      isWon && "bg-emerald-50/50 dark:bg-emerald-950/20"
+    )}>
       {/* Header: Name + Actions */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -89,12 +109,21 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
         </DropdownMenu>
       </div>
 
-      {/* Stage + Assignee Row */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {contact.stage_name ? (
+      {/* Status + Stage + Assignee Row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Deal Status Badge */}
+        <Badge 
+          variant="secondary" 
+          className={cn("text-xs gap-1 px-2", dealStatusConfig[status]?.className)}
+        >
+          <StatusIcon className="h-3 w-3" />
+          {dealStatusConfig[status]?.label}
+        </Badge>
+
+        {contact.stage_name && (
           <Badge 
             variant="outline" 
-            className="gap-1.5"
+            className="gap-1.5 text-xs"
             style={{ 
               borderColor: contact.stage_color || undefined,
               color: contact.stage_color || undefined
@@ -106,8 +135,6 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
             />
             {contact.stage_name}
           </Badge>
-        ) : (
-          <span className="text-muted-foreground text-sm">Sem estágio</span>
         )}
 
         <div className="h-4 w-px bg-border" />
@@ -129,6 +156,16 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
           </span>
         )}
       </div>
+
+      {/* Lost Reason - shown when lost */}
+      {isLost && contact.lost_reason && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-100/50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700 dark:text-red-300">
+            <span className="font-medium">Motivo:</span> {contact.lost_reason}
+          </p>
+        </div>
+      )}
 
       {/* Tags + Source + Date Row */}
       <div className="flex items-center gap-2 flex-wrap">
