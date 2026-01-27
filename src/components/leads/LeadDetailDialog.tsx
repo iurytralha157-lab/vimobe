@@ -1581,8 +1581,8 @@ export function LeadDetailDialog({
                       <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     </div>
                   </div> : taskActivities.length > 0 ? <div className="relative">
-                    {/* Timeline line */}
-                    <div className="absolute left-[18px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-primary/20 via-border to-transparent" />
+                    {/* Timeline line - centered under icons (padding 12px + half of icon 18px = 30px) */}
+                    <div className="absolute left-[30px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
                     
                     <div className="space-y-3">
                       {taskActivities.slice(0, 5).map((activity: any, idx: number) => {
