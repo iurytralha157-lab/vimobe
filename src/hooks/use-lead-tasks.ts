@@ -114,7 +114,9 @@ export function useCompleteCadenceTask() {
       dayOffset,
       type,
       title,
-      description 
+      description,
+      outcome,
+      outcomeNotes
     }: { 
       leadId: string; 
       templateTaskId: string;
@@ -122,6 +124,8 @@ export function useCompleteCadenceTask() {
       type: 'call' | 'message' | 'email' | 'note';
       title: string;
       description?: string;
+      outcome?: string;
+      outcomeNotes?: string;
     }) => {
       const { data: user } = await supabase.auth.getUser();
       
@@ -146,6 +150,8 @@ export function useCompleteCadenceTask() {
             is_done: newIsDone,
             done_at: newIsDone ? new Date().toISOString() : null,
             done_by: newIsDone ? user.user?.id : null,
+            outcome: newIsDone ? outcome : null,
+            outcome_notes: newIsDone ? outcomeNotes : null,
           })
           .eq('id', existingTask.id)
           .select()
@@ -165,6 +171,8 @@ export function useCompleteCadenceTask() {
               task_id: data.id,
               task_type: type,
               day_offset: dayOffset,
+              outcome: outcome,
+              outcome_notes: outcomeNotes,
             },
           });
         }
@@ -181,6 +189,8 @@ export function useCompleteCadenceTask() {
             is_done: true,
             done_at: new Date().toISOString(),
             done_by: user.user?.id,
+            outcome: outcome,
+            outcome_notes: outcomeNotes,
           })
           .select()
           .single();
@@ -198,6 +208,8 @@ export function useCompleteCadenceTask() {
             task_id: data.id,
             task_type: type,
             day_offset: dayOffset,
+            outcome: outcome,
+            outcome_notes: outcomeNotes,
           },
         });
       }
