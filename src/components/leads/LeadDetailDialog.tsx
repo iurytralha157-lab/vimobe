@@ -29,6 +29,7 @@ import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
+import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
@@ -119,6 +120,8 @@ export function LeadDetailDialog({
   const [stagePopoverOpen, setStagePopoverOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [roteiroDialogOpen, setRoteiroDialogOpen] = useState(false);
+  const [outcomeDialogOpen, setOutcomeDialogOpen] = useState(false);
+  const [taskForOutcome, setTaskForOutcome] = useState<any>(null);
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [editForm, setEditForm] = useState({
     name: '',
@@ -261,22 +264,36 @@ export function LeadDetailDialog({
       // Error handled by mutation
     }
   };
-  const handleToggleCadenceTask = async (task: any) => {
+  const handleToggleCadenceTask = async (task: any, outcome?: string, outcomeNotes?: string) => {
     await completeCadenceTask.mutateAsync({
       leadId: lead.id,
       templateTaskId: task.id,
       dayOffset: task.day_offset,
       type: task.type,
       title: task.title,
-      description: task.description
+      description: task.description,
+      outcome,
+      outcomeNotes
     });
   };
+  
+  // Handle outcome dialog confirmation
+  const handleOutcomeConfirm = async (outcome: TaskOutcome, notes: string) => {
+    if (!taskForOutcome) return;
+    await handleToggleCadenceTask(taskForOutcome, outcome, notes);
+    setOutcomeDialogOpen(false);
+    setTaskForOutcome(null);
+  };
+  
   const handleCadenceTaskClick = (task: any) => {
     const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
     const isDone = existingTask?.is_done;
 
-    // Se tem observação/roteiro, abrir o popup
-    if (task.observation && !isDone) {
+    // Se já está feito, não faz nada (evitar toggle reverso sem querer)
+    if (isDone) return;
+
+    // Se tem observação/roteiro, abrir o popup de roteiro primeiro
+    if (task.observation) {
       setSelectedTask(task);
       setRoteiroDialogOpen(true);
       return;
@@ -287,8 +304,14 @@ export function LeadDetailDialog({
       // Substituir variáveis na mensagem
       const message = task.recommended_message.replace(/{nome}/gi, lead.name || '').replace(/{empresa}/gi, lead.empresa || '').replace(/{email}/gi, lead.email || '');
       openNewChatWithMessage(lead.phone, message, lead.id, lead.name);
-    } else if (!isDone) {
-      // Apenas toggle se não estiver completo
+    }
+    
+    // Para call, message, email - abrir dialog de outcome
+    if (['call', 'message', 'email'].includes(task.type)) {
+      setTaskForOutcome(task);
+      setOutcomeDialogOpen(true);
+    } else {
+      // Para note ou outros tipos, apenas completar
       handleToggleCadenceTask(task);
     }
   };
@@ -297,6 +320,12 @@ export function LeadDetailDialog({
     if (action === 'message' && selectedTask.recommended_message && lead.phone) {
       const message = selectedTask.recommended_message.replace(/{nome}/gi, lead.name || '').replace(/{empresa}/gi, lead.empresa || '').replace(/{email}/gi, lead.email || '');
       openNewChatWithMessage(lead.phone, message, lead.id, lead.name);
+    }
+    
+    // Após roteiro, abrir dialog de outcome se for call/message/email
+    if (['call', 'message', 'email'].includes(selectedTask.type)) {
+      setTaskForOutcome(selectedTask);
+      setOutcomeDialogOpen(true);
     } else {
       handleToggleCadenceTask(selectedTask);
     }
@@ -2109,6 +2138,18 @@ export function LeadDetailDialog({
       </DialogContent>
     </Dialog>;
 
+  // Outcome Dialog component
+  const OutcomeDialogComponent = () => (
+    <TaskOutcomeDialog
+      open={outcomeDialogOpen}
+      onOpenChange={setOutcomeDialogOpen}
+      taskType={taskForOutcome?.type || 'call'}
+      taskTitle={taskForOutcome?.title || ''}
+      onConfirm={handleOutcomeConfirm}
+      isLoading={completeCadenceTask.isPending}
+    />
+  );
+
   // Render mobile or desktop version
   if (isMobile) {
     return <>
@@ -2118,6 +2159,7 @@ export function LeadDetailDialog({
           </DrawerContent>
         </Drawer>
         <RoteiroDialog />
+        <OutcomeDialogComponent />
       </>;
   }
   return <>
@@ -2127,5 +2169,6 @@ export function LeadDetailDialog({
         </DialogContent>
       </Dialog>
       <RoteiroDialog />
+      <OutcomeDialogComponent />
     </>;
 }

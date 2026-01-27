@@ -16,11 +16,15 @@ import {
   FileText,
   Bot,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getOutcomeLabel, getOutcomeVariant } from '@/components/leads/TaskOutcomeDialog';
 
 interface LeadHistoryProps {
   leadId: string;
@@ -76,6 +80,21 @@ const eventColors: Record<string, { text: string; bg: string }> = {
 };
 
 const defaultColor = { text: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' };
+
+// Outcome badge colors
+const outcomeVariantClasses: Record<string, string> = {
+  success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  default: 'bg-muted text-muted-foreground',
+};
+
+const outcomeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  success: CheckCircle2,
+  warning: AlertCircle,
+  error: XCircle,
+  default: Clock,
+};
 
 export function LeadHistory({ leadId }: LeadHistoryProps) {
   const { data: events = [], isLoading } = useLeadFullHistory(leadId);
@@ -134,6 +153,13 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
           const isFirstResponse = event.type === 'first_response';
           const isFirst = index === 0;
           
+          // Extract outcome from metadata for activity events
+          const metadata = event.metadata as Record<string, any> | null;
+          const outcome = metadata?.outcome;
+          const outcomeNotes = metadata?.outcome_notes;
+          const outcomeVariant = outcome ? getOutcomeVariant(outcome) : null;
+          const OutcomeIcon = outcomeVariant ? outcomeIcons[outcomeVariant] : null;
+          
           return (
             <div key={event.id} className="relative flex gap-3 pl-9">
               {/* Icon */}
@@ -163,6 +189,20 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
                         {event.label}
                       </p>
                       
+                      {/* Outcome Badge */}
+                      {outcome && outcomeVariant && OutcomeIcon && (
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-[10px] px-1.5 py-0 gap-1 border-0",
+                            outcomeVariantClasses[outcomeVariant]
+                          )}
+                        >
+                          <OutcomeIcon className="h-2.5 w-2.5" />
+                          {getOutcomeLabel(outcome)}
+                        </Badge>
+                      )}
+                      
                       {event.isAutomation && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
                           <Bot className="h-2.5 w-2.5" />
@@ -183,14 +223,21 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
                       )}
                     </div>
                     
-                    {event.content && (
+                    {/* Outcome Notes */}
+                    {outcomeNotes && (
+                      <p className="text-xs text-muted-foreground mt-1 italic">
+                        "{outcomeNotes}"
+                      </p>
+                    )}
+                    
+                    {event.content && !outcomeNotes && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {event.content}
                       </p>
                     )}
                     
                     {/* Show metadata details for stage changes */}
-                    {event.metadata && typeof event.metadata === 'object' && !event.content && (
+                    {event.metadata && typeof event.metadata === 'object' && !event.content && !outcome && (
                       <div className="text-xs text-muted-foreground mt-1">
                         {(event.metadata as any).from_stage && (event.metadata as any).to_stage && (
                           <span className="flex items-center gap-1">

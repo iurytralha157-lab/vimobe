@@ -1592,6 +1592,8 @@ export type Database = {
           id: string
           is_done: boolean | null
           lead_id: string
+          outcome: string | null
+          outcome_notes: string | null
           title: string
           type: string | null
         }
@@ -1605,6 +1607,8 @@ export type Database = {
           id?: string
           is_done?: boolean | null
           lead_id: string
+          outcome?: string | null
+          outcome_notes?: string | null
           title: string
           type?: string | null
         }
@@ -1618,6 +1622,8 @@ export type Database = {
           id?: string
           is_done?: boolean | null
           lead_id?: string
+          outcome?: string | null
+          outcome_notes?: string | null
           title?: string
           type?: string | null
         }
