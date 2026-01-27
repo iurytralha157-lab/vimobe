@@ -176,6 +176,20 @@ export function useCreateLead() {
             if (lead.stage_id) updateData.stage_id = lead.stage_id;
             if (lead.pipeline_id) updateData.pipeline_id = lead.pipeline_id;
             
+            // Registrar atividade de reentrada no histórico
+            const { data: userData } = await supabase.auth.getUser();
+            await supabase.from('activities').insert({
+              lead_id: existingLead.id,
+              type: 'lead_reentry',
+              content: `Lead entrou novamente${lead.source ? ` via ${lead.source}` : ''}`,
+              user_id: userData.user?.id || null,
+              metadata: {
+                source: lead.source || 'manual',
+                new_data: updateData,
+                original_phone: lead.phone,
+              }
+            });
+            
             if (Object.keys(updateData).length > 0) {
               const { data: updatedLead, error: updateError } = await supabase
                 .from('leads')

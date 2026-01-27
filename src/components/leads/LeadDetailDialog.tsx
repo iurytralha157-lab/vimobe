@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
@@ -70,7 +70,8 @@ const activityTypeLabels: Record<string, string> = {
   lead_created: 'Lead criado',
   stage_change: 'Movido de estágio',
   assignee_changed: 'Responsável alterado',
-  status_change: 'Status alterado'
+  status_change: 'Status alterado',
+  lead_reentry: 'Lead reentrou'
 };
 const activityTypeIcons: Record<string, typeof Phone> = {
   call: Phone,
@@ -80,7 +81,8 @@ const activityTypeIcons: Record<string, typeof Phone> = {
   lead_created: Plus,
   stage_change: ChevronRight,
   assignee_changed: UserCheck,
-  status_change: Target
+  status_change: Target,
+  lead_reentry: RotateCcw
 };
 interface LeadDetailDialogProps {
   lead: any;
@@ -348,7 +350,7 @@ export function LeadDetailDialog({
   };
   // Mostrar todas as atividades importantes no histórico recente
   const taskActivities = activities.filter((a: any) => 
-    ['call', 'message', 'email', 'note', 'task_completed', 'lead_created', 'stage_change', 'assignee_changed', 'status_change'].includes(a.type)
+    ['call', 'message', 'email', 'note', 'task_completed', 'lead_created', 'stage_change', 'assignee_changed', 'status_change', 'lead_reentry'].includes(a.type)
   );
   const SourceIcon = sourceIcons[lead.source] || Target;
 

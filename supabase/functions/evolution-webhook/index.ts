@@ -1521,6 +1521,20 @@ async function createLeadFromConversation(
       
       console.log(`Linked conversation to existing lead: ${existingLead.id} (matched by normalized phone)`);
       
+      // Registrar atividade de reentrada no histórico
+      await supabase.from("activities").insert({
+        lead_id: existingLead.id,
+        type: "lead_reentry",
+        content: `Lead entrou novamente via WhatsApp`,
+        user_id: null,
+        metadata: {
+          source: "whatsapp",
+          from_ads: isFromAds,
+          ad_source: adSource || null,
+          phone: contactPhone,
+        }
+      });
+      
       // If from ads, still apply tag to existing lead
       if (isFromAds) {
         await applyFacebookAdsTag(supabase, session.organization_id, existingLead.id, adSource);
