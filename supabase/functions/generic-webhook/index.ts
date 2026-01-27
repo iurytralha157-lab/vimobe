@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       // Buscar leads existentes
       const { data: allLeads } = await supabase
         .from('leads')
-        .select('id, phone')
+        .select('id, phone, stage_id, pipeline_id, assigned_user_id, deal_status')
         .eq('organization_id', webhook.organization_id)
         .not('phone', 'is', null);
       
@@ -120,35 +120,91 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Se encontrou lead existente, atualizar e registrar reentrada
+    // Se encontrou lead existente, fazer REENTRADA COMPLETA
     if (existingLead) {
       console.log(`Found existing lead by phone: ${existingLead.id}`);
       
-      // Atualizar lead existente
-      const updateData: Record<string, any> = {};
-      if (mappedData.name && mappedData.name !== 'unknown') updateData.name = mappedData.name;
-      if (mappedData.email) updateData.email = mappedData.email;
-      if (mappedData.message) updateData.message = mappedData.message;
+      // Guardar dados anteriores para o histórico
+      const oldStageId = existingLead.stage_id;
+      const oldPipelineId = existingLead.pipeline_id;
+      const oldAssigneeId = existingLead.assigned_user_id;
+      const oldDealStatus = existingLead.deal_status;
       
-      if (Object.keys(updateData).length > 0) {
-        await supabase
-          .from('leads')
-          .update(updateData)
-          .eq('id', existingLead.id);
+      // Determinar estágio de destino (mesmo lógica de lead novo)
+      let targetStageId = webhook.target_stage_id;
+      const targetPipelineId = webhook.target_pipeline_id;
+      
+      if (!targetStageId && targetPipelineId) {
+        const { data: firstStage } = await supabase
+          .from('stages')
+          .select('id')
+          .eq('pipeline_id', targetPipelineId)
+          .order('position', { ascending: true })
+          .limit(1)
+          .single();
+        
+        if (firstStage) {
+          targetStageId = firstStage.id;
+        }
       }
       
-      // Registrar atividade de reentrada
+      // Preparar dados de atualização COMPLETA (como se fosse lead novo)
+      const updateData: Record<string, any> = {
+        // Dados do formulário
+        ...(mappedData.name && mappedData.name !== 'unknown' && { name: mappedData.name }),
+        ...(mappedData.email && { email: mappedData.email }),
+        ...(mappedData.message && { message: mappedData.message }),
+        // Resetar para reprocessamento completo
+        stage_id: targetStageId || existingLead.stage_id,
+        pipeline_id: targetPipelineId || existingLead.pipeline_id,
+        assigned_user_id: null, // Limpar para round-robin redistribuir
+        deal_status: 'open', // Resetar status para aberto
+        won_at: null,
+        lost_at: null,
+        lost_reason: null,
+        stage_entered_at: new Date().toISOString(),
+        first_touch_at: null, // Resetar timer do bolsão
+      };
+      
+      // Atualizar o lead
+      const { error: updateError } = await supabase
+        .from('leads')
+        .update(updateData)
+        .eq('id', existingLead.id);
+      
+      if (updateError) {
+        console.error('Lead update error:', updateError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to update lead', details: updateError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Registrar atividade de reentrada com detalhes completos
       await supabase.from('activities').insert({
         lead_id: existingLead.id,
         type: 'lead_reentry',
-        content: 'Lead entrou novamente via webhook',
+        content: `Lead reentrou via webhook "${webhook.name}"`,
         user_id: null,
         metadata: {
           source: 'webhook',
           webhook_id: webhook.id,
-          new_data: updateData,
+          webhook_name: webhook.name,
+          pipeline_name: webhook.pipeline?.name,
+          stage_name: webhook.stage?.name,
+          from_stage_id: oldStageId,
+          to_stage_id: targetStageId,
+          from_pipeline_id: oldPipelineId,
+          to_pipeline_id: targetPipelineId,
+          from_status: oldDealStatus,
+          to_status: 'open',
+          previous_assignee_id: oldAssigneeId,
+          new_data: mappedData,
         }
       });
+      
+      // O trigger trigger_lead_intake vai chamar handle_lead_intake automaticamente
+      // porque assigned_user_id foi setado para NULL
       
       // Aplicar tags configuradas
       const targetTagIds = webhook.target_tag_ids || [];
@@ -169,19 +225,20 @@ Deno.serve(async (req) => {
         })
         .eq('id', webhook.id);
       
-      console.log('Lead updated (reentry):', existingLead.id);
+      console.log('Lead updated (full reentry):', existingLead.id);
       
       return new Response(
         JSON.stringify({
           success: true,
           lead_id: existingLead.id,
           reentry: true,
-          message: 'Lead already exists, updated with new data',
+          message: 'Lead reentered - moved to configured stage and queued for redistribution',
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // ===== LEAD NOVO =====
     // Determine the stage_id: use configured one or get first stage of pipeline
     let stageId = webhook.target_stage_id;
     const pipelineId = webhook.target_pipeline_id;
@@ -203,7 +260,6 @@ Deno.serve(async (req) => {
     }
 
     // Create lead (novo - não duplicado)
-    // IMPORTANTE: Não usar .select() junto com insert para evitar race condition com triggers
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
@@ -230,6 +286,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Registrar atividade de criação do lead
+    await supabase.from('activities').insert({
+      lead_id: lead.id,
+      type: 'lead_created',
+      content: `Lead criado via webhook "${webhook.name}"`,
+      user_id: null,
+      metadata: {
+        source: 'webhook',
+        webhook_id: webhook.id,
+        webhook_name: webhook.name,
+        pipeline_name: webhook.pipeline?.name,
+        stage_name: webhook.stage?.name,
+      }
+    });
+
     // Apply tags if configured (após lead criado com sucesso)
     const targetTagIds = webhook.target_tag_ids || [];
     if (targetTagIds.length > 0) {
@@ -241,8 +312,6 @@ Deno.serve(async (req) => {
       await supabase.from('lead_tags').insert(leadTags);
       console.log('Applied tags to lead:', targetTagIds);
     }
-
-    // Atividade de criação é registrada pelo trigger log_lead_activity no banco
 
     // Update webhook stats
     await supabase
