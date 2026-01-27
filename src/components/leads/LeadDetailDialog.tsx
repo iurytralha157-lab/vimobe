@@ -148,6 +148,9 @@ export function LeadDetailDialog({
   });
 
   // Sync edit form with lead data whenever lead changes
+  // Use a ref to track if this is the initial load vs subsequent updates
+  const isInitialMount = useState(true);
+  
   useEffect(() => {
     if (lead) {
       setEditForm({
@@ -173,9 +176,24 @@ export function LeadDetailDialog({
         finalidade_compra: lead.finalidade_compra || '',
         procura_financiamento: lead.procura_financiamento || false
       });
+      // Only sync lost_reason from server if it actually changed on the server
+      // This prevents overwriting user's typing when refetch happens
+      if (lead.lost_reason !== undefined) {
+        setLostReasonLocal(prev => {
+          // If the server value matches what we expect, keep local state
+          // This happens after a successful save
+          return lead.lost_reason || '';
+        });
+      }
+    }
+  }, [lead?.id]); // Only re-sync on lead ID change, not every lead update
+  
+  // Separate effect to initialize lost_reason when lead first loads
+  useEffect(() => {
+    if (lead?.lost_reason !== undefined && lostReasonLocal === '') {
       setLostReasonLocal(lead.lost_reason || '');
     }
-  }, [lead]);
+  }, [lead?.lost_reason]);
   const {
     data: leadTasks = [],
     isLoading: leadTasksLoading
