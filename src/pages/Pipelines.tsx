@@ -607,7 +607,7 @@ export default function Pipelines() {
             />
 
             {/* Responsible Filter */}
-            {isAdmin ? (
+            {(isAdmin || hasLeadViewAll) ? (
               <Select value={filterUser} onValueChange={setFilterUser}>
                 <SelectTrigger className={cn(
                   "h-8 w-auto min-w-[90px] sm:min-w-[110px] text-xs flex-shrink-0",
