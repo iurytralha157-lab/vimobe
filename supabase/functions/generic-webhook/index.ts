@@ -163,7 +163,6 @@ Deno.serve(async (req) => {
         lost_at: null,
         lost_reason: null,
         stage_entered_at: new Date().toISOString(),
-        first_touch_at: null, // Resetar timer do bolsão
       };
       
       // Atualizar o lead
