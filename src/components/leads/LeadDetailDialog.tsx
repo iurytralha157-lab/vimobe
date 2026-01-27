@@ -1477,9 +1477,9 @@ export function LeadDetailDialog({
               const isPast = idx < currentStageIndex;
               const isFirst = idx === 0;
               return <div key={stage.id} className="flex items-center shrink-0">
-                    {!isFirst && <div className={cn("w-4 h-0.5 transition-colors", isPast ? "bg-primary" : isActive ? "bg-gradient-to-r from-primary to-border" : "bg-border/50")} />}
-                    <button onClick={() => handleMoveToStage(stage.id)} className={cn("relative h-6 px-2.5 rounded-full text-[10px] font-medium transition-all whitespace-nowrap flex items-center gap-1", isActive ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" : isPast ? "bg-primary/15 text-primary hover:bg-primary/25" : "text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent hover:border-border/50")}>
-                      {isPast && <Check className="h-2.5 w-2.5" />}
+                    {!isFirst && <div className={cn("w-2 h-0.5 transition-colors", isPast ? "bg-primary" : isActive ? "bg-gradient-to-r from-primary to-border" : "bg-border/50")} />}
+                    <button onClick={() => handleMoveToStage(stage.id)} className={cn("relative h-5 px-2 rounded-full text-[9px] font-medium transition-all whitespace-nowrap flex items-center gap-0.5", isActive ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground" : isPast ? "bg-primary/15 text-primary hover:bg-primary/25" : "text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent hover:border-border/50")}>
+                      {isPast && <Check className="h-2 w-2" />}
                       {isActive && <div className="h-1 w-1 rounded-full bg-primary-foreground animate-pulse" />}
                       {stage.name}
                     </button>
