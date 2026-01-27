@@ -1588,7 +1588,7 @@ export function LeadDetailDialog({
                       {taskActivities.slice(0, 5).map((activity: any, idx: number) => {
                     const ActivityIcon = activityTypeIcons[activity.type] || CheckCircle;
                     return <div key={activity.id} className="group relative flex items-start gap-3 p-3 rounded-xl hover:bg-accent/30 transition-all">
-                            <div className="relative z-10 h-9 w-9 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <div className="relative z-10 h-9 w-9 rounded-xl bg-card border border-primary/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                               <ActivityIcon className="h-4 w-4 text-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
