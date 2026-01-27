@@ -119,6 +119,7 @@ export function LeadDetailDialog({
   const [stagePopoverOpen, setStagePopoverOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [roteiroDialogOpen, setRoteiroDialogOpen] = useState(false);
+  const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [editForm, setEditForm] = useState({
     name: '',
     phone: '',
@@ -169,6 +170,7 @@ export function LeadDetailDialog({
         finalidade_compra: lead.finalidade_compra || '',
         procura_financiamento: lead.procura_financiamento || false
       });
+      setLostReasonLocal(lead.lost_reason || '');
     }
   }, [lead]);
   const {
@@ -519,7 +521,8 @@ export function LeadDetailDialog({
           {/* Lost reason inline input */}
           {lead.deal_status === 'lost' && (
             <Input 
-              defaultValue={lead.lost_reason || ''} 
+              value={lostReasonLocal} 
+              onChange={(e) => setLostReasonLocal(e.target.value)}
               onBlur={async (e) => {
                 if (e.target.value !== (lead.lost_reason || '')) {
                   await updateLead.mutateAsync({
@@ -1107,14 +1110,17 @@ export function LeadDetailDialog({
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Motivo da Perda</Label>
                     <Input 
-                      value={lead.lost_reason || ''} 
-                      onChange={async (e) => {
-                        await updateLead.mutateAsync({
-                          id: lead.id,
-                          lost_reason: e.target.value
-                        } as any);
+                      value={lostReasonLocal} 
+                      onChange={(e) => setLostReasonLocal(e.target.value)}
+                      onBlur={async (e) => {
+                        if (e.target.value !== (lead.lost_reason || '')) {
+                          await updateLead.mutateAsync({
+                            id: lead.id,
+                            lost_reason: e.target.value
+                          } as any);
+                          refetchStages();
+                        }
                       }}
-                      onBlur={() => refetchStages()}
                       placeholder="Ex: Preço alto, escolheu concorrente..."
                       className="rounded-xl"
                     />
@@ -1902,14 +1908,17 @@ export function LeadDetailDialog({
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Motivo da Perda</Label>
                     <Input 
-                      value={lead.lost_reason || ''} 
-                      onChange={async (e) => {
-                        await updateLead.mutateAsync({
-                          id: lead.id,
-                          lost_reason: e.target.value
-                        } as any);
+                      value={lostReasonLocal} 
+                      onChange={(e) => setLostReasonLocal(e.target.value)}
+                      onBlur={async (e) => {
+                        if (e.target.value !== (lead.lost_reason || '')) {
+                          await updateLead.mutateAsync({
+                            id: lead.id,
+                            lost_reason: e.target.value
+                          } as any);
+                          refetchStages();
+                        }
                       }}
-                      onBlur={() => refetchStages()}
                       placeholder="Ex: Preço alto, escolheu concorrente..."
                       className="rounded-xl"
                     />
