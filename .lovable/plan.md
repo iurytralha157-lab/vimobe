@@ -1,162 +1,191 @@
 
-# Plano de Correção: Aba de Gestão (CRM Management)
+# Plano: Sistema de Resultado de Tentativas de Contato
 
-## Diagnóstico Completo
+## Visão Geral
 
-Após análise detalhada do código e banco de dados, identifiquei os seguintes problemas:
-
-| Funcionalidade | Status | Problema |
-|---|---|---|
-| **Equipes** | ✅ OK | Interface funcionando normalmente |
-| **Escala** | ⚠️ Parcial | Salva mas não é usada na distribuição |
-| **Distribuição** | ✅ OK | Round-robin funcional |
-| **Bolsão** | ❌ Quebrado | Faltam colunas no banco de dados |
-| **Tags** | ⚠️ Oculto | Componente existe mas não está na página |
+Implementar um sistema que, ao marcar uma tarefa de cadência como feita, abre um dialog perguntando o **resultado** dessa tentativa. Isso vai enriquecer significativamente o histórico do lead e permitir análises futuras sobre qualidade de leads e efetividade dos corretores.
 
 ---
 
-## Problema 1: Bolsão não funciona
+## O Que Será Implementado
 
-**Causa:** A tabela `leads` não possui as colunas necessárias:
-- `assigned_at` - Quando o lead foi atribuído
-- `first_touch_at` - Quando houve primeiro contato (WhatsApp, ligação)
-- `redistribution_count` - Contador de redistribuições
+### 1. Dialog de Resultado ao Completar Tarefa
 
-**Evidência:** Logs do Postgres mostram erros repetidos:
-```
-"column leads.assigned_at does not exist"
-```
+Quando o corretor clicar para completar uma tarefa (ligação, mensagem, email), aparecerá um pequeno formulário perguntando:
 
-**Solução:** Adicionar as colunas faltantes via migração SQL.
+**Para Ligações:**
+- Atendeu?
+  - Sim, conversamos
+  - Não atendeu / Caixa postal
+  - Número inexistente / Errado
+  - Linha ocupada
 
----
+**Para Mensagens (WhatsApp):**
+- O lead respondeu?
+  - Sim, respondeu
+  - Visualizou mas não respondeu
+  - Não visualizou
+  - Número sem WhatsApp
 
-## Problema 2: Tabela lead_pool_history não existe
+**Para Emails:**
+- Resultado:
+  - Respondeu
+  - Não respondeu
+  - Email inválido
 
-**Causa:** O histórico de redistribuições precisa dessa tabela para funcionar.
-
-**Solução:** Criar a tabela `lead_pool_history`.
-
----
-
-## Problema 3: Escala não afeta distribuição
-
-**Causa:** A função `handle_lead_intake` não verifica `is_member_available()` antes de atribuir o lead.
-
-**Exemplo atual:** Corretor com horário 9h-18h recebe leads às 22h.
-
-**Solução:** Alterar a função para pular membros indisponíveis.
+Cada opção também permite adicionar uma **observação livre** opcional.
 
 ---
 
-## Problema 4: Aba de Tags sumiu
+## Detalhes Técnicos
 
-**Causa:** O componente `TagsTab.tsx` existe e funciona, mas não foi adicionado ao arquivo `CRMManagement.tsx`.
+### Alterações no Banco de Dados
 
-**Solução:** Importar e adicionar a aba de Tags.
-
----
-
-## Alterações Técnicas
-
-### 1. Migração SQL - Colunas do Bolsão
-
+**Tabela `lead_tasks`** - Adicionar colunas:
 ```sql
--- Adicionar colunas na tabela leads
-ALTER TABLE leads 
-  ADD COLUMN IF NOT EXISTS assigned_at timestamptz,
-  ADD COLUMN IF NOT EXISTS first_touch_at timestamptz,
-  ADD COLUMN IF NOT EXISTS redistribution_count integer DEFAULT 0;
-
--- Criar tabela de histórico
-CREATE TABLE IF NOT EXISTS lead_pool_history (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  lead_id uuid REFERENCES leads(id) ON DELETE CASCADE,
-  organization_id uuid REFERENCES organizations(id) ON DELETE CASCADE,
-  from_user_id uuid REFERENCES users(id),
-  to_user_id uuid REFERENCES users(id),
-  reason text DEFAULT 'timeout',
-  redistributed_at timestamptz DEFAULT now()
-);
-
--- RLS
-ALTER TABLE lead_pool_history ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their org pool history"
-  ON lead_pool_history FOR SELECT
-  USING (organization_id = auth_org_id());
+ALTER TABLE lead_tasks 
+ADD COLUMN outcome TEXT,           -- 'answered', 'not_answered', 'invalid_number', etc.
+ADD COLUMN outcome_notes TEXT;     -- Observação livre do corretor
 ```
 
-### 2. Trigger para preencher assigned_at
+**Tabela `activities`** - O metadata JSON já suporta campos adicionais, então vamos incluir `outcome` e `outcome_notes` no registro.
 
-```sql
-CREATE OR REPLACE FUNCTION set_lead_assigned_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.assigned_user_id IS NOT NULL 
-     AND (OLD.assigned_user_id IS NULL OR OLD.assigned_user_id != NEW.assigned_user_id) THEN
-    NEW.assigned_at = NOW();
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+---
 
-CREATE TRIGGER tr_set_assigned_at
-  BEFORE UPDATE ON leads
-  FOR EACH ROW EXECUTE FUNCTION set_lead_assigned_at();
-```
+### Alterações no Frontend
 
-### 3. Atualizar handle_lead_intake para respeitar escala
+**1. Novo componente: `TaskOutcomeDialog.tsx`**
+- Dialog/Sheet que aparece quando o corretor clica para completar a tarefa
+- Mostra opções de resultado específicas por tipo de tarefa (call/message/email)
+- Campo opcional para observações
+- Botões "Salvar" e "Cancelar"
 
-Adicionar verificação de disponibilidade antes de atribuir:
+**2. Modificar `use-lead-tasks.ts`**
+- Atualizar `useCompleteCadenceTask` para aceitar `outcome` e `outcome_notes`
+- Salvar esses dados tanto na `lead_tasks` quanto no `activities.metadata`
 
-```sql
--- Dentro do loop de seleção de membro:
--- Verificar se o usuário está disponível
-IF NOT is_member_available(v_member.user_id) THEN
-  -- Pular para próximo membro
-  CONTINUE;
-END IF;
-```
+**3. Modificar `LeadDetailDialog.tsx`**
+- Ao clicar na tarefa, abrir o `TaskOutcomeDialog` ao invés de completar diretamente
+- Passar os dados do resultado para a mutation
 
-### 4. Adicionar aba de Tags
+**4. Atualizar exibição de atividades**
+- Mostrar o resultado junto com a atividade no histórico
+- Ex: "Ligação realizada - Não atendeu" ou "Mensagem enviada - Lead respondeu"
 
-**Arquivo:** `src/pages/CRMManagement.tsx`
+---
 
-```tsx
-// Adicionar import
-import { TagsTab } from '@/components/crm-management/TagsTab';
-import { Tags } from 'lucide-react';
+### Opções de Resultado por Tipo
 
-// Adicionar na TabsList
-<TabsTrigger value="tags">
-  <Tags className="h-4 w-4" />
-  Tags
-</TabsTrigger>
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  TIPO: LIGAÇÃO (call)                                       │
+├─────────────────────────────────────────────────────────────┤
+│  answered          →  "Atendeu - Conversamos"               │
+│  not_answered      →  "Não atendeu / Caixa postal"          │
+│  invalid_number    →  "Número inexistente / Errado"         │
+│  busy              →  "Linha ocupada"                       │
+│  scheduled         →  "Agendou retorno"                     │
+└─────────────────────────────────────────────────────────────┘
 
-// Adicionar TabsContent
-<TabsContent value="tags">
-  <TagsTab />
-</TabsContent>
+┌─────────────────────────────────────────────────────────────┐
+│  TIPO: MENSAGEM (message)                                   │
+├─────────────────────────────────────────────────────────────┤
+│  replied           →  "Respondeu"                           │
+│  seen_no_reply     →  "Visualizou mas não respondeu"        │
+│  not_seen          →  "Não visualizou"                      │
+│  no_whatsapp       →  "Número sem WhatsApp"                 │
+│  scheduled         →  "Agendou visita/reunião"              │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  TIPO: EMAIL (email)                                        │
+├─────────────────────────────────────────────────────────────┤
+│  replied           →  "Respondeu"                           │
+│  not_replied       →  "Não respondeu"                       │
+│  bounced           →  "Email inválido / Retornou"           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Ordem de Implementação
+## Fluxo do Usuário
 
-1. **Migração SQL** - Criar colunas e tabela (banco de dados)
-2. **Trigger assigned_at** - Automatizar preenchimento
-3. **Atualizar handle_lead_intake** - Respeitar escala
-4. **Adicionar aba Tags** - Interface (código React)
-5. **Testar Bolsão** - Verificar funcionamento completo
+```text
+1. Corretor abre o lead
+2. Na aba "Atividades", vê a cadência configurada
+3. Clica em "Primeira tentativa de contato (Ligação)"
+4. Abre dialog: "Como foi essa ligação?"
+   ┌────────────────────────────────────┐
+   │  Como foi essa ligação?            │
+   │                                    │
+   │  ○ Atendeu - Conversamos           │
+   │  ○ Não atendeu / Caixa postal      │
+   │  ○ Número inexistente              │
+   │  ○ Linha ocupada                   │
+   │  ○ Agendou retorno                 │
+   │                                    │
+   │  Observação (opcional):            │
+   │  ┌──────────────────────────────┐  │
+   │  │ Disse que vai ligar depois   │  │
+   │  └──────────────────────────────┘  │
+   │                                    │
+   │     [Cancelar]     [Registrar]     │
+   └────────────────────────────────────┘
+5. Corretor seleciona resultado e clica em "Registrar"
+6. Sistema salva a tarefa como completa + resultado
+7. No histórico aparece: "Ligação realizada - Não atendeu"
+```
 
 ---
 
-## Resultado Esperado
+## Exibição no Histórico
 
-Após implementação:
-- ✅ Equipes: Funcionando
-- ✅ Escala: Corretores fora do horário não recebem leads
-- ✅ Distribuição: Round-robin funcional
-- ✅ Bolsão: Redistribuição automática por timeout
-- ✅ Tags: Aba visível para gerenciar tags
+Após implementado, o histórico mostrará informações muito mais ricas:
+
+```text
+Atividades Recentes:
+───────────────────────────────────────────
+🔴 Ligação realizada - Não atendeu
+   "Tentei 3x mas foi caixa postal"
+   há 2 minutos • João Silva
+
+💬 Mensagem enviada - Lead respondeu
+   "Interessado, pediu mais informações"
+   há 1 hora • João Silva
+
+🔴 Ligação realizada - Número inexistente
+   há 2 dias • Maria Santos
+───────────────────────────────────────────
+```
+
+---
+
+## Arquivos a Serem Modificados/Criados
+
+| Arquivo | Ação |
+|---------|------|
+| `supabase/migrations/xxx.sql` | Criar - adicionar colunas outcome |
+| `src/components/leads/TaskOutcomeDialog.tsx` | Criar - dialog de resultado |
+| `src/hooks/use-lead-tasks.ts` | Modificar - aceitar outcome |
+| `src/components/leads/LeadDetailDialog.tsx` | Modificar - integrar dialog |
+| `src/components/leads/LeadHistory.tsx` | Modificar - exibir outcome |
+| `src/integrations/supabase/types.ts` | Atualizar - tipos gerados |
+
+---
+
+## Benefícios
+
+1. **Histórico completo**: Saber exatamente o que aconteceu em cada tentativa
+2. **Métricas de qualidade**: Leads com números errados, leads que respondem, etc.
+3. **Avaliação de corretores**: Quantas tentativas até conseguir contato
+4. **Base para IA futura**: Dados ricos para gerar resumos automatizados
+5. **Relatórios**: Possibilidade de criar dashboards com taxa de contato efetivo
+
+---
+
+## Considerações Finais
+
+Este é o primeiro passo para ter um histórico completo e rico. No futuro, com esses dados estruturados, será muito mais fácil implementar:
+- Resumo por IA (como você viu no Bot Leads)
+- Dashboard de performance de contato
+- Alertas automáticos para leads com muitas tentativas sem sucesso
