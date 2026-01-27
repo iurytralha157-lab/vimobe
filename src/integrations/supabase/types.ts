@@ -4413,11 +4413,13 @@ export type Database = {
           assignee_avatar: string
           assignee_name: string
           created_at: string
+          deal_status: string
           email: string
           id: string
           last_interaction_at: string
           last_interaction_channel: string
           last_interaction_preview: string
+          lost_reason: string
           name: string
           phone: string
           pipeline_id: string

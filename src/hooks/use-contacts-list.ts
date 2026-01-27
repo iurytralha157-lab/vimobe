@@ -43,6 +43,8 @@ export interface Contact {
   last_interaction_channel: string | null;
   tags: ContactTag[];
   total_count: number;
+  deal_status: 'open' | 'won' | 'lost' | null;
+  lost_reason: string | null;
 }
 
 export function useContactsList(filters: ContactListFilters) {
