@@ -110,34 +110,36 @@ export function LeadCard({
   const isWon = lead.deal_status === 'won';
   
   return <Draggable draggableId={lead.id} index={index}>
-      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-950/40", isWon && "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800")} onClick={onClick}>
+      {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card border border-border rounded-lg p-3 cursor-pointer transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
             {/* Deal Status Badge */}
-            {lead.deal_status && lead.deal_status !== 'open' && <Badge variant="secondary" className={cn("text-[9px] px-1.5 py-0 font-medium flex items-center gap-0.5", dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color)}>
+            {lead.deal_status && lead.deal_status !== 'open' && (
+              <span className={cn("text-[9px] px-1.5 py-0.5 font-medium flex items-center gap-0.5 rounded-full", dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.color)}>
                 {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.icon && (() => {
-            const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
-            return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
-          })()}
+                  const Icon = dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig].icon;
+                  return Icon ? <Icon className="h-2.5 w-2.5" /> : null;
+                })()}
                 {dealStatusConfig[lead.deal_status as keyof typeof dealStatusConfig]?.label}
-              </Badge>}
+              </span>
+            )}
             
             {/* Tags - primeira tag em destaque */}
             {lead.tags && lead.tags.length > 0 && <>
-                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-medium" style={{
+                <span className="text-[9px] px-1.5 py-0.5 font-medium rounded-full" style={{
             backgroundColor: `${lead.tags[0].color}20`,
             color: lead.tags[0].color,
             borderColor: lead.tags[0].color
           }}>
                   {lead.tags[0].name}
-                </Badge>
+                </span>
                 {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
               </>}
           </div>
 
           {/* Lost Reason - shown when lost */}
           {isLost && lead.lost_reason && (
-            <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-red-100/80 dark:bg-red-900/30 text-[10px] text-red-700 dark:text-red-300">
+            <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-destructive/10 text-[10px] text-destructive">
               <XCircle className="h-3 w-3 shrink-0" />
               <span className="truncate">{lead.lost_reason}</span>
             </div>
