@@ -1,23 +1,52 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface ExportData {
   [key: string]: string | number | boolean | null | undefined;
 }
 
-export function exportToExcel(data: ExportData[], filename: string, sheetName = 'Dados') {
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFile(workbook, `${filename}.xlsx`);
+export async function exportToExcel(data: ExportData[], filename: string, sheetName = 'Dados') {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
+
+  if (data.length === 0) return;
+
+  // Set columns from data keys
+  const keys = Object.keys(data[0]);
+  worksheet.columns = keys.map(key => ({
+    header: key,
+    key: key,
+    width: Math.min(Math.max(key.length + 2, 12), 40),
+  }));
+
+  // Add rows
+  data.forEach(row => worksheet.addRow(row));
+
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadFile(buffer, `${filename}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
-export function exportToCSV(data: ExportData[], filename: string) {
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const csv = XLSX.utils.sheet_to_csv(worksheet);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+export async function exportToCSV(data: ExportData[], filename: string) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Data');
+
+  if (data.length === 0) return;
+
+  const keys = Object.keys(data[0]);
+  worksheet.columns = keys.map(key => ({ header: key, key: key }));
+  data.forEach(row => worksheet.addRow(row));
+
+  const buffer = await workbook.csv.writeBuffer();
+  downloadFile(buffer, `${filename}.csv`, 'text/csv;charset=utf-8;');
+}
+
+function downloadFile(buffer: ExcelJS.Buffer, filename: string, mimeType: string) {
+  const blob = new Blob([buffer], { type: mimeType });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.csv`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(link.href);
 }

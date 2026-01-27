@@ -22,13 +22,12 @@ import {
   FileSpreadsheet, 
   Loader2,
   CheckCircle2,
-  AlertCircle
 } from 'lucide-react';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useCreateLead } from '@/hooks/use-leads';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { cn } from '@/lib/utils';
 
 interface ImportContactsDialogProps {
@@ -94,11 +93,64 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   const parseFile = async (file: File) => {
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet);
+      let jsonData: Record<string, string>[] = [];
+
+      if (file.name.endsWith('.csv')) {
+        // Parse CSV manually for browser compatibility
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter(line => line.trim());
+        if (lines.length < 2) {
+          toast.error('Arquivo CSV vazio ou inválido');
+          return;
+        }
+        
+        const headers = lines[0].split(/[,;]/).map(h => h.replace(/^["']|["']$/g, '').toLowerCase().trim());
+        
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(/[,;]/).map(v => v.replace(/^["']|["']$/g, '').trim());
+          const row: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            if (header && values[index] !== undefined) {
+              row[header] = values[index];
+            }
+          });
+          if (Object.keys(row).length > 0) {
+            jsonData.push(row);
+          }
+        }
+      } else {
+        // Parse XLSX using ExcelJS
+        const workbook = new ExcelJS.Workbook();
+        const arrayBuffer = await file.arrayBuffer();
+        await workbook.xlsx.load(arrayBuffer);
+        
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          toast.error('Planilha vazia ou inválida');
+          return;
+        }
+
+        const headers: string[] = [];
+        
+        worksheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) {
+            row.eachCell((cell, colNumber) => {
+              headers[colNumber - 1] = String(cell.value || '').toLowerCase().trim();
+            });
+          } else {
+            const rowData: Record<string, string> = {};
+            row.eachCell((cell, colNumber) => {
+              const header = headers[colNumber - 1];
+              if (header) {
+                rowData[header] = String(cell.value || '');
+              }
+            });
+            if (Object.keys(rowData).length > 0) {
+              jsonData.push(rowData);
+            }
+          }
+        });
+      }
 
       // Normalize column names
       const normalizedData = jsonData.map(row => {
@@ -193,16 +245,29 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     }
   };
 
-  const downloadSample = () => {
-    const sampleData = [
-      { nome: 'João Silva', telefone: '5511999998888', email: 'joao@exemplo.com', mensagem: 'Interessado no imóvel' },
-      { nome: 'Maria Santos', telefone: '5511988887777', email: 'maria@exemplo.com', mensagem: 'Quer agendar visita' },
+  const downloadSample = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Contatos');
+    
+    worksheet.columns = [
+      { header: 'nome', key: 'nome', width: 25 },
+      { header: 'telefone', key: 'telefone', width: 18 },
+      { header: 'email', key: 'email', width: 30 },
+      { header: 'mensagem', key: 'mensagem', width: 40 },
     ];
 
-    const worksheet = XLSX.utils.json_to_sheet(sampleData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contatos');
-    XLSX.writeFile(workbook, 'exemplo_importacao_contatos.xlsx');
+    worksheet.addRow({ nome: 'João Silva', telefone: '5511999998888', email: 'joao@exemplo.com', mensagem: 'Interessado no imóvel' });
+    worksheet.addRow({ nome: 'Maria Santos', telefone: '5511988887777', email: 'maria@exemplo.com', mensagem: 'Quer agendar visita' });
+
+    worksheet.getRow(1).font = { bold: true };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'exemplo_importacao_contatos.xlsx';
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const resetDialog = () => {
