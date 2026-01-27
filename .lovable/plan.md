@@ -1,190 +1,111 @@
 
-# Plano de Correção: Histórico Completo e Reentrada de Leads
+# Plano de Correção: Permissões RBAC e Visibilidade do Super Admin
 
-## Diagnóstico Completo
+## Resumo dos Problemas Identificados
 
-Após análise detalhada, identifiquei **dois problemas principais**:
+### Problema 1: Super Admin Não Vê as Funções ao Impersonar
+**Causa Raiz:** Em `src/pages/Settings.tsx`, linha 284, a aba "Funções" só aparece para usuários com `profile?.role === 'admin'`. Porém, o super_admin tem role `super_admin`, não `admin`, então a aba fica escondida.
 
-### Problema 1: Histórico não aparece imediatamente
+### Problema 2: Usuários com Permissão `lead_view_all` Não Veem Todos os Leads
+**Causa Raiz:** Embora a migração do banco de dados tenha sido aplicada corretamente e a função `list_contacts_paginated` esteja atualizada, a variável `v_can_view_all` só é inicializada quando o bloco `IF NOT v_is_admin` executa. O problema é que as variáveis booleanas em PostgreSQL inicializam como `NULL`, e `NULL OR TRUE` = `TRUE`, mas `NULL OR FALSE` = `NULL` (falsy).
 
-**Causa**: O trigger `log_lead_activity` foi modificado para ignorar operações `INSERT` (para evitar race condition com FK), mas isso significa que quando um lead é criado, **nenhuma atividade "Lead criado" é registrada**.
-
-**Evidência**: O lead `826c0f64...` foi criado em `03:03:03`, mas a primeira atividade é `lead_reentry` em `03:03:22` - não há atividade de criação.
-
-### Problema 2: Reentrada não atualiza completamente o lead
-
-**Causa**: O código atual do `generic-webhook` na lógica de reentrada (linhas 123-182):
-- Atualiza apenas nome, email e message
-- **NÃO** atualiza o estágio para o configurado no webhook
-- **NÃO** limpa o responsável para redistribuição via round-robin
-- **NÃO** atualiza o deal_status (se estava "lost", deveria voltar para "open")
-
-**Comportamento esperado pelo usuário**: Quando um lead reentra, ele deve ser tratado "como se tivesse acabado de entrar" - voltar ao estágio configurado, passar pelo round-robin, atualizar status.
+No entanto, a lógica parece correta. O problema real pode ser:
+1. O cache da função no banco de dados não foi atualizado
+2. A Izadora precisa fazer logout/login para a sessão atualizar
+3. Há um problema de timing entre a migração e a atualização do cache
 
 ---
 
-## Solução Proposta
+## Plano de Implementação
 
-### Parte 1: Corrigir Histórico Inicial
+### Etapa 1: Corrigir Visibilidade da Tab "Funções" para Super Admin
 
-Modificar o trigger `log_lead_activity` para registrar a atividade de criação **usando um AFTER INSERT separado** ou registrar diretamente no webhook/edge function após o INSERT ser commitado.
+**Arquivo:** `src/pages/Settings.tsx`
 
-**Opção escolhida**: Inserir a atividade `lead_created` diretamente no `generic-webhook` APÓS o lead ser criado com sucesso (já que o trigger ignora INSERT).
-
-**Alterações no `generic-webhook/index.ts`**:
-```typescript
-// Após linha 231 (após lead criado com sucesso)
-// Registrar atividade de criação manualmente
-await supabase.from('activities').insert({
-  lead_id: lead.id,
-  type: 'lead_created',
-  content: `Lead criado via webhook "${webhook.name}"`,
-  user_id: null,
-  metadata: {
-    source: 'webhook',
-    webhook_id: webhook.id,
-    webhook_name: webhook.name,
-    pipeline_name: webhook.pipeline?.name,
-    stage_name: webhook.stage?.name,
-  }
-});
-```
-
-### Parte 2: Reentrada Completa do Lead
-
-Modificar a lógica de reentrada no `generic-webhook` para:
-
-1. **Atualizar o estágio** para o configurado no webhook
-2. **Limpar o responsável** para que o round-robin redistribua
-3. **Resetar deal_status** para "open" (se estava "lost" ou "won")
-4. **Atualizar stage_entered_at** para o timestamp atual
-5. **Chamar handle_lead_intake** para redistribuição
-
-**Código atual problemático** (linhas 127-137):
-```typescript
-const updateData: Record<string, any> = {};
-if (mappedData.name && mappedData.name !== 'unknown') updateData.name = mappedData.name;
-if (mappedData.email) updateData.email = mappedData.email;
-if (mappedData.message) updateData.message = mappedData.message;
-```
-
-**Código corrigido**:
-```typescript
-// Determinar estágio de destino
-let targetStageId = webhook.target_stage_id;
-if (!targetStageId && webhook.target_pipeline_id) {
-  const { data: firstStage } = await supabase
-    .from('stages')
-    .select('id')
-    .eq('pipeline_id', webhook.target_pipeline_id)
-    .order('position', { ascending: true })
-    .limit(1)
-    .single();
-  targetStageId = firstStage?.id;
-}
-
-// Preparar dados de atualização completa
-const updateData: Record<string, any> = {
-  // Dados do formulário
-  ...(mappedData.name && mappedData.name !== 'unknown' && { name: mappedData.name }),
-  ...(mappedData.email && { email: mappedData.email }),
-  ...(mappedData.message && { message: mappedData.message }),
-  // Resetar para reprocessamento
-  stage_id: targetStageId || existingLead.stage_id, // Mover para estágio configurado
-  pipeline_id: webhook.target_pipeline_id || existingLead.pipeline_id,
-  assigned_user_id: null, // Limpar para round-robin redistribuir
-  deal_status: 'open', // Resetar status
-  won_at: null,
-  lost_at: null,
-  lost_reason: null,
-  stage_entered_at: new Date().toISOString(),
-  first_touch_at: null, // Resetar timer do bolsão
-};
-
-await supabase
-  .from('leads')
-  .update(updateData)
-  .eq('id', existingLead.id);
-
-// Chamar handle_lead_intake para redistribuição
-await supabase.rpc('handle_lead_intake', { p_lead_id: existingLead.id });
-```
-
----
-
-## Detalhes Técnicos
-
-### Fluxo Completo de Reentrada
-
-```text
-Lead existente detectado (mesmo telefone)
-  │
-  ├─→ Atualizar dados (nome, email, message)
-  │
-  ├─→ Mover para estágio do webhook (ex: "Base")
-  │
-  ├─→ Resetar deal_status para "open"
-  │
-  ├─→ Limpar assigned_user_id
-  │
-  ├─→ Registrar atividade "lead_reentry" com detalhes
-  │
-  ├─→ Triggers AFTER UPDATE disparam:
-  │     ├─→ log_lead_activity: registra stage_change, assignee_changed
-  │     └─→ trigger_lead_intake: chama handle_lead_intake para round-robin
-  │
-  └─→ Lead é redistribuído automaticamente
-```
-
-### Atividade de Reentrada Melhorada
+**Alteração:** Modificar a condição na linha 284 para incluir super_admin quando estiver impersonando:
 
 ```typescript
-await supabase.from('activities').insert({
-  lead_id: existingLead.id,
-  type: 'lead_reentry',
-  content: `Lead reentrou via webhook "${webhook.name}"`,
-  user_id: null,
-  metadata: {
-    source: 'webhook',
-    webhook_id: webhook.id,
-    webhook_name: webhook.name,
-    from_stage_id: oldStageId,
-    to_stage_id: targetStageId,
-    from_status: oldDealStatus,
-    to_status: 'open',
-    previous_assignee_id: oldAssigneeId,
-    new_data: mappedData,
-  }
-});
+// Antes
+{profile?.role === 'admin' && <TabsTrigger value="roles" ...>
+
+// Depois  
+{(profile?.role === 'admin' || isSuperAdmin) && <TabsTrigger value="roles" ...>
+```
+
+**Dependência:** Importar `isSuperAdmin` do contexto de autenticação (já disponível via `useAuth`).
+
+---
+
+### Etapa 2: Reforçar a Lógica RBAC na Função do Banco
+
+**Arquivo:** Nova migração SQL
+
+**Problema Potencial:** As variáveis `v_can_view_all` e `v_can_view_team` permanecem `NULL` se não entrarem no bloco IF, o que pode causar comportamento inesperado na expressão OR.
+
+**Solução:** Inicializar explicitamente as variáveis como `FALSE` antes do bloco condicional:
+
+```sql
+-- Após as declarações, adicionar inicialização:
+v_can_view_all := FALSE;
+v_can_view_team := FALSE;
+
+-- Isso garante que a expressão OR funcione corretamente:
+-- FALSE OR TRUE = TRUE (quando o usuário tem permissão)
+-- FALSE OR FALSE = FALSE (fallback para apenas seus leads)
 ```
 
 ---
 
-## Resumo das Alterações
+### Etapa 3: Atualizar Condições Relacionadas
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `supabase/functions/generic-webhook/index.ts` | 1. Adicionar atividade `lead_created` após INSERT bem-sucedido |
-| `supabase/functions/generic-webhook/index.ts` | 2. Reescrever lógica de reentrada para atualização completa |
-| `supabase/functions/generic-webhook/index.ts` | 3. Chamar `handle_lead_intake` após reentrada |
+**Arquivos Afetados:**
+1. `src/pages/Settings.tsx` - Tab Funções
+2. `src/components/settings/RolesTab.tsx` - Verificar se há outras condições de admin-only
 
 ---
 
-## Impacto
+## Detalhamento Técnico
 
-- **Histórico**: Leads novos terão atividade "Lead criado" imediatamente visível
-- **Reentrada**: Leads que reentram serão completamente reprocessados:
-  - Voltam ao estágio configurado no webhook
-  - Passam pelo round-robin novamente
-  - Status resetado para "open"
-  - Histórico preservado com todas as interações anteriores
-- **Compatibilidade**: Funciona com qualquer fonte (webhook, Facebook, WhatsApp, etc.)
+### Mudanças no Frontend
+
+1. **Settings.tsx:**
+   - Adicionar `isSuperAdmin` ao destructuring do `useAuth()`
+   - Alterar condição da TabsTrigger "roles" para `(profile?.role === 'admin' || isSuperAdmin)`
+
+### Mudanças no Banco de Dados
+
+1. **Nova Migração SQL:**
+```sql
+CREATE OR REPLACE FUNCTION public.list_contacts_paginated(...)
+...
+DECLARE
+  v_org_id UUID;
+  v_user_id UUID;
+  v_is_admin BOOLEAN;
+  v_is_super_admin BOOLEAN;
+  v_can_view_all BOOLEAN := FALSE;  -- Inicialização explícita
+  v_can_view_team BOOLEAN := FALSE; -- Inicialização explícita
+  v_team_member_ids UUID[];
+  v_offset INT;
+  v_total BIGINT;
+BEGIN
+  -- resto do código permanece igual
+...
+```
 
 ---
 
-## Próximos Passos
+## Ordem de Execução
 
-1. Atualizar a edge function `generic-webhook`
-2. Fazer deploy
-3. Testar com um lead novo (verificar atividade "Lead criado")
-4. Testar reentrada de lead existente (verificar movimentação + redistribuição)
+1. Aplicar migração SQL para corrigir inicialização das variáveis
+2. Modificar `Settings.tsx` para permitir super_admin ver a tab Funções
+3. Testar com usuário Izadora (logout/login pode ser necessário)
+4. Testar com conta super_admin impersonando a organização
+
+---
+
+## Validação
+
+- Após implementação, Izadora deve ver todos os 6 leads (não apenas os 2 atribuídos a ela)
+- Super Admin impersonando deve ver a aba "Funções" nas configurações
+- Super Admin deve poder criar, editar e excluir funções da organização
