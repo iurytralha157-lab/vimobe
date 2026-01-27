@@ -662,8 +662,8 @@ export function LeadDetailDialog({
                 {activitiesLoading ? <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div> : taskActivities.length > 0 ? <div className="relative">
-                    {/* Timeline line */}
-                    <div className="absolute left-[15px] top-5 bottom-5 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
+                    {/* Timeline line - z-0 to stay behind icons */}
+                    <div className="absolute z-0 left-[15px] top-5 bottom-5 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
                     
                     <div className="space-y-1">
                       {taskActivities.slice(0, 4).map((activity: any) => {
@@ -1581,8 +1581,8 @@ export function LeadDetailDialog({
                       <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                     </div>
                   </div> : taskActivities.length > 0 ? <div className="relative">
-                    {/* Timeline line - centered under icons (padding 12px + half of icon 18px = 30px) */}
-                    <div className="absolute left-[30px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
+                    {/* Timeline line - z-0 to stay behind icons */}
+                    <div className="absolute z-0 left-[30px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
                     
                     <div className="space-y-3">
                       {taskActivities.slice(0, 5).map((activity: any, idx: number) => {
