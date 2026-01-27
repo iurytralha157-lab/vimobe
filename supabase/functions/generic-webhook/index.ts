@@ -203,6 +203,7 @@ Deno.serve(async (req) => {
     }
 
     // Create lead (novo - não duplicado)
+    // IMPORTANTE: Não usar .select() junto com insert para evitar race condition com triggers
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
         source: 'webhook',
         stage_entered_at: stageId ? new Date().toISOString() : null,
       })
-      .select()
+      .select('id, pipeline_id, stage_id, assigned_user_id')
       .single();
 
     if (leadError) {
@@ -229,7 +230,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Apply tags if configured
+    // Apply tags if configured (após lead criado com sucesso)
     const targetTagIds = webhook.target_tag_ids || [];
     if (targetTagIds.length > 0) {
       const leadTags = targetTagIds.map((tagId: string) => ({
@@ -241,7 +242,7 @@ Deno.serve(async (req) => {
       console.log('Applied tags to lead:', targetTagIds);
     }
 
-    // Note: lead_created activity, timeline events, and round-robin assignment are handled by trigger
+    // Atividade de criação é registrada pelo trigger log_lead_activity no banco
 
     // Update webhook stats
     await supabase
