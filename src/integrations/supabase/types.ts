@@ -3874,6 +3874,7 @@ export type Database = {
           last_message: string | null
           last_message_at: string | null
           lead_id: string | null
+          organization_id: string | null
           presence_updated_at: string | null
           remote_jid: string
           session_id: string
@@ -3893,6 +3894,7 @@ export type Database = {
           last_message?: string | null
           last_message_at?: string | null
           lead_id?: string | null
+          organization_id?: string | null
           presence_updated_at?: string | null
           remote_jid: string
           session_id: string
@@ -3912,6 +3914,7 @@ export type Database = {
           last_message?: string | null
           last_message_at?: string | null
           lead_id?: string | null
+          organization_id?: string | null
           presence_updated_at?: string | null
           remote_jid?: string
           session_id?: string
@@ -3924,6 +3927,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
