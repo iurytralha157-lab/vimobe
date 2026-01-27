@@ -129,11 +129,12 @@ export default function Pipelines() {
   }, [pipelines, selectedPipelineId]);
   
   // Check if user has lead_view_all permission
-  const { data: hasLeadViewAll = false } = useHasPermission('lead_view_all');
+  const { data: hasLeadViewAll = false, isLoading: permissionLoading } = useHasPermission('lead_view_all');
   
   // Set initial filter based on user role AND permissions
+  // Wait for permission to load before deciding the filter
   useEffect(() => {
-    if (filterUser === undefined && profile?.id) {
+    if (filterUser === undefined && profile?.id && !permissionLoading) {
       // For admin, super_admin, OR users with lead_view_all permission: show all
       if (isAdmin || hasLeadViewAll) {
         setFilterUser('all');
@@ -142,7 +143,7 @@ export default function Pipelines() {
         setFilterUser(profile.id);
       }
     }
-  }, [profile, isAdmin, filterUser, hasLeadViewAll]);
+  }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading]);
   
   const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined);
   const { data: users = [] } = useOrganizationUsers();
