@@ -661,11 +661,15 @@ export function LeadDetailDialog({
                 
                 {activitiesLoading ? <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div> : taskActivities.length > 0 ? <div className="space-y-2">
-                    {taskActivities.slice(0, 4).map((activity: any) => {
+                  </div> : taskActivities.length > 0 ? <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-[15px] top-5 bottom-5 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
+                    
+                    <div className="space-y-1">
+                      {taskActivities.slice(0, 4).map((activity: any) => {
                 const ActivityIcon = activityTypeIcons[activity.type] || CheckCircle;
-                return <div key={activity.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-accent/30">
-                          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                return <div key={activity.id} className="relative flex items-start gap-3 p-2.5 rounded-lg hover:bg-accent/30">
+                          <div className="relative z-10 h-7 w-7 rounded-lg bg-card border border-primary/20 flex items-center justify-center shrink-0">
                             <ActivityIcon className="h-3.5 w-3.5 text-primary" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -679,6 +683,7 @@ export function LeadDetailDialog({
                           </div>
                         </div>;
               })}
+                    </div>
                   </div> : <div className="text-center py-6 border border-dashed rounded-xl bg-muted/20">
                     <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Nenhuma atividade</p>
