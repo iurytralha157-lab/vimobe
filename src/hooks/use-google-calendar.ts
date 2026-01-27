@@ -40,9 +40,12 @@ export function useConnectGoogleCalendar() {
 
   return useMutation({
     mutationFn: async () => {
+      // Get the current URL to redirect back after OAuth
+      const returnUrl = window.location.href;
+      
       // This will trigger the OAuth flow via edge function
       const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
-        body: { action: 'connect' },
+        body: { action: 'connect', returnUrl },
       });
 
       if (error) throw error;
@@ -50,8 +53,8 @@ export function useConnectGoogleCalendar() {
     },
     onSuccess: (data) => {
       if (data?.authUrl) {
-        // Open Google OAuth in new window
-        window.open(data.authUrl, '_blank', 'width=500,height=600');
+        // Open Google OAuth in same window (will redirect back after auth)
+        window.location.href = data.authUrl;
       }
       queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
     },
