@@ -70,6 +70,7 @@ import { useTags } from '@/hooks/use-tags';
 import { useAssignLeadRoundRobin } from '@/hooks/use-assign-lead-roundrobin';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 import { useStageVGV } from '@/hooks/use-vgv';
+import { useHasPermission } from '@/hooks/use-organization-roles';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -127,17 +128,21 @@ export default function Pipelines() {
     }
   }, [pipelines, selectedPipelineId]);
   
-  // Set initial filter based on user role
+  // Check if user has lead_view_all permission
+  const { data: hasLeadViewAll = false } = useHasPermission('lead_view_all');
+  
+  // Set initial filter based on user role AND permissions
   useEffect(() => {
     if (filterUser === undefined && profile?.id) {
-      // For non-admin users, pre-select their own name
-      if (!isAdmin) {
-        setFilterUser(profile.id);
-      } else {
+      // For admin, super_admin, OR users with lead_view_all permission: show all
+      if (isAdmin || hasLeadViewAll) {
         setFilterUser('all');
+      } else {
+        // For regular users without permission, pre-select their own name
+        setFilterUser(profile.id);
       }
     }
-  }, [profile, isAdmin, filterUser]);
+  }, [profile, isAdmin, filterUser, hasLeadViewAll]);
   
   const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined);
   const { data: users = [] } = useOrganizationUsers();
