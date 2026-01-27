@@ -2335,6 +2335,9 @@ export type Database = {
           is_default: boolean | null
           name: string
           organization_id: string
+          pool_enabled: boolean | null
+          pool_max_redistributions: number | null
+          pool_timeout_minutes: number | null
         }
         Insert: {
           created_at?: string
@@ -2343,6 +2346,9 @@ export type Database = {
           is_default?: boolean | null
           name: string
           organization_id: string
+          pool_enabled?: boolean | null
+          pool_max_redistributions?: number | null
+          pool_timeout_minutes?: number | null
         }
         Update: {
           created_at?: string
@@ -2351,6 +2357,9 @@ export type Database = {
           is_default?: boolean | null
           name?: string
           organization_id?: string
+          pool_enabled?: boolean | null
+          pool_max_redistributions?: number | null
+          pool_timeout_minutes?: number | null
         }
         Relationships: [
           {
