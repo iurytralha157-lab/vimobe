@@ -48,6 +48,7 @@ const activityLabels: Record<string, string> = {
   tag_added: 'Tag adicionada',
   tag_removed: 'Tag removida',
   assignee_changed: 'Responsável alterado',
+  lead_reentry: 'Lead reentrou',
 };
 
 function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
