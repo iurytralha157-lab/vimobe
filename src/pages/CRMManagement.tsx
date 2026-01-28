@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shuffle, Users, Timer, Tags } from 'lucide-react';
+import { Shuffle, Users, Timer, Tags, GitBranch } from 'lucide-react';
+import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 
 // Distribuição components
 import { DistributionTab } from '@/components/crm-management/DistributionTab';
@@ -28,6 +29,13 @@ export default function CRMManagement() {
               Equipes
             </TabsTrigger>
             <TabsTrigger 
+              value="pipelines" 
+              className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+            >
+              <GitBranch className="h-4 w-4" />
+              Pipelines
+            </TabsTrigger>
+            <TabsTrigger 
               value="distribution" 
               className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
             >
@@ -52,6 +60,10 @@ export default function CRMManagement() {
 
           <TabsContent value="teams" className="mt-0">
             <TeamsTab />
+          </TabsContent>
+
+          <TabsContent value="pipelines" className="mt-0">
+            <TeamPipelinesManager />
           </TabsContent>
 
           <TabsContent value="distribution" className="mt-0">
