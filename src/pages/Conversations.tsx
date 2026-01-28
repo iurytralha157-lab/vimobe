@@ -14,7 +14,7 @@ import { CreateLeadDialog } from "@/components/conversations/CreateLeadDialog";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, useArchiveConversation, useDeleteConversation, WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
-import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
+import { useAccessibleSessions } from "@/hooks/use-accessible-sessions";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -36,7 +36,7 @@ export default function Conversations() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     data: sessions
-  } = useWhatsAppSessions();
+  } = useAccessibleSessions();
   const {
     data: conversations,
     isLoading: loadingConversations
