@@ -23,16 +23,20 @@ export interface WebhookIntegration {
   trigger_events: string[];
   created_at: string;
   updated_at: string;
+  created_by: string | null;
   // Joined data
   pipeline?: { id: string; name: string };
   team?: { id: string; name: string };
   stage?: { id: string; name: string; color: string };
   property?: { id: string; code: string; title: string | null };
+  creator?: { id: string; name: string };
 }
 
 export function useWebhooks() {
+  const { profile } = useAuth();
+
   return useQuery({
-    queryKey: ['webhooks'],
+    queryKey: ['webhooks', profile?.id, profile?.role],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('webhooks_integrations')
@@ -41,7 +45,8 @@ export function useWebhooks() {
           pipeline:pipelines(id, name),
           team:teams(id, name),
           stage:stages(id, name, color),
-          property:properties(id, code, title)
+          property:properties(id, code, title),
+          creator:users!webhooks_integrations_created_by_fkey(id, name)
         `)
         .order('created_at', { ascending: false });
 
@@ -50,8 +55,17 @@ export function useWebhooks() {
         throw error;
       }
 
-      return (data || []) as unknown as WebhookIntegration[];
+      // Filtrar: admins veem todos, usuários veem apenas os seus
+      const allWebhooks = (data || []) as unknown as WebhookIntegration[];
+      
+      if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+        return allWebhooks;
+      }
+
+      // Usuário comum: só vê webhooks que ele criou
+      return allWebhooks.filter(w => w.created_by === profile?.id);
     },
+    enabled: !!profile,
   });
 }
 
@@ -76,6 +90,9 @@ export function useCreateWebhook() {
         throw new Error('Organização não encontrada');
       }
 
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+
       const { data, error } = await supabase
         .from('webhooks_integrations')
         .insert({
@@ -90,6 +107,7 @@ export function useCreateWebhook() {
           field_mapping: webhook.field_mapping || {},
           webhook_url: webhook.webhook_url || null,
           trigger_events: webhook.trigger_events || [],
+          created_by: userId,
         })
         .select()
         .single();
