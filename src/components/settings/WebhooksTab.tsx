@@ -32,28 +32,27 @@ import {
   Copy,
   Trash2,
   RefreshCw,
-  ExternalLink,
   Loader2,
-  Check,
-  AlertCircle,
   Code,
   ArrowDownToLine,
   ArrowUpFromLine,
+  Building2,
+  Wifi,
 } from 'lucide-react';
 import { useWebhooks, useCreateWebhook, useUpdateWebhook, useDeleteWebhook, useToggleWebhook, useRegenerateToken } from '@/hooks/use-webhooks';
-import { usePipelines, useStages } from '@/hooks/use-stages';
-import { useTeams } from '@/hooks/use-teams';
 import { useProperties } from '@/hooks/use-properties';
+import { useServicePlans } from '@/hooks/use-service-plans';
+import { useAuth } from '@/contexts/AuthContext';
 import { InlineTagSelector } from '@/components/ui/tag-selector';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 export function WebhooksTab() {
+  const { organization } = useAuth();
   const { data: webhooks = [], isLoading } = useWebhooks();
-  const { data: pipelines = [] } = usePipelines();
-  const { data: teams = [] } = useTeams();
   const { data: properties = [] } = useProperties();
+  const { data: servicePlans = [] } = useServicePlans();
   const createWebhook = useCreateWebhook();
   const updateWebhook = useUpdateWebhook();
   const deleteWebhook = useDeleteWebhook();
@@ -65,15 +64,14 @@ export function WebhooksTab() {
   const [formData, setFormData] = useState({
     name: '',
     type: 'incoming' as 'incoming' | 'outgoing',
-    target_pipeline_id: '',
-    target_team_id: '',
-    target_stage_id: '',
     target_tag_ids: [] as string[],
-    target_property_id: '',
+    interest_type: '' as '' | 'property' | 'plan',
+    interest_property_id: '',
+    interest_plan_id: '',
   });
 
-  // Get stages for selected pipeline
-  const { data: stages = [] } = useStages(formData.target_pipeline_id || undefined);
+  // Determine segment based on organization
+  const isTelecom = organization?.segment === 'telecom';
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generic-webhook`;
 
@@ -83,15 +81,21 @@ export function WebhooksTab() {
       return;
     }
 
-    await createWebhook.mutateAsync({
+    // Build the webhook data - interest fields go to leads, not webhook config
+    const webhookData: any = {
       name: formData.name.trim(),
       type: formData.type,
-      target_pipeline_id: formData.target_pipeline_id || undefined,
-      target_team_id: formData.target_team_id || undefined,
-      target_stage_id: formData.target_stage_id || undefined,
       target_tag_ids: formData.target_tag_ids.length > 0 ? formData.target_tag_ids : undefined,
-      target_property_id: formData.target_property_id || undefined,
-    });
+    };
+
+    // Store interest in field_mapping so generic-webhook can apply it
+    if (formData.interest_type === 'property' && formData.interest_property_id) {
+      webhookData.field_mapping = { interest_property_id: formData.interest_property_id };
+    } else if (formData.interest_type === 'plan' && formData.interest_plan_id) {
+      webhookData.field_mapping = { interest_plan_id: formData.interest_plan_id };
+    }
+
+    await createWebhook.mutateAsync(webhookData);
 
     setDialogOpen(false);
     resetForm();
@@ -100,15 +104,22 @@ export function WebhooksTab() {
   const handleUpdate = async () => {
     if (!selectedWebhook) return;
 
-    await updateWebhook.mutateAsync({
+    const updates: any = {
       id: selectedWebhook.id,
       name: formData.name.trim(),
-      target_pipeline_id: formData.target_pipeline_id || null,
-      target_team_id: formData.target_team_id || null,
-      target_stage_id: formData.target_stage_id || null,
       target_tag_ids: formData.target_tag_ids,
-      target_property_id: formData.target_property_id || null,
-    });
+    };
+
+    // Update interest in field_mapping
+    if (formData.interest_type === 'property' && formData.interest_property_id) {
+      updates.field_mapping = { interest_property_id: formData.interest_property_id };
+    } else if (formData.interest_type === 'plan' && formData.interest_plan_id) {
+      updates.field_mapping = { interest_plan_id: formData.interest_plan_id };
+    } else {
+      updates.field_mapping = {};
+    }
+
+    await updateWebhook.mutateAsync(updates);
 
     setDialogOpen(false);
     setSelectedWebhook(null);
@@ -119,24 +130,37 @@ export function WebhooksTab() {
     setFormData({
       name: '',
       type: 'incoming',
-      target_pipeline_id: '',
-      target_team_id: '',
-      target_stage_id: '',
       target_tag_ids: [],
-      target_property_id: '',
+      interest_type: '',
+      interest_property_id: '',
+      interest_plan_id: '',
     });
   };
 
   const openEditDialog = (webhook: any) => {
     setSelectedWebhook(webhook);
+    
+    // Parse interest from field_mapping
+    const fieldMapping = webhook.field_mapping || {};
+    let interestType: '' | 'property' | 'plan' = '';
+    let interestPropertyId = '';
+    let interestPlanId = '';
+    
+    if (fieldMapping.interest_property_id) {
+      interestType = 'property';
+      interestPropertyId = fieldMapping.interest_property_id;
+    } else if (fieldMapping.interest_plan_id) {
+      interestType = 'plan';
+      interestPlanId = fieldMapping.interest_plan_id;
+    }
+    
     setFormData({
       name: webhook.name,
       type: webhook.type,
-      target_pipeline_id: webhook.target_pipeline_id || '',
-      target_team_id: webhook.target_team_id || '',
-      target_stage_id: webhook.target_stage_id || '',
       target_tag_ids: webhook.target_tag_ids || [],
-      target_property_id: webhook.target_property_id || '',
+      interest_type: interestType,
+      interest_property_id: interestPropertyId,
+      interest_plan_id: interestPlanId,
     });
     setDialogOpen(true);
   };
@@ -227,19 +251,19 @@ export function WebhooksTab() {
                             </span>
                           )}
                         </div>
-                        {webhook.pipeline && (
+                        {/* Show interest info */}
+                        {(webhook.field_mapping?.interest_property_id || webhook.field_mapping?.interest_plan_id) && (
                           <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            <Badge variant="outline" className="text-xs">
-                              Pipeline: {webhook.pipeline.name}
-                            </Badge>
-                            {webhook.stage && (
-                              <Badge variant="outline" className="text-xs" style={{ borderColor: webhook.stage.color, color: webhook.stage.color }}>
-                                Estágio: {webhook.stage.name}
+                            {webhook.field_mapping?.interest_property_id && (
+                              <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-300">
+                                <Building2 className="h-3 w-3 mr-1" />
+                                Imóvel configurado
                               </Badge>
                             )}
-                            {webhook.team && (
-                              <Badge variant="outline" className="text-xs">
-                                Equipe: {webhook.team.name}
+                            {webhook.field_mapping?.interest_plan_id && (
+                              <Badge variant="outline" className="text-xs text-blue-600 border-blue-300">
+                                <Wifi className="h-3 w-3 mr-1" />
+                                Plano configurado
                               </Badge>
                             )}
                           </div>
@@ -450,70 +474,7 @@ export function WebhooksTab() {
 
             <Separator />
 
-            <div className="space-y-2">
-              <Label>Pipeline de Destino</Label>
-              <Select
-                value={formData.target_pipeline_id || "__none__"}
-                onValueChange={(v) => setFormData(prev => ({ ...prev, target_pipeline_id: v === "__none__" ? '' : v, target_stage_id: '' }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Pipeline padrão</SelectItem>
-                  {pipelines.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.target_pipeline_id && (
-              <div className="space-y-2">
-                <Label>Estágio Inicial</Label>
-                <Select
-                  value={formData.target_stage_id || "__none__"}
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, target_stage_id: v === "__none__" ? '' : v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Primeiro estágio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Primeiro estágio</SelectItem>
-                    {stages.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
-                          {s.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Equipe de Destino (Round-Robin)</Label>
-              <Select
-                value={formData.target_team_id || "__none__"}
-                onValueChange={(v) => setFormData(prev => ({ ...prev, target_team_id: v === "__none__" ? '' : v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sem distribuição" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Sem distribuição automática</SelectItem>
-                  {teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Leads serão distribuídos automaticamente entre os membros da equipe
-              </p>
-            </div>
-
+            {/* Tags */}
             <div className="space-y-2">
               <Label>Tags Automáticas</Label>
               <InlineTagSelector
@@ -532,27 +493,92 @@ export function WebhooksTab() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label>Imóvel de Interesse</Label>
+            <Separator />
+
+            {/* Interest Selection */}
+            <div className="space-y-3">
+              <Label>Interesse do Lead</Label>
+              <p className="text-xs text-muted-foreground">
+                Defina o interesse padrão para leads recebidos por este webhook.
+                A distribuição (pipeline, estágio) é configurada nas Filas de Distribuição.
+              </p>
+              
               <Select
-                value={formData.target_property_id || "__none__"}
-                onValueChange={(v) => setFormData(prev => ({ ...prev, target_property_id: v === "__none__" ? '' : v }))}
+                value={formData.interest_type || "__none__"}
+                onValueChange={(v) => setFormData(prev => ({ 
+                  ...prev, 
+                  interest_type: v === "__none__" ? '' : v as '' | 'property' | 'plan',
+                  interest_property_id: '',
+                  interest_plan_id: ''
+                }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Nenhum imóvel" />
+                  <SelectValue placeholder="Sem interesse definido" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Nenhum imóvel</SelectItem>
-                  {properties.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.code} - {p.title || p.tipo_de_imovel}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="__none__">Sem interesse definido</SelectItem>
+                  {!isTelecom && <SelectItem value="property">Imóvel</SelectItem>}
+                  {isTelecom && <SelectItem value="plan">Plano de Serviço</SelectItem>}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                O lead será automaticamente associado a este imóvel
-              </p>
+
+              {formData.interest_type === 'property' && (
+                <Select
+                  value={formData.interest_property_id || "__none__"}
+                  onValueChange={(v) => setFormData(prev => ({ 
+                    ...prev, 
+                    interest_property_id: v === "__none__" ? '' : v 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o imóvel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum imóvel</SelectItem>
+                    {properties.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <span>{p.code} - {p.title || p.tipo_de_imovel}</span>
+                          {p.preco && (
+                            <span className="text-xs text-emerald-600">
+                              R${p.preco.toLocaleString('pt-BR')}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {formData.interest_type === 'plan' && (
+                <Select
+                  value={formData.interest_plan_id || "__none__"}
+                  onValueChange={(v) => setFormData(prev => ({ 
+                    ...prev, 
+                    interest_plan_id: v === "__none__" ? '' : v 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum plano</SelectItem>
+                    {servicePlans.filter(p => p.is_active).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <span>{p.code} - {p.name}</span>
+                          {p.price && (
+                            <span className="text-xs text-blue-600">
+                              R${p.price.toLocaleString('pt-BR')}/mês
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

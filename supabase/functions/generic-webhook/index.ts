@@ -71,14 +71,25 @@ Deno.serve(async (req) => {
       procura_financiamento: 'procura_financiamento',
     };
     
-    const fieldMapping = (webhook.field_mapping && Object.keys(webhook.field_mapping).length > 0)
-      ? webhook.field_mapping
-      : defaultMapping;
+    // Extract interest IDs from field_mapping (these are stored directly, not as field mappings)
+    const interestPropertyId = webhook.field_mapping?.interest_property_id || null;
+    const interestPlanId = webhook.field_mapping?.interest_plan_id || null;
     
-    console.log('Using field mapping:', JSON.stringify(fieldMapping));
+    // Get actual field mapping (filter out interest configs)
+    const fieldMapping = Object.fromEntries(
+      Object.entries(webhook.field_mapping || {}).filter(
+        ([key]) => !key.startsWith('interest_')
+      )
+    );
+    
+    const effectiveMapping = Object.keys(fieldMapping).length > 0 ? fieldMapping : defaultMapping;
+    
+    console.log('Using field mapping:', JSON.stringify(effectiveMapping));
+    console.log('Interest property ID:', interestPropertyId);
+    console.log('Interest plan ID:', interestPlanId);
 
     const mappedData: Record<string, any> = {};
-    for (const [targetField, sourceField] of Object.entries(fieldMapping)) {
+    for (const [targetField, sourceField] of Object.entries(effectiveMapping)) {
       const srcField = sourceField as string;
       if (body[srcField] !== undefined) {
         mappedData[targetField] = body[srcField];
@@ -238,27 +249,10 @@ Deno.serve(async (req) => {
     }
 
     // ===== LEAD NOVO =====
-    // Determine the stage_id: use configured one or get first stage of pipeline
-    let stageId = webhook.target_stage_id;
-    const pipelineId = webhook.target_pipeline_id;
-    
-    if (!stageId && pipelineId) {
-      // Get first stage of the pipeline (lowest position)
-      const { data: firstStage } = await supabase
-        .from('stages')
-        .select('id')
-        .eq('pipeline_id', pipelineId)
-        .order('position', { ascending: true })
-        .limit(1)
-        .single();
-      
-      if (firstStage) {
-        stageId = firstStage.id;
-        console.log('Auto-assigned to first stage:', stageId);
-      }
-    }
+    // Note: pipeline_id and stage_id are left null - distribution queues will set them via handle_lead_intake
 
     // Create lead (novo - não duplicado)
+    // Note: pipeline_id and stage_id are left null - distribution queues will set them
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
@@ -267,12 +261,12 @@ Deno.serve(async (req) => {
         phone: mappedData.phone || null,
         email: mappedData.email || null,
         message: mappedData.message || null,
-        pipeline_id: pipelineId || null,
-        stage_id: stageId || null,
+        pipeline_id: null, // Distribution queue will set this
+        stage_id: null, // Distribution queue will set this
         assigned_user_id: null,
-        property_id: webhook.target_property_id || null,
+        interest_property_id: interestPropertyId,
+        interest_plan_id: interestPlanId,
         source: 'webhook',
-        stage_entered_at: stageId ? new Date().toISOString() : null,
       })
       .select('id, pipeline_id, stage_id, assigned_user_id')
       .single();
