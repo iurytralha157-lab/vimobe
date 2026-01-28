@@ -141,7 +141,8 @@ export function AppSidebar() {
     t
   } = useLanguage();
   const {
-    hasModule
+    hasModule,
+    isLoading: modulesLoading
   } = useOrganizationModules();
   const {
     hasPermission
@@ -171,8 +172,11 @@ export function AppSidebar() {
   const logoHeight = systemSettings?.logo_height || 40;
 
   // Filter nav items based on enabled modules, user role, permissions, and organization segment
+  // While modules are loading, only show items without module requirement to prevent flash
   const navItems = useMemo(() => {
     return allNavItems.filter(item => {
+      // If modules are still loading and this item requires a module, hide it to prevent flash
+      if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
       // Check permission-based access
@@ -183,12 +187,15 @@ export function AppSidebar() {
       if (item.path === '/reports/performance' && organization?.segment !== 'telecom' && profile?.role !== 'admin' && !isSuperAdmin) return false;
       return true;
     });
-  }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment]);
+  }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment, modulesLoading]);
 
   // Filter bottom items based on user role and modules
+  // While modules are loading, hide module-dependent items to prevent flash
   const computedBottomItems = useMemo(() => {
     let items = bottomItems.filter(item => {
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      // If modules are still loading and this item requires a module, hide it
+      if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
       return true;
     });
@@ -200,7 +207,7 @@ export function AppSidebar() {
       }, ...items];
     }
     return items;
-  }, [isSuperAdmin, profile?.role, hasModule]);
+  }, [isSuperAdmin, profile?.role, hasModule, modulesLoading]);
   const getLabel = (labelKey: string): string => {
     return (t.nav as Record<string, string>)[labelKey] || labelKey;
   };
