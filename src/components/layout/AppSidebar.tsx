@@ -28,8 +28,7 @@ const allNavItems: NavItem[] = [{
   icon: Kanban,
   labelKey: 'pipelines',
   path: '/crm/pipelines',
-  module: 'crm',
-  permission: 'module_crm'
+  module: 'crm'
 }, {
   icon: MessageSquare,
   labelKey: 'conversations',
@@ -39,8 +38,7 @@ const allNavItems: NavItem[] = [{
   icon: Users,
   labelKey: 'contacts',
   path: '/crm/contacts',
-  module: 'crm',
-  permission: 'module_crm'
+  module: 'crm'
 }, {
   icon: DollarSign,
   labelKey: 'financial',
@@ -91,8 +89,7 @@ const allNavItems: NavItem[] = [{
   icon: UserCheck,
   labelKey: 'telecomCustomers',
   path: '/telecom/customers',
-  module: 'telecom',
-  permission: 'module_crm'
+  module: 'telecom'
 },
 // Admin modules
 {
