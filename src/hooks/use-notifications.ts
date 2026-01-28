@@ -163,17 +163,34 @@ export function useNotifications() {
               // Silent notification for WhatsApp - no sound, just update queries
               console.log('WhatsApp notification received (silent):', newNotification.title);
             } else if (newNotification.type === 'lead') {
-              // New lead - play cha-ching sound
-              console.log('🔔 Playing new-lead sound for:', newNotification.title);
-              if (newLeadSoundRef.current) {
-                newLeadSoundRef.current.currentTime = 0;
-                newLeadSoundRef.current.volume = 0.7;
-                newLeadSoundRef.current.play()
-                  .then(() => console.log('✅ New lead sound played successfully'))
-                  .catch((err) => console.log('❌ Failed to play new lead sound:', err));
-              } else {
-                console.log('❌ newLeadSoundRef is null');
-              }
+              // New lead - play cha-ching sound with robust fallback
+              console.log('🔔 Attempting to play new-lead sound for:', newNotification.title);
+              
+              const playLeadSound = async () => {
+                try {
+                  if (newLeadSoundRef.current) {
+                    newLeadSoundRef.current.currentTime = 0;
+                    newLeadSoundRef.current.volume = 0.7;
+                    await newLeadSoundRef.current.play();
+                    console.log('✅ New lead sound played successfully');
+                  } else {
+                    throw new Error('newLeadSoundRef is null');
+                  }
+                } catch (err) {
+                  console.warn('⚠️ Primary sound failed, trying fallback:', err);
+                  // Fallback: create a new Audio instance
+                  try {
+                    const fallbackAudio = new Audio('/sounds/new-lead.mp3');
+                    fallbackAudio.volume = 0.7;
+                    await fallbackAudio.play();
+                    console.log('✅ Fallback new lead sound played successfully');
+                  } catch (fallbackErr) {
+                    console.error('❌ Fallback sound also failed:', fallbackErr);
+                  }
+                }
+              };
+              
+              playLeadSound();
               
               toast.success('🆕 Novo Lead!', {
                 description: newNotification.content || newNotification.title,
