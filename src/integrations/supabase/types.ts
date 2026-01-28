@@ -3768,6 +3768,7 @@ export type Database = {
         Row: {
           api_token: string
           created_at: string
+          created_by: string | null
           field_mapping: Json | null
           id: string
           is_active: boolean
@@ -3789,6 +3790,7 @@ export type Database = {
         Insert: {
           api_token?: string
           created_at?: string
+          created_by?: string | null
           field_mapping?: Json | null
           id?: string
           is_active?: boolean
@@ -3810,6 +3812,7 @@ export type Database = {
         Update: {
           api_token?: string
           created_at?: string
+          created_by?: string | null
           field_mapping?: Json | null
           id?: string
           is_active?: boolean
@@ -3829,6 +3832,13 @@ export type Database = {
           webhook_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "webhooks_integrations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "webhooks_integrations_organization_id_fkey"
             columns: ["organization_id"]
