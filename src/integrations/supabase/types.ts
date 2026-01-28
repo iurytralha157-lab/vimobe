@@ -1711,6 +1711,8 @@ export type Database = {
           email: string | null
           first_touch_at: string | null
           id: string
+          interest_plan_id: string | null
+          interest_property_id: string | null
           lost_at: string | null
           lost_reason: string | null
           message: string | null
@@ -1736,6 +1738,8 @@ export type Database = {
           email?: string | null
           first_touch_at?: string | null
           id?: string
+          interest_plan_id?: string | null
+          interest_property_id?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
@@ -1761,6 +1765,8 @@ export type Database = {
           email?: string | null
           first_touch_at?: string | null
           id?: string
+          interest_plan_id?: string | null
+          interest_property_id?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
@@ -1784,6 +1790,20 @@ export type Database = {
             columns: ["assigned_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_interest_plan_id_fkey"
+            columns: ["interest_plan_id"]
+            isOneToOne: false
+            referencedRelation: "service_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_interest_property_id_fkey"
+            columns: ["interest_property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
           {
@@ -2880,7 +2900,10 @@ export type Database = {
           leads_distributed: number | null
           name: string
           organization_id: string
+          settings: Json | null
           strategy: string | null
+          target_pipeline_id: string | null
+          target_stage_id: string | null
         }
         Insert: {
           created_at?: string
@@ -2890,7 +2913,10 @@ export type Database = {
           leads_distributed?: number | null
           name: string
           organization_id: string
+          settings?: Json | null
           strategy?: string | null
+          target_pipeline_id?: string | null
+          target_stage_id?: string | null
         }
         Update: {
           created_at?: string
@@ -2900,7 +2926,10 @@ export type Database = {
           leads_distributed?: number | null
           name?: string
           organization_id?: string
+          settings?: Json | null
           strategy?: string | null
+          target_pipeline_id?: string | null
+          target_stage_id?: string | null
         }
         Relationships: [
           {
@@ -2908,6 +2937,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_robins_target_pipeline_id_fkey"
+            columns: ["target_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_robins_target_stage_id_fkey"
+            columns: ["target_stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
             referencedColumns: ["id"]
           },
         ]

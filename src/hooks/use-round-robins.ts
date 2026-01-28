@@ -30,6 +30,23 @@ export interface RoundRobin {
   // New columns from migration
   strategy: string | null;
   leads_distributed: number | null;
+  // Advanced distribution columns
+  target_pipeline_id: string | null;
+  target_stage_id: string | null;
+  settings: {
+    enable_redistribution?: boolean;
+    preserve_position?: boolean;
+    require_checkin?: boolean;
+    schedule?: Array<{
+      day: number;
+      enabled: boolean;
+      start: string;
+      end: string;
+    }>;
+  } | null;
+  // Joined data
+  target_pipeline?: { id: string; name: string };
+  target_stage?: { id: string; name: string; color: string };
   rules: RoundRobinRule[];
   members: RoundRobinMember[];
 }
@@ -40,7 +57,11 @@ export function useRoundRobins() {
     queryFn: async () => {
       const { data: roundRobins, error } = await supabase
         .from('round_robins')
-        .select('*')
+        .select(`
+          *,
+          target_pipeline:pipelines!round_robins_target_pipeline_id_fkey(id, name),
+          target_stage:stages!round_robins_target_stage_id_fkey(id, name, color)
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -103,6 +124,11 @@ export function useRoundRobins() {
         ...rr,
         strategy: (rr as any).strategy || 'simple',
         leads_distributed: countsByRR[rr.id] || (rr as any).leads_distributed || 0,
+        target_pipeline_id: (rr as any).target_pipeline_id || null,
+        target_stage_id: (rr as any).target_stage_id || null,
+        settings: (rr as any).settings || null,
+        target_pipeline: (rr as any).target_pipeline || null,
+        target_stage: (rr as any).target_stage || null,
         rules: rulesByRR[rr.id] || [],
         members: membersByRR[rr.id] || [],
       })) as RoundRobin[];

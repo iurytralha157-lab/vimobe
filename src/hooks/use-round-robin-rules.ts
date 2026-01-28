@@ -21,6 +21,9 @@ export interface RoundRobinRule {
   round_robin_id: string;
   match_type: string;
   match_value: string;
+  match: RuleMatch | null;
+  priority: number;
+  is_active: boolean;
 }
 
 export function useRoundRobinRules(roundRobinId?: string) {
