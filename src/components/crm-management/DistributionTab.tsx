@@ -32,6 +32,7 @@ import {
 import { useRoundRobins, useUpdateRoundRobin, useDeleteRoundRobin, RoundRobin as RoundRobinType } from '@/hooks/use-round-robins';
 import { useTeams } from '@/hooks/use-teams';
 import { useOrganizationUsers } from '@/hooks/use-users';
+import { useTags } from '@/hooks/use-tags';
 import { useCreateQueueAdvanced, useUpdateQueueAdvanced } from '@/hooks/use-create-queue-advanced';
 import { DistributionQueueEditor } from '@/components/round-robin/DistributionQueueEditor';
 import { RulesManager } from '@/components/round-robin/RulesManager';
@@ -53,6 +54,7 @@ export function DistributionTab() {
   const { data: roundRobins = [], isLoading } = useRoundRobins();
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
   const { data: users = [] } = useOrganizationUsers();
+  const { data: tags = [] } = useTags();
   const updateRoundRobin = useUpdateRoundRobin();
   const deleteRoundRobin = useDeleteRoundRobin();
   const createQueue = useCreateQueueAdvanced();
@@ -219,11 +221,29 @@ export function DistributionTab() {
                   <p className="text-xs font-medium text-muted-foreground mb-2">Critérios</p>
                   <div className="flex flex-wrap gap-1.5">
                     {rr.rules.length > 0 ? (
-                      rr.rules.slice(0, 3).map((rule) => (
-                        <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
-                          {matchTypeLabels[rule.match_type] || rule.match_type}: {rule.match_value?.substring(0, 20) || 'Configurado'}
-                        </Badge>
-                      ))
+                      rr.rules.slice(0, 3).map((rule) => {
+                        // Se for tag, busca o nome e cor da tag
+                        if (rule.match_type === 'tag') {
+                          const tag = tags.find(t => t.id === rule.match_value);
+                          if (tag) {
+                            return (
+                              <Badge 
+                                key={rule.id} 
+                                variant="outline" 
+                                className="gap-1 text-xs"
+                                style={{ borderColor: tag.color, color: tag.color }}
+                              >
+                                Tag: {tag.name}
+                              </Badge>
+                            );
+                          }
+                        }
+                        return (
+                          <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
+                            {matchTypeLabels[rule.match_type] || rule.match_type}: {rule.match_value?.substring(0, 20) || 'Configurado'}
+                          </Badge>
+                        );
+                      })
                     ) : (
                       <span className="text-xs text-muted-foreground">Qualquer lead (fila genérica)</span>
                     )}
