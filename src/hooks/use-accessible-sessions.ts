@@ -19,22 +19,7 @@ export function useAccessibleSessions() {
     queryFn: async (): Promise<WhatsAppSession[]> => {
       if (!profile?.id || !profile?.organization_id) return [];
 
-      // Admins see all sessions in their organization
-      if (profile.role === 'admin') {
-        const { data, error } = await supabase
-          .from("whatsapp_sessions")
-          .select("*")
-          .eq("organization_id", profile.organization_id)
-          .order("created_at", { ascending: false });
-        
-        if (error) {
-          console.error("Error fetching sessions for admin:", error);
-          return [];
-        }
-        return data as WhatsAppSession[];
-      }
-
-      // Non-admins: fetch owned sessions + sessions with explicit access
+      // All users: fetch owned sessions + sessions with explicit access
       const [ownedResult, accessResult] = await Promise.all([
         supabase
           .from("whatsapp_sessions")
