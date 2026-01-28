@@ -5,6 +5,77 @@ import { toast } from 'sonner';
 const CHANNEL_NAME = 'system-updates';
 
 /**
+ * Performs a complete cache clear including Service Worker and all browser caches
+ */
+async function performFullCacheClear(): Promise<void> {
+  console.log('[ForceRefresh] Starting full cache clear...');
+
+  // 1. Unregister all Service Workers
+  if ('serviceWorker' in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      console.log(`[ForceRefresh] Found ${registrations.length} service workers to unregister`);
+      
+      for (const registration of registrations) {
+        const success = await registration.unregister();
+        console.log(`[ForceRefresh] Service worker unregistered: ${success}`);
+      }
+    } catch (err) {
+      console.error('[ForceRefresh] Error unregistering service workers:', err);
+    }
+  }
+
+  // 2. Clear all Cache Storage (PWA caches)
+  if ('caches' in window) {
+    try {
+      const cacheNames = await caches.keys();
+      console.log(`[ForceRefresh] Found ${cacheNames.length} caches to clear:`, cacheNames);
+      
+      await Promise.all(
+        cacheNames.map(async (cacheName) => {
+          const deleted = await caches.delete(cacheName);
+          console.log(`[ForceRefresh] Cache "${cacheName}" deleted: ${deleted}`);
+        })
+      );
+    } catch (err) {
+      console.error('[ForceRefresh] Error clearing caches:', err);
+    }
+  }
+
+  // 3. Clear localStorage (except auth tokens)
+  const authKeysToKeep = ['sb-iemalzlfnbouobyjwlwi-auth-token', 'impersonate_session'];
+  const keysToRemove: string[] = [];
+  
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && !authKeysToKeep.some(authKey => key.includes(authKey))) {
+      keysToRemove.push(key);
+    }
+  }
+  
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+    console.log(`[ForceRefresh] Removed localStorage key: ${key}`);
+  });
+
+  // 4. Clear sessionStorage (except auth tokens)
+  const sessionKeysToRemove: string[] = [];
+  for (let i = 0; i < sessionStorage.length; i++) {
+    const key = sessionStorage.key(i);
+    if (key && !authKeysToKeep.some(authKey => key.includes(authKey))) {
+      sessionKeysToRemove.push(key);
+    }
+  }
+  
+  sessionKeysToRemove.forEach(key => {
+    sessionStorage.removeItem(key);
+    console.log(`[ForceRefresh] Removed sessionStorage key: ${key}`);
+  });
+
+  console.log('[ForceRefresh] Full cache clear completed');
+}
+
+/**
  * Hook that listens for force refresh broadcasts and reloads the page
  * when received. Used by all users.
  */
@@ -13,37 +84,25 @@ export function useForceRefreshListener() {
     const channel = supabase.channel(CHANNEL_NAME);
 
     channel
-      .on('broadcast', { event: 'force-refresh' }, (payload) => {
+      .on('broadcast', { event: 'force-refresh' }, async (payload) => {
         console.log('[ForceRefresh] Received refresh signal:', payload);
         
         // Show a toast before refreshing
-        toast.info('Atualizando sistema...', {
-          duration: 1500,
+        toast.info('Atualizando sistema... Por favor aguarde.', {
+          duration: 3000,
         });
 
-        // Clear all caches
-        if ('caches' in window) {
-          caches.keys().then((names) => {
-            names.forEach((name) => {
-              caches.delete(name);
-            });
-          });
-        }
+        // Perform full cache clear
+        await performFullCacheClear();
 
-        // Clear localStorage cache items (not auth)
-        const keysToKeep = ['sb-iemalzlfnbouobyjwlwi-auth-token', 'impersonate_session'];
-        Object.keys(localStorage).forEach((key) => {
-          if (!keysToKeep.some(k => key.includes(k))) {
-            // Only clear cache-related items
-            if (key.includes('cache') || key.includes('query')) {
-              localStorage.removeItem(key);
-            }
-          }
-        });
-
-        // Delay slightly to show the toast, then reload
+        // Wait a moment to ensure caches are cleared, then hard reload
         setTimeout(() => {
-          window.location.reload();
+          // Use cache-busting query param and force reload
+          const url = new URL(window.location.href);
+          url.searchParams.set('_refresh', Date.now().toString());
+          
+          // Force a hard reload bypassing cache
+          window.location.replace(url.toString());
         }, 1500);
       })
       .subscribe((status) => {
