@@ -328,7 +328,7 @@ export function WebhooksTab() {
                             {/* Example */}
                             <div className="space-y-2">
                               <Label className="text-xs text-muted-foreground">Exemplo de Requisição</Label>
-                              <div className="bg-muted rounded-lg p-3 font-mono text-xs overflow-x-auto">
+                            <div className="bg-muted rounded-lg p-3 font-mono text-xs overflow-x-auto">
                                 <pre>{`curl -X POST "${webhookUrl}" \\
   -H "Authorization: Bearer ${webhook.api_token}" \\
   -H "Content-Type: application/json" \\
@@ -337,6 +337,7 @@ export function WebhooksTab() {
     "phone": "11999999999",
     "email": "joao@email.com",
     "message": "Interesse no imóvel",
+    "property_id": "uuid-do-imovel",
     "renda_familiar": "5000-10000",
     "trabalha": true,
     "profissao": "Engenheiro",
@@ -394,9 +395,10 @@ export function WebhooksTab() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {[
                 { field: 'name', required: true },
-                { field: 'phone', required: false },
+                { field: 'phone', required: true },
                 { field: 'email', required: false },
                 { field: 'message', required: false },
+                { field: 'property_id', required: false },
                 { field: 'renda_familiar', required: false },
                 { field: 'trabalha', required: false },
                 { field: 'profissao', required: false },
@@ -537,14 +539,14 @@ export function WebhooksTab() {
                     <SelectItem value="__none__">Nenhum imóvel</SelectItem>
                     {properties.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span>{p.code} - {p.title || p.tipo_de_imovel}</span>
+                        <span>
+                          {p.code}
                           {p.preco && (
-                            <span className="text-xs text-emerald-600">
+                            <span className="ml-2 text-emerald-600">
                               R${p.preco.toLocaleString('pt-BR')}
                             </span>
                           )}
-                        </div>
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
