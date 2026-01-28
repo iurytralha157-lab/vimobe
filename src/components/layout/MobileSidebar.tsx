@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import {
   Menu,
@@ -42,6 +43,7 @@ interface NavItem {
   labelKey: string;
   path: string;
   module?: string;
+  permission?: string;
   adminOnly?: boolean;
   children?: NavItem[];
 }
@@ -49,9 +51,9 @@ interface NavItem {
 // Exact same nav items as AppSidebar (desktop)
 const allNavItems: NavItem[] = [
   { icon: LayoutDashboard, labelKey: 'dashboard', path: '/dashboard' },
-  { icon: Kanban, labelKey: 'pipelines', path: '/crm/pipelines', module: 'crm' },
+  { icon: Kanban, labelKey: 'pipelines', path: '/crm/pipelines', module: 'crm', permission: 'module_crm' },
   { icon: MessageSquare, labelKey: 'conversations', path: '/crm/conversas', module: 'whatsapp' },
-  { icon: Users, labelKey: 'contacts', path: '/crm/contacts', module: 'crm' },
+  { icon: Users, labelKey: 'contacts', path: '/crm/contacts', module: 'crm', permission: 'module_crm' },
   { 
     icon: DollarSign, 
     labelKey: 'financial', 
@@ -71,7 +73,7 @@ const allNavItems: NavItem[] = [
   // Telecom modules
   { icon: Package, labelKey: 'plans', path: '/plans', module: 'plans' },
   { icon: MapPin, labelKey: 'coverage', path: '/coverage', module: 'coverage' },
-  { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom' },
+  { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom', permission: 'module_crm' },
   // Admin modules
   { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'performance' },
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
@@ -92,6 +94,7 @@ export function MobileSidebar() {
   const { profile, isSuperAdmin, organization } = useAuth();
   const { t } = useLanguage();
   const { hasModule } = useOrganizationModules();
+  const { hasPermission } = useUserPermissions();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
 
@@ -106,18 +109,20 @@ export function MobileSidebar() {
     return null;
   }, [resolvedTheme, systemSettings]);
 
-  // Filter nav items based on enabled modules, user role, and organization segment
+  // Filter nav items based on enabled modules, user role, permissions, and organization segment
   const navItems = useMemo(() => {
     return allNavItems.filter(item => {
       if (item.module && !hasModule(item.module as any)) return false;
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      // Check permission-based access
+      if (item.permission && !hasPermission(item.permission)) return false;
       // Hide Contacts menu for telecom segment
       if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
       // Hide Performance for non-admins in imobiliário segment (keep visible for telecom)
       if (item.path === '/reports/performance' && organization?.segment !== 'telecom' && profile?.role !== 'admin' && !isSuperAdmin) return false;
       return true;
     });
-  }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
+  }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment]);
 
   // Filter bottom items based on user role and modules
   const computedBottomItems = useMemo(() => {

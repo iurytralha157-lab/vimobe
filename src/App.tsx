@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SuperAdminRoute } from "@/components/guards/SuperAdminRoute";
 import { AdminRoute } from "@/components/guards/AdminRoute";
+import { PermissionGuard } from "@/components/guards/PermissionGuard";
 import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
 import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 
@@ -194,8 +195,8 @@ function AppRoutes() {
           {/* Regular Routes */}
           <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
-          <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+          <Route path="/crm/pipelines" element={<ProtectedRoute><PermissionGuard permission="module_crm"><Pipelines /></PermissionGuard></ProtectedRoute>} />
+          <Route path="/crm/contacts" element={<ProtectedRoute><PermissionGuard permission="module_crm"><Contacts /></PermissionGuard></ProtectedRoute>} />
           <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
@@ -217,7 +218,7 @@ function AppRoutes() {
           {/* Telecom Module */}
           <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
           <Route path="/coverage" element={<ProtectedRoute><CoverageAreas /></ProtectedRoute>} />
-          <Route path="/telecom/customers" element={<ProtectedRoute><TelecomCustomers /></ProtectedRoute>} />
+          <Route path="/telecom/customers" element={<ProtectedRoute><PermissionGuard permission="module_crm"><TelecomCustomers /></PermissionGuard></ProtectedRoute>} />
           <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
           
           {/* Automations */}
