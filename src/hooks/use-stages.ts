@@ -13,7 +13,10 @@ const LEAD_PIPELINE_FIELDS = `
   stage_id, assigned_user_id, pipeline_id, message,
   stage_entered_at,
   deal_status, valor_interesse, property_id, lost_reason, won_at, lost_at,
-  assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url)
+  interest_property_id, interest_plan_id,
+  assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
+  interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
+  interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price)
 `;
 
 export function useStages(pipelineId?: string) {
