@@ -1,98 +1,122 @@
 
-# Plano: Corrigir Conflito de Funções handle_lead_intake
+# Plano: Corrigir Inputs Perdendo Foco ao Editar Lead
 
 ## Problema Identificado
 
-Existe um **conflito de funções** no banco de dados. Há duas funções com o mesmo nome mas assinaturas diferentes:
+Ao digitar em campos como Nome, Email, Profissão, Finalidade de Compra e Valor do Negócio dentro do dialog de detalhes do lead, **o input perde o foco após cada caractere digitado**.
 
-| Função | Tipo de Retorno | Propósito |
-|--------|-----------------|-----------|
-| `handle_lead_intake()` | trigger | Versão antiga - só define stage/pipeline |
-| `handle_lead_intake(p_lead_id uuid)` | jsonb | Versão correta - faz round-robin completo |
+**Causa Raiz**: Os componentes `MobileContent` e `DesktopContent` estão definidos como **funções inline** dentro do `LeadDetailDialog`. A cada re-render (quando o estado `editForm` muda), essas funções são recriadas com uma nova referência, fazendo o React interpretar como **componentes diferentes** e remontá-los completamente, o que causa a perda de foco.
 
-O trigger `trigger_lead_intake` está chamando `handle_lead_intake(NEW.id)`, que deveria acionar a versão com parâmetro, **MAS** a existência da versão sem parâmetros está causando conflitos e comportamento inesperado.
-
-**Resultado**: O log `assignments_log` registra a distribuição correta (alternando entre usuários), mas o UPDATE no lead não está sendo aplicado corretamente.
+```text
+Usuário digita "A"
+      ↓
+setEditForm({...name: "A"})
+      ↓
+LeadDetailDialog re-renderiza
+      ↓
+MobileContent = () => ... (nova função criada!)
+      ↓
+React vê como componente diferente
+      ↓
+Desmonta inputs antigos, monta novos
+      ↓
+Input perde foco
+```
 
 ---
 
 ## Solução
 
-Criar uma migração que:
-
-1. **Remove a função antiga** `handle_lead_intake()` sem parâmetros
-2. **Mantém apenas** `handle_lead_intake(p_lead_id uuid)` com a lógica correta
-3. **Recria o trigger** para garantir que chama a versão correta
+Converter as funções `MobileContent` e `DesktopContent` de funções inline para **JSX direto inline** ou extraí-las para o nível superior do módulo. A abordagem mais segura e limpa é usar JSX direto no retorno do componente.
 
 ---
 
-## Seção Técnica
+## Seção Tecnica
 
-### Migração SQL
+### Arquivo a Modificar
+- `src/components/leads/LeadDetailDialog.tsx`
 
-```sql
--- 1. Dropar função antiga (a versão trigger sem parâmetros)
-DROP FUNCTION IF EXISTS public.handle_lead_intake() CASCADE;
+### Mudancas
 
--- 2. Recriar função trigger que chama a versão correta
-CREATE OR REPLACE FUNCTION public.trigger_handle_lead_intake()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_result jsonb;
-BEGIN 
-  -- Só aciona se o lead não tiver responsável atribuído
-  IF NEW.assigned_user_id IS NULL THEN 
-    v_result := public.handle_lead_intake(NEW.id); 
-  END IF; 
-  RETURN NEW; 
-END; 
-$$;
+**1. Remover as definicoes de funcao inline:**
 
--- 3. Recriar trigger
-DROP TRIGGER IF EXISTS trigger_lead_intake ON public.leads;
-CREATE TRIGGER trigger_lead_intake 
-  AFTER INSERT ON public.leads 
-  FOR EACH ROW 
-  EXECUTE FUNCTION public.trigger_handle_lead_intake();
+Antes (linhas ~434 e ~1312):
+```tsx
+const MobileContent = () => <div className="flex flex-col h-full">
+  // ... todo o conteudo mobile
+</div>;
+
+const DesktopContent = () => <div className="flex flex-col h-full max-h-[90vh]">
+  // ... todo o conteudo desktop
+</div>;
 ```
 
-### Verificação
+**2. Usar o JSX diretamente no retorno:**
 
-Após a migração, deve existir apenas:
-- `handle_lead_intake(p_lead_id uuid)` → retorna JSONB
-- `trigger_handle_lead_intake()` → trigger que chama a função acima
+Depois:
+```tsx
+// No return do componente
+if (isMobile) {
+  return (
+    <Drawer open={!!lead} onOpenChange={() => onClose()}>
+      <DrawerContent className="h-[95vh] p-0">
+        {/* JSX do mobile direto aqui, sem funcao wrapper */}
+        <div className="flex flex-col h-full">
+          {/* ... todo o conteudo que estava em MobileContent */}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
 
-### Fluxo Corrigido
-
-```text
-1. Webhook cria lead com assigned_user_id = NULL
-   ↓
-2. Trigger AFTER INSERT dispara
-   ↓  
-3. trigger_handle_lead_intake() verifica assigned_user_id IS NULL
-   ↓
-4. Chama handle_lead_intake(p_lead_id uuid) ← Versão correta com round-robin
-   ↓
-5. Round-robin seleciona próximo membro (alternando 1→2→1→2)
-   ↓
-6. UPDATE leads SET assigned_user_id = membro_selecionado
-   ↓
-7. INSERT assignments_log (registro histórico)
+return (
+  <Dialog open={!!lead} onOpenChange={() => onClose()}>
+    <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] p-0 overflow-hidden">
+      {/* JSX do desktop direto aqui, sem funcao wrapper */}
+      <div className="flex flex-col h-full max-h-[90vh]">
+        {/* ... todo o conteudo que estava em DesktopContent */}
+      </div>
+    </DialogContent>
+  </Dialog>
+);
 ```
+
+### Alternativa (Memoizacao)
+
+Se houver necessidade de manter as funcoes por organizacao do codigo, envolver com `useMemo`:
+
+```tsx
+const MobileContent = useMemo(() => (
+  <div className="flex flex-col h-full">
+    {/* conteudo */}
+  </div>
+), [/* dependencias essenciais */]);
+```
+
+Porem, a abordagem de JSX direto e mais simples e evita problemas de dependencias.
 
 ---
 
 ## Resultado Esperado
 
-**Antes**: Todos os leads sendo atribuídos para o mesmo usuário (primeiro da fila)
+**Antes**: Digitar uma letra faz o input perder o foco, forçando clique novamente
 
-**Depois**: Leads alternando corretamente entre os participantes:
-- Lead 1 → André Rocha
-- Lead 2 → usuário de teste  
-- Lead 3 → André Rocha
-- Lead 4 → usuário de teste
-- ...
+**Depois**: Digitação fluida e contínua em todos os campos do formulário de edição
+
+---
+
+## Bonus: Correcao do PhoneInput
+
+Tambem ha um problema menor no `PhoneInput` onde o `useEffect` com `[value]` reseta estados internos a cada mudanca. Isso sera corrigido adicionando uma verificacao para evitar reset desnecessario:
+
+```tsx
+useEffect(() => {
+  const newParsed = parsePhoneInput(value);
+  // Só atualiza se os valores realmente mudaram
+  if (newParsed.ddd !== ddd || newParsed.number !== number) {
+    setSelectedCountry(countries.find(c => c.code === newParsed.countryCode) || countries[0]);
+    setDdd(newParsed.ddd);
+    setNumber(newParsed.number);
+  }
+}, [value]);
+```
