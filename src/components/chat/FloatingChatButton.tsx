@@ -4,6 +4,7 @@ import { MessageCircle } from "lucide-react";
 import { useWhatsAppConversations, useWhatsAppRealtimeConversations } from "@/hooks/use-whatsapp-conversations";
 import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
 import { useLocation } from "react-router-dom";
+import { useUserPermissions } from "@/hooks/use-user-permissions";
 
 export function FloatingChatButton() {
   const { state, toggleChat } = useFloatingChat();
@@ -11,6 +12,7 @@ export function FloatingChatButton() {
   // Filtrar grupos para não contar mensagens de grupos no badge
   const { data: conversations } = useWhatsAppConversations(undefined, { hideGroups: true });
   const location = useLocation();
+  const { hasPermission, isLoading: loadingPermissions } = useUserPermissions();
   
   // Enable realtime para manter badge atualizado
   useWhatsAppRealtimeConversations();
@@ -18,12 +20,15 @@ export function FloatingChatButton() {
   // Verificar se tem sessão conectada
   const hasConnectedSession = sessions?.some((s) => s.status === "connected");
   
+  // Verificar permissão de acesso ao CRM
+  const hasCrmPermission = hasPermission("module_crm");
+  
   // Contar mensagens não lidas apenas de conversas individuais (não grupos)
   const unreadCount = conversations?.reduce((acc, c) => acc + (c.unread_count || 0), 0) || 0;
 
-  // Não mostrar botão se chat está aberto, não tem sessão, ou está na página de conversas
+  // Não mostrar botão se chat está aberto, não tem sessão, está na página de conversas, ou não tem permissão
   const isOnConversationsPage = location.pathname === "/crm/conversas";
-  if (state.isOpen || !hasConnectedSession || isOnConversationsPage) return null;
+  if (state.isOpen || !hasConnectedSession || isOnConversationsPage || (!loadingPermissions && !hasCrmPermission)) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

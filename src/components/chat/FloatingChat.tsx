@@ -18,6 +18,8 @@ import { useStartConversation, useFindConversationByPhone } from "@/hooks/use-st
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useUserPermissions } from "@/hooks/use-user-permissions";
+
 export function FloatingChat() {
   const {
     state,
@@ -66,9 +68,13 @@ export function FloatingChat() {
   const markAsRead = useMarkConversationAsRead();
   const startConversation = useStartConversation();
   const findConversation = useFindConversationByPhone();
+  const { hasPermission, isLoading: loadingPermissions } = useUserPermissions();
 
   // Enable realtime
   useWhatsAppRealtimeConversations();
+  
+  // Verificar permissão de acesso ao CRM
+  const hasCrmPermission = hasPermission("module_crm");
 
   // Save hide groups preference
   useEffect(() => {
@@ -328,7 +334,8 @@ export function FloatingChat() {
     </Dialog>
   );
 
-  if (!isOpen) return null;
+  // Não renderizar se não tem permissão ao CRM ou não está aberto
+  if (!isOpen || (!loadingPermissions && !hasCrmPermission)) return null;
 
   // Shared content components
   const ChatHeader = ({
