@@ -1724,6 +1724,8 @@ export type Database = {
           property_id: string | null
           redistribution_count: number | null
           source: string | null
+          source_session_id: string | null
+          source_webhook_id: string | null
           stage_entered_at: string | null
           stage_id: string | null
           updated_at: string
@@ -1751,6 +1753,8 @@ export type Database = {
           property_id?: string | null
           redistribution_count?: number | null
           source?: string | null
+          source_session_id?: string | null
+          source_webhook_id?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
           updated_at?: string
@@ -1778,6 +1782,8 @@ export type Database = {
           property_id?: string | null
           redistribution_count?: number | null
           source?: string | null
+          source_session_id?: string | null
+          source_webhook_id?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
           updated_at?: string
@@ -1825,6 +1831,20 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_source_session_id_fkey"
+            columns: ["source_session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_source_webhook_id_fkey"
+            columns: ["source_webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks_integrations"
             referencedColumns: ["id"]
           },
           {

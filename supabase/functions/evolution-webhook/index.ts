@@ -1655,6 +1655,7 @@ async function createLeadFromConversation(
         pipeline_id: pipelineId,
         stage_id: stage.id,
         assigned_user_id: assignedUserId,
+        source_session_id: session.id, // Track which WhatsApp session created this lead
       })
       .select()
       .single();
