@@ -1,159 +1,143 @@
 
-# Plano: Reformulação do Sistema de Distribuição de Leads
+# Plano: Correção do Controle de Acesso WhatsApp
 
-## Visão Geral
+## Problema Identificado
 
-Este plano visa transformar o sistema de distribuição de leads para centralizar toda a lógica de roteamento nas **Filas de Distribuição**, removendo a configuração de destino do webhook e implementando um sistema robusto de regras inspirado no C2S.
+O sistema atual tem um **vazamento de segurança** nas conversas do WhatsApp. Existem duas políticas RLS conflitantes na tabela `whatsapp_conversations`:
 
-## Mudanças Principais
+1. ✅ **Correta**: `Users can view conversations from accessible sessions` - respeita o controle de acesso por sessão
+2. ❌ **Problemática**: `Users can view their organization conversations` - permite que **qualquer usuário** da organização veja **todas** as conversas apenas verificando `organization_id`
 
-### 1. Simplificar Webhooks (Entrada de Leads)
-- **Remover** do webhook: Pipeline, Estágio, Equipe destino
-- **Manter** no webhook: Nome, Token, Tags, e adicionar **Interesse** (imóvel ou plano)
-- Todos os leads entram via webhook de forma "limpa" e a distribuição decide para onde vai
+A segunda política anula completamente o controle de acesso configurado em "Gerenciar Acessos".
 
-### 2. Melhorar Filas de Distribuição
-- Adicionar suporte a **Equipes** nos participantes (não apenas usuários individuais)
-- Sistema de **Regras Avançadas** com múltiplas condições:
-  - Fonte (Meta, WordPress, WhatsApp, Manual, etc.)
-  - Nome da Campanha (contém texto)
-  - Tags
-  - Cidade
-  - Interesse em Imóvel/Plano específico
-  - Pipeline de destino
-- Configurações de **Horário** por dia da semana
-- Configurações **Avançadas** (redistribuição, preservar posição)
+---
 
-### 3. Campo de Interesse no Lead
-- Adicionar coluna `interest_property_id` ou `interest_plan_id` na tabela `leads`
-- Exibir valor do interesse em verde no card do lead (já existe parcialmente com `valor_interesse`)
+## Mudanças Propostas
+
+### 1. Remover Política RLS Permissiva
+
+Remover a política `Users can view their organization conversations` que permite acesso irrestrito baseado apenas em `organization_id`.
+
+### 2. Manter Apenas a Política de Acesso Controlado
+
+A política `Users can view conversations from accessible sessions` já implementa corretamente a lógica:
+- Proprietário da sessão pode ver conversas
+- Admin pode ver todas (organização)
+- Usuários com acesso explícito via `whatsapp_session_access` podem ver
+
+### 3. Adicionar Filtro no Dropdown de Sessões (Conversations)
+
+Na página de **Conversas**, o dropdown deve mostrar apenas sessões que o usuário pode **realmente visualizar conversas**:
+- Sessões onde é proprietário
+- Sessões onde tem acesso via `whatsapp_session_access`
+- Admins continuam vendo todas as sessões
+
+**Nota**: Isso é diferente da página de **Configurações WhatsApp** onde admins precisam ver todas para gerenciamento.
+
+### 4. Criar Hook `useAccessibleSessions`
+
+Um hook específico para filtrar sessões baseado no acesso a conversas (não apenas visualização de metadados da sessão).
 
 ---
 
 ## Detalhamento Técnico
 
-### Fase 1: Migração de Banco de Dados
+### Migração SQL
 
-**Tabela `leads`:**
 ```sql
-ALTER TABLE leads ADD COLUMN interest_property_id uuid REFERENCES properties(id);
-ALTER TABLE leads ADD COLUMN interest_plan_id uuid REFERENCES service_plans(id);
+-- 1. Remover política permissiva que vaza dados
+DROP POLICY IF EXISTS "Users can view their organization conversations" 
+ON whatsapp_conversations;
+
+-- 2. Remover política de update também baseada em org_id
+DROP POLICY IF EXISTS "Users can update their organization conversations" 
+ON whatsapp_conversations;
+
+-- 3. Criar política de update correta baseada em acesso à sessão
+CREATE POLICY "Users can update conversations from accessible sessions"
+ON whatsapp_conversations FOR UPDATE
+USING (
+  session_id IN (
+    SELECT ws.id 
+    FROM whatsapp_sessions ws
+    WHERE ws.organization_id = get_user_organization_id()
+    AND (
+      ws.owner_user_id = auth.uid()
+      OR is_admin()
+      OR ws.id IN (
+        SELECT wsa.session_id 
+        FROM whatsapp_session_access wsa
+        WHERE wsa.user_id = auth.uid() AND wsa.can_view = true
+      )
+    )
+  )
+);
 ```
 
-**Tabela `round_robin_rules` - Expandir `match` JSONB:**
-- O campo `match` (jsonb) já existe e suportará:
-```json
-{
-  "source": ["meta", "wordpress"],
-  "campaign_contains": "ALPHAVILLE",
-  "tag_in": ["VIP", "Urgente"],
-  "city_in": ["São Paulo", "Campinas"],
-  "interest_property_id": "uuid-do-imovel",
-  "interest_plan_id": "uuid-do-plano",
-  "target_pipeline_id": "uuid-pipeline",
-  "target_stage_id": "uuid-stage",
-  "schedule": {
-    "days": [1,2,3,4,5],
-    "start": "08:00",
-    "end": "18:00"
-  }
+### Hook: `useAccessibleSessions`
+
+Criar hook para retornar apenas sessões cujas conversas o usuário pode ver:
+
+```typescript
+// src/hooks/use-accessible-sessions.ts
+export function useAccessibleSessions() {
+  const { profile } = useAuth();
+
+  return useQuery({
+    queryKey: ["accessible-sessions", profile?.id],
+    queryFn: async () => {
+      // Admins veem todas
+      if (profile?.role === 'admin') {
+        const { data } = await supabase
+          .from("whatsapp_sessions")
+          .select("*")
+          .eq("organization_id", profile.organization_id);
+        return data;
+      }
+
+      // Buscar sessões próprias + com acesso
+      const { data: ownedSessions } = await supabase
+        .from("whatsapp_sessions")
+        .select("*")
+        .eq("owner_user_id", profile?.id);
+
+      const { data: accessGrants } = await supabase
+        .from("whatsapp_session_access")
+        .select("session:whatsapp_sessions(*)")
+        .eq("user_id", profile?.id)
+        .eq("can_view", true);
+
+      // Combinar e remover duplicatas
+      const allSessions = [
+        ...(ownedSessions || []),
+        ...(accessGrants?.map(g => g.session).filter(Boolean) || [])
+      ];
+
+      return [...new Map(allSessions.map(s => [s.id, s])).values()];
+    }
+  });
 }
 ```
 
-**Tabela `round_robins` - Novas configurações:**
-```sql
-ALTER TABLE round_robins ADD COLUMN target_pipeline_id uuid REFERENCES pipelines(id);
-ALTER TABLE round_robins ADD COLUMN target_stage_id uuid REFERENCES stages(id);
-ALTER TABLE round_robins ADD COLUMN settings jsonb DEFAULT '{}';
--- settings pode ter: enable_redistribution, preserve_position, schedule, etc.
+### Atualização: `Conversations.tsx`
+
+Trocar `useWhatsAppSessions` por `useAccessibleSessions` no dropdown:
+
+```typescript
+// Antes
+const { data: sessions } = useWhatsAppSessions();
+
+// Depois
+const { data: sessions } = useAccessibleSessions();
 ```
 
-### Fase 2: Atualizar Webhook
+### Atualização: `FloatingChat.tsx`
 
-**`supabase/functions/generic-webhook/index.ts`:**
-1. Remover lógica de `target_pipeline_id`, `target_stage_id`, `target_team_id`
-2. Adicionar suporte a `interest_property_id` ou `interest_plan_id` no payload
-3. Lead entra sem pipeline/stage definido - a distribuição define
-4. Manter tags configuradas no webhook
+Mesma mudança para o chat flutuante:
 
-**Novo fluxo:**
+```typescript
+const { data: sessions } = useAccessibleSessions();
 ```
-Webhook recebe lead → Salva lead (sem pipeline) → Trigger chama handle_lead_intake → 
-Regras de distribuição avaliam → Fila matched → Atribui usuário + define pipeline/stage
-```
-
-### Fase 3: Refatorar `handle_lead_intake` (RPC)
-
-**Nova lógica:**
-1. Buscar todas as filas ativas da organização
-2. Para cada fila, avaliar regras em ordem de prioridade
-3. Verificar condições do `match` JSONB:
-   - Fonte combina?
-   - Campanha contém texto?
-   - Lead tem alguma das tags?
-   - Cidade combina?
-   - Interesse em imóvel/plano específico?
-   - Horário atual está dentro do schedule?
-4. Primeira fila que combinar → Atribuir lead
-5. Definir `pipeline_id` e `stage_id` da fila no lead
-6. Fallback: fila padrão sem regras
-
-### Fase 4: Interface de Criação/Edição de Fila
-
-**Componente: `DistributionQueueEditor.tsx`**
-
-Layout em seções expansíveis (como nas imagens C2S):
-
-**Seção 1 - Informações Básicas:**
-- Nome da fila
-- Pipeline de destino
-- Estágio inicial
-
-**Seção 2 - Regras de Entrada:**
-- Botão "+ Nova condição"
-- Cada condição:
-  - Tipo (Fonte, Campanha, Tag, Cidade, Interesse, etc.)
-  - Operador (É igual, Contém, etc.)
-  - Valor(es) - multi-select quando aplicável
-- Múltiplas condições com "E TAMBÉM"
-- Alerta: "Se nenhum critério for selecionado, qualquer lead poderá ser distribuído nessa fila!"
-
-**Seção 3 - Configurações de Horário:**
-- Toggle "Fila ativa todos os dias (24/7)"
-- Grid de dias da semana com horário início/fim
-- Toggle "Usuários devem realizar Check-in?"
-
-**Seção 4 - Usuários Ativos na Fila:**
-- Buscar usuário ou **Adicionar Equipe**
-- Lista com drag-and-drop para ordenar
-- Peso/percentual para distribuição ponderada
-- Contador de leads recebidos
-
-**Seção 5 - Configurações Avançadas:**
-- Toggle "Ativar redistribuição?" (com explicação)
-- Toggle "Permitir marcar presença após fechamento do Check-in?"
-- Toggle "Preservar posição na fila quando usuário estiver temporariamente indisponível?"
-
-### Fase 5: Webhook Simplificado
-
-**Nova interface `WebhooksTab.tsx`:**
-- Nome do webhook
-- Tipo (Entrada)
-- **Interesse** - Selector de Imóvel ou Plano (exibe valor)
-- Tags a aplicar
-- Token/URL
-
-Remove:
-- Pipeline destino
-- Estágio destino
-- Equipe destino
-
-### Fase 6: Card do Lead
-
-**Atualizar `LeadCard.tsx`:**
-- Já exibe `valorInteresse` em laranja/verde
-- Adicionar lógica para buscar preço do `interest_property_id` ou `interest_plan_id`
-- Tooltip mostrando nome do imóvel/plano
 
 ---
 
@@ -161,60 +145,41 @@ Remove:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Migração SQL | Adicionar colunas em `leads`, `round_robins` |
-| `generic-webhook/index.ts` | Simplificar, adicionar interest |
-| `handle_lead_intake` (RPC) | Nova lógica de matching com JSONB |
-| `pick_round_robin_for_lead` (RPC) | Avaliar campo `match` JSONB |
-| `DistributionTab.tsx` | Nova UI de criação/edição |
-| `EditQueueDialog.tsx` | Adicionar suporte a equipes |
-| `RuleEditor.tsx` | Expandir condições disponíveis |
-| `RulesManager.tsx` | UI para múltiplas condições |
-| `WebhooksTab.tsx` | Remover destinos, adicionar interesse |
-| `LeadCard.tsx` | Exibir interesse do imóvel/plano |
-| `use-round-robins.ts` | Carregar novas colunas |
-| `use-round-robin-rules.ts` | Trabalhar com `match` JSONB |
+| Migração SQL | Remover política permissiva, criar política de update correta |
+| `src/hooks/use-accessible-sessions.ts` | **Novo** - Hook para sessões acessíveis |
+| `src/pages/Conversations.tsx` | Usar `useAccessibleSessions` no dropdown |
+| `src/components/chat/FloatingChat.tsx` | Usar `useAccessibleSessions` no dropdown |
 
 ---
 
-## Fluxo Final
+## Resultado Esperado
 
 ```text
-┌─────────────┐     ┌──────────────┐     ┌──────────────────┐
-│   Webhook   │────▶│  Lead criado │────▶│ handle_lead_     │
-│ (simples)   │     │ (sem assign) │     │ intake trigger   │
-└─────────────┘     └──────────────┘     └────────┬─────────┘
-                                                  │
-                    ┌─────────────────────────────▼──────────┐
-                    │     Avaliar Filas de Distribuição      │
-                    │  ┌───────────────────────────────────┐ │
-                    │  │ Fila 1: Leads Facebook            │ │
-                    │  │ Regras: source=meta, city=SP      │ │
-                    │  │ Pipeline: Vendas, Stage: Novo     │ │
-                    │  │ Membros: Equipe Sul               │ │
-                    │  └───────────────────────────────────┘ │
-                    │  ┌───────────────────────────────────┐ │
-                    │  │ Fila 2: Leads WhatsApp            │ │
-                    │  │ Regras: source=whatsapp           │ │
-                    │  │ Pipeline: Atendimento             │ │
-                    │  │ Membros: João, Maria              │ │
-                    │  └───────────────────────────────────┘ │
-                    │  ┌───────────────────────────────────┐ │
-                    │  │ Fila Padrão (sem regras)          │ │
-                    │  │ Fallback para leads não matched   │ │
-                    │  └───────────────────────────────────┘ │
-                    └────────────────────────────────────────┘
-                                         │
-                    ┌────────────────────▼───────────────────┐
-                    │  Lead atribuído + Pipeline/Stage set   │
-                    │  Notificação enviada ao responsável    │
-                    └────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ ANTES (Problemático)                                        │
+├─────────────────────────────────────────────────────────────┤
+│ Admin vê: Todas as sessões no dropdown                      │
+│ Admin vê: Todas as conversas da organização (vazamento!)    │
+│ Broker vê: Todas as sessões (RLS sessions permite admin)    │
+│ Broker vê: Conversas de sessões sem acesso (vazamento!)     │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ DEPOIS (Corrigido)                                          │
+├─────────────────────────────────────────────────────────────┤
+│ Admin vê: Todas as sessões (admin=true na policy)           │
+│ Admin vê: Todas as conversas (admin=true na policy)         │
+│ Broker vê: Apenas sessões próprias + com acesso explícito   │
+│ Broker vê: Apenas conversas das sessões permitidas          │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+**Nota sobre Admins**: Admins continuam tendo acesso total porque a função `is_admin()` está na política RLS. Se o requisito é que **mesmo admins** precisem de acesso explícito, a política precisa ser ajustada para remover `OR is_admin()`.
 
 ---
 
-## Considerações
+## Consideração Adicional
 
-1. **Backward Compatibility**: Webhooks existentes com pipeline/stage configurado continuarão funcionando até serem migrados
-2. **Migração Gradual**: Novo campo `target_pipeline_id` na fila terá precedência sobre o webhook
-3. **Interesse no Card**: Voltará a exibir o valor em destaque como era antes
-4. **Equipes como Participantes**: Ao selecionar uma equipe, todos os membros ativos entram na distribuição
+Se o usuário deseja que **admins também** precisem de acesso explícito para ver conversas (como mencionado na mensagem), a política RLS precisaria ser ainda mais restritiva, removendo `is_admin()` da cláusula. Nesse caso, o admin só teria acesso gerencial às sessões (criar, deletar, configurar acessos) mas não às conversas em si.
+
+Isso pode ser implementado com uma flag adicional ou removendo `is_admin()` apenas da política de SELECT em `whatsapp_conversations`.
