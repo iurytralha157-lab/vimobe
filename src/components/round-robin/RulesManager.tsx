@@ -34,6 +34,7 @@ import {
   useDeleteRoundRobinRule,
   RoundRobinRule,
 } from '@/hooks/use-round-robin-rules';
+import { useTags } from '@/hooks/use-tags';
 
 interface RulesManagerProps {
   roundRobinId: string;
@@ -42,6 +43,7 @@ interface RulesManagerProps {
 
 export function RulesManager({ roundRobinId, roundRobinName }: RulesManagerProps) {
   const { data: rules = [], isLoading } = useRoundRobinRules(roundRobinId);
+  const { data: tags = [] } = useTags();
   const createRule = useCreateRoundRobinRule();
   const updateRule = useUpdateRoundRobinRule();
   const deleteRule = useDeleteRoundRobinRule();
@@ -66,6 +68,25 @@ export function RulesManager({ roundRobinId, roundRobinName }: RulesManagerProps
   };
   
   const renderMatchDescription = (rule: RoundRobinRule) => {
+    // Se for tag, busca o nome e cor da tag
+    if (rule.match_type === 'tag') {
+      const tag = tags.find(t => t.id === rule.match_value);
+      if (tag) {
+        return (
+          <Badge 
+            variant="outline" 
+            className="gap-1"
+            style={{ 
+              borderColor: tag.color,
+              color: tag.color,
+            }}
+          >
+            Tag: {tag.name}
+          </Badge>
+        );
+      }
+    }
+    
     return (
       <Badge variant="outline" className="gap-1">
         {rule.match_type}: {rule.match_value}
