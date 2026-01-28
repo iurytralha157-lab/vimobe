@@ -33,6 +33,8 @@ import { useRoundRobins, useUpdateRoundRobin, useDeleteRoundRobin, RoundRobin as
 import { useTeams } from '@/hooks/use-teams';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
+import { useProperties } from '@/hooks/use-properties';
+import { useServicePlans } from '@/hooks/use-service-plans';
 import { useCreateQueueAdvanced, useUpdateQueueAdvanced } from '@/hooks/use-create-queue-advanced';
 import { DistributionQueueEditor } from '@/components/round-robin/DistributionQueueEditor';
 import { RulesManager } from '@/components/round-robin/RulesManager';
@@ -55,6 +57,8 @@ export function DistributionTab() {
   const { data: teams = [], isLoading: teamsLoading } = useTeams();
   const { data: users = [] } = useOrganizationUsers();
   const { data: tags = [] } = useTags();
+  const { data: properties = [] } = useProperties();
+  const { data: plans = [] } = useServicePlans();
   const updateRoundRobin = useUpdateRoundRobin();
   const deleteRoundRobin = useDeleteRoundRobin();
   const createQueue = useCreateQueueAdvanced();
@@ -238,6 +242,27 @@ export function DistributionTab() {
                             );
                           }
                         }
+                        
+                        // Se for imóvel, busca o código do imóvel
+                        if (rule.match_type === 'interest_property' || rule.match_type === 'property') {
+                          const property = properties.find(p => p.id === rule.match_value);
+                          return (
+                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
+                              Imóvel: {property?.code || property?.title || rule.match_value?.substring(0, 10)}
+                            </Badge>
+                          );
+                        }
+                        
+                        // Se for plano, busca o nome do plano
+                        if (rule.match_type === 'interest_plan') {
+                          const plan = plans.find(p => p.id === rule.match_value);
+                          return (
+                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
+                              Plano: {plan?.name || rule.match_value?.substring(0, 10)}
+                            </Badge>
+                          );
+                        }
+                        
                         return (
                           <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
                             {matchTypeLabels[rule.match_type] || rule.match_type}: {rule.match_value?.substring(0, 20) || 'Configurado'}
