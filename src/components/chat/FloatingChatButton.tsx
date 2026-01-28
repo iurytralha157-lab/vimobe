@@ -4,7 +4,6 @@ import { MessageCircle } from "lucide-react";
 import { useWhatsAppConversations, useWhatsAppRealtimeConversations } from "@/hooks/use-whatsapp-conversations";
 import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
 import { useLocation } from "react-router-dom";
-import { useUserPermissions } from "@/hooks/use-user-permissions";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 
 export function FloatingChatButton() {
@@ -13,7 +12,6 @@ export function FloatingChatButton() {
   // Filtrar grupos para não contar mensagens de grupos no badge
   const { data: conversations } = useWhatsAppConversations(undefined, { hideGroups: true });
   const location = useLocation();
-  const { hasPermission, isLoading: loadingPermissions } = useUserPermissions();
   const { data: hasWhatsAppAccess, isLoading: loadingWhatsAppAccess } = useHasWhatsAppAccess();
   
   // Enable realtime para manter badge atualizado
@@ -22,17 +20,12 @@ export function FloatingChatButton() {
   // Verificar se tem sessão conectada
   const hasConnectedSession = sessions?.some((s) => s.status === "connected");
   
-  // Verificar permissão de acesso ao CRM OU acesso direto ao WhatsApp
-  const hasCrmPermission = hasPermission("module_crm");
-  const canAccessWhatsApp = hasCrmPermission || hasWhatsAppAccess;
-  
   // Contar mensagens não lidas apenas de conversas individuais (não grupos)
   const unreadCount = conversations?.reduce((acc, c) => acc + (c.unread_count || 0), 0) || 0;
 
   // Não mostrar botão se chat está aberto, não tem sessão, está na página de conversas, ou não tem acesso
   const isOnConversationsPage = location.pathname === "/crm/conversas";
-  const isLoading = loadingPermissions || loadingWhatsAppAccess;
-  if (state.isOpen || !hasConnectedSession || isOnConversationsPage || (!isLoading && !canAccessWhatsApp)) return null;
+  if (state.isOpen || !hasConnectedSession || isOnConversationsPage || (!loadingWhatsAppAccess && !hasWhatsAppAccess)) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

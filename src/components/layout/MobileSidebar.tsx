@@ -51,9 +51,9 @@ interface NavItem {
 // Exact same nav items as AppSidebar (desktop)
 const allNavItems: NavItem[] = [
   { icon: LayoutDashboard, labelKey: 'dashboard', path: '/dashboard' },
-  { icon: Kanban, labelKey: 'pipelines', path: '/crm/pipelines', module: 'crm', permission: 'module_crm' },
+  { icon: Kanban, labelKey: 'pipelines', path: '/crm/pipelines', module: 'crm' },
   { icon: MessageSquare, labelKey: 'conversations', path: '/crm/conversas', module: 'whatsapp' },
-  { icon: Users, labelKey: 'contacts', path: '/crm/contacts', module: 'crm', permission: 'module_crm' },
+  { icon: Users, labelKey: 'contacts', path: '/crm/contacts', module: 'crm' },
   { 
     icon: DollarSign, 
     labelKey: 'financial', 
@@ -73,7 +73,7 @@ const allNavItems: NavItem[] = [
   // Telecom modules
   { icon: Package, labelKey: 'plans', path: '/plans', module: 'plans' },
   { icon: MapPin, labelKey: 'coverage', path: '/coverage', module: 'coverage' },
-  { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom', permission: 'module_crm' },
+  { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom' },
   // Admin modules
   { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'performance' },
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },

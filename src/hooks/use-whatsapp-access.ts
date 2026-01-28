@@ -14,6 +14,11 @@ export function useHasWhatsAppAccess() {
     queryFn: async () => {
       if (!profile?.id || !profile?.organization_id) return false;
 
+      // Admins têm acesso total ao WhatsApp
+      if (profile.role === 'admin') {
+        return true;
+      }
+
       // Check if user owns any session
       const { data: ownedSessions, error: ownedError } = await supabase
         .from("whatsapp_sessions")

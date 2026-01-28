@@ -195,8 +195,8 @@ function AppRoutes() {
           {/* Regular Routes */}
           <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/crm/pipelines" element={<ProtectedRoute><PermissionGuard permission="module_crm"><Pipelines /></PermissionGuard></ProtectedRoute>} />
-          <Route path="/crm/contacts" element={<ProtectedRoute><PermissionGuard permission="module_crm"><Contacts /></PermissionGuard></ProtectedRoute>} />
+          <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
+          <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
           <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
@@ -204,7 +204,7 @@ function AppRoutes() {
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/settings/site" element={<ProtectedRoute><AdminRoute><SiteSettings /></AdminRoute></ProtectedRoute>} />
           <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
-          <Route path="/crm/conversas" element={<ProtectedRoute><PermissionGuard permission="module_crm"><Conversations /></PermissionGuard></ProtectedRoute>} />
+          <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
           
           {/* Financial Module - Admin Only */}
@@ -218,7 +218,7 @@ function AppRoutes() {
           {/* Telecom Module */}
           <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
           <Route path="/coverage" element={<ProtectedRoute><CoverageAreas /></ProtectedRoute>} />
-          <Route path="/telecom/customers" element={<ProtectedRoute><PermissionGuard permission="module_crm"><TelecomCustomers /></PermissionGuard></ProtectedRoute>} />
+          <Route path="/telecom/customers" element={<ProtectedRoute><TelecomCustomers /></ProtectedRoute>} />
           <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
           
           {/* Automations */}
