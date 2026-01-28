@@ -62,7 +62,14 @@ export function LeadCard({
   const totalTasks = pendingTasks + completedTasks;
   const hasPhone = !!lead.phone;
   const hasEmail = !!lead.email;
-  const valorInteresse = lead.valor_interesse || lead.property?.preco;
+  
+  // Get interest value from: interest property, interest plan, legacy valor_interesse, or property
+  const interestPropertyPrice = lead.interest_property?.preco;
+  const interestPlanPrice = lead.interest_plan?.price;
+  const valorInteresse = interestPropertyPrice || interestPlanPrice || lead.valor_interesse || lead.property?.preco;
+  const interestLabel = lead.interest_property?.title || lead.interest_property?.code || 
+                        lead.interest_plan?.name || lead.interest_plan?.code || 
+                        lead.property?.title || null;
 
   // Verifica se o lead tem tags de prioridade alta
   const hasHighPriority = lead.tags?.some((tag: any) => tag.name?.toLowerCase().includes('urgente') || tag.name?.toLowerCase().includes('vip') || tag.name?.toLowerCase().includes('prioridade') || tag.name?.toLowerCase().includes('hot'));
@@ -228,12 +235,24 @@ export function LeadCard({
               {/* Valor do imóvel/interesse */}
               {valorInteresse > 0 && <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-950 px-1.5 py-0.5 rounded">
+                    <div className={cn(
+                      "text-[10px] font-semibold px-1.5 py-0.5 rounded",
+                      interestPlanPrice 
+                        ? "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950" 
+                        : "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950"
+                    )}>
                       {formatCurrency(valorInteresse)}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
-                    Valor: R${valorInteresse.toLocaleString('pt-BR')}
+                    {interestLabel ? (
+                      <div className="space-y-0.5">
+                        <div className="font-medium">{interestLabel}</div>
+                        <div>R${valorInteresse.toLocaleString('pt-BR')}</div>
+                      </div>
+                    ) : (
+                      <>Valor: R${valorInteresse.toLocaleString('pt-BR')}</>
+                    )}
                   </TooltipContent>
                 </Tooltip>}
 
