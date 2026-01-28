@@ -132,21 +132,48 @@ export function useCreateQueueAdvanced() {
         if (rulesError) throw rulesError;
       }
       
-      // Create members
+      // Create members - only insert user members directly
+      // For team members, we need to expand to individual users
       if (input.members.length > 0) {
-        const membersToInsert = input.members.map((member, index) => ({
-          round_robin_id: roundRobin.id,
-          user_id: member.type === 'user' ? member.entityId : null,
-          team_id: member.type === 'team' ? member.entityId : null,
-          weight: member.weight,
-          position: index,
-        }));
+        const membersToInsert: any[] = [];
         
-        const { error: membersError } = await supabase
-          .from('round_robin_members')
-          .insert(membersToInsert);
+        for (const member of input.members) {
+          if (member.type === 'user') {
+            membersToInsert.push({
+              round_robin_id: roundRobin.id,
+              user_id: member.entityId,
+              team_id: null,
+              weight: member.weight,
+              position: membersToInsert.length,
+            });
+          } else if (member.type === 'team') {
+            // Get all users from the team
+            const { data: teamMembers } = await supabase
+              .from('team_members')
+              .select('user_id')
+              .eq('team_id', member.entityId);
+            
+            if (teamMembers && teamMembers.length > 0) {
+              for (const tm of teamMembers) {
+                membersToInsert.push({
+                  round_robin_id: roundRobin.id,
+                  user_id: tm.user_id,
+                  team_id: member.entityId,
+                  weight: member.weight,
+                  position: membersToInsert.length,
+                });
+              }
+            }
+          }
+        }
         
-        if (membersError) throw membersError;
+        if (membersToInsert.length > 0) {
+          const { error: membersError } = await supabase
+            .from('round_robin_members')
+            .insert(membersToInsert);
+          
+          if (membersError) throw membersError;
+        }
       }
       
       return roundRobin;
@@ -249,17 +276,43 @@ export function useUpdateQueueAdvanced() {
         .eq('round_robin_id', id);
       
       if (input.members.length > 0) {
-        const membersToInsert = input.members.map((member, index) => ({
-          round_robin_id: id,
-          user_id: member.type === 'user' ? member.entityId : null,
-          team_id: member.type === 'team' ? member.entityId : null,
-          weight: member.weight,
-          position: index,
-        }));
+        const membersToInsert: any[] = [];
         
-        await supabase
-          .from('round_robin_members')
-          .insert(membersToInsert);
+        for (const member of input.members) {
+          if (member.type === 'user') {
+            membersToInsert.push({
+              round_robin_id: id,
+              user_id: member.entityId,
+              team_id: null,
+              weight: member.weight,
+              position: membersToInsert.length,
+            });
+          } else if (member.type === 'team') {
+            // Get all users from the team
+            const { data: teamMembers } = await supabase
+              .from('team_members')
+              .select('user_id')
+              .eq('team_id', member.entityId);
+            
+            if (teamMembers && teamMembers.length > 0) {
+              for (const tm of teamMembers) {
+                membersToInsert.push({
+                  round_robin_id: id,
+                  user_id: tm.user_id,
+                  team_id: member.entityId,
+                  weight: member.weight,
+                  position: membersToInsert.length,
+                });
+              }
+            }
+          }
+        }
+        
+        if (membersToInsert.length > 0) {
+          await supabase
+            .from('round_robin_members')
+            .insert(membersToInsert);
+        }
       }
       
       return { id };
