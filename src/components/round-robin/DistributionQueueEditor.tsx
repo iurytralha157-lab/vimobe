@@ -1,0 +1,884 @@
+import { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { 
+  ChevronDown, 
+  Plus, 
+  X, 
+  Trash2, 
+  Loader2, 
+  Save,
+  Settings2,
+  Clock,
+  Users,
+  Filter,
+  AlertCircle,
+  Building2,
+  UsersRound
+} from 'lucide-react';
+import { usePipelines, useStages } from '@/hooks/use-stages';
+import { useTeams } from '@/hooks/use-teams';
+import { useOrganizationUsers } from '@/hooks/use-users';
+import { useTags } from '@/hooks/use-tags';
+import { useProperties } from '@/hooks/use-properties';
+import { useServicePlans } from '@/hooks/use-service-plans';
+import { cn } from '@/lib/utils';
+
+interface QueueSettings {
+  enable_redistribution?: boolean;
+  preserve_position?: boolean;
+  require_checkin?: boolean;
+}
+
+interface ScheduleDay {
+  day: number;
+  enabled: boolean;
+  start: string;
+  end: string;
+}
+
+interface RuleCondition {
+  id: string;
+  type: 'source' | 'campaign_contains' | 'tag' | 'city' | 'interest_property' | 'interest_plan' | 'meta_form';
+  values: string[];
+}
+
+interface QueueMember {
+  id?: string;
+  type: 'user' | 'team';
+  entityId: string;
+  weight: number;
+  name?: string;
+}
+
+interface QueueFormData {
+  name: string;
+  strategy: 'simple' | 'weighted';
+  target_pipeline_id: string;
+  target_stage_id: string;
+  is_active: boolean;
+  settings: QueueSettings;
+  schedule: ScheduleDay[];
+  conditions: RuleCondition[];
+  members: QueueMember[];
+}
+
+interface DistributionQueueEditorProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  queue?: any; // existing queue for edit mode
+  onSave: (data: QueueFormData) => Promise<void>;
+}
+
+const DAYS_OF_WEEK = [
+  { value: 0, label: 'Dom' },
+  { value: 1, label: 'Seg' },
+  { value: 2, label: 'Ter' },
+  { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' },
+  { value: 5, label: 'Sex' },
+  { value: 6, label: 'Sáb' },
+];
+
+const SOURCE_OPTIONS = [
+  { value: 'meta', label: 'Meta Ads' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'wordpress', label: 'WordPress' },
+  { value: 'website', label: 'Website' },
+  { value: 'manual', label: 'Manual' },
+];
+
+const CONDITION_TYPES = [
+  { value: 'source', label: 'Fonte', icon: '🌐' },
+  { value: 'campaign_contains', label: 'Nome da Campanha (contém)', icon: '📣' },
+  { value: 'tag', label: 'Tag', icon: '🏷️' },
+  { value: 'city', label: 'Cidade', icon: '📍' },
+  { value: 'interest_property', label: 'Interesse em Imóvel', icon: '🏠' },
+  { value: 'interest_plan', label: 'Interesse em Plano', icon: '📋' },
+];
+
+const defaultSchedule: ScheduleDay[] = DAYS_OF_WEEK.map(d => ({
+  day: d.value,
+  enabled: d.value >= 1 && d.value <= 5, // seg-sex enabled by default
+  start: '08:00',
+  end: '18:00',
+}));
+
+export function DistributionQueueEditor({ 
+  open, 
+  onOpenChange, 
+  queue, 
+  onSave 
+}: DistributionQueueEditorProps) {
+  const { data: pipelines = [] } = usePipelines();
+  const { data: teams = [] } = useTeams();
+  const { data: users = [] } = useOrganizationUsers();
+  const { data: tags = [] } = useTags();
+  const { data: properties = [] } = useProperties();
+  const { data: plans = [] } = useServicePlans();
+  
+  const [saving, setSaving] = useState(false);
+  const [openSections, setOpenSections] = useState<string[]>(['basic', 'rules', 'members']);
+  
+  const [formData, setFormData] = useState<QueueFormData>({
+    name: '',
+    strategy: 'simple',
+    target_pipeline_id: '',
+    target_stage_id: '',
+    is_active: true,
+    settings: {
+      enable_redistribution: false,
+      preserve_position: true,
+      require_checkin: false,
+    },
+    schedule: defaultSchedule,
+    conditions: [],
+    members: [],
+  });
+
+  // Get stages for selected pipeline
+  const { data: stages = [] } = useStages(formData.target_pipeline_id || undefined);
+
+  // Initialize form when queue changes
+  useEffect(() => {
+    if (queue) {
+      // Parse existing queue data
+      const existingConditions: RuleCondition[] = (queue.rules || []).map((rule: any) => {
+        const match = rule.match || {};
+        if (Object.keys(match).length > 0) {
+          // New JSONB format
+          const type = Object.keys(match)[0] as RuleCondition['type'];
+          const values = Array.isArray(match[type]) ? match[type] : [match[type]];
+          return { id: rule.id, type, values };
+        }
+        // Legacy format
+        return {
+          id: rule.id,
+          type: rule.match_type as RuleCondition['type'],
+          values: [rule.match_value],
+        };
+      });
+
+      const existingMembers: QueueMember[] = (queue.members || []).map((m: any) => ({
+        id: m.id,
+        type: m.team_id ? 'team' : 'user',
+        entityId: m.team_id || m.user_id,
+        weight: m.weight || 10,
+        name: m.user?.name || m.team?.name,
+      }));
+
+      setFormData({
+        name: queue.name || '',
+        strategy: queue.strategy || 'simple',
+        target_pipeline_id: queue.target_pipeline_id || '',
+        target_stage_id: queue.target_stage_id || '',
+        is_active: queue.is_active ?? true,
+        settings: queue.settings || {},
+        schedule: queue.settings?.schedule || defaultSchedule,
+        conditions: existingConditions,
+        members: existingMembers,
+      });
+    } else {
+      // Reset for new queue
+      setFormData({
+        name: '',
+        strategy: 'simple',
+        target_pipeline_id: '',
+        target_stage_id: '',
+        is_active: true,
+        settings: {},
+        schedule: defaultSchedule,
+        conditions: [],
+        members: [],
+      });
+    }
+  }, [queue, open]);
+
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => 
+      prev.includes(section) 
+        ? prev.filter(s => s !== section)
+        : [...prev, section]
+    );
+  };
+
+  const addCondition = () => {
+    setFormData(prev => ({
+      ...prev,
+      conditions: [
+        ...prev.conditions,
+        { id: crypto.randomUUID(), type: 'source', values: [] }
+      ],
+    }));
+  };
+
+  const updateCondition = (id: string, updates: Partial<RuleCondition>) => {
+    setFormData(prev => ({
+      ...prev,
+      conditions: prev.conditions.map(c => 
+        c.id === id ? { ...c, ...updates } : c
+      ),
+    }));
+  };
+
+  const removeCondition = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      conditions: prev.conditions.filter(c => c.id !== id),
+    }));
+  };
+
+  const addMember = (type: 'user' | 'team', entityId: string, name: string) => {
+    if (formData.members.some(m => m.type === type && m.entityId === entityId)) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      members: [...prev.members, { type, entityId, weight: 10, name }],
+    }));
+  };
+
+  const updateMemberWeight = (entityId: string, weight: number) => {
+    setFormData(prev => ({
+      ...prev,
+      members: prev.members.map(m => 
+        m.entityId === entityId ? { ...m, weight: Math.max(1, weight) } : m
+      ),
+    }));
+  };
+
+  const removeMember = (entityId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      members: prev.members.filter(m => m.entityId !== entityId),
+    }));
+  };
+
+  const updateScheduleDay = (day: number, updates: Partial<ScheduleDay>) => {
+    setFormData(prev => ({
+      ...prev,
+      schedule: prev.schedule.map(s => 
+        s.day === day ? { ...s, ...updates } : s
+      ),
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) return;
+    
+    setSaving(true);
+    try {
+      await onSave(formData);
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const totalWeight = formData.members.reduce((sum, m) => sum + m.weight, 0);
+  const is24_7 = formData.schedule.every(s => s.enabled && s.start === '00:00' && s.end === '23:59');
+
+  const renderConditionValueSelector = (condition: RuleCondition) => {
+    switch (condition.type) {
+      case 'source':
+        return (
+          <div className="flex flex-wrap gap-1">
+            {SOURCE_OPTIONS.map(opt => (
+              <Badge
+                key={opt.value}
+                variant={condition.values.includes(opt.value) ? 'default' : 'outline'}
+                className="cursor-pointer"
+                onClick={() => {
+                  const newValues = condition.values.includes(opt.value)
+                    ? condition.values.filter(v => v !== opt.value)
+                    : [...condition.values, opt.value];
+                  updateCondition(condition.id, { values: newValues });
+                }}
+              >
+                {opt.label}
+              </Badge>
+            ))}
+          </div>
+        );
+      
+      case 'campaign_contains':
+        return (
+          <Input
+            placeholder="Digite parte do nome da campanha..."
+            value={condition.values[0] || ''}
+            onChange={e => updateCondition(condition.id, { values: [e.target.value] })}
+          />
+        );
+      
+      case 'tag':
+        return (
+          <div className="flex flex-wrap gap-1">
+            {tags.map(tag => (
+              <Badge
+                key={tag.id}
+                variant={condition.values.includes(tag.id) ? 'default' : 'outline'}
+                className="cursor-pointer"
+                style={condition.values.includes(tag.id) ? { backgroundColor: tag.color } : {}}
+                onClick={() => {
+                  const newValues = condition.values.includes(tag.id)
+                    ? condition.values.filter(v => v !== tag.id)
+                    : [...condition.values, tag.id];
+                  updateCondition(condition.id, { values: newValues });
+                }}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        );
+      
+      case 'city':
+        return (
+          <Input
+            placeholder="Ex: São Paulo, Campinas"
+            value={condition.values.join(', ')}
+            onChange={e => updateCondition(condition.id, { 
+              values: e.target.value.split(',').map(v => v.trim()).filter(Boolean)
+            })}
+          />
+        );
+      
+      case 'interest_property':
+        return (
+          <Select
+            value={condition.values[0] || ''}
+            onValueChange={v => updateCondition(condition.id, { values: [v] })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um imóvel..." />
+            </SelectTrigger>
+            <SelectContent>
+              {properties.map(prop => (
+                <SelectItem key={prop.id} value={prop.id}>
+                  {prop.code} - {prop.title || prop.bairro || 'Imóvel'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'interest_plan':
+        return (
+          <Select
+            value={condition.values[0] || ''}
+            onValueChange={v => updateCondition(condition.id, { values: [v] })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um plano..." />
+            </SelectTrigger>
+            <SelectContent>
+              {plans.map(plan => (
+                <SelectItem key={plan.id} value={plan.id}>
+                  {plan.name} - R${plan.price?.toLocaleString('pt-BR')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {queue ? 'Editar Fila de Distribuição' : 'Nova Fila de Distribuição'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Section 1: Basic Info */}
+          <Collapsible open={openSections.includes('basic')} onOpenChange={() => toggleSection('basic')}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-primary" />
+                <span className="font-medium">Informações Básicas</span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('basic') && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 px-1 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nome da Fila *</Label>
+                  <Input
+                    placeholder="Ex: Leads Facebook"
+                    value={formData.name}
+                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estratégia</Label>
+                  <Select 
+                    value={formData.strategy} 
+                    onValueChange={v => setFormData(prev => ({ ...prev, strategy: v as any }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="simple">Round Robin (sequencial)</SelectItem>
+                      <SelectItem value="weighted">Ponderada (por peso)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Pipeline de Destino</Label>
+                  <Select 
+                    value={formData.target_pipeline_id || '__none__'} 
+                    onValueChange={v => setFormData(prev => ({ 
+                      ...prev, 
+                      target_pipeline_id: v === '__none__' ? '' : v,
+                      target_stage_id: ''
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nenhum (usar padrão)</SelectItem>
+                      {pipelines.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Estágio Inicial</Label>
+                  <Select 
+                    value={formData.target_stage_id || '__none__'} 
+                    onValueChange={v => setFormData(prev => ({ 
+                      ...prev, 
+                      target_stage_id: v === '__none__' ? '' : v 
+                    }))}
+                    disabled={!formData.target_pipeline_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.target_pipeline_id ? "Selecione..." : "Selecione um pipeline"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Primeiro estágio</SelectItem>
+                      {stages.map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: s.color }} 
+                            />
+                            {s.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 2: Entry Rules */}
+          <Collapsible open={openSections.includes('rules')} onOpenChange={() => toggleSection('rules')}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" />
+                <span className="font-medium">Regras de Entrada</span>
+                {formData.conditions.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {formData.conditions.length}
+                  </Badge>
+                )}
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('rules') && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 px-1 space-y-4">
+              {formData.conditions.length === 0 && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                  <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    Se nenhum critério for selecionado, qualquer lead poderá ser distribuído nesta fila!
+                  </p>
+                </div>
+              )}
+
+              {formData.conditions.map((condition, idx) => (
+                <div key={condition.id} className="p-3 rounded-lg border space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {idx > 0 && (
+                        <Badge variant="outline" className="text-xs">E TAMBÉM</Badge>
+                      )}
+                      <Select
+                        value={condition.type}
+                        onValueChange={v => updateCondition(condition.id, { 
+                          type: v as RuleCondition['type'], 
+                          values: [] 
+                        })}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CONDITION_TYPES.map(ct => (
+                            <SelectItem key={ct.value} value={ct.value}>
+                              <span className="mr-2">{ct.icon}</span>
+                              {ct.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeCondition(condition.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {renderConditionValueSelector(condition)}
+                </div>
+              ))}
+
+              <Button 
+                variant="outline" 
+                onClick={addCondition}
+                className="w-full gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Nova Condição
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 3: Schedule */}
+          <Collapsible open={openSections.includes('schedule')} onOpenChange={() => toggleSection('schedule')}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <span className="font-medium">Configurações de Horário</span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('schedule') && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 px-1 space-y-4">
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={is24_7}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        schedule: prev.schedule.map(s => ({
+                          ...s,
+                          enabled: true,
+                          start: '00:00',
+                          end: '23:59',
+                        })),
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        schedule: defaultSchedule,
+                      }));
+                    }
+                  }}
+                />
+                <Label>Fila ativa todos os dias (24/7)</Label>
+              </div>
+
+              {!is24_7 && (
+                <div className="space-y-2">
+                  {formData.schedule.map(day => (
+                    <div key={day.day} className="flex items-center gap-3">
+                      <Checkbox
+                        checked={day.enabled}
+                        onCheckedChange={(checked) => updateScheduleDay(day.day, { enabled: !!checked })}
+                      />
+                      <span className="w-12 text-sm font-medium">
+                        {DAYS_OF_WEEK.find(d => d.value === day.day)?.label}
+                      </span>
+                      <Input
+                        type="time"
+                        value={day.start}
+                        onChange={e => updateScheduleDay(day.day, { start: e.target.value })}
+                        disabled={!day.enabled}
+                        className="w-28"
+                      />
+                      <span className="text-muted-foreground">até</span>
+                      <Input
+                        type="time"
+                        value={day.end}
+                        onChange={e => updateScheduleDay(day.day, { end: e.target.value })}
+                        disabled={!day.enabled}
+                        className="w-28"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-2">
+                <Switch
+                  checked={formData.settings.require_checkin || false}
+                  onCheckedChange={checked => setFormData(prev => ({
+                    ...prev,
+                    settings: { ...prev.settings, require_checkin: checked },
+                  }))}
+                />
+                <Label>Usuários devem realizar Check-in?</Label>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 4: Members */}
+          <Collapsible open={openSections.includes('members')} onOpenChange={() => toggleSection('members')}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="font-medium">Usuários Ativos na Fila</span>
+                {formData.members.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {formData.members.length}
+                  </Badge>
+                )}
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('members') && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 px-1 space-y-4">
+              {formData.members.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Participante</TableHead>
+                        <TableHead className="text-center w-32">
+                          {formData.strategy === 'weighted' ? 'Peso' : 'Ordem'}
+                        </TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.members.map((member, idx) => {
+                        const percentage = totalWeight > 0 
+                          ? Math.round((member.weight / totalWeight) * 100) 
+                          : 0;
+                        
+                        return (
+                          <TableRow key={member.entityId}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {member.type === 'team' ? (
+                                  <UsersRound className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                                      {member.name?.[0] || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                )}
+                                <div>
+                                  <span className="font-medium text-sm">{member.name || 'Desconhecido'}</span>
+                                  {member.type === 'team' && (
+                                    <Badge variant="outline" className="ml-2 text-xs">Equipe</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {formData.strategy === 'weighted' ? (
+                                <div className="flex items-center justify-center gap-2">
+                                  <Input
+                                    type="number"
+                                    value={member.weight}
+                                    onChange={e => updateMemberWeight(member.entityId, parseInt(e.target.value) || 1)}
+                                    className="w-16 text-center"
+                                    min={1}
+                                    max={100}
+                                  />
+                                  <span className="text-xs text-muted-foreground w-10">
+                                    ({percentage}%)
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="text-center text-muted-foreground">
+                                  #{idx + 1}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => removeMember(member.entityId)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Select onValueChange={v => {
+                  const user = users.find(u => u.id === v);
+                  if (user) addMember('user', v, user.name);
+                }}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Adicionar corretor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users
+                      .filter(u => !formData.members.some(m => m.type === 'user' && m.entityId === u.id))
+                      .map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            {user.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+                
+                <Select onValueChange={v => {
+                  const team = teams.find(t => t.id === v);
+                  if (team) addMember('team', v, team.name);
+                }}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Adicionar equipe..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams
+                      .filter(t => !formData.members.some(m => m.type === 'team' && m.entityId === t.id))
+                      .map(team => (
+                        <SelectItem key={team.id} value={team.id}>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            {team.name}
+                          </div>
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 5: Advanced Settings */}
+          <Collapsible open={openSections.includes('advanced')} onOpenChange={() => toggleSection('advanced')}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-primary" />
+                <span className="font-medium">Configurações Avançadas</span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('advanced') && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 px-1 space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Switch
+                    checked={formData.settings.enable_redistribution || false}
+                    onCheckedChange={checked => setFormData(prev => ({
+                      ...prev,
+                      settings: { ...prev.settings, enable_redistribution: checked },
+                    }))}
+                  />
+                  <div>
+                    <Label>Ativar redistribuição?</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leads não atendidos serão redistribuídos automaticamente após o tempo configurado no pipeline.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Switch
+                    checked={formData.settings.preserve_position || false}
+                    onCheckedChange={checked => setFormData(prev => ({
+                      ...prev,
+                      settings: { ...prev.settings, preserve_position: checked },
+                    }))}
+                  />
+                  <div>
+                    <Label>Preservar posição na fila?</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Usuários temporariamente indisponíveis mantêm sua posição quando voltam.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={!formData.name.trim() || saving}
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Salvar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
