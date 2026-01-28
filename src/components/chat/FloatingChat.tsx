@@ -13,7 +13,8 @@ import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, Check
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, WhatsAppConversation, WhatsAppMessage } from "@/hooks/use-whatsapp-conversations";
-import { useWhatsAppSessions, WhatsAppSession } from "@/hooks/use-whatsapp-sessions";
+import { useAccessibleSessions } from "@/hooks/use-accessible-sessions";
+import { WhatsAppSession } from "@/hooks/use-whatsapp-sessions";
 import { useStartConversation, useFindConversationByPhone } from "@/hooks/use-start-conversation";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,7 +54,7 @@ export function FloatingChat() {
   const {
     data: sessions,
     isLoading: loadingSessions
-  } = useWhatsAppSessions();
+  } = useAccessibleSessions();
   const {
     data: conversations,
     isLoading: loadingConversations
