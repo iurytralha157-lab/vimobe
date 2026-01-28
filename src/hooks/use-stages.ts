@@ -84,7 +84,7 @@ export function useStagesWithLeads(pipelineId?: string) {
           .from('leads')
           .select(LEAD_PIPELINE_FIELDS)
           .eq('pipeline_id', targetPipelineId)
-          .order('created_at', { ascending: false })
+          .order('stage_entered_at', { ascending: false })
           .limit(500) // Limite para performance
       ]);
       
