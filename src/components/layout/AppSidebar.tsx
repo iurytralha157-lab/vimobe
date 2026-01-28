@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useMemo } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
@@ -15,6 +16,7 @@ interface NavItem {
   labelKey: string;
   path: string;
   module?: string;
+  permission?: string;
   adminOnly?: boolean;
   children?: NavItem[];
 }
@@ -26,7 +28,8 @@ const allNavItems: NavItem[] = [{
   icon: Kanban,
   labelKey: 'pipelines',
   path: '/crm/pipelines',
-  module: 'crm'
+  module: 'crm',
+  permission: 'module_crm'
 }, {
   icon: MessageSquare,
   labelKey: 'conversations',
@@ -36,7 +39,8 @@ const allNavItems: NavItem[] = [{
   icon: Users,
   labelKey: 'contacts',
   path: '/crm/contacts',
-  module: 'crm'
+  module: 'crm',
+  permission: 'module_crm'
 }, {
   icon: DollarSign,
   labelKey: 'financial',
@@ -87,7 +91,8 @@ const allNavItems: NavItem[] = [{
   icon: UserCheck,
   labelKey: 'telecomCustomers',
   path: '/telecom/customers',
-  module: 'telecom'
+  module: 'telecom',
+  permission: 'module_crm'
 },
 // Admin modules
 {
@@ -142,6 +147,9 @@ export function AppSidebar() {
     hasModule
   } = useOrganizationModules();
   const {
+    hasPermission
+  } = useUserPermissions();
+  const {
     collapsed,
     toggleCollapsed
   } = useSidebar();
@@ -165,18 +173,20 @@ export function AppSidebar() {
   const logoWidth = systemSettings?.logo_width || 140;
   const logoHeight = systemSettings?.logo_height || 40;
 
-  // Filter nav items based on enabled modules, user role, and organization segment
+  // Filter nav items based on enabled modules, user role, permissions, and organization segment
   const navItems = useMemo(() => {
     return allNavItems.filter(item => {
       if (item.module && !hasModule(item.module as any)) return false;
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      // Check permission-based access
+      if (item.permission && !hasPermission(item.permission)) return false;
       // Hide Contacts menu for telecom segment
       if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
       // Hide Performance for non-admins in imobiliário segment (keep visible for telecom)
       if (item.path === '/reports/performance' && organization?.segment !== 'telecom' && profile?.role !== 'admin' && !isSuperAdmin) return false;
       return true;
     });
-  }, [hasModule, profile?.role, isSuperAdmin, organization?.segment]);
+  }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment]);
 
   // Filter bottom items based on user role and modules
   const computedBottomItems = useMemo(() => {
