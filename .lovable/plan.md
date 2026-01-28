@@ -1,110 +1,62 @@
 
-# Plano: Interesse de Imóvel Dinâmico via Webhook
+# Plano: Corrigir Erro "column prop.category does not exist"
 
-## Resumo
+## Problema Identificado
 
-Atualmente, o interesse do lead (imóvel ou plano) é configurado **fixo** no webhook. Você quer que quando enviar `property_id` no payload (ex: `"property_id": "AP0004"`), o sistema automaticamente encontre o imóvel pelo código e associe ao lead.
+A migração que criei está referenciando `prop.category` na função `pick_round_robin_for_lead`, mas essa coluna não existe na tabela `properties`.
 
-**Mudanças necessárias:**
+**Coluna correta:** `tipo_de_negocio` (que contém valores como "Venda" ou "Aluguel")
 
-1. **Webhook**: Processar `property_id` dinâmico do payload
-2. **Pipeline**: Exibir o interesse do imóvel no card do lead
+## Solução
 
----
-
-## O Que Vai Mudar
-
-### 1. Webhook - Processar `property_id` Dinâmico
-
-Quando receber um payload assim:
-```json
-{
-  "name": "João Silva",
-  "phone": "11999999999",
-  "property_id": "AP0004"
-}
-```
-
-O webhook vai:
-1. Verificar se `property_id` está no payload
-2. Buscar o imóvel pelo **código** (AP0004) OU pelo **UUID**
-3. Se encontrar, associar o `interest_property_id` ao lead
-4. Prioridade: payload > configuração fixa do webhook
-
-### 2. Card do Pipeline - Mostrar Interesse
-
-O card do lead no Kanban vai exibir:
-- Nome/código do imóvel de interesse
-- Valor do imóvel (badge verde)
+Criar uma nova migração que corrija a função SQL, substituindo:
+- `prop.category` por `prop.tipo_de_negocio`
 
 ---
 
 ## Seção Técnica
 
-### Arquivos a Modificar
+### Migração SQL
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/generic-webhook/index.ts` | Buscar imóvel por código/UUID antes de criar lead |
-| `src/hooks/use-stages.ts` | Incluir `interest_property_id` e join com `properties` |
-
-### Lógica do Webhook (generic-webhook)
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│ Payload recebido: { "property_id": "AP0004", ... }      │
-├─────────────────────────────────────────────────────────┤
-│ 1. Verificar se property_id está no payload            │
-│                                                         │
-│ 2. Se sim:                                              │
-│    a) Tentar buscar por UUID direto                     │
-│    b) Se não encontrar, buscar por código               │
-│                                                         │
-│ 3. Se encontrou imóvel:                                 │
-│    → interest_property_id = imóvel.id                   │
-│                                                         │
-│ 4. Se não encontrou mas webhook tem config fixa:        │
-│    → interest_property_id = webhook.field_mapping       │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Query do Pipeline (use-stages.ts)
-
-Atualizar `LEAD_PIPELINE_FIELDS`:
 ```sql
--- Campos atuais
-id, name, phone, email, source, ...
+-- Corrigir função pick_round_robin_for_lead
+-- Substituir prop.category por prop.tipo_de_negocio
 
--- Adicionar
-interest_property_id,
-interest_plan_id,
-interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
-interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price)
+CREATE OR REPLACE FUNCTION public.pick_round_robin_for_lead(p_lead_id uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE 
+  v_lead RECORD; 
+  ...
+BEGIN
+  -- CORRIGIDO: prop.tipo_de_negocio ao invés de prop.category
+  SELECT l.*, p.default_round_robin_id, lm.campaign_id, lm.form_id,
+         prop.tipo_de_negocio as property_category
+  INTO v_lead 
+  FROM public.leads l 
+  LEFT JOIN public.pipelines p ON p.id = l.pipeline_id 
+  LEFT JOIN public.lead_meta lm ON lm.lead_id = l.id
+  LEFT JOIN public.properties prop ON prop.id = l.interest_property_id
+  WHERE l.id = p_lead_id;
+  
+  -- resto da função permanece igual...
+END;
+$function$;
 ```
 
-### Fluxo Completo
+### Mudança Específica
 
-```text
-1. Webhook recebe payload com property_id: "AP0004"
-   ↓
-2. Busca imóvel: SELECT id FROM properties WHERE code = 'AP0004' AND organization_id = X
-   ↓
-3. Cria lead com interest_property_id = imóvel encontrado
-   ↓
-4. Pipeline busca lead com JOIN em properties
-   ↓
-5. Card mostra: "AP0004 - Apartamento" + "R$450K"
-```
+| Antes (Errado) | Depois (Correto) |
+|----------------|------------------|
+| `prop.category as property_category` | `prop.tipo_de_negocio as property_category` |
 
----
+### Arquivo a Criar
 
-## Resultado Final
+Nova migração SQL que recria a função com a coluna correta.
 
-**Antes:**
-- Interesse de imóvel fixo por webhook
-- Card não mostrava interesse dinâmico
+### Resultado
 
-**Depois:**
-- Payload pode enviar `property_id` (código ou UUID)
-- Sistema busca e associa automaticamente
-- Card exibe o imóvel/plano de interesse com valor
+Após a correção, o webhook funcionará normalmente e poderá processar leads com `property_id` no payload.
