@@ -117,6 +117,7 @@ const SOURCE_OPTIONS = [
   { value: 'instagram', label: 'Instagram' },
   { value: 'whatsapp', label: 'WhatsApp' },
   { value: 'wordpress', label: 'WordPress' },
+  { value: 'webhook', label: 'Webhook' },
   { value: 'website', label: 'Website' },
   { value: 'manual', label: 'Manual' },
 ];
