@@ -67,9 +67,9 @@ export function LeadCard({
   const interestPropertyPrice = lead.interest_property?.preco;
   const interestPlanPrice = lead.interest_plan?.price;
   const valorInteresse = interestPropertyPrice || interestPlanPrice || lead.valor_interesse || lead.property?.preco;
-  const interestLabel = lead.interest_property?.title || lead.interest_property?.code || 
-                        lead.interest_plan?.name || lead.interest_plan?.code || 
-                        lead.property?.title || null;
+  const interestLabel = lead.interest_property?.code || lead.interest_property?.title || 
+                        lead.interest_plan?.code || lead.interest_plan?.name || 
+                        lead.property?.code || lead.property?.title || null;
 
   // Verifica se o lead tem tags de prioridade alta
   const hasHighPriority = lead.tags?.some((tag: any) => tag.name?.toLowerCase().includes('urgente') || tag.name?.toLowerCase().includes('vip') || tag.name?.toLowerCase().includes('prioridade') || tag.name?.toLowerCase().includes('hot'));
