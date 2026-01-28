@@ -267,6 +267,7 @@ Deno.serve(async (req) => {
         interest_property_id: interestPropertyId,
         interest_plan_id: interestPlanId,
         source: 'webhook',
+        source_webhook_id: webhook.id, // Track which webhook created this lead
       })
       .select('id, pipeline_id, stage_id, assigned_user_id')
       .single();

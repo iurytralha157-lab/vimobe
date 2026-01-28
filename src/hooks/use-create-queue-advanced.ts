@@ -11,7 +11,7 @@ interface ScheduleDay {
 
 interface RuleCondition {
   id: string;
-  type: 'source' | 'campaign_contains' | 'tag' | 'city' | 'interest_property' | 'interest_plan' | 'meta_form';
+  type: 'source' | 'webhook' | 'whatsapp_session' | 'meta_form' | 'website_category' | 'campaign_contains' | 'tag' | 'city' | 'interest_property' | 'interest_plan';
   values: string[];
 }
 
@@ -95,6 +95,18 @@ export function useCreateQueueAdvanced() {
             case 'source':
               matchValue = { source: condition.values };
               break;
+            case 'webhook':
+              matchValue = { webhook_id: condition.values };
+              break;
+            case 'whatsapp_session':
+              matchValue = { whatsapp_session_id: condition.values };
+              break;
+            case 'meta_form':
+              matchValue = { meta_form_id: condition.values };
+              break;
+            case 'website_category':
+              matchValue = { website_category: condition.values };
+              break;
             case 'campaign_contains':
               matchValue = { campaign_name_contains: condition.values[0] };
               break;
@@ -109,9 +121,6 @@ export function useCreateQueueAdvanced() {
               break;
             case 'interest_plan':
               matchValue = { interest_plan_id: condition.values[0] };
-              break;
-            case 'meta_form':
-              matchValue = { meta_form_id: condition.values };
               break;
           }
           
@@ -234,6 +243,18 @@ export function useUpdateQueueAdvanced() {
             case 'source':
               matchValue = { source: condition.values };
               break;
+            case 'webhook':
+              matchValue = { webhook_id: condition.values };
+              break;
+            case 'whatsapp_session':
+              matchValue = { whatsapp_session_id: condition.values };
+              break;
+            case 'meta_form':
+              matchValue = { meta_form_id: condition.values };
+              break;
+            case 'website_category':
+              matchValue = { website_category: condition.values };
+              break;
             case 'campaign_contains':
               matchValue = { campaign_name_contains: condition.values[0] };
               break;
@@ -248,9 +269,6 @@ export function useUpdateQueueAdvanced() {
               break;
             case 'interest_plan':
               matchValue = { interest_plan_id: condition.values[0] };
-              break;
-            case 'meta_form':
-              matchValue = { meta_form_id: condition.values };
               break;
           }
           

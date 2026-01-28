@@ -45,7 +45,10 @@ import {
   Filter,
   AlertCircle,
   Building2,
-  UsersRound
+  UsersRound,
+  MessageSquare,
+  Globe,
+  Webhook
 } from 'lucide-react';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useTeams } from '@/hooks/use-teams';
@@ -53,6 +56,10 @@ import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
 import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
+import { useWebhooks } from '@/hooks/use-webhooks';
+import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
+import { useMetaFormConfigs } from '@/hooks/use-meta-forms';
+import { useMetaIntegrations } from '@/hooks/use-meta-integration';
 import { cn } from '@/lib/utils';
 
 interface QueueSettings {
@@ -70,7 +77,7 @@ interface ScheduleDay {
 
 interface RuleCondition {
   id: string;
-  type: 'source' | 'campaign_contains' | 'tag' | 'city' | 'interest_property' | 'interest_plan' | 'meta_form';
+  type: 'source' | 'webhook' | 'whatsapp_session' | 'meta_form' | 'website_category' | 'campaign_contains' | 'tag' | 'city' | 'interest_property' | 'interest_plan';
   values: string[];
 }
 
@@ -112,23 +119,31 @@ const DAYS_OF_WEEK = [
 ];
 
 const SOURCE_OPTIONS = [
-  { value: 'meta', label: 'Meta Ads' },
+  { value: 'meta_ads', label: 'Meta Ads' },
   { value: 'facebook', label: 'Facebook' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'wordpress', label: 'WordPress' },
   { value: 'webhook', label: 'Webhook' },
   { value: 'website', label: 'Website' },
-  { value: 'manual', label: 'Manual' },
 ];
 
 const CONDITION_TYPES = [
-  { value: 'source', label: 'Fonte', icon: '🌐' },
+  { value: 'source', label: 'Fonte (genérica)', icon: '🌐' },
+  { value: 'webhook', label: 'Webhook Específico', icon: '🔗' },
+  { value: 'whatsapp_session', label: 'Conexão WhatsApp', icon: '💬' },
+  { value: 'meta_form', label: 'Formulário Meta', icon: '📝' },
+  { value: 'website_category', label: 'Categoria do Site', icon: '🏷️' },
   { value: 'campaign_contains', label: 'Nome da Campanha (contém)', icon: '📣' },
   { value: 'tag', label: 'Tag', icon: '🏷️' },
   { value: 'city', label: 'Cidade', icon: '📍' },
   { value: 'interest_property', label: 'Interesse em Imóvel', icon: '🏠' },
   { value: 'interest_plan', label: 'Interesse em Plano', icon: '📋' },
+];
+
+const WEBSITE_CATEGORY_OPTIONS = [
+  { value: 'venda', label: 'Venda' },
+  { value: 'locacao', label: 'Locação' },
+  { value: 'lancamento', label: 'Lançamento' },
 ];
 
 const defaultSchedule: ScheduleDay[] = DAYS_OF_WEEK.map(d => ({
@@ -150,6 +165,11 @@ export function DistributionQueueEditor({
   const { data: tags = [] } = useTags();
   const { data: properties = [] } = useProperties();
   const { data: plans = [] } = useServicePlans();
+  const { data: webhooks = [] } = useWebhooks();
+  const { data: whatsappSessions = [] } = useWhatsAppSessions();
+  const { data: metaIntegrations = [] } = useMetaIntegrations();
+  const activeMetaIntegration = metaIntegrations.find(i => i.is_connected);
+  const { data: metaFormConfigs = [] } = useMetaFormConfigs(activeMetaIntegration?.id);
   
   const [saving, setSaving] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(['basic', 'rules', 'members']);
@@ -360,6 +380,116 @@ export function DistributionQueueEditor({
                 {opt.label}
               </Badge>
             ))}
+          </div>
+        );
+
+      case 'webhook':
+        return (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Selecione os webhooks que ativarão esta fila:</p>
+            <div className="flex flex-wrap gap-1">
+              {webhooks.filter(w => w.type === 'incoming').map(wh => (
+                <Badge
+                  key={wh.id}
+                  variant={condition.values.includes(wh.id) ? 'default' : 'outline'}
+                  className="cursor-pointer gap-1"
+                  onClick={() => {
+                    const newValues = condition.values.includes(wh.id)
+                      ? condition.values.filter(v => v !== wh.id)
+                      : [...condition.values, wh.id];
+                    updateCondition(condition.id, { values: newValues });
+                  }}
+                >
+                  <Webhook className="h-3 w-3" />
+                  {wh.name}
+                </Badge>
+              ))}
+              {webhooks.filter(w => w.type === 'incoming').length === 0 && (
+                <span className="text-sm text-muted-foreground italic">Nenhum webhook de entrada configurado</span>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'whatsapp_session':
+        return (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Selecione as conexões WhatsApp:</p>
+            <div className="flex flex-wrap gap-1">
+              {whatsappSessions.filter(s => s.is_active).map(session => (
+                <Badge
+                  key={session.id}
+                  variant={condition.values.includes(session.id) ? 'default' : 'outline'}
+                  className="cursor-pointer gap-1"
+                  onClick={() => {
+                    const newValues = condition.values.includes(session.id)
+                      ? condition.values.filter(v => v !== session.id)
+                      : [...condition.values, session.id];
+                    updateCondition(condition.id, { values: newValues });
+                  }}
+                >
+                  <MessageSquare className="h-3 w-3" />
+                  {session.display_name || session.phone_number || session.instance_name}
+                </Badge>
+              ))}
+              {whatsappSessions.filter(s => s.is_active).length === 0 && (
+                <span className="text-sm text-muted-foreground italic">Nenhuma conexão WhatsApp ativa</span>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'meta_form':
+        return (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Selecione os formulários Meta:</p>
+            <div className="flex flex-wrap gap-1">
+              {metaFormConfigs.filter(f => f.is_active).map(form => (
+                <Badge
+                  key={form.form_id}
+                  variant={condition.values.includes(form.form_id) ? 'default' : 'outline'}
+                  className="cursor-pointer gap-1"
+                  onClick={() => {
+                    const newValues = condition.values.includes(form.form_id)
+                      ? condition.values.filter(v => v !== form.form_id)
+                      : [...condition.values, form.form_id];
+                    updateCondition(condition.id, { values: newValues });
+                  }}
+                >
+                  📝 {form.form_name || form.form_id}
+                </Badge>
+              ))}
+              {metaFormConfigs.filter(f => f.is_active).length === 0 && (
+                <span className="text-sm text-muted-foreground italic">
+                  {activeMetaIntegration ? 'Nenhum formulário configurado' : 'Meta Ads não configurado'}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'website_category':
+        return (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">Selecione as categorias de imóvel do site:</p>
+            <div className="flex flex-wrap gap-1">
+              {WEBSITE_CATEGORY_OPTIONS.map(opt => (
+                <Badge
+                  key={opt.value}
+                  variant={condition.values.includes(opt.value) ? 'default' : 'outline'}
+                  className="cursor-pointer gap-1"
+                  onClick={() => {
+                    const newValues = condition.values.includes(opt.value)
+                      ? condition.values.filter(v => v !== opt.value)
+                      : [...condition.values, opt.value];
+                    updateCondition(condition.id, { values: newValues });
+                  }}
+                >
+                  <Globe className="h-3 w-3" />
+                  {opt.label}
+                </Badge>
+              ))}
+            </div>
           </div>
         );
       
