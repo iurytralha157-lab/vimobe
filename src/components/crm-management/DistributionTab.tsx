@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -240,19 +240,37 @@ export function DistributionTab() {
                       {rr.members.length > 0 ? (
                         <>
                           <div className="flex -space-x-2">
-                            {rr.members.slice(0, 5).map((member) => (
-                              <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
-                                {member.team_id ? (
-                                  <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">
-                                    <UsersRound className="h-3 w-3" />
+                            {rr.members.slice(0, 5).map((member, index) => {
+                              const user = member.user;
+                              const team = member.team_id ? teams.find(t => t.id === member.team_id) : null;
+                              const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 
+                                              team?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+                              
+                              // Cores para avatares sem foto
+                              const colors = [
+                                'bg-primary text-primary-foreground',
+                                'bg-orange-500 text-white',
+                                'bg-emerald-500 text-white',
+                                'bg-violet-500 text-white',
+                                'bg-pink-500 text-white',
+                              ];
+                              const colorClass = colors[index % colors.length];
+                              
+                              return (
+                                <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
+                                  {user?.avatar_url && (
+                                    <AvatarImage src={user.avatar_url} alt={user.name || ''} />
+                                  )}
+                                  <AvatarFallback className={`${colorClass} text-xs font-medium`}>
+                                    {member.team_id ? (
+                                      <UsersRound className="h-3.5 w-3.5" />
+                                    ) : (
+                                      initials
+                                    )}
                                   </AvatarFallback>
-                                ) : (
-                                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                    {member.user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
-                                  </AvatarFallback>
-                                )}
-                              </Avatar>
-                            ))}
+                                </Avatar>
+                              );
+                            })}
                             {rr.members.length > 5 && (
                               <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
                                 <span className="text-xs text-muted-foreground">+{rr.members.length - 5}</span>
