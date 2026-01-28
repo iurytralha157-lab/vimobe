@@ -251,6 +251,81 @@ Deno.serve(async (req) => {
     // ===== LEAD NOVO =====
     // Note: pipeline_id and stage_id are left null - distribution queues will set them via handle_lead_intake
 
+    // ===== RESOLVE DYNAMIC PROPERTY/PLAN FROM PAYLOAD =====
+    let resolvedPropertyId = interestPropertyId;
+    let resolvedPlanId = interestPlanId;
+    
+    // Check for property_id in payload (can be UUID or code like "AP0004")
+    const payloadPropertyId = body.property_id || mappedData.property_id;
+    if (payloadPropertyId) {
+      console.log('Looking up property by:', payloadPropertyId);
+      
+      // Try UUID first
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payloadPropertyId);
+      
+      if (isUuid) {
+        const { data: prop } = await supabase
+          .from('properties')
+          .select('id')
+          .eq('id', payloadPropertyId)
+          .eq('organization_id', webhook.organization_id)
+          .maybeSingle();
+        
+        if (prop) {
+          resolvedPropertyId = prop.id;
+          console.log('Found property by UUID:', resolvedPropertyId);
+        }
+      } else {
+        // Try by code
+        const { data: prop } = await supabase
+          .from('properties')
+          .select('id')
+          .eq('code', payloadPropertyId)
+          .eq('organization_id', webhook.organization_id)
+          .maybeSingle();
+        
+        if (prop) {
+          resolvedPropertyId = prop.id;
+          console.log('Found property by code:', resolvedPropertyId);
+        }
+      }
+    }
+    
+    // Check for plan_id in payload (can be UUID or code)
+    const payloadPlanId = body.plan_id || mappedData.plan_id;
+    if (payloadPlanId) {
+      console.log('Looking up plan by:', payloadPlanId);
+      
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payloadPlanId);
+      
+      if (isUuid) {
+        const { data: plan } = await supabase
+          .from('service_plans')
+          .select('id')
+          .eq('id', payloadPlanId)
+          .eq('organization_id', webhook.organization_id)
+          .maybeSingle();
+        
+        if (plan) {
+          resolvedPlanId = plan.id;
+          console.log('Found plan by UUID:', resolvedPlanId);
+        }
+      } else {
+        // Try by code
+        const { data: plan } = await supabase
+          .from('service_plans')
+          .select('id')
+          .eq('code', payloadPlanId)
+          .eq('organization_id', webhook.organization_id)
+          .maybeSingle();
+        
+        if (plan) {
+          resolvedPlanId = plan.id;
+          console.log('Found plan by code:', resolvedPlanId);
+        }
+      }
+    }
+
     // Create lead (novo - não duplicado)
     // Note: pipeline_id and stage_id are left null - distribution queues will set them
     const { data: lead, error: leadError } = await supabase
@@ -264,8 +339,8 @@ Deno.serve(async (req) => {
         pipeline_id: null, // Distribution queue will set this
         stage_id: null, // Distribution queue will set this
         assigned_user_id: null,
-        interest_property_id: interestPropertyId,
-        interest_plan_id: interestPlanId,
+        interest_property_id: resolvedPropertyId,
+        interest_plan_id: resolvedPlanId,
         source: 'webhook',
         source_webhook_id: webhook.id, // Track which webhook created this lead
       })
