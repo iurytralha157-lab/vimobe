@@ -93,7 +93,7 @@ export function MobileSidebar() {
   const location = useLocation();
   const { profile, isSuperAdmin, organization } = useAuth();
   const { t } = useLanguage();
-  const { hasModule } = useOrganizationModules();
+  const { hasModule, isLoading: modulesLoading } = useOrganizationModules();
   const { hasPermission } = useUserPermissions();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
@@ -110,8 +110,11 @@ export function MobileSidebar() {
   }, [resolvedTheme, systemSettings]);
 
   // Filter nav items based on enabled modules, user role, permissions, and organization segment
+  // While modules are loading, only show items without module requirement to prevent flash
   const navItems = useMemo(() => {
     return allNavItems.filter(item => {
+      // If modules are still loading and this item requires a module, hide it to prevent flash
+      if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
       // Check permission-based access
@@ -122,16 +125,19 @@ export function MobileSidebar() {
       if (item.path === '/reports/performance' && organization?.segment !== 'telecom' && profile?.role !== 'admin' && !isSuperAdmin) return false;
       return true;
     });
-  }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment]);
+  }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment, modulesLoading]);
 
   // Filter bottom items based on user role and modules
+  // While modules are loading, hide module-dependent items to prevent flash
   const computedBottomItems = useMemo(() => {
     return bottomItems.filter(item => {
       if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+      // If modules are still loading and this item requires a module, hide it
+      if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
       return true;
     });
-  }, [profile?.role, isSuperAdmin, hasModule]);
+  }, [profile?.role, isSuperAdmin, hasModule, modulesLoading]);
 
   // Helper to get label from translation
   const getLabel = (labelKey: string): string => {
