@@ -175,30 +175,59 @@ export function DistributionQueueEditor({
   // Initialize form when queue changes
   useEffect(() => {
     if (queue) {
-      // Parse existing queue data
+      // Parse existing queue data - rules
       const existingConditions: RuleCondition[] = (queue.rules || []).map((rule: any) => {
-        const match = rule.match || {};
-        if (Object.keys(match).length > 0) {
-          // New JSONB format
-          const type = Object.keys(match)[0] as RuleCondition['type'];
-          const values = Array.isArray(match[type]) ? match[type] : [match[type]];
-          return { id: rule.id, type, values };
+        // Try to parse from match_type and match_value (stored format)
+        const matchType = rule.match_type as RuleCondition['type'];
+        const matchValueStr = rule.match_value || '';
+        
+        // Parse values based on type
+        let values: string[] = [];
+        if (matchValueStr) {
+          // Some values are comma-separated
+          values = matchValueStr.split(',').map((v: string) => v.trim()).filter(Boolean);
         }
-        // Legacy format
+        
         return {
           id: rule.id,
-          type: rule.match_type as RuleCondition['type'],
-          values: [rule.match_value],
+          type: matchType,
+          values,
         };
       });
 
-      const existingMembers: QueueMember[] = (queue.members || []).map((m: any) => ({
-        id: m.id,
-        type: m.team_id ? 'team' : 'user',
-        entityId: m.team_id || m.user_id,
-        weight: m.weight || 10,
-        name: m.user?.name || m.team?.name,
-      }));
+      // Parse existing members - group by team_id to avoid duplicates
+      const membersMap = new Map<string, QueueMember>();
+      
+      for (const m of (queue.members || [])) {
+        if (m.team_id) {
+          // It's a team member - group by team_id
+          const key = `team_${m.team_id}`;
+          if (!membersMap.has(key)) {
+            const team = teams.find(t => t.id === m.team_id);
+            membersMap.set(key, {
+              id: m.id,
+              type: 'team',
+              entityId: m.team_id,
+              weight: m.weight || 10,
+              name: team?.name || 'Equipe',
+            });
+          }
+        } else {
+          // Individual user
+          const key = `user_${m.user_id}`;
+          if (!membersMap.has(key)) {
+            membersMap.set(key, {
+              id: m.id,
+              type: 'user',
+              entityId: m.user_id,
+              weight: m.weight || 10,
+              name: m.user?.name || 'Usuário',
+            });
+          }
+        }
+      }
+      
+      const existingMembers = Array.from(membersMap.values());
 
       setFormData({
         name: queue.name || '',
@@ -225,7 +254,7 @@ export function DistributionQueueEditor({
         members: [],
       });
     }
-  }, [queue, open]);
+  }, [queue, open, teams]);
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => 
