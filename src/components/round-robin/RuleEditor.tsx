@@ -29,6 +29,7 @@ const SOURCES = [
   { value: 'wordpress', label: 'WordPress' },
   { value: 'whatsapp', label: 'WhatsApp' },
   { value: 'manual', label: 'Manual' },
+  { value: 'webhook', label: 'Webhook' },
 ];
 
 const DAYS_OF_WEEK = [
