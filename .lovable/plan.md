@@ -1,132 +1,110 @@
 
-# Plano: Sistema Avançado de Regras de Distribuição
+# Plano: Interesse de Imóvel Dinâmico via Webhook
 
 ## Resumo
-Vou aprimorar o sistema de regras de distribuição para permitir controle granular por:
-- **Webhook específico** - quando fonte = webhook, mostrar lista de webhooks configurados
-- **Conexão WhatsApp específica** - quando fonte = WhatsApp, mostrar lista de conexões
-- **Formulário Meta específico** - quando fonte = Meta Ads, mostrar lista de formulários
-- **Website** com filtros por imóvel ou categoria (locação/venda)
 
-Também removerei WordPress e Manual das opções de fonte (não fazem sentido para distribuição).
+Atualmente, o interesse do lead (imóvel ou plano) é configurado **fixo** no webhook. Você quer que quando enviar `property_id` no payload (ex: `"property_id": "AP0004"`), o sistema automaticamente encontre o imóvel pelo código e associe ao lead.
+
+**Mudanças necessárias:**
+
+1. **Webhook**: Processar `property_id` dinâmico do payload
+2. **Pipeline**: Exibir o interesse do imóvel no card do lead
 
 ---
 
-## Mudanças Necessárias
+## O Que Vai Mudar
 
-### 1. Banco de Dados
-Adicionar colunas na tabela `leads` para rastrear a origem específica:
+### 1. Webhook - Processar `property_id` Dinâmico
 
-```text
-+------------------+------+----------------------------------+
-| Coluna           | Tipo | Descrição                        |
-+------------------+------+----------------------------------+
-| source_webhook_id| UUID | ID do webhook que criou o lead   |
-| source_session_id| UUID | ID da sessão WhatsApp de origem  |
-+------------------+------+----------------------------------+
+Quando receber um payload assim:
+```json
+{
+  "name": "João Silva",
+  "phone": "11999999999",
+  "property_id": "AP0004"
+}
 ```
 
-Atualizar a função `pick_round_robin_for_lead` para suportar os novos filtros.
+O webhook vai:
+1. Verificar se `property_id` está no payload
+2. Buscar o imóvel pelo **código** (AP0004) OU pelo **UUID**
+3. Se encontrar, associar o `interest_property_id` ao lead
+4. Prioridade: payload > configuração fixa do webhook
 
-### 2. Edge Functions
-Atualizar os webhooks para salvar o ID da origem:
-- `generic-webhook` - salvar `source_webhook_id`
-- `evolution-webhook` - salvar `source_session_id`
+### 2. Card do Pipeline - Mostrar Interesse
 
-### 3. Interface do Editor de Distribuição
-
-**Fontes disponíveis (atualizado):**
-- Meta Ads → mostra lista de formulários configurados
-- Facebook
-- Instagram  
-- WhatsApp → mostra lista de conexões
-- Webhook → mostra lista de webhooks
-- Website → mostra filtros por imóvel ou categoria
-
-**Removidos:** WordPress, Manual
-
-**Nova lógica de seleção:**
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│ Tipo de Condição: [Fonte ▼]                             │
-├─────────────────────────────────────────────────────────┤
-│ Fonte: [Webhook ▼]                                      │
-│                                                         │
-│ ┌─ Webhook específico ─────────────────────────────┐   │
-│ │ ☑ Make                                           │   │
-│ │ ☐ RD Station                                     │   │
-│ │ ☐ Landing Page X                                 │   │
-│ └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-```
-
-### 4. Novos Tipos de Condição
-
-```text
-+---------------------+------------------------------------------+
-| Tipo                | Descrição                                |
-+---------------------+------------------------------------------+
-| source              | Fonte genérica (facebook, instagram...)  |
-| webhook             | Webhook específico (por ID)              |
-| whatsapp_session    | Conexão WhatsApp específica (por ID)     |
-| meta_form           | Formulário Meta específico (já existe)   |
-| website_property    | Lead do site com imóvel específico       |
-| website_category    | Lead do site por categoria (venda/locação)|
-+---------------------+------------------------------------------+
-```
+O card do lead no Kanban vai exibir:
+- Nome/código do imóvel de interesse
+- Valor do imóvel (badge verde)
 
 ---
 
 ## Seção Técnica
 
-### Migração SQL
-
-```sql
--- Adicionar colunas de rastreamento de origem
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS source_webhook_id UUID REFERENCES webhooks_integrations(id);
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS source_session_id UUID REFERENCES whatsapp_sessions(id);
-
--- Índices para performance
-CREATE INDEX IF NOT EXISTS idx_leads_source_webhook ON leads(source_webhook_id) WHERE source_webhook_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_leads_source_session ON leads(source_session_id) WHERE source_session_id IS NOT NULL;
-```
-
-### Atualização da função `pick_round_robin_for_lead`
-
-Adicionar suporte para:
-- `webhook` - match por `source_webhook_id`
-- `whatsapp_session` - match por `source_session_id`
-- `website_category` - match por categoria do imóvel de interesse
-
 ### Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `DistributionQueueEditor.tsx` | Atualizar UI com novos seletores |
-| `use-create-queue-advanced.ts` | Adicionar novos tipos de condição |
-| `generic-webhook/index.ts` | Salvar `source_webhook_id` |
-| `evolution-webhook/index.ts` | Salvar `source_session_id` |
-| Função SQL `pick_round_robin_for_lead` | Adicionar matching para novos tipos |
+| `supabase/functions/generic-webhook/index.ts` | Buscar imóvel por código/UUID antes de criar lead |
+| `src/hooks/use-stages.ts` | Incluir `interest_property_id` e join com `properties` |
 
-### Hooks Necessários
+### Lógica do Webhook (generic-webhook)
 
-O editor já importa:
-- `useWebhooks()` - lista de webhooks
-- `useWhatsAppSessions()` - lista de conexões WhatsApp
+```text
+┌─────────────────────────────────────────────────────────┐
+│ Payload recebido: { "property_id": "AP0004", ... }      │
+├─────────────────────────────────────────────────────────┤
+│ 1. Verificar se property_id está no payload            │
+│                                                         │
+│ 2. Se sim:                                              │
+│    a) Tentar buscar por UUID direto                     │
+│    b) Se não encontrar, buscar por código               │
+│                                                         │
+│ 3. Se encontrou imóvel:                                 │
+│    → interest_property_id = imóvel.id                   │
+│                                                         │
+│ 4. Se não encontrou mas webhook tem config fixa:        │
+│    → interest_property_id = webhook.field_mapping       │
+└─────────────────────────────────────────────────────────┘
+```
 
-Será necessário buscar `meta_form_configs` para listar formulários Meta.
+### Query do Pipeline (use-stages.ts)
+
+Atualizar `LEAD_PIPELINE_FIELDS`:
+```sql
+-- Campos atuais
+id, name, phone, email, source, ...
+
+-- Adicionar
+interest_property_id,
+interest_plan_id,
+interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
+interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price)
+```
+
+### Fluxo Completo
+
+```text
+1. Webhook recebe payload com property_id: "AP0004"
+   ↓
+2. Busca imóvel: SELECT id FROM properties WHERE code = 'AP0004' AND organization_id = X
+   ↓
+3. Cria lead com interest_property_id = imóvel encontrado
+   ↓
+4. Pipeline busca lead com JOIN em properties
+   ↓
+5. Card mostra: "AP0004 - Apartamento" + "R$450K"
+```
 
 ---
 
-## Fluxo do Usuário
+## Resultado Final
 
-1. Usuário abre o editor de fila de distribuição
-2. Clica em "+ Adicionar Condição"
-3. Seleciona "Fonte" como tipo de condição
-4. Seleciona "Webhook" como fonte
-5. Aparece lista com todos os webhooks configurados
-6. Usuário seleciona os webhooks desejados
-7. Salva a fila
+**Antes:**
+- Interesse de imóvel fixo por webhook
+- Card não mostrava interesse dinâmico
 
-Agora, leads vindos desses webhooks específicos serão distribuídos para essa fila.
+**Depois:**
+- Payload pode enviar `property_id` (código ou UUID)
+- Sistema busca e associa automaticamente
+- Card exibe o imóvel/plano de interesse com valor
