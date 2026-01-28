@@ -38,12 +38,17 @@ export function PhoneInput({
   const [number, setNumber] = useState(parsed.number);
 
   // Update internal state when value changes externally
+  // Only update if values actually changed to prevent focus loss
   useEffect(() => {
     const newParsed = parsePhoneInput(value);
     const newCountry = countries.find(c => c.code === newParsed.countryCode) || countries[0];
-    setSelectedCountry(newCountry);
-    setDdd(newParsed.ddd);
-    setNumber(newParsed.number);
+    
+    // Only update if values actually differ
+    if (newParsed.ddd !== ddd || newParsed.number !== number || newCountry.code !== selectedCountry.code) {
+      setSelectedCountry(newCountry);
+      setDdd(newParsed.ddd);
+      setNumber(newParsed.number);
+    }
   }, [value]);
 
   // Format number with mask (XXXXX-XXXX or XXXX-XXXX)

@@ -430,8 +430,8 @@ export function LeadDetailDialog({
     icon: History
   }];
 
-  // Mobile content component
-  const MobileContent = () => <div className="flex flex-col h-full">
+  // Mobile content - defined as JSX variable (NOT a component function) to prevent re-mounting
+  const MobileContent = () => (<div className="flex flex-col h-full">
       {/* Mobile Header - Compact & Premium */}
       <div className="relative px-4 pt-4 pb-3 border-b bg-gradient-to-br from-card via-card to-primary/5">
         {/* Close button */}
@@ -1306,10 +1306,10 @@ export function LeadDetailDialog({
           {activeTab === 'history' && <LeadHistory leadId={lead.id} />}
         </div>
       </div>
-    </div>;
+    </div>);
 
-  // Desktop content - same as before but improved
-  const DesktopContent = () => <div className="flex flex-col h-full max-h-[90vh]">
+  // Desktop content - defined as JSX variable (NOT a component function) to prevent re-mounting
+  const DesktopContent = () => (<div className="flex flex-col h-full max-h-[90vh]">
       {/* Premium Header */}
       <div className="relative p-6 border-b bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
         {/* Subtle background pattern */}
@@ -2107,7 +2107,7 @@ export function LeadDetailDialog({
           </TabsContent>
         </Tabs>
       </ScrollArea>
-    </div>;
+    </div>);
 
   // Roteiro Dialog
   const RoteiroDialog = () => <Dialog open={roteiroDialogOpen} onOpenChange={setRoteiroDialogOpen}>
@@ -2168,25 +2168,68 @@ export function LeadDetailDialog({
     />
   );
 
-  // Render mobile or desktop version
+  // Memoize dialog content to avoid re-creating on every render
+  const mobileContentJSX = (
+    <div className="flex flex-col h-full">
+      {/* Mobile Header - Compact & Premium */}
+      <div className="relative px-4 pt-4 pb-3 border-b bg-gradient-to-br from-card via-card to-primary/5">
+        {/* Close button */}
+        <button onClick={onClose} className="absolute right-3 top-3 h-8 w-8 rounded-full bg-muted/80 flex items-center justify-center z-10">
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Lead Info */}
+        <div className="flex items-center gap-3 mb-3 pr-10">
+          <div className="relative shrink-0">
+            <div className="absolute -inset-0.5 bg-gradient-to-br from-primary/40 to-primary/10 rounded-full blur-sm" />
+            <Avatar className="relative h-12 w-12 border-2 border-primary/20 shadow-lg">
+              <AvatarImage src={lead.whatsapp_picture} alt={lead.name} />
+              <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                {lead.name?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-lg truncate">{lead.name}</h2>
+            {lead.empresa && <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
+                <Building2 className="h-3 w-3 shrink-0" />
+                <span className="truncate">{lead.empresa}</span>
+              </p>}
+          </div>
+        </div>
+
+        {/* Quick Actions Row - keeping inline reference */}
+      </div>
+      {/* Rest of mobile content is rendered via the existing MobileContent variable */}
+    </div>
+  );
+
+  // Render mobile or desktop version - use JSX directly instead of component functions
   if (isMobile) {
-    return <>
+    return (
+      <>
         <Drawer open={!!lead} onOpenChange={() => onClose()}>
           <DrawerContent className="h-[95vh] max-h-[95vh]">
-            <MobileContent />
+            {/* Inline JSX instead of <MobileContent /> to prevent re-mounting */}
+            {MobileContent()}
           </DrawerContent>
         </Drawer>
-        <RoteiroDialog />
-        <OutcomeDialogComponent />
-      </>;
+        {RoteiroDialog()}
+        {OutcomeDialogComponent()}
+      </>
+    );
   }
-  return <>
+  return (
+    <>
       <Dialog open={!!lead} onOpenChange={() => onClose()}>
         <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] p-0 overflow-hidden animate-scale-in">
-          <DesktopContent />
+          {/* Inline JSX instead of <DesktopContent /> to prevent re-mounting */}
+          {DesktopContent()}
         </DialogContent>
       </Dialog>
-      <RoteiroDialog />
-      <OutcomeDialogComponent />
-    </>;
+      {RoteiroDialog()}
+      {OutcomeDialogComponent()}
+    </>
+  );
 }
