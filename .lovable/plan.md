@@ -1,94 +1,99 @@
 
-# Plano: Restringir Dropdown de Canais WhatsApp ao Acesso Explícito
+# Plano: Adicionar Gestão de Pipelines por Equipe
 
-## Problema Identificado
+## O que você precisa
 
-Na página de **Conversas** e no **FloatingChat**, o dropdown "Todos os canais" está mostrando **todos** os canais da organização para administradores, quando deveria mostrar apenas os canais que o usuário tem acesso explícito.
+Você quer restringir o acesso a pipelines baseado em equipes. Por exemplo:
+- **Equipe Vendas** → acessa apenas **Pipeline Vendas**
+- **Equipe Suporte** → acessa apenas **Pipeline Suporte**
 
-**Comportamento Atual (Incorreto):**
-- Admins veem **todos** os canais da organização
-- Usuários comuns veem apenas canais próprios ou com acesso explícito
+**Boa notícia:** Esta funcionalidade já está 90% pronta! Toda a estrutura de banco de dados e políticas de segurança já existem. Só falta expor a interface na página de Gestão.
 
-**Comportamento Esperado:**
-- **Todos os usuários** (incluindo admins) só devem ver canais onde:
-  1. São **donos** da sessão (`owner_user_id`)
-  2. OU têm **acesso concedido** em "Gerenciar Acessos" (`whatsapp_session_access`)
+---
+
+## O que já funciona
+
+| Componente | Status |
+|------------|--------|
+| Tabela `team_pipelines` | ✅ Criada |
+| Políticas de segurança (RLS) | ✅ Funcionando |
+| Componente de UI | ✅ Criado (`TeamPipelinesManager`) |
+| Integração na página | ❌ **Falta adicionar** |
+
+---
+
+## Como vai funcionar
+
+1. **Pipelines sem vínculo** = acessíveis a todos os usuários da organização
+2. **Pipelines com vínculo** = apenas membros das equipes vinculadas podem ver
+
+### Hierarquia de acesso:
+- **Admin**: vê todas as pipelines e leads
+- **Líder de equipe**: vê pipelines vinculadas às suas equipes + leads dessas pipelines
+- **Membro de equipe**: vê pipelines vinculadas à sua equipe + leads atribuídos a ele
+- **Usuário sem equipe**: vê pipelines sem vínculo + leads atribuídos a ele
+
+---
 
 ## Solução
 
-Remover o bypass de admin no hook `useAccessibleSessions`. Atualmente existe este trecho:
+Adicionar uma nova aba **"Pipelines"** na página de Gestão, usando o componente `TeamPipelinesManager` que já existe.
 
-```typescript
-// Admins see all sessions in their organization
-if (profile.role === 'admin') {
-  // Retorna TODOS os canais - PROBLEMA!
-}
-```
-
-Após a correção, **todos os usuários** usarão a mesma lógica de verificação de acesso.
+A interface mostrará:
+- Lista de equipes com suas pipelines vinculadas
+- Lista de pipelines indicando se estão "Restritas" ou "Acessíveis a todos"
+- Ao clicar numa equipe, abre um diálogo para selecionar quais pipelines ela pode acessar
 
 ---
 
 ## Seção Técnica
 
-### Arquivo a Modificar
-- `src/hooks/use-accessible-sessions.ts`
+### Arquivo a modificar
+`src/pages/CRMManagement.tsx`
 
-### Mudança
+### Mudanças
 
-**Antes (linhas 22-35):**
+1. **Importar o componente existente:**
 ```typescript
-// Admins see all sessions in their organization
-if (profile.role === 'admin') {
-  const { data, error } = await supabase
-    .from("whatsapp_sessions")
-    .select("*")
-    .eq("organization_id", profile.organization_id)
-    .order("created_at", { ascending: false });
-  
-  if (error) {
-    console.error("Error fetching sessions for admin:", error);
-    return [];
-  }
-  return data as WhatsAppSession[];
-}
+import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 ```
 
-**Depois:**
+2. **Adicionar ícone ao import:**
 ```typescript
-// Remover completamente o bloco de bypass para admin
-// Todos os usuários usam a mesma lógica de verificação de acesso
+import { Shuffle, Users, Timer, Tags, GitBranch } from 'lucide-react';
 ```
 
-A lógica que permanece (e que será aplicada a todos):
+3. **Adicionar nova tab no TabsList:**
 ```typescript
-// Buscar sessões onde é owner + sessões com acesso explícito
-const [ownedResult, accessResult] = await Promise.all([
-  supabase
-    .from("whatsapp_sessions")
-    .select("*")
-    .eq("organization_id", profile.organization_id)
-    .eq("owner_user_id", profile.id),
-  supabase
-    .from("whatsapp_session_access")
-    .select("session:whatsapp_sessions!..(*)")
-    .eq("user_id", profile.id)
-    .eq("can_view", true)
-]);
+<TabsTrigger 
+  value="pipelines" 
+  className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+>
+  <GitBranch className="h-4 w-4" />
+  Pipelines
+</TabsTrigger>
 ```
+
+4. **Adicionar conteúdo da tab:**
+```typescript
+<TabsContent value="pipelines" className="mt-0">
+  <TeamPipelinesManager />
+</TabsContent>
+```
+
+### Resultado Final
+
+A página de **Gestão** terá as seguintes abas:
+- Equipes
+- **Pipelines** (nova)
+- Distribuição
+- Bolsão
+- Tags
 
 ---
 
-## Resultado Esperado
+## Arquivos afetados
 
-**Antes:**
-- Admin vê: gabrielbrasil, guilherme, maikson, raquelfernandes, vendasmcmv (todos)
-  
-**Depois:**
-- Admin vê apenas: canais onde é owner OU tem acesso em "Gerenciar Acessos"
+1. `src/pages/CRMManagement.tsx` - Adicionar a aba de Pipelines
 
-## Arquivos Afetados
-
-1. `src/hooks/use-accessible-sessions.ts` - Remover bypass de admin
-
-Os componentes que usam esse hook (`Conversations.tsx`, `FloatingChat.tsx`, `FloatingChatButton.tsx`) não precisam de alteração pois já consomem os dados corretamente.
+Nenhuma alteração de banco de dados é necessária, pois toda a estrutura já existe e funciona.
