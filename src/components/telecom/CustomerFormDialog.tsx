@@ -147,8 +147,8 @@ export function CustomerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[650px] h-[90vh] max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{customer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
           <DialogDescription>
             {customer 
@@ -157,7 +157,7 @@ export function CustomerFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] pr-4">
+        <ScrollArea className="flex-1 pr-4 -mr-4">
           <form id="customer-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Dados Pessoais */}
             <div className="space-y-3">
@@ -589,7 +589,7 @@ export function CustomerFormDialog({
           </form>
         </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 pt-4 border-t">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
