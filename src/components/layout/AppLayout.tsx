@@ -7,6 +7,7 @@ import { FloatingChat } from '@/components/chat/FloatingChat';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -15,6 +16,9 @@ interface AppLayoutProps {
 
 function AppLayoutContent({ children, title }: AppLayoutProps) {
   const isMobile = useIsMobile();
+  
+  // Start WhatsApp session health monitoring
+  useWhatsAppHealthMonitor();
 
   return (
     <div className="h-screen flex w-full bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
