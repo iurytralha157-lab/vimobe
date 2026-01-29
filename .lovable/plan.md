@@ -1,230 +1,259 @@
 
-# Plano: Clonar Design do Site Eduardo Ferreira Broker
+# Ajustes no Site Público - Cabeçalho, Hero e Categorias
 
-## O que você quer
+## Resumo do que você pediu
 
-Copiar exatamente o design do seu site WordPress **eduardoferreirabroker.com.br** para o sistema de sites integrado do VIMOB, incluindo:
-
-- Cabeçalho com efeito vidro escuro (idêntico)
-- Hero fullscreen com imagem configurável
-- Mapa interativo com todos os imóveis
-- Abas de tipo de imóvel (Apartamento, Casa, etc.)
-- Filtros avançados na página de imóveis
-- Footer idêntico com layout de 4 colunas
+1. **Cabeçalho** - Largura fixa (~1400-1500px), não full-width, efeito vidro mais claro, sem borda, botão "Contato" preenchido com bordas arredondadas
+2. **Barra de busca** - Efeito vidro mais claro (igual ao header), espaçamento entre título e campo
+3. **Imóveis** - Puxar os imóveis cadastrados (já funciona via `status: 'ativo'`), mostrar seção "Descubra os imóveis" e "Imóveis em destaque"
+4. **Categorias com efeito sanfona** - Cards de categorias (Casas, Apartamentos, etc.) com efeito hover que expande a imagem
 
 ---
 
-## Análise do Site de Referência
+## O que já está funcionando
 
-O site **eduardoferreirabroker.com.br** possui:
-
-| Elemento | Descrição |
-|----------|-----------|
-| **Header** | Fundo preto com transparência/blur (glassmorphism), logo à esquerda, menu central, botão Contato com borda dourada |
-| **Hero** | Imagem fullscreen (100vh), título centralizado, barra de busca com campos: pesquisa, tipo, finalidade |
-| **Menu** | HOME, BUSCAR MAPA, IMÓVEIS, APARTAMENTO, CASA, ícone favoritos, CONTATO |
-| **Cards** | Badge "Venda/Aluguel" dourado, ícone de favorito, informações: endereço, quartos, vagas, m², preço |
-| **Mapa** | OpenStreetMap com markers dos imóveis por endereço |
-| **Filtros** | Lateral esquerda: Quartos, Vagas, Finalidade, Tipo, Cidade, Bairro, Pets, Banheiros, Suítes, Mobília, M², Preço |
-| **Footer** | Fundo preto, 4 colunas: Logo+descrição, Menu, Contatos, Social |
+- A edge function `public-site-data` já filtra imóveis com `status: 'ativo'`
+- O campo `destaque: true` já marca imóveis em destaque
+- A função `useFeaturedProperties` já busca imóveis em destaque
 
 ---
 
-## O que precisa ser adicionado no Banco de Dados
+## Mudanças necessárias
 
-Novos campos na tabela `organization_sites`:
+### 1. PublicSiteLayout.tsx - Novo Header
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `hero_image_url` | TEXT | Imagem do banner principal (Home) |
-| `hero_title` | TEXT | Título do hero (ex: "Transformando seus sonhos em realidade!") |
-| `hero_subtitle` | TEXT | Subtítulo do hero |
-| `page_banner_url` | TEXT | Imagem de fundo do cabeçalho das páginas internas |
-
----
-
-## Arquivos a serem modificados
-
-### 1. Migração SQL (novo arquivo)
-Adicionar os novos campos para imagens configuráveis.
-
-### 2. PublicSiteLayout.tsx
-- Header com glassmorphism escuro (bg-black/80 backdrop-blur-lg)
-- Menu idêntico: HOME, BUSCAR MAPA, IMÓVEIS, abas por tipo, favoritos, CONTATO
-- Posição fixa no topo
-- Logo à esquerda, navegação central, CTA à direita
-
-### 3. PublicHome.tsx
-- Hero 100vh com imagem de fundo configurável
-- Título/subtítulo configuráveis
-- Barra de busca com 3 campos + botão dourado
-- Seção "Descubra Imóveis que Definem o Conceito de Luxo"
-- Grid de imóveis com cards iguais ao original
-- Seção "Imóveis em destaque" (carrossel)
-- Seção de categorias (Casas, Apartamentos, Coberturas, Studio)
-
-### 4. PublicProperties.tsx
-- Header com imagem de fundo + título do tipo selecionado
-- Layout split: Filtros (esquerda) + Grid de imóveis + Mapa (direita)
-- Filtros avançados conforme original
-- Cards de imóvel com badge Venda/Aluguel dourado
-
-### 5. Nova Página: PublicMap.tsx
-- Mapa fullscreen com todos os imóveis
-- Markers por endereço usando geocodificação
-- Popup com preview do imóvel ao clicar
-
-### 6. PublicContact.tsx
-- Layout split: Informações + Formulário
-- Mapa do escritório abaixo
-- Seletor de assunto
-
-### 7. SiteSettings.tsx
-- Adicionar campos para upload das imagens do hero e banner
-- Campos para título e subtítulo do hero
-
-### 8. use-organization-site.ts
-- Adicionar novos campos ao tipo OrganizationSite
-
----
-
-## Seção Técnica Detalhada
-
-### Migração SQL
-
-```sql
-ALTER TABLE public.organization_sites
-ADD COLUMN IF NOT EXISTS hero_image_url TEXT,
-ADD COLUMN IF NOT EXISTS hero_title TEXT,
-ADD COLUMN IF NOT EXISTS hero_subtitle TEXT,
-ADD COLUMN IF NOT EXISTS page_banner_url TEXT;
+**Antes:**
+```tsx
+<header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10">
+  <div className="max-w-7xl mx-auto px-4 ...">
 ```
 
-### Novo Header (PublicSiteLayout)
-
-```typescript
-// Header com glassmorphism escuro
-<header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10">
-  <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-    {/* Logo */}
-    <Link to="/" className="flex items-center">
-      {logo_url ? <img src={logo_url} className="h-10" /> : <span className="text-white font-serif text-xl">{site_title}</span>}
-    </Link>
-    
-    {/* Navigation */}
-    <nav className="hidden lg:flex items-center gap-6">
-      <Link className="text-white/80 hover:text-white text-sm tracking-wide">HOME</Link>
-      <Link className="text-white/80 hover:text-white text-sm tracking-wide">BUSCAR MAPA</Link>
-      <Link className="text-white/80 hover:text-white text-sm tracking-wide">IMÓVEIS</Link>
-      {propertyTypes.map(type => (
-        <Link key={type} className="text-white/80 hover:text-[#C4A052] text-sm tracking-wide uppercase">{type}</Link>
-      ))}
-    </nav>
-    
-    {/* CTA */}
-    <div className="flex items-center gap-4">
-      <button className="text-white/80 hover:text-white"><Heart /></button>
-      <Link className="border border-[#C4A052] text-[#C4A052] px-4 py-2 rounded text-sm tracking-widest hover:bg-[#C4A052] hover:text-white transition-all">
-        CONTATO
-      </Link>
+**Depois:**
+```tsx
+<header className="fixed top-0 left-0 right-0 z-50">
+  {/* Container centralizado com largura máxima */}
+  <div className="max-w-[1400px] mx-auto px-4 mt-4">
+    <div className="bg-white/20 backdrop-blur-xl rounded-2xl px-6">
+      <div className="flex justify-between items-center h-16">
+        {/* Logo */}
+        ...
+        {/* Navigation */}
+        ...
+        {/* CTA - Botão Contato preenchido */}
+        <Link className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-medium">
+          CONTATO
+        </Link>
+      </div>
     </div>
   </div>
 </header>
 ```
 
-### Novo Hero (PublicHome)
+**Características:**
+- Container com `max-w-[1400px]` centralizado
+- Fundo mais claro: `bg-white/20` (em vez de `bg-black/80`)
+- Blur mais intenso: `backdrop-blur-xl`
+- Sem borda: removido `border-b border-white/10`
+- Bordas arredondadas: `rounded-2xl`
+- Margem do topo: `mt-4` para flutuar
+- Botão Contato: `bg-white text-gray-800 rounded-full`
 
-```typescript
-// Hero Fullscreen
-<section className="relative h-screen">
-  <div 
-    className="absolute inset-0 bg-cover bg-center"
-    style={{ backgroundImage: `url(${siteConfig.hero_image_url || '/default-hero.jpg'})` }}
-  >
-    <div className="absolute inset-0 bg-black/40" />
-  </div>
-  
-  <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4">
-    <h1 className="text-4xl md:text-5xl font-light mb-8">
-      {siteConfig.hero_title || 'Transformando seus sonhos em realidade!'}
-    </h1>
-    
-    {/* Search Bar */}
-    <div className="bg-black/50 backdrop-blur-sm rounded-lg p-2 flex flex-wrap gap-2 max-w-4xl w-full">
-      <Input placeholder="Digite condomínio, região, bairro ou cidade" className="flex-1 min-w-[200px] bg-white/10 border-white/20 text-white" />
-      <Select><SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">Tipo de Imóvel</SelectTrigger></Select>
-      <Select><SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">Finalidade...</SelectTrigger></Select>
-      <Button className="bg-[#C4A052] hover:bg-[#B39042] text-white">
-        <Search className="w-4 h-4 mr-2" /> Buscar Imóveis
-      </Button>
-    </div>
+---
+
+### 2. PublicHome.tsx - Barra de Busca Mais Clara
+
+**Antes:**
+```tsx
+<form className="bg-black/60 backdrop-blur-md rounded-lg p-3 ...">
+```
+
+**Depois:**
+```tsx
+<form className="bg-white/20 backdrop-blur-xl rounded-2xl p-4 ...">
+```
+
+**Características:**
+- Mesmo estilo do header: `bg-white/20 backdrop-blur-xl`
+- Bordas mais arredondadas: `rounded-2xl`
+- Espaçamento maior entre título e barra: `mb-16` (em vez de `mb-12`)
+
+---
+
+### 3. PublicHome.tsx - Mostrar Imóveis Cadastrados
+
+A seção de imóveis em destaque já existe no código, mas só aparece se `featuredProperties.length > 0`. O problema pode ser:
+
+1. Nenhum imóvel está marcado como `destaque: true`
+2. Nenhum imóvel está com `status: 'ativo'`
+
+**Solução:**
+- Criar uma nova seção que mostra TODOS os imóveis ativos (não apenas destaque)
+- Manter a seção de destaque separadamente
+
+```tsx
+{/* Imóveis em Destaque */}
+{featuredProperties.length > 0 && (
+  <section className="py-20 bg-[#0D0D0D]">
+    <h2>Imóveis em Destaque</h2>
+    {/* Grid de destaque */}
+  </section>
+)}
+
+{/* Todos os Imóveis - Nova seção */}
+<section className="py-20 bg-white">
+  <h2>Descubra Imóveis que Definem o Conceito de Luxo</h2>
+  {/* Grid de todos os imóveis ativos */}
+</section>
+```
+
+Vamos usar um novo hook para buscar todos os imóveis ativos:
+```tsx
+const { data: allProperties = [] } = usePublicProperties(organizationId, { limit: 6 });
+```
+
+---
+
+### 4. PublicHome.tsx - Seção de Categorias com Efeito Sanfona
+
+Esta é a parte mais interessante. Baseado na imagem que você enviou:
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  ┌────────┐┌──────────────────────┐┌────────┐┌────────┐     │
+│  │ CASAS  ││    APARTAMENTOS      ││COBERTURAS││STUDIOS │    │
+│  │        ││   (expandido hover)  ││        ││        │     │
+│  │  25%   ││        40%           ││  17.5% ││  17.5% │     │
+│  └────────┘└──────────────────────┘└────────┘└────────┘     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Implementação:**
+```tsx
+const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
+
+const categories = [
+  { name: 'CASAS', image: '/images/category-casa.jpg' },
+  { name: 'APARTAMENTOS', image: '/images/category-apartamento.jpg' },
+  { name: 'COBERTURAS', image: '/images/category-cobertura.jpg' },
+  { name: 'STUDIOS', image: '/images/category-studio.jpg' },
+];
+
+<section className="py-20 bg-[#0D0D0D]">
+  <div className="h-[500px] flex">
+    {categories.map((cat, idx) => (
+      <div
+        key={cat.name}
+        onMouseEnter={() => setHoveredCategory(idx)}
+        onMouseLeave={() => setHoveredCategory(null)}
+        className={cn(
+          "relative h-full overflow-hidden transition-all duration-500 ease-out",
+          hoveredCategory === idx ? "flex-[2]" : "flex-1"
+        )}
+      >
+        <img
+          src={cat.image}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
+          style={{ transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)' }}
+        />
+        <div className="absolute inset-0 bg-black/40" />
+        <span className="absolute left-4 top-1/2 bg-white text-gray-900 px-4 py-2 text-sm font-medium">
+          {cat.name}
+        </span>
+      </div>
+    ))}
   </div>
 </section>
 ```
 
-### Mapa com Leaflet (nova dependência)
+**Comportamento:**
+- Por padrão: todos os 4 cards têm tamanho igual (`flex-1`)
+- Ao hover: o card expandido fica maior (`flex-[2]`)
+- A imagem dentro faz zoom (`scale(1.1)`)
+- Transição suave: `transition-all duration-500`
 
-```typescript
-// Usar react-leaflet para mapa OpenStreetMap
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+---
 
-<MapContainer center={[-23.5505, -46.6333]} zoom={12} className="h-full w-full">
-  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-  {properties.map(property => (
-    <Marker key={property.id} position={[property.lat, property.lng]}>
-      <Popup>
-        <PropertyCard property={property} compact />
-      </Popup>
-    </Marker>
-  ))}
-</MapContainer>
+## Arquivos a serem modificados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/public/PublicSiteLayout.tsx` | Header com largura fixa, vidro claro, botão preenchido |
+| `src/pages/public/PublicHome.tsx` | Barra de busca clara, seção de todos os imóveis, efeito sanfona nas categorias |
+
+---
+
+## Seção Técnica
+
+### CSS do Header Glassmorphism Claro
+
+```tsx
+// Container externo (apenas posicionamento)
+<header className="fixed top-0 left-0 right-0 z-50">
+  {/* Container com largura fixa e margem do topo */}
+  <div className="max-w-[1400px] mx-auto px-4 pt-4">
+    {/* Barra com efeito vidro claro */}
+    <div className="bg-white/20 backdrop-blur-xl rounded-2xl px-6 shadow-lg">
 ```
 
-### Paleta de Cores do Site Original
+### Botão Contato Preenchido
 
-| Elemento | Cor |
-|----------|-----|
-| Fundo header/footer | `#0D0D0D` (preto) |
-| Cor de destaque | `#C4A052` (dourado) |
-| Texto principal | `#FFFFFF` (branco) |
-| Texto secundário | `rgba(255,255,255,0.7)` |
-| Badge Venda/Aluguel | `#C4A052` com transparência |
+```tsx
+<Link 
+  to={getHref("contato")}
+  className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-medium tracking-wide hover:bg-white/90 transition-colors"
+>
+  CONTATO
+</Link>
+```
 
----
+### Efeito Sanfona com Flexbox
 
-## Nova Dependência Necessária
+```tsx
+// Estado para controlar qual card está expandido
+const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
 
-```bash
-npm install react-leaflet leaflet
-npm install -D @types/leaflet
+// Classes dinâmicas
+className={cn(
+  "relative h-full overflow-hidden transition-all duration-500 ease-out cursor-pointer",
+  hoveredCategory === null 
+    ? "flex-1"  // Todos iguais quando nenhum hover
+    : hoveredCategory === idx 
+      ? "flex-[2]"  // Expandido
+      : "flex-[0.8]"  // Encolhido
+)}
+```
+
+### Buscar Todos os Imóveis
+
+```tsx
+// No PublicHome.tsx
+import { usePublicProperties, useFeaturedProperties } from "@/hooks/use-public-site";
+
+const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
+const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
+const allProperties = allPropertiesData?.properties || [];
 ```
 
 ---
 
-## Resumo das Mudanças
+## Resultado Visual Esperado
 
-| Arquivo | Ação |
-|---------|------|
-| Nova migração SQL | Adicionar campos hero_image_url, hero_title, hero_subtitle, page_banner_url |
-| `src/integrations/supabase/types.ts` | Regenerar tipos |
-| `src/hooks/use-organization-site.ts` | Atualizar interface OrganizationSite |
-| `src/hooks/use-public-site.ts` | Atualizar interface PublicSiteConfig |
-| `src/pages/public/PublicSiteLayout.tsx` | Refazer header com glassmorphism escuro |
-| `src/pages/public/PublicHome.tsx` | Hero fullscreen + novo layout de cards |
-| `src/pages/public/PublicProperties.tsx` | Split layout com mapa lateral |
-| `src/pages/public/PublicMap.tsx` | Nova página de busca por mapa |
-| `src/pages/public/PublicContact.tsx` | Novo layout com mapa |
-| `src/pages/SiteSettings.tsx` | Adicionar uploads de imagens hero/banner |
-| `package.json` | Adicionar react-leaflet, leaflet |
+**Header:**
+- Flutua sobre o hero com fundo vidro claro/acinzentado
+- Largura fixa de ~1400px
+- Bordas arredondadas
+- Sem linha de borda inferior
+- Botão Contato branco com texto escuro e bordas arredondadas
 
----
+**Barra de Busca:**
+- Mesmo efeito vidro claro do header
+- Espaçamento maior do título
 
-## Resultado Final
+**Seção de Imóveis:**
+- Mostra todos os imóveis ativos cadastrados
+- Seção separada para destaque (se houver)
 
-Após a implementação:
-
-1. Você poderá configurar as imagens do hero e banner em **Configurações do Site**
-2. O site terá o visual idêntico ao eduardoferreirabroker.com.br
-3. Os imóveis aparecerão no mapa baseado nos endereços cadastrados
-4. Filtros avançados funcionarão como no original
-5. Menu com abas por tipo de imóvel funcionará dinamicamente
+**Categorias:**
+- 4 cards lado a lado com imagens de fundo
+- Hover expande o card e dá zoom na imagem
+- Transição suave tipo sanfona
