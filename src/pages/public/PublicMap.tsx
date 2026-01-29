@@ -2,30 +2,16 @@ import { Link, useLocation } from "react-router-dom";
 import { usePublicProperties } from "@/hooks/use-public-site";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePublicContext } from "./usePublicContext";
 
 export default function PublicMap() {
   const { organizationId, siteConfig } = usePublicContext();
-  const { data, isLoading } = usePublicProperties(organizationId, { limit: 100 });
+  const { data } = usePublicProperties(organizationId, { limit: 100 });
   const location = useLocation();
-  const [mapCenter] = useState<[number, number]>([-23.5505, -46.6333]); // São Paulo default
-  const [cssLoaded, setCssLoaded] = useState(false);
-
-  // Load Leaflet CSS dynamically to ensure it's always available
-  useEffect(() => {
-    const linkId = 'leaflet-css';
-    if (!document.getElementById(linkId)) {
-      const link = document.createElement('link');
-      link.id = linkId;
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      link.onload = () => setCssLoaded(true);
-      document.head.appendChild(link);
-    } else {
-      setCssLoaded(true);
-    }
-  }, []);
+  const [mapReady, setMapReady] = useState(false);
+  const [leafletComponents, setLeafletComponents] = useState<any>(null);
+  const [L, setL] = useState<any>(null);
 
   // Get primary color from config
   const primaryColor = siteConfig?.primary_color || '#C4A052';
@@ -44,26 +30,94 @@ export default function PublicMap() {
     return `/${path}`;
   };
 
+  // Load Leaflet CSS and JS dynamically
+  useEffect(() => {
+    let mounted = true;
+    
+    // First load CSS
+    const linkId = 'leaflet-css';
+    let link = document.getElementById(linkId) as HTMLLinkElement | null;
+    
+    const loadJS = () => {
+      Promise.all([
+        import('react-leaflet'),
+        import('leaflet')
+      ]).then(([reactLeaflet, leaflet]) => {
+        if (!mounted) return;
+        
+        // Fix for default marker icons
+        delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
+        leaflet.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
+        
+        setLeafletComponents({
+          MapContainer: reactLeaflet.MapContainer,
+          TileLayer: reactLeaflet.TileLayer,
+          Marker: reactLeaflet.Marker,
+          Popup: reactLeaflet.Popup,
+        });
+        setL(leaflet);
+        setMapReady(true);
+      }).catch(err => {
+        console.error('Error loading Leaflet:', err);
+      });
+    };
+    
+    if (!link) {
+      link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.onload = loadJS;
+      document.head.appendChild(link);
+    } else {
+      loadJS();
+    }
+    
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Get random position for demo purposes
+  const getRandomPosition = (index: number): [number, number] => {
+    const baseLat = -23.5505;
+    const baseLng = -46.6333;
+    const offset = 0.05;
+    const seedLat = Math.sin(index * 12345) * offset;
+    const seedLng = Math.cos(index * 67890) * offset;
+    return [baseLat + seedLat, baseLng + seedLng];
+  };
+
   const formatPrice = (value: number | null) => {
     if (!value) return null;
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   };
 
+  // Custom marker with dynamic color
+  const customIcon = useMemo(() => {
+    if (!L) return null;
+    return new L.Icon({
+      iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${primaryColor}" width="32" height="32">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      `),
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32],
+    });
+  }, [L, primaryColor]);
+
   if (!siteConfig) {
     return null;
   }
 
-  // Show loading state while CSS is loading
-  if (!cssLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: secondaryColor }}>
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Carregando mapa...</p>
-        </div>
-      </div>
-    );
-  }
+  const properties = data?.properties || [];
+  const mapCenter: [number, number] = [-23.5505, -46.6333];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: secondaryColor }}>
@@ -97,158 +151,78 @@ export default function PublicMap() {
 
       {/* Map */}
       <div className="max-w-7xl mx-auto px-4 pb-10">
-        <div className="h-[600px] rounded-lg overflow-hidden shadow-2xl">
-          <MapComponent 
-            mapCenter={mapCenter} 
-            properties={data?.properties || []}
-            primaryColor={primaryColor}
-            getHref={getHref}
-            formatPrice={formatPrice}
-          />
+        <div className="h-[600px] rounded-lg overflow-hidden shadow-2xl bg-gray-800">
+          {!mapReady || !leafletComponents || !customIcon ? (
+            <div className="h-full w-full flex items-center justify-center">
+              <div className="text-white text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <p>Carregando mapa...</p>
+              </div>
+            </div>
+          ) : (
+            <leafletComponents.MapContainer 
+              center={mapCenter} 
+              zoom={12} 
+              className="h-full w-full"
+              style={{ background: '#1a1a1a' }}
+            >
+              <leafletComponents.TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {properties.map((property: any, index: number) => (
+                <leafletComponents.Marker
+                  key={property.id} 
+                  position={getRandomPosition(index)}
+                  icon={customIcon}
+                >
+                  <leafletComponents.Popup>
+                    <div className="w-64">
+                      <img 
+                        src={property.imagem_principal || '/placeholder.svg'} 
+                        alt={property.titulo}
+                        className="w-full h-32 object-cover rounded-t"
+                      />
+                      <div className="p-3">
+                        <h3 className="font-semibold text-sm mb-1 line-clamp-1">{property.titulo}</h3>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
+                          📍 {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
+                          {property.quartos && (
+                            <span className="flex items-center gap-1">
+                              🛏️ {property.quartos}
+                            </span>
+                          )}
+                          {property.area_total && (
+                            <span className="flex items-center gap-1">
+                              📐 {property.area_total}m²
+                            </span>
+                          )}
+                        </div>
+                        <div 
+                          className="font-bold"
+                          style={{ color: primaryColor }}
+                        >
+                          {formatPrice(property.valor_venda || property.valor_aluguel)}
+                        </div>
+                        <a href={getHref(`imoveis/${property.codigo}`)}>
+                          <button 
+                            className="w-full mt-2 text-white text-xs py-2 px-3 rounded"
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            Ver Detalhes
+                          </button>
+                        </a>
+                      </div>
+                    </div>
+                  </leafletComponents.Popup>
+                </leafletComponents.Marker>
+              ))}
+            </leafletComponents.MapContainer>
+          )}
         </div>
       </div>
     </div>
-  );
-}
-
-// Lazy load MapContainer to avoid SSR issues
-function MapComponent({ 
-  mapCenter, 
-  properties, 
-  primaryColor,
-  getHref,
-  formatPrice
-}: { 
-  mapCenter: [number, number];
-  properties: any[];
-  primaryColor: string;
-  getHref: (path: string) => string;
-  formatPrice: (value: number | null) => string | null;
-}) {
-  const [leafletComponents, setLeafletComponents] = useState<any>(null);
-  const [L, setL] = useState<any>(null);
-  
-  useEffect(() => {
-    Promise.all([
-      import('react-leaflet'),
-      import('leaflet')
-    ]).then(([reactLeaflet, leaflet]) => {
-      // Fix for default marker icons
-      delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
-      leaflet.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-      });
-      
-      setLeafletComponents({
-        MapContainer: reactLeaflet.MapContainer,
-        TileLayer: reactLeaflet.TileLayer,
-        Marker: reactLeaflet.Marker,
-        Popup: reactLeaflet.Popup,
-      });
-      setL(leaflet);
-    });
-  }, []);
-  
-  // Get random position for demo purposes
-  const getRandomPosition = (index: number): [number, number] => {
-    const baseLat = -23.5505;
-    const baseLng = -46.6333;
-    const offset = 0.05;
-    const seedLat = Math.sin(index * 12345) * offset;
-    const seedLng = Math.cos(index * 67890) * offset;
-    return [baseLat + seedLat, baseLng + seedLng];
-  };
-
-  // Custom marker with dynamic color
-  const customIcon = useMemo(() => {
-    if (!L) return null;
-    return new L.Icon({
-      iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${primaryColor}" width="32" height="32">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-        </svg>
-      `),
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32],
-    });
-  }, [L, primaryColor]);
-  
-  if (!leafletComponents || !L || !customIcon) {
-    return (
-      <div className="h-full w-full flex items-center justify-center bg-gray-800">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-          <p className="text-sm">Carregando mapa...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { MapContainer, TileLayer, Marker, Popup } = leafletComponents;
-  
-  return (
-    <MapContainer 
-      center={mapCenter} 
-      zoom={12} 
-      className="h-full w-full"
-      style={{ background: '#1a1a1a' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      {properties.map((property: any, index: number) => (
-        <Marker
-          key={property.id} 
-          position={getRandomPosition(index)}
-          icon={customIcon}
-        >
-          <Popup>
-            <div className="w-64">
-              <img 
-                src={property.imagem_principal || '/placeholder.svg'} 
-                alt={property.titulo}
-                className="w-full h-32 object-cover rounded-t"
-              />
-              <div className="p-3">
-                <h3 className="font-semibold text-sm mb-1 line-clamp-1">{property.titulo}</h3>
-                <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
-                  📍 {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
-                </p>
-                <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
-                  {property.quartos && (
-                    <span className="flex items-center gap-1">
-                      🛏️ {property.quartos}
-                    </span>
-                  )}
-                  {property.area_total && (
-                    <span className="flex items-center gap-1">
-                      📐 {property.area_total}m²
-                    </span>
-                  )}
-                </div>
-                <div 
-                  className="font-bold"
-                  style={{ color: primaryColor }}
-                >
-                  {formatPrice(property.valor_venda || property.valor_aluguel)}
-                </div>
-                <a href={getHref(`imoveis/${property.codigo}`)}>
-                  <button 
-                    className="w-full mt-2 text-white text-xs py-2 px-3 rounded"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    Ver Detalhes
-                  </button>
-                </a>
-              </div>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
   );
 }
