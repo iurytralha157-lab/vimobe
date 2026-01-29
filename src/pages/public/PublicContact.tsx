@@ -6,19 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { toast } from "sonner";
-
-// Try to import from PreviewSiteWrapper context first (for preview mode)
-let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
-try {
-  const previewContext = require('./PreviewSiteWrapper');
-  usePublicSiteContext = previewContext.usePreviewSiteContext;
-} catch {
-  const publicContext = require('@/contexts/PublicSiteContext');
-  usePublicSiteContext = publicContext.usePublicSiteContext;
-}
+import { usePublicContext } from "./usePublicContext";
 
 export default function PublicContact() {
-  const { organizationId, siteConfig } = usePublicSiteContext();
+  const { organizationId, siteConfig } = usePublicContext();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -54,34 +45,38 @@ export default function PublicContact() {
     }
   };
 
+  if (!siteConfig) {
+    return null;
+  }
+
   const contactItems = [
     {
       icon: Phone,
       label: "Telefone",
-      value: siteConfig?.phone,
-      href: siteConfig?.phone ? `tel:${siteConfig.phone}` : undefined,
-      color: siteConfig?.primary_color,
+      value: siteConfig.phone,
+      href: siteConfig.phone ? `tel:${siteConfig.phone}` : undefined,
+      color: siteConfig.primary_color,
     },
     {
       icon: MessageCircle,
       label: "WhatsApp",
-      value: siteConfig?.whatsapp,
-      href: siteConfig?.whatsapp ? `https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}` : undefined,
+      value: siteConfig.whatsapp,
+      href: siteConfig.whatsapp ? `https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}` : undefined,
       color: '#25D366',
       external: true,
     },
     {
       icon: Mail,
       label: "E-mail",
-      value: siteConfig?.email,
-      href: siteConfig?.email ? `mailto:${siteConfig.email}` : undefined,
-      color: siteConfig?.primary_color,
+      value: siteConfig.email,
+      href: siteConfig.email ? `mailto:${siteConfig.email}` : undefined,
+      color: siteConfig.primary_color,
     },
     {
       icon: MapPin,
       label: "Endereço",
-      value: siteConfig?.address ? `${siteConfig.address}${siteConfig.city ? `, ${siteConfig.city}` : ''}${siteConfig.state ? ` - ${siteConfig.state}` : ''}` : undefined,
-      color: siteConfig?.primary_color,
+      value: siteConfig.address ? `${siteConfig.address}${siteConfig.city ? `, ${siteConfig.city}` : ''}${siteConfig.state ? ` - ${siteConfig.state}` : ''}` : undefined,
+      color: siteConfig.primary_color,
     },
   ].filter(item => item.value);
 
@@ -90,7 +85,7 @@ export default function PublicContact() {
       {/* Hero */}
       <section 
         className="py-20 md:py-28 relative overflow-hidden"
-        style={{ backgroundColor: siteConfig?.secondary_color }}
+        style={{ backgroundColor: siteConfig.secondary_color }}
       >
         <div 
           className="absolute inset-0 opacity-10"
@@ -102,7 +97,7 @@ export default function PublicContact() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
           <span 
             className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
-            style={{ backgroundColor: `${siteConfig?.primary_color}30`, color: siteConfig?.primary_color }}
+            style={{ backgroundColor: `${siteConfig.primary_color}30`, color: siteConfig.primary_color }}
           >
             Contato
           </span>
@@ -183,11 +178,11 @@ export default function PublicContact() {
               </div>
 
               {/* Social Links */}
-              {(siteConfig?.instagram || siteConfig?.facebook) && (
+              {(siteConfig.instagram || siteConfig.facebook) && (
                 <div className="pt-6">
                   <h3 className="font-bold text-gray-900 mb-4">Siga-nos nas redes</h3>
                   <div className="flex gap-3">
-                    {siteConfig?.instagram && (
+                    {siteConfig.instagram && (
                       <a
                         href={siteConfig.instagram}
                         target="_blank"
@@ -197,7 +192,7 @@ export default function PublicContact() {
                         <Instagram className="w-6 h-6" />
                       </a>
                     )}
-                    {siteConfig?.facebook && (
+                    {siteConfig.facebook && (
                       <a
                         href={siteConfig.facebook}
                         target="_blank"
@@ -284,7 +279,7 @@ export default function PublicContact() {
                       type="submit"
                       size="lg"
                       className="w-full text-white h-14 text-base font-semibold rounded-xl gap-2 shadow-lg hover:shadow-xl transition-all"
-                      style={{ backgroundColor: siteConfig?.primary_color }}
+                      style={{ backgroundColor: siteConfig.primary_color }}
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (

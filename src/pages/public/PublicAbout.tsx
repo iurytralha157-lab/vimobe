@@ -2,19 +2,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building, Users, Award, Heart, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-
-// Try to import from PreviewSiteWrapper context first (for preview mode)
-let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
-try {
-  const previewContext = require('./PreviewSiteWrapper');
-  usePublicSiteContext = previewContext.usePreviewSiteContext;
-} catch {
-  const publicContext = require('@/contexts/PublicSiteContext');
-  usePublicSiteContext = publicContext.usePublicSiteContext;
-}
+import { usePublicContext } from "./usePublicContext";
 
 export default function PublicAbout() {
-  const { siteConfig } = usePublicSiteContext();
+  const { siteConfig } = usePublicContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -26,6 +17,10 @@ export default function PublicAbout() {
     }
     return `/${path}`;
   };
+
+  if (!siteConfig) {
+    return null;
+  }
 
   const features = [
     { icon: Building, title: "Imóveis Selecionados", description: "Curadoria dos melhores imóveis da região com critérios rigorosos de qualidade" },
@@ -46,7 +41,7 @@ export default function PublicAbout() {
       {/* Hero */}
       <section 
         className="py-20 md:py-28 relative overflow-hidden"
-        style={{ backgroundColor: siteConfig?.secondary_color }}
+        style={{ backgroundColor: siteConfig.secondary_color }}
       >
         <div 
           className="absolute inset-0 opacity-10"
@@ -58,12 +53,12 @@ export default function PublicAbout() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
           <span 
             className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
-            style={{ backgroundColor: `${siteConfig?.primary_color}30`, color: siteConfig?.primary_color }}
+            style={{ backgroundColor: `${siteConfig.primary_color}30`, color: siteConfig.primary_color }}
           >
             Sobre Nós
           </span>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 max-w-3xl">
-            {siteConfig?.about_title || `Conheça a ${siteConfig?.organization_name}`}
+            {siteConfig.about_title || `Conheça a ${siteConfig.organization_name}`}
           </h1>
           <p className="text-white/70 text-lg md:text-xl max-w-2xl">
             Conheça nossa história, nossos valores e nosso compromisso em ajudar você a encontrar o imóvel perfeito.
@@ -79,7 +74,7 @@ export default function PublicAbout() {
               <div key={index} className="text-center">
                 <p 
                   className="text-4xl md:text-5xl font-bold mb-2"
-                  style={{ color: siteConfig?.primary_color }}
+                  style={{ color: siteConfig.primary_color }}
                 >
                   {stat.value}
                 </p>
@@ -96,7 +91,7 @@ export default function PublicAbout() {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Image */}
             <div className="order-2 lg:order-1">
-              {siteConfig?.about_image_url ? (
+              {siteConfig.about_image_url ? (
                 <img 
                   src={siteConfig.about_image_url} 
                   alt="Sobre nós"
@@ -105,17 +100,17 @@ export default function PublicAbout() {
               ) : (
                 <div 
                   className="rounded-3xl h-[400px] md:h-[500px] flex items-center justify-center relative overflow-hidden"
-                  style={{ backgroundColor: `${siteConfig?.primary_color}10` }}
+                  style={{ backgroundColor: `${siteConfig.primary_color}10` }}
                 >
                   <div 
                     className="absolute inset-0 opacity-20"
                     style={{ 
-                      backgroundImage: `linear-gradient(135deg, ${siteConfig?.primary_color} 0%, transparent 50%)` 
+                      backgroundImage: `linear-gradient(135deg, ${siteConfig.primary_color} 0%, transparent 50%)` 
                     }}
                   ></div>
                   <Building 
                     className="w-32 h-32"
-                    style={{ color: siteConfig?.primary_color }}
+                    style={{ color: siteConfig.primary_color }}
                   />
                 </div>
               )}
@@ -125,21 +120,21 @@ export default function PublicAbout() {
             <div className="order-1 lg:order-2">
               <span 
                 className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: siteConfig?.primary_color }}
+                style={{ color: siteConfig.primary_color }}
               >
                 Nossa História
               </span>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-6">
                 Transformando sonhos em realidade desde o início
               </h2>
-              {siteConfig?.about_text ? (
+              {siteConfig.about_text ? (
                 <div className="text-gray-600 whitespace-pre-wrap leading-relaxed text-lg">
                   {siteConfig.about_text}
                 </div>
               ) : (
                 <div className="text-gray-600 space-y-4 text-lg leading-relaxed">
                   <p>
-                    A {siteConfig?.organization_name} nasceu com o objetivo de transformar a experiência 
+                    A {siteConfig.organization_name} nasceu com o objetivo de transformar a experiência 
                     de comprar, vender ou alugar imóveis. Acreditamos que encontrar o lugar perfeito 
                     deve ser uma jornada prazerosa e sem complicações.
                   </p>
@@ -160,7 +155,7 @@ export default function PublicAbout() {
               <div className="mt-8 space-y-3">
                 {["Atendimento personalizado", "Imóveis verificados", "Suporte completo"].map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: siteConfig?.primary_color }} />
+                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: siteConfig.primary_color }} />
                     <span className="text-gray-700 font-medium">{item}</span>
                   </div>
                 ))}
@@ -176,12 +171,12 @@ export default function PublicAbout() {
           <div className="text-center mb-16">
             <span 
               className="text-sm font-semibold uppercase tracking-wider"
-              style={{ color: siteConfig?.primary_color }}
+              style={{ color: siteConfig.primary_color }}
             >
               Nossos Diferenciais
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-4">
-              Por que escolher a {siteConfig?.organization_name}?
+              Por que escolher a {siteConfig.organization_name}?
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto text-lg">
               Oferecemos uma experiência diferenciada em todas as etapas do seu negócio imobiliário.
@@ -194,11 +189,11 @@ export default function PublicAbout() {
                 <CardContent className="p-8">
                   <div 
                     className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center transition-transform group-hover:scale-110"
-                    style={{ backgroundColor: `${siteConfig?.primary_color}15` }}
+                    style={{ backgroundColor: `${siteConfig.primary_color}15` }}
                   >
                     <feature.icon 
                       className="w-8 h-8"
-                      style={{ color: siteConfig?.primary_color }}
+                      style={{ color: siteConfig.primary_color }}
                     />
                   </div>
                   <h3 className="font-bold text-gray-900 mb-3 text-lg">{feature.title}</h3>
@@ -213,7 +208,7 @@ export default function PublicAbout() {
       {/* CTA */}
       <section 
         className="py-20 relative overflow-hidden"
-        style={{ backgroundColor: siteConfig?.primary_color }}
+        style={{ backgroundColor: siteConfig.primary_color }}
       >
         <div 
           className="absolute inset-0 opacity-10"
@@ -234,7 +229,7 @@ export default function PublicAbout() {
               <Button 
                 size="lg"
                 className="bg-white hover:bg-gray-100 w-full sm:w-auto rounded-full px-8 gap-2"
-                style={{ color: siteConfig?.primary_color }}
+                style={{ color: siteConfig.primary_color }}
               >
                 Fale Conosco
                 <ArrowRight className="w-5 h-5" />

@@ -3,24 +3,10 @@ import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, Mess
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-
-// Try to import from PreviewSiteWrapper context first (for preview mode)
-// Falls back to PublicSiteContext for production domains
-let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
-try {
-  const previewContext = require('./PreviewSiteWrapper');
-  usePublicSiteContext = previewContext.usePreviewSiteContext;
-} catch {
-  const publicContext = require('@/contexts/PublicSiteContext');
-  usePublicSiteContext = publicContext.usePublicSiteContext;
-}
+import { usePublicContext } from "./usePublicContext";
 
 export default function PublicSiteLayout() {
-  const context = usePublicSiteContext();
-  const siteConfig = context?.siteConfig;
-  const isLoading = context?.isLoading;
-  const error = context?.error;
-  
+  const { siteConfig, isLoading, error } = usePublicContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -50,7 +36,7 @@ export default function PublicSiteLayout() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Site não encontrado</h1>
-        <p className="text-gray-600">Verifique o endereço e tente novamente.</p>
+        <p className="text-gray-600">{error || 'Verifique o endereço e tente novamente.'}</p>
       </div>
     );
   }
@@ -61,11 +47,6 @@ export default function PublicSiteLayout() {
     { href: "sobre", label: "Sobre" },
     { href: "contato", label: "Contato" },
   ];
-
-  // Get base path for preview mode
-  const basePath = location.pathname.includes('/site/previsualização') 
-    ? `/site/previsualização${location.search}` 
-    : '';
 
   const isActive = (path: string) => {
     const currentPath = location.pathname.replace('/site/previsualização', '');

@@ -1,33 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import { useSearchParams, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { PublicSiteConfig } from '@/hooks/use-public-site';
+import { PublicContext, PublicContextType } from './usePublicContext';
 import PublicSiteLayout from './PublicSiteLayout';
 import PublicHome from './PublicHome';
 import PublicProperties from './PublicProperties';
 import PublicPropertyDetail from './PublicPropertyDetail';
 import PublicAbout from './PublicAbout';
 import PublicContact from './PublicContact';
-
-interface PreviewSiteContextType {
-  organizationId: string | null;
-  siteConfig: PublicSiteConfig | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
-const PreviewSiteContext = createContext<PreviewSiteContextType | undefined>(undefined);
-
-export function usePreviewSiteContext() {
-  const context = useContext(PreviewSiteContext);
-  if (context === undefined) {
-    throw new Error('usePreviewSiteContext must be used within a PreviewSiteProvider');
-  }
-  return context;
-}
-
-// Re-export as usePublicSiteContext for compatibility with public components
-export { usePreviewSiteContext as usePublicSiteContext };
 
 function PreviewSiteProvider({ children, organizationId }: { children: ReactNode; organizationId: string }) {
   const [siteConfig, setSiteConfig] = useState<PublicSiteConfig | null>(null);
@@ -37,6 +18,8 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
   useEffect(() => {
     const loadSiteConfig = async () => {
       try {
+        console.log('Loading site config for org:', organizationId);
+        
         const { data, error: fetchError } = await supabase
           .from('organization_sites')
           .select('*, organizations(name)')
@@ -49,6 +32,8 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
           setIsLoading(false);
           return;
         }
+
+        console.log('Site config loaded:', data);
 
         if (data) {
           setSiteConfig({
@@ -94,16 +79,25 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
     loadSiteConfig();
   }, [organizationId]);
 
+  const contextValue: PublicContextType = {
+    organizationId,
+    siteConfig,
+    isLoading,
+    error,
+  };
+
   return (
-    <PreviewSiteContext.Provider value={{ organizationId, siteConfig, isLoading, error }}>
+    <PublicContext.Provider value={contextValue}>
       {children}
-    </PreviewSiteContext.Provider>
+    </PublicContext.Provider>
   );
 }
 
 export default function PreviewSiteWrapper() {
   const [searchParams] = useSearchParams();
   const orgId = searchParams.get('org');
+
+  console.log('PreviewSiteWrapper - orgId:', orgId);
 
   if (!orgId) {
     return (
@@ -129,27 +123,6 @@ export default function PreviewSiteWrapper() {
 }
 
 function PreviewSiteRoutes() {
-  const { organizationId, isLoading, error } = usePreviewSiteContext();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Carregando preview...</div>
-      </div>
-    );
-  }
-
-  if (error || !organizationId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Erro no Preview</h1>
-          <p className="text-muted-foreground">{error || 'Organização não encontrada.'}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Routes>
       <Route path="/" element={<PublicSiteLayout />}>

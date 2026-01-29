@@ -1,14 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
 import { PublicSiteConfig } from '@/hooks/use-public-site';
-
-interface PublicSiteContextType {
-  organizationId: string | null;
-  siteConfig: PublicSiteConfig | null;
-  isLoading: boolean;
-  error: string | null;
-}
-
-const PublicSiteContext = createContext<PublicSiteContextType | undefined>(undefined);
+import { PublicContext, PublicContextType } from '@/pages/public/usePublicContext';
 
 export function PublicSiteProvider({ children }: { children: ReactNode }) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
@@ -25,7 +17,8 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
         if (
           hostname === 'localhost' ||
           hostname.includes('lovable.app') ||
-          hostname.includes('lovable.dev')
+          hostname.includes('lovable.dev') ||
+          hostname.includes('lovableproject.com')
         ) {
           setIsLoading(false);
           return;
@@ -65,17 +58,19 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
     resolveSite();
   }, []);
 
+  const contextValue: PublicContextType = {
+    organizationId,
+    siteConfig,
+    isLoading,
+    error,
+  };
+
   return (
-    <PublicSiteContext.Provider value={{ organizationId, siteConfig, isLoading, error }}>
+    <PublicContext.Provider value={contextValue}>
       {children}
-    </PublicSiteContext.Provider>
+    </PublicContext.Provider>
   );
 }
 
-export function usePublicSiteContext() {
-  const context = useContext(PublicSiteContext);
-  if (context === undefined) {
-    throw new Error('usePublicSiteContext must be used within a PublicSiteProvider');
-  }
-  return context;
-}
+// Re-export usePublicContext for backward compatibility
+export { usePublicContext as usePublicSiteContext } from '@/pages/public/usePublicContext';
