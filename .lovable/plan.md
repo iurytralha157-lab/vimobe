@@ -1,616 +1,230 @@
 
-# 🗺️ MAPA MENTAL COMPLETO DO VIMOB CRM
+# Plano: Clonar Design do Site Eduardo Ferreira Broker
 
-## 📋 Sumário Executivo
+## O que você quer
 
-Este documento apresenta uma auditoria completa da arquitetura do sistema Vimob CRM, incluindo todos os fluxos de dados, controle de acesso, tabelas do banco de dados, políticas RLS e caminhos de navegação para cada tipo de usuário.
+Copiar exatamente o design do seu site WordPress **eduardoferreirabroker.com.br** para o sistema de sites integrado do VIMOB, incluindo:
 
----
-
-## 🔐 1. SISTEMA DE AUTENTICAÇÃO
-
-### 1.1 Fluxo de Login
-
-```text
-┌─────────────┐     ┌──────────────┐     ┌────────────────┐
-│  /auth      │────▶│ Supabase     │────▶│ AuthContext    │
-│  (Login)    │     │ auth.users   │     │ (React)        │
-└─────────────┘     └──────────────┘     └────────────────┘
-                                                │
-                    ┌───────────────────────────┘
-                    ▼
-        ┌───────────────────────┐
-        │ Busca profile em      │
-        │ public.users          │
-        │ (id = auth.uid())     │
-        └───────────────────────┘
-                    │
-        ┌───────────┴───────────┐
-        ▼                       ▼
-┌───────────────┐      ┌───────────────┐
-│ Verifica      │      │ Carrega       │
-│ user_roles    │      │ organization  │
-│ (super_admin?)│      │ (org_id)      │
-└───────────────┘      └───────────────┘
-```
-
-### 1.2 Hierarquia de Papéis
-
-| Papel | Código | Acesso | Descrição |
-|-------|--------|--------|-----------|
-| **Super Admin** | `super_admin` | Global | Acesso total a todas organizações |
-| **Admin** | `admin` | Organização | Acesso total à sua organização |
-| **User/Broker** | `user` | Limitado | Vê apenas leads atribuídos a ele |
-
-### 1.3 Tabelas de Autenticação
-
-**`auth.users`** (Supabase)
-- Gerenciado pelo Supabase Auth
-- Contém email, password_hash, tokens
-
-**`public.users`** (Aplicação)
-```
-id              UUID (= auth.uid())
-email           TEXT
-name            TEXT
-role            TEXT ('admin', 'user', 'super_admin')
-organization_id UUID → organizations.id (NULL para super_admin)
-is_active       BOOLEAN
-avatar_url      TEXT
-phone           TEXT
-created_at      TIMESTAMP
-```
-
-**`user_roles`** (Papéis do Sistema)
-```
-id       UUID
-user_id  UUID → auth.users.id
-role     app_role ENUM ('admin', 'user', 'super_admin')
-```
+- Cabeçalho com efeito vidro escuro (idêntico)
+- Hero fullscreen com imagem configurável
+- Mapa interativo com todos os imóveis
+- Abas de tipo de imóvel (Apartamento, Casa, etc.)
+- Filtros avançados na página de imóveis
+- Footer idêntico com layout de 4 colunas
 
 ---
 
-## 🏢 2. ESTRUTURA ORGANIZACIONAL
+## Análise do Site de Referência
 
-### 2.1 Organizações
+O site **eduardoferreirabroker.com.br** possui:
 
-**`organizations`**
-```
-id                  UUID
-name                TEXT
-segment             TEXT ('imobiliario', 'telecom', 'servicos')
-logo_url            TEXT
-is_active           BOOLEAN
-subscription_status TEXT ('trial', 'active', 'suspended')
-max_users           INTEGER
-created_at          TIMESTAMP
-```
-
-### 2.2 Módulos por Organização
-
-**`organization_modules`**
-```
-id              UUID
-organization_id UUID → organizations.id
-module_name     TEXT
-is_enabled      BOOLEAN
-```
-
-**Módulos Disponíveis:**
-| Módulo | Descrição | Padrão |
-|--------|-----------|--------|
-| crm | Pipeline e Contatos | ✅ Ativo |
-| financial | Módulo Financeiro | ✅ Ativo |
-| properties | Imóveis (Imobiliário) | ✅ Ativo |
-| plans | Planos (Telecom) | Conforme segmento |
-| coverage | Áreas de Cobertura | Conforme segmento |
-| telecom | Clientes Telecom | Conforme segmento |
-| whatsapp | Conversas WhatsApp | ✅ Ativo |
-| agenda | Agenda/Calendário | ✅ Ativo |
-| automations | Automações | ❌ Desativado |
-| performance | Desempenho | ❌ Desativado |
-| site | Site Integrado | ❌ Desativado |
-| webhooks | Webhooks | ❌ Desativado |
+| Elemento | Descrição |
+|----------|-----------|
+| **Header** | Fundo preto com transparência/blur (glassmorphism), logo à esquerda, menu central, botão Contato com borda dourada |
+| **Hero** | Imagem fullscreen (100vh), título centralizado, barra de busca com campos: pesquisa, tipo, finalidade |
+| **Menu** | HOME, BUSCAR MAPA, IMÓVEIS, APARTAMENTO, CASA, ícone favoritos, CONTATO |
+| **Cards** | Badge "Venda/Aluguel" dourado, ícone de favorito, informações: endereço, quartos, vagas, m², preço |
+| **Mapa** | OpenStreetMap com markers dos imóveis por endereço |
+| **Filtros** | Lateral esquerda: Quartos, Vagas, Finalidade, Tipo, Cidade, Bairro, Pets, Banheiros, Suítes, Mobília, M², Preço |
+| **Footer** | Fundo preto, 4 colunas: Logo+descrição, Menu, Contatos, Social |
 
 ---
 
-## 🛡️ 3. SISTEMA DE PERMISSÕES RBAC
+## O que precisa ser adicionado no Banco de Dados
 
-### 3.1 Estrutura de Funções Personalizadas
+Novos campos na tabela `organization_sites`:
 
-```text
-organization_roles          Funções criadas pela organização
-        │                   (ex: "Backoffice", "Gerente", "SDR")
-        │
-        ▼
-organization_role_permissions    Permissões atribuídas à função
-        │                        (ex: 'lead_view_all', 'lead_edit_all')
-        │
-        ▼
-user_organization_roles     Usuário vinculado à função
-        │
-        ▼
-available_permissions       24 permissões disponíveis
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `hero_image_url` | TEXT | Imagem do banner principal (Home) |
+| `hero_title` | TEXT | Título do hero (ex: "Transformando seus sonhos em realidade!") |
+| `hero_subtitle` | TEXT | Subtítulo do hero |
+| `page_banner_url` | TEXT | Imagem de fundo do cabeçalho das páginas internas |
+
+---
+
+## Arquivos a serem modificados
+
+### 1. Migração SQL (novo arquivo)
+Adicionar os novos campos para imagens configuráveis.
+
+### 2. PublicSiteLayout.tsx
+- Header com glassmorphism escuro (bg-black/80 backdrop-blur-lg)
+- Menu idêntico: HOME, BUSCAR MAPA, IMÓVEIS, abas por tipo, favoritos, CONTATO
+- Posição fixa no topo
+- Logo à esquerda, navegação central, CTA à direita
+
+### 3. PublicHome.tsx
+- Hero 100vh com imagem de fundo configurável
+- Título/subtítulo configuráveis
+- Barra de busca com 3 campos + botão dourado
+- Seção "Descubra Imóveis que Definem o Conceito de Luxo"
+- Grid de imóveis com cards iguais ao original
+- Seção "Imóveis em destaque" (carrossel)
+- Seção de categorias (Casas, Apartamentos, Coberturas, Studio)
+
+### 4. PublicProperties.tsx
+- Header com imagem de fundo + título do tipo selecionado
+- Layout split: Filtros (esquerda) + Grid de imóveis + Mapa (direita)
+- Filtros avançados conforme original
+- Cards de imóvel com badge Venda/Aluguel dourado
+
+### 5. Nova Página: PublicMap.tsx
+- Mapa fullscreen com todos os imóveis
+- Markers por endereço usando geocodificação
+- Popup com preview do imóvel ao clicar
+
+### 6. PublicContact.tsx
+- Layout split: Informações + Formulário
+- Mapa do escritório abaixo
+- Seletor de assunto
+
+### 7. SiteSettings.tsx
+- Adicionar campos para upload das imagens do hero e banner
+- Campos para título e subtítulo do hero
+
+### 8. use-organization-site.ts
+- Adicionar novos campos ao tipo OrganizationSite
+
+---
+
+## Seção Técnica Detalhada
+
+### Migração SQL
+
+```sql
+ALTER TABLE public.organization_sites
+ADD COLUMN IF NOT EXISTS hero_image_url TEXT,
+ADD COLUMN IF NOT EXISTS hero_title TEXT,
+ADD COLUMN IF NOT EXISTS hero_subtitle TEXT,
+ADD COLUMN IF NOT EXISTS page_banner_url TEXT;
 ```
 
-### 3.2 Categorias de Permissões
+### Novo Header (PublicSiteLayout)
 
-**Módulos (modules)**
-| Chave | Nome | Descrição |
-|-------|------|-----------|
-| module_crm | CRM | Acesso ao módulo de leads |
-| module_financial | Financeiro | Acesso ao financeiro |
-| module_reports | Relatórios | Acesso a relatórios |
-
-**Leads (leads)**
-| Chave | Nome | Descrição |
-|-------|------|-----------|
-| lead_view_all | Ver Todos Leads | Visualiza leads de todos |
-| lead_view_team | Ver Leads Equipe | Visualiza leads da equipe |
-| lead_edit_all | Editar Todos | Pode editar qualquer lead |
-| lead_delete | Excluir Leads | Pode excluir leads |
-
-**Dados (data)**
-| Chave | Nome | Descrição |
-|-------|------|-----------|
-| data_export | Exportar Dados | Pode exportar relatórios |
-| data_import | Importar Dados | Pode importar contatos |
-
-**Configurações (settings)**
-| Chave | Nome | Descrição |
-|-------|------|-----------|
-| settings_users | Gerenciar Usuários | CRUD de usuários |
-| settings_pipelines | Gerenciar Pipelines | CRUD de pipelines |
-| settings_teams | Gerenciar Equipes | CRUD de equipes |
-
-### 3.3 Verificação de Permissões
-
-**Frontend: `useUserPermissions` / `useHasPermission`**
 ```typescript
-const { hasPermission } = useUserPermissions();
-if (hasPermission('lead_view_all')) {
-  // Mostrar todos os leads
-}
+// Header com glassmorphism escuro
+<header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10">
+  <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+    {/* Logo */}
+    <Link to="/" className="flex items-center">
+      {logo_url ? <img src={logo_url} className="h-10" /> : <span className="text-white font-serif text-xl">{site_title}</span>}
+    </Link>
+    
+    {/* Navigation */}
+    <nav className="hidden lg:flex items-center gap-6">
+      <Link className="text-white/80 hover:text-white text-sm tracking-wide">HOME</Link>
+      <Link className="text-white/80 hover:text-white text-sm tracking-wide">BUSCAR MAPA</Link>
+      <Link className="text-white/80 hover:text-white text-sm tracking-wide">IMÓVEIS</Link>
+      {propertyTypes.map(type => (
+        <Link key={type} className="text-white/80 hover:text-[#C4A052] text-sm tracking-wide uppercase">{type}</Link>
+      ))}
+    </nav>
+    
+    {/* CTA */}
+    <div className="flex items-center gap-4">
+      <button className="text-white/80 hover:text-white"><Heart /></button>
+      <Link className="border border-[#C4A052] text-[#C4A052] px-4 py-2 rounded text-sm tracking-widest hover:bg-[#C4A052] hover:text-white transition-all">
+        CONTATO
+      </Link>
+    </div>
+  </div>
+</header>
 ```
 
-**Backend: `user_has_permission(p_permission_key, p_user_id)`**
-```sql
-SELECT public.user_has_permission('lead_view_all', auth.uid());
--- Retorna TRUE/FALSE
+### Novo Hero (PublicHome)
+
+```typescript
+// Hero Fullscreen
+<section className="relative h-screen">
+  <div 
+    className="absolute inset-0 bg-cover bg-center"
+    style={{ backgroundImage: `url(${siteConfig.hero_image_url || '/default-hero.jpg'})` }}
+  >
+    <div className="absolute inset-0 bg-black/40" />
+  </div>
+  
+  <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4">
+    <h1 className="text-4xl md:text-5xl font-light mb-8">
+      {siteConfig.hero_title || 'Transformando seus sonhos em realidade!'}
+    </h1>
+    
+    {/* Search Bar */}
+    <div className="bg-black/50 backdrop-blur-sm rounded-lg p-2 flex flex-wrap gap-2 max-w-4xl w-full">
+      <Input placeholder="Digite condomínio, região, bairro ou cidade" className="flex-1 min-w-[200px] bg-white/10 border-white/20 text-white" />
+      <Select><SelectTrigger className="w-40 bg-white/10 border-white/20 text-white">Tipo de Imóvel</SelectTrigger></Select>
+      <Select><SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">Finalidade...</SelectTrigger></Select>
+      <Button className="bg-[#C4A052] hover:bg-[#B39042] text-white">
+        <Search className="w-4 h-4 mr-2" /> Buscar Imóveis
+      </Button>
+    </div>
+  </div>
+</section>
 ```
 
-**Hierarquia de bypass:**
-1. Super Admin → Sempre TRUE
-2. Admin → Sempre TRUE
-3. Usuário → Verifica em organization_role_permissions
+### Mapa com Leaflet (nova dependência)
+
+```typescript
+// Usar react-leaflet para mapa OpenStreetMap
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+
+<MapContainer center={[-23.5505, -46.6333]} zoom={12} className="h-full w-full">
+  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+  {properties.map(property => (
+    <Marker key={property.id} position={[property.lat, property.lng]}>
+      <Popup>
+        <PropertyCard property={property} compact />
+      </Popup>
+    </Marker>
+  ))}
+</MapContainer>
+```
+
+### Paleta de Cores do Site Original
+
+| Elemento | Cor |
+|----------|-----|
+| Fundo header/footer | `#0D0D0D` (preto) |
+| Cor de destaque | `#C4A052` (dourado) |
+| Texto principal | `#FFFFFF` (branco) |
+| Texto secundário | `rgba(255,255,255,0.7)` |
+| Badge Venda/Aluguel | `#C4A052` com transparência |
 
 ---
 
-## 📊 4. PIPELINES E LEADS
+## Nova Dependência Necessária
 
-### 4.1 Estrutura de Pipeline
-
-```text
-pipelines
-    │
-    ├── stages (ordenados por position)
-    │       │
-    │       └── stage_automations
-    │               └── Ações automáticas ao entrar no estágio
-    │
-    └── leads
-            ├── lead_tags
-            ├── lead_tasks
-            ├── activities (histórico)
-            └── lead_meta (dados Meta Ads)
-```
-
-### 4.2 Tabela `leads`
-
-```
-id                  UUID
-name                TEXT (obrigatório)
-phone               TEXT
-email               TEXT
-source              TEXT ('manual', 'whatsapp', 'webhook', 'meta_ads'...)
-deal_status         TEXT ('open', 'won', 'lost')
-stage_id            UUID → stages.id
-pipeline_id         UUID → pipelines.id
-assigned_user_id    UUID → users.id
-organization_id     UUID → organizations.id
-created_at          TIMESTAMP
-assigned_at         TIMESTAMP (quando foi atribuído)
-stage_entered_at    TIMESTAMP (quando entrou no estágio)
-first_touch_at      TIMESTAMP (primeiro contato WhatsApp)
-won_at              TIMESTAMP
-lost_at             TIMESTAMP
-redistribution_count INTEGER (quantas vezes foi redistribuído)
-```
-
-### 4.3 Visibilidade de Leads (RLS)
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│                    QUEM VÊ O QUÊ?                       │
-├─────────────────────────────────────────────────────────┤
-│ Super Admin    → Todos os leads de todas organizações  │
-│ Admin          → Todos os leads da sua organização     │
-│ User + lead_view_all → Todos os leads da organização   │
-│ User + lead_view_team → Leads da sua equipe            │
-│ User (padrão)  → Apenas leads atribuídos a ele         │
-└─────────────────────────────────────────────────────────┘
-```
-
-### 4.4 Restrição por Equipe (team_pipelines)
-
-Se uma pipeline estiver vinculada a equipes na tabela `team_pipelines`:
-- Apenas membros dessas equipes veem os leads
-- Pipelines sem vínculo são acessíveis a todos
-
----
-
-## 🔄 5. DISTRIBUIÇÃO ROUND ROBIN
-
-### 5.1 Fluxo de Distribuição
-
-```text
-Lead Entra (webhook/whatsapp/meta)
-        │
-        ▼
-┌───────────────────────┐
-│ pick_round_robin_for_ │
-│ lead(lead_id)         │
-│ Avalia regras por     │
-│ prioridade            │
-└───────────────────────┘
-        │
-        ▼
-┌───────────────────────┐
-│ handle_lead_intake()  │
-│ Seleciona próximo     │
-│ membro disponível     │
-└───────────────────────┘
-        │
-        ├─── Verifica disponibilidade (member_availability)
-        ├─── Rotaciona índice (last_assigned_index)
-        │
-        ▼
-┌───────────────────────┐
-│ Atribui lead ao       │
-│ usuário selecionado   │
-│ + Move para pipeline/ │
-│   stage de destino    │
-└───────────────────────┘
-        │
-        ▼
-┌───────────────────────┐
-│ Registra em           │
-│ assignments_log       │
-└───────────────────────┘
-```
-
-### 5.2 Critérios de Match (round_robin_rules)
-
-```json
-{
-  "source": ["webhook", "whatsapp"],
-  "webhook_id": ["uuid-do-webhook"],
-  "whatsapp_session_id": ["uuid-da-sessao"],
-  "meta_form_id": ["id-do-formulario"],
-  "campaign_name_contains": "Black Friday",
-  "tag_in": ["quente", "priority"],
-  "city_in": ["São Paulo", "Campinas"],
-  "website_category": ["venda", "locacao"],
-  "schedule": {
-    "days": [1, 2, 3, 4, 5],
-    "start": "09:00",
-    "end": "18:00"
-  }
-}
-```
-
-### 5.3 Bolsão (Pool)
-
-Configuração em `pipelines`:
-- `pool_enabled`: Ativa redistribuição automática
-- `pool_timeout_minutes`: Tempo sem interação para redistribuir
-- `pool_max_redistributions`: Limite de redistribuições
-
----
-
-## 💬 6. INTEGRAÇÃO WHATSAPP
-
-### 6.1 Estrutura de Acesso
-
-```text
-whatsapp_sessions
-        │
-        ├── owner_user_id (quem criou a sessão)
-        │
-        └── whatsapp_session_access
-                │
-                └── user_id + can_view = TRUE
-                    (acesso explícito)
-```
-
-### 6.2 Regras de Visibilidade
-
-| Usuário | Vê Sessão? |
-|---------|------------|
-| Owner da sessão | ✅ Sempre |
-| Com acesso em session_access | ✅ Sim |
-| Admin SEM acesso explícito | ❌ Não |
-| Outro usuário | ❌ Não |
-
-### 6.3 Vinculação Lead ↔ Conversa
-
-```text
-whatsapp_conversations.lead_id → leads.id
-        │
-        └── Vinculação automática por telefone normalizado
-            (função normalize_phone())
+```bash
+npm install react-leaflet leaflet
+npm install -D @types/leaflet
 ```
 
 ---
 
-## 💰 7. MÓDULO FINANCEIRO
+## Resumo das Mudanças
 
-### 7.1 Estrutura
-
-```text
-financial_entries          Contas a pagar/receber
-        │
-        └── financial_categories
-
-contracts                  Contratos de venda
-        │
-        ├── leads.id
-        ├── properties.id
-        │
-        └── commissions    Comissões dos corretores
-                │
-                └── users.id (corretor)
-```
-
-### 7.2 Acesso
-
-- **Apenas Admin** pode acessar `/financeiro/*`
-- Protegido por `AdminRoute` no frontend
-- RLS no backend filtra por organization_id
+| Arquivo | Ação |
+|---------|------|
+| Nova migração SQL | Adicionar campos hero_image_url, hero_title, hero_subtitle, page_banner_url |
+| `src/integrations/supabase/types.ts` | Regenerar tipos |
+| `src/hooks/use-organization-site.ts` | Atualizar interface OrganizationSite |
+| `src/hooks/use-public-site.ts` | Atualizar interface PublicSiteConfig |
+| `src/pages/public/PublicSiteLayout.tsx` | Refazer header com glassmorphism escuro |
+| `src/pages/public/PublicHome.tsx` | Hero fullscreen + novo layout de cards |
+| `src/pages/public/PublicProperties.tsx` | Split layout com mapa lateral |
+| `src/pages/public/PublicMap.tsx` | Nova página de busca por mapa |
+| `src/pages/public/PublicContact.tsx` | Novo layout com mapa |
+| `src/pages/SiteSettings.tsx` | Adicionar uploads de imagens hero/banner |
+| `package.json` | Adicionar react-leaflet, leaflet |
 
 ---
 
-## 🚀 8. EDGE FUNCTIONS
+## Resultado Final
 
-### 8.1 Funções Principais
+Após a implementação:
 
-| Função | Descrição | Trigger |
-|--------|-----------|---------|
-| `create-organization-admin` | Cria org + admin | Super Admin |
-| `create-user` | Cria novo usuário | Admin |
-| `delete-user` | Remove usuário | Admin |
-| `delete-organization` | Remove org completa | Super Admin |
-| `generic-webhook` | Recebe leads externos | HTTP POST |
-| `evolution-webhook` | Processa WhatsApp | Evolution API |
-| `meta-webhook` | Processa Meta Ads | Facebook |
-| `automation-trigger` | Inicia automação | Trigger |
-| `pool-checker` | Redistribui inativos | Cron |
-| `handle_lead_intake` | RPC Round Robin | Interno |
-
----
-
-## 🗺️ 9. ROTAS E NAVEGAÇÃO
-
-### 9.1 Mapa de Rotas
-
-```text
-/auth                    ← Pública (login/signup)
-/onboarding              ← Usuário sem organização
-
-/dashboard               ← ProtectedRoute
-/crm/pipelines           ← ProtectedRoute
-/crm/contacts            ← ProtectedRoute
-/crm/conversas           ← ProtectedRoute
-/agenda                  ← ProtectedRoute
-/properties              ← ProtectedRoute (se módulo ativo)
-/plans                   ← ProtectedRoute (telecom)
-/coverage                ← ProtectedRoute (telecom)
-/telecom/customers       ← ProtectedRoute (telecom)
-/settings                ← ProtectedRoute
-
-/crm/management          ← AdminRoute (Gestão CRM)
-/financeiro/*            ← AdminRoute
-/automations             ← AdminRoute
-/settings/site           ← AdminRoute + módulo 'site'
-
-/admin                   ← SuperAdminRoute
-/admin/organizations     ← SuperAdminRoute
-/admin/users             ← SuperAdminRoute
-/admin/settings          ← SuperAdminRoute
-```
-
-### 9.2 Fluxo por Tipo de Usuário
-
-**Super Admin:**
-```text
-Login → /admin → Pode impersonate organização
-        │
-        └── Durante impersonate:
-            → Vê sistema como Admin daquela org
-            → Banner "Voltar ao Painel Admin"
-```
-
-**Admin:**
-```text
-Login → /dashboard → Acesso total à organização
-        │
-        ├── /crm/management (equipes, distribuição)
-        ├── /financeiro/* (contas, contratos)
-        ├── /automations
-        └── /settings (usuários, webhooks, funções)
-```
-
-**Broker/User:**
-```text
-Login → /dashboard → Vê KPIs dos SEUS leads
-        │
-        ├── /crm/pipelines → Vê SEUS leads no Kanban
-        ├── /crm/contacts → Lista SEUS contatos
-        ├── /crm/conversas → WhatsApp (apenas sessões com acesso)
-        └── /agenda → Suas tarefas
-```
-
----
-
-## 🔒 10. POLÍTICAS RLS PRINCIPAIS
-
-### 10.1 Tabela `leads`
-
-```sql
--- SELECT para usuários
-leads.organization_id = get_user_organization_id()
-AND (
-    is_admin() 
-    OR user_has_permission('lead_view_all')
-    OR leads.assigned_user_id = auth.uid()
-)
-
--- INSERT
-organization_id é forçado pelo trigger enforce_organization_id()
-
--- UPDATE
-Mesma lógica do SELECT
-```
-
-### 10.2 Tabela `users`
-
-```sql
--- SELECT
-users.organization_id = get_user_organization_id()
-OR is_super_admin()
-
--- UPDATE
-(id = auth.uid())  -- próprio perfil
-OR (is_admin() AND users.organization_id = get_user_organization_id())
-```
-
-### 10.3 Tabela `whatsapp_conversations`
-
-```sql
--- SELECT
-EXISTS (
-    SELECT 1 FROM whatsapp_sessions ws
-    WHERE ws.id = conversation.session_id
-    AND ws.organization_id = get_user_organization_id()
-    AND (
-        ws.owner_user_id = auth.uid()
-        OR user_has_session_access(ws.id)
-    )
-)
-```
-
----
-
-## 📦 11. FUNÇÕES SQL CRÍTICAS
-
-| Função | Propósito |
-|--------|-----------|
-| `is_super_admin()` | Verifica se é super admin |
-| `is_admin()` | Verifica se é admin da org |
-| `get_user_organization_id()` | Retorna org_id do usuário atual |
-| `user_has_permission(key)` | Verifica permissão RBAC |
-| `user_has_session_access(session_id)` | Verifica acesso WhatsApp |
-| `normalize_phone(phone)` | Normaliza telefone (+55...) |
-| `handle_lead_intake(lead_id)` | Distribui lead via round robin |
-| `pick_round_robin_for_lead(lead_id)` | Encontra fila correta |
-| `is_member_available(user_id)` | Verifica escala de disponibilidade |
-
----
-
-## 🔄 12. TRIGGERS AUTOMÁTICOS
-
-| Trigger | Tabela | Evento | Ação |
-|---------|--------|--------|------|
-| `enforce_organization_id` | leads | INSERT | Define org_id automaticamente |
-| `log_lead_activity` | leads | UPDATE | Registra mudanças em activities |
-| `execute_stage_automations` | leads | UPDATE | Executa automações de estágio |
-| `notify_new_lead` | leads | INSERT | Notifica usuário atribuído |
-| `notify_lead_first_assignment` | leads | UPDATE | Notifica admins + responsável |
-| `notify_lead_assigned` | leads | UPDATE | Notifica transferência |
-| `notify_stage_change` | leads | UPDATE | Notifica quando ganho |
-| `sync_user_roles` | users | INSERT/UPDATE | Sincroniza com user_roles |
-| `handle_deal_status_change` | leads | UPDATE | Define won_at/lost_at |
-
----
-
-## 📊 13. DIAGRAMA DE RELACIONAMENTOS
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                         CORE ENTITIES                                │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  organizations ◄─────────────────────────────────────────┐          │
-│       │                                                   │          │
-│       ├─── users ◄─── user_roles                         │          │
-│       │      │                                            │          │
-│       │      └─── user_organization_roles ───► organization_roles   │
-│       │                                              │               │
-│       │                                              └─► permissions │
-│       │                                                              │
-│       ├─── teams ◄─── team_members ◄─── member_availability         │
-│       │      │                                                       │
-│       │      └─── team_pipelines ──────┐                            │
-│       │                                │                             │
-│       ├─── pipelines ◄─────────────────┘                            │
-│       │      │                                                       │
-│       │      └─── stages ◄─── stage_automations                     │
-│       │             │                                                │
-│       ├─── leads ───┴──────────────────────────────────────────────┐│
-│       │      │                                                      ││
-│       │      ├─── lead_tags ───► tags                              ││
-│       │      ├─── lead_tasks                                        ││
-│       │      ├─── lead_meta                                         ││
-│       │      ├─── activities                                        ││
-│       │      └─── notifications                                     ││
-│       │                                                              │
-│       ├─── round_robins ◄─── round_robin_members                    │
-│       │      │                                                       │
-│       │      └─── round_robin_rules                                 │
-│       │                                                              │
-│       ├─── whatsapp_sessions ◄─── whatsapp_session_access          │
-│       │      │                                                       │
-│       │      └─── whatsapp_conversations ───► whatsapp_messages    │
-│       │                                                              │
-│       ├─── properties (imobiliário)                                 │
-│       │      │                                                       │
-│       │      └─── contracts ───► commissions                        │
-│       │                                                              │
-│       ├─── service_plans (telecom)                                  │
-│       │      │                                                       │
-│       │      └─── telecom_customers ───► telecom_billing           │
-│       │                                                              │
-│       └─── financial_entries ───► financial_categories             │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## ✅ 14. CHECKLIST DE SEGURANÇA
-
-| Área | Status | Descrição |
-|------|--------|-----------|
-| RLS em leads | ✅ | Filtro por org + assigned_user |
-| RLS em users | ✅ | Filtro por organização |
-| RLS em financial | ✅ | Apenas org + admin |
-| RLS em whatsapp | ✅ | Owner + session_access |
-| Super Admin bypass | ✅ | Via is_super_admin() |
-| Impersonation | ✅ | Atualiza org_id temporariamente |
-| RBAC customizado | ✅ | 24 permissões granulares |
-| Team-based access | ✅ | Via team_pipelines |
-| Módulos condicionais | ✅ | organization_modules |
-
----
-
-Este documento serve como referência completa para auditoria e compreensão do sistema. Cada componente está mapeado com suas dependências, fluxos de dados e controles de acesso.
+1. Você poderá configurar as imagens do hero e banner em **Configurações do Site**
+2. O site terá o visual idêntico ao eduardoferreirabroker.com.br
+3. Os imóveis aparecerão no mapa baseado nos endereços cadastrados
+4. Filtros avançados funcionarão como no original
+5. Menu com abas por tipo de imóvel funcionará dinamicamente
