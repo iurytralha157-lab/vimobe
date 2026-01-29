@@ -18,12 +18,23 @@ Deno.serve(async (req) => {
     const propertyCode = url.searchParams.get('property_code');
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '12');
+    
+    // Search & Filters
     const search = url.searchParams.get('search') || '';
     const tipo = url.searchParams.get('tipo') || '';
+    const finalidade = url.searchParams.get('finalidade') || '';
     const minPrice = url.searchParams.get('min_price');
     const maxPrice = url.searchParams.get('max_price');
     const quartos = url.searchParams.get('quartos');
+    const suites = url.searchParams.get('suites');
+    const banheiros = url.searchParams.get('banheiros');
+    const vagas = url.searchParams.get('vagas');
     const cidade = url.searchParams.get('cidade');
+    const bairro = url.searchParams.get('bairro');
+    const minArea = url.searchParams.get('min_area');
+    const maxArea = url.searchParams.get('max_area');
+    const mobilia = url.searchParams.get('mobilia');
+    const pet = url.searchParams.get('pet');
 
     if (!organizationId) {
       return new Response(
@@ -44,7 +55,7 @@ Deno.serve(async (req) => {
       .from('organization_sites')
       .select('is_active')
       .eq('organization_id', organizationId)
-      .single();
+      .maybeSingle();
 
     if (siteError || !siteData?.is_active) {
       return new Response(
@@ -64,24 +75,65 @@ Deno.serve(async (req) => {
           .eq('status', 'ativo')
           .order('created_at', { ascending: false });
 
-        // Apply filters
+        // Search filter
         if (search) {
-          query = query.or(`titulo.ilike.%${search}%,descricao.ilike.%${search}%,bairro.ilike.%${search}%`);
+          query = query.or(`title.ilike.%${search}%,descricao.ilike.%${search}%,bairro.ilike.%${search}%,code.ilike.%${search}%`);
         }
+        
+        // Type filter (Apartamento, Casa, etc)
         if (tipo) {
-          query = query.eq('tipo_imovel', tipo);
+          query = query.eq('tipo_de_imovel', tipo);
         }
+        
+        // Finalidade filter (Venda, Aluguel)
+        if (finalidade) {
+          query = query.ilike('tipo_de_negocio', `%${finalidade}%`);
+        }
+        
+        // Price filters
         if (minPrice) {
-          query = query.gte('valor_venda', parseFloat(minPrice));
+          query = query.gte('preco', parseFloat(minPrice));
         }
         if (maxPrice) {
-          query = query.lte('valor_venda', parseFloat(maxPrice));
+          query = query.lte('preco', parseFloat(maxPrice));
         }
+        
+        // Rooms/features filters
         if (quartos) {
           query = query.gte('quartos', parseInt(quartos));
         }
+        if (suites) {
+          query = query.gte('suites', parseInt(suites));
+        }
+        if (banheiros) {
+          query = query.gte('banheiros', parseInt(banheiros));
+        }
+        if (vagas) {
+          query = query.gte('vagas', parseInt(vagas));
+        }
+        
+        // Location filters
         if (cidade) {
           query = query.ilike('cidade', `%${cidade}%`);
+        }
+        if (bairro) {
+          query = query.ilike('bairro', `%${bairro}%`);
+        }
+        
+        // Area filters
+        if (minArea) {
+          query = query.gte('area_util', parseFloat(minArea));
+        }
+        if (maxArea) {
+          query = query.lte('area_util', parseFloat(maxArea));
+        }
+        
+        // Boolean filters
+        if (mobilia === 'true') {
+          query = query.eq('mobiliado', true);
+        }
+        if (pet === 'true') {
+          query = query.eq('aceita_pet', true);
         }
 
         // Pagination
@@ -117,9 +169,9 @@ Deno.serve(async (req) => {
           .from('properties')
           .select('*')
           .eq('organization_id', organizationId)
-          .eq('codigo', propertyCode)
+          .eq('code', propertyCode)
           .eq('status', 'ativo')
-          .single();
+          .maybeSingle();
 
         if (error || !data) {
           return new Response(
@@ -154,18 +206,17 @@ Deno.serve(async (req) => {
       case 'property-types': {
         const { data, error } = await supabase
           .from('properties')
-          .select('tipo_imovel')
+          .select('tipo_de_imovel')
           .eq('organization_id', organizationId)
           .eq('status', 'ativo')
-          .not('tipo_imovel', 'is', null);
+          .not('tipo_de_imovel', 'is', null);
 
         if (error) {
           console.error('Error fetching property types:', error);
           throw error;
         }
 
-        // Get unique types
-        const types = [...new Set(data?.map(p => p.tipo_imovel).filter(Boolean))];
+        const types = [...new Set(data?.map(p => p.tipo_de_imovel).filter(Boolean))];
         response = { types };
         break;
       }
@@ -183,9 +234,52 @@ Deno.serve(async (req) => {
           throw error;
         }
 
-        // Get unique cities
         const cities = [...new Set(data?.map(p => p.cidade).filter(Boolean))];
         response = { cities };
+        break;
+      }
+
+      case 'neighborhoods': {
+        let neighborhoodQuery = supabase
+          .from('properties')
+          .select('bairro')
+          .eq('organization_id', organizationId)
+          .eq('status', 'ativo')
+          .not('bairro', 'is', null);
+
+        // Filter by city if provided
+        if (cidade) {
+          neighborhoodQuery = neighborhoodQuery.ilike('cidade', `%${cidade}%`);
+        }
+
+        const { data, error } = await neighborhoodQuery;
+
+        if (error) {
+          console.error('Error fetching neighborhoods:', error);
+          throw error;
+        }
+
+        const neighborhoods = [...new Set(data?.map(p => p.bairro).filter(Boolean))];
+        response = { neighborhoods };
+        break;
+      }
+
+      case 'map-properties': {
+        // Return only properties with valid coordinates
+        const { data, error } = await supabase
+          .from('properties')
+          .select('id, code, title, preco, tipo_de_negocio, tipo_de_imovel, quartos, banheiros, vagas, area_util, imagem_principal, latitude, longitude, bairro, cidade')
+          .eq('organization_id', organizationId)
+          .eq('status', 'ativo')
+          .not('latitude', 'is', null)
+          .not('longitude', 'is', null);
+
+        if (error) {
+          console.error('Error fetching map properties:', error);
+          throw error;
+        }
+
+        response = { properties: data || [] };
         break;
       }
 

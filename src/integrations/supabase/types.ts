@@ -2520,10 +2520,12 @@ export type Database = {
           banheiros: number | null
           cep: string | null
           cidade: string | null
+          city_id: string | null
           code: string
           commission_percentage: number | null
           complemento: string | null
           condominio: number | null
+          condominium_id: string | null
           created_at: string
           descricao: string | null
           destaque: boolean | null
@@ -2532,7 +2534,10 @@ export type Database = {
           id: string
           imagem_principal: string | null
           iptu: number | null
+          latitude: number | null
+          longitude: number | null
           mobilia: string | null
+          neighborhood_id: string | null
           numero: string | null
           organization_id: string
           preco: number | null
@@ -2559,10 +2564,12 @@ export type Database = {
           banheiros?: number | null
           cep?: string | null
           cidade?: string | null
+          city_id?: string | null
           code: string
           commission_percentage?: number | null
           complemento?: string | null
           condominio?: number | null
+          condominium_id?: string | null
           created_at?: string
           descricao?: string | null
           destaque?: boolean | null
@@ -2571,7 +2578,10 @@ export type Database = {
           id?: string
           imagem_principal?: string | null
           iptu?: number | null
+          latitude?: number | null
+          longitude?: number | null
           mobilia?: string | null
+          neighborhood_id?: string | null
           numero?: string | null
           organization_id: string
           preco?: number | null
@@ -2598,10 +2608,12 @@ export type Database = {
           banheiros?: number | null
           cep?: string | null
           cidade?: string | null
+          city_id?: string | null
           code?: string
           commission_percentage?: number | null
           complemento?: string | null
           condominio?: number | null
+          condominium_id?: string | null
           created_at?: string
           descricao?: string | null
           destaque?: boolean | null
@@ -2610,7 +2622,10 @@ export type Database = {
           id?: string
           imagem_principal?: string | null
           iptu?: number | null
+          latitude?: number | null
+          longitude?: number | null
           mobilia?: string | null
+          neighborhood_id?: string | null
           numero?: string | null
           organization_id?: string
           preco?: number | null
@@ -2630,7 +2645,124 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "properties_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "property_cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "property_condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: false
+            referencedRelation: "property_neighborhoods"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "properties_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_cities: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          uf: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          uf?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          uf?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_cities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_condominiums: {
+        Row: {
+          address: string | null
+          city_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          neighborhood_id: string | null
+          organization_id: string
+        }
+        Insert: {
+          address?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          neighborhood_id?: string | null
+          organization_id: string
+        }
+        Update: {
+          address?: string | null
+          city_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          neighborhood_id?: string | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_condominiums_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "property_cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_condominiums_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: false
+            referencedRelation: "property_neighborhoods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_condominiums_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -2663,6 +2795,48 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "property_features_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_neighborhoods: {
+        Row: {
+          city_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          city_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+        }
+        Update: {
+          city_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_neighborhoods_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "property_cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_neighborhoods_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

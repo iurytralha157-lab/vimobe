@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { usePublicContext } from "./usePublicContext";
 import { usePropertyTypes } from "@/hooks/use-public-site";
+import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 
 export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
@@ -243,16 +244,20 @@ export default function PublicSiteLayout() {
         <Outlet />
       </main>
 
-      {/* Floating WhatsApp Button - Mobile */}
-      {siteConfig.whatsapp && (
-        <a
-          href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="lg:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors"
-        >
-          <MessageCircle className="w-7 h-7" />
-        </a>
+      {/* Floating WhatsApp Button - Mobile - Opens Contact Form */}
+      {siteConfig.whatsapp && organizationId && (
+        <div className="lg:hidden fixed bottom-6 right-6 z-50">
+          <ContactFormDialog
+            organizationId={organizationId}
+            whatsappNumber={siteConfig.whatsapp}
+            primaryColor={primaryColor}
+            trigger={
+              <button className="w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors">
+                <MessageCircle className="w-7 h-7" />
+              </button>
+            }
+          />
+        </div>
       )}
 
       {/* Footer - Dark Style */}

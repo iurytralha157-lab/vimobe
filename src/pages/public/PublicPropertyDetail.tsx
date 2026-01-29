@@ -1,14 +1,13 @@
 import { useParams, Link, useLocation, useSearchParams } from "react-router-dom";
-import { usePublicProperty, submitContactForm } from "@/hooks/use-public-site";
+import { usePublicProperty } from "@/hooks/use-public-site";
 import { MapPin, Bed, Bath, Car, Maximize, Phone, ArrowLeft, ChevronLeft, ChevronRight, Building, MessageCircle, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "sonner";
 import { usePublicContext } from "./usePublicContext";
+import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 
 export default function PublicPropertyDetail() {
   const { codigo } = useParams<{ codigo: string }>();
@@ -19,8 +18,6 @@ export default function PublicPropertyDetail() {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get base path for preview mode
   const getHref = (path: string) => {
@@ -39,33 +36,6 @@ export default function PublicPropertyDetail() {
 
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!organizationId || !formData.name || !formData.phone) {
-      toast.error('Preencha nome e telefone');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await submitContactForm({
-        organization_id: organizationId,
-        name: formData.name,
-        email: formData.email || undefined,
-        phone: formData.phone,
-        message: formData.message || `Interesse no imóvel ${codigo}`,
-        property_id: property?.id,
-        property_code: codigo,
-      });
-      toast.success('Mensagem enviada! Entraremos em contato em breve.');
-      setFormData({ name: '', email: '', phone: '', message: '' });
-    } catch (error) {
-      toast.error('Erro ao enviar mensagem. Tente novamente.');
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const formatPrice = (value: number | null) => {
@@ -387,51 +357,30 @@ export default function PublicPropertyDetail() {
               </CardContent>
             </Card>
 
-            {/* Contact Form */}
+            {/* Contact Form Card */}
             <Card className="rounded-2xl border-0 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl">Tenho Interesse</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <Input
-                    placeholder="Seu nome *"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    className="rounded-xl"
-                  />
-                  <Input
-                    type="tel"
-                    placeholder="Telefone *"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    required
-                    className="rounded-xl"
-                  />
-                  <Input
-                    type="email"
-                    placeholder="E-mail"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="rounded-xl"
-                  />
-                  <Textarea
-                    placeholder="Mensagem (opcional)"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="rounded-xl resize-none"
-                    rows={3}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full text-white rounded-xl"
-                    style={{ backgroundColor: siteConfig?.primary_color }}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Enviando...' : 'Enviar'}
-                  </Button>
-                </form>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4">Tenho Interesse</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Preencha o formulário para receber mais informações sobre este imóvel.
+                </p>
+                <ContactFormDialog
+                  organizationId={organizationId || ''}
+                  propertyId={property?.id}
+                  propertyCode={property?.codigo}
+                  propertyTitle={property?.titulo}
+                  whatsappNumber={siteConfig?.whatsapp}
+                  primaryColor={siteConfig?.primary_color}
+                  trigger={
+                    <Button
+                      className="w-full text-white rounded-xl gap-2"
+                      style={{ backgroundColor: siteConfig?.primary_color }}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Entrar em Contato
+                    </Button>
+                  }
+                />
               </CardContent>
             </Card>
           </div>

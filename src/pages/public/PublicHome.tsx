@@ -1,12 +1,13 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useFeaturedProperties, usePropertyTypes, usePublicProperties } from "@/hooks/use-public-site";
-import { Search, Building, MapPin, ArrowRight, Bed, Car, Maximize, Heart } from "lucide-react";
+import { Search, Building, MapPin, ArrowRight, Bed, Car, Maximize, Heart, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { usePublicContext } from "./usePublicContext";
 import { cn } from "@/lib/utils";
+import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -441,20 +442,22 @@ export default function PublicHome() {
                 Fale Conosco
               </Button>
             </Link>
-            {siteConfig.whatsapp && (
-              <a
-                href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button 
-                  size="lg"
-                  variant="outline"
-                  className="border-white text-white hover:bg-white/10 px-8 py-6 text-base tracking-wide rounded-full"
-                >
-                  WhatsApp
-                </Button>
-              </a>
+            {siteConfig.whatsapp && organizationId && (
+              <ContactFormDialog
+                organizationId={organizationId}
+                whatsappNumber={siteConfig.whatsapp}
+                primaryColor={primaryColor}
+                trigger={
+                  <Button 
+                    size="lg"
+                    variant="outline"
+                    className="border-white text-white hover:bg-white/10 px-8 py-6 text-base tracking-wide rounded-full gap-2"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    WhatsApp
+                  </Button>
+                }
+              />
             )}
           </div>
         </div>
