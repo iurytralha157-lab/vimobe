@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       .from('organization_sites')
       .select('is_active')
       .eq('organization_id', organization_id)
-      .single();
+      .maybeSingle();
 
     if (siteError || !siteData?.is_active) {
       return new Response(
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       .eq('organization_id', organization_id)
       .order('created_at', { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (pipelineError || !pipeline) {
       console.error('No pipeline found for organization:', pipelineError);
@@ -79,9 +79,9 @@ Deno.serve(async (req) => {
       .from('stages')
       .select('id')
       .eq('pipeline_id', pipeline.id)
-      .order('order', { ascending: true })
+      .order('position', { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (stageError || !stage) {
       console.error('No stage found for pipeline:', stageError);
@@ -114,9 +114,8 @@ Deno.serve(async (req) => {
         .from('activities')
         .insert({
           lead_id: leadId,
-          organization_id: organization_id,
           type: 'note',
-          description: `Nova mensagem do site: ${message || 'Sem mensagem'}${property_code ? ` (Imóvel: ${property_code})` : ''}`
+          content: `Nova mensagem do site: ${message || 'Sem mensagem'}${property_code ? ` (Imóvel: ${property_code})` : ''}`
         });
 
       console.log(`Updated existing lead: ${leadId}`);
@@ -130,12 +129,13 @@ Deno.serve(async (req) => {
         email: email || null,
         telefone: normalizedPhone,
         source: 'website',
-        notes: message || null
+        notes: message || null,
+        stage_entered_at: new Date().toISOString()
       };
 
       // If property_id is provided, add it to lead data
       if (property_id) {
-        leadData.property_id = property_id;
+        leadData.interest_property_id = property_id;
       }
 
       const { data: newLead, error: leadError } = await supabase
@@ -159,12 +159,26 @@ Deno.serve(async (req) => {
         .from('activities')
         .insert({
           lead_id: leadId,
-          organization_id: organization_id,
           type: 'lead_created',
-          description: `Lead criado via site${property_code ? ` (Imóvel: ${property_code})` : ''}`
+          content: `Lead criado via site${property_code ? ` (Imóvel: ${property_code})` : ''}`
         });
 
       console.log(`Created new lead: ${leadId}`);
+
+      // Try to run round-robin distribution
+      try {
+        const { data: distributionResult, error: distributionError } = await supabase
+          .rpc('handle_lead_intake', { p_lead_id: leadId });
+        
+        if (distributionError) {
+          console.log('Distribution skipped (no active queue or error):', distributionError.message);
+        } else if (distributionResult?.success) {
+          console.log(`Lead distributed to user: ${distributionResult.assigned_user_id}`);
+        }
+      } catch (distError) {
+        console.log('Distribution attempt failed:', distError);
+        // Continue without distribution - lead stays unassigned
+      }
     }
 
     // Create notification for admins
