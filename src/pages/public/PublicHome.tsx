@@ -235,41 +235,6 @@ export default function PublicHome() {
         </section>
       )}
 
-      {/* Category Accordion Section */}
-      <section className="py-0 bg-[#0D0D0D]">
-        <div className="h-[400px] md:h-[500px] flex overflow-hidden">
-          {categories.map((cat, idx) => (
-            <Link
-              key={cat.name}
-              to={getHref(`imoveis?tipo=${encodeURIComponent(cat.type)}`)}
-              onMouseEnter={() => setHoveredCategory(idx)}
-              onMouseLeave={() => setHoveredCategory(null)}
-              className={cn(
-                "relative h-full overflow-hidden transition-all duration-500 ease-out cursor-pointer",
-                hoveredCategory === null 
-                  ? "flex-1"
-                  : hoveredCategory === idx 
-                    ? "flex-[2]"
-                    : "flex-[0.6]"
-              )}
-            >
-              <img
-                src={cat.image}
-                alt={cat.name}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
-                style={{ transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)' }}
-              />
-              <div className="absolute inset-0 bg-black/40 hover:bg-black/30 transition-colors" />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                <span className="bg-white text-gray-900 px-4 py-2 text-sm font-semibold tracking-wide">
-                  {cat.name}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* All Properties Section */}
       {allProperties.length > 0 && (
         <section className="py-20 bg-gray-50">
@@ -366,6 +331,41 @@ export default function PublicHome() {
           </div>
         </section>
       )}
+
+      {/* Category Accordion Section */}
+      <section className="py-0 bg-[#0D0D0D]">
+        <div className="h-[400px] md:h-[500px] flex overflow-hidden">
+          {categories.map((cat, idx) => (
+            <Link
+              key={cat.name}
+              to={getHref(`imoveis?tipo=${encodeURIComponent(cat.type)}`)}
+              onMouseEnter={() => setHoveredCategory(idx)}
+              onMouseLeave={() => setHoveredCategory(null)}
+              className={cn(
+                "relative h-full overflow-hidden transition-all duration-500 ease-out cursor-pointer",
+                hoveredCategory === null 
+                  ? "flex-1"
+                  : hoveredCategory === idx 
+                    ? "flex-[2]"
+                    : "flex-[0.6]"
+              )}
+            >
+              <img
+                src={cat.image}
+                alt={cat.name}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
+                style={{ transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)' }}
+              />
+              <div className="absolute inset-0 bg-black/40 hover:bg-black/30 transition-colors" />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                <span className="bg-white text-gray-900 px-4 py-2 text-sm font-semibold tracking-wide">
+                  {cat.name}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section 
