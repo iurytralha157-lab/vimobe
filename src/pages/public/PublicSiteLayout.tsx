@@ -42,20 +42,21 @@ export default function PublicSiteLayout() {
     );
   }
 
+  const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
+  const orgParam = new URLSearchParams(location.search).get('org');
+
   const isActive = (path: string) => {
-    const currentPath = location.pathname.replace('/site/previsualização', '');
+    const currentPath = location.pathname.replace('/site/preview', '').replace('/site/previsualização', '');
     if (path === "") return currentPath === "" || currentPath === "/";
     return currentPath.includes(`/${path}`);
   };
 
   const getHref = (path: string) => {
-    if (location.pathname.includes('/site/previsualização')) {
-      // Preserve org param and add any new params
-      const orgParam = new URLSearchParams(location.search).get('org');
+    if (isPreviewMode && orgParam) {
       if (path.includes('?')) {
-        return `/site/previsualização/${path}&org=${orgParam}`;
+        return `/site/preview/${path}&org=${orgParam}`;
       }
-      return `/site/previsualização/${path}?org=${orgParam}`;
+      return `/site/preview/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };

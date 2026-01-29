@@ -37,13 +37,15 @@ export default function PublicMap() {
     popupAnchor: [0, -32],
   }), [primaryColor]);
 
+  const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
+  const orgParam = new URLSearchParams(location.search).get('org');
+  
   const getHref = (path: string) => {
-    if (location.pathname.includes('/site/previsualização')) {
-      const orgParam = new URLSearchParams(location.search).get('org');
+    if (isPreviewMode && orgParam) {
       if (path.includes('?')) {
-        return `/site/previsualização/${path}&org=${orgParam}`;
+        return `/site/preview/${path}&org=${orgParam}`;
       }
-      return `/site/previsualização/${path}?org=${orgParam}`;
+      return `/site/preview/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };

@@ -10,10 +10,12 @@ export default function PublicAbout() {
   const [searchParams] = useSearchParams();
 
   // Get base path for preview mode
+  const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
+  const orgParam = searchParams.get('org');
+  
   const getHref = (path: string) => {
-    if (location.pathname.includes('/site/previsualização')) {
-      const orgParam = searchParams.get('org');
-      return `/site/previsualização/${path}?org=${orgParam}`;
+    if (isPreviewMode && orgParam) {
+      return `/site/preview/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };
