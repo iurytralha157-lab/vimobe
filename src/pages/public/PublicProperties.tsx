@@ -8,19 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-
-// Try to import from PreviewSiteWrapper context first (for preview mode)
-let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
-try {
-  const previewContext = require('./PreviewSiteWrapper');
-  usePublicSiteContext = previewContext.usePreviewSiteContext;
-} catch {
-  const publicContext = require('@/contexts/PublicSiteContext');
-  usePublicSiteContext = publicContext.usePublicSiteContext;
-}
+import { usePublicContext } from "./usePublicContext";
 
 export default function PublicProperties() {
-  const { organizationId, siteConfig } = usePublicSiteContext();
+  const { organizationId, siteConfig } = usePublicContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   
@@ -105,6 +96,10 @@ export default function PublicProperties() {
     if (!value) return null;
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   };
+
+  if (!siteConfig) {
+    return null;
+  }
 
   const FiltersContent = ({ onClose }: { onClose?: () => void }) => (
     <div className="space-y-6">
@@ -205,7 +200,7 @@ export default function PublicProperties() {
       {/* Header */}
       <div 
         className="py-16 md:py-20 relative overflow-hidden"
-        style={{ backgroundColor: siteConfig?.secondary_color }}
+        style={{ backgroundColor: siteConfig.secondary_color }}
       >
         <div 
           className="absolute inset-0 opacity-10"
@@ -249,7 +244,7 @@ export default function PublicProperties() {
                     {activeFilterCount > 0 && (
                       <Badge 
                         className="text-white"
-                        style={{ backgroundColor: siteConfig?.primary_color }}
+                        style={{ backgroundColor: siteConfig.primary_color }}
                       >
                         {activeFilterCount}
                       </Badge>
@@ -410,26 +405,35 @@ export default function PublicProperties() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="rounded-full w-10 h-10"
+                      className="rounded-full"
                       disabled={filters.page <= 1}
                       onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </Button>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
-                        const page = i + 1;
+                        let pageNum;
+                        if (data.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (filters.page <= 3) {
+                          pageNum = i + 1;
+                        } else if (filters.page >= data.totalPages - 2) {
+                          pageNum = data.totalPages - 4 + i;
+                        } else {
+                          pageNum = filters.page - 2 + i;
+                        }
                         return (
                           <Button
-                            key={page}
-                            variant={filters.page === page ? "default" : "outline"}
+                            key={pageNum}
+                            variant={filters.page === pageNum ? "default" : "ghost"}
                             size="icon"
-                            className={`rounded-full w-10 h-10 ${filters.page === page ? 'text-white' : ''}`}
-                            style={filters.page === page ? { backgroundColor: siteConfig?.primary_color } : {}}
-                            onClick={() => setFilters(prev => ({ ...prev, page }))}
+                            className="rounded-full w-10 h-10"
+                            style={filters.page === pageNum ? { backgroundColor: siteConfig.primary_color } : {}}
+                            onClick={() => setFilters(prev => ({ ...prev, page: pageNum }))}
                           >
-                            {page}
+                            {pageNum}
                           </Button>
                         );
                       })}
@@ -438,7 +442,7 @@ export default function PublicProperties() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="rounded-full w-10 h-10"
+                      className="rounded-full"
                       disabled={filters.page >= data.totalPages}
                       onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
                     >

@@ -6,19 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
-
-// Try to import from PreviewSiteWrapper context first (for preview mode)
-let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
-try {
-  const previewContext = require('./PreviewSiteWrapper');
-  usePublicSiteContext = previewContext.usePreviewSiteContext;
-} catch {
-  const publicContext = require('@/contexts/PublicSiteContext');
-  usePublicSiteContext = publicContext.usePublicSiteContext;
-}
+import { usePublicContext } from "./usePublicContext";
 
 export default function PublicHome() {
-  const { organizationId, siteConfig } = usePublicSiteContext();
+  const { organizationId, siteConfig } = usePublicContext();
   const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
   const navigate = useNavigate();
@@ -52,6 +43,10 @@ export default function PublicHome() {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   };
 
+  if (!siteConfig) {
+    return null;
+  }
+
   return (
     <div>
       {/* Hero Section - Modern Style */}
@@ -60,7 +55,7 @@ export default function PublicHome() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ 
-            backgroundImage: `linear-gradient(135deg, ${siteConfig?.secondary_color || '#1E293B'} 0%, ${siteConfig?.primary_color || '#F97316'}50 100%)`
+            backgroundImage: `linear-gradient(135deg, ${siteConfig.secondary_color || '#1E293B'} 0%, ${siteConfig.primary_color || '#F97316'}50 100%)`
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent"></div>
@@ -70,10 +65,10 @@ export default function PublicHome() {
           <div className="max-w-2xl">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
               Encontre o Imóvel<br />
-              <span style={{ color: siteConfig?.primary_color }}>dos Seus Sonhos</span>
+              <span style={{ color: siteConfig.primary_color }}>dos Seus Sonhos</span>
             </h1>
             <p className="text-lg md:text-xl text-white/80 mb-10 max-w-xl">
-              {siteConfig?.site_description || "Navegue por nossa seleção exclusiva de imóveis e encontre o lugar perfeito para você e sua família."}
+              {siteConfig.site_description || "Navegue por nossa seleção exclusiva de imóveis e encontre o lugar perfeito para você e sua família."}
             </p>
 
             {/* Search Form - Modern Card Style */}
@@ -110,7 +105,7 @@ export default function PublicHome() {
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
-                    style={{ backgroundColor: siteConfig?.primary_color }}
+                    style={{ backgroundColor: siteConfig.primary_color }}
                   >
                     <Search className="w-5 h-5 mr-2" />
                     Buscar
@@ -130,7 +125,7 @@ export default function PublicHome() {
               <div>
                 <span 
                   className="text-sm font-semibold uppercase tracking-wider"
-                  style={{ color: siteConfig?.primary_color }}
+                  style={{ color: siteConfig.primary_color }}
                 >
                   Destaques
                 </span>
@@ -143,7 +138,7 @@ export default function PublicHome() {
                 <Button 
                   variant="outline" 
                   className="rounded-full border-2 gap-2"
-                  style={{ borderColor: siteConfig?.primary_color, color: siteConfig?.primary_color }}
+                  style={{ borderColor: siteConfig.primary_color, color: siteConfig.primary_color }}
                 >
                   Ver todos os imóveis
                   <ArrowRight className="w-4 h-4" />
@@ -169,7 +164,7 @@ export default function PublicHome() {
                         {property.destaque && (
                           <span 
                             className="px-3 py-1 text-xs font-bold text-white rounded-full shadow-lg"
-                            style={{ backgroundColor: siteConfig?.primary_color }}
+                            style={{ backgroundColor: siteConfig.primary_color }}
                           >
                             Destaque
                           </span>
@@ -240,7 +235,7 @@ export default function PublicHome() {
             <div className="text-center mb-12">
               <span 
                 className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: siteConfig?.primary_color }}
+                style={{ color: siteConfig.primary_color }}
               >
                 Categorias
               </span>
@@ -260,16 +255,16 @@ export default function PublicHome() {
                   <div 
                     className="relative p-6 rounded-2xl text-center transition-all duration-300 hover:shadow-lg overflow-hidden"
                     style={{ 
-                      backgroundColor: index % 2 === 0 ? `${siteConfig?.primary_color}10` : '#f8fafc'
+                      backgroundColor: index % 2 === 0 ? `${siteConfig.primary_color}10` : '#f8fafc'
                     }}
                   >
                     <div 
                       className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center transition-transform group-hover:scale-110"
-                      style={{ backgroundColor: `${siteConfig?.primary_color}20` }}
+                      style={{ backgroundColor: `${siteConfig.primary_color}20` }}
                     >
                       <Building 
                         className="w-7 h-7"
-                        style={{ color: siteConfig?.primary_color }}
+                        style={{ color: siteConfig.primary_color }}
                       />
                     </div>
                     <span className="font-semibold text-gray-800 group-hover:text-gray-900">
@@ -277,7 +272,7 @@ export default function PublicHome() {
                     </span>
                     <ChevronRight 
                       className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: siteConfig?.primary_color }}
+                      style={{ color: siteConfig.primary_color }}
                     />
                   </div>
                 </Link>
@@ -291,7 +286,7 @@ export default function PublicHome() {
       <section className="py-20 relative overflow-hidden">
         <div 
           className="absolute inset-0"
-          style={{ backgroundColor: siteConfig?.secondary_color }}
+          style={{ backgroundColor: siteConfig.secondary_color }}
         >
           <div 
             className="absolute inset-0 opacity-10"
@@ -314,13 +309,13 @@ export default function PublicHome() {
               <Button 
                 size="lg"
                 className="text-white w-full sm:w-auto rounded-full px-8 shadow-lg hover:shadow-xl transition-all"
-                style={{ backgroundColor: siteConfig?.primary_color }}
+                style={{ backgroundColor: siteConfig.primary_color }}
               >
                 Fale Conosco
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
-            {siteConfig?.whatsapp && (
+            {siteConfig.whatsapp && (
               <a
                 href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
                 target="_blank"

@@ -8,20 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "sonner";
-
-// Try to import from PreviewSiteWrapper context first (for preview mode)
-let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
-try {
-  const previewContext = require('./PreviewSiteWrapper');
-  usePublicSiteContext = previewContext.usePreviewSiteContext;
-} catch {
-  const publicContext = require('@/contexts/PublicSiteContext');
-  usePublicSiteContext = publicContext.usePublicSiteContext;
-}
+import { usePublicContext } from "./usePublicContext";
 
 export default function PublicPropertyDetail() {
   const { codigo } = useParams<{ codigo: string }>();
-  const { organizationId, siteConfig } = usePublicSiteContext();
+  const { organizationId, siteConfig } = usePublicContext();
   const { data: property, isLoading } = usePublicProperty(organizationId, codigo || null);
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -408,37 +399,37 @@ export default function PublicPropertyDetail() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="rounded-xl h-12"
+                    className="rounded-xl"
                   />
                   <Input
                     type="tel"
-                    placeholder="Seu telefone *"
+                    placeholder="Telefone *"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     required
-                    className="rounded-xl h-12"
+                    className="rounded-xl"
                   />
                   <Input
                     type="email"
-                    placeholder="Seu e-mail"
+                    placeholder="E-mail"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="rounded-xl h-12"
+                    className="rounded-xl"
                   />
                   <Textarea
                     placeholder="Mensagem (opcional)"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    rows={3}
                     className="rounded-xl resize-none"
+                    rows={3}
                   />
-                  <Button 
+                  <Button
                     type="submit"
-                    className="w-full text-white rounded-xl h-12 font-semibold"
+                    className="w-full text-white rounded-xl"
                     style={{ backgroundColor: siteConfig?.primary_color }}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Enviando...' : 'Enviar Mensagem'}
+                    {isSubmitting ? 'Enviando...' : 'Enviar'}
                   </Button>
                 </form>
               </CardContent>
