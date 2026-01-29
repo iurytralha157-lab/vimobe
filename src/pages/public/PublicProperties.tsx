@@ -147,16 +147,39 @@ export default function PublicProperties() {
     return null;
   }
 
+  // Separate local state for search input to prevent focus loss
+  const [localSearch, setLocalSearch] = useState(filters.search);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Sync local search with debounced update to filters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== filters.search) {
+        updateFilter('search', localSearch);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [localSearch]);
+  
+  // Sync local search when filters.search changes externally (e.g., from URL)
+  useEffect(() => {
+    if (filters.search !== localSearch && document.activeElement !== searchInputRef.current) {
+      setLocalSearch(filters.search);
+    }
+  }, [filters.search]);
+
   const FiltersContent = ({ onClose }: { onClose?: () => void }) => (
     <div className="space-y-6">
       {/* Basic Filters - Always visible */}
       <div>
         <label className="text-sm font-semibold text-gray-700 mb-2 block">Buscar</label>
-        <Input
+        <input
+          ref={searchInputRef}
+          type="text"
           placeholder="Localização, bairro..."
-          value={filters.search}
-          onChange={(e) => updateFilter('search', e.target.value)}
-          className="rounded-xl"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          className="flex h-10 w-full rounded-xl border-0 bg-muted px-4 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
         />
       </div>
 
