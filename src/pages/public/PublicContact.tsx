@@ -1,12 +1,21 @@
-import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
 import { submitContactForm } from "@/hooks/use-public-site";
-import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle, Send, Clock } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { toast } from "sonner";
+
+// Try to import from PreviewSiteWrapper context first (for preview mode)
+let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
+try {
+  const previewContext = require('./PreviewSiteWrapper');
+  usePublicSiteContext = previewContext.usePreviewSiteContext;
+} catch {
+  const publicContext = require('@/contexts/PublicSiteContext');
+  usePublicSiteContext = publicContext.usePublicSiteContext;
+}
 
 export default function PublicContact() {
   const { organizationId, siteConfig } = usePublicSiteContext();

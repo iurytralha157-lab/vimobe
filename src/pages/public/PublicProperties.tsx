@@ -1,7 +1,6 @@
-import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { usePublicProperties, usePropertyTypes, usePublicCities } from "@/hooks/use-public-site";
-import { Link, useSearchParams } from "react-router-dom";
-import { Search, MapPin, Bed, Bath, Car, Maximize, Filter, X, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Search, MapPin, Bed, Bath, Car, Maximize, X, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,9 +9,20 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 
+// Try to import from PreviewSiteWrapper context first (for preview mode)
+let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
+try {
+  const previewContext = require('./PreviewSiteWrapper');
+  usePublicSiteContext = previewContext.usePreviewSiteContext;
+} catch {
+  const publicContext = require('@/contexts/PublicSiteContext');
+  usePublicSiteContext = publicContext.usePublicSiteContext;
+}
+
 export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicSiteContext();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
@@ -38,18 +48,39 @@ export default function PublicProperties() {
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
   const { data: cities = [] } = usePublicCities(organizationId);
 
-  // Update URL when filters change
+  // Get base path for preview mode
+  const getHref = (path: string) => {
+    if (location.pathname.includes('/site/previsualização')) {
+      const orgParam = searchParams.get('org');
+      return `/site/previsualização/${path}?org=${orgParam}`;
+    }
+    return `/${path}`;
+  };
+
+  // Update URL when filters change (only non-org params)
   useEffect(() => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams);
+    // Keep org param if it exists
+    const orgParam = searchParams.get('org');
+    
     if (filters.search) params.set('search', filters.search);
+    else params.delete('search');
     if (filters.tipo) params.set('tipo', filters.tipo);
+    else params.delete('tipo');
     if (filters.cidade) params.set('cidade', filters.cidade);
+    else params.delete('cidade');
     if (filters.quartos) params.set('quartos', filters.quartos);
+    else params.delete('quartos');
     if (filters.minPrice) params.set('min_price', filters.minPrice);
+    else params.delete('min_price');
     if (filters.maxPrice) params.set('max_price', filters.maxPrice);
+    else params.delete('max_price');
     if (filters.page > 1) params.set('page', String(filters.page));
+    else params.delete('page');
+    
+    if (orgParam) params.set('org', orgParam);
     setSearchParams(params);
-  }, [filters, setSearchParams]);
+  }, [filters]);
 
   const updateFilter = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -304,7 +335,7 @@ export default function PublicProperties() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {data?.properties?.map((property) => (
-                    <Link key={property.id} to={`/imoveis/${property.codigo}`}>
+                    <Link key={property.id} to={getHref(`imoveis/${property.codigo}`)}>
                       <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-white rounded-2xl h-full">
                         <div className="relative h-56 overflow-hidden">
                           <img
@@ -402,21 +433,8 @@ export default function PublicProperties() {
                           </Button>
                         );
                       })}
-                      {data.totalPages > 5 && (
-                        <>
-                          <span className="text-gray-400">...</span>
-                          <Button
-                            variant={filters.page === data.totalPages ? "default" : "outline"}
-                            size="icon"
-                            className="rounded-full w-10 h-10"
-                            onClick={() => setFilters(prev => ({ ...prev, page: data.totalPages }))}
-                          >
-                            {data.totalPages}
-                          </Button>
-                        </>
-                      )}
                     </div>
-                    
+
                     <Button
                       variant="outline"
                       size="icon"

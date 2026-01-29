@@ -172,14 +172,28 @@ Registro A (www):
               Configure seu site imobiliário público
             </p>
           </div>
-          {getSiteUrl() && site?.is_active && (
-            <a href={getSiteUrl()!} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Visitar Site
-              </Button>
-            </a>
-          )}
+          <div className="flex gap-2">
+            {site && (
+              <a 
+                href={`/site/previsualização?org=${profile?.organization_id}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <Button variant="outline">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Preview
+                </Button>
+              </a>
+            )}
+            {getSiteUrl() && site?.is_active && (
+              <a href={getSiteUrl()!} target="_blank" rel="noopener noreferrer">
+                <Button>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Visitar Site
+                </Button>
+              </a>
+            )}
+          </div>
         </div>
 
         {!site && (
