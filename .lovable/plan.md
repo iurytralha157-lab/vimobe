@@ -1,209 +1,133 @@
 
+# Plano: Adicionar Permissões para Planos, Localidades e Clientes Telecom
 
-# Plano: Ajustes no Site Público - Navegação, Filtros e UX
-
-## Resumo dos Problemas Identificados
-
-Baseado no feedback, identifiquei 7 pontos a corrigir:
-
-| # | Problema | Localização |
-|---|----------|-------------|
-| 1 | Botão "CONTATO" está branco, deve usar cor primária | Header |
-| 2 | Adicionar mapa de localização na página de contato | PublicContact |
-| 3 | WhatsApp deve abrir popup de formulário antes de redirecionar | Rodapé + Contato |
-| 4 | Navegação não atualiza filtros quando já está na página de imóveis | Header filterLinks |
-| 5 | Item de menu ativo não destaca corretamente (Aluguel/Apartamentos) | Header |
-| 6 | Campo de busca perde foco ao digitar (bug de re-render) | PublicProperties |
-| 7 | Badges de filtro ativos estão apagados, precisam de cor destaque | PublicProperties |
+## Objetivo
+Adicionar novas opções de permissão no sistema de Funções (RBAC) para os módulos de Telecom:
+- **Planos de Serviço**: Ver e Editar
+- **Localidades (Cobertura)**: Ver e Editar  
+- **Clientes Telecom**: Ver todos, Ver próprios, Editar
 
 ---
 
-## Soluções por Arquivo
+## Novas Permissões a Adicionar
 
-### 1. `src/pages/public/PublicSiteLayout.tsx`
-
-**Correção do botão CONTATO:**
-- Mudar de `bg-white text-gray-800` para usar `primaryColor` como background
-
-**Correção do highlight de menu:**
-- Atualizar a função `isActive()` para detectar query params (tipo, finalidade)
-- Quando URL tiver `?tipo=Apartamento`, destacar "APARTAMENTOS"
-- Quando URL tiver `?finalidade=aluguel`, destacar "ALUGUEL"
-
-**WhatsApp no rodapé com popup:**
-- Envolver o link do WhatsApp no rodapé com `ContactFormDialog`
-
-**Código atual do botão:**
-```tsx
-<Link 
-  to={getHref("contato")}
-  className="bg-white text-gray-800 px-6 py-2.5 rounded-full..."
->
-  CONTATO
-</Link>
-```
-
-**Novo código:**
-```tsx
-<Link 
-  to={getHref("contato")}
-  className="px-6 py-2.5 rounded-full text-sm font-light tracking-wide transition-colors"
-  style={{ backgroundColor: primaryColor, color: 'white' }}
->
-  CONTATO
-</Link>
-```
-
-**Nova função isActive para filterLinks:**
-```tsx
-const isFilterActive = (href: string) => {
-  const urlParams = new URLSearchParams(location.search);
-  if (href.includes('tipo=Apartamento')) return urlParams.get('tipo') === 'Apartamento';
-  if (href.includes('tipo=Casa')) return urlParams.get('tipo') === 'Casa';
-  if (href.includes('finalidade=aluguel')) return urlParams.get('finalidade') === 'aluguel';
-  return false;
-};
-```
+| Chave | Nome | Descrição | Categoria |
+|-------|------|-----------|-----------|
+| `plans_view` | Ver planos | Visualizar catálogo de planos | modules |
+| `plans_edit` | Editar planos | Criar, editar e excluir planos | modules |
+| `coverage_view` | Ver localidades | Visualizar áreas de cobertura | modules |
+| `coverage_edit` | Editar localidades | Criar, editar e excluir localidades | modules |
+| `customers_view_all` | Ver todos os clientes | Visualizar todos os clientes telecom | data |
+| `customers_view_own` | Ver próprios clientes | Ver apenas clientes criados por si | data |
+| `customers_edit` | Editar clientes | Criar, editar e excluir clientes | data |
 
 ---
 
-### 2. `src/pages/public/PublicProperties.tsx`
+## Arquivos a Modificar
 
-**Correção do bug de digitação:**
-- O problema é que os filtros são inicializados apenas uma vez via `useState`
-- Quando a URL muda (clique no header), o estado não é atualizado
-- Adicionar `useEffect` para sincronizar state com searchParams
+### 1. Migração SQL (nova)
+Inserir as novas permissões na tabela `available_permissions`:
+
+```sql
+INSERT INTO available_permissions (key, name, description, category) VALUES
+('plans_view', 'Ver planos', 'Visualizar catálogo de planos de serviço', 'modules'),
+('plans_edit', 'Editar planos', 'Criar, editar e excluir planos de serviço', 'modules'),
+('coverage_view', 'Ver localidades', 'Visualizar áreas de cobertura', 'modules'),
+('coverage_edit', 'Editar localidades', 'Criar, editar e excluir áreas de cobertura', 'modules'),
+('customers_view_all', 'Ver todos os clientes', 'Visualizar todos os clientes telecom da organização', 'data'),
+('customers_view_own', 'Ver próprios clientes', 'Visualizar apenas clientes criados por si', 'data'),
+('customers_edit', 'Editar clientes', 'Criar, editar e excluir clientes telecom', 'data');
+```
+
+### 2. `src/pages/ServicePlans.tsx`
+- Verificar permissão `plans_view` para acesso à página
+- Verificar permissão `plans_edit` para mostrar botões de criar/editar/excluir
+- Substituir checagem `isAdmin` por verificação de permissão
 
 **Antes:**
 ```tsx
-const [filters, setFilters] = useState({
-  search: searchParams.get('search') || '',
-  tipo: searchParams.get('tipo') || '',
-  // ...
-});
+const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+// ...
+{isAdmin && (
+  <Button onClick={() => setFormOpen(true)}>
+    <Plus /> Novo Plano
+  </Button>
+)}
 ```
 
 **Depois:**
 ```tsx
-const [filters, setFilters] = useState(() => ({
-  search: searchParams.get('search') || '',
-  tipo: searchParams.get('tipo') || '',
-  // ...
-}));
-
-// Sincronizar com URL quando searchParams mudar externamente
-useEffect(() => {
-  setFilters({
-    search: searchParams.get('search') || '',
-    tipo: searchParams.get('tipo') || '',
-    finalidade: searchParams.get('finalidade') || '',
-    cidade: searchParams.get('cidade') || '',
-    quartos: searchParams.get('quartos') || '',
-    minPrice: searchParams.get('min_price') || '',
-    maxPrice: searchParams.get('max_price') || '',
-    banheiros: searchParams.get('banheiros') || '',
-    vagas: searchParams.get('vagas') || '',
-    page: parseInt(searchParams.get('page') || '1'),
-  });
-}, [location.search]); // Reagir a mudanças na URL
-```
-
-**Correção das badges de filtro:**
-- Adicionar estilo com `primaryColor` ao invés de `variant="secondary"`
-
-```tsx
-{filters.finalidade && (
-  <Badge 
-    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
-    style={{ backgroundColor: primaryColor }}
-  >
-    {filters.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
-    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('finalidade', '')} />
-  </Badge>
+import { useUserPermissions } from '@/hooks/use-user-permissions';
+// ...
+const { hasPermission } = useUserPermissions();
+const canEdit = hasPermission('plans_edit');
+// ...
+{canEdit && (
+  <Button onClick={() => setFormOpen(true)}>
+    <Plus /> Novo Plano
+  </Button>
 )}
 ```
 
-**Correção do input de busca (perda de foco):**
-- O problema está no useEffect que atualiza URL a cada mudança de filtro
-- Usar `useDebouncedValue` para o campo de busca apenas
+### 3. `src/pages/CoverageAreas.tsx`
+- Verificar permissão `coverage_view` para acesso
+- Verificar permissão `coverage_edit` para botões de edição
+- Mesma lógica do ServicePlans
+
+### 4. `src/pages/TelecomCustomers.tsx`
+- Verificar `customers_view_all` para ver todos os clientes
+- Verificar `customers_view_own` para ver apenas os próprios
+- Verificar `customers_edit` para criar/editar/excluir
+- Atualizar query do hook `useTelecomCustomers` para filtrar por `created_by` quando não tiver `customers_view_all`
+
+### 5. `src/hooks/use-telecom-customers.ts`
+Adicionar lógica de filtragem baseada em permissão:
 
 ```tsx
-// Debounce apenas para o campo search
-const debouncedSearch = useDebouncedValue(filters.search, 300);
-
-// No useEffect, usar debouncedSearch ao invés de filters.search
-useEffect(() => {
-  const params = new URLSearchParams();
-  if (debouncedSearch) params.set('search', debouncedSearch);
-  // ... resto dos filtros
-}, [debouncedSearch, filters.tipo, filters.finalidade, ...]);
+// Se não tem permissão de ver todos, filtrar por created_by
+if (!hasViewAllPermission) {
+  query = query.eq('created_by', userId);
+}
 ```
 
 ---
 
-### 3. `src/pages/public/PublicContact.tsx`
+## Lógica de Permissões
 
-**Adicionar mapa de localização:**
-- Usar Leaflet para exibir um mapa estático com a localização do endereço
-- Posicionar abaixo do formulário de contato
-- Usar geocodificação simples ou coordenadas padrão
+### Planos
+- `plans_view`: Pode acessar a página e ver os planos
+- `plans_edit`: Pode criar, editar e excluir planos (inclui view)
+- Admin/Super Admin: Sempre tem ambos
 
-```tsx
-// Adicionar seção de mapa após o grid de contato
-{siteConfig.address && (
-  <section className="py-10 bg-white">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Nossa Localização</h3>
-      <div className="h-[400px] rounded-2xl overflow-hidden shadow-lg">
-        <MapContainer center={[-23.5505, -46.6333]} zoom={15} className="h-full w-full">
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <Marker position={[-23.5505, -46.6333]}>
-            <Popup>{siteConfig.address}</Popup>
-          </Marker>
-        </MapContainer>
-      </div>
-    </div>
-  </section>
-)}
-```
+### Localidades
+- `coverage_view`: Pode acessar a página e ver localidades
+- `coverage_edit`: Pode criar, editar e excluir (inclui view)
+- Admin/Super Admin: Sempre tem ambos
 
-**WhatsApp com popup:**
-- Substituir link direto do WhatsApp por `ContactFormDialog`
+### Clientes
+- `customers_view_own`: Vê apenas clientes que ele criou
+- `customers_view_all`: Vê todos os clientes da organização
+- `customers_edit`: Pode criar, editar e excluir
+- Admin/Super Admin: Sempre vê todos e pode editar
 
 ---
 
 ## Resumo das Alterações
 
-| Arquivo | Mudanças |
-|---------|----------|
-| `PublicSiteLayout.tsx` | Botão CONTATO laranja, isActive para filtros, WhatsApp footer com popup |
-| `PublicProperties.tsx` | Sync URL → state, debounce no search, badges coloridas |
-| `PublicContact.tsx` | Mapa de localização, WhatsApp com popup |
+| Arquivo | Mudança |
+|---------|---------|
+| Nova migração SQL | Inserir 7 novas permissões |
+| `ServicePlans.tsx` | Usar `hasPermission('plans_edit')` ao invés de `isAdmin` |
+| `CoverageAreas.tsx` | Usar `hasPermission('coverage_edit')` ao invés de `isAdmin` |
+| `TelecomCustomers.tsx` | Adicionar lógica de permissões para view/edit |
+| `use-telecom-customers.ts` | Filtrar por `created_by` quando necessário |
 
 ---
 
-## Detalhes Técnicos
+## Observações Técnicas
 
-### Bug do Input de Busca
-O problema ocorre porque:
-1. Usuário digita no input
-2. `updateFilter` atualiza o state
-3. `useEffect` dispara e chama `setSearchParams`
-4. React re-renderiza o componente
-5. O input perde o foco
+1. **Compatibilidade**: As páginas continuam funcionando para admins sem necessidade de atribuir permissões - o hook `useUserPermissions` já retorna `true` para admins e super admins.
 
-**Solução:** Usar debounce no campo de busca para atualizar a URL apenas após o usuário parar de digitar.
+2. **Segurança**: A filtragem de clientes por `created_by` será feita no frontend E no RLS do banco para garantir segurança em camadas.
 
-### Navegação do Header não Atualiza Filtros
-O problema ocorre porque:
-1. Os filtros são inicializados no `useState` apenas na montagem do componente
-2. Quando o usuário clica em "Casas" no header, a URL muda mas o state não
-3. O componente já está montado, então `useState` não re-executa
-
-**Solução:** Adicionar `useEffect` que observa `location.search` e sincroniza o state com os searchParams.
-
-### isActive para Links com Filtros
-A função atual só verifica o pathname, não os query params. Precisamos:
-1. Para links simples (HOME, MAPA): verificar pathname
-2. Para filterLinks (APARTAMENTOS, CASAS, ALUGUEL): verificar query params específicos
-
+3. **Categoria**: Planos e Localidades ficam em `modules` pois são módulos do sistema. Clientes ficam em `data` pois seguem o padrão de "visibilidade de dados" como os leads.
