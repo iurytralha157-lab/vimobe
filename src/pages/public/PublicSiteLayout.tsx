@@ -61,67 +61,68 @@ export default function PublicSiteLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0D0D0D]">
-      {/* Header - Dark Glassmorphism */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Logo */}
-            <Link to={getHref("")} className="flex items-center">
-              {siteConfig.logo_url ? (
-                <img 
-                  src={siteConfig.logo_url} 
-                  alt={siteConfig.site_title} 
-                  className="h-10 md:h-12 w-auto object-contain"
-                />
-              ) : (
-                <span className="text-xl md:text-2xl font-serif text-white tracking-wider">
-                  {siteConfig.site_title}
-                </span>
-              )}
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-1">
-              {mainNavLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={getHref(link.href)}
-                  className={`px-4 py-2 text-sm font-medium tracking-wider transition-colors ${
-                    isActive(link.href) 
-                      ? 'text-[#C4A052]' 
-                      : 'text-white/80 hover:text-white'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              
-              {/* Property Type Links */}
-              {typeLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={getHref(link.href)}
-                  className="px-4 py-2 text-sm font-medium tracking-wider text-white/80 hover:text-[#C4A052] transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Desktop CTA */}
-            <div className="hidden lg:flex items-center gap-4">
-              <button className="text-white/80 hover:text-white transition-colors">
-                <Heart className="w-5 h-5" />
-              </button>
-              <Link 
-                to={getHref("contato")}
-                className="border border-[#C4A052] text-[#C4A052] px-6 py-2.5 text-sm font-medium tracking-widest hover:bg-[#C4A052] hover:text-white transition-all duration-300"
-              >
-                CONTATO
+      {/* Header - Floating Glassmorphism */}
+      <header className="fixed top-0 left-0 right-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-4 pt-4">
+          <div className="bg-white/20 backdrop-blur-xl rounded-2xl px-6 shadow-lg">
+            <div className="flex justify-between items-center h-16">
+              {/* Logo */}
+              <Link to={getHref("")} className="flex items-center">
+                {siteConfig.logo_url ? (
+                  <img 
+                    src={siteConfig.logo_url} 
+                    alt={siteConfig.site_title} 
+                    className="h-8 md:h-10 w-auto object-contain"
+                  />
+                ) : (
+                  <span className="text-lg md:text-xl font-serif text-white tracking-wider">
+                    {siteConfig.site_title}
+                  </span>
+                )}
               </Link>
-            </div>
 
-            {/* Mobile Menu Button */}
+              {/* Desktop Navigation */}
+              <nav className="hidden lg:flex items-center gap-1">
+                {mainNavLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    to={getHref(link.href)}
+                    className={`px-4 py-2 text-sm font-medium tracking-wider transition-colors ${
+                      isActive(link.href) 
+                        ? 'text-[#C4A052]' 
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                
+                {/* Property Type Links */}
+                {typeLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    to={getHref(link.href)}
+                    className="px-4 py-2 text-sm font-medium tracking-wider text-white/80 hover:text-[#C4A052] transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* Desktop CTA */}
+              <div className="hidden lg:flex items-center gap-4">
+                <button className="text-white/80 hover:text-white transition-colors">
+                  <Heart className="w-5 h-5" />
+                </button>
+                <Link 
+                  to={getHref("contato")}
+                  className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-medium tracking-wide hover:bg-white/90 transition-colors"
+                >
+                  CONTATO
+                </Link>
+              </div>
+
+              {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <button className="lg:hidden p-2 text-white">
@@ -205,6 +206,7 @@ export default function PublicSiteLayout() {
                 </div>
               </SheetContent>
             </Sheet>
+            </div>
           </div>
         </div>
       </header>
