@@ -1,11 +1,101 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-// Global flag to prevent audio unlock from re-triggering on navigation
-let globalAudioUnlocked = false;
+// Global AudioContext for reliable sound playback
+let globalAudioContext: AudioContext | null = null;
+let notificationBuffer: AudioBuffer | null = null;
+let newLeadBuffer: AudioBuffer | null = null;
+let audioInitialized = false;
+
+// Initialize AudioContext and load sounds
+async function initializeAudio(): Promise<void> {
+  if (audioInitialized) return;
+  
+  try {
+    // Create AudioContext (needs user interaction to start)
+    globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Load and decode audio files
+    const loadAudioBuffer = async (url: string): Promise<AudioBuffer | null> => {
+      try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        return await globalAudioContext!.decodeAudioData(arrayBuffer);
+      } catch (err) {
+        console.error('Failed to load audio:', url, err);
+        return null;
+      }
+    };
+
+    // Load both sounds in parallel
+    const [notifBuffer, leadBuffer] = await Promise.all([
+      loadAudioBuffer('/sounds/notification.mp3'),
+      loadAudioBuffer('/sounds/new-lead.mp3'),
+    ]);
+
+    notificationBuffer = notifBuffer;
+    newLeadBuffer = leadBuffer;
+    audioInitialized = true;
+    
+    console.log('🔊 Audio system initialized successfully');
+  } catch (err) {
+    console.error('Failed to initialize audio:', err);
+  }
+}
+
+// Resume AudioContext if suspended (required after page navigation)
+async function resumeAudioContext(): Promise<void> {
+  if (globalAudioContext?.state === 'suspended') {
+    try {
+      await globalAudioContext.resume();
+      console.log('🔊 AudioContext resumed');
+    } catch (err) {
+      console.error('Failed to resume AudioContext:', err);
+    }
+  }
+}
+
+// Play sound using Web Audio API (much more reliable)
+function playSound(type: 'notification' | 'new-lead', volume: number = 0.7): void {
+  if (!globalAudioContext || !audioInitialized) {
+    console.warn('🔇 Audio not initialized yet');
+    return;
+  }
+
+  const buffer = type === 'new-lead' ? newLeadBuffer : notificationBuffer;
+  if (!buffer) {
+    console.warn('🔇 Audio buffer not loaded for:', type);
+    return;
+  }
+
+  try {
+    // Resume if needed
+    if (globalAudioContext.state === 'suspended') {
+      globalAudioContext.resume();
+    }
+
+    // Create buffer source
+    const source = globalAudioContext.createBufferSource();
+    source.buffer = buffer;
+
+    // Create gain node for volume control
+    const gainNode = globalAudioContext.createGain();
+    gainNode.gain.value = volume;
+
+    // Connect: source -> gain -> destination
+    source.connect(gainNode);
+    gainNode.connect(globalAudioContext.destination);
+
+    // Play
+    source.start(0);
+    console.log('✅ Sound played:', type);
+  } catch (err) {
+    console.error('❌ Failed to play sound:', err);
+  }
+}
 
 export interface Notification {
   id: string;
@@ -61,73 +151,52 @@ export function useNotifications() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const audioUnlockedRef = useRef(false);
-  const notificationSoundRef = useRef<HTMLAudioElement | null>(null);
-  const newLeadSoundRef = useRef<HTMLAudioElement | null>(null);
+  const audioSetupDone = useRef(false);
 
-  // Initialize audio elements
+  // Initialize audio on first user interaction
   useEffect(() => {
-    notificationSoundRef.current = new Audio('/sounds/notification.mp3');
-    newLeadSoundRef.current = new Audio('/sounds/new-lead.mp3');
-    notificationSoundRef.current.volume = 0.5;
-    newLeadSoundRef.current.volume = 0.7;
+    if (audioSetupDone.current) return;
     
-    // Preload
-    notificationSoundRef.current.load();
-    newLeadSoundRef.current.load();
-  }, []);
-
-  // Request notification permission and unlock audio on first interaction
-  useEffect(() => {
-    requestNotificationPermission();
-    
-    // Skip if already unlocked globally (survives navigation)
-    if (globalAudioUnlocked) return;
-    
-    const handleInteraction = () => {
-      // Check global flag first to prevent any re-triggering
-      if (globalAudioUnlocked) return;
+    const handleInteraction = async () => {
+      if (audioSetupDone.current) return;
+      audioSetupDone.current = true;
       
-      // Mark as unlocked GLOBALLY and locally BEFORE any operations
-      globalAudioUnlocked = true;
-      audioUnlockedRef.current = true;
-      
-      // Remove listeners IMMEDIATELY to prevent any further triggers
+      // Remove listeners immediately
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('keydown', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
       
-      // Unlock audio silently (volume 0) - no audible sound
-      const unlockSound = (audio: HTMLAudioElement | null) => {
-        if (!audio) return;
-        audio.volume = 0;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-        }).catch(() => {});
-      };
-
-      unlockSound(notificationSoundRef.current);
-      unlockSound(newLeadSoundRef.current);
+      // Initialize audio system
+      await initializeAudio();
       
-      // Restore volume AFTER unlock with a small delay
-      setTimeout(() => {
-        if (notificationSoundRef.current) notificationSoundRef.current.volume = 0.5;
-        if (newLeadSoundRef.current) newLeadSoundRef.current.volume = 0.7;
-      }, 100);
-      
-      console.log('Audio unlocked for notifications');
+      // Request notification permission
+      await requestNotificationPermission();
     };
 
     document.addEventListener('click', handleInteraction);
     document.addEventListener('keydown', handleInteraction);
     document.addEventListener('touchstart', handleInteraction);
 
+    // Also try to resume on visibility change (tab focus)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        resumeAudioContext();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('keydown', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+  }, []);
+
+  // Play notification sound - exposed for manual trigger if needed
+  const playNotificationSound = useCallback((type: 'notification' | 'new-lead' = 'notification') => {
+    const volume = type === 'new-lead' ? 0.7 : 0.5;
+    playSound(type, volume);
   }, []);
 
   // Subscribe to realtime notifications
@@ -140,7 +209,7 @@ export function useNotifications() {
       }
 
       const channel = supabase
-        .channel('notifications-realtime-v2')
+        .channel('notifications-realtime-v3')
         .on(
           'postgres_changes',
           {
@@ -151,46 +220,18 @@ export function useNotifications() {
           },
           (payload) => {
             console.log('🔔 New notification received:', payload);
-            console.log('🔊 Audio unlocked status:', globalAudioUnlocked, audioUnlockedRef.current);
             
             const newNotification = payload.new as Notification;
             
-            // Play sound based on type - only for important notifications
-            // Skip WhatsApp message notifications (type: 'whatsapp' or 'message')
+            // Skip WhatsApp message notifications (silent)
             const isWhatsAppNotification = newNotification.type === 'whatsapp' || newNotification.type === 'message';
             
             if (isWhatsAppNotification) {
-              // Silent notification for WhatsApp - no sound, just update queries
               console.log('WhatsApp notification received (silent):', newNotification.title);
             } else if (newNotification.type === 'lead') {
-              // New lead - play cha-ching sound with robust fallback
-              console.log('🔔 Attempting to play new-lead sound for:', newNotification.title);
-              
-              const playLeadSound = async () => {
-                try {
-                  if (newLeadSoundRef.current) {
-                    newLeadSoundRef.current.currentTime = 0;
-                    newLeadSoundRef.current.volume = 0.7;
-                    await newLeadSoundRef.current.play();
-                    console.log('✅ New lead sound played successfully');
-                  } else {
-                    throw new Error('newLeadSoundRef is null');
-                  }
-                } catch (err) {
-                  console.warn('⚠️ Primary sound failed, trying fallback:', err);
-                  // Fallback: create a new Audio instance
-                  try {
-                    const fallbackAudio = new Audio('/sounds/new-lead.mp3');
-                    fallbackAudio.volume = 0.7;
-                    await fallbackAudio.play();
-                    console.log('✅ Fallback new lead sound played successfully');
-                  } catch (fallbackErr) {
-                    console.error('❌ Fallback sound also failed:', fallbackErr);
-                  }
-                }
-              };
-              
-              playLeadSound();
+              // New lead - play cha-ching sound
+              console.log('🔔 Playing new-lead sound for:', newNotification.title);
+              playSound('new-lead', 0.7);
               
               toast.success('🆕 Novo Lead!', {
                 description: newNotification.content || newNotification.title,
@@ -199,13 +240,7 @@ export function useNotifications() {
             } else {
               // Other important notifications (financial, system, etc.)
               console.log('🔔 Playing notification sound for:', newNotification.title);
-              if (notificationSoundRef.current) {
-                notificationSoundRef.current.currentTime = 0;
-                notificationSoundRef.current.volume = 0.5;
-                notificationSoundRef.current.play()
-                  .then(() => console.log('✅ Notification sound played successfully'))
-                  .catch((err) => console.log('❌ Failed to play notification sound:', err));
-              }
+              playSound('notification', 0.5);
               
               toast(newNotification.title, {
                 description: newNotification.content || undefined,
@@ -248,7 +283,7 @@ export function useNotifications() {
     };
   }, [profile?.id, queryClient]);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['notifications', profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -264,6 +299,11 @@ export function useNotifications() {
     enabled: !!profile?.id,
     refetchInterval: 30000,
   });
+
+  return {
+    ...query,
+    playNotificationSound,
+  };
 }
 
 export function useUnreadNotificationsCount() {
@@ -274,7 +314,7 @@ export function useUnreadNotificationsCount() {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel('notifications-count-realtime-v2')
+      .channel('notifications-count-realtime-v3')
       .on(
         'postgres_changes',
         {
