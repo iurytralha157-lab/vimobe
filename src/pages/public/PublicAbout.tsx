@@ -42,29 +42,21 @@ export default function PublicAbout() {
     <div className="min-h-screen">
       {/* Hero */}
       <section 
-        className="py-20 md:py-28 relative overflow-hidden"
-        style={{ backgroundColor: siteConfig.secondary_color }}
+        className="py-16 md:py-20 relative overflow-hidden"
+        style={{
+          backgroundImage: siteConfig.page_banner_url 
+            ? `url(${siteConfig.page_banner_url})` 
+            : undefined,
+          backgroundColor: !siteConfig.page_banner_url ? siteConfig.secondary_color : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
       >
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{ 
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }}
-        ></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
-          <span 
-            className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
-            style={{ backgroundColor: `${siteConfig.primary_color}30`, color: siteConfig.primary_color }}
-          >
-            Sobre Nós
-          </span>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 max-w-3xl">
-            {siteConfig.about_title || `Conheça a ${siteConfig.organization_name}`}
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">
+            {siteConfig.about_title || 'Sobre Nós'}
           </h1>
-          <p className="text-white/70 text-lg md:text-xl max-w-2xl">
-            Conheça nossa história, nossos valores e nosso compromisso em ajudar você a encontrar o imóvel perfeito.
-          </p>
         </div>
       </section>
 

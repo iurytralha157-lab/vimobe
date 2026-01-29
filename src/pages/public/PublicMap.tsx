@@ -2,11 +2,10 @@ import { Link, useLocation } from "react-router-dom";
 import { usePublicProperties } from "@/hooks/use-public-site";
 import { MapPin, Bed, Maximize, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePublicContext } from "./usePublicContext";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -18,12 +17,29 @@ L.Icon.Default.mergeOptions({
 
 export default function PublicMap() {
   const { organizationId, siteConfig } = usePublicContext();
-  const { data } = usePublicProperties(organizationId, { limit: 100 });
+  const { data, isLoading } = usePublicProperties(organizationId, { limit: 100 });
   const location = useLocation();
   const [mapCenter] = useState<[number, number]>([-23.5505, -46.6333]); // São Paulo default
+  const [cssLoaded, setCssLoaded] = useState(false);
+
+  // Load Leaflet CSS dynamically to ensure it's always available
+  useEffect(() => {
+    const linkId = 'leaflet-css';
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.onload = () => setCssLoaded(true);
+      document.head.appendChild(link);
+    } else {
+      setCssLoaded(true);
+    }
+  }, []);
 
   // Get primary color from config
   const primaryColor = siteConfig?.primary_color || '#C4A052';
+  const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
 
   // Custom marker with dynamic color
   const customIcon = useMemo(() => new L.Icon({
@@ -71,21 +87,35 @@ export default function PublicMap() {
     return null;
   }
 
+  // Show loading state while CSS is loading
+  if (!cssLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: secondaryColor }}>
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Carregando mapa...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#0D0D0D]">
+    <div className="min-h-screen" style={{ backgroundColor: secondaryColor }}>
       {/* Header with banner */}
       <div 
-        className="h-48 md:h-64 relative flex items-center justify-center"
+        className="py-16 md:py-20 relative overflow-hidden"
         style={{
           backgroundImage: siteConfig.page_banner_url 
             ? `url(${siteConfig.page_banner_url})` 
-            : 'linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%)'
+            : undefined,
+          backgroundColor: !siteConfig.page_banner_url ? secondaryColor : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
       >
         <div className="absolute inset-0 bg-black/60" />
-        <div className="relative z-10 text-center text-white pt-20">
-          <h1 className="text-3xl md:text-4xl font-light mb-2">Buscar no Mapa</h1>
-          <p className="text-white/60">Encontre imóveis por localização</p>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">Buscar no Mapa</h1>
         </div>
       </div>
 
