@@ -54,8 +54,9 @@ export function useUserPermissions(): UserPermissions {
     // Admin always has permission
     if (profile?.role === 'admin') return true;
     
-    // Still loading - assume true to prevent flicker
-    if (isLoading) return true;
+    // Still loading - return false to prevent unauthorized access
+    // This is safer than returning true during load
+    if (isLoading) return false;
     
     // Wildcard means all permissions
     if (permissions.includes('*')) return true;
