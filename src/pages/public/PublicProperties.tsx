@@ -272,20 +272,23 @@ export default function PublicProperties() {
       {/* Header */}
       <div 
         className="py-16 md:py-20 relative overflow-hidden"
-        style={{ backgroundColor: secondaryColor }}
+        style={{
+          backgroundImage: siteConfig.page_banner_url 
+            ? `url(${siteConfig.page_banner_url})` 
+            : undefined,
+          backgroundColor: !siteConfig.page_banner_url ? secondaryColor : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
       >
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{ 
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }}
-        ></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">Imóveis Disponíveis</h1>
-          <p className="text-white/70 text-lg">
-            {isLoading ? 'Carregando...' : `${data?.total || 0} imóveis encontrados`}
-          </p>
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">
+            {filters.tipo === 'Apartamento' ? 'Apartamentos' : 
+             filters.tipo === 'Casa' ? 'Casas' : 
+             filters.finalidade === 'aluguel' ? 'Aluguel' : 
+             'Imóveis Disponíveis'}
+          </h1>
         </div>
       </div>
 
