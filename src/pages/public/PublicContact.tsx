@@ -4,29 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { usePublicContext } from "./usePublicContext";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 
 export default function PublicContact() {
   const { organizationId, siteConfig } = usePublicContext();
-  const [cssLoaded, setCssLoaded] = useState(false);
-  
-  // Load Leaflet CSS dynamically to ensure it's always available
-  useEffect(() => {
-    const linkId = 'leaflet-css';
-    if (!document.getElementById(linkId)) {
-      const link = document.createElement('link');
-      link.id = linkId;
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      link.onload = () => setCssLoaded(true);
-      document.head.appendChild(link);
-    } else {
-      setCssLoaded(true);
-    }
-  }, []);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -35,9 +19,6 @@ export default function PublicContact() {
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Default coordinates (São Paulo) - in production, could use geocoding API
-  const defaultPosition: [number, number] = [-23.5505, -46.6333];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +62,6 @@ export default function PublicContact() {
       icon: MessageCircle,
       label: "WhatsApp",
       value: siteConfig.whatsapp,
-      // No href - will use ContactFormDialog instead
       color: '#25D366',
       useContactDialog: true,
     },
@@ -338,92 +318,6 @@ export default function PublicContact() {
           </div>
         </div>
       </section>
-
-      {/* Map Section - Lazy loaded */}
-      {siteConfig.address && cssLoaded && (
-        <section className="py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">Nossa Localização</h3>
-            <div className="h-[400px] rounded-2xl overflow-hidden shadow-lg">
-              <ContactMapSection 
-                position={defaultPosition} 
-                siteConfig={siteConfig}
-              />
-            </div>
-          </div>
-        </section>
-      )}
     </div>
-  );
-}
-
-// Separate component for lazy-loaded map
-function ContactMapSection({ 
-  position, 
-  siteConfig 
-}: { 
-  position: [number, number];
-  siteConfig: any;
-}) {
-  const [leafletComponents, setLeafletComponents] = useState<any>(null);
-  
-  useEffect(() => {
-    Promise.all([
-      import('react-leaflet'),
-      import('leaflet')
-    ]).then(([reactLeaflet, leaflet]) => {
-      // Fix for default marker icons
-      delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
-      leaflet.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-      });
-      
-      setLeafletComponents({
-        MapContainer: reactLeaflet.MapContainer,
-        TileLayer: reactLeaflet.TileLayer,
-        Marker: reactLeaflet.Marker,
-        Popup: reactLeaflet.Popup,
-      });
-    });
-  }, []);
-  
-  if (!leafletComponents) {
-    return (
-      <div className="h-full w-full flex items-center justify-center bg-gray-100">
-        <div className="text-gray-600 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto mb-2"></div>
-          <p className="text-sm">Carregando mapa...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { MapContainer, TileLayer, Marker, Popup } = leafletComponents;
-  
-  return (
-    <MapContainer 
-      center={position} 
-      zoom={15} 
-      className="h-full w-full"
-      scrollWheelZoom={false}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker position={position}>
-        <Popup>
-          <div className="text-center">
-            <strong>{siteConfig.organization_name}</strong>
-            <br />
-            {siteConfig.address}
-            {siteConfig.city && <><br />{siteConfig.city}</>}
-            {siteConfig.state && ` - ${siteConfig.state}`}
-          </div>
-        </Popup>
-      </Marker>
-    </MapContainer>
   );
 }
