@@ -27,13 +27,15 @@ export default function PublicHome() {
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
 
+  const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
+  const orgParam = new URLSearchParams(location.search).get('org');
+
   const getHref = (path: string) => {
-    if (location.pathname.includes('/site/previsualização')) {
-      const orgParam = new URLSearchParams(location.search).get('org');
+    if (isPreviewMode && orgParam) {
       if (path.includes('?')) {
-        return `/site/previsualização/${path}&org=${orgParam}`;
+        return `/site/preview/${path}&org=${orgParam}`;
       }
-      return `/site/previsualização/${path}?org=${orgParam}`;
+      return `/site/preview/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };
@@ -45,10 +47,12 @@ export default function PublicHome() {
     if (selectedType && selectedType !== "all") params.set("tipo", selectedType);
     if (selectedFinalidade && selectedFinalidade !== "all") params.set("finalidade", selectedFinalidade);
     
-    const basePath = location.pathname.includes('/site/previsualização') 
-      ? `/site/previsualização/imoveis?org=${new URLSearchParams(location.search).get('org')}&${params.toString()}`
-      : `/imoveis?${params.toString()}`;
-    navigate(basePath);
+    if (isPreviewMode && orgParam) {
+      params.set("org", orgParam);
+      navigate(`/site/preview/imoveis?${params.toString()}`);
+    } else {
+      navigate(`/imoveis?${params.toString()}`);
+    }
   };
 
   const formatPrice = (value: number | null) => {

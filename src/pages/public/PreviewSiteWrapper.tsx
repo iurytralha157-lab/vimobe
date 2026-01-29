@@ -132,6 +132,9 @@ export default function PreviewSiteWrapper() {
 }
 
 function PreviewSiteRoutes() {
+  const [searchParams] = useSearchParams();
+  const orgId = searchParams.get('org');
+  
   return (
     <Routes>
       <Route path="/" element={<PublicSiteLayout />}>
@@ -142,7 +145,7 @@ function PreviewSiteRoutes() {
         <Route path="contato" element={<PublicContact />} />
         <Route path="mapa" element={<PublicMap />} />
       </Route>
-      <Route path="*" element={<Navigate to="/site/previsualização" replace />} />
+      <Route path="*" element={<Navigate to={`/site/preview?org=${orgId}`} replace />} />
     </Routes>
   );
 }

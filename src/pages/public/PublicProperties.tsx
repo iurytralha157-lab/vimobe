@@ -49,13 +49,15 @@ export default function PublicProperties() {
   const { data: cities = [] } = usePublicCities(organizationId);
 
   // Get base path for preview mode
+  const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
+  const orgParam = searchParams.get('org');
+  
   const getHref = (path: string) => {
-    if (location.pathname.includes('/site/previsualização')) {
-      const orgParam = searchParams.get('org');
+    if (isPreviewMode && orgParam) {
       if (path.includes('?')) {
-        return `/site/previsualização/${path}&org=${orgParam}`;
+        return `/site/preview/${path}&org=${orgParam}`;
       }
-      return `/site/previsualização/${path}?org=${orgParam}`;
+      return `/site/preview/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };

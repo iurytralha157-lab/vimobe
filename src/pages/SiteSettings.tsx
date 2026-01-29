@@ -186,7 +186,7 @@ Registro A (www):
           <div className="flex gap-2">
             {site && (
               <a 
-                href={`/site/previsualização?org=${profile?.organization_id}`} 
+                href={`/site/preview?org=${profile?.organization_id}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
               >
