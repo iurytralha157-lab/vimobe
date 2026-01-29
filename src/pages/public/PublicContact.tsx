@@ -7,6 +7,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { toast } from "sonner";
 import { usePublicContext } from "./usePublicContext";
+import { ContactFormDialog } from "@/components/public/ContactFormDialog";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix Leaflet default marker icon
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 export default function PublicContact() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -18,6 +30,9 @@ export default function PublicContact() {
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Default coordinates (São Paulo) - in production, could use geocoding API
+  const defaultPosition: [number, number] = [-23.5505, -46.6333];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +76,9 @@ export default function PublicContact() {
       icon: MessageCircle,
       label: "WhatsApp",
       value: siteConfig.whatsapp,
-      href: siteConfig.whatsapp ? `https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}` : undefined,
+      // No href - will use ContactFormDialog instead
       color: '#25D366',
-      external: true,
+      useContactDialog: true,
     },
     {
       icon: Mail,
@@ -79,6 +94,8 @@ export default function PublicContact() {
       color: siteConfig.primary_color,
     },
   ].filter(item => item.value);
+
+  const primaryColor = siteConfig.primary_color || '#F97316';
 
   return (
     <div className="min-h-screen">
@@ -121,11 +138,34 @@ export default function PublicContact() {
                 {contactItems.map((item, index) => (
                   <Card key={index} className="border-0 rounded-2xl hover:shadow-lg transition-all duration-300 group">
                     <CardContent className="p-5">
-                      {item.href ? (
+                      {item.useContactDialog && organizationId && siteConfig.whatsapp ? (
+                        <ContactFormDialog
+                          organizationId={organizationId}
+                          whatsappNumber={siteConfig.whatsapp}
+                          primaryColor={primaryColor}
+                          trigger={
+                            <button className="flex items-center gap-4 w-full text-left cursor-pointer">
+                              <div 
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+                                style={{ backgroundColor: `${item.color}15` }}
+                              >
+                                <item.icon 
+                                  className="w-6 h-6"
+                                  style={{ color: item.color }}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500 font-medium">{item.label}</p>
+                                <p className="font-semibold text-gray-900 group-hover:underline">
+                                  {item.value}
+                                </p>
+                              </div>
+                            </button>
+                          }
+                        />
+                      ) : item.href ? (
                         <a 
                           href={item.href}
-                          target={item.external ? "_blank" : undefined}
-                          rel={item.external ? "noopener noreferrer" : undefined}
                           className="flex items-center gap-4"
                         >
                           <div 
@@ -293,6 +333,39 @@ export default function PublicContact() {
           </div>
         </div>
       </section>
+
+      {/* Map Section */}
+      {siteConfig.address && (
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">Nossa Localização</h3>
+            <div className="h-[400px] rounded-2xl overflow-hidden shadow-lg">
+              <MapContainer 
+                center={defaultPosition} 
+                zoom={15} 
+                className="h-full w-full"
+                scrollWheelZoom={false}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Marker position={defaultPosition}>
+                  <Popup>
+                    <div className="text-center">
+                      <strong>{siteConfig.organization_name}</strong>
+                      <br />
+                      {siteConfig.address}
+                      {siteConfig.city && <><br />{siteConfig.city}</>}
+                      {siteConfig.state && ` - ${siteConfig.state}`}
+                    </div>
+                  </Popup>
+                </Marker>
+              </MapContainer>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
