@@ -84,11 +84,11 @@ export default function TelecomCustomers() {
     plan_id: planFilter || undefined,
     page,
     limit: pageSize,
-    viewAllPermission: canViewAll,
+    canViewAll: canViewAll,
     currentUserId: profile?.id,
   });
   const { data: stats = { total: 0, instalados: 0, cancelados: 0, aguardando: 0, inadimplentes: 0 } } = useTelecomCustomerStats({
-    viewAllPermission: canViewAll,
+    canViewAll: canViewAll,
     currentUserId: profile?.id,
   });
   const { data: plans = [] } = useServicePlans();

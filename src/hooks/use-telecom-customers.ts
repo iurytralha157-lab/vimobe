@@ -126,7 +126,7 @@ export function useTelecomCustomers(filters?: {
   page?: number;
   limit?: number;
   // Permission-based filtering
-  viewAllPermission?: boolean;
+  canViewAll?: boolean;
   currentUserId?: string;
 }) {
   const { organization } = useAuth();
@@ -134,8 +134,12 @@ export function useTelecomCustomers(filters?: {
   const limit = filters?.limit || 30;
   const offset = (page - 1) * limit;
 
+  // Determine if we should filter by seller_id
+  // Only filter if canViewAll is explicitly false AND we have a user ID
+  const shouldFilterBySeller = filters?.canViewAll === false && !!filters?.currentUserId;
+
   return useQuery({
-    queryKey: ['telecom-customers', organization?.id, filters],
+    queryKey: ['telecom-customers', organization?.id, filters?.status, filters?.search, filters?.plan_id, page, limit, shouldFilterBySeller, filters?.currentUserId],
     queryFn: async () => {
       if (!organization?.id) return [];
       
@@ -150,9 +154,9 @@ export function useTelecomCustomers(filters?: {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
-      // Permission-based filtering: if user doesn't have view_all, filter by seller_id
-      if (filters?.viewAllPermission === false && filters?.currentUserId) {
-        query = query.eq('seller_id', filters.currentUserId);
+      // Permission-based filtering: if user doesn't have view_all permission, filter by seller_id
+      if (shouldFilterBySeller) {
+        query = query.eq('seller_id', filters!.currentUserId!);
       }
 
       if (filters?.status) {
@@ -178,13 +182,16 @@ export function useTelecomCustomers(filters?: {
 
 // Hook separado para contar estatísticas usando queries de contagem (sem limite de 1000)
 export function useTelecomCustomerStats(filters?: {
-  viewAllPermission?: boolean;
+  canViewAll?: boolean;
   currentUserId?: string;
 }) {
   const { organization } = useAuth();
 
+  // Determine if we should filter by seller_id
+  const shouldFilterBySeller = filters?.canViewAll === false && !!filters?.currentUserId;
+
   return useQuery({
-    queryKey: ['telecom-customer-stats', organization?.id, filters?.viewAllPermission, filters?.currentUserId],
+    queryKey: ['telecom-customer-stats', organization?.id, shouldFilterBySeller, filters?.currentUserId],
     queryFn: async () => {
       if (!organization?.id) {
         return {
@@ -203,9 +210,9 @@ export function useTelecomCustomerStats(filters?: {
           .select('*', { count: 'exact', head: true })
           .eq('organization_id', organization.id);
         
-        // Permission-based filtering: if user doesn't have view_all, filter by seller_id
-        if (filters?.viewAllPermission === false && filters?.currentUserId) {
-          query = query.eq('seller_id', filters.currentUserId);
+        // Permission-based filtering: if user doesn't have view_all permission, filter by seller_id
+        if (shouldFilterBySeller) {
+          query = query.eq('seller_id', filters!.currentUserId!);
         }
         
         if (status) {
