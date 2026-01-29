@@ -22,9 +22,17 @@ export default function PublicHome() {
   const [selectedFinalidade, setSelectedFinalidade] = useState("");
   const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
 
+  // Get colors from config with fallbacks
+  const primaryColor = siteConfig?.primary_color || '#C4A052';
+  const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
+
   const getHref = (path: string) => {
     if (location.pathname.includes('/site/previsualização')) {
-      return `/site/previsualização/${path}${location.search}`;
+      const orgParam = new URLSearchParams(location.search).get('org');
+      if (path.includes('?')) {
+        return `/site/previsualização/${path}&org=${orgParam}`;
+      }
+      return `/site/previsualização/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };
@@ -37,7 +45,7 @@ export default function PublicHome() {
     if (selectedFinalidade && selectedFinalidade !== "all") params.set("finalidade", selectedFinalidade);
     
     const basePath = location.pathname.includes('/site/previsualização') 
-      ? `/site/previsualização/imoveis${location.search}&${params.toString()}`
+      ? `/site/previsualização/imoveis?org=${new URLSearchParams(location.search).get('org')}&${params.toString()}`
       : `/imoveis?${params.toString()}`;
     navigate(basePath);
   };
@@ -96,7 +104,8 @@ export default function PublicHome() {
                 placeholder="Digite condomínio, região, bairro ou cidade"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-12 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-[#C4A052] rounded-xl"
+                className="h-12 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"
+                style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
               />
             </div>
             <Select value={selectedType} onValueChange={setSelectedType}>
@@ -122,7 +131,8 @@ export default function PublicHome() {
             </Select>
             <Button 
               type="submit" 
-              className="h-12 px-8 bg-[#C4A052] hover:bg-[#B39042] text-white font-medium rounded-xl"
+              className="h-12 px-8 text-white font-medium rounded-xl"
+              style={{ backgroundColor: primaryColor }}
             >
               <Search className="w-5 h-5 mr-2" />
               Buscar Imóveis
@@ -143,7 +153,10 @@ export default function PublicHome() {
         <section className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <span className="text-sm font-semibold uppercase tracking-wider text-[#C4A052]">
+              <span 
+                className="text-sm font-semibold uppercase tracking-wider"
+                style={{ color: primaryColor }}
+              >
                 Exclusivos
               </span>
               <h2 className="text-3xl md:text-4xl font-light text-gray-900 mt-2">
@@ -164,7 +177,10 @@ export default function PublicHome() {
                       
                       {/* Badge */}
                       <div className="absolute top-4 left-4">
-                        <span className="px-3 py-1.5 text-xs font-semibold bg-[#C4A052]/90 text-white rounded">
+                        <span 
+                          className="px-3 py-1.5 text-xs font-semibold text-white rounded"
+                          style={{ backgroundColor: `${primaryColor}E6` }}
+                        >
                           {property.valor_venda ? 'VENDA' : 'ALUGUEL'}
                         </span>
                       </div>
@@ -208,7 +224,10 @@ export default function PublicHome() {
                       </div>
                       
                       {/* Price */}
-                      <div className="text-[#C4A052] font-bold text-xl">
+                      <div 
+                        className="font-bold text-xl"
+                        style={{ color: primaryColor }}
+                      >
                         {property.valor_venda && formatPrice(property.valor_venda)}
                         {property.valor_aluguel && !property.valor_venda && (
                           <>{formatPrice(property.valor_aluguel)}<span className="text-sm font-normal">/mês</span></>
@@ -224,7 +243,19 @@ export default function PublicHome() {
               <Link to={getHref("imoveis")}>
                 <Button 
                   variant="outline" 
-                  className="border-2 border-[#C4A052] text-[#C4A052] hover:bg-[#C4A052] hover:text-white px-8 py-6 text-sm tracking-wider"
+                  className="border-2 px-8 py-6 text-sm tracking-wider"
+                  style={{ 
+                    borderColor: primaryColor, 
+                    color: primaryColor,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = primaryColor;
+                    e.currentTarget.style.color = 'white';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = primaryColor;
+                  }}
                 >
                   VER TODOS OS IMÓVEIS
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -240,7 +271,10 @@ export default function PublicHome() {
         <section className="py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <span className="text-sm font-semibold uppercase tracking-wider text-[#C4A052]">
+              <span 
+                className="text-sm font-semibold uppercase tracking-wider"
+                style={{ color: primaryColor }}
+              >
                 Nosso Portfólio
               </span>
               <h2 className="text-3xl md:text-4xl font-light text-gray-900 mt-2">
@@ -261,7 +295,10 @@ export default function PublicHome() {
                       
                       {/* Badge */}
                       <div className="absolute top-4 left-4">
-                        <span className="px-3 py-1.5 text-xs font-semibold bg-[#C4A052]/90 text-white rounded">
+                        <span 
+                          className="px-3 py-1.5 text-xs font-semibold text-white rounded"
+                          style={{ backgroundColor: `${primaryColor}E6` }}
+                        >
                           {property.valor_venda ? 'VENDA' : 'ALUGUEL'}
                         </span>
                       </div>
@@ -305,7 +342,10 @@ export default function PublicHome() {
                       </div>
                       
                       {/* Price */}
-                      <div className="text-[#C4A052] font-bold text-xl">
+                      <div 
+                        className="font-bold text-xl"
+                        style={{ color: primaryColor }}
+                      >
                         {property.valor_venda && formatPrice(property.valor_venda)}
                         {property.valor_aluguel && !property.valor_venda && (
                           <>{formatPrice(property.valor_aluguel)}<span className="text-sm font-normal">/mês</span></>
@@ -321,7 +361,19 @@ export default function PublicHome() {
               <Link to={getHref("imoveis")}>
                 <Button 
                   variant="outline" 
-                  className="border-2 border-[#C4A052] text-[#C4A052] hover:bg-[#C4A052] hover:text-white px-8 py-6 text-sm tracking-wider"
+                  className="border-2 px-8 py-6 text-sm tracking-wider"
+                  style={{ 
+                    borderColor: primaryColor, 
+                    color: primaryColor,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = primaryColor;
+                    e.currentTarget.style.color = 'white';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = primaryColor;
+                  }}
                 >
                   VER TODOS OS IMÓVEIS
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -370,7 +422,7 @@ export default function PublicHome() {
       {/* CTA Section */}
       <section 
         className="py-24 relative"
-        style={{ backgroundColor: '#0D0D0D' }}
+        style={{ backgroundColor: secondaryColor }}
       >
         <div className="max-w-4xl mx-auto px-4 text-center text-white">
           <h2 className="text-3xl md:text-4xl font-light mb-6">
@@ -381,9 +433,12 @@ export default function PublicHome() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to={getHref("contato")}>
-              <Button className="bg-[#C4A052] hover:bg-[#B39042] text-white px-8 py-6 text-sm tracking-wider">
-                FALE CONOSCO
-                <ArrowRight className="w-4 h-4 ml-2" />
+              <Button 
+                size="lg" 
+                className="text-white px-8 py-6 text-base tracking-wide rounded-full"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Fale Conosco
               </Button>
             </Link>
             {siteConfig.whatsapp && (
@@ -393,10 +448,11 @@ export default function PublicHome() {
                 rel="noopener noreferrer"
               >
                 <Button 
+                  size="lg"
                   variant="outline"
-                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 px-8 py-6 text-sm tracking-wider"
+                  className="border-white text-white hover:bg-white/10 px-8 py-6 text-base tracking-wide rounded-full"
                 >
-                  WHATSAPP
+                  WhatsApp
                 </Button>
               </a>
             )}

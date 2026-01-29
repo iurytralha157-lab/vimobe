@@ -1,12 +1,13 @@
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { usePublicProperties, usePropertyTypes, usePublicCities } from "@/hooks/use-public-site";
-import { Search, MapPin, Bed, Bath, Car, Maximize, X, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Search, MapPin, Bed, Bath, Car, Maximize, X, ChevronLeft, ChevronRight, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState, useEffect } from "react";
 import { usePublicContext } from "./usePublicContext";
 
@@ -14,14 +15,22 @@ export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  
+  // Get colors from config
+  const primaryColor = siteConfig?.primary_color || '#C4A052';
+  const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
   
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
     tipo: searchParams.get('tipo') || '',
+    finalidade: searchParams.get('finalidade') || '',
     cidade: searchParams.get('cidade') || '',
     quartos: searchParams.get('quartos') || '',
     minPrice: searchParams.get('min_price') || '',
     maxPrice: searchParams.get('max_price') || '',
+    banheiros: searchParams.get('banheiros') || '',
+    vagas: searchParams.get('vagas') || '',
     page: parseInt(searchParams.get('page') || '1'),
   });
 
@@ -43,6 +52,9 @@ export default function PublicProperties() {
   const getHref = (path: string) => {
     if (location.pathname.includes('/site/previsualização')) {
       const orgParam = searchParams.get('org');
+      if (path.includes('?')) {
+        return `/site/previsualização/${path}&org=${orgParam}`;
+      }
       return `/site/previsualização/${path}?org=${orgParam}`;
     }
     return `/${path}`;
@@ -50,24 +62,20 @@ export default function PublicProperties() {
 
   // Update URL when filters change (only non-org params)
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams();
     // Keep org param if it exists
     const orgParam = searchParams.get('org');
     
     if (filters.search) params.set('search', filters.search);
-    else params.delete('search');
     if (filters.tipo) params.set('tipo', filters.tipo);
-    else params.delete('tipo');
+    if (filters.finalidade) params.set('finalidade', filters.finalidade);
     if (filters.cidade) params.set('cidade', filters.cidade);
-    else params.delete('cidade');
     if (filters.quartos) params.set('quartos', filters.quartos);
-    else params.delete('quartos');
     if (filters.minPrice) params.set('min_price', filters.minPrice);
-    else params.delete('min_price');
     if (filters.maxPrice) params.set('max_price', filters.maxPrice);
-    else params.delete('max_price');
+    if (filters.banheiros) params.set('banheiros', filters.banheiros);
+    if (filters.vagas) params.set('vagas', filters.vagas);
     if (filters.page > 1) params.set('page', String(filters.page));
-    else params.delete('page');
     
     if (orgParam) params.set('org', orgParam);
     setSearchParams(params);
@@ -81,16 +89,19 @@ export default function PublicProperties() {
     setFilters({
       search: '',
       tipo: '',
+      finalidade: '',
       cidade: '',
       quartos: '',
       minPrice: '',
       maxPrice: '',
+      banheiros: '',
+      vagas: '',
       page: 1,
     });
   };
 
-  const hasActiveFilters = filters.search || filters.tipo || filters.cidade || filters.quartos || filters.minPrice || filters.maxPrice;
-  const activeFilterCount = [filters.search, filters.tipo, filters.cidade, filters.quartos, filters.minPrice, filters.maxPrice].filter(Boolean).length;
+  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.quartos || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
+  const activeFilterCount = [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas].filter(Boolean).length;
 
   const formatPrice = (value: number | null) => {
     if (!value) return null;
@@ -103,6 +114,7 @@ export default function PublicProperties() {
 
   const FiltersContent = ({ onClose }: { onClose?: () => void }) => (
     <div className="space-y-6">
+      {/* Basic Filters - Always visible */}
       <div>
         <label className="text-sm font-semibold text-gray-700 mb-2 block">Buscar</label>
         <Input
@@ -114,23 +126,8 @@ export default function PublicProperties() {
       </div>
 
       <div>
-        <label className="text-sm font-semibold text-gray-700 mb-2 block">Tipo de Imóvel</label>
-        <Select value={filters.tipo} onValueChange={(v) => updateFilter('tipo', v)}>
-          <SelectTrigger className="rounded-xl">
-            <SelectValue placeholder="Todos os tipos" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {propertyTypes.map((type) => (
-              <SelectItem key={type} value={type}>{type}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
         <label className="text-sm font-semibold text-gray-700 mb-2 block">Cidade</label>
-        <Select value={filters.cidade} onValueChange={(v) => updateFilter('cidade', v)}>
+        <Select value={filters.cidade} onValueChange={(v) => updateFilter('cidade', v === 'all' ? '' : v)}>
           <SelectTrigger className="rounded-xl">
             <SelectValue placeholder="Todas as cidades" />
           </SelectTrigger>
@@ -139,22 +136,6 @@ export default function PublicProperties() {
             {cities.map((city) => (
               <SelectItem key={city} value={city}>{city}</SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <label className="text-sm font-semibold text-gray-700 mb-2 block">Quartos</label>
-        <Select value={filters.quartos} onValueChange={(v) => updateFilter('quartos', v)}>
-          <SelectTrigger className="rounded-xl">
-            <SelectValue placeholder="Qualquer" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Qualquer</SelectItem>
-            <SelectItem value="1">1+ quarto</SelectItem>
-            <SelectItem value="2">2+ quartos</SelectItem>
-            <SelectItem value="3">3+ quartos</SelectItem>
-            <SelectItem value="4">4+ quartos</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -179,6 +160,95 @@ export default function PublicProperties() {
         </div>
       </div>
 
+      {/* More Filters - Collapsible */}
+      <Collapsible open={showMoreFilters} onOpenChange={setShowMoreFilters}>
+        <CollapsibleTrigger asChild>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-between px-0 hover:bg-transparent"
+          >
+            <span className="font-semibold text-gray-700">Mais Filtros</span>
+            <ChevronDown className={`w-5 h-5 transition-transform ${showMoreFilters ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 pt-4">
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Tipo de Imóvel</label>
+            <Select value={filters.tipo} onValueChange={(v) => updateFilter('tipo', v === 'all' ? '' : v)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {propertyTypes.map((type) => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Finalidade</label>
+            <Select value={filters.finalidade} onValueChange={(v) => updateFilter('finalidade', v === 'all' ? '' : v)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="venda">Venda</SelectItem>
+                <SelectItem value="aluguel">Aluguel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Quartos</label>
+            <Select value={filters.quartos} onValueChange={(v) => updateFilter('quartos', v === 'any' ? '' : v)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Qualquer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Qualquer</SelectItem>
+                <SelectItem value="1">1+ quarto</SelectItem>
+                <SelectItem value="2">2+ quartos</SelectItem>
+                <SelectItem value="3">3+ quartos</SelectItem>
+                <SelectItem value="4">4+ quartos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Banheiros</label>
+            <Select value={filters.banheiros} onValueChange={(v) => updateFilter('banheiros', v === 'any' ? '' : v)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Qualquer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Qualquer</SelectItem>
+                <SelectItem value="1">1+ banheiro</SelectItem>
+                <SelectItem value="2">2+ banheiros</SelectItem>
+                <SelectItem value="3">3+ banheiros</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Vagas</label>
+            <Select value={filters.vagas} onValueChange={(v) => updateFilter('vagas', v === 'any' ? '' : v)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Qualquer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Qualquer</SelectItem>
+                <SelectItem value="1">1+ vaga</SelectItem>
+                <SelectItem value="2">2+ vagas</SelectItem>
+                <SelectItem value="3">3+ vagas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
       {hasActiveFilters && (
         <Button 
           variant="outline" 
@@ -200,7 +270,7 @@ export default function PublicProperties() {
       {/* Header */}
       <div 
         className="py-16 md:py-20 relative overflow-hidden"
-        style={{ backgroundColor: siteConfig.secondary_color }}
+        style={{ backgroundColor: secondaryColor }}
       >
         <div 
           className="absolute inset-0 opacity-10"
@@ -209,7 +279,7 @@ export default function PublicProperties() {
             backgroundSize: '40px 40px'
           }}
         ></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">Imóveis Disponíveis</h1>
           <p className="text-white/70 text-lg">
             {isLoading ? 'Carregando...' : `${data?.total || 0} imóveis encontrados`}
@@ -244,7 +314,7 @@ export default function PublicProperties() {
                     {activeFilterCount > 0 && (
                       <Badge 
                         className="text-white"
-                        style={{ backgroundColor: siteConfig.primary_color }}
+                        style={{ backgroundColor: primaryColor }}
                       >
                         {activeFilterCount}
                       </Badge>
@@ -277,6 +347,12 @@ export default function PublicProperties() {
                     <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('tipo', '')} />
                   </Badge>
                 )}
+                {filters.finalidade && (
+                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                    {filters.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('finalidade', '')} />
+                  </Badge>
+                )}
                 {filters.cidade && (
                   <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
                     {filters.cidade}
@@ -287,6 +363,18 @@ export default function PublicProperties() {
                   <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
                     {filters.quartos}+ quartos
                     <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('quartos', '')} />
+                  </Badge>
+                )}
+                {filters.banheiros && (
+                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                    {filters.banheiros}+ banheiros
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('banheiros', '')} />
+                  </Badge>
+                )}
+                {filters.vagas && (
+                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                    {filters.vagas}+ vagas
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('vagas', '')} />
                   </Badge>
                 )}
               </div>
@@ -357,7 +445,10 @@ export default function PublicProperties() {
                           </div>
                         </div>
                         <CardContent className="p-5">
-                          <h3 className="font-bold text-lg text-gray-900 line-clamp-1 mb-2 group-hover:text-orange-600 transition-colors">
+                          <h3 
+                            className="font-bold text-lg text-gray-900 line-clamp-1 mb-2 transition-colors"
+                            style={{ '--hover-color': primaryColor } as React.CSSProperties}
+                          >
                             {property.titulo}
                           </h3>
                           <p className="text-gray-500 text-sm flex items-center gap-1 mb-4">
@@ -429,8 +520,8 @@ export default function PublicProperties() {
                             key={pageNum}
                             variant={filters.page === pageNum ? "default" : "ghost"}
                             size="icon"
-                            className="rounded-full w-10 h-10"
-                            style={filters.page === pageNum ? { backgroundColor: siteConfig.primary_color } : {}}
+                            className="rounded-full w-10 h-10 text-white"
+                            style={filters.page === pageNum ? { backgroundColor: primaryColor } : {}}
                             onClick={() => setFilters(prev => ({ ...prev, page: pageNum }))}
                           >
                             {pageNum}

@@ -1,8 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { usePublicProperties } from "@/hooks/use-public-site";
-import { MapPin, Bed, Bath, Maximize, ArrowLeft } from "lucide-react";
+import { MapPin, Bed, Maximize, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { usePublicContext } from "./usePublicContext";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -16,27 +16,34 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Custom gold marker
-const goldIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#C4A052" width="32" height="32">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-  `),
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
-});
-
 export default function PublicMap() {
   const { organizationId, siteConfig } = usePublicContext();
   const { data } = usePublicProperties(organizationId, { limit: 100 });
   const location = useLocation();
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-23.5505, -46.6333]); // São Paulo default
+  const [mapCenter] = useState<[number, number]>([-23.5505, -46.6333]); // São Paulo default
+
+  // Get primary color from config
+  const primaryColor = siteConfig?.primary_color || '#C4A052';
+
+  // Custom marker with dynamic color
+  const customIcon = useMemo(() => new L.Icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${primaryColor}" width="32" height="32">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+    `),
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  }), [primaryColor]);
 
   const getHref = (path: string) => {
     if (location.pathname.includes('/site/previsualização')) {
-      return `/site/previsualização/${path}${location.search}`;
+      const orgParam = new URLSearchParams(location.search).get('org');
+      if (path.includes('?')) {
+        return `/site/previsualização/${path}&org=${orgParam}`;
+      }
+      return `/site/previsualização/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };
@@ -47,15 +54,15 @@ export default function PublicMap() {
   };
 
   // For now, we'll use random positions around São Paulo since we don't have geocoded addresses
-  // In a real implementation, you would geocode the addresses
+  // In a real implementation, you would geocode the addresses or use lat/lng from the database
   const getRandomPosition = (index: number): [number, number] => {
     const baseLat = -23.5505;
     const baseLng = -46.6333;
     const offset = 0.05;
-    return [
-      baseLat + (Math.random() - 0.5) * offset * 2,
-      baseLng + (Math.random() - 0.5) * offset * 2
-    ];
+    // Use index as seed for consistent positions
+    const seedLat = Math.sin(index * 12345) * offset;
+    const seedLng = Math.cos(index * 67890) * offset;
+    return [baseLat + seedLat, baseLng + seedLng];
   };
 
   if (!siteConfig) {
@@ -107,7 +114,7 @@ export default function PublicMap() {
               <Marker 
                 key={property.id} 
                 position={getRandomPosition(index)}
-                icon={goldIcon}
+                icon={customIcon}
               >
                 <Popup>
                   <div className="w-64">
@@ -134,11 +141,18 @@ export default function PublicMap() {
                           </span>
                         )}
                       </div>
-                      <div className="text-[#C4A052] font-bold">
+                      <div 
+                        className="font-bold"
+                        style={{ color: primaryColor }}
+                      >
                         {formatPrice(property.valor_venda || property.valor_aluguel)}
                       </div>
                       <Link to={getHref(`imoveis/${property.codigo}`)}>
-                        <Button size="sm" className="w-full mt-2 bg-[#C4A052] hover:bg-[#B39042] text-white text-xs">
+                        <Button 
+                          size="sm" 
+                          className="w-full mt-2 text-white text-xs"
+                          style={{ backgroundColor: primaryColor }}
+                        >
                           Ver Detalhes
                         </Button>
                       </Link>
