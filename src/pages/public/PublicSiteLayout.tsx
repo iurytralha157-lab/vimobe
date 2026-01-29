@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, MessageCircle, Heart, X } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, MessageCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -12,6 +12,10 @@ export default function PublicSiteLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
+  // Get colors from config with fallbacks
+  const primaryColor = siteConfig?.primary_color || '#C4A052';
+  const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
+
   // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -20,7 +24,10 @@ export default function PublicSiteLayout() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C4A052]"></div>
+        <div 
+          className="animate-spin rounded-full h-12 w-12 border-b-2"
+          style={{ borderColor: primaryColor }}
+        ></div>
       </div>
     );
   }
@@ -42,22 +49,29 @@ export default function PublicSiteLayout() {
 
   const getHref = (path: string) => {
     if (location.pathname.includes('/site/previsualização')) {
-      return `/site/previsualização/${path}${location.search}`;
+      // Preserve org param and add any new params
+      const orgParam = new URLSearchParams(location.search).get('org');
+      if (path.includes('?')) {
+        return `/site/previsualização/${path}&org=${orgParam}`;
+      }
+      return `/site/previsualização/${path}?org=${orgParam}`;
     }
     return `/${path}`;
   };
 
-  // Dynamic nav links with property types
+  // Dynamic nav links with property types and pre-applied filters
   const mainNavLinks = [
     { href: "", label: "HOME" },
     { href: "mapa", label: "BUSCAR MAPA" },
     { href: "imoveis", label: "IMÓVEIS" },
   ];
 
-  const typeLinks = propertyTypes.slice(0, 4).map(type => ({
-    href: `imoveis?tipo=${encodeURIComponent(type)}`,
-    label: type.toUpperCase()
-  }));
+  // Add pre-filtered links
+  const filterLinks = [
+    { href: "imoveis?tipo=Apartamento", label: "APARTAMENTOS" },
+    { href: "imoveis?tipo=Casa", label: "CASAS" },
+    { href: "imoveis?finalidade=aluguel", label: "ALUGUEL" },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0D0D0D]">
@@ -91,22 +105,25 @@ export default function PublicSiteLayout() {
                   <Link
                     key={link.href}
                     to={getHref(link.href)}
-                    className={`px-4 py-2 text-sm font-light tracking-wider transition-colors ${
-                      isActive(link.href) 
-                        ? 'text-[#C4A052]' 
-                        : 'text-white/80 hover:text-white'
-                    }`}
+                    className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
+                    style={{ 
+                      color: isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                    onMouseLeave={(e) => e.currentTarget.style.color = isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'}
                   >
                     {link.label}
                   </Link>
                 ))}
                 
-                {/* Property Type Links */}
-                {typeLinks.map((link) => (
+                {/* Pre-filtered Links */}
+                {filterLinks.map((link) => (
                   <Link
                     key={link.href}
                     to={getHref(link.href)}
-                    className="px-4 py-2 text-sm font-light tracking-wider text-white/80 hover:text-[#C4A052] transition-colors"
+                    className="px-4 py-2 text-sm font-light tracking-wider text-white/80 transition-colors"
+                    onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
                   >
                     {link.label}
                   </Link>
@@ -162,11 +179,11 @@ export default function PublicSiteLayout() {
                           key={link.href}
                           to={getHref(link.href)}
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`block px-4 py-3 text-sm font-medium tracking-wider transition-colors ${
-                            isActive(link.href) 
-                              ? 'text-[#C4A052] bg-white/5' 
-                              : 'text-white/80 hover:text-white hover:bg-white/5'
-                          }`}
+                          className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
+                          style={{ 
+                            color: isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)',
+                            backgroundColor: isActive(link.href) ? 'rgba(255,255,255,0.05)' : 'transparent'
+                          }}
                         >
                           {link.label}
                         </Link>
@@ -174,12 +191,13 @@ export default function PublicSiteLayout() {
                       
                       <div className="border-t border-white/10 my-4"></div>
                       
-                      {typeLinks.map((link) => (
+                      {filterLinks.map((link) => (
                         <Link
                           key={link.href}
                           to={getHref(link.href)}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="block px-4 py-3 text-sm font-medium tracking-wider text-white/80 hover:text-[#C4A052] hover:bg-white/5 transition-colors"
+                          className="block px-4 py-3 text-sm font-medium tracking-wider text-white/80 hover:bg-white/5 transition-colors"
+                          style={{ ':hover': { color: primaryColor } } as React.CSSProperties}
                         >
                           {link.label}
                         </Link>
@@ -190,7 +208,8 @@ export default function PublicSiteLayout() {
                       <Link
                         to={getHref("contato")}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="block px-4 py-3 text-sm font-medium tracking-wider text-[#C4A052] hover:bg-white/5 transition-colors"
+                        className="block px-4 py-3 text-sm font-medium tracking-wider hover:bg-white/5 transition-colors"
+                        style={{ color: primaryColor }}
                       >
                         CONTATO
                       </Link>
@@ -237,7 +256,10 @@ export default function PublicSiteLayout() {
       )}
 
       {/* Footer - Dark Style */}
-      <footer className="bg-[#0D0D0D] text-white border-t border-white/10">
+      <footer 
+        className="text-white border-t border-white/10"
+        style={{ backgroundColor: secondaryColor }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
             {/* Brand */}
@@ -262,7 +284,12 @@ export default function PublicSiteLayout() {
 
             {/* Menu */}
             <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-[#C4A052] mb-4">Menu</h4>
+              <h4 
+                className="text-sm font-semibold uppercase tracking-wider mb-4"
+                style={{ color: primaryColor }}
+              >
+                Menu
+              </h4>
               <ul className="space-y-3">
                 {mainNavLinks.map((link) => (
                   <li key={link.href}>
@@ -287,7 +314,12 @@ export default function PublicSiteLayout() {
 
             {/* Contact */}
             <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-[#C4A052] mb-4">Contato</h4>
+              <h4 
+                className="text-sm font-semibold uppercase tracking-wider mb-4"
+                style={{ color: primaryColor }}
+              >
+                Contato
+              </h4>
               <ul className="space-y-3">
                 {siteConfig.phone && (
                   <li>
@@ -339,14 +371,22 @@ export default function PublicSiteLayout() {
 
             {/* Social */}
             <div>
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-[#C4A052] mb-4">Redes Sociais</h4>
+              <h4 
+                className="text-sm font-semibold uppercase tracking-wider mb-4"
+                style={{ color: primaryColor }}
+              >
+                Redes Sociais
+              </h4>
               <div className="flex gap-3">
                 {siteConfig.instagram && (
                   <a 
                     href={siteConfig.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#C4A052] transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
+                    style={{ ':hover': { backgroundColor: primaryColor } } as React.CSSProperties}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
                   >
                     <Instagram className="w-5 h-5" />
                   </a>
@@ -356,7 +396,9 @@ export default function PublicSiteLayout() {
                     href={siteConfig.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#C4A052] transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
                   >
                     <Facebook className="w-5 h-5" />
                   </a>
@@ -366,7 +408,9 @@ export default function PublicSiteLayout() {
                     href={siteConfig.youtube}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#C4A052] transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
                   >
                     <Youtube className="w-5 h-5" />
                   </a>
@@ -376,7 +420,9 @@ export default function PublicSiteLayout() {
                     href={siteConfig.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#C4A052] transition-colors"
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
                   >
                     <Linkedin className="w-5 h-5" />
                   </a>
@@ -397,7 +443,8 @@ export default function PublicSiteLayout() {
                   href="https://vimob.com.br" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-[#C4A052] hover:text-white transition-colors"
+                  className="hover:text-white transition-colors"
+                  style={{ color: primaryColor }}
                 >
                   VIMOB
                 </a>
