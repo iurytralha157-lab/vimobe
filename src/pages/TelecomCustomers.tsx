@@ -87,7 +87,10 @@ export default function TelecomCustomers() {
     viewAllPermission: canViewAll,
     currentUserId: profile?.id,
   });
-  const { data: stats = { total: 0, instalados: 0, cancelados: 0, aguardando: 0, inadimplentes: 0 } } = useTelecomCustomerStats();
+  const { data: stats = { total: 0, instalados: 0, cancelados: 0, aguardando: 0, inadimplentes: 0 } } = useTelecomCustomerStats({
+    viewAllPermission: canViewAll,
+    currentUserId: profile?.id,
+  });
   const { data: plans = [] } = useServicePlans();
   
   const createCustomer = useCreateTelecomCustomer();

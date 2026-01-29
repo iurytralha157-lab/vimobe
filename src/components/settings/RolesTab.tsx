@@ -55,11 +55,37 @@ import {
   type AvailablePermission
 } from '@/hooks/use-organization-roles';
 
+// Mapeamento de categorias para labels bonitos e ícones
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; order: number }> = {
   modules: { label: 'Módulos', icon: LayoutDashboard, order: 1 },
-  leads: { label: 'Leads', icon: Users, order: 2 },
-  data: { label: 'Dados', icon: Shield, order: 3 },
+  leads: { label: 'Leads & Pipeline', icon: Users, order: 2 },
+  data: { label: 'Dados & Clientes', icon: Shield, order: 3 },
   settings: { label: 'Configurações', icon: Settings, order: 4 },
+};
+
+// Agrupamento semântico de permissões por área funcional
+const PERMISSION_GROUPS: Record<string, { label: string; keys: string[] }> = {
+  // Dentro de "modules"
+  dashboard: { label: 'Dashboard', keys: ['dashboard_view'] },
+  pipeline: { label: 'Pipeline', keys: ['pipeline_view', 'pipeline_edit'] },
+  conversations: { label: 'Conversas', keys: ['conversations_view', 'conversations_edit'] },
+  financial: { label: 'Financeiro', keys: ['financial_view', 'financial_edit'] },
+  properties: { label: 'Imóveis', keys: ['properties_view', 'properties_edit'] },
+  plans: { label: 'Planos de Serviço', keys: ['plans_view', 'plans_edit'] },
+  coverage: { label: 'Áreas de Cobertura', keys: ['coverage_view', 'coverage_edit'] },
+  agenda: { label: 'Agenda', keys: ['agenda_view', 'agenda_edit'] },
+  automations: { label: 'Automações', keys: ['automations_view', 'automations_edit'] },
+  reports: { label: 'Relatórios', keys: ['reports_view'] },
+  // Dentro de "leads"
+  lead_visibility: { label: 'Visibilidade de Leads', keys: ['lead_view_all', 'lead_view_own', 'lead_view_team'] },
+  lead_actions: { label: 'Ações em Leads', keys: ['lead_edit', 'lead_delete', 'lead_assign', 'lead_transfer'] },
+  // Dentro de "data"
+  customers: { label: 'Clientes Telecom', keys: ['customers_view_all', 'customers_view_own', 'customers_edit'] },
+  data_export: { label: 'Exportação', keys: ['data_export'] },
+  // Dentro de "settings"
+  org_settings: { label: 'Configurações', keys: ['settings_view', 'settings_edit'] },
+  team_management: { label: 'Gestão de Equipes', keys: ['team_view', 'team_edit'] },
+  user_management: { label: 'Gestão de Usuários', keys: ['user_invite', 'user_edit'] },
 };
 
 const COLOR_OPTIONS = [
@@ -318,28 +344,94 @@ export function RolesTab() {
                           </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                          <div className="space-y-3 pt-2">
-                            {permissionsByCategory[category].map(permission => (
-                              <div 
-                                key={permission.key}
-                                className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                                onClick={() => togglePermission(permission.key)}
-                              >
-                                <div className={`mt-0.5 h-5 w-5 rounded border flex items-center justify-center transition-colors ${
-                                  selectedPermissions.includes(permission.key)
-                                    ? 'bg-primary border-primary text-primary-foreground'
-                                    : 'border-input'
-                                }`}>
-                                  {selectedPermissions.includes(permission.key) && (
-                                    <Check className="h-3 w-3" />
+                          <div className="space-y-4 pt-2">
+                            {/* Agrupar permissões por área funcional dentro da categoria */}
+                            {(() => {
+                              // Encontrar grupos que têm permissões nesta categoria
+                              const categoryPermKeys = permissionsByCategory[category]?.map(p => p.key) || [];
+                              const relevantGroups = Object.entries(PERMISSION_GROUPS).filter(([_, group]) =>
+                                group.keys.some(k => categoryPermKeys.includes(k))
+                              );
+
+                              // Permissões que não estão em nenhum grupo
+                              const groupedKeys = relevantGroups.flatMap(([_, g]) => g.keys);
+                              const ungroupedPerms = (permissionsByCategory[category] || []).filter(
+                                p => !groupedKeys.includes(p.key)
+                              );
+
+                              return (
+                                <>
+                                  {relevantGroups.map(([groupKey, group]) => {
+                                    const groupPerms = (permissionsByCategory[category] || []).filter(p => 
+                                      group.keys.includes(p.key)
+                                    );
+                                    if (groupPerms.length === 0) return null;
+
+                                    return (
+                                      <div key={groupKey} className="space-y-2">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
+                                          {group.label}
+                                        </p>
+                                        <div className="space-y-2">
+                                          {groupPerms.map(permission => (
+                                            <div 
+                                              key={permission.key}
+                                              className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                                              onClick={() => togglePermission(permission.key)}
+                                            >
+                                              <div className={`mt-0.5 h-5 w-5 rounded border flex items-center justify-center transition-colors ${
+                                                selectedPermissions.includes(permission.key)
+                                                  ? 'bg-primary border-primary text-primary-foreground'
+                                                  : 'border-input'
+                                              }`}>
+                                                {selectedPermissions.includes(permission.key) && (
+                                                  <Check className="h-3 w-3" />
+                                                )}
+                                              </div>
+                                              <div className="flex-1">
+                                                <p className="font-medium text-sm">{permission.name}</p>
+                                                <p className="text-xs text-muted-foreground">{permission.description}</p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                  {/* Permissões não agrupadas */}
+                                  {ungroupedPerms.length > 0 && (
+                                    <div className="space-y-2">
+                                      {relevantGroups.length > 0 && (
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
+                                          Outras
+                                        </p>
+                                      )}
+                                      {ungroupedPerms.map(permission => (
+                                        <div 
+                                          key={permission.key}
+                                          className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                                          onClick={() => togglePermission(permission.key)}
+                                        >
+                                          <div className={`mt-0.5 h-5 w-5 rounded border flex items-center justify-center transition-colors ${
+                                            selectedPermissions.includes(permission.key)
+                                              ? 'bg-primary border-primary text-primary-foreground'
+                                              : 'border-input'
+                                          }`}>
+                                            {selectedPermissions.includes(permission.key) && (
+                                              <Check className="h-3 w-3" />
+                                            )}
+                                          </div>
+                                          <div className="flex-1">
+                                            <p className="font-medium text-sm">{permission.name}</p>
+                                            <p className="text-xs text-muted-foreground">{permission.description}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
                                   )}
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-medium text-sm">{permission.name}</p>
-                                  <p className="text-xs text-muted-foreground">{permission.description}</p>
-                                </div>
-                              </div>
-                            ))}
+                                </>
+                              );
+                            })()}
                           </div>
                         </AccordionContent>
                       </AccordionItem>

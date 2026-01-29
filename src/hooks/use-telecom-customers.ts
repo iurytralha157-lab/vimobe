@@ -177,11 +177,14 @@ export function useTelecomCustomers(filters?: {
 }
 
 // Hook separado para contar estatísticas usando queries de contagem (sem limite de 1000)
-export function useTelecomCustomerStats() {
+export function useTelecomCustomerStats(filters?: {
+  viewAllPermission?: boolean;
+  currentUserId?: string;
+}) {
   const { organization } = useAuth();
 
   return useQuery({
-    queryKey: ['telecom-customer-stats', organization?.id],
+    queryKey: ['telecom-customer-stats', organization?.id, filters?.viewAllPermission, filters?.currentUserId],
     queryFn: async () => {
       if (!organization?.id) {
         return {
@@ -193,6 +196,25 @@ export function useTelecomCustomerStats() {
         };
       }
 
+      // Base query builder that applies permission filtering
+      const buildQuery = (status?: string) => {
+        let query = supabase
+          .from('telecom_customers')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organization.id);
+        
+        // Permission-based filtering: if user doesn't have view_all, filter by seller_id
+        if (filters?.viewAllPermission === false && filters?.currentUserId) {
+          query = query.eq('seller_id', filters.currentUserId);
+        }
+        
+        if (status) {
+          query = query.eq('status', status);
+        }
+        
+        return query;
+      };
+
       // Usar count para evitar limite de 1000 rows
       const [
         { count: total },
@@ -201,30 +223,11 @@ export function useTelecomCustomerStats() {
         { count: aguardando },
         { count: inadimplentes },
       ] = await Promise.all([
-        supabase
-          .from('telecom_customers')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', organization.id),
-        supabase
-          .from('telecom_customers')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', organization.id)
-          .eq('status', 'INSTALADOS'),
-        supabase
-          .from('telecom_customers')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', organization.id)
-          .eq('status', 'CANCELADO'),
-        supabase
-          .from('telecom_customers')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', organization.id)
-          .eq('status', 'AGUARDANDO'),
-        supabase
-          .from('telecom_customers')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', organization.id)
-          .eq('status', 'INADIMPLENTE'),
+        buildQuery(),
+        buildQuery('INSTALADOS'),
+        buildQuery('CANCELADO'),
+        buildQuery('AGUARDANDO'),
+        buildQuery('INADIMPLENTE'),
       ]);
 
       return {
