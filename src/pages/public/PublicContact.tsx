@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { usePublicContext } from "./usePublicContext";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
 // Fix Leaflet default marker icon
@@ -22,6 +21,22 @@ L.Icon.Default.mergeOptions({
 
 export default function PublicContact() {
   const { organizationId, siteConfig } = usePublicContext();
+  const [cssLoaded, setCssLoaded] = useState(false);
+  
+  // Load Leaflet CSS dynamically to ensure it's always available
+  useEffect(() => {
+    const linkId = 'leaflet-css';
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.onload = () => setCssLoaded(true);
+      document.head.appendChild(link);
+    } else {
+      setCssLoaded(true);
+    }
+  }, []);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -335,7 +350,7 @@ export default function PublicContact() {
       </section>
 
       {/* Map Section */}
-      {siteConfig.address && (
+      {siteConfig.address && cssLoaded && (
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">Nossa Localização</h3>

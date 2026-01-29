@@ -2,9 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { usePublicProperties } from "@/hooks/use-public-site";
 import { MapPin, Bed, Maximize, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { usePublicContext } from "./usePublicContext";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
 // Fix for default marker icons in react-leaflet
@@ -132,70 +131,131 @@ export default function PublicMap() {
       {/* Map */}
       <div className="max-w-7xl mx-auto px-4 pb-10">
         <div className="h-[600px] rounded-lg overflow-hidden shadow-2xl">
-          <MapContainer 
-            center={mapCenter} 
-            zoom={12} 
-            className="h-full w-full"
-            style={{ background: '#1a1a1a' }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {data?.properties?.map((property, index) => (
-              <Marker 
-                key={property.id} 
-                position={getRandomPosition(index)}
-                icon={customIcon}
-              >
-                <Popup>
-                  <div className="w-64">
-                    <img 
-                      src={property.imagem_principal || '/placeholder.svg'} 
-                      alt={property.titulo}
-                      className="w-full h-32 object-cover rounded-t"
-                    />
-                    <div className="p-3">
-                      <h3 className="font-semibold text-sm mb-1 line-clamp-1">{property.titulo}</h3>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
-                        <MapPin className="w-3 h-3" />
-                        {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
-                        {property.quartos && (
-                          <span className="flex items-center gap-1">
-                            <Bed className="w-3 h-3" /> {property.quartos}
-                          </span>
-                        )}
-                        {property.area_total && (
-                          <span className="flex items-center gap-1">
-                            <Maximize className="w-3 h-3" /> {property.area_total}m²
-                          </span>
-                        )}
-                      </div>
-                      <div 
-                        className="font-bold"
-                        style={{ color: primaryColor }}
-                      >
-                        {formatPrice(property.valor_venda || property.valor_aluguel)}
-                      </div>
-                      <Link to={getHref(`imoveis/${property.codigo}`)}>
-                        <Button 
-                          size="sm" 
-                          className="w-full mt-2 text-white text-xs"
-                          style={{ backgroundColor: primaryColor }}
-                        >
-                          Ver Detalhes
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+          <MapComponent 
+            mapCenter={mapCenter} 
+            properties={data?.properties || []}
+            customIcon={customIcon}
+            primaryColor={primaryColor}
+            getHref={getHref}
+            formatPrice={formatPrice}
+          />
         </div>
       </div>
     </div>
+  );
+}
+
+// Lazy load MapContainer to avoid SSR issues
+function MapComponent({ 
+  mapCenter, 
+  properties, 
+  customIcon, 
+  primaryColor,
+  getHref,
+  formatPrice
+}: { 
+  mapCenter: [number, number];
+  properties: any[];
+  customIcon: L.Icon;
+  primaryColor: string;
+  getHref: (path: string) => string;
+  formatPrice: (value: number | null) => string | null;
+}) {
+  const [MapContainer, setMapContainer] = useState<any>(null);
+  const [TileLayer, setTileLayer] = useState<any>(null);
+  const [Marker, setMarker] = useState<any>(null);
+  const [Popup, setPopup] = useState<any>(null);
+  
+  useEffect(() => {
+    import('react-leaflet').then((mod) => {
+      setMapContainer(() => mod.MapContainer);
+      setTileLayer(() => mod.TileLayer);
+      setMarker(() => mod.Marker);
+      setPopup(() => mod.Popup);
+    });
+  }, []);
+  
+  // Get random position for demo purposes
+  const getRandomPosition = (index: number): [number, number] => {
+    const baseLat = -23.5505;
+    const baseLng = -46.6333;
+    const offset = 0.05;
+    const seedLat = Math.sin(index * 12345) * offset;
+    const seedLng = Math.cos(index * 67890) * offset;
+    return [baseLat + seedLat, baseLng + seedLng];
+  };
+  
+  if (!MapContainer || !TileLayer || !Marker || !Popup) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-gray-800">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+          <p className="text-sm">Carregando mapa...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <MapContainer 
+      center={mapCenter} 
+      zoom={12} 
+      className="h-full w-full"
+      style={{ background: '#1a1a1a' }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {properties.map((property: any, index: number) => (
+        <Marker
+          key={property.id} 
+          position={getRandomPosition(index)}
+          icon={customIcon}
+        >
+          <Popup>
+            <div className="w-64">
+              <img 
+                src={property.imagem_principal || '/placeholder.svg'} 
+                alt={property.titulo}
+                className="w-full h-32 object-cover rounded-t"
+              />
+              <div className="p-3">
+                <h3 className="font-semibold text-sm mb-1 line-clamp-1">{property.titulo}</h3>
+                <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
+                  📍 {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
+                </p>
+                <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
+                  {property.quartos && (
+                    <span className="flex items-center gap-1">
+                      🛏️ {property.quartos}
+                    </span>
+                  )}
+                  {property.area_total && (
+                    <span className="flex items-center gap-1">
+                      📐 {property.area_total}m²
+                    </span>
+                  )}
+                </div>
+                <div 
+                  className="font-bold"
+                  style={{ color: primaryColor }}
+                >
+                  {formatPrice(property.valor_venda || property.valor_aluguel)}
+                </div>
+                <a href={getHref(`imoveis/${property.codigo}`)}>
+                  <button 
+                    className="w-full mt-2 text-white text-xs py-2 px-3 rounded"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    Ver Detalhes
+                  </button>
+                </a>
+              </div>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </MapContainer>
   );
 }
