@@ -9,6 +9,7 @@ import PublicProperties from './PublicProperties';
 import PublicPropertyDetail from './PublicPropertyDetail';
 import PublicAbout from './PublicAbout';
 import PublicContact from './PublicContact';
+import PublicMap from './PublicMap';
 
 function PreviewSiteProvider({ children, organizationId }: { children: ReactNode; organizationId: string }) {
   const [siteConfig, setSiteConfig] = useState<PublicSiteConfig | null>(null);
@@ -65,6 +66,11 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
             seo_description: data.seo_description,
             seo_keywords: data.seo_keywords,
             google_analytics_id: data.google_analytics_id,
+            // New hero fields
+            hero_image_url: data.hero_image_url,
+            hero_title: data.hero_title,
+            hero_subtitle: data.hero_subtitle,
+            page_banner_url: data.page_banner_url,
             organization_name: (data.organizations as any)?.name || 'Imobiliária',
           });
         }
@@ -131,6 +137,7 @@ function PreviewSiteRoutes() {
         <Route path="imoveis/:code" element={<PublicPropertyDetail />} />
         <Route path="sobre" element={<PublicAbout />} />
         <Route path="contato" element={<PublicContact />} />
+        <Route path="mapa" element={<PublicMap />} />
       </Route>
       <Route path="*" element={<Navigate to="/site/previsualização" replace />} />
     </Routes>

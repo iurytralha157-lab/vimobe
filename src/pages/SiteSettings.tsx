@@ -46,6 +46,9 @@ export default function SiteSettings() {
     seo_description: '',
     seo_keywords: '',
     google_analytics_id: '',
+    // New hero fields
+    hero_title: '',
+    hero_subtitle: '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +81,9 @@ export default function SiteSettings() {
         seo_description: site.seo_description || '',
         seo_keywords: site.seo_keywords || '',
         google_analytics_id: site.google_analytics_id || '',
+        // New hero fields
+        hero_title: site.hero_title || '',
+        hero_subtitle: site.hero_subtitle || '',
       });
     }
   }, [site]);
@@ -97,7 +103,7 @@ export default function SiteSettings() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon' | 'about') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -110,6 +116,10 @@ export default function SiteSettings() {
         await updateSite.mutateAsync({ favicon_url: url });
       } else if (type === 'about') {
         await updateSite.mutateAsync({ about_image_url: url });
+      } else if (type === 'hero') {
+        await updateSite.mutateAsync({ hero_image_url: url });
+      } else if (type === 'banner') {
+        await updateSite.mutateAsync({ page_banner_url: url });
       }
       
       toast.success('Imagem enviada com sucesso!');
@@ -510,6 +520,95 @@ Registro A (www):
                       >
                         Destaque
                       </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Hero (Banner Principal)</CardTitle>
+                  <CardDescription>Configure a imagem e textos da página inicial</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <Label>Imagem do Hero (Tela Inicial)</Label>
+                    {site?.hero_image_url ? (
+                      <div className="border rounded-lg p-4 bg-muted">
+                        <img src={site.hero_image_url} alt="Hero" className="h-32 w-full object-cover rounded" />
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
+                        Nenhuma imagem do hero enviada
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'hero')}
+                        className="hidden"
+                        id="hero-upload"
+                        disabled={!isAdmin}
+                      />
+                      <label htmlFor="hero-upload">
+                        <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
+                          <span>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Enviar Imagem Hero
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Título do Hero</Label>
+                    <Input
+                      placeholder="Transformando seus sonhos em realidade!"
+                      value={formData.hero_title}
+                      onChange={(e) => setFormData({ ...formData, hero_title: e.target.value })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subtítulo do Hero</Label>
+                    <Input
+                      placeholder="Encontre o imóvel perfeito para você"
+                      value={formData.hero_subtitle}
+                      onChange={(e) => setFormData({ ...formData, hero_subtitle: e.target.value })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+
+                  <div className="border-t pt-4 mt-4 space-y-3">
+                    <Label>Banner das Páginas Internas</Label>
+                    {site?.page_banner_url ? (
+                      <div className="border rounded-lg p-4 bg-muted">
+                        <img src={site.page_banner_url} alt="Banner" className="h-24 w-full object-cover rounded" />
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
+                        Nenhum banner enviado
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'banner')}
+                        className="hidden"
+                        id="banner-upload"
+                        disabled={!isAdmin}
+                      />
+                      <label htmlFor="banner-upload">
+                        <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
+                          <span>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Enviar Banner
+                          </span>
+                        </Button>
+                      </label>
                     </div>
                   </div>
                 </CardContent>

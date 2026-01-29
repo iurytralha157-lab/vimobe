@@ -2221,12 +2221,16 @@ export type Database = {
           facebook: string | null
           favicon_url: string | null
           google_analytics_id: string | null
+          hero_image_url: string | null
+          hero_subtitle: string | null
+          hero_title: string | null
           id: string
           instagram: string | null
           is_active: boolean
           linkedin: string | null
           logo_url: string | null
           organization_id: string
+          page_banner_url: string | null
           phone: string | null
           primary_color: string | null
           secondary_color: string | null
@@ -2256,12 +2260,16 @@ export type Database = {
           facebook?: string | null
           favicon_url?: string | null
           google_analytics_id?: string | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
           id?: string
           instagram?: string | null
           is_active?: boolean
           linkedin?: string | null
           logo_url?: string | null
           organization_id: string
+          page_banner_url?: string | null
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
@@ -2291,12 +2299,16 @@ export type Database = {
           facebook?: string | null
           favicon_url?: string | null
           google_analytics_id?: string | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
           id?: string
           instagram?: string | null
           is_active?: boolean
           linkedin?: string | null
           logo_url?: string | null
           organization_id?: string
+          page_banner_url?: string | null
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null

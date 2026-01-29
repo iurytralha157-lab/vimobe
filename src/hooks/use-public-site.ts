@@ -30,6 +30,11 @@ export interface PublicSiteConfig {
   seo_description: string | null;
   seo_keywords: string | null;
   google_analytics_id: string | null;
+  // New hero fields
+  hero_image_url: string | null;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  page_banner_url: string | null;
   organization_name: string;
 }
 

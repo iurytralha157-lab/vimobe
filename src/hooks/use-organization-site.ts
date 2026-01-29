@@ -35,6 +35,11 @@ export interface OrganizationSite {
   seo_description: string | null;
   seo_keywords: string | null;
   google_analytics_id: string | null;
+  // New hero fields
+  hero_image_url: string | null;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  page_banner_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -124,7 +129,7 @@ export function useUploadSiteAsset() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'favicon' | 'about' }) => {
+    mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner' }) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `site-${type}-${Date.now()}.${fileExt}`;
       const filePath = `sites/${fileName}`;
