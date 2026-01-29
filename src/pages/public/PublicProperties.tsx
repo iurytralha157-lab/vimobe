@@ -8,8 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePublicContext } from "./usePublicContext";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -21,7 +22,7 @@ export default function PublicProperties() {
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
   
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => ({
     search: searchParams.get('search') || '',
     tipo: searchParams.get('tipo') || '',
     finalidade: searchParams.get('finalidade') || '',
@@ -32,7 +33,33 @@ export default function PublicProperties() {
     banheiros: searchParams.get('banheiros') || '',
     vagas: searchParams.get('vagas') || '',
     page: parseInt(searchParams.get('page') || '1'),
-  });
+  }));
+  
+  // Track if URL changes came from external navigation (header links)
+  const lastLocationSearch = useRef(location.search);
+  
+  // Debounce search to prevent focus loss while typing
+  const debouncedSearch = useDebouncedValue(filters.search, 400);
+  
+  // Sync state with URL when URL changes externally (e.g., clicking header links)
+  useEffect(() => {
+    // Only sync if URL changed externally
+    if (location.search !== lastLocationSearch.current) {
+      const newParams = new URLSearchParams(location.search);
+      setFilters({
+        search: newParams.get('search') || '',
+        tipo: newParams.get('tipo') || '',
+        finalidade: newParams.get('finalidade') || '',
+        cidade: newParams.get('cidade') || '',
+        quartos: newParams.get('quartos') || '',
+        minPrice: newParams.get('min_price') || '',
+        maxPrice: newParams.get('max_price') || '',
+        banheiros: newParams.get('banheiros') || '',
+        vagas: newParams.get('vagas') || '',
+        page: parseInt(newParams.get('page') || '1'),
+      });
+    }
+  }, [location.search]);
 
   const { data, isLoading } = usePublicProperties(organizationId, {
     page: filters.page,
@@ -62,13 +89,14 @@ export default function PublicProperties() {
     return `/${path}`;
   };
 
-  // Update URL when filters change (only non-org params)
+  // Update URL when filters change (use debounced search to prevent focus loss)
   useEffect(() => {
     const params = new URLSearchParams();
     // Keep org param if it exists
     const orgParam = searchParams.get('org');
     
-    if (filters.search) params.set('search', filters.search);
+    // Use debounced search for URL update
+    if (debouncedSearch) params.set('search', debouncedSearch);
     if (filters.tipo) params.set('tipo', filters.tipo);
     if (filters.finalidade) params.set('finalidade', filters.finalidade);
     if (filters.cidade) params.set('cidade', filters.cidade);
@@ -80,8 +108,13 @@ export default function PublicProperties() {
     if (filters.page > 1) params.set('page', String(filters.page));
     
     if (orgParam) params.set('org', orgParam);
-    setSearchParams(params);
-  }, [filters]);
+    
+    // Update last location to track this as internal change
+    const newSearch = '?' + params.toString();
+    lastLocationSearch.current = newSearch;
+    
+    setSearchParams(params, { replace: true });
+  }, [debouncedSearch, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.page]);
 
   const updateFilter = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -341,45 +374,66 @@ export default function PublicProperties() {
             {hasActiveFilters && (
               <div className="flex flex-wrap gap-2 mb-6">
                 {filters.search && (
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     "{filters.search}"
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('search', '')} />
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('search', '')} />
                   </Badge>
                 )}
                 {filters.tipo && (
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     {filters.tipo}
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('tipo', '')} />
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('tipo', '')} />
                   </Badge>
                 )}
                 {filters.finalidade && (
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     {filters.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('finalidade', '')} />
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('finalidade', '')} />
                   </Badge>
                 )}
                 {filters.cidade && (
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     {filters.cidade}
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('cidade', '')} />
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('cidade', '')} />
                   </Badge>
                 )}
                 {filters.quartos && (
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     {filters.quartos}+ quartos
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('quartos', '')} />
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('quartos', '')} />
                   </Badge>
                 )}
                 {filters.banheiros && (
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     {filters.banheiros}+ banheiros
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('banheiros', '')} />
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('banheiros', '')} />
                   </Badge>
                 )}
                 {filters.vagas && (
-                  <Badge variant="secondary" className="rounded-full px-3 py-1 gap-1">
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     {filters.vagas}+ vagas
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('vagas', '')} />
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('vagas', '')} />
                   </Badge>
                 )}
               </div>

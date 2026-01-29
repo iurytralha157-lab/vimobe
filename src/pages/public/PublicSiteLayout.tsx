@@ -51,6 +51,20 @@ export default function PublicSiteLayout() {
     return currentPath.includes(`/${path}`);
   };
 
+  // Check if a filter link is active based on query params
+  const isFilterActive = (href: string) => {
+    const urlParams = new URLSearchParams(location.search);
+    const currentPath = location.pathname.replace('/site/preview', '').replace('/site/previsualização', '');
+    
+    // Only highlight if we're on the properties page
+    if (!currentPath.includes('/imoveis')) return false;
+    
+    if (href.includes('tipo=Apartamento')) return urlParams.get('tipo') === 'Apartamento';
+    if (href.includes('tipo=Casa')) return urlParams.get('tipo') === 'Casa';
+    if (href.includes('finalidade=aluguel')) return urlParams.get('finalidade') === 'aluguel';
+    return false;
+  };
+
   const getHref = (path: string) => {
     if (isPreviewMode && orgParam) {
       if (path.includes('?')) {
@@ -123,9 +137,12 @@ export default function PublicSiteLayout() {
                   <Link
                     key={link.href}
                     to={getHref(link.href)}
-                    className="px-4 py-2 text-sm font-light tracking-wider text-white/80 transition-colors"
+                    className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
+                    style={{ 
+                      color: isFilterActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'
+                    }}
                     onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = isFilterActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'}
                   >
                     {link.label}
                   </Link>
@@ -139,7 +156,8 @@ export default function PublicSiteLayout() {
                 </button>
                 <Link 
                   to={getHref("contato")}
-                  className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-light tracking-wide hover:bg-white/90 transition-colors"
+                  className="px-6 py-2.5 rounded-full text-sm font-light tracking-wide transition-colors hover:opacity-90"
+                  style={{ backgroundColor: primaryColor, color: 'white' }}
                 >
                   CONTATO
                 </Link>
@@ -338,17 +356,19 @@ export default function PublicSiteLayout() {
                     </a>
                   </li>
                 )}
-                {siteConfig.whatsapp && (
+                {siteConfig.whatsapp && organizationId && (
                   <li>
-                    <a 
-                      href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 text-white/60 hover:text-white transition-colors text-sm"
-                    >
-                      <MessageCircle className="w-4 h-4 flex-shrink-0" />
-                      WhatsApp
-                    </a>
+                    <ContactFormDialog
+                      organizationId={organizationId}
+                      whatsappNumber={siteConfig.whatsapp}
+                      primaryColor={primaryColor}
+                      trigger={
+                        <button className="flex items-center gap-3 text-white/60 hover:text-white transition-colors text-sm cursor-pointer">
+                          <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                          WhatsApp
+                        </button>
+                      }
+                    />
                   </li>
                 )}
                 {siteConfig.email && (
