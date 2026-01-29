@@ -91,7 +91,7 @@ export default function PublicSiteLayout() {
                   <Link
                     key={link.href}
                     to={getHref(link.href)}
-                    className={`px-4 py-2 text-sm font-medium tracking-wider transition-colors ${
+                    className={`px-4 py-2 text-sm font-light tracking-wider transition-colors ${
                       isActive(link.href) 
                         ? 'text-[#C4A052]' 
                         : 'text-white/80 hover:text-white'
@@ -106,7 +106,7 @@ export default function PublicSiteLayout() {
                   <Link
                     key={link.href}
                     to={getHref(link.href)}
-                    className="px-4 py-2 text-sm font-medium tracking-wider text-white/80 hover:text-[#C4A052] transition-colors"
+                    className="px-4 py-2 text-sm font-light tracking-wider text-white/80 hover:text-[#C4A052] transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -120,7 +120,7 @@ export default function PublicSiteLayout() {
                 </button>
                 <Link 
                   to={getHref("contato")}
-                  className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-medium tracking-wide hover:bg-white/90 transition-colors"
+                  className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-light tracking-wide hover:bg-white/90 transition-colors"
                 >
                   CONTATO
                 </Link>
