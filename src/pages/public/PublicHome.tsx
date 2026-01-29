@@ -394,7 +394,7 @@ export default function PublicHome() {
               >
                 <Button 
                   variant="outline"
-                  className="border-2 border-white/30 text-white hover:bg-white/10 px-8 py-6 text-sm tracking-wider"
+                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 px-8 py-6 text-sm tracking-wider"
                 >
                   WHATSAPP
                 </Button>
