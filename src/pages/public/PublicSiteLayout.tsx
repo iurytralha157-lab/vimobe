@@ -72,7 +72,11 @@ export default function PublicSiteLayout() {
                   <img 
                     src={siteConfig.logo_url} 
                     alt={siteConfig.site_title} 
-                    className="h-8 md:h-10 w-auto object-contain"
+                    style={{ 
+                      maxWidth: siteConfig.logo_width || 160, 
+                      maxHeight: siteConfig.logo_height || 50 
+                    }}
+                    className="w-auto object-contain"
                   />
                 ) : (
                   <span className="text-lg md:text-xl font-serif text-white tracking-wider">
@@ -137,7 +141,11 @@ export default function PublicSiteLayout() {
                       <img 
                         src={siteConfig.logo_url} 
                         alt={siteConfig.site_title} 
-                        className="h-8 w-auto object-contain"
+                        style={{ 
+                          maxWidth: Math.min(siteConfig.logo_width || 160, 200), 
+                          maxHeight: Math.min(siteConfig.logo_height || 50, 40) 
+                        }}
+                        className="w-auto object-contain"
                       />
                     ) : (
                       <span className="text-lg font-serif text-white">
@@ -238,7 +246,11 @@ export default function PublicSiteLayout() {
                 <img 
                   src={siteConfig.logo_url} 
                   alt={siteConfig.site_title} 
-                  className="h-12 w-auto object-contain mb-4"
+                  style={{ 
+                    maxWidth: siteConfig.logo_width || 160, 
+                    maxHeight: siteConfig.logo_height || 50 
+                  }}
+                  className="w-auto object-contain mb-4"
                 />
               ) : (
                 <h3 className="text-xl font-serif mb-4">{siteConfig.site_title}</h3>

@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2 } from "lucide-react";
+import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -431,6 +432,72 @@ Registro A (www):
                         </label>
                       </div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Logo Size Controls */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Maximize2 className="h-5 w-5" />
+                    Tamanho da Logo no Site
+                  </CardTitle>
+                  <CardDescription>
+                    Ajuste as dimensões da logo exibida no site público (em pixels)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Largura Máxima</Label>
+                        <span className="text-sm font-medium text-muted-foreground">{site?.logo_width || 160}px</span>
+                      </div>
+                      <Slider
+                        value={[site?.logo_width || 160]}
+                        onValueChange={(value) => updateSite.mutate({ logo_width: value[0] })}
+                        min={60}
+                        max={400}
+                        step={10}
+                        className="w-full"
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label>Altura Máxima</Label>
+                        <span className="text-sm font-medium text-muted-foreground">{site?.logo_height || 50}px</span>
+                      </div>
+                      <Slider
+                        value={[site?.logo_height || 50]}
+                        onValueChange={(value) => updateSite.mutate({ logo_height: value[0] })}
+                        min={20}
+                        max={120}
+                        step={5}
+                        className="w-full"
+                        disabled={!isAdmin}
+                      />
+                    </div>
+
+                    {/* Preview */}
+                    {site?.logo_url && (
+                      <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                        <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização</Label>
+                        <div className="flex items-center justify-center h-24 bg-background rounded border">
+                          <img 
+                            src={site.logo_url} 
+                            alt="Preview" 
+                            style={{ 
+                              maxWidth: site.logo_width || 160, 
+                              maxHeight: site.logo_height || 50 
+                            }}
+                            className="object-contain"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

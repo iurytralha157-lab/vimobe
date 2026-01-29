@@ -2228,7 +2228,9 @@ export type Database = {
           instagram: string | null
           is_active: boolean
           linkedin: string | null
+          logo_height: number | null
           logo_url: string | null
+          logo_width: number | null
           organization_id: string
           page_banner_url: string | null
           phone: string | null
@@ -2267,7 +2269,9 @@ export type Database = {
           instagram?: string | null
           is_active?: boolean
           linkedin?: string | null
+          logo_height?: number | null
           logo_url?: string | null
+          logo_width?: number | null
           organization_id: string
           page_banner_url?: string | null
           phone?: string | null
@@ -2306,7 +2310,9 @@ export type Database = {
           instagram?: string | null
           is_active?: boolean
           linkedin?: string | null
+          logo_height?: number | null
           logo_url?: string | null
+          logo_width?: number | null
           organization_id?: string
           page_banner_url?: string | null
           phone?: string | null
