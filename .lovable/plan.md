@@ -1,259 +1,290 @@
 
-# Ajustes no Site Público - Cabeçalho, Hero e Categorias
+# Plano Completo: Evolução do Site Público Imobiliário
 
-## Resumo do que você pediu
-
-1. **Cabeçalho** - Largura fixa (~1400-1500px), não full-width, efeito vidro mais claro, sem borda, botão "Contato" preenchido com bordas arredondadas
-2. **Barra de busca** - Efeito vidro mais claro (igual ao header), espaçamento entre título e campo
-3. **Imóveis** - Puxar os imóveis cadastrados (já funciona via `status: 'ativo'`), mostrar seção "Descubra os imóveis" e "Imóveis em destaque"
-4. **Categorias com efeito sanfona** - Cards de categorias (Casas, Apartamentos, etc.) com efeito hover que expande a imagem
+## Visão Geral
+Este plano cobre a revisão e aprimoramento completo do site público, incluindo sistema de cores dinâmico, filtros avançados, cadastro de localidades, formulário de contato com popup, e integração com distribuição de leads.
 
 ---
 
-## O que já está funcionando
+## Fase 1: Sistema de Cores Dinâmico
 
-- A edge function `public-site-data` já filtra imóveis com `status: 'ativo'`
-- O campo `destaque: true` já marca imóveis em destaque
-- A função `useFeaturedProperties` já busca imóveis em destaque
+### Problema Atual
+As cores personalizáveis (principal, secundária, destaque) configuradas em "Meu Site" não estão sendo aplicadas. O site usa cores hardcoded (#C4A052 dourado).
 
----
+### Solução
+Substituir todas as cores hardcoded pelo sistema de cores do siteConfig:
 
-## Mudanças necessárias
+**Arquivos a modificar:**
+- `src/pages/public/PublicSiteLayout.tsx` - Header, footer e links
+- `src/pages/public/PublicHome.tsx` - Badges, botões, seções
+- `src/pages/public/PublicProperties.tsx` - Filtros e cards
+- `src/pages/public/PublicPropertyDetail.tsx` - Detalhes e formulário
+- `src/pages/public/PublicContact.tsx` - Página de contato
+- `src/pages/public/PublicAbout.tsx` - Página sobre
+- `src/pages/public/PublicMap.tsx` - Marcadores do mapa
 
-### 1. PublicSiteLayout.tsx - Novo Header
-
-**Antes:**
-```tsx
-<header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-lg border-b border-white/10">
-  <div className="max-w-7xl mx-auto px-4 ...">
-```
-
-**Depois:**
-```tsx
-<header className="fixed top-0 left-0 right-0 z-50">
-  {/* Container centralizado com largura máxima */}
-  <div className="max-w-[1400px] mx-auto px-4 mt-4">
-    <div className="bg-white/20 backdrop-blur-xl rounded-2xl px-6">
-      <div className="flex justify-between items-center h-16">
-        {/* Logo */}
-        ...
-        {/* Navigation */}
-        ...
-        {/* CTA - Botão Contato preenchido */}
-        <Link className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-medium">
-          CONTATO
-        </Link>
-      </div>
-    </div>
-  </div>
-</header>
-```
-
-**Características:**
-- Container com `max-w-[1400px]` centralizado
-- Fundo mais claro: `bg-white/20` (em vez de `bg-black/80`)
-- Blur mais intenso: `backdrop-blur-xl`
-- Sem borda: removido `border-b border-white/10`
-- Bordas arredondadas: `rounded-2xl`
-- Margem do topo: `mt-4` para flutuar
-- Botão Contato: `bg-white text-gray-800 rounded-full`
+**Mapeamento de cores:**
+- `primary_color` - Botões de ação, badges, links hover, ícones
+- `secondary_color` - Backgrounds de seções, footer
+- `accent_color` - Destaques secundários, bordas
 
 ---
 
-### 2. PublicHome.tsx - Barra de Busca Mais Clara
+## Fase 2: Sistema de Filtros Avançados
 
-**Antes:**
-```tsx
-<form className="bg-black/60 backdrop-blur-md rounded-lg p-3 ...">
-```
+### Filtros Básicos (Sempre Visíveis)
+- Cidade (select)
+- Bairro (select - carregado da API)
+- Faixa de Valor (slider ou inputs min/max)
 
-**Depois:**
-```tsx
-<form className="bg-white/20 backdrop-blur-xl rounded-2xl p-4 ...">
-```
+### Filtros Expandidos ("Mais Filtros")
+- Tipo de Imóvel
+- Finalidade (Venda/Aluguel)
+- Quartos (1+, 2+, 3+, 4+)
+- Suítes
+- Banheiros
+- Vagas
+- Área (m²) min/max
+- Mobília (Sim/Não)
+- Aceita Pet (Sim/Não)
+- Condomínio (select - futuro)
 
-**Características:**
-- Mesmo estilo do header: `bg-white/20 backdrop-blur-xl`
-- Bordas mais arredondadas: `rounded-2xl`
-- Espaçamento maior entre título e barra: `mb-16` (em vez de `mb-12`)
+### Alterações Necessárias
 
----
+**1. Hook `use-public-site.ts`:**
+- Adicionar novos parâmetros de filtro
+- Criar hook `usePublicNeighborhoods` para buscar bairros
 
-### 3. PublicHome.tsx - Mostrar Imóveis Cadastrados
+**2. Edge Function `public-site-data`:**
+- Adicionar endpoint `neighborhoods` para listar bairros únicos
+- Adicionar filtros: finalidade, suites, banheiros, vagas, mobilia, regra_pet, area
 
-A seção de imóveis em destaque já existe no código, mas só aparece se `featuredProperties.length > 0`. O problema pode ser:
-
-1. Nenhum imóvel está marcado como `destaque: true`
-2. Nenhum imóvel está com `status: 'ativo'`
-
-**Solução:**
-- Criar uma nova seção que mostra TODOS os imóveis ativos (não apenas destaque)
-- Manter a seção de destaque separadamente
-
-```tsx
-{/* Imóveis em Destaque */}
-{featuredProperties.length > 0 && (
-  <section className="py-20 bg-[#0D0D0D]">
-    <h2>Imóveis em Destaque</h2>
-    {/* Grid de destaque */}
-  </section>
-)}
-
-{/* Todos os Imóveis - Nova seção */}
-<section className="py-20 bg-white">
-  <h2>Descubra Imóveis que Definem o Conceito de Luxo</h2>
-  {/* Grid de todos os imóveis ativos */}
-</section>
-```
-
-Vamos usar um novo hook para buscar todos os imóveis ativos:
-```tsx
-const { data: allProperties = [] } = usePublicProperties(organizationId, { limit: 6 });
-```
+**3. Página `PublicProperties.tsx`:**
+- Interface de filtros colapsável
+- Seção básica sempre visível
+- Botão "Mais Filtros" expande filtros adicionais
+- URL reflete todos os filtros ativos
 
 ---
 
-### 4. PublicHome.tsx - Seção de Categorias com Efeito Sanfona
+## Fase 3: Navegação com Filtros Pré-Aplicados
 
-Esta é a parte mais interessante. Baseado na imagem que você enviou:
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  ┌────────┐┌──────────────────────┐┌────────┐┌────────┐     │
-│  │ CASAS  ││    APARTAMENTOS      ││COBERTURAS││STUDIOS │    │
-│  │        ││   (expandido hover)  ││        ││        │     │
-│  │  25%   ││        40%           ││  17.5% ││  17.5% │     │
-│  └────────┘└──────────────────────┘└────────┘└────────┘     │
-└──────────────────────────────────────────────────────────────┘
+### Header Atualizado
+```
+HOME | BUSCAR MAPA | IMÓVEIS | APARTAMENTOS | CASAS | ALUGUEL | CONTATO
 ```
 
-**Implementação:**
-```tsx
-const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
+### Lógica de Links
+- **IMÓVEIS** - `/imoveis` (sem filtros)
+- **APARTAMENTOS** - `/imoveis?tipo=Apartamento`
+- **CASAS** - `/imoveis?tipo=Casa`
+- **ALUGUEL** - `/imoveis?finalidade=aluguel`
 
-const categories = [
-  { name: 'CASAS', image: '/images/category-casa.jpg' },
-  { name: 'APARTAMENTOS', image: '/images/category-apartamento.jpg' },
-  { name: 'COBERTURAS', image: '/images/category-cobertura.jpg' },
-  { name: 'STUDIOS', image: '/images/category-studio.jpg' },
-];
-
-<section className="py-20 bg-[#0D0D0D]">
-  <div className="h-[500px] flex">
-    {categories.map((cat, idx) => (
-      <div
-        key={cat.name}
-        onMouseEnter={() => setHoveredCategory(idx)}
-        onMouseLeave={() => setHoveredCategory(null)}
-        className={cn(
-          "relative h-full overflow-hidden transition-all duration-500 ease-out",
-          hoveredCategory === idx ? "flex-[2]" : "flex-1"
-        )}
-      >
-        <img
-          src={cat.image}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
-          style={{ transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)' }}
-        />
-        <div className="absolute inset-0 bg-black/40" />
-        <span className="absolute left-4 top-1/2 bg-white text-gray-900 px-4 py-2 text-sm font-medium">
-          {cat.name}
-        </span>
-      </div>
-    ))}
-  </div>
-</section>
-```
-
-**Comportamento:**
-- Por padrão: todos os 4 cards têm tamanho igual (`flex-1`)
-- Ao hover: o card expandido fica maior (`flex-[2]`)
-- A imagem dentro faz zoom (`scale(1.1)`)
-- Transição suave: `transition-all duration-500`
+Os links do header serão atualizados para incluir esses filtros pré-configurados, mantendo suporte ao modo preview com `?org=ID`.
 
 ---
 
-## Arquivos a serem modificados
+## Fase 4: Página do Mapa Funcional
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/public/PublicSiteLayout.tsx` | Header com largura fixa, vidro claro, botão preenchido |
-| `src/pages/public/PublicHome.tsx` | Barra de busca clara, seção de todos os imóveis, efeito sanfona nas categorias |
+### Problema Atual
+O mapa usa posições aleatórias pois não há coordenadas nos imóveis.
 
----
+### Solução Imediata
+1. Adicionar colunas `latitude` e `longitude` na tabela `properties`
+2. Usar geocodificação manual ou futura integração com API
+3. Exibir apenas imóveis com coordenadas no mapa
+4. Centro do mapa baseado na média das coordenadas ou cidade principal
 
-## Seção Técnica
-
-### CSS do Header Glassmorphism Claro
-
-```tsx
-// Container externo (apenas posicionamento)
-<header className="fixed top-0 left-0 right-0 z-50">
-  {/* Container com largura fixa e margem do topo */}
-  <div className="max-w-[1400px] mx-auto px-4 pt-4">
-    {/* Barra com efeito vidro claro */}
-    <div className="bg-white/20 backdrop-blur-xl rounded-2xl px-6 shadow-lg">
-```
-
-### Botão Contato Preenchido
-
-```tsx
-<Link 
-  to={getHref("contato")}
-  className="bg-white text-gray-800 px-6 py-2.5 rounded-full text-sm font-medium tracking-wide hover:bg-white/90 transition-colors"
->
-  CONTATO
-</Link>
-```
-
-### Efeito Sanfona com Flexbox
-
-```tsx
-// Estado para controlar qual card está expandido
-const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
-
-// Classes dinâmicas
-className={cn(
-  "relative h-full overflow-hidden transition-all duration-500 ease-out cursor-pointer",
-  hoveredCategory === null 
-    ? "flex-1"  // Todos iguais quando nenhum hover
-    : hoveredCategory === idx 
-      ? "flex-[2]"  // Expandido
-      : "flex-[0.8]"  // Encolhido
-)}
-```
-
-### Buscar Todos os Imóveis
-
-```tsx
-// No PublicHome.tsx
-import { usePublicProperties, useFeaturedProperties } from "@/hooks/use-public-site";
-
-const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
-const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
-const allProperties = allPropertiesData?.properties || [];
-```
+### Melhorias Visuais
+- Marcadores com cor primária do site
+- Popup com card do imóvel e botão "Ver Detalhes"
+- Cluster de marcadores quando muitos próximos
 
 ---
 
-## Resultado Visual Esperado
+## Fase 5: Sistema de Cadastro de Localidades
 
-**Header:**
-- Flutua sobre o hero com fundo vidro claro/acinzentado
-- Largura fixa de ~1400px
-- Bordas arredondadas
-- Sem linha de borda inferior
-- Botão Contato branco com texto escuro e bordas arredondadas
+### Novas Tabelas no Banco de Dados
 
-**Barra de Busca:**
-- Mesmo efeito vidro claro do header
-- Espaçamento maior do título
+```sql
+-- Cidades cadastradas
+CREATE TABLE property_cities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  uf TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-**Seção de Imóveis:**
-- Mostra todos os imóveis ativos cadastrados
-- Seção separada para destaque (se houver)
+-- Bairros cadastrados
+CREATE TABLE property_neighborhoods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  city_id UUID REFERENCES property_cities(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 
-**Categorias:**
-- 4 cards lado a lado com imagens de fundo
-- Hover expande o card e dá zoom na imagem
-- Transição suave tipo sanfona
+-- Condomínios cadastrados
+CREATE TABLE property_condominiums (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  city_id UUID REFERENCES property_cities(id),
+  neighborhood_id UUID REFERENCES property_neighborhoods(id),
+  name TEXT NOT NULL,
+  address TEXT,
+  latitude DECIMAL(10, 8),
+  longitude DECIMAL(11, 8),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Atualizar properties para referenciar
+ALTER TABLE properties 
+  ADD COLUMN city_id UUID REFERENCES property_cities(id),
+  ADD COLUMN neighborhood_id UUID REFERENCES property_neighborhoods(id),
+  ADD COLUMN condominium_id UUID REFERENCES property_condominiums(id);
+```
+
+### Interface de Administração
+Nova aba em **Gestão CRM** ou ao lado de **Imóveis**:
+- Aba "Cidades" - CRUD de cidades
+- Aba "Bairros" - CRUD de bairros (vinculados a cidades)
+- Aba "Condomínios" - CRUD de condomínios
+
+### Formulário de Imóvel Atualizado
+Selects dinâmicos:
+- Cidade (carrega cidades cadastradas)
+- Bairro (filtra por cidade selecionada)
+- Condomínio (filtra por bairro selecionado)
+
+---
+
+## Fase 6: Formulário de Contato com Popup
+
+### Componente `ContactFormDialog.tsx`
+Novo componente de dialog/popup reutilizável:
+
+```tsx
+<ContactFormDialog
+  organizationId={organizationId}
+  propertyId={property?.id}
+  propertyCode={property?.codigo}
+  trigger={<Button>Fale Conosco</Button>}
+/>
+```
+
+### Campos do Formulário
+- Nome (obrigatório)
+- Telefone (obrigatório)
+- E-mail
+- Mensagem (preenchida automaticamente com interesse no imóvel se aplicável)
+
+### Integração
+- Substituir links diretos do WhatsApp por formulário + redirecionamento
+- Botão flutuante de WhatsApp abre o popup primeiro
+- Após envio bem-sucedido, opção de ir para WhatsApp
+
+### Fluxo
+1. Usuário clica em "Fale Conosco" ou botão WhatsApp
+2. Popup abre com formulário
+3. Usuário preenche dados
+4. Sistema cria lead via `public-site-contact`
+5. Toast de sucesso + opção de abrir WhatsApp
+
+---
+
+## Fase 7: Integração com Distribuição de Leads
+
+### Atualização da Edge Function `public-site-contact`
+Após criar o lead:
+1. Verificar se existe fila de distribuição com regra `source: website`
+2. Se existir, chamar `handle_lead_intake` para distribuição automática
+3. Se não existir, lead fica sem atribuição no primeiro estágio
+
+### Regras de Distribuição
+Adicionar opção na UI de criação de filas:
+- Nova opção de fonte: "Site (Website)"
+- Filtro por categoria do imóvel (Venda/Aluguel) já existe
+
+### Notificações
+- Lead criado notifica admins com origem "Site"
+- Se distribuído, notifica usuário atribuído
+
+---
+
+## Fase 8: Revisão Visual e UX
+
+### Página de Contato
+- Manter layout atual que já está bom
+- Aplicar cores dinâmicas
+- Garantir que formulário funciona corretamente
+
+### Página de Imóveis
+- Header com banner configurável
+- Filtros básicos sempre visíveis
+- Seção "Mais Filtros" colapsável
+- Grid responsivo de cards
+- Paginação
+
+### Página de Detalhes do Imóvel
+- Galeria de imagens funcional
+- Formulário de interesse
+- Botões de contato (WhatsApp, telefone)
+- Características do imóvel
+
+### Página do Mapa
+- Mapa fullscreen com imóveis marcados
+- Filtros laterais ou overlay
+- Cards nos popups dos marcadores
+
+---
+
+## Detalhes Técnicos
+
+### Arquivos a Criar
+1. `src/pages/admin/PropertyLocations.tsx` - Gestão de localidades
+2. `src/components/public/ContactFormDialog.tsx` - Popup de contato
+3. `src/hooks/use-property-locations.ts` - Hook para localidades
+4. `src/hooks/use-public-neighborhoods.ts` - Bairros para site público
+
+### Arquivos a Modificar
+1. `src/pages/public/PublicSiteLayout.tsx` - Header com novos links
+2. `src/pages/public/PublicProperties.tsx` - Filtros avançados
+3. `src/pages/public/PublicMap.tsx` - Mapa funcional
+4. `src/pages/public/PublicPropertyDetail.tsx` - Popup de contato
+5. `src/pages/public/PublicContact.tsx` - Cores dinâmicas
+6. `src/pages/public/PublicHome.tsx` - Cores dinâmicas
+7. `src/hooks/use-public-site.ts` - Novos endpoints
+8. `supabase/functions/public-site-data/index.ts` - Novos filtros e endpoints
+9. `supabase/functions/public-site-contact/index.ts` - Integração com distribuição
+10. `src/components/properties/PropertyFormDialog.tsx` - Selects de localidades
+
+### Migrations SQL
+1. Criar tabelas de localidades
+2. Adicionar colunas de referência em properties
+3. Adicionar colunas latitude/longitude em properties
+
+---
+
+## Ordem de Implementação Sugerida
+
+1. **Sistema de Cores** - Impacto visual imediato
+2. **Filtros Avançados** - Funcionalidade crítica
+3. **Navegação com Filtros** - UX do header
+4. **Popup de Contato** - Captura de leads
+5. **Integração Distribuição** - Automação
+6. **Sistema de Localidades** - Backend + Admin
+7. **Mapa Funcional** - Requer coordenadas
+
+---
+
+## Garantias de Não-Interferência no CRM
+
+- Todas as alterações no site público usam contexto isolado (`PublicContext`)
+- Edge functions públicas operam com `service_role` apenas para leitura
+- Leads criados seguem fluxo padrão existente
+- Rotas do site são completamente separadas (`/site/previsualização/*`)
+- Nenhuma alteração em componentes do CRM principal
