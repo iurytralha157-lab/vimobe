@@ -77,19 +77,19 @@ export default function PublicHome() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4 pt-20">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-light mb-4 max-w-4xl leading-tight">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-light mb-6 max-w-4xl leading-tight">
             {siteConfig.hero_title || 'Transformando seus sonhos em realidade!'}
           </h1>
           {siteConfig.hero_subtitle && (
-            <p className="text-lg md:text-xl text-white/70 mb-12 max-w-2xl">
+            <p className="text-base md:text-lg text-white/70 mb-16 max-w-2xl">
               {siteConfig.hero_subtitle}
             </p>
           )}
 
-          {/* Search Bar - Light Glassmorphism */}
+          {/* Search Bar - Glassmorphism igual ao header */}
           <form 
             onSubmit={handleSearch} 
-            className="bg-white/20 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4"
+            className="bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4"
           >
             <div className="flex-1 min-w-[200px]">
               <Input
