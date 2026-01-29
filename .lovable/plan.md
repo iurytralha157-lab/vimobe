@@ -1,187 +1,103 @@
 
-# Plano: Ajustes Visuais das Páginas Internas do Site Público
+# Diagnóstico: Leads do Guilherme não aparecem no Pipeline
 
 ## Problema Identificado
-1. As páginas internas (Imóveis, Apartamentos, Casas, Aluguel, Mapa, Contato) não estão usando o banner configurável (`page_banner_url`)
-2. Os títulos não estão centralizados
-3. Texto "0 imóveis encontrados" aparece desnecessariamente
-4. Títulos devem ser dinâmicos baseados no filtro ativo
-5. Página de Contato tem elementos desnecessários (badge "Contato" e subtexto)
-6. Página do Mapa está em branco - problema com o CSS do Leaflet não carregando
+
+Os leads do Guilherme estão visíveis na página de **Contatos**, mas não aparecem no **Pipeline** (Kanban).
+
+**Causa raiz**: 17 dos 18 leads do Guilherme estão com `pipeline_id = NULL` e `stage_id = NULL`. O Kanban filtra por pipeline selecionado, então leads sem pipeline nunca aparecem lá.
+
+### Evidência dos dados:
+
+| Métrica | Guilherme | Total Sistema |
+|---------|-----------|---------------|
+| Total de leads | 18 | 138 |
+| Leads sem pipeline | 17 | 58 |
+| Leads sem stage | 17 | 58 |
+
+Todos os 58 leads sem pipeline foram criados via `source: webhook`.
 
 ---
 
-## Alterações por Arquivo
+## Plano de Correção
 
-### 1. `src/pages/public/PublicProperties.tsx`
-**Mudanças:**
-- Adicionar banner de imagem do `siteConfig.page_banner_url` como background
-- Centralizar o título
-- Remover a contagem de imóveis do header ("X imóveis encontrados")
-- Título dinâmico baseado nos filtros:
-  - Se `tipo=Apartamento` → "Apartamentos"
-  - Se `tipo=Casa` → "Casas"
-  - Se `finalidade=aluguel` → "Aluguel"
-  - Padrão → "Imóveis Disponíveis"
+### Parte 1: Correção Imediata dos Dados
 
-**Antes:**
-```tsx
-<h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">Imóveis Disponíveis</h1>
-<p className="text-white/70 text-lg">
-  {isLoading ? 'Carregando...' : `${data?.total || 0} imóveis encontrados`}
-</p>
+Executar SQL para atribuir o pipeline e stage padrão para todos os leads órfãos:
+
+```sql
+-- Atribuir pipeline e stage padrão para leads sem pipeline
+WITH default_pipeline AS (
+  SELECT p.id as pipeline_id, s.id as stage_id
+  FROM pipelines p
+  JOIN stages s ON s.pipeline_id = p.id
+  WHERE p.is_default = true
+  ORDER BY s.position
+  LIMIT 1
+)
+UPDATE leads
+SET 
+  pipeline_id = (SELECT pipeline_id FROM default_pipeline),
+  stage_id = (SELECT stage_id FROM default_pipeline),
+  stage_entered_at = COALESCE(stage_entered_at, created_at)
+WHERE pipeline_id IS NULL
+  AND (SELECT pipeline_id FROM default_pipeline) IS NOT NULL;
 ```
 
-**Depois:**
-```tsx
-<div 
-  className="py-16 md:py-20 relative overflow-hidden"
-  style={{
-    backgroundImage: siteConfig.page_banner_url 
-      ? `url(${siteConfig.page_banner_url})` 
-      : undefined,
-    backgroundColor: !siteConfig.page_banner_url ? secondaryColor : undefined,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  }}
->
-  <div className="absolute inset-0 bg-black/60" />
-  <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
-    <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">
-      {getPageTitle()}
-    </h1>
-  </div>
-</div>
-```
+### Parte 2: Correção no Webhook (Prevenção)
 
-Função para título dinâmico:
-```tsx
-const getPageTitle = () => {
-  if (filters.tipo === 'Apartamento') return 'Apartamentos';
-  if (filters.tipo === 'Casa') return 'Casas';
-  if (filters.finalidade === 'aluguel') return 'Aluguel';
-  return 'Imóveis Disponíveis';
-};
-```
+Atualizar o webhook `generic-webhook/index.ts` para garantir que **sempre** atribua um pipeline e stage padrão quando criar um lead, mesmo que não venham especificados no payload.
 
----
+Mudança necessária:
+- Antes de inserir o lead, buscar o pipeline padrão da organização
+- Buscar o primeiro stage (menor `position`) desse pipeline
+- Atribuir esses valores ao lead se `pipeline_id` ou `stage_id` não forem fornecidos
 
-### 2. `src/pages/public/PublicContact.tsx`
-**Mudanças:**
-- Adicionar banner de imagem do `siteConfig.page_banner_url`
-- Remover badge "Contato" em laranja
-- Remover subtexto descritivo
-- Centralizar título "Entre em Contato"
-- Usar fonte leve (font-light) para consistência
+### Parte 3: Correção Alternativa via Trigger (Mais Robusta)
 
-**Antes:**
-```tsx
-<span className="inline-block px-4 py-1.5 rounded-full...">Contato</span>
-<h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">Entre em Contato</h1>
-<p className="text-white/70...">Estamos prontos para ajudá-lo...</p>
-```
+Criar um trigger no banco de dados para garantir que nenhum lead seja criado sem pipeline/stage:
 
-**Depois:**
-```tsx
-<div 
-  className="py-16 md:py-20 relative overflow-hidden"
-  style={{
-    backgroundImage: siteConfig.page_banner_url 
-      ? `url(${siteConfig.page_banner_url})` 
-      : undefined,
-    backgroundColor: !siteConfig.page_banner_url ? siteConfig.secondary_color : undefined,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  }}
->
-  <div className="absolute inset-0 bg-black/60" />
-  <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
-    <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">Entre em Contato</h1>
-  </div>
-</div>
+```sql
+CREATE OR REPLACE FUNCTION ensure_lead_has_pipeline()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.pipeline_id IS NULL THEN
+    SELECT p.id, s.id INTO NEW.pipeline_id, NEW.stage_id
+    FROM pipelines p
+    JOIN stages s ON s.pipeline_id = p.id
+    WHERE p.organization_id = NEW.organization_id
+      AND p.is_default = true
+    ORDER BY s.position
+    LIMIT 1;
+  ELSIF NEW.stage_id IS NULL THEN
+    SELECT id INTO NEW.stage_id
+    FROM stages
+    WHERE pipeline_id = NEW.pipeline_id
+    ORDER BY position
+    LIMIT 1;
+  END IF;
+  
+  IF NEW.stage_entered_at IS NULL THEN
+    NEW.stage_entered_at := NOW();
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_ensure_lead_pipeline
+BEFORE INSERT ON leads
+FOR EACH ROW
+EXECUTE FUNCTION ensure_lead_has_pipeline();
 ```
 
 ---
 
-### 3. `src/pages/public/PublicMap.tsx`
-**Mudanças:**
-- Corrigir problema de tela branca - importar CSS do Leaflet de forma mais confiável
-- Adicionar fallback se o mapa não carregar
-- Remover subtexto e centralizar título
-- Usar fonte consistente (font-light)
+## Resumo da Implementação
 
-**Correção do CSS:**
-O problema pode estar relacionado ao import do CSS do Leaflet. Vamos garantir que o CSS seja carregado adicionando um fallback e verificando se o container tem altura definida antes de renderizar.
+| Etapa | Ação | Impacto |
+|-------|------|---------|
+| 1 | Migração SQL para corrigir leads existentes | Imediato - leads aparecem no Pipeline |
+| 2 | Trigger no banco | Previne leads órfãos no futuro |
 
-```tsx
-// Importar CSS inline como fallback
-useEffect(() => {
-  // Ensure Leaflet CSS is loaded
-  const linkId = 'leaflet-css';
-  if (!document.getElementById(linkId)) {
-    const link = document.createElement('link');
-    link.id = linkId;
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-  }
-}, []);
-```
-
----
-
-### 4. `src/pages/public/PublicAbout.tsx`
-**Mudanças:**
-- Verificar se já usa o banner e centralização
-- Garantir consistência visual
-
----
-
-## Resumo das Alterações
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `PublicProperties.tsx` | Banner + título dinâmico + centralizado |
-| `PublicContact.tsx` | Banner + remover badge/subtexto + centralizado |
-| `PublicMap.tsx` | Corrigir CSS do Leaflet + título centralizado |
-| `PublicAbout.tsx` | Verificar consistência |
-
----
-
-## Padrão Visual Unificado para Páginas Internas
-
-Todas as páginas internas terão este header consistente:
-
-```tsx
-<div 
-  className="py-16 md:py-20 relative overflow-hidden"
-  style={{
-    backgroundImage: siteConfig.page_banner_url 
-      ? `url(${siteConfig.page_banner_url})` 
-      : undefined,
-    backgroundColor: !siteConfig.page_banner_url ? secondaryColor : undefined,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  }}
->
-  <div className="absolute inset-0 bg-black/60" />
-  <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
-    <h1 className="text-3xl md:text-4xl font-light">{titulo}</h1>
-  </div>
-</div>
-```
-
----
-
-## Detalhes Técnicos
-
-### Página do Mapa - Problema de Tela Branca
-O componente `MapContainer` do react-leaflet requer:
-1. CSS do Leaflet carregado
-2. Container com altura definida
-3. Contexto válido com `siteConfig`
-
-A correção inclui:
-- Carregar CSS via link dinâmico no head
-- Adicionar estado de loading enquanto CSS carrega
-- Verificar se `data?.properties` existe antes de renderizar markers
+Após a correção, todos os leads do Guilherme (e de outros usuários) que estavam órfãos aparecerão no estágio inicial do pipeline padrão (provavelmente "Contato inicial").
