@@ -125,6 +125,9 @@ export function useTelecomCustomers(filters?: {
   plan_id?: string;
   page?: number;
   limit?: number;
+  // Permission-based filtering
+  viewAllPermission?: boolean;
+  currentUserId?: string;
 }) {
   const { organization } = useAuth();
   const page = filters?.page || 1;
@@ -146,6 +149,11 @@ export function useTelecomCustomers(filters?: {
         .eq('organization_id', organization.id)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
+
+      // Permission-based filtering: if user doesn't have view_all, filter by seller_id
+      if (filters?.viewAllPermission === false && filters?.currentUserId) {
+        query = query.eq('seller_id', filters.currentUserId);
+      }
 
       if (filters?.status) {
         query = query.eq('status', filters.status);
