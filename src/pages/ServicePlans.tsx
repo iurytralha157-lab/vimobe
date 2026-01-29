@@ -33,12 +33,12 @@ import {
   useDeleteServicePlan,
   type ServicePlan 
 } from '@/hooks/use-service-plans';
-import { useAuth } from '@/contexts/AuthContext';
 import { ModuleGuard } from '@/components/guards/ModuleGuard';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 
 export default function ServicePlans() {
-  const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const { hasPermission } = useUserPermissions();
+  const canEdit = hasPermission('plans_edit');
   const { data: plans = [], isLoading } = useServicePlans();
   const createPlan = useCreateServicePlan();
   const updatePlan = useUpdateServicePlan();
@@ -106,7 +106,7 @@ export default function ServicePlans() {
                 Gerencie os planos de internet e serviços da sua empresa
               </p>
             </div>
-            {isAdmin && (
+            {canEdit && (
               <Button onClick={() => { setEditingPlan(null); setFormOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Plano
@@ -195,7 +195,7 @@ export default function ServicePlans() {
                 <p className="text-muted-foreground text-sm">
                   {search ? 'Tente outra busca' : 'Comece cadastrando seu primeiro plano'}
                 </p>
-                {isAdmin && !search && (
+                {canEdit && !search && (
                   <Button 
                     className="mt-4" 
                     onClick={() => { setEditingPlan(null); setFormOpen(true); }}
@@ -212,8 +212,8 @@ export default function ServicePlans() {
                 <PlanCard
                   key={plan.id}
                   plan={plan}
-                  onEdit={isAdmin ? handleEdit : undefined}
-                  onDelete={isAdmin ? handleDelete : undefined}
+                  onEdit={canEdit ? handleEdit : undefined}
+                  onDelete={canEdit ? handleDelete : undefined}
                 />
               ))}
             </div>

@@ -61,10 +61,14 @@ import { useServicePlans } from '@/hooks/use-service-plans';
 import { useAuth } from '@/contexts/AuthContext';
 import { ModuleGuard } from '@/components/guards/ModuleGuard';
 import { cn } from '@/lib/utils';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 
 export default function TelecomCustomers() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const { hasPermission } = useUserPermissions();
+  const canEdit = hasPermission('customers_edit');
+  const canViewAll = hasPermission('customers_view_all');
+  
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [planFilter, setPlanFilter] = useState<string>('');
@@ -80,6 +84,8 @@ export default function TelecomCustomers() {
     plan_id: planFilter || undefined,
     page,
     limit: pageSize,
+    viewAllPermission: canViewAll,
+    currentUserId: profile?.id,
   });
   const { data: stats = { total: 0, instalados: 0, cancelados: 0, aguardando: 0, inadimplentes: 0 } } = useTelecomCustomerStats();
   const { data: plans = [] } = useServicePlans();
@@ -156,10 +162,12 @@ export default function TelecomCustomers() {
                 Gerencie os clientes de internet e telecom
               </p>
             </div>
-            <Button onClick={() => { setEditingCustomer(null); setFormOpen(true); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Cliente
-            </Button>
+            {canEdit && (
+              <Button onClick={() => { setEditingCustomer(null); setFormOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Cliente
+              </Button>
+            )}
           </div>
 
           {/* Stats Cards */}
@@ -261,7 +269,7 @@ export default function TelecomCustomers() {
                     ? 'Tente ajustar os filtros' 
                     : 'Comece cadastrando seu primeiro cliente'}
                 </p>
-                {!search && !statusFilter && !planFilter && (
+                {canEdit && !search && !statusFilter && !planFilter && (
                   <Button 
                     className="mt-4" 
                     onClick={() => { setEditingCustomer(null); setFormOpen(true); }}
@@ -339,21 +347,23 @@ export default function TelecomCustomers() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(customer)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {isAdmin && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(customer)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                            {canEdit && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(customer)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(customer)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
                             )}
                           </div>
                         </TableCell>

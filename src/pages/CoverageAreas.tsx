@@ -40,8 +40,8 @@ import {
   useDeleteCoverageArea,
   type CoverageArea 
 } from '@/hooks/use-coverage-areas';
-import { useAuth } from '@/contexts/AuthContext';
 import { ModuleGuard } from '@/components/guards/ModuleGuard';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 
 interface GroupedAreas {
   [uf: string]: {
@@ -50,8 +50,8 @@ interface GroupedAreas {
 }
 
 export default function CoverageAreas() {
-  const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const { hasPermission } = useUserPermissions();
+  const canEdit = hasPermission('coverage_edit');
   const { data: areas = [], isLoading } = useCoverageAreas();
   const createArea = useCreateCoverageArea();
   const createAreasBatch = useCreateCoverageAreasBatch();
@@ -134,7 +134,7 @@ export default function CoverageAreas() {
                 Gerencie as localidades que sua empresa atende
               </p>
             </div>
-            {isAdmin && (
+            {canEdit && (
               <Button onClick={() => { setEditingArea(null); setFormOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Localidade
@@ -206,7 +206,7 @@ export default function CoverageAreas() {
                 <p className="text-muted-foreground text-sm">
                   {search ? 'Tente outra busca' : 'Comece cadastrando suas áreas de cobertura'}
                 </p>
-                {isAdmin && !search && (
+                {canEdit && !search && (
                   <Button 
                     className="mt-4" 
                     onClick={() => { setEditingArea(null); setFormOpen(true); }}
@@ -255,7 +255,7 @@ export default function CoverageAreas() {
                                 {area.zone && (
                                   <span className="text-xs opacity-70">({area.zone})</span>
                                 )}
-                                {isAdmin && (
+                                {canEdit && (
                                   <span className="hidden group-hover:inline-flex gap-1 ml-1">
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleEdit(area); }}
