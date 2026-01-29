@@ -1,7 +1,6 @@
-import { useParams, Link } from "react-router-dom";
-import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
+import { useParams, Link, useLocation, useSearchParams } from "react-router-dom";
 import { usePublicProperty, submitContactForm } from "@/hooks/use-public-site";
-import { MapPin, Bed, Bath, Car, Maximize, Phone, ArrowLeft, ChevronLeft, ChevronRight, Building, MessageCircle, Share2, Heart, X } from "lucide-react";
+import { MapPin, Bed, Bath, Car, Maximize, Phone, ArrowLeft, ChevronLeft, ChevronRight, Building, MessageCircle, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,15 +9,36 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "sonner";
 
+// Try to import from PreviewSiteWrapper context first (for preview mode)
+let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
+try {
+  const previewContext = require('./PreviewSiteWrapper');
+  usePublicSiteContext = previewContext.usePreviewSiteContext;
+} catch {
+  const publicContext = require('@/contexts/PublicSiteContext');
+  usePublicSiteContext = publicContext.usePublicSiteContext;
+}
+
 export default function PublicPropertyDetail() {
   const { codigo } = useParams<{ codigo: string }>();
   const { organizationId, siteConfig } = usePublicSiteContext();
   const { data: property, isLoading } = usePublicProperty(organizationId, codigo || null);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Get base path for preview mode
+  const getHref = (path: string) => {
+    if (location.pathname.includes('/site/previsualização')) {
+      const orgParam = searchParams.get('org');
+      return `/site/previsualização/${path}?org=${orgParam}`;
+    }
+    return `/${path}`;
+  };
 
   const allImages = property ? [property.imagem_principal, ...(property.fotos || [])].filter(Boolean) : [];
 
@@ -95,7 +115,7 @@ export default function PublicPropertyDetail() {
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Imóvel não encontrado</h1>
         <p className="text-gray-600 mb-6 text-center">O imóvel que você procura não está disponível.</p>
-        <Link to="/imoveis">
+        <Link to={getHref("imoveis")}>
           <Button 
             className="rounded-full text-white"
             style={{ backgroundColor: siteConfig?.primary_color }}
@@ -113,7 +133,7 @@ export default function PublicPropertyDetail() {
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/imoveis" className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm font-medium">
+            <Link to={getHref("imoveis")} className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm font-medium">
               <ArrowLeft className="w-4 h-4" />
               Voltar para imóveis
             </Link>
@@ -204,19 +224,19 @@ export default function PublicPropertyDetail() {
             {/* Thumbnails */}
             {allImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-            {allImages.map((img, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentImageIndex(index)}
-                className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                  index === currentImageIndex 
-                    ? 'ring-2 ring-offset-2' 
-                    : 'opacity-70 hover:opacity-100'
-                }`}
-                style={{ 
-                  borderColor: index === currentImageIndex ? siteConfig?.primary_color : 'transparent',
-                }}
-              >
+                {allImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                      index === currentImageIndex 
+                        ? 'ring-2 ring-offset-2' 
+                        : 'opacity-70 hover:opacity-100'
+                    }`}
+                    style={{ 
+                      borderColor: index === currentImageIndex ? siteConfig?.primary_color : 'transparent',
+                    }}
+                  >
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
@@ -413,7 +433,7 @@ export default function PublicPropertyDetail() {
                     className="rounded-xl resize-none"
                   />
                   <Button 
-                    type="submit" 
+                    type="submit"
                     className="w-full text-white rounded-xl h-12 font-semibold"
                     style={{ backgroundColor: siteConfig?.primary_color }}
                     disabled={isSubmitting}
@@ -424,45 +444,6 @@ export default function PublicPropertyDetail() {
               </CardContent>
             </Card>
           </div>
-        </div>
-      </div>
-
-      {/* Mobile Fixed Bottom Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-40">
-        <div className="flex items-center gap-3 max-w-7xl mx-auto">
-          <div className="flex-1">
-            {property.valor_venda && (
-              <p 
-                className="text-xl font-bold"
-                style={{ color: siteConfig?.primary_color }}
-              >
-                {formatPrice(property.valor_venda)}
-              </p>
-            )}
-            {property.valor_aluguel && !property.valor_venda && (
-              <p 
-                className="text-xl font-bold"
-                style={{ color: siteConfig?.primary_color }}
-              >
-                {formatPrice(property.valor_aluguel)}/mês
-              </p>
-            )}
-          </div>
-          {siteConfig?.whatsapp && (
-            <a
-              href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}?text=Olá! Tenho interesse no imóvel ${property.codigo} - ${property.titulo}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button 
-                className="text-white rounded-xl h-12 px-6 gap-2"
-                style={{ backgroundColor: '#25D366' }}
-              >
-                <MessageCircle className="w-5 h-5" />
-                WhatsApp
-              </Button>
-            </a>
-          )}
         </div>
       </div>
     </div>

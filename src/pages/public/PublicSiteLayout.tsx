@@ -1,12 +1,26 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
-import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, X, MessageCircle, ChevronRight } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, MessageCircle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+// Try to import from PreviewSiteWrapper context first (for preview mode)
+// Falls back to PublicSiteContext for production domains
+let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
+try {
+  const previewContext = require('./PreviewSiteWrapper');
+  usePublicSiteContext = previewContext.usePreviewSiteContext;
+} catch {
+  const publicContext = require('@/contexts/PublicSiteContext');
+  usePublicSiteContext = publicContext.usePublicSiteContext;
+}
 
 export default function PublicSiteLayout() {
-  const { siteConfig, isLoading, error } = usePublicSiteContext();
+  const context = usePublicSiteContext();
+  const siteConfig = context?.siteConfig;
+  const isLoading = context?.isLoading;
+  const error = context?.error;
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -42,15 +56,28 @@ export default function PublicSiteLayout() {
   }
 
   const navLinks = [
-    { href: "/", label: "Início" },
-    { href: "/imoveis", label: "Imóveis" },
-    { href: "/sobre", label: "Sobre" },
-    { href: "/contato", label: "Contato" },
+    { href: "", label: "Início" },
+    { href: "imoveis", label: "Imóveis" },
+    { href: "sobre", label: "Sobre" },
+    { href: "contato", label: "Contato" },
   ];
 
+  // Get base path for preview mode
+  const basePath = location.pathname.includes('/site/previsualização') 
+    ? `/site/previsualização${location.search}` 
+    : '';
+
   const isActive = (path: string) => {
-    if (path === "/") return location.pathname === path;
-    return location.pathname.startsWith(path);
+    const currentPath = location.pathname.replace('/site/previsualização', '');
+    if (path === "") return currentPath === "" || currentPath === "/";
+    return currentPath.includes(`/${path}`);
+  };
+
+  const getHref = (path: string) => {
+    if (location.pathname.includes('/site/previsualização')) {
+      return `/site/previsualização/${path}${location.search}`;
+    }
+    return `/${path}`;
   };
 
   return (
@@ -60,7 +87,7 @@ export default function PublicSiteLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3">
+            <Link to={getHref("")} className="flex items-center gap-3">
               {siteConfig.logo_url ? (
                 <img 
                   src={siteConfig.logo_url} 
@@ -82,7 +109,7 @@ export default function PublicSiteLayout() {
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
-                  to={link.href}
+                  to={getHref(link.href)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                     isActive(link.href) 
                       ? 'text-white' 
@@ -161,7 +188,7 @@ export default function PublicSiteLayout() {
                       {navLinks.map((link) => (
                         <Link
                           key={link.href}
-                          to={link.href}
+                          to={getHref(link.href)}
                           onClick={() => setMobileMenuOpen(false)}
                           className={`flex items-center justify-between px-4 py-3 rounded-xl text-base font-medium transition-all ${
                             isActive(link.href) 
@@ -304,7 +331,7 @@ export default function PublicSiteLayout() {
                 {navLinks.map((link) => (
                   <li key={link.href}>
                     <Link 
-                      to={link.href}
+                      to={getHref(link.href)}
                       className="text-gray-400 hover:text-white transition-colors text-sm"
                     >
                       {link.label}

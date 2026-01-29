@@ -1,29 +1,50 @@
-import { Link } from "react-router-dom";
-import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useFeaturedProperties, usePropertyTypes } from "@/hooks/use-public-site";
-import { Search, Home, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, ChevronRight } from "lucide-react";
+import { Search, Building, MapPin, ArrowRight, Bed, Bath, Maximize, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+// Try to import from PreviewSiteWrapper context first (for preview mode)
+let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
+try {
+  const previewContext = require('./PreviewSiteWrapper');
+  usePublicSiteContext = previewContext.usePreviewSiteContext;
+} catch {
+  const publicContext = require('@/contexts/PublicSiteContext');
+  usePublicSiteContext = publicContext.usePublicSiteContext;
+}
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicSiteContext();
   const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("");
+
+  // Get base path for preview mode
+  const getHref = (path: string) => {
+    if (location.pathname.includes('/site/previsualização')) {
+      return `/site/previsualização/${path}${location.search}`;
+    }
+    return `/${path}`;
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (selectedType && selectedType !== "all") params.set("tipo", selectedType);
-    navigate(`/imoveis?${params.toString()}`);
+    
+    const basePath = location.pathname.includes('/site/previsualização') 
+      ? `/site/previsualização/imoveis${location.search}&${params.toString()}`
+      : `/imoveis?${params.toString()}`;
+    navigate(basePath);
   };
 
   const formatPrice = (value: number | null) => {
@@ -118,7 +139,7 @@ export default function PublicHome() {
                 </h2>
                 <p className="text-gray-600 mt-2">Confira nossas melhores oportunidades</p>
               </div>
-              <Link to="/imoveis">
+              <Link to={getHref("imoveis")}>
                 <Button 
                   variant="outline" 
                   className="rounded-full border-2 gap-2"
@@ -132,7 +153,7 @@ export default function PublicHome() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredProperties.map((property) => (
-                <Link key={property.id} to={`/imoveis/${property.codigo}`}>
+                <Link key={property.id} to={getHref(`imoveis/${property.codigo}`)}>
                   <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-white rounded-2xl">
                     <div className="relative h-64 overflow-hidden">
                       <img
@@ -233,7 +254,7 @@ export default function PublicHome() {
               {propertyTypes.slice(0, 8).map((type, index) => (
                 <Link 
                   key={type} 
-                  to={`/imoveis?tipo=${encodeURIComponent(type)}`}
+                  to={getHref(`imoveis?tipo=${encodeURIComponent(type)}`)}
                   className="group"
                 >
                   <div 
@@ -289,7 +310,7 @@ export default function PublicHome() {
             Entre em contato conosco e nossa equipe especializada vai ajudar você a encontrar o imóvel ideal para suas necessidades.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/contato">
+            <Link to={getHref("contato")}>
               <Button 
                 size="lg"
                 className="text-white w-full sm:w-auto rounded-full px-8 shadow-lg hover:shadow-xl transition-all"

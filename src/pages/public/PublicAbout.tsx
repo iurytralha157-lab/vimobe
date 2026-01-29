@@ -1,11 +1,31 @@
-import { usePublicSiteContext } from "@/contexts/PublicSiteContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building, Users, Award, Heart, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+
+// Try to import from PreviewSiteWrapper context first (for preview mode)
+let usePublicSiteContext: () => { organizationId: string | null; siteConfig: any; isLoading: boolean; error: string | null };
+try {
+  const previewContext = require('./PreviewSiteWrapper');
+  usePublicSiteContext = previewContext.usePreviewSiteContext;
+} catch {
+  const publicContext = require('@/contexts/PublicSiteContext');
+  usePublicSiteContext = publicContext.usePublicSiteContext;
+}
 
 export default function PublicAbout() {
   const { siteConfig } = usePublicSiteContext();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  // Get base path for preview mode
+  const getHref = (path: string) => {
+    if (location.pathname.includes('/site/previsualização')) {
+      const orgParam = searchParams.get('org');
+      return `/site/previsualização/${path}?org=${orgParam}`;
+    }
+    return `/${path}`;
+  };
 
   const features = [
     { icon: Building, title: "Imóveis Selecionados", description: "Curadoria dos melhores imóveis da região com critérios rigorosos de qualidade" },
@@ -210,7 +230,7 @@ export default function PublicAbout() {
             Entre em contato conosco e vamos ajudá-lo a realizar seu sonho.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/contato">
+            <Link to={getHref("contato")}>
               <Button 
                 size="lg"
                 className="bg-white hover:bg-gray-100 w-full sm:w-auto rounded-full px-8 gap-2"
@@ -220,7 +240,7 @@ export default function PublicAbout() {
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/imoveis">
+            <Link to={getHref("imoveis")}>
               <Button 
                 size="lg"
                 variant="outline"
