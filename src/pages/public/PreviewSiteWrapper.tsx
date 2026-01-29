@@ -66,11 +66,14 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
             seo_description: data.seo_description,
             seo_keywords: data.seo_keywords,
             google_analytics_id: data.google_analytics_id,
-            // New hero fields
+            // Hero fields
             hero_image_url: data.hero_image_url,
             hero_title: data.hero_title,
             hero_subtitle: data.hero_subtitle,
             page_banner_url: data.page_banner_url,
+            // Logo size fields
+            logo_width: data.logo_width,
+            logo_height: data.logo_height,
             organization_name: (data.organizations as any)?.name || 'Imobiliária',
           });
         }

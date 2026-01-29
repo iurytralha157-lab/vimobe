@@ -35,11 +35,14 @@ export interface OrganizationSite {
   seo_description: string | null;
   seo_keywords: string | null;
   google_analytics_id: string | null;
-  // New hero fields
+  // Hero fields
   hero_image_url: string | null;
   hero_title: string | null;
   hero_subtitle: string | null;
   page_banner_url: string | null;
+  // Logo size fields
+  logo_width: number | null;
+  logo_height: number | null;
   created_at: string;
   updated_at: string;
 }
