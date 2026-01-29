@@ -82,8 +82,47 @@ Deno.serve(async (req) => {
           updateData.health_check_failures = 0;
         } else {
           // Increment failures
-          updateData.health_check_failures = (session.health_check_failures || 0) + 1;
+          const newFailures = (session.health_check_failures || 0) + 1;
+          updateData.health_check_failures = newFailures;
           updateData.status = "disconnected";
+
+          // Create notification if this is the 2nd consecutive failure (threshold)
+          if (newFailures === 2) {
+            const displayName = session.display_name || session.instance_name;
+            
+            // Notify session owner
+            await supabase.from("notifications").insert({
+              user_id: session.owner_user_id,
+              organization_id: session.organization_id,
+              title: "⚠️ WhatsApp Desconectado!",
+              content: `A sessão "${displayName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
+              type: "warning",
+              is_read: false,
+            });
+
+            // Notify admins of the organization
+            const { data: admins } = await supabase
+              .from("users")
+              .select("id")
+              .eq("organization_id", session.organization_id)
+              .eq("role", "admin")
+              .neq("id", session.owner_user_id);
+
+            if (admins && admins.length > 0) {
+              const adminNotifications = admins.map((admin: any) => ({
+                user_id: admin.id,
+                organization_id: session.organization_id,
+                title: "⚠️ WhatsApp Desconectado!",
+                content: `A sessão "${displayName}" perdeu a conexão. O responsável foi notificado.`,
+                type: "warning",
+                is_read: false,
+              }));
+
+              await supabase.from("notifications").insert(adminNotifications);
+            }
+
+            console.log(`Disconnection notifications sent for session ${displayName}`);
+          }
         }
 
         await supabase
