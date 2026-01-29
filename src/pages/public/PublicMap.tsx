@@ -1,18 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { usePublicProperties } from "@/hooks/use-public-site";
-import { MapPin, Bed, Maximize, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePublicContext } from "./usePublicContext";
-import L from 'leaflet';
-
-// Fix for default marker icons in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
 
 export default function PublicMap() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -40,18 +31,6 @@ export default function PublicMap() {
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
 
-  // Custom marker with dynamic color
-  const customIcon = useMemo(() => new L.Icon({
-    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${primaryColor}" width="32" height="32">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-      </svg>
-    `),
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
-  }), [primaryColor]);
-
   const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
   const orgParam = new URLSearchParams(location.search).get('org');
   
@@ -68,18 +47,6 @@ export default function PublicMap() {
   const formatPrice = (value: number | null) => {
     if (!value) return null;
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
-  };
-
-  // For now, we'll use random positions around São Paulo since we don't have geocoded addresses
-  // In a real implementation, you would geocode the addresses or use lat/lng from the database
-  const getRandomPosition = (index: number): [number, number] => {
-    const baseLat = -23.5505;
-    const baseLng = -46.6333;
-    const offset = 0.05;
-    // Use index as seed for consistent positions
-    const seedLat = Math.sin(index * 12345) * offset;
-    const seedLng = Math.cos(index * 67890) * offset;
-    return [baseLat + seedLat, baseLng + seedLng];
   };
 
   if (!siteConfig) {
@@ -134,7 +101,6 @@ export default function PublicMap() {
           <MapComponent 
             mapCenter={mapCenter} 
             properties={data?.properties || []}
-            customIcon={customIcon}
             primaryColor={primaryColor}
             getHref={getHref}
             formatPrice={formatPrice}
@@ -149,29 +115,39 @@ export default function PublicMap() {
 function MapComponent({ 
   mapCenter, 
   properties, 
-  customIcon, 
   primaryColor,
   getHref,
   formatPrice
 }: { 
   mapCenter: [number, number];
   properties: any[];
-  customIcon: L.Icon;
   primaryColor: string;
   getHref: (path: string) => string;
   formatPrice: (value: number | null) => string | null;
 }) {
-  const [MapContainer, setMapContainer] = useState<any>(null);
-  const [TileLayer, setTileLayer] = useState<any>(null);
-  const [Marker, setMarker] = useState<any>(null);
-  const [Popup, setPopup] = useState<any>(null);
+  const [leafletComponents, setLeafletComponents] = useState<any>(null);
+  const [L, setL] = useState<any>(null);
   
   useEffect(() => {
-    import('react-leaflet').then((mod) => {
-      setMapContainer(() => mod.MapContainer);
-      setTileLayer(() => mod.TileLayer);
-      setMarker(() => mod.Marker);
-      setPopup(() => mod.Popup);
+    Promise.all([
+      import('react-leaflet'),
+      import('leaflet')
+    ]).then(([reactLeaflet, leaflet]) => {
+      // Fix for default marker icons
+      delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
+      leaflet.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+      
+      setLeafletComponents({
+        MapContainer: reactLeaflet.MapContainer,
+        TileLayer: reactLeaflet.TileLayer,
+        Marker: reactLeaflet.Marker,
+        Popup: reactLeaflet.Popup,
+      });
+      setL(leaflet);
     });
   }, []);
   
@@ -184,8 +160,23 @@ function MapComponent({
     const seedLng = Math.cos(index * 67890) * offset;
     return [baseLat + seedLat, baseLng + seedLng];
   };
+
+  // Custom marker with dynamic color
+  const customIcon = useMemo(() => {
+    if (!L) return null;
+    return new L.Icon({
+      iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${primaryColor}" width="32" height="32">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      `),
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32],
+    });
+  }, [L, primaryColor]);
   
-  if (!MapContainer || !TileLayer || !Marker || !Popup) {
+  if (!leafletComponents || !L || !customIcon) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-gray-800">
         <div className="text-white text-center">
@@ -195,6 +186,8 @@ function MapComponent({
       </div>
     );
   }
+
+  const { MapContainer, TileLayer, Marker, Popup } = leafletComponents;
   
   return (
     <MapContainer 
