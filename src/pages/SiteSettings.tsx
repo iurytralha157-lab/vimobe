@@ -458,7 +458,7 @@ Registro A (www):
                         value={[site?.logo_width || 160]}
                         onValueChange={(value) => updateSite.mutate({ logo_width: value[0] })}
                         min={60}
-                        max={400}
+                        max={500}
                         step={10}
                         className="w-full"
                         disabled={!isAdmin}
