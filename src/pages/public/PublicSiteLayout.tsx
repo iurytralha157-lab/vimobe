@@ -64,8 +64,8 @@ export default function PublicSiteLayout() {
       {/* Header - Floating Glassmorphism */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="max-w-[1200px] mx-auto px-4 pt-4">
-          <div className="bg-black/40 backdrop-blur-xl rounded-2xl px-8">
-            <div className="flex justify-between items-center h-[60px]">
+          <div className="bg-black/40 backdrop-blur-xl rounded-2xl px-8 pl-4">
+            <div className="flex justify-between items-center h-[70px]">
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
                 {siteConfig.logo_url ? (
