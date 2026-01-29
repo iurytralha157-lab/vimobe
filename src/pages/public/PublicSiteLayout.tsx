@@ -63,9 +63,9 @@ export default function PublicSiteLayout() {
     <div className="min-h-screen flex flex-col bg-[#0D0D0D]">
       {/* Header - Floating Glassmorphism */}
       <header className="fixed top-0 left-0 right-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-4 pt-4">
-          <div className="bg-black/40 backdrop-blur-xl rounded-2xl px-6">
-            <div className="flex justify-between items-center h-16">
+        <div className="max-w-[1200px] mx-auto px-4 pt-4">
+          <div className="bg-black/40 backdrop-blur-xl rounded-2xl px-8">
+            <div className="flex justify-between items-center h-20">
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
                 {siteConfig.logo_url ? (
