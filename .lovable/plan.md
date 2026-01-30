@@ -1,106 +1,115 @@
 
-# Plano: Corrigir Persistência de Campos no Formulário de Imóveis
+# Plano: Exibir Mapa Interativo Baseado no Endereço
 
-## Diagnóstico Completo
+## Situação Atual
 
-Após análise detalhada do código, banco de dados e network requests, identifiquei os seguintes problemas:
-
-### Problemas Identificados
-
-1. **Cache do React Query causando dados desatualizados**
-   - Quando o usuário abre para editar, o `useProperty` pode retornar dados cacheados antigos
-   - A query não força um refetch ao editar
-
-2. **Campo Mobília não funciona com string vazia**
-   - O Radix Select não aceita `value=""` corretamente
-   - Quando `formData.mobilia` é `""`, o Select fica inconsistente
-
-3. **Extras e Proximidades nunca são salvos**
-   - Os campos `detalhes_extras` e `proximidades` **não existem** na tabela `properties`
-   - O usuário seleciona opções que nunca são persistidas
-   - Precisa criar tabelas de junção ou adicionar colunas JSON
-
----
+O componente `PropertyLocation.tsx` **já tem mapa implementado** com Leaflet, mas ele só aparece quando o imóvel tem latitude/longitude cadastradas. O problema é que **nenhum imóvel tem coordenadas** no banco de dados, e o formulário de cadastro nem tem esses campos.
 
 ## Solução Proposta
 
-### 1. Forçar Refetch ao Editar (Cache Bypass)
+Vou modificar o componente para **sempre mostrar o mapa**, usando geocodificação automática baseada no endereço (gratuita via Nominatim/OpenStreetMap).
 
-**Arquivo:** `src/pages/Properties.tsx`
+---
+
+## Como Vai Funcionar
+
+1. Se o imóvel tem latitude/longitude → usa essas coordenadas (atual)
+2. Se não tem coordenadas mas tem endereço → geocodifica automaticamente e mostra o mapa
+3. Fallback: centra no bairro/cidade se o endereço exato não for encontrado
+
+---
+
+## Mudanças Técnicas
+
+**Arquivo:** `src/components/public/property-detail/PropertyLocation.tsx`
+
+### 1. Adicionar Geocodificação Automática
 
 ```typescript
-// Adicionar refetch manual ao clicar em editar
-const { data: fullPropertyData, refetch: refetchProperty } = useProperty(loadingPropertyId);
-
-const openEdit = async (property: Property) => {
-  setLoadingPropertyId(property.id);
-};
-
-// No useEffect, garantir que sempre busca dados frescos
-useEffect(() => {
-  if (loadingPropertyId) {
-    // Invalidar cache antes de buscar
-    queryClient.invalidateQueries({ queryKey: ['property', loadingPropertyId] });
+// Função para geocodificar endereço via Nominatim (gratuito)
+const geocodeAddress = async (address: string): Promise<{lat: number, lon: number} | null> => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+    );
+    const data = await response.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    }
+    return null;
+  } catch {
+    return null;
   }
-}, [loadingPropertyId]);
-```
-
-### 2. Corrigir Select de Mobília
-
-**Arquivo:** `src/components/properties/PropertyFormDialog.tsx`
-
-```typescript
-<Select 
-  value={formData.mobilia || undefined}  // undefined ao invés de ""
-  onValueChange={(v) => setFormData({ ...formData, mobilia: v })}
->
-```
-
-### 3. Adicionar Colunas JSON para Extras e Proximidades
-
-**Migração SQL:**
-
-```sql
-ALTER TABLE properties 
-ADD COLUMN IF NOT EXISTS detalhes_extras text[] DEFAULT '{}';
-
-ALTER TABLE properties 
-ADD COLUMN IF NOT EXISTS proximidades text[] DEFAULT '{}';
-```
-
-**Arquivo:** `src/pages/Properties.tsx` (handleSubmit)
-
-Adicionar os campos ao objeto de salvamento:
-```typescript
-const propertyData = {
-  // ... outros campos
-  detalhes_extras: formData.detalhes_extras,
-  proximidades: formData.proximidades,
 };
 ```
 
-**Arquivo:** `src/pages/Properties.tsx` (useEffect de carga)
+### 2. Lógica de Fallback
 
-Carregar os dados:
 ```typescript
-detalhes_extras: (fullPropertyData.detalhes_extras as string[]) || [],
-proximidades: (fullPropertyData.proximidades as string[]) || [],
+useEffect(() => {
+  const loadCoordinates = async () => {
+    // Prioridade 1: Coordenadas existentes
+    if (hasCoordinates) {
+      setMapCoords({ lat: latitude!, lon: longitude! });
+      return;
+    }
+
+    // Prioridade 2: Geocodificar endereço completo
+    if (fullAddress) {
+      const coords = await geocodeAddress(fullAddress);
+      if (coords) {
+        setMapCoords(coords);
+        return;
+      }
+    }
+
+    // Prioridade 3: Geocodificar bairro + cidade
+    if (bairro && cidade) {
+      const coords = await geocodeAddress(`${bairro}, ${cidade}, ${uf}, Brasil`);
+      if (coords) {
+        setMapCoords(coords);
+        return;
+      }
+    }
+
+    // Prioridade 4: Geocodificar só cidade
+    if (cidade && uf) {
+      const coords = await geocodeAddress(`${cidade}, ${uf}, Brasil`);
+      if (coords) {
+        setMapCoords(coords);
+      }
+    }
+  };
+
+  loadCoordinates();
+}, [latitude, longitude, fullAddress, bairro, cidade, uf]);
 ```
 
 ---
 
-## Resumo das Mudanças
+## Visual Final
+
+O resultado será exatamente como a imagem de referência:
+- Mapa ocupando boa parte da seção
+- Pin/marcador na localização
+- Endereço formatado abaixo do mapa
+- Estilo limpo com bordas arredondadas
+
+---
+
+## Vantagens
+
+| Aspecto | Benefício |
+|---------|-----------|
+| **Sem custo** | Nominatim/OpenStreetMap é 100% gratuito |
+| **Automático** | Não precisa preencher latitude/longitude |
+| **Fallback inteligente** | Sempre mostra algo (endereço → bairro → cidade) |
+| **Já configurado** | Leaflet já está instalado no projeto |
+
+---
+
+## Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `Properties.tsx` | Invalidar cache ao editar, incluir campos extras no submit |
-| `PropertyFormDialog.tsx` | Corrigir Select de Mobília com `undefined` |
-| **Migração SQL** | Adicionar colunas `detalhes_extras` e `proximidades` |
-
----
-
-## Resultado Esperado
-
-1. Todos os campos (endereço, CEP, complemento, mobília, descrição) persistem corretamente
-2. Extras e Proximidades são salvos no banco de dados
-3. Ao editar, sempre carrega os dados mais recentes do banco
+| `PropertyLocation.tsx` | Adicionar geocodificação automática e lógica de fallback |
