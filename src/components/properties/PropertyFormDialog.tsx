@@ -451,9 +451,9 @@ export function PropertyFormDialog({
             </div>
             <div className="space-y-2">
               <Label>Mobília</Label>
-              <Select 
-                value={formData.mobilia} 
-                onValueChange={(v) => setFormData({ ...formData, mobilia: v })}
+            <Select 
+              value={formData.mobilia || undefined} 
+              onValueChange={(v) => setFormData({ ...formData, mobilia: v })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
