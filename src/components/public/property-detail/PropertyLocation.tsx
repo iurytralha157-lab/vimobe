@@ -1,5 +1,16 @@
 import React, { useEffect, useState, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
+import { 
+  LocationResult, 
+  PrecisionLevel,
+  getZoomLevel, 
+  getPrecisionLabel,
+  geocodeStructured,
+  geocodeSimple,
+  POI_CONFIG
+} from './map-utils';
+import { usePOIs } from './usePOIs';
+import POIMarkers from './POIMarkers';
 
 interface PropertyLocationProps {
   latitude?: number | null;
@@ -15,21 +26,13 @@ interface PropertyLocationProps {
   primaryColor?: string;
 }
 
-type PrecisionLevel = 'exact' | 'street' | 'neighborhood' | 'city';
-
-interface LocationResult {
-  lat: number;
-  lon: number;
-  boundingBox?: [number, number, number, number]; // [south, north, west, east]
-  precision: PrecisionLevel;
-}
-
 interface LeafletModules {
   MapContainer: any;
   TileLayer: any;
   Marker: any;
   Popup: any;
   Rectangle: any;
+  L: any;
 }
 
 // Error Boundary to catch map errors
@@ -59,69 +62,19 @@ class MapErrorBoundary extends Component<{ children: ReactNode; fallback: ReactN
   }
 }
 
-// Get zoom level based on precision
-const getZoomLevel = (precision: PrecisionLevel): number => {
-  switch (precision) {
-    case 'exact': return 17;
-    case 'street': return 16;
-    case 'neighborhood': return 14;
-    case 'city': return 12;
-    default: return 15;
-  }
-};
-
-// Get precision label for display
-const getPrecisionLabel = (precision: PrecisionLevel): string => {
-  switch (precision) {
-    case 'exact': return 'Localização exata';
-    case 'street': return 'Localização aproximada (rua)';
-    case 'neighborhood': return 'Localização aproximada (bairro)';
-    case 'city': return 'Localização aproximada (cidade)';
-    default: return 'Localização';
-  }
-};
-
-// Geocode address using Nominatim with bounding box
-const geocodeWithBounds = async (
-  address: string, 
-  precision: PrecisionLevel
-): Promise<LocationResult | null> => {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
-      {
-        headers: {
-          'User-Agent': 'PropertySite/1.0'
-        }
-      }
-    );
-    const data = await response.json();
-    if (data && data.length > 0) {
-      const result = data[0];
-      return { 
-        lat: parseFloat(result.lat), 
-        lon: parseFloat(result.lon),
-        boundingBox: result.boundingbox ? result.boundingbox.map(Number) as [number, number, number, number] : undefined,
-        precision
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-// Separate map component for exact location (pin)
+// Separate map component for exact location (pin) with POIs
 function LeafletMapWithMarker({ 
   location, 
   title, 
-  modules 
+  modules,
+  pois
 }: { 
   location: LocationResult; 
   title: string; 
   modules: LeafletModules;
+  pois: import('./map-utils').POI[];
 }) {
-  const { MapContainer, TileLayer, Marker, Popup } = modules;
+  const { MapContainer, TileLayer, Marker, Popup, L } = modules;
   
   try {
     return (
@@ -139,6 +92,11 @@ function LeafletMapWithMarker({
         <Marker position={[location.lat, location.lon]}>
           <Popup>{title}</Popup>
         </Marker>
+        <POIMarkers 
+          pois={pois} 
+          modules={{ Marker, Popup }} 
+          L={L} 
+        />
       </MapContainer>
     );
   } catch (error) {
@@ -147,19 +105,21 @@ function LeafletMapWithMarker({
   }
 }
 
-// Separate map component for area (rectangle)
+// Separate map component for area (rectangle) with POIs
 function LeafletMapWithArea({ 
   location, 
   title,
   primaryColor,
-  modules 
+  modules,
+  pois
 }: { 
   location: LocationResult; 
   title: string;
   primaryColor: string;
   modules: LeafletModules;
+  pois: import('./map-utils').POI[];
 }) {
-  const { MapContainer, TileLayer, Rectangle, Popup } = modules;
+  const { MapContainer, TileLayer, Rectangle, Popup, Marker, L } = modules;
   
   if (!location.boundingBox) {
     return null;
@@ -197,6 +157,11 @@ function LeafletMapWithArea({
         >
           <Popup>{title} - {getPrecisionLabel(location.precision)}</Popup>
         </Rectangle>
+        <POIMarkers 
+          pois={pois} 
+          modules={{ Marker, Popup }} 
+          L={L} 
+        />
       </MapContainer>
     );
   } catch (error) {
@@ -240,6 +205,35 @@ function MapPlaceholder({ primaryColor }: { primaryColor: string }) {
   );
 }
 
+// POI Legend component
+function POILegend({ pois, primaryColor }: { pois: import('./map-utils').POI[]; primaryColor: string }) {
+  const uniqueTypes = useMemo(() => {
+    const types = new Set(pois.map(p => p.type));
+    return Array.from(types);
+  }, [pois]);
+
+  if (uniqueTypes.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-3 px-6 py-3 border-t border-gray-100">
+      {uniqueTypes.map(type => {
+        const config = POI_CONFIG[type];
+        return (
+          <div key={type} className="flex items-center gap-1.5 text-sm text-gray-600">
+            <span 
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
+              style={{ backgroundColor: config.color }}
+            >
+              {config.emoji}
+            </span>
+            <span>{config.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function PropertyLocation({
   latitude,
   longitude,
@@ -275,7 +269,15 @@ export default function PropertyLocation({
 
   const hasExistingCoordinates = latitude !== null && longitude !== null && latitude !== undefined && longitude !== undefined;
 
-  // Geocode address with precision-based fallback
+  // Fetch POIs when we have a location
+  const { pois } = usePOIs({
+    lat: location?.lat ?? null,
+    lon: location?.lon ?? null,
+    enabled: !!location,
+    radius: 1000
+  });
+
+  // Geocode address with structured search and precision-based fallback
   useEffect(() => {
     let isMounted = true;
     
@@ -294,10 +296,17 @@ export default function PropertyLocation({
           return;
         }
 
-        // Priority 2: Full address with number → exact pin
+        // Priority 2: Full address with number → structured search for exact pin
         if (endereco && numero && cidade) {
-          const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
-          const result = await geocodeWithBounds(searchAddress, 'exact');
+          // Try structured geocoding first (more accurate for Brazilian addresses)
+          let result = await geocodeStructured(endereco, numero, cidade, uf || '', 'exact');
+          
+          // Fallback to simple search if structured fails
+          if (!result) {
+            const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
+            result = await geocodeSimple(searchAddress, 'exact');
+          }
+          
           if (result && isMounted) {
             setLocation(result);
             setGeocodeAttempted(true);
@@ -307,8 +316,13 @@ export default function PropertyLocation({
 
         // Priority 3: Street without number → street area
         if (endereco && cidade && !numero) {
-          const searchAddress = [endereco, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
-          const result = await geocodeWithBounds(searchAddress, 'street');
+          let result = await geocodeStructured(endereco, null, cidade, uf || '', 'street');
+          
+          if (!result) {
+            const searchAddress = [endereco, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
+            result = await geocodeSimple(searchAddress, 'street');
+          }
+          
           if (result && isMounted) {
             setLocation(result);
             setGeocodeAttempted(true);
@@ -319,7 +333,7 @@ export default function PropertyLocation({
         // Priority 4: Only neighborhood → neighborhood area
         if (bairro && cidade) {
           const searchAddress = `${bairro}, ${cidade}, ${uf || ''}, Brasil`;
-          const result = await geocodeWithBounds(searchAddress, 'neighborhood');
+          const result = await geocodeSimple(searchAddress, 'neighborhood');
           if (result && isMounted) {
             setLocation(result);
             setGeocodeAttempted(true);
@@ -329,7 +343,7 @@ export default function PropertyLocation({
 
         // Priority 5: Only city → city area
         if (cidade && uf) {
-          const result = await geocodeWithBounds(`${cidade}, ${uf}, Brasil`, 'city');
+          const result = await geocodeSimple(`${cidade}, ${uf}, Brasil`, 'city');
           if (result && isMounted) {
             setLocation(result);
           }
@@ -384,6 +398,7 @@ export default function PropertyLocation({
             Marker: reactLeaflet.Marker,
             Popup: reactLeaflet.Popup,
             Rectangle: reactLeaflet.Rectangle,
+            L: L.default || L,
           });
         }
       } catch (error) {
@@ -446,7 +461,8 @@ export default function PropertyLocation({
               <LeafletMapWithMarker 
                 location={location} 
                 title={title} 
-                modules={leafletModules} 
+                modules={leafletModules}
+                pois={pois}
               />
             </MapErrorBoundary>
           )}
@@ -457,7 +473,8 @@ export default function PropertyLocation({
                 location={location} 
                 title={title}
                 primaryColor={primaryColor}
-                modules={leafletModules} 
+                modules={leafletModules}
+                pois={pois}
               />
             </MapErrorBoundary>
           )}
@@ -468,7 +485,8 @@ export default function PropertyLocation({
               <LeafletMapWithMarker 
                 location={location} 
                 title={title} 
-                modules={leafletModules} 
+                modules={leafletModules}
+                pois={pois}
               />
             </MapErrorBoundary>
           )}
@@ -481,6 +499,9 @@ export default function PropertyLocation({
             <MapPlaceholder primaryColor={primaryColor} />
           )}
         </div>
+
+        {/* POI Legend */}
+        {pois.length > 0 && <POILegend pois={pois} primaryColor={primaryColor} />}
 
         {/* Address */}
         {fullAddress && (
