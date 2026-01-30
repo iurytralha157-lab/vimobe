@@ -27,12 +27,12 @@ export default function PropertyGallery({
   const maxStartIndex = Math.max(0, allMedia.length - visibleCount);
 
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => Math.min(prev + 1, maxStartIndex));
+    setCurrentIndex((prev) => (prev >= maxStartIndex ? 0 : prev + 1));
   }, [maxStartIndex]);
 
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => Math.max(prev - 1, 0));
-  }, []);
+    setCurrentIndex((prev) => (prev <= 0 ? maxStartIndex : prev - 1));
+  }, [maxStartIndex]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function PropertyGallery({
   return (
     <>
       {/* Fullwidth Gallery Carousel - Nexo Style */}
-      <div className="relative w-full mt-16 md:mt-20">
+      <div className="relative w-full">
         {/* Main Carousel Container */}
         <div className="relative h-[300px] md:h-[450px] lg:h-[550px] overflow-hidden">
           {showVideo && youtubeId ? (
@@ -92,7 +92,7 @@ export default function PropertyGallery({
           ) : (
             <>
               {/* Images Grid - Side by Side */}
-              <div className="flex h-full gap-1 md:gap-2">
+              <div className="flex h-full gap-px">
                 {visibleImages.map((img, index) => (
                   <button
                     key={currentIndex + index}
@@ -113,23 +113,23 @@ export default function PropertyGallery({
               </div>
 
               {/* Navigation Arrows */}
-              {hasMultiple && currentIndex > 0 && (
-                <button
-                  onClick={prevSlide}
-                  className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
-                  aria-label="Fotos anteriores"
-                >
-                  <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
-                </button>
-              )}
-              {hasMultiple && currentIndex < maxStartIndex && (
-                <button
-                  onClick={nextSlide}
-                  className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
-                  aria-label="Próximas fotos"
-                >
-                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
-                </button>
+              {hasMultiple && (
+                <>
+                  <button
+                    onClick={prevSlide}
+                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                    aria-label="Fotos anteriores"
+                  >
+                    <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
+                  </button>
+                  <button
+                    onClick={nextSlide}
+                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                    aria-label="Próximas fotos"
+                  >
+                    <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
+                  </button>
+                </>
               )}
 
               {/* Counter Badge */}

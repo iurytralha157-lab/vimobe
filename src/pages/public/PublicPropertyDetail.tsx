@@ -100,31 +100,6 @@ export default function PublicPropertyDetail() {
         videoUrl={(property as any).video_imovel}
       />
 
-      {/* Breadcrumb */}
-      <div className="bg-white border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link 
-              to={getHref("imoveis")} 
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar para imóveis
-            </Link>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-full"
-                onClick={handleShare}
-              >
-                <Share2 className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
