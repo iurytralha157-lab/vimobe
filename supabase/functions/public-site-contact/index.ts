@@ -57,40 +57,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get the first pipeline for this organization to assign the lead
-    const { data: pipeline, error: pipelineError } = await supabase
-      .from('pipelines')
-      .select('id')
-      .eq('organization_id', organization_id)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (pipelineError || !pipeline) {
-      console.error('No pipeline found for organization:', pipelineError);
-      return new Response(
-        JSON.stringify({ error: 'Organization setup incomplete' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get the first stage of this pipeline
-    const { data: stage, error: stageError } = await supabase
-      .from('stages')
-      .select('id')
-      .eq('pipeline_id', pipeline.id)
-      .order('position', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (stageError || !stage) {
-      console.error('No stage found for pipeline:', stageError);
-      return new Response(
-        JSON.stringify({ error: 'Organization setup incomplete' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Normalize phone number
     const normalizedPhone = phone.replace(/\D/g, '');
 
@@ -99,7 +65,7 @@ Deno.serve(async (req) => {
       .from('leads')
       .select('id')
       .eq('organization_id', organization_id)
-      .eq('telefone', normalizedPhone)
+      .eq('phone', normalizedPhone)
       .limit(1)
       .maybeSingle();
 
@@ -120,23 +86,34 @@ Deno.serve(async (req) => {
 
       console.log(`Updated existing lead: ${leadId}`);
     } else {
-      // Create new lead
+      // Get the first admin of the organization as default assignee
+      const { data: admin } = await supabase
+        .from('users')
+        .select('id')
+        .eq('organization_id', organization_id)
+        .eq('role', 'admin')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      console.log(`Admin found for org ${organization_id}:`, admin?.id || 'none');
+
+      // Create lead WITHOUT pipeline/stage initially (goes to Contacts only)
       const leadData: Record<string, unknown> = {
         organization_id: organization_id,
-        pipeline_id: pipeline.id,
-        stage_id: stage.id,
+        pipeline_id: null,          // No pipeline initially
+        stage_id: null,             // No stage initially
+        assigned_user_id: admin?.id || null,  // Admin as default responsible
+        assigned_at: admin ? new Date().toISOString() : null,
         name: name,
         email: email || null,
-        telefone: normalizedPhone,
+        phone: normalizedPhone,     // Fixed: was 'telefone'
+        message: message || null,   // Fixed: was 'notes'
         source: 'website',
-        notes: message || null,
-        stage_entered_at: new Date().toISOString()
+        deal_status: 'open',
+        interest_property_id: property_id || null,
       };
-
-      // If property_id is provided, add it to lead data
-      if (property_id) {
-        leadData.interest_property_id = property_id;
-      }
 
       const { data: newLead, error: leadError } = await supabase
         .from('leads')
@@ -163,31 +140,55 @@ Deno.serve(async (req) => {
           content: `Lead criado via site${property_code ? ` (Imóvel: ${property_code})` : ''}`
         });
 
-      console.log(`Created new lead: ${leadId}`);
+      console.log(`Created new lead: ${leadId} (without pipeline, assigned to admin: ${admin?.id || 'none'})`);
 
       // Try to run round-robin distribution
+      // If successful, this will move the lead to a pipeline/stage and reassign
       try {
         const { data: distributionResult, error: distributionError } = await supabase
           .rpc('handle_lead_intake', { p_lead_id: leadId });
         
         if (distributionError) {
           console.log('Distribution skipped (no active queue or error):', distributionError.message);
-        } else if (distributionResult?.success) {
-          console.log(`Lead distributed to user: ${distributionResult.assigned_user_id}`);
+          // Lead stays in Contacts with admin as responsible - this is fine
+        } else if (distributionResult?.success && distributionResult?.assigned_user_id) {
+          console.log(`Lead distributed to user: ${distributionResult.assigned_user_id}, pipeline: ${distributionResult.pipeline_id}`);
+        } else {
+          console.log('No distribution queue matched, lead stays in Contacts with admin');
         }
       } catch (distError) {
         console.log('Distribution attempt failed:', distError);
-        // Continue without distribution - lead stays unassigned
+        // Continue without distribution - lead stays in Contacts with admin
       }
     }
 
-    // Create notification for admins
+    // Create notification for the assigned user (admin or distributed user)
+    // First, get the current assigned user
+    const { data: currentLead } = await supabase
+      .from('leads')
+      .select('assigned_user_id')
+      .eq('id', leadId)
+      .single();
+
+    if (currentLead?.assigned_user_id) {
+      await supabase.from('notifications').insert({
+        user_id: currentLead.assigned_user_id,
+        organization_id: organization_id,
+        lead_id: leadId,
+        title: 'Novo lead do site',
+        content: `${name} entrou em contato pelo site${property_code ? ` sobre o imóvel ${property_code}` : ''}`,
+        type: 'new_lead'
+      });
+    }
+
+    // Also notify other admins if they weren't the assigned user
     const { data: admins } = await supabase
       .from('users')
       .select('id')
       .eq('organization_id', organization_id)
       .eq('role', 'admin')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .neq('id', currentLead?.assigned_user_id || '00000000-0000-0000-0000-000000000000');
 
     if (admins && admins.length > 0) {
       const notifications = admins.map(admin => ({
