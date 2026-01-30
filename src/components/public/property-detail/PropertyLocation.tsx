@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { MapPin } from 'lucide-react';
 
 interface PropertyLocationProps {
@@ -18,6 +18,13 @@ interface PropertyLocationProps {
 interface Coordinates {
   lat: number;
   lon: number;
+}
+
+interface LeafletModules {
+  MapContainer: any;
+  TileLayer: any;
+  Marker: any;
+  Popup: any;
 }
 
 // Geocode address using Nominatim (free OpenStreetMap service)
@@ -41,6 +48,37 @@ const geocodeAddress = async (address: string): Promise<Coordinates | null> => {
   }
 };
 
+// Separate map component to avoid closure issues
+function LeafletMap({ 
+  coords, 
+  title, 
+  modules 
+}: { 
+  coords: Coordinates; 
+  title: string; 
+  modules: LeafletModules;
+}) {
+  const { MapContainer, TileLayer, Marker, Popup } = modules;
+  
+  return (
+    <MapContainer
+      center={[coords.lat, coords.lon]}
+      zoom={15}
+      scrollWheelZoom={false}
+      style={{ height: '100%', width: '100%' }}
+      className="rounded-xl"
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <Marker position={[coords.lat, coords.lon]}>
+        <Popup>{title}</Popup>
+      </Marker>
+    </MapContainer>
+  );
+}
+
 export default function PropertyLocation({
   latitude,
   longitude,
@@ -54,30 +92,38 @@ export default function PropertyLocation({
   title,
   primaryColor = '#F97316',
 }: PropertyLocationProps) {
-  const [MapComponent, setMapComponent] = useState<React.ComponentType<any> | null>(null);
+  const [leafletModules, setLeafletModules] = useState<LeafletModules | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mapCoords, setMapCoords] = useState<Coordinates | null>(null);
+  const [geocodeAttempted, setGeocodeAttempted] = useState(false);
 
   // Build full address string
-  const addressParts = [
-    endereco,
-    numero,
-    complemento,
-    bairro,
-    cidade,
-    uf,
-    cep,
-  ].filter(Boolean);
-  
-  const fullAddress = addressParts.join(', ');
+  const fullAddress = useMemo(() => {
+    const addressParts = [
+      endereco,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      cep,
+    ].filter(Boolean);
+    return addressParts.join(', ');
+  }, [endereco, numero, complemento, bairro, cidade, uf, cep]);
+
   const hasExistingCoordinates = latitude !== null && longitude !== null && latitude !== undefined && longitude !== undefined;
 
   // Geocode address if no coordinates exist
   useEffect(() => {
+    let isMounted = true;
+    
     const loadCoordinates = async () => {
       // Priority 1: Use existing coordinates
       if (hasExistingCoordinates) {
-        setMapCoords({ lat: latitude!, lon: longitude! });
+        if (isMounted) {
+          setMapCoords({ lat: latitude!, lon: longitude! });
+          setGeocodeAttempted(true);
+        }
         return;
       }
 
@@ -85,8 +131,9 @@ export default function PropertyLocation({
       if (endereco && cidade) {
         const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
         const coords = await geocodeAddress(searchAddress);
-        if (coords) {
+        if (coords && isMounted) {
           setMapCoords(coords);
+          setGeocodeAttempted(true);
           return;
         }
       }
@@ -94,8 +141,9 @@ export default function PropertyLocation({
       // Priority 3: Geocode neighborhood + city
       if (bairro && cidade) {
         const coords = await geocodeAddress(`${bairro}, ${cidade}, ${uf || ''}, Brasil`);
-        if (coords) {
+        if (coords && isMounted) {
           setMapCoords(coords);
+          setGeocodeAttempted(true);
           return;
         }
       }
@@ -103,20 +151,26 @@ export default function PropertyLocation({
       // Priority 4: Geocode just city
       if (cidade && uf) {
         const coords = await geocodeAddress(`${cidade}, ${uf}, Brasil`);
-        if (coords) {
+        if (coords && isMounted) {
           setMapCoords(coords);
         }
+      }
+      
+      if (isMounted) {
+        setGeocodeAttempted(true);
       }
     };
 
     loadCoordinates();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [latitude, longitude, endereco, numero, bairro, cidade, uf, hasExistingCoordinates]);
 
-  // Dynamically load Leaflet when we have coordinates
+  // Load Leaflet modules once
   useEffect(() => {
-    if (!mapCoords) {
-      return;
-    }
+    let isMounted = true;
 
     // Inject Leaflet CSS
     const existingLink = document.querySelector('link[href*="leaflet"]');
@@ -128,10 +182,10 @@ export default function PropertyLocation({
     }
 
     // Dynamically import react-leaflet
-    const loadMap = async () => {
+    const loadLeaflet = async () => {
       try {
         const L = await import('leaflet');
-        const { MapContainer, TileLayer, Marker, Popup } = await import('react-leaflet');
+        const reactLeaflet = await import('react-leaflet');
 
         // Fix default marker icon
         delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -141,40 +195,38 @@ export default function PropertyLocation({
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         });
 
-        // Create the map component with current coordinates
-        const DynamicMap = () => (
-          <MapContainer
-            center={[mapCoords.lat, mapCoords.lon]}
-            zoom={15}
-            scrollWheelZoom={false}
-            style={{ height: '100%', width: '100%' }}
-            className="rounded-xl"
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={[mapCoords.lat, mapCoords.lon]}>
-              <Popup>{title}</Popup>
-            </Marker>
-          </MapContainer>
-        );
-
-        setMapComponent(() => DynamicMap);
-        setIsLoading(false);
+        if (isMounted) {
+          setLeafletModules({
+            MapContainer: reactLeaflet.MapContainer,
+            TileLayer: reactLeaflet.TileLayer,
+            Marker: reactLeaflet.Marker,
+            Popup: reactLeaflet.Popup,
+          });
+          setIsLoading(false);
+        }
       } catch (error) {
-        console.error('Error loading map:', error);
-        setIsLoading(false);
+        console.error('Error loading Leaflet:', error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    loadMap();
-  }, [mapCoords, title]);
+    loadLeaflet();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Don't render if no address at all
-  if (!fullAddress && !mapCoords) {
+  if (!fullAddress && !mapCoords && geocodeAttempted) {
     return null;
   }
+
+  const showMap = mapCoords && leafletModules && !isLoading;
+  const showLoading = isLoading || (!geocodeAttempted);
+  const showNoLocation = geocodeAttempted && !mapCoords && !isLoading;
 
   return (
     <div>
@@ -186,23 +238,27 @@ export default function PropertyLocation({
       <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
         {/* Map */}
         <div className="h-[300px] md:h-[400px] w-full bg-gray-100">
-          {isLoading || !mapCoords ? (
+          {showLoading && (
             <div className="w-full h-full flex items-center justify-center">
-              {mapCoords === null && !isLoading ? (
-                <div className="text-center text-gray-400">
-                  <MapPin className="w-12 h-12 mx-auto mb-2" />
-                  <p className="text-sm">Localização aproximada</p>
-                </div>
-              ) : (
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: primaryColor }} />
-              )}
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: primaryColor }} />
             </div>
-          ) : MapComponent ? (
-            <MapComponent />
-          ) : (
+          )}
+          
+          {showNoLocation && (
             <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <MapPin className="w-12 h-12" />
+              <div className="text-center">
+                <MapPin className="w-12 h-12 mx-auto mb-2" />
+                <p className="text-sm">Localização não disponível</p>
+              </div>
             </div>
+          )}
+          
+          {showMap && (
+            <LeafletMap 
+              coords={mapCoords} 
+              title={title} 
+              modules={leafletModules} 
+            />
           )}
         </div>
 
