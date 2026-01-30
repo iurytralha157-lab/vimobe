@@ -10,7 +10,7 @@ import {
   Star,
   Building2
 } from 'lucide-react';
-import { useProperties, useCreateProperty, useUpdateProperty, useDeleteProperty, Property } from '@/hooks/use-properties';
+import { useProperties, useProperty, useCreateProperty, useUpdateProperty, useDeleteProperty, Property } from '@/hooks/use-properties';
 import { usePropertyTypes, useCreatePropertyType } from '@/hooks/use-property-types';
 import { usePropertyFeatures, useCreatePropertyFeature, useSeedDefaultFeatures, DEFAULT_FEATURES } from '@/hooks/use-property-features';
 import { usePropertyProximities, useCreatePropertyProximity, useSeedDefaultProximities, DEFAULT_PROXIMITIES } from '@/hooks/use-property-proximities';
@@ -110,11 +110,13 @@ export default function Properties() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [newTypeName, setNewTypeName] = useState('');
   const [showAddType, setShowAddType] = useState(false);
+  const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const deferredSearch = useDeferredValue(search);
   
   const { data: properties = [], isLoading } = useProperties(deferredSearch);
+  const { data: fullPropertyData } = useProperty(loadingPropertyId);
   const { data: propertyTypes = [] } = usePropertyTypes();
   const { data: features = [], isLoading: loadingFeatures } = usePropertyFeatures();
   const { data: proximities = [], isLoading: loadingProximities } = usePropertyProximities();
@@ -138,6 +140,51 @@ export default function Properties() {
       seedProximities.mutate();
     }
   }, [loadingProximities, proximities.length]);
+
+  // Quando os dados completos do imóvel são carregados, popular o formulário
+  useEffect(() => {
+    if (fullPropertyData && loadingPropertyId) {
+      setEditingProperty(fullPropertyData);
+      setFormData({
+        title: fullPropertyData.title || '',
+        tipo_de_imovel: fullPropertyData.tipo_de_imovel || 'Apartamento',
+        tipo_de_negocio: fullPropertyData.tipo_de_negocio || 'Venda',
+        status: fullPropertyData.status || 'ativo',
+        destaque: fullPropertyData.destaque || false,
+        endereco: fullPropertyData.endereco || '',
+        numero: fullPropertyData.numero || '',
+        complemento: fullPropertyData.complemento || '',
+        bairro: fullPropertyData.bairro || '',
+        cidade: fullPropertyData.cidade || '',
+        uf: fullPropertyData.uf || '',
+        cep: fullPropertyData.cep || '',
+        quartos: fullPropertyData.quartos?.toString() || '',
+        suites: fullPropertyData.suites?.toString() || '',
+        banheiros: fullPropertyData.banheiros?.toString() || '',
+        vagas: fullPropertyData.vagas?.toString() || '',
+        area_util: fullPropertyData.area_util?.toString() || '',
+        area_total: fullPropertyData.area_total?.toString() || '',
+        mobilia: fullPropertyData.mobilia || '',
+        regra_pet: fullPropertyData.regra_pet || false,
+        andar: fullPropertyData.andar?.toString() || '',
+        ano_construcao: fullPropertyData.ano_construcao?.toString() || '',
+        preco: fullPropertyData.preco?.toString() || '',
+        condominio: fullPropertyData.condominio?.toString() || '',
+        iptu: fullPropertyData.iptu?.toString() || '',
+        seguro_incendio: fullPropertyData.seguro_incendio?.toString() || '',
+        taxa_de_servico: fullPropertyData.taxa_de_servico?.toString() || '',
+        commission_percentage: (fullPropertyData as any).commission_percentage?.toString() || '',
+        descricao: fullPropertyData.descricao || '',
+        imagem_principal: fullPropertyData.imagem_principal || '',
+        fotos: (fullPropertyData.fotos as string[]) || [],
+        video_imovel: fullPropertyData.video_imovel || '',
+        detalhes_extras: [],
+        proximidades: [],
+      });
+      setDialogOpen(true);
+      setLoadingPropertyId(null);
+    }
+  }, [fullPropertyData, loadingPropertyId]);
 
   const resetForm = () => {
     setFormData(initialFormData);
@@ -193,44 +240,8 @@ export default function Properties() {
   };
 
   const openEdit = (property: Property) => {
-    setEditingProperty(property);
-    setFormData({
-      title: property.title || '',
-      tipo_de_imovel: property.tipo_de_imovel || 'Apartamento',
-      tipo_de_negocio: property.tipo_de_negocio || 'Venda',
-      status: property.status || 'ativo',
-      destaque: property.destaque || false,
-      endereco: property.endereco || '',
-      numero: property.numero || '',
-      complemento: property.complemento || '',
-      bairro: property.bairro || '',
-      cidade: property.cidade || '',
-      uf: property.uf || '',
-      cep: property.cep || '',
-      quartos: property.quartos?.toString() || '',
-      suites: property.suites?.toString() || '',
-      banheiros: property.banheiros?.toString() || '',
-      vagas: property.vagas?.toString() || '',
-      area_util: property.area_util?.toString() || '',
-      area_total: property.area_total?.toString() || '',
-      mobilia: property.mobilia || '',
-      regra_pet: property.regra_pet || false,
-      andar: property.andar?.toString() || '',
-      ano_construcao: property.ano_construcao?.toString() || '',
-      preco: property.preco?.toString() || '',
-      condominio: property.condominio?.toString() || '',
-      iptu: property.iptu?.toString() || '',
-      seguro_incendio: property.seguro_incendio?.toString() || '',
-      taxa_de_servico: property.taxa_de_servico?.toString() || '',
-      commission_percentage: (property as any).commission_percentage?.toString() || '',
-      descricao: property.descricao || '',
-      imagem_principal: property.imagem_principal || '',
-      fotos: (property.fotos as string[]) || [],
-      video_imovel: property.video_imovel || '',
-      detalhes_extras: [],
-      proximidades: [],
-    });
-    setDialogOpen(true);
+    // Buscar dados completos do imóvel (incluindo fotos)
+    setLoadingPropertyId(property.id);
   };
 
   const handleDelete = async (id: string) => {
