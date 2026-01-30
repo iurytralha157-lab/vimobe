@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X, Images, Play } from 'lucide-react';
 
 interface PropertyGalleryProps {
@@ -23,35 +22,31 @@ export default function PropertyGallery({
   const allMedia = images.filter(Boolean);
   const hasMultiple = allMedia.length > 1;
 
-  const nextImage = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % allMedia.length);
-  }, [allMedia.length]);
+  // Número de imagens visíveis no carrossel (4 no desktop, 2 no mobile)
+  const visibleCount = typeof window !== 'undefined' && window.innerWidth < 768 ? 2 : 4;
+  const maxStartIndex = Math.max(0, allMedia.length - visibleCount);
 
-  const prevImage = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + allMedia.length) % allMedia.length);
-  }, [allMedia.length]);
+  const nextSlide = useCallback(() => {
+    setCurrentIndex((prev) => Math.min(prev + 1, maxStartIndex));
+  }, [maxStartIndex]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentIndex((prev) => Math.max(prev - 1, 0));
+  }, []);
 
   // Keyboard navigation
   useEffect(() => {
     if (!lightboxOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') prevImage();
-      if (e.key === 'ArrowRight') nextImage();
+      if (e.key === 'ArrowLeft') setCurrentIndex((prev) => Math.max(prev - 1, 0));
+      if (e.key === 'ArrowRight') setCurrentIndex((prev) => Math.min(prev + 1, allMedia.length - 1));
       if (e.key === 'Escape') setLightboxOpen(false);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [lightboxOpen, nextImage, prevImage]);
-
-  if (allMedia.length === 0) {
-    return (
-      <div className="relative w-full h-[300px] md:h-[400px] lg:h-[500px] bg-gray-200 rounded-2xl flex items-center justify-center">
-        <Images className="w-16 h-16 text-gray-400" />
-      </div>
-    );
-  }
+  }, [lightboxOpen, allMedia.length]);
 
   // Extract YouTube video ID
   const getYouTubeId = (url: string) => {
@@ -61,139 +56,110 @@ export default function PropertyGallery({
 
   const youtubeId = videoUrl ? getYouTubeId(videoUrl) : null;
 
+  if (allMedia.length === 0) {
+    return (
+      <div className="w-full h-[300px] md:h-[400px] bg-gray-200 flex items-center justify-center">
+        <Images className="w-16 h-16 text-gray-400" />
+      </div>
+    );
+  }
+
+  // Get visible images for the carousel
+  const visibleImages = allMedia.slice(currentIndex, currentIndex + visibleCount);
+
   return (
     <>
-      {/* Main Gallery */}
-      <div className="relative">
-        {/* Main Image */}
-        <div className="relative w-full h-[300px] md:h-[400px] lg:h-[500px] bg-gray-900 rounded-2xl overflow-hidden">
+      {/* Fullwidth Gallery Carousel - Nexo Style */}
+      <div className="relative w-full mt-16 md:mt-20">
+        {/* Main Carousel Container */}
+        <div className="relative h-[300px] md:h-[450px] lg:h-[550px] overflow-hidden">
           {showVideo && youtubeId ? (
-            <iframe
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
-              title="Video do imóvel"
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <button 
-              onClick={() => setLightboxOpen(true)}
-              className="w-full h-full cursor-zoom-in"
-            >
-              <img
-                src={allMedia[currentIndex]}
-                alt={`${title} - Foto ${currentIndex + 1}`}
-                className="w-full h-full object-contain"
+            <div className="w-full h-full bg-black flex items-center justify-center">
+              <iframe
+                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
+                title="Video do imóvel"
+                className="w-full h-full max-w-4xl"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
               />
-            </button>
-          )}
-
-          {/* Navigation Arrows */}
-          {hasMultiple && !showVideo && (
+              <button
+                onClick={() => setShowVideo(false)}
+                className="absolute top-4 right-4 bg-black/70 hover:bg-black/90 text-white p-2 rounded-full shadow-lg transition-all z-10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
             <>
+              {/* Images Grid - Side by Side */}
+              <div className="flex h-full gap-1 md:gap-2">
+                {visibleImages.map((img, index) => (
+                  <button
+                    key={currentIndex + index}
+                    onClick={() => {
+                      setCurrentIndex(currentIndex + index);
+                      setLightboxOpen(true);
+                    }}
+                    className="flex-1 h-full cursor-zoom-in overflow-hidden relative group"
+                  >
+                    <img
+                      src={img}
+                      alt={`${title} - Foto ${currentIndex + index + 1}`}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                  </button>
+                ))}
+              </div>
+
+              {/* Navigation Arrows */}
+              {hasMultiple && currentIndex > 0 && (
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                  aria-label="Fotos anteriores"
+                >
+                  <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
+                </button>
+              )}
+              {hasMultiple && currentIndex < maxStartIndex && (
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                  aria-label="Próximas fotos"
+                >
+                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
+                </button>
+              )}
+
+              {/* Counter Badge */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm font-medium flex items-center gap-2">
+                <Images className="w-4 h-4" />
+                {currentIndex + 1} - {Math.min(currentIndex + visibleCount, allMedia.length)} / {allMedia.length}
+              </div>
+
+              {/* View All Button */}
               <button
-                onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-all backdrop-blur-sm"
-                aria-label="Foto anterior"
+                onClick={() => setLightboxOpen(true)}
+                className="absolute bottom-4 right-4 bg-white/95 hover:bg-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
               >
-                <ChevronLeft className="w-6 h-6" />
+                <Images className="w-4 h-4" />
+                Ver todas
               </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-all backdrop-blur-sm"
-                aria-label="Próxima foto"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
+
+              {/* Video Button */}
+              {youtubeId && (
+                <button
+                  onClick={() => setShowVideo(true)}
+                  className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
+                >
+                  <Play className="w-4 h-4" />
+                  Ver Vídeo
+                </button>
+              )}
             </>
           )}
-
-          {/* Counter Badge */}
-          {hasMultiple && !showVideo && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm font-medium">
-              {currentIndex + 1} / {allMedia.length}
-            </div>
-          )}
-
-          {/* View All Button */}
-          <button
-            onClick={() => setLightboxOpen(true)}
-            className="absolute bottom-4 right-4 bg-white/95 hover:bg-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
-          >
-            <Images className="w-4 h-4" />
-            Ver todas ({allMedia.length})
-          </button>
-
-          {/* Video Button */}
-          {youtubeId && !showVideo && (
-            <button
-              onClick={() => setShowVideo(true)}
-              className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
-            >
-              <Play className="w-4 h-4" />
-              Ver Vídeo
-            </button>
-          )}
-
-          {/* Close Video Button */}
-          {showVideo && (
-            <button
-              onClick={() => setShowVideo(false)}
-              className="absolute top-4 right-4 bg-black/70 hover:bg-black/90 text-white p-2 rounded-full shadow-lg transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
         </div>
-
-        {/* Thumbnails */}
-        {hasMultiple && (
-          <div className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            {allMedia.map((img, index) => (
-              <button
-                key={index}
-                onClick={() => { setCurrentIndex(index); setShowVideo(false); }}
-                className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden transition-all ${
-                  index === currentIndex && !showVideo
-                    ? 'ring-2 ring-offset-2 opacity-100'
-                    : 'opacity-60 hover:opacity-100'
-                }`}
-                style={{
-                  ['--tw-ring-color' as any]: primaryColor,
-                }}
-              >
-                <img 
-                  src={img}
-                  alt={`Miniatura ${index + 1}`} 
-                  className="w-full h-full object-cover" 
-                />
-              </button>
-            ))}
-            {/* Video Thumbnail */}
-            {youtubeId && (
-              <button
-                onClick={() => setShowVideo(true)}
-                className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden transition-all relative ${
-                  showVideo
-                    ? 'ring-2 ring-offset-2 opacity-100'
-                    : 'opacity-60 hover:opacity-100'
-                }`}
-                style={{
-                  ['--tw-ring-color' as any]: primaryColor,
-                }}
-              >
-                <img 
-                  src={`https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`} 
-                  alt="Vídeo" 
-                  className="w-full h-full object-cover" 
-                />
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <Play className="w-6 h-6 text-white" />
-                </div>
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Lightbox Dialog */}
@@ -217,14 +183,16 @@ export default function PropertyGallery({
             {hasMultiple && (
               <>
                 <button
-                  onClick={prevImage}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                  onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
+                  disabled={currentIndex === 0}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors disabled:opacity-30"
                 >
                   <ChevronLeft className="w-8 h-8" />
                 </button>
                 <button
-                  onClick={nextImage}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                  onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, allMedia.length - 1))}
+                  disabled={currentIndex === allMedia.length - 1}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors disabled:opacity-30"
                 >
                   <ChevronRight className="w-8 h-8" />
                 </button>

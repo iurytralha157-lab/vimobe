@@ -92,6 +92,14 @@ export default function PublicPropertyDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Gallery at Top - Full Width */}
+      <PropertyGallery 
+        images={allImages} 
+        title={property.titulo} 
+        primaryColor={primaryColor}
+        videoUrl={(property as any).video_imovel}
+      />
+
       {/* Breadcrumb */}
       <div className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -121,14 +129,6 @@ export default function PublicPropertyDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Gallery */}
-            <PropertyGallery 
-              images={allImages} 
-              title={property.titulo} 
-              primaryColor={primaryColor}
-              videoUrl={(property as any).video_imovel}
-            />
-
             {/* Property Header */}
             <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100">
               {/* Tags */}
@@ -185,9 +185,21 @@ export default function PublicPropertyDetail() {
               />
             </div>
 
-            {/* Details (Description, Extras, Nearby) */}
+            {/* Description Section */}
+            {(property.descricao || (property as any).descricao) && (
+              <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Descrição</h2>
+                <div className="prose prose-gray max-w-none">
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                    {property.descricao || (property as any).descricao}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Details (Extras, Nearby) */}
             <PropertyDetails
-              descricao={property.descricao || (property as any).descricao}
+              descricao={null}
               detalhesExtras={(property as any).detalhes_extras}
               proximidades={(property as any).proximidades}
               primaryColor={primaryColor}
