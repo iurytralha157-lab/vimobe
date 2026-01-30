@@ -140,7 +140,8 @@ function PreviewSiteRoutes() {
       <Route path="/" element={<PublicSiteLayout />}>
         <Route index element={<PublicHome />} />
         <Route path="imoveis" element={<PublicProperties />} />
-        <Route path="imoveis/:code" element={<PublicPropertyDetail />} />
+        <Route path="imoveis/:codigo" element={<PublicPropertyDetail />} />
+        <Route path="imovel/:code" element={<PublicPropertyDetail />} />
         <Route path="sobre" element={<PublicAbout />} />
         <Route path="contato" element={<PublicContact />} />
         <Route path="mapa" element={<PublicMap />} />

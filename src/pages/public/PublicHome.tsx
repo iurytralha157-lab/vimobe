@@ -171,7 +171,7 @@ export default function PublicHome() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredProperties.map((property) => (
-                <Link key={property.id} to={getHref(`imoveis/${property.codigo}`)} className="group">
+                <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="group">
                   <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
                     <div className="relative h-72 overflow-hidden">
                       <img
@@ -289,7 +289,7 @@ export default function PublicHome() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {allProperties.map((property) => (
-                <Link key={property.id} to={getHref(`imoveis/${property.codigo}`)} className="group">
+                <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="group">
                   <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
                     <div className="relative h-72 overflow-hidden">
                       <img

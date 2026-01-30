@@ -371,7 +371,7 @@ export default function PublicProperties() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {data?.properties?.map((property) => (
-                    <Link key={property.id} to={getHref(`imoveis/${property.codigo}`)}>
+                    <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)}>
                       <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-white rounded-2xl h-full">
                         <div className="relative h-56 overflow-hidden">
                           <img
