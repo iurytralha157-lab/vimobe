@@ -59,39 +59,15 @@ export default function PropertyFeatures({
 
   return (
     <div className="space-y-6">
-      {/* Main Features Grid */}
+      {/* Main Features - Inline Style */}
       {features.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="flex flex-wrap gap-3">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <div 
                 key={index} 
-                className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl text-center hover:shadow-sm transition-shadow"
-              >
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-                  style={{ backgroundColor: `${primaryColor}15` }}
-                >
-                  <Icon className="w-6 h-6" style={{ color: primaryColor }} />
-                </div>
-                <span className="text-2xl font-bold text-gray-900">{feature.value}</span>
-                <span className="text-sm text-gray-500">{feature.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Additional Features */}
-      {additionalFeatures.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {additionalFeatures.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <div 
-                key={index} 
-                className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
+                className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl"
               >
                 <div 
                   className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -99,10 +75,34 @@ export default function PropertyFeatures({
                 >
                   <Icon className="w-5 h-5" style={{ color: primaryColor }} />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">{feature.label}</p>
-                  <p className="font-semibold text-gray-900">{feature.value}</p>
+                <span className="text-base font-semibold text-gray-900">
+                  {feature.value} {feature.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Additional Features - Inline Style */}
+      {additionalFeatures.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {additionalFeatures.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <div 
+                key={index} 
+                className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl"
+              >
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${primaryColor}15` }}
+                >
+                  <Icon className="w-5 h-5" style={{ color: primaryColor }} />
                 </div>
+                <span className="text-base font-semibold text-gray-900">
+                  {feature.label}: {feature.value}
+                </span>
               </div>
             );
           })}
