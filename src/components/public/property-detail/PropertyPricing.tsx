@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { MessageCircle, Phone, DollarSign } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { ContactFormDialog } from '@/components/public/ContactFormDialog';
 
 interface PropertyPricingProps {
@@ -67,7 +67,7 @@ export default function PropertyPricing({
     : null;
 
   return (
-    <Card className="rounded-2xl border-0 shadow-lg sticky top-24">
+    <Card className="rounded-2xl border border-gray-100 sticky top-24">
       <CardContent className="p-6 space-y-6">
         {/* Price */}
         {preco && (
@@ -110,37 +110,10 @@ export default function PropertyPricing({
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="space-y-3 pt-4">
-          {whatsappUrl && (
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block">
-              <Button 
-                className="w-full text-white rounded-xl h-14 text-base font-semibold gap-2 shadow-lg hover:shadow-xl transition-all"
-                style={{ backgroundColor: '#25D366' }}
-              >
-                <MessageCircle className="w-5 h-5" />
-                Chamar no WhatsApp
-              </Button>
-            </a>
-          )}
-
-          {phoneNumber && (
-            <a href={`tel:${phoneNumber}`} className="block">
-              <Button 
-                variant="outline" 
-                className="w-full rounded-xl h-12 gap-2 font-medium"
-              >
-                <Phone className="w-5 h-5" />
-                {phoneNumber}
-              </Button>
-            </a>
-          )}
-        </div>
-
-        {/* Contact Form */}
+        {/* Contact Form - OBRIGATÓRIO */}
         <div className="pt-4 border-t border-gray-100">
           <p className="text-sm text-gray-500 mb-3 text-center">
-            Ou preencha o formulário para receber mais informações
+            Preencha o formulário para receber mais informações
           </p>
           <ContactFormDialog
             organizationId={organizationId}
@@ -151,14 +124,10 @@ export default function PropertyPricing({
             primaryColor={primaryColor}
             trigger={
               <Button
-                variant="outline"
-                className="w-full rounded-xl gap-2"
-                style={{ 
-                  borderColor: primaryColor,
-                  color: primaryColor,
-                }}
+                className="w-full rounded-xl h-14 text-base font-semibold gap-2 text-white shadow-lg hover:shadow-xl transition-all"
+                style={{ backgroundColor: primaryColor }}
               >
-                <DollarSign className="w-4 h-4" />
+                <MessageCircle className="w-5 h-5" />
                 Tenho Interesse
               </Button>
             }

@@ -123,6 +123,19 @@ export function PropertyFormDialog({
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Funções de formatação de moeda
+  const formatCurrencyDisplay = (value: string): string => {
+    if (!value) return '';
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    const formatted = Number(numbers).toLocaleString('pt-BR');
+    return formatted;
+  };
+
+  const parseCurrencyInput = (value: string): string => {
+    return value.replace(/\D/g, '');
+  };
+
   const handleImagesChange = (images: string[], mainImage: string) => {
     setFormData({ 
       ...formData, 
@@ -491,29 +504,26 @@ export function PropertyFormDialog({
             <div className="space-y-2">
               <Label>Preço (R$)</Label>
               <Input 
-                type="number" 
-                placeholder="500000"
-                value={formData.preco}
-                onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
+                placeholder="500.000"
+                value={formatCurrencyDisplay(formData.preco)}
+                onChange={(e) => setFormData({ ...formData, preco: parseCurrencyInput(e.target.value) })}
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Condomínio (R$)</Label>
                 <Input 
-                  type="number" 
                   placeholder="800"
-                  value={formData.condominio}
-                  onChange={(e) => setFormData({ ...formData, condominio: e.target.value })}
+                  value={formatCurrencyDisplay(formData.condominio)}
+                  onChange={(e) => setFormData({ ...formData, condominio: parseCurrencyInput(e.target.value) })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>IPTU (R$)</Label>
                 <Input 
-                  type="number" 
                   placeholder="200"
-                  value={formData.iptu}
-                  onChange={(e) => setFormData({ ...formData, iptu: e.target.value })}
+                  value={formatCurrencyDisplay(formData.iptu)}
+                  onChange={(e) => setFormData({ ...formData, iptu: parseCurrencyInput(e.target.value) })}
                 />
               </div>
             </div>
@@ -521,19 +531,17 @@ export function PropertyFormDialog({
               <div className="space-y-2">
                 <Label>Seguro Incêndio (R$)</Label>
                 <Input 
-                  type="number" 
                   placeholder="50"
-                  value={formData.seguro_incendio}
-                  onChange={(e) => setFormData({ ...formData, seguro_incendio: e.target.value })}
+                  value={formatCurrencyDisplay(formData.seguro_incendio)}
+                  onChange={(e) => setFormData({ ...formData, seguro_incendio: parseCurrencyInput(e.target.value) })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Taxa de Serviço (R$)</Label>
                 <Input 
-                  type="number" 
                   placeholder="100"
-                  value={formData.taxa_de_servico}
-                  onChange={(e) => setFormData({ ...formData, taxa_de_servico: e.target.value })}
+                  value={formatCurrencyDisplay(formData.taxa_de_servico)}
+                  onChange={(e) => setFormData({ ...formData, taxa_de_servico: parseCurrencyInput(e.target.value) })}
                 />
               </div>
             </div>
