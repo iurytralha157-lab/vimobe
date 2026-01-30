@@ -206,7 +206,7 @@ export default function PublicMap() {
                         >
                           {formatPrice(property.valor_venda || property.valor_aluguel)}
                         </div>
-                        <a href={getHref(`imoveis/${property.codigo}`)}>
+                        <a href={getHref(`imovel/${property.codigo || (property as any).code}`)}>
                           <button 
                             className="w-full mt-2 text-white text-xs py-2 px-3 rounded"
                             style={{ backgroundColor: primaryColor }}

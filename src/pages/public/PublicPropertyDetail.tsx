@@ -1,26 +1,30 @@
 import { useParams, Link, useLocation, useSearchParams } from "react-router-dom";
 import { usePublicProperty } from "@/hooks/use-public-site";
-import { MapPin, Bed, Bath, Car, Maximize, Phone, ArrowLeft, ChevronLeft, ChevronRight, Building, MessageCircle, Share2, X } from "lucide-react";
+import { MapPin, ArrowLeft, Building, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useState } from "react";
 import { toast } from "sonner";
 import { usePublicContext } from "./usePublicContext";
-import { ContactFormDialog } from "@/components/public/ContactFormDialog";
+import {
+  PropertyGallery,
+  PropertyFeatures,
+  PropertyDetails,
+  PropertyLocation,
+  PropertyPricing,
+  RelatedProperties,
+} from "@/components/public/property-detail";
 
 export default function PublicPropertyDetail() {
-  const { codigo } = useParams<{ codigo: string }>();
+  // Support both old route (/imoveis/:codigo) and new route (/imovel/:code)
+  const { codigo, code } = useParams<{ codigo?: string; code?: string }>();
+  const propertyCode = code || codigo;
+  
   const { organizationId, siteConfig } = usePublicContext();
-  const { data: property, isLoading } = usePublicProperty(organizationId, codigo || null);
+  const { data: property, isLoading } = usePublicProperty(organizationId, propertyCode || null);
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-
   // Get base path for preview mode
-  const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
+  const isPreviewMode = location.pathname.includes('/site/preview');
   const orgParam = searchParams.get('org');
   
   const getHref = (path: string) => {
@@ -28,21 +32,6 @@ export default function PublicPropertyDetail() {
       return `/site/preview/${path}?org=${orgParam}`;
     }
     return `/${path}`;
-  };
-
-  const allImages = property ? [property.imagem_principal, ...(property.fotos || [])].filter(Boolean) : [];
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-  };
-
-  const formatPrice = (value: number | null) => {
-    if (!value) return null;
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   };
 
   const handleShare = async () => {
@@ -62,17 +51,28 @@ export default function PublicPropertyDetail() {
     }
   };
 
+  const primaryColor = siteConfig?.primary_color || '#F97316';
+  const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
+
+  // Build all images array
+  const allImages = property 
+    ? [property.imagem_principal, ...(property.fotos || [])].filter(Boolean) as string[]
+    : [];
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: siteConfig?.primary_color }}></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div 
+          className="animate-spin rounded-full h-12 w-12 border-b-2" 
+          style={{ borderColor: primaryColor }}
+        />
       </div>
     );
   }
 
   if (!property) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50">
         <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-6">
           <Building className="w-12 h-12 text-gray-300" />
         </div>
@@ -81,7 +81,7 @@ export default function PublicPropertyDetail() {
         <Link to={getHref("imoveis")}>
           <Button 
             className="rounded-full text-white"
-            style={{ backgroundColor: siteConfig?.primary_color }}
+            style={{ backgroundColor: primaryColor }}
           >
             Ver todos os imóveis
           </Button>
@@ -93,10 +93,13 @@ export default function PublicPropertyDetail() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Breadcrumb */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <Link to={getHref("imoveis")} className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm font-medium">
+            <Link 
+              to={getHref("imoveis")} 
+              className="text-gray-600 hover:text-gray-900 flex items-center gap-2 text-sm font-medium transition-colors"
+            >
               <ArrowLeft className="w-4 h-4" />
               Voltar para imóveis
             </Link>
@@ -117,275 +120,125 @@ export default function PublicPropertyDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Image Gallery */}
-            {allImages.length > 0 && (
-              <div className="relative rounded-2xl overflow-hidden bg-gray-900">
-                <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-                  <DialogTrigger asChild>
-                    <button className="w-full cursor-zoom-in">
-                      <img
-                        src={allImages[currentImageIndex] || '/placeholder.svg'}
-                        alt={property.titulo}
-                        className="w-full h-[350px] md:h-[450px] lg:h-[500px] object-contain"
-                      />
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0">
-                    <button 
-                      onClick={() => setLightboxOpen(false)}
-                      className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                    <img
-                      src={allImages[currentImageIndex] || '/placeholder.svg'}
-                      alt={property.titulo}
-                      className="w-full h-full object-contain"
-                    />
-                    {allImages.length > 1 && (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white"
-                        >
-                          <ChevronLeft className="w-8 h-8" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white"
-                        >
-                          <ChevronRight className="w-8 h-8" />
-                        </button>
-                      </>
-                    )}
-                  </DialogContent>
-                </Dialog>
-                
-                {allImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={prevImage}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-                    >
-                      <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    <button
-                      onClick={nextImage}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-                    >
-                      <ChevronRight className="w-6 h-6" />
-                    </button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 px-4 py-2 rounded-full text-white text-sm font-medium">
-                      {currentImageIndex + 1} / {allImages.length}
-                    </div>
-                  </>
+          <div className="lg:col-span-2 space-y-8">
+            {/* Gallery */}
+            <PropertyGallery 
+              images={allImages} 
+              title={property.titulo} 
+              primaryColor={primaryColor}
+              videoUrl={(property as any).video_imovel}
+            />
+
+            {/* Property Header */}
+            <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100">
+              {/* Tags */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span 
+                  className="px-4 py-1.5 text-sm font-semibold text-white rounded-full"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {property.tipo_imovel || (property as any).tipo_de_imovel}
+                </span>
+                <span className="px-4 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-full">
+                  Cód: {property.codigo || (property as any).code}
+                </span>
+                {(property as any).tipo_de_negocio && (
+                  <span className="px-4 py-1.5 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
+                    {(property as any).tipo_de_negocio}
+                  </span>
                 )}
               </div>
-            )}
 
-            {/* Thumbnails */}
-            {allImages.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                {allImages.map((img, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                      index === currentImageIndex 
-                        ? 'ring-2 ring-offset-2' 
-                        : 'opacity-70 hover:opacity-100'
-                    }`}
-                    style={{ 
-                      borderColor: index === currentImageIndex ? siteConfig?.primary_color : 'transparent',
-                    }}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
+              {/* Title */}
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                {property.titulo || (property as any).title}
+              </h1>
 
-            {/* Property Info */}
-            <Card className="rounded-2xl border-0 shadow-sm">
-              <CardContent className="p-6 md:p-8">
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <span 
-                    className="px-4 py-1.5 text-sm font-semibold text-white rounded-full"
-                    style={{ backgroundColor: siteConfig?.primary_color }}
-                  >
-                    {property.tipo_imovel}
-                  </span>
-                  <span className="px-4 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-full">
-                    Cód: {property.codigo}
-                  </span>
-                </div>
+              {/* Address */}
+              <p className="text-gray-500 flex items-center gap-2 text-lg">
+                <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
+                {[
+                  property.endereco || (property as any).endereco,
+                  (property as any).numero,
+                  property.bairro || (property as any).bairro,
+                  property.cidade || (property as any).cidade,
+                  property.estado || (property as any).uf,
+                ].filter(Boolean).join(', ')}
+              </p>
+            </div>
 
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-                  {property.titulo}
-                </h1>
+            {/* Features */}
+            <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Características</h2>
+              <PropertyFeatures
+                quartos={property.quartos || (property as any).quartos}
+                suites={property.suites || (property as any).suites}
+                banheiros={property.banheiros || (property as any).banheiros}
+                vagas={property.vagas || (property as any).vagas}
+                areaUtil={(property as any).area_util}
+                areaTotal={property.area_total || (property as any).area_total}
+                andar={(property as any).andar}
+                anoConstrucao={(property as any).ano_construcao}
+                mobilia={(property as any).mobilia}
+                regraPet={(property as any).regra_pet}
+                primaryColor={primaryColor}
+              />
+            </div>
 
-                <p className="text-gray-500 flex items-center gap-2 mb-8 text-lg">
-                  <MapPin className="w-5 h-5 flex-shrink-0" />
-                  {[property.endereco, property.bairro, property.cidade, property.estado].filter(Boolean).join(', ')}
-                </p>
+            {/* Details (Description, Extras, Nearby) */}
+            <PropertyDetails
+              descricao={property.descricao || (property as any).descricao}
+              detalhesExtras={(property as any).detalhes_extras}
+              proximidades={(property as any).proximidades}
+              primaryColor={primaryColor}
+            />
 
-                {/* Features Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  {property.quartos && (
-                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: `${siteConfig?.primary_color}15` }}
-                      >
-                        <Bed className="w-6 h-6" style={{ color: siteConfig?.primary_color }} />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-gray-900">{property.quartos}</p>
-                        <p className="text-sm text-gray-500">Quartos</p>
-                      </div>
-                    </div>
-                  )}
-                  {property.banheiros && (
-                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: `${siteConfig?.primary_color}15` }}
-                      >
-                        <Bath className="w-6 h-6" style={{ color: siteConfig?.primary_color }} />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-gray-900">{property.banheiros}</p>
-                        <p className="text-sm text-gray-500">Banheiros</p>
-                      </div>
-                    </div>
-                  )}
-                  {property.vagas && (
-                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: `${siteConfig?.primary_color}15` }}
-                      >
-                        <Car className="w-6 h-6" style={{ color: siteConfig?.primary_color }} />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-gray-900">{property.vagas}</p>
-                        <p className="text-sm text-gray-500">Vagas</p>
-                      </div>
-                    </div>
-                  )}
-                  {property.area_total && (
-                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: `${siteConfig?.primary_color}15` }}
-                      >
-                        <Maximize className="w-6 h-6" style={{ color: siteConfig?.primary_color }} />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-gray-900">{property.area_total}</p>
-                        <p className="text-sm text-gray-500">m² Área</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Description */}
-                {property.descricao && (
-                  <div>
-                    <h2 className="text-xl font-bold mb-4">Descrição</h2>
-                    <div className="text-gray-600 whitespace-pre-wrap leading-relaxed">
-                      {property.descricao}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Location Map */}
+            <PropertyLocation
+              latitude={(property as any).latitude}
+              longitude={(property as any).longitude}
+              endereco={property.endereco || (property as any).endereco}
+              numero={(property as any).numero}
+              complemento={(property as any).complemento}
+              bairro={property.bairro || (property as any).bairro}
+              cidade={property.cidade || (property as any).cidade}
+              uf={property.estado || (property as any).uf}
+              cep={property.cep || (property as any).cep}
+              title={property.titulo || (property as any).title}
+              primaryColor={primaryColor}
+            />
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Price Card */}
-            <Card className="rounded-2xl border-0 shadow-sm sticky top-24">
-              <CardContent className="p-6">
-                {property.valor_venda && (
-                  <div className="mb-2">
-                    <p className="text-sm text-gray-500 font-medium">Valor de Venda</p>
-                    <p 
-                      className="text-3xl md:text-4xl font-bold"
-                      style={{ color: siteConfig?.primary_color }}
-                    >
-                      {formatPrice(property.valor_venda)}
-                    </p>
-                  </div>
-                )}
-
-                {property.valor_aluguel && (
-                  <div className="mb-6">
-                    <p className="text-sm text-gray-500 font-medium">Valor do Aluguel</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {formatPrice(property.valor_aluguel)}<span className="text-base font-normal text-gray-500">/mês</span>
-                    </p>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  {siteConfig?.whatsapp && (
-                    <a
-                      href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}?text=Olá! Tenho interesse no imóvel ${property.codigo} - ${property.titulo}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <Button 
-                        className="w-full text-white rounded-xl h-12 text-base font-semibold gap-2 shadow-lg hover:shadow-xl transition-all"
-                        style={{ backgroundColor: '#25D366' }}
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        Chamar no WhatsApp
-                      </Button>
-                    </a>
-                  )}
-                  
-                  {siteConfig?.phone && (
-                    <a href={`tel:${siteConfig.phone}`} className="block">
-                      <Button variant="outline" className="w-full rounded-xl h-12 gap-2">
-                        <Phone className="w-5 h-5" />
-                        {siteConfig.phone}
-                      </Button>
-                    </a>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Contact Form Card */}
-            <Card className="rounded-2xl border-0 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-4">Tenho Interesse</h3>
-                <p className="text-gray-600 text-sm mb-4">
-                  Preencha o formulário para receber mais informações sobre este imóvel.
-                </p>
-                <ContactFormDialog
-                  organizationId={organizationId || ''}
-                  propertyId={property?.id}
-                  propertyCode={property?.codigo}
-                  propertyTitle={property?.titulo}
-                  whatsappNumber={siteConfig?.whatsapp}
-                  primaryColor={siteConfig?.primary_color}
-                  trigger={
-                    <Button
-                      className="w-full text-white rounded-xl gap-2"
-                      style={{ backgroundColor: siteConfig?.primary_color }}
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Entrar em Contato
-                    </Button>
-                  }
-                />
-              </CardContent>
-            </Card>
+          <div className="lg:col-span-1">
+            <PropertyPricing
+              preco={property.valor_venda || (property as any).preco}
+              tipoNegocio={(property as any).tipo_de_negocio}
+              condominio={(property as any).condominio}
+              iptu={(property as any).iptu}
+              seguroIncendio={(property as any).seguro_incendio}
+              taxaServico={(property as any).taxa_de_servico}
+              codigo={property.codigo || (property as any).code}
+              titulo={property.titulo || (property as any).title}
+              propertyId={property.id}
+              organizationId={organizationId || ''}
+              whatsappNumber={siteConfig?.whatsapp}
+              phoneNumber={siteConfig?.phone}
+              primaryColor={primaryColor}
+            />
           </div>
+        </div>
+
+        {/* Related Properties */}
+        <div className="mt-16">
+          <RelatedProperties
+            organizationId={organizationId || ''}
+            currentPropertyCode={property.codigo || (property as any).code}
+            tipoImovel={property.tipo_imovel || (property as any).tipo_de_imovel}
+            cidade={property.cidade || (property as any).cidade}
+            getHref={getHref}
+            primaryColor={primaryColor}
+          />
         </div>
       </div>
     </div>

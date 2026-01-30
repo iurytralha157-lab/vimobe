@@ -264,6 +264,52 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case 'related': {
+        if (!propertyCode) {
+          return new Response(
+            JSON.stringify({ error: 'property_code is required for related endpoint' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // First, get the current property to know its type and location
+        const { data: currentProperty } = await supabase
+          .from('properties')
+          .select('tipo_de_imovel, cidade, bairro')
+          .eq('organization_id', organizationId)
+          .eq('code', propertyCode)
+          .single();
+
+        // Build query for related properties
+        let relatedQuery = supabase
+          .from('properties')
+          .select('id, code, title, preco, tipo_de_imovel, quartos, area_util, bairro, cidade, imagem_principal')
+          .eq('organization_id', organizationId)
+          .eq('status', 'ativo')
+          .neq('code', propertyCode) // Exclude current property
+          .limit(parseInt(url.searchParams.get('limit') || '4'));
+
+        // Filter by same type if available
+        if (currentProperty?.tipo_de_imovel) {
+          relatedQuery = relatedQuery.eq('tipo_de_imovel', currentProperty.tipo_de_imovel);
+        }
+
+        // Optionally filter by city
+        if (currentProperty?.cidade) {
+          relatedQuery = relatedQuery.eq('cidade', currentProperty.cidade);
+        }
+
+        const { data: relatedData, error: relatedError } = await relatedQuery;
+
+        if (relatedError) {
+          console.error('Error fetching related properties:', relatedError);
+          throw relatedError;
+        }
+
+        response = { properties: relatedData || [] };
+        break;
+      }
+
       case 'map-properties': {
         // Return only properties with valid coordinates
         const { data, error } = await supabase
