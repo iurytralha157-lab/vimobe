@@ -15,6 +15,32 @@ interface PropertyLocationProps {
   primaryColor?: string;
 }
 
+interface Coordinates {
+  lat: number;
+  lon: number;
+}
+
+// Geocode address using Nominatim (free OpenStreetMap service)
+const geocodeAddress = async (address: string): Promise<Coordinates | null> => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+      {
+        headers: {
+          'User-Agent': 'PropertySite/1.0'
+        }
+      }
+    );
+    const data = await response.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 export default function PropertyLocation({
   latitude,
   longitude,
@@ -30,6 +56,7 @@ export default function PropertyLocation({
 }: PropertyLocationProps) {
   const [MapComponent, setMapComponent] = useState<React.ComponentType<any> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mapCoords, setMapCoords] = useState<Coordinates | null>(null);
 
   // Build full address string
   const addressParts = [
@@ -43,12 +70,51 @@ export default function PropertyLocation({
   ].filter(Boolean);
   
   const fullAddress = addressParts.join(', ');
-  const hasCoordinates = latitude !== null && longitude !== null && latitude !== undefined && longitude !== undefined;
+  const hasExistingCoordinates = latitude !== null && longitude !== null && latitude !== undefined && longitude !== undefined;
 
-  // Dynamically load Leaflet
+  // Geocode address if no coordinates exist
   useEffect(() => {
-    if (!hasCoordinates) {
-      setIsLoading(false);
+    const loadCoordinates = async () => {
+      // Priority 1: Use existing coordinates
+      if (hasExistingCoordinates) {
+        setMapCoords({ lat: latitude!, lon: longitude! });
+        return;
+      }
+
+      // Priority 2: Geocode full address
+      if (endereco && cidade) {
+        const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
+        const coords = await geocodeAddress(searchAddress);
+        if (coords) {
+          setMapCoords(coords);
+          return;
+        }
+      }
+
+      // Priority 3: Geocode neighborhood + city
+      if (bairro && cidade) {
+        const coords = await geocodeAddress(`${bairro}, ${cidade}, ${uf || ''}, Brasil`);
+        if (coords) {
+          setMapCoords(coords);
+          return;
+        }
+      }
+
+      // Priority 4: Geocode just city
+      if (cidade && uf) {
+        const coords = await geocodeAddress(`${cidade}, ${uf}, Brasil`);
+        if (coords) {
+          setMapCoords(coords);
+        }
+      }
+    };
+
+    loadCoordinates();
+  }, [latitude, longitude, endereco, numero, bairro, cidade, uf, hasExistingCoordinates]);
+
+  // Dynamically load Leaflet when we have coordinates
+  useEffect(() => {
+    if (!mapCoords) {
       return;
     }
 
@@ -75,10 +141,10 @@ export default function PropertyLocation({
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         });
 
-        // Create the map component
+        // Create the map component with current coordinates
         const DynamicMap = () => (
           <MapContainer
-            center={[latitude!, longitude!]}
+            center={[mapCoords.lat, mapCoords.lon]}
             zoom={15}
             scrollWheelZoom={false}
             style={{ height: '100%', width: '100%' }}
@@ -88,7 +154,7 @@ export default function PropertyLocation({
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <Marker position={[latitude!, longitude!]}>
+            <Marker position={[mapCoords.lat, mapCoords.lon]}>
               <Popup>{title}</Popup>
             </Marker>
           </MapContainer>
@@ -103,9 +169,10 @@ export default function PropertyLocation({
     };
 
     loadMap();
-  }, [hasCoordinates, latitude, longitude, title]);
+  }, [mapCoords, title]);
 
-  if (!fullAddress && !hasCoordinates) {
+  // Don't render if no address at all
+  if (!fullAddress && !mapCoords) {
     return null;
   }
 
@@ -118,21 +185,26 @@ export default function PropertyLocation({
 
       <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
         {/* Map */}
-        {hasCoordinates && (
-          <div className="h-[300px] md:h-[400px] w-full bg-gray-100">
-            {isLoading ? (
-              <div className="w-full h-full flex items-center justify-center">
+        <div className="h-[300px] md:h-[400px] w-full bg-gray-100">
+          {isLoading || !mapCoords ? (
+            <div className="w-full h-full flex items-center justify-center">
+              {mapCoords === null && !isLoading ? (
+                <div className="text-center text-gray-400">
+                  <MapPin className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-sm">Localização aproximada</p>
+                </div>
+              ) : (
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: primaryColor }} />
-              </div>
-            ) : MapComponent ? (
-              <MapComponent />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <MapPin className="w-12 h-12" />
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          ) : MapComponent ? (
+            <MapComponent />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">
+              <MapPin className="w-12 h-12" />
+            </div>
+          )}
+        </div>
 
         {/* Address */}
         {fullAddress && (
