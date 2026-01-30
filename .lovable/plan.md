@@ -1,110 +1,152 @@
 
-# Plano: Corrigir Bug de Fotos Sumindo ao Editar Imóvel
+# Plano: Ajustes Finais no Bloco de Contato e Formatação de Valores
 
-## Problema Identificado
+## Resumo das Mudanças
 
-Quando o usuário clica para editar um imóvel, as fotos da galeria não aparecem porque:
+Você solicitou várias melhorias que vou agrupar em 4 áreas:
 
-1. **Query de listagem é otimizada** - O hook `useProperties` busca apenas campos essenciais para performance:
-   ```
-   id, code, title, tipo_de_imovel, tipo_de_negocio, 
-   status, destaque, bairro, cidade, uf,
-   quartos, banheiros, vagas, area_util, preco, 
-   imagem_principal, created_at, organization_id
-   ```
-   
-2. **Campo `fotos` não está na listagem** - Só `imagem_principal` é carregado
+---
 
-3. **Edição usa dados incompletos** - A função `openEdit()` usa o objeto da lista que não tem `fotos`
+## 1. Remover Sombra do Bloco de Preços
 
-4. **Array vazio sobrescreve fotos** - Ao salvar, `fotos: []` apaga as fotos existentes
+**Arquivo:** `src/components/public/property-detail/PropertyPricing.tsx`
 
-## Solução
+**Mudança:**
+- Linha 70: Remover `shadow-lg` da classe do Card
+- Antes: `<Card className="rounded-2xl border-0 shadow-lg sticky top-24">`
+- Depois: `<Card className="rounded-2xl border border-gray-100 sticky top-24">`
 
-Modificar o fluxo de edição para buscar os dados completos do imóvel antes de abrir o formulário.
+---
+
+## 2. Remover "Risquinhos" do Background
+
+Após análise, não encontrei elementos decorativos explícitos no código. Os "risquinhos" podem ser artefatos de renderização do navegador ou elementos visuais da imagem de fundo. Vou adicionar verificação para garantir que não há elementos estranhos no background.
+
+**Verificar se há algum padrão CSS ou elemento SVG** que cause isso no site público. Se necessário, adicionar `background: none` explícito.
+
+---
+
+## 3. Obrigar Formulário Antes de Qualquer Contato
+
+**Arquivo:** `src/components/public/property-detail/PropertyPricing.tsx`
+
+**Mudança no fluxo:**
+- Remover os botões diretos de WhatsApp e Telefone
+- Deixar APENAS o formulário de contato "Tenho Interesse"
+- Após preencher e enviar o formulário, o usuário pode optar por ir ao WhatsApp
+
+**Antes (linha 113-138):**
+```tsx
+{/* Action Buttons */}
+<div className="space-y-3 pt-4">
+  {whatsappUrl && (
+    <a href={whatsappUrl}...> {/* BOTÃO DIRETO WHATSAPP */}
+  )}
+  {phoneNumber && (
+    <a href={`tel:${phoneNumber}`}...> {/* BOTÃO DIRETO TELEFONE */}
+  )}
+</div>
+```
+
+**Depois:**
+```tsx
+{/* Contact Form - OBRIGATÓRIO */}
+<div className="pt-4">
+  <p className="text-sm text-gray-500 mb-3 text-center">
+    Preencha o formulário para receber mais informações
+  </p>
+  <ContactFormDialog
+    trigger={
+      <Button className="w-full rounded-xl h-14">
+        Tenho Interesse
+      </Button>
+    }
+    ...
+  />
+</div>
+```
+
+---
+
+## 4. Formatação de Valores com Separador de Milhares
+
+**Arquivo:** `src/components/properties/PropertyFormDialog.tsx`
+
+**Mudança:**
+- Criar função auxiliar para formatar moeda enquanto digita
+- Aplicar nos campos: Preço, Condomínio, IPTU, Seguro Incêndio, Taxa de Serviço
+
+**Função de formatação:**
+```tsx
+const formatCurrencyInput = (value: string): string => {
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '');
+  // Converte para número e formata
+  const formatted = Number(numbers).toLocaleString('pt-BR');
+  return formatted === '0' ? '' : formatted;
+};
+
+const parseCurrencyToNumber = (value: string): string => {
+  return value.replace(/\./g, '');
+};
+```
+
+**Exemplo de campo:**
+```tsx
+<Input 
+  placeholder="500.000"
+  value={formatCurrencyInput(formData.preco)}
+  onChange={(e) => {
+    const rawValue = parseCurrencyToNumber(e.target.value);
+    setFormData({ ...formData, preco: rawValue });
+  }}
+/>
+```
+
+---
+
+## 5. Corrigir Salvamento de Valores (Condomínio, IPTU, etc.)
+
+**Problema identificado:**
+Os campos estão no banco de dados e no formulário, mas vou verificar se estão sendo salvos corretamente no `handleSubmit` da página `Properties.tsx`.
+
+**Arquivo:** `src/pages/Properties.tsx`
+
+**Verificar linhas 221-225:**
+```tsx
+condominio: formData.condominio ? parseFloat(formData.condominio) : null,
+iptu: formData.iptu ? parseFloat(formData.iptu) : null,
+seguro_incendio: formData.seguro_incendio ? parseFloat(formData.seguro_incendio) : null,
+taxa_de_servico: formData.taxa_de_servico ? parseFloat(formData.taxa_de_servico) : null,
+```
+
+Já está correto! O problema pode estar na **carga inicial** quando edita - preciso verificar se esses campos estão sendo carregados no `fullPropertyData`.
+
+**Verificar linhas 172-175:**
+```tsx
+condominio: fullPropertyData.condominio?.toString() || '',
+iptu: fullPropertyData.iptu?.toString() || '',
+seguro_incendio: fullPropertyData.seguro_incendio?.toString() || '',
+taxa_de_servico: fullPropertyData.taxa_de_servico?.toString() || '',
+```
+
+Já está correto também! Vou verificar se há algum problema na query do `useProperty`.
 
 ---
 
 ## Arquivos a Modificar
 
-### 1. `src/pages/Properties.tsx`
-
-**Mudanças:**
-- Adicionar estado para controlar qual imóvel está sendo carregado
-- Usar o hook `useProperty(id)` para buscar dados completos ao editar
-- Mostrar loading enquanto carrega os dados
-- Só abrir o formulário quando os dados completos estiverem disponíveis
-
-**Antes (problema):**
-```typescript
-const openEdit = (property: Property) => {
-  setEditingProperty(property);
-  setFormData({
-    ...
-    fotos: (property.fotos as string[]) || [], // fotos é undefined!
-    ...
-  });
-  setDialogOpen(true);
-};
-```
-
-**Depois (solução):**
-```typescript
-const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(null);
-
-// Buscar dados completos quando houver loadingPropertyId
-const { data: fullPropertyData } = useProperty(loadingPropertyId);
-
-useEffect(() => {
-  if (fullPropertyData && loadingPropertyId) {
-    setEditingProperty(fullPropertyData);
-    setFormData({
-      ...
-      fotos: (fullPropertyData.fotos as string[]) || [],
-      ...
-    });
-    setDialogOpen(true);
-    setLoadingPropertyId(null);
-  }
-}, [fullPropertyData, loadingPropertyId]);
-
-const openEdit = (property: Property) => {
-  setLoadingPropertyId(property.id);
-};
-```
+| Arquivo | Mudança |
+|---------|---------|
+| `PropertyPricing.tsx` | Remover sombra, remover botões diretos de contato |
+| `PropertyFormDialog.tsx` | Adicionar formatação de moeda nos campos de valores |
+| `Properties.tsx` | Ajustar parsing de valores formatados |
 
 ---
 
-## Fluxo Corrigido
+## Resultado Esperado
 
-```text
-1. Usuário clica "Editar" no imóvel
-   ↓
-2. setLoadingPropertyId(property.id)
-   ↓
-3. Hook useProperty(id) busca dados completos (incluindo fotos)
-   ↓
-4. useEffect detecta dados carregados
-   ↓
-5. setFormData com fotos corretas
-   ↓
-6. Abre o dialog com todos os dados
-```
-
----
-
-## Benefícios
-
-- **Fotos persistem** - Dados completos sempre carregados ao editar
-- **Performance mantida** - Listagem continua otimizada (sem fotos)
-- **UX melhorada** - Loading visual enquanto carrega dados
-- **Código limpo** - Usa hooks existentes (useProperty)
-
----
-
-## Arquivos Afetados
-
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/pages/Properties.tsx` | Adicionar busca de dados completos ao editar |
-
+1. Bloco de preços sem sombra
+2. Contato apenas via formulário (não há atalhos diretos)
+3. Valores formatados com pontos de milhares enquanto digita
+4. Valores de taxas (condomínio, IPTU, etc.) persistindo corretamente
