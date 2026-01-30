@@ -2529,6 +2529,7 @@ export type Database = {
           created_at: string
           descricao: string | null
           destaque: boolean | null
+          detalhes_extras: string[] | null
           endereco: string | null
           fotos: Json | null
           id: string
@@ -2541,6 +2542,7 @@ export type Database = {
           numero: string | null
           organization_id: string
           preco: number | null
+          proximidades: string[] | null
           quartos: number | null
           regra_pet: boolean | null
           seguro_incendio: number | null
@@ -2573,6 +2575,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           destaque?: boolean | null
+          detalhes_extras?: string[] | null
           endereco?: string | null
           fotos?: Json | null
           id?: string
@@ -2585,6 +2588,7 @@ export type Database = {
           numero?: string | null
           organization_id: string
           preco?: number | null
+          proximidades?: string[] | null
           quartos?: number | null
           regra_pet?: boolean | null
           seguro_incendio?: number | null
@@ -2617,6 +2621,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           destaque?: boolean | null
+          detalhes_extras?: string[] | null
           endereco?: string | null
           fotos?: Json | null
           id?: string
@@ -2629,6 +2634,7 @@ export type Database = {
           numero?: string | null
           organization_id?: string
           preco?: number | null
+          proximidades?: string[] | null
           quartos?: number | null
           regra_pet?: boolean | null
           seguro_incendio?: number | null

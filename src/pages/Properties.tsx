@@ -1,4 +1,5 @@
 import { useState, useEffect, useDeferredValue } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,6 +113,7 @@ export default function Properties() {
   const [showAddType, setShowAddType] = useState(false);
   const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
 
   const deferredSearch = useDeferredValue(search);
   
@@ -178,8 +180,8 @@ export default function Properties() {
         imagem_principal: fullPropertyData.imagem_principal || '',
         fotos: (fullPropertyData.fotos as string[]) || [],
         video_imovel: fullPropertyData.video_imovel || '',
-        detalhes_extras: [],
-        proximidades: [],
+        detalhes_extras: ((fullPropertyData as any).detalhes_extras as string[]) || [],
+        proximidades: ((fullPropertyData as any).proximidades as string[]) || [],
       });
       setDialogOpen(true);
       setLoadingPropertyId(null);
@@ -194,7 +196,6 @@ export default function Properties() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Remove detalhes_extras and proximidades as they don't exist in the database schema
     const propertyData = {
       title: formData.title || null,
       tipo_de_imovel: formData.tipo_de_imovel,
@@ -227,6 +228,8 @@ export default function Properties() {
       imagem_principal: formData.imagem_principal || null,
       fotos: formData.fotos,
       video_imovel: formData.video_imovel || null,
+      detalhes_extras: formData.detalhes_extras,
+      proximidades: formData.proximidades,
     };
     
     if (editingProperty) {
@@ -240,6 +243,8 @@ export default function Properties() {
   };
 
   const openEdit = (property: Property) => {
+    // Invalidar cache para garantir dados frescos
+    queryClient.invalidateQueries({ queryKey: ['property', property.id] });
     // Buscar dados completos do imóvel (incluindo fotos)
     setLoadingPropertyId(property.id);
   };
