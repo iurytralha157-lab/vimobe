@@ -1,136 +1,203 @@
 
+# Plano: Mapa com Precisão Melhorada e Pontos de Interesse
 
-# Plano: Delimitar Área no Mapa Baseado na Precisão do Endereço
+## Problemas Identificados
 
-## O Que Vai Mudar
-
-O mapa vai mostrar diferentes visualizações de acordo com a precisão do endereço:
-
-| Dados Disponíveis | Visualização no Mapa |
-|-------------------|---------------------|
-| Endereço + Número | Pin exato (como está hoje) |
-| Só a Rua (sem número) | Linha marcando a rua inteira |
-| Só Bairro | Área do bairro delimitada |
-| Só Cidade | Área da cidade delimitada |
+1. **Geocoding impreciso**: O Nominatim nem sempre encontra endereços brasileiros com exatidão (ex: "Rua Menino Jesus de Praga, 420" marca no meio da rua)
+2. **Falta de contexto**: O mapa não mostra o que tem na redondeza (supermercados, hospitais, etc.)
 
 ---
 
-## Como Funciona Tecnicamente
+## Solução Proposta
 
-A API do Nominatim retorna um **boundingbox** para cada resultado, que define os limites da área. Vou usar isso para:
+### Parte 1: Melhorar Precisão do Geocoding
 
-1. **Endereço completo com número** → Pin/marcador no ponto exato (zoom 17)
-2. **Rua sem número** → Retângulo/polígono marcando a extensão da rua (zoom 16)
-3. **Bairro** → Retângulo destacando a área do bairro (zoom 14)
-4. **Cidade** → Retângulo mostrando os limites da cidade (zoom 12)
+**Problema técnico**: O Nominatim às vezes ignora o número da casa em endereços brasileiros.
+
+**Solução**: Usar busca estruturada do Nominatim que separa rua, número, cidade:
+
+```
+/search?street=420 Rua Menino Jesus de Praga&city=Cidade&country=Brasil&format=json
+```
+
+Isso dá resultados mais precisos que juntar tudo numa string.
+
+**Fallback adicional**: Se não encontrar com número, tenta sem número + marca como "rua" (área ao invés de pin).
 
 ---
 
-## Mudanças no Código
+### Parte 2: Mostrar Pontos de Interesse (POI)
+
+Vou usar a **Overpass API** (gratuita, do OpenStreetMap) para buscar estabelecimentos próximos e mostrar com ícones grandes no mapa.
+
+**POIs que serão exibidos**:
+
+| Categoria | Ícone | Cor |
+|-----------|-------|-----|
+| Supermercado | Carrinho | Verde |
+| Hospital/Clínica | Cruz/Coração | Vermelho |
+| Escola | Livro | Azul |
+| Farmácia | Medicamento | Verde claro |
+| Banco | Cifrão | Amarelo |
+| Restaurante | Garfo/Faca | Laranja |
+
+**Exemplo de busca Overpass**:
+```
+[out:json][timeout:10];
+(
+  node["amenity"="supermarket"](around:1000, -23.55, -46.63);
+  node["amenity"="hospital"](around:1000, -23.55, -46.63);
+  node["amenity"="school"](around:1000, -23.55, -46.63);
+);
+out body;
+```
+
+---
+
+## Mudanças Técnicas
 
 **Arquivo:** `src/components/public/property-detail/PropertyLocation.tsx`
 
-### 1. Novo Tipo para Área
+### 1. Geocoding Estruturado (mais preciso)
 
 ```typescript
-interface LocationResult {
+// Busca estruturada - separa os campos
+const geocodeStructured = async (
+  street: string,
+  number: string,
+  city: string,
+  state: string
+): Promise<LocationResult | null> => {
+  const params = new URLSearchParams({
+    street: `${number} ${street}`,
+    city: city,
+    state: state,
+    country: 'Brasil',
+    format: 'json',
+    limit: '1'
+  });
+  
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?${params}`,
+    { headers: { 'User-Agent': 'PropertySite/1.0' } }
+  );
+  // ...
+};
+```
+
+### 2. Buscar POIs com Overpass API
+
+```typescript
+interface POI {
   lat: number;
   lon: number;
-  boundingBox?: [number, number, number, number]; // [sul, norte, oeste, leste]
-  precision: 'exact' | 'street' | 'neighborhood' | 'city';
+  type: 'supermarket' | 'hospital' | 'school' | 'pharmacy' | 'bank' | 'restaurant';
+  name?: string;
 }
-```
 
-### 2. Função de Geocodificação Atualizada
-
-A função vai retornar também o boundingbox e o nível de precisão:
-
-```typescript
-const geocodeWithBounds = async (address: string, precision: string): Promise<LocationResult | null> => {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
-  );
+const fetchNearbyPOIs = async (lat: number, lon: number, radius: number = 1000): Promise<POI[]> => {
+  const query = `
+    [out:json][timeout:10];
+    (
+      node["shop"="supermarket"](around:${radius},${lat},${lon});
+      node["amenity"="hospital"](around:${radius},${lat},${lon});
+      node["amenity"="clinic"](around:${radius},${lat},${lon});
+      node["amenity"="school"](around:${radius},${lat},${lon});
+      node["amenity"="pharmacy"](around:${radius},${lat},${lon});
+      node["amenity"="bank"](around:${radius},${lat},${lon});
+    );
+    out body;
+  `;
+  
+  const response = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: query
+  });
+  
   const data = await response.json();
-  if (data && data.length > 0) {
-    return {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon),
-      boundingBox: data[0].boundingbox?.map(Number),
-      precision: precision
-    };
-  }
-  return null;
+  return data.elements.map(el => ({
+    lat: el.lat,
+    lon: el.lon,
+    type: mapAmenityType(el.tags),
+    name: el.tags?.name
+  }));
 };
 ```
 
-### 3. Lógica de Fallback com Precisão
+### 3. Ícones Personalizados Grandes
 
 ```typescript
-// Prioridade 1: Endereço completo com número → pin exato
-if (endereco && numero && cidade) {
-  result = await geocode(fullAddress, 'exact');
-}
-
-// Prioridade 2: Só a rua (sem número) → delimitar rua
-else if (endereco && cidade && !numero) {
-  result = await geocode(`${endereco}, ${cidade}, ${uf}`, 'street');
-}
-
-// Prioridade 3: Só bairro → delimitar bairro
-else if (bairro && cidade) {
-  result = await geocode(`${bairro}, ${cidade}, ${uf}`, 'neighborhood');
-}
-
-// Prioridade 4: Só cidade → delimitar cidade
-else if (cidade && uf) {
-  result = await geocode(`${cidade}, ${uf}`, 'city');
-}
-```
-
-### 4. Componente de Mapa com Área Delimitada
-
-Vou adicionar o componente `Rectangle` do Leaflet para desenhar as áreas:
-
-```typescript
-// Importar Rectangle junto com os outros componentes
-const { MapContainer, TileLayer, Marker, Popup, Rectangle } = modules;
-
-// No mapa:
-{precision === 'exact' ? (
-  <Marker position={[lat, lon]}><Popup>{title}</Popup></Marker>
-) : (
-  <Rectangle 
-    bounds={[[sul, oeste], [norte, leste]]}
-    pathOptions={{ 
-      color: primaryColor, 
-      fillColor: primaryColor, 
-      fillOpacity: 0.2 
-    }}
-  />
-)}
-```
-
-### 5. Zoom Dinâmico por Precisão
-
-```typescript
-const getZoomLevel = (precision: string) => {
-  switch (precision) {
-    case 'exact': return 17;
-    case 'street': return 16;
-    case 'neighborhood': return 14;
-    case 'city': return 12;
-    default: return 15;
-  }
+// Criar ícones customizados para cada tipo de POI
+const createPOIIcon = (L: any, type: string): any => {
+  const iconConfig = {
+    supermarket: { emoji: '🛒', color: '#22c55e' },
+    hospital: { emoji: '🏥', color: '#ef4444' },
+    school: { emoji: '🎓', color: '#3b82f6' },
+    pharmacy: { emoji: '💊', color: '#10b981' },
+    bank: { emoji: '🏦', color: '#eab308' },
+  };
+  
+  const config = iconConfig[type] || { emoji: '📍', color: '#6b7280' };
+  
+  return L.divIcon({
+    html: `<div style="
+      font-size: 24px;
+      background: ${config.color};
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    ">${config.emoji}</div>`,
+    className: 'poi-marker',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
 };
+```
+
+### 4. Renderizar POIs no Mapa
+
+```typescript
+// No componente LeafletMapWithMarker, adicionar POIs
+{pois.map((poi, index) => (
+  <Marker 
+    key={index}
+    position={[poi.lat, poi.lon]}
+    icon={createPOIIcon(L, poi.type)}
+  >
+    <Popup>
+      <strong>{poi.name || getPoiLabel(poi.type)}</strong>
+    </Popup>
+  </Marker>
+))}
 ```
 
 ---
 
 ## Resultado Visual
 
-- **Pin azul** → Localização exata conhecida
-- **Retângulo colorido semi-transparente** → Área aproximada (rua/bairro/cidade)
-- Zoom ajustado automaticamente para mostrar toda a área
+- **Pin azul grande** no centro = Localização do imóvel
+- **Ícones coloridos ao redor** = Pontos de interesse:
+  - 🛒 Supermercados (verde, 40px)
+  - 🏥 Hospitais (vermelho, 40px)
+  - 🎓 Escolas (azul, 40px)
+  - 💊 Farmácias (verde claro, 40px)
+  - 🏦 Bancos (amarelo, 40px)
+
+---
+
+## Vantagens
+
+| Aspecto | Benefício |
+|---------|-----------|
+| **Geocoding estruturado** | Mais preciso para endereços brasileiros |
+| **Overpass API** | 100% gratuita, sem limite de uso |
+| **Ícones grandes** | Visíveis sem precisar dar zoom |
+| **Contexto da região** | Cliente vê o que tem por perto |
 
 ---
 
@@ -138,5 +205,4 @@ const getZoomLevel = (precision: string) => {
 
 | Arquivo | Mudança |
 |---------|---------|
-| `PropertyLocation.tsx` | Adicionar suporte a bounding box, Rectangle component, e lógica de precisão |
-
+| `PropertyLocation.tsx` | Geocoding estruturado + busca e exibição de POIs com ícones personalizados |
