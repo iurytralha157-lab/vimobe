@@ -75,8 +75,9 @@ export default function PropertyFeatures({
                 >
                   <Icon className="w-5 h-5" style={{ color: primaryColor }} />
                 </div>
-                <span className="text-base font-semibold text-gray-900">
-                  {feature.value} {feature.label}
+                <span className="text-base text-gray-900">
+                  <span className="font-bold">{feature.value}</span>{' '}
+                  <span className="font-normal text-gray-500">{feature.label}</span>
                 </span>
               </div>
             );
@@ -100,8 +101,9 @@ export default function PropertyFeatures({
                 >
                   <Icon className="w-5 h-5" style={{ color: primaryColor }} />
                 </div>
-                <span className="text-base font-semibold text-gray-900">
-                  {feature.label}: {feature.value}
+                <span className="text-base text-gray-900">
+                  <span className="font-normal text-gray-500">{feature.label}:</span>{' '}
+                  <span className="font-bold">{feature.value}</span>
                 </span>
               </div>
             );
