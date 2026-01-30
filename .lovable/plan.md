@@ -1,203 +1,124 @@
 
-# Plano: Mapa com Precisão Melhorada e Pontos de Interesse
+# Plano: Corrigir Erro do Formulário e Melhorar Fluxo de Leads do Site
 
-## Problemas Identificados
+## Problema Atual
 
-1. **Geocoding impreciso**: O Nominatim nem sempre encontra endereços brasileiros com exatidão (ex: "Rua Menino Jesus de Praga, 420" marca no meio da rua)
-2. **Falta de contexto**: O mapa não mostra o que tem na redondeza (supermercados, hospitais, etc.)
-
----
-
-## Solução Proposta
-
-### Parte 1: Melhorar Precisão do Geocoding
-
-**Problema técnico**: O Nominatim às vezes ignora o número da casa em endereços brasileiros.
-
-**Solução**: Usar busca estruturada do Nominatim que separa rua, número, cidade:
-
-```
-/search?street=420 Rua Menino Jesus de Praga&city=Cidade&country=Brasil&format=json
-```
-
-Isso dá resultados mais precisos que juntar tudo numa string.
-
-**Fallback adicional**: Se não encontrar com número, tenta sem número + marca como "rua" (área ao invés de pin).
+1. **Erro na Edge Function**: Usando `notes` e `telefone` que não existem na tabela leads (colunas corretas: `message` e `phone`)
+2. **Lógica inflexível**: Sempre exige pipeline/stage, não permite lead "solto" em contatos
 
 ---
 
-### Parte 2: Mostrar Pontos de Interesse (POI)
+## Nova Lógica de Leads do Site
 
-Vou usar a **Overpass API** (gratuita, do OpenStreetMap) para buscar estabelecimentos próximos e mostrar com ícones grandes no mapa.
-
-**POIs que serão exibidos**:
-
-| Categoria | Ícone | Cor |
-|-----------|-------|-----|
-| Supermercado | Carrinho | Verde |
-| Hospital/Clínica | Cruz/Coração | Vermelho |
-| Escola | Livro | Azul |
-| Farmácia | Medicamento | Verde claro |
-| Banco | Cifrão | Amarelo |
-| Restaurante | Garfo/Faca | Laranja |
-
-**Exemplo de busca Overpass**:
-```
-[out:json][timeout:10];
-(
-  node["amenity"="supermarket"](around:1000, -23.55, -46.63);
-  node["amenity"="hospital"](around:1000, -23.55, -46.63);
-  node["amenity"="school"](around:1000, -23.55, -46.63);
-);
-out body;
+```text
+Lead chega do site
+        │
+        ▼
+   ┌─────────────────────┐
+   │ Tenta distribuição  │
+   │ (handle_lead_intake)│
+   └─────────────────────┘
+        │
+        ├── SIM: Fila encontrada
+        │   └── Lead vai para pipeline/stage da fila
+        │       com responsável definido pela distribuição
+        │
+        └── NÃO: Sem fila ativa
+            └── Lead vai só para CONTATOS:
+                • Sem pipeline_id
+                • Sem stage_id  
+                • Responsável = Administrador da organização
+                • Source = "website"
+                • Status = "open"
 ```
 
 ---
 
-## Mudanças Técnicas
+## Correções Técnicas
 
-**Arquivo:** `src/components/public/property-detail/PropertyLocation.tsx`
+**Arquivo:** `supabase/functions/public-site-contact/index.ts`
 
-### 1. Geocoding Estruturado (mais preciso)
+### 1. Corrigir Nomes das Colunas
+
+| Errado | Correto |
+|--------|---------|
+| `notes` | `message` |
+| `telefone` | `phone` |
+
+### 2. Nova Lógica de Criação
 
 ```typescript
-// Busca estruturada - separa os campos
-const geocodeStructured = async (
-  street: string,
-  number: string,
-  city: string,
-  state: string
-): Promise<LocationResult | null> => {
-  const params = new URLSearchParams({
-    street: `${number} ${street}`,
-    city: city,
-    state: state,
-    country: 'Brasil',
-    format: 'json',
-    limit: '1'
-  });
-  
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?${params}`,
-    { headers: { 'User-Agent': 'PropertySite/1.0' } }
-  );
-  // ...
+// 1. Primeiro buscar o admin da organização
+const { data: admin } = await supabase
+  .from('users')
+  .select('id')
+  .eq('organization_id', organization_id)
+  .eq('role', 'admin')
+  .eq('is_active', true)
+  .order('created_at', { ascending: true })
+  .limit(1)
+  .maybeSingle();
+
+// 2. Criar lead SEM pipeline/stage (vai para Contatos apenas)
+const leadData = {
+  organization_id: organization_id,
+  pipeline_id: null,       // Sem pipeline inicialmente
+  stage_id: null,          // Sem estágio inicialmente  
+  assigned_user_id: admin?.id || null,  // Admin como responsável padrão
+  assigned_at: admin ? new Date().toISOString() : null,
+  name: name,
+  email: email || null,
+  phone: normalizedPhone,  // Correção: era telefone
+  message: message || null, // Correção: era notes
+  source: 'website',
+  deal_status: 'open',
+  interest_property_id: property_id || null,
 };
+
+// 3. Inserir lead
+const { data: newLead } = await supabase
+  .from('leads')
+  .insert(leadData)
+  .select('id')
+  .single();
+
+// 4. Tentar distribuição (vai mover para pipeline se houver fila)
+const { data: distributionResult } = await supabase
+  .rpc('handle_lead_intake', { p_lead_id: newLead.id });
+
+// Se distribuição funcionou, o lead agora está em um pipeline
+// Se não funcionou, o lead continua em Contatos com o admin
 ```
 
-### 2. Buscar POIs com Overpass API
+### 3. Remover Dependência de Pipeline/Stage
 
-```typescript
-interface POI {
-  lat: number;
-  lon: number;
-  type: 'supermarket' | 'hospital' | 'school' | 'pharmacy' | 'bank' | 'restaurant';
-  name?: string;
-}
-
-const fetchNearbyPOIs = async (lat: number, lon: number, radius: number = 1000): Promise<POI[]> => {
-  const query = `
-    [out:json][timeout:10];
-    (
-      node["shop"="supermarket"](around:${radius},${lat},${lon});
-      node["amenity"="hospital"](around:${radius},${lat},${lon});
-      node["amenity"="clinic"](around:${radius},${lat},${lon});
-      node["amenity"="school"](around:${radius},${lat},${lon});
-      node["amenity"="pharmacy"](around:${radius},${lat},${lon});
-      node["amenity"="bank"](around:${radius},${lat},${lon});
-    );
-    out body;
-  `;
-  
-  const response = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: query
-  });
-  
-  const data = await response.json();
-  return data.elements.map(el => ({
-    lat: el.lat,
-    lon: el.lon,
-    type: mapAmenityType(el.tags),
-    name: el.tags?.name
-  }));
-};
-```
-
-### 3. Ícones Personalizados Grandes
-
-```typescript
-// Criar ícones customizados para cada tipo de POI
-const createPOIIcon = (L: any, type: string): any => {
-  const iconConfig = {
-    supermarket: { emoji: '🛒', color: '#22c55e' },
-    hospital: { emoji: '🏥', color: '#ef4444' },
-    school: { emoji: '🎓', color: '#3b82f6' },
-    pharmacy: { emoji: '💊', color: '#10b981' },
-    bank: { emoji: '🏦', color: '#eab308' },
-  };
-  
-  const config = iconConfig[type] || { emoji: '📍', color: '#6b7280' };
-  
-  return L.divIcon({
-    html: `<div style="
-      font-size: 24px;
-      background: ${config.color};
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    ">${config.emoji}</div>`,
-    className: 'poi-marker',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20]
-  });
-};
-```
-
-### 4. Renderizar POIs no Mapa
-
-```typescript
-// No componente LeafletMapWithMarker, adicionar POIs
-{pois.map((poi, index) => (
-  <Marker 
-    key={index}
-    position={[poi.lat, poi.lon]}
-    icon={createPOIIcon(L, poi.type)}
-  >
-    <Popup>
-      <strong>{poi.name || getPoiLabel(poi.type)}</strong>
-    </Popup>
-  </Marker>
-))}
-```
+Antes: A função falhava se não houvesse pipeline
+Depois: Pipeline é opcional, lead pode existir só em Contatos
 
 ---
 
-## Resultado Visual
+## Resultado
 
-- **Pin azul grande** no centro = Localização do imóvel
-- **Ícones coloridos ao redor** = Pontos de interesse:
-  - 🛒 Supermercados (verde, 40px)
-  - 🏥 Hospitais (vermelho, 40px)
-  - 🎓 Escolas (azul, 40px)
-  - 💊 Farmácias (verde claro, 40px)
-  - 🏦 Bancos (amarelo, 40px)
+| Cenário | Comportamento |
+|---------|---------------|
+| **Com fila de distribuição para "website"** | Lead vai para pipeline/stage da fila, responsável definido pela distribuição |
+| **Sem fila configurada** | Lead aparece em Contatos, responsável = admin, sem pipeline |
+| **Lead existente** | Adiciona atividade com nova mensagem |
 
 ---
 
-## Vantagens
+## Campos do Lead (Contatos)
 
-| Aspecto | Benefício |
-|---------|-----------|
-| **Geocoding estruturado** | Mais preciso para endereços brasileiros |
-| **Overpass API** | 100% gratuita, sem limite de uso |
-| **Ícones grandes** | Visíveis sem precisar dar zoom |
-| **Contexto da região** | Cliente vê o que tem por perto |
+Quando não houver distribuição, o lead terá:
+
+- **Nome**: Do formulário
+- **Telefone**: Do formulário
+- **E-mail**: Do formulário (opcional)
+- **Origem**: "Website"
+- **Status**: "Aberto"
+- **Responsável**: Administrador da organização
+- **Criado em**: Data/hora do envio
+- **Pipeline**: Vazio (não aparece no Kanban)
 
 ---
 
@@ -205,4 +126,4 @@ const createPOIIcon = (L: any, type: string): any => {
 
 | Arquivo | Mudança |
 |---------|---------|
-| `PropertyLocation.tsx` | Geocoding estruturado + busca e exibição de POIs com ícones personalizados |
+| `supabase/functions/public-site-contact/index.ts` | Corrigir colunas + nova lógica sem dependência de pipeline |
