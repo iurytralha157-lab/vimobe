@@ -8,9 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { usePublicContext } from "./usePublicContext";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -22,6 +21,10 @@ export default function PublicProperties() {
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
   
+  // Separate local state for search input to prevent focus loss - MUST be at the top
+  const [localSearch, setLocalSearch] = useState(searchParams.get('search') || '');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const [filters, setFilters] = useState(() => ({
     search: searchParams.get('search') || '',
     tipo: searchParams.get('tipo') || '',
@@ -37,9 +40,6 @@ export default function PublicProperties() {
   
   // Track if URL changes came from external navigation (header links)
   const lastLocationSearch = useRef(location.search);
-  
-  // Debounce search to prevent focus loss while typing
-  const debouncedSearch = useDebouncedValue(filters.search, 400);
   
   // Sync state with URL when URL changes externally (e.g., clicking header links)
   useEffect(() => {
@@ -60,6 +60,23 @@ export default function PublicProperties() {
       });
     }
   }, [location.search]);
+
+  // Sync local search with debounced update to filters
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== filters.search) {
+        setFilters(prev => ({ ...prev, search: localSearch, page: 1 }));
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [localSearch, filters.search]);
+  
+  // Sync local search when filters.search changes externally (e.g., from URL)
+  useEffect(() => {
+    if (filters.search !== localSearch && document.activeElement !== searchInputRef.current) {
+      setLocalSearch(filters.search);
+    }
+  }, [filters.search]);
 
   const { data, isLoading } = usePublicProperties(organizationId, {
     page: filters.page,
@@ -89,14 +106,13 @@ export default function PublicProperties() {
     return `/${path}`;
   };
 
-  // Update URL when filters change (use debounced search to prevent focus loss)
+  // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams();
     // Keep org param if it exists
     const orgParam = searchParams.get('org');
     
-    // Use debounced search for URL update
-    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (filters.search) params.set('search', filters.search);
     if (filters.tipo) params.set('tipo', filters.tipo);
     if (filters.finalidade) params.set('finalidade', filters.finalidade);
     if (filters.cidade) params.set('cidade', filters.cidade);
@@ -114,7 +130,7 @@ export default function PublicProperties() {
     lastLocationSearch.current = newSearch;
     
     setSearchParams(params, { replace: true });
-  }, [debouncedSearch, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.page]);
+  }, [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.page]);
 
   const updateFilter = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -146,27 +162,6 @@ export default function PublicProperties() {
   if (!siteConfig) {
     return null;
   }
-
-  // Separate local state for search input to prevent focus loss
-  const [localSearch, setLocalSearch] = useState(filters.search);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  // Sync local search with debounced update to filters
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localSearch !== filters.search) {
-        updateFilter('search', localSearch);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [localSearch]);
-  
-  // Sync local search when filters.search changes externally (e.g., from URL)
-  useEffect(() => {
-    if (filters.search !== localSearch && document.activeElement !== searchInputRef.current) {
-      setLocalSearch(filters.search);
-    }
-  }, [filters.search]);
 
   const FiltersContent = ({ onClose }: { onClose?: () => void }) => (
     <div className="space-y-6">
