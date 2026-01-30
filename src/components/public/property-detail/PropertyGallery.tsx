@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, X, Images, Play } from 'lucide-react';
+import useEmblaCarousel from 'embla-carousel-react';
 
 interface PropertyGalleryProps {
   images: string[];
@@ -19,34 +20,78 @@ export default function PropertyGallery({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
+  // Embla carousel com transição suave e drag
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: true,
+    dragFree: false,
+    containScroll: 'trimSnaps',
+    slidesToScroll: 1,
+    duration: 25, // Transição mais suave (maior = mais lento)
+  });
+
+  const [lightboxEmblaRef, lightboxEmblaApi] = useEmblaCarousel({ 
+    loop: true,
+    startIndex: currentIndex,
+    duration: 20,
+  });
+
   const allMedia = images.filter(Boolean);
   const hasMultiple = allMedia.length > 1;
 
-  // Número de imagens visíveis no carrossel (4 no desktop, 2 no mobile)
-  const visibleCount = typeof window !== 'undefined' && window.innerWidth < 768 ? 2 : 4;
-  const maxStartIndex = Math.max(0, allMedia.length - visibleCount);
+  // Sync embla with currentIndex
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentIndex(emblaApi.selectedScrollSnap());
+      });
+    }
+  }, [emblaApi]);
 
-  const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev >= maxStartIndex ? 0 : prev + 1));
-  }, [maxStartIndex]);
+  // Sync lightbox embla
+  useEffect(() => {
+    if (lightboxEmblaApi) {
+      lightboxEmblaApi.on('select', () => {
+        setCurrentIndex(lightboxEmblaApi.selectedScrollSnap());
+      });
+    }
+  }, [lightboxEmblaApi]);
 
-  const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev <= 0 ? maxStartIndex : prev - 1));
-  }, [maxStartIndex]);
+  // Scroll to index when lightbox opens
+  useEffect(() => {
+    if (lightboxOpen && lightboxEmblaApi) {
+      lightboxEmblaApi.scrollTo(currentIndex, true);
+    }
+  }, [lightboxOpen, lightboxEmblaApi, currentIndex]);
+
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+  const lightboxScrollPrev = useCallback(() => {
+    if (lightboxEmblaApi) lightboxEmblaApi.scrollPrev();
+  }, [lightboxEmblaApi]);
+
+  const lightboxScrollNext = useCallback(() => {
+    if (lightboxEmblaApi) lightboxEmblaApi.scrollNext();
+  }, [lightboxEmblaApi]);
 
   // Keyboard navigation
   useEffect(() => {
     if (!lightboxOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') setCurrentIndex((prev) => Math.max(prev - 1, 0));
-      if (e.key === 'ArrowRight') setCurrentIndex((prev) => Math.min(prev + 1, allMedia.length - 1));
+      if (e.key === 'ArrowLeft') lightboxScrollPrev();
+      if (e.key === 'ArrowRight') lightboxScrollNext();
       if (e.key === 'Escape') setLightboxOpen(false);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [lightboxOpen, allMedia.length]);
+  }, [lightboxOpen, lightboxScrollPrev, lightboxScrollNext]);
 
   // Extract YouTube video ID
   const getYouTubeId = (url: string) => {
@@ -64,14 +109,10 @@ export default function PropertyGallery({
     );
   }
 
-  // Get visible images for the carousel
-  const visibleImages = allMedia.slice(currentIndex, currentIndex + visibleCount);
-
   return (
     <>
-      {/* Fullwidth Gallery Carousel - Nexo Style */}
+      {/* Fullwidth Gallery Carousel with Embla */}
       <div className="relative w-full">
-        {/* Main Carousel Container */}
         <div className="relative h-[300px] md:h-[450px] lg:h-[550px] overflow-hidden">
           {showVideo && youtubeId ? (
             <div className="w-full h-full bg-black flex items-center justify-center">
@@ -91,40 +132,46 @@ export default function PropertyGallery({
             </div>
           ) : (
             <>
-              {/* Images Grid - Side by Side */}
-              <div className="flex h-full gap-px">
-                {visibleImages.map((img, index) => (
-                  <button
-                    key={currentIndex + index}
-                    onClick={() => {
-                      setCurrentIndex(currentIndex + index);
-                      setLightboxOpen(true);
-                    }}
-                    className="flex-1 h-full cursor-zoom-in overflow-hidden relative group"
-                  >
-                    <img
-                      src={img}
-                      alt={`${title} - Foto ${currentIndex + index + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                  </button>
-                ))}
+              {/* Embla Carousel */}
+              <div className="overflow-hidden h-full cursor-grab active:cursor-grabbing" ref={emblaRef}>
+                <div className="flex h-full">
+                  {allMedia.map((img, index) => (
+                    <div
+                      key={index}
+                      className="flex-[0_0_50%] md:flex-[0_0_25%] min-w-0 h-full px-px"
+                    >
+                      <button
+                        onClick={() => {
+                          setCurrentIndex(index);
+                          setLightboxOpen(true);
+                        }}
+                        className="w-full h-full cursor-zoom-in overflow-hidden relative group"
+                      >
+                        <img
+                          src={img}
+                          alt={`${title} - Foto ${index + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Navigation Arrows */}
               {hasMultiple && (
                 <>
                   <button
-                    onClick={prevSlide}
-                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                    onClick={scrollPrev}
+                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all duration-200 z-10 hover:scale-105 active:scale-95"
                     aria-label="Fotos anteriores"
                   >
                     <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
                   </button>
                   <button
-                    onClick={nextSlide}
-                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                    onClick={scrollNext}
+                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all duration-200 z-10 hover:scale-105 active:scale-95"
                     aria-label="Próximas fotos"
                   >
                     <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
@@ -135,13 +182,13 @@ export default function PropertyGallery({
               {/* Counter Badge */}
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm font-medium flex items-center gap-2">
                 <Images className="w-4 h-4" />
-                {currentIndex + 1} - {Math.min(currentIndex + visibleCount, allMedia.length)} / {allMedia.length}
+                {currentIndex + 1} / {allMedia.length}
               </div>
 
               {/* View All Button */}
               <button
                 onClick={() => setLightboxOpen(true)}
-                className="absolute bottom-4 right-4 bg-white/95 hover:bg-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
+                className="absolute bottom-4 right-4 bg-white/95 hover:bg-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-105"
               >
                 <Images className="w-4 h-4" />
                 Ver todas
@@ -151,7 +198,7 @@ export default function PropertyGallery({
               {youtubeId && (
                 <button
                   onClick={() => setShowVideo(true)}
-                  className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
+                  className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all duration-200"
                 >
                   <Play className="w-4 h-4" />
                   Ver Vídeo
@@ -162,7 +209,7 @@ export default function PropertyGallery({
         </div>
       </div>
 
-      {/* Lightbox Dialog */}
+      {/* Lightbox Dialog with Embla */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0">
           <button
@@ -173,26 +220,33 @@ export default function PropertyGallery({
             <X className="w-6 h-6" />
           </button>
 
-          <div className="relative w-full h-[90vh] flex items-center justify-center">
-            <img
-              src={allMedia[currentIndex]}
-              alt={`${title} - Foto ${currentIndex + 1}`}
-              className="max-w-full max-h-full object-contain"
-            />
+          <div className="relative w-full h-[90vh] flex flex-col items-center justify-center">
+            {/* Lightbox Embla Carousel */}
+            <div className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing" ref={lightboxEmblaRef}>
+              <div className="flex h-full items-center">
+                {allMedia.map((img, index) => (
+                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-4">
+                    <img
+                      src={img}
+                      alt={`${title} - Foto ${index + 1}`}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {hasMultiple && (
               <>
                 <button
-                  onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
-                  disabled={currentIndex === 0}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors disabled:opacity-30"
+                  onClick={lightboxScrollPrev}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
                 >
                   <ChevronLeft className="w-8 h-8" />
                 </button>
                 <button
-                  onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, allMedia.length - 1))}
-                  disabled={currentIndex === allMedia.length - 1}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors disabled:opacity-30"
+                  onClick={lightboxScrollNext}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
                 >
                   <ChevronRight className="w-8 h-8" />
                 </button>
@@ -204,9 +258,12 @@ export default function PropertyGallery({
               {allMedia.map((img, index) => (
                 <button
                   key={index}
-                  onClick={() => setCurrentIndex(index)}
-                  className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden transition-all ${
-                    index === currentIndex ? 'ring-2 ring-white' : 'opacity-50 hover:opacity-100'
+                  onClick={() => {
+                    setCurrentIndex(index);
+                    lightboxEmblaApi?.scrollTo(index);
+                  }}
+                  className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 ${
+                    index === currentIndex ? 'ring-2 ring-white scale-105' : 'opacity-50 hover:opacity-100'
                   }`}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />

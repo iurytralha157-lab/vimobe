@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Property, useProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { useIsMobile } from '@/hooks/use-mobile';
+import useEmblaCarousel from 'embla-carousel-react';
 import {
   MapPin,
   Bed,
@@ -45,16 +46,42 @@ export function PropertyPreviewDialog({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const updateProperty = useUpdateProperty();
   
+  // Embla carousel com transição suave e drag
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    loop: true,
+    duration: 25, // Transição mais suave
+  });
+  
   // Fetch full property data including gallery
   const { data: fullProperty, isLoading } = useProperty(open ? propertyFromList?.id ?? null : null);
   
   // Use full property if available, otherwise fallback to list property
   const property = fullProperty || propertyFromList;
 
-  // Reset image index when property changes
+  // Sync embla with currentIndex
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.on('select', () => {
+        setCurrentImageIndex(emblaApi.selectedScrollSnap());
+      });
+    }
+  }, [emblaApi]);
+
+  // Reset and scroll to first image when property changes
   useEffect(() => {
     setCurrentImageIndex(0);
-  }, [property?.id]);
+    if (emblaApi) {
+      emblaApi.scrollTo(0, true);
+    }
+  }, [property?.id, emblaApi]);
+
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
 
   if (!property && !isLoading) return null;
 
@@ -82,14 +109,6 @@ export function PropertyPreviewDialog({
     });
   };
 
-  const handlePrevImage = () => {
-    setCurrentImageIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
-  };
-
-  const handleNextImage = () => {
-    setCurrentImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
-  };
-
   const content = isLoading ? (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="lg:w-1/2">
@@ -115,29 +134,41 @@ export function PropertyPreviewDialog({
     <div className="flex flex-col lg:flex-row gap-6">
       {/* Left Side - Image Gallery */}
       <div className="lg:w-1/2 flex flex-col">
-        {/* Main Image */}
+        {/* Main Image with Embla Carousel */}
         <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted group">
           {allImages.length > 0 ? (
             <>
-              <img
-                src={allImages[currentImageIndex]}
-                alt={`${property.title || 'Imóvel'} - Foto ${currentImageIndex + 1}`}
-                className="w-full h-full object-cover"
-              />
+              {/* Embla Carousel */}
+              <div 
+                className="overflow-hidden h-full cursor-grab active:cursor-grabbing" 
+                ref={emblaRef}
+              >
+                <div className="flex h-full">
+                  {allImages.map((img, index) => (
+                    <div key={index} className="flex-[0_0_100%] min-w-0 h-full">
+                      <img
+                        src={img}
+                        alt={`${property.title || 'Imóvel'} - Foto ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
               
               {/* Navigation Arrows */}
               {allImages.length > 1 && (
                 <>
                   <button
-                    onClick={handlePrevImage}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                    onClick={scrollPrev}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-all duration-200 hover:scale-105 active:scale-95"
                     type="button"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   <button
-                    onClick={handleNextImage}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+                    onClick={scrollNext}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-all duration-200 hover:scale-105 active:scale-95"
                     type="button"
                   >
                     <ChevronRight className="h-5 w-5" />
@@ -173,12 +204,15 @@ export function PropertyPreviewDialog({
               <button
                 key={index}
                 type="button"
-                className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                   index === currentImageIndex 
-                    ? 'border-primary ring-2 ring-primary/30' 
+                    ? 'border-primary ring-2 ring-primary/30 scale-105' 
                     : 'border-transparent hover:border-muted-foreground/40'
                 }`}
-                onClick={() => setCurrentImageIndex(index)}
+                onClick={() => {
+                  setCurrentImageIndex(index);
+                  emblaApi?.scrollTo(index);
+                }}
               >
                 <img src={img} alt="" className="w-full h-full object-cover" />
               </button>
