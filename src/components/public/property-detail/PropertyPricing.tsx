@@ -112,9 +112,6 @@ export default function PropertyPricing({
 
         {/* Contact Form - OBRIGATÓRIO */}
         <div className="pt-4 border-t border-gray-100">
-          <p className="text-sm text-gray-500 mb-3 text-center">
-            Preencha o formulário para receber mais informações
-          </p>
           <ContactFormDialog
             organizationId={organizationId}
             propertyId={propertyId}
@@ -124,7 +121,7 @@ export default function PropertyPricing({
             primaryColor={primaryColor}
             trigger={
               <Button
-                className="w-full rounded-xl h-14 text-base font-semibold gap-2 text-white shadow-lg hover:shadow-xl transition-all"
+                className="w-full rounded-xl h-14 text-base font-semibold gap-2 text-white transition-all"
                 style={{ backgroundColor: primaryColor }}
               >
                 <MessageCircle className="w-5 h-5" />
@@ -132,6 +129,9 @@ export default function PropertyPricing({
               </Button>
             }
           />
+          <p className="text-sm text-gray-500 mt-3 text-center">
+            Preencha o formulário para receber mais informações
+          </p>
         </div>
 
         {/* Property Code */}
