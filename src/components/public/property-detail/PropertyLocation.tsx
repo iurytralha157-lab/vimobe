@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
 
 interface PropertyLocationProps {
@@ -25,6 +25,33 @@ interface LeafletModules {
   TileLayer: any;
   Marker: any;
   Popup: any;
+}
+
+// Error Boundary to catch map errors
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class MapErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Map Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
 }
 
 // Geocode address using Nominatim (free OpenStreetMap service)
@@ -60,22 +87,54 @@ function LeafletMap({
 }) {
   const { MapContainer, TileLayer, Marker, Popup } = modules;
   
+  // Wrap in try-catch for safety
+  try {
+    return (
+      <MapContainer
+        center={[coords.lat, coords.lon]}
+        zoom={15}
+        scrollWheelZoom={false}
+        style={{ height: '100%', width: '100%' }}
+        className="rounded-xl"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={[coords.lat, coords.lon]}>
+          <Popup>{title}</Popup>
+        </Marker>
+      </MapContainer>
+    );
+  } catch (error) {
+    console.error('Error rendering map:', error);
+    return null;
+  }
+}
+
+// Static map fallback using OpenStreetMap static image
+function StaticMapFallback({ coords, primaryColor }: { coords: Coordinates; primaryColor: string }) {
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${coords.lon - 0.01},${coords.lat - 0.01},${coords.lon + 0.01},${coords.lat + 0.01}&layer=mapnik&marker=${coords.lat},${coords.lon}`;
+  
   return (
-    <MapContainer
-      center={[coords.lat, coords.lon]}
-      zoom={15}
-      scrollWheelZoom={false}
-      style={{ height: '100%', width: '100%' }}
-      className="rounded-xl"
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker position={[coords.lat, coords.lon]}>
-        <Popup>{title}</Popup>
-      </Marker>
-    </MapContainer>
+    <iframe
+      src={mapUrl}
+      style={{ width: '100%', height: '100%', border: 0 }}
+      loading="lazy"
+      title="Localização do imóvel"
+    />
+  );
+}
+
+// Placeholder when no map available
+function MapPlaceholder({ primaryColor }: { primaryColor: string }) {
+  return (
+    <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+      <div className="text-center">
+        <MapPin className="w-12 h-12 mx-auto mb-2" />
+        <p className="text-sm">Mapa não disponível</p>
+      </div>
+    </div>
   );
 }
 
@@ -93,6 +152,7 @@ export default function PropertyLocation({
   primaryColor = '#F97316',
 }: PropertyLocationProps) {
   const [leafletModules, setLeafletModules] = useState<LeafletModules | null>(null);
+  const [leafletError, setLeafletError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [mapCoords, setMapCoords] = useState<Coordinates | null>(null);
   const [geocodeAttempted, setGeocodeAttempted] = useState(false);
@@ -118,46 +178,51 @@ export default function PropertyLocation({
     let isMounted = true;
     
     const loadCoordinates = async () => {
-      // Priority 1: Use existing coordinates
-      if (hasExistingCoordinates) {
-        if (isMounted) {
-          setMapCoords({ lat: latitude!, lon: longitude! });
-          setGeocodeAttempted(true);
-        }
-        return;
-      }
-
-      // Priority 2: Geocode full address
-      if (endereco && cidade) {
-        const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
-        const coords = await geocodeAddress(searchAddress);
-        if (coords && isMounted) {
-          setMapCoords(coords);
-          setGeocodeAttempted(true);
+      try {
+        // Priority 1: Use existing coordinates
+        if (hasExistingCoordinates) {
+          if (isMounted) {
+            setMapCoords({ lat: latitude!, lon: longitude! });
+            setGeocodeAttempted(true);
+          }
           return;
         }
-      }
 
-      // Priority 3: Geocode neighborhood + city
-      if (bairro && cidade) {
-        const coords = await geocodeAddress(`${bairro}, ${cidade}, ${uf || ''}, Brasil`);
-        if (coords && isMounted) {
-          setMapCoords(coords);
-          setGeocodeAttempted(true);
-          return;
+        // Priority 2: Geocode full address
+        if (endereco && cidade) {
+          const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
+          const coords = await geocodeAddress(searchAddress);
+          if (coords && isMounted) {
+            setMapCoords(coords);
+            setGeocodeAttempted(true);
+            return;
+          }
         }
-      }
 
-      // Priority 4: Geocode just city
-      if (cidade && uf) {
-        const coords = await geocodeAddress(`${cidade}, ${uf}, Brasil`);
-        if (coords && isMounted) {
-          setMapCoords(coords);
+        // Priority 3: Geocode neighborhood + city
+        if (bairro && cidade) {
+          const coords = await geocodeAddress(`${bairro}, ${cidade}, ${uf || ''}, Brasil`);
+          if (coords && isMounted) {
+            setMapCoords(coords);
+            setGeocodeAttempted(true);
+            return;
+          }
         }
+
+        // Priority 4: Geocode just city
+        if (cidade && uf) {
+          const coords = await geocodeAddress(`${cidade}, ${uf}, Brasil`);
+          if (coords && isMounted) {
+            setMapCoords(coords);
+          }
+        }
+      } catch (error) {
+        console.error('Error geocoding:', error);
       }
       
       if (isMounted) {
         setGeocodeAttempted(true);
+        setIsLoading(false);
       }
     };
 
@@ -172,18 +237,17 @@ export default function PropertyLocation({
   useEffect(() => {
     let isMounted = true;
 
-    // Inject Leaflet CSS
-    const existingLink = document.querySelector('link[href*="leaflet"]');
-    if (!existingLink) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
-
-    // Dynamically import react-leaflet
     const loadLeaflet = async () => {
       try {
+        // Inject Leaflet CSS
+        const existingLink = document.querySelector('link[href*="leaflet"]');
+        if (!existingLink) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+        }
+
         const L = await import('leaflet');
         const reactLeaflet = await import('react-leaflet');
 
@@ -202,10 +266,13 @@ export default function PropertyLocation({
             Marker: reactLeaflet.Marker,
             Popup: reactLeaflet.Popup,
           });
-          setIsLoading(false);
         }
       } catch (error) {
         console.error('Error loading Leaflet:', error);
+        if (isMounted) {
+          setLeafletError(true);
+        }
+      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
@@ -219,14 +286,13 @@ export default function PropertyLocation({
     };
   }, []);
 
-  // Don't render if no address at all
+  // Don't render section if no address at all
   if (!fullAddress && !mapCoords && geocodeAttempted) {
     return null;
   }
 
-  const showMap = mapCoords && leafletModules && !isLoading;
-  const showLoading = isLoading || (!geocodeAttempted);
-  const showNoLocation = geocodeAttempted && !mapCoords && !isLoading;
+  const canShowLeafletMap = mapCoords && leafletModules && !leafletError;
+  const canShowFallbackMap = mapCoords && (leafletError || !leafletModules);
 
   return (
     <div>
@@ -238,27 +304,28 @@ export default function PropertyLocation({
       <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
         {/* Map */}
         <div className="h-[300px] md:h-[400px] w-full bg-gray-100">
-          {showLoading && (
+          {isLoading && (
             <div className="w-full h-full flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: primaryColor }} />
             </div>
           )}
           
-          {showNoLocation && (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
-              <div className="text-center">
-                <MapPin className="w-12 h-12 mx-auto mb-2" />
-                <p className="text-sm">Localização não disponível</p>
-              </div>
-            </div>
+          {!isLoading && canShowLeafletMap && (
+            <MapErrorBoundary fallback={<StaticMapFallback coords={mapCoords} primaryColor={primaryColor} />}>
+              <LeafletMap 
+                coords={mapCoords} 
+                title={title} 
+                modules={leafletModules} 
+              />
+            </MapErrorBoundary>
           )}
           
-          {showMap && (
-            <LeafletMap 
-              coords={mapCoords} 
-              title={title} 
-              modules={leafletModules} 
-            />
+          {!isLoading && canShowFallbackMap && (
+            <StaticMapFallback coords={mapCoords} primaryColor={primaryColor} />
+          )}
+          
+          {!isLoading && !mapCoords && geocodeAttempted && (
+            <MapPlaceholder primaryColor={primaryColor} />
           )}
         </div>
 
