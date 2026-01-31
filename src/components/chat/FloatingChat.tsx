@@ -191,7 +191,8 @@ export function FloatingChat() {
     return conv.contact_name?.toLowerCase().includes(search) || conv.contact_phone?.includes(search);
   });
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !activeConversation) return;
+    const textToSend = messageText.trim();
+    if (!textToSend || !activeConversation) return;
 
     // Verify session is valid and connected before sending
     const sessionId = activeConversation.session_id;
@@ -213,11 +214,14 @@ export function FloatingChat() {
       });
       return;
     }
+    
+    // Limpa o campo IMEDIATAMENTE (UX otimista)
+    setMessageText("");
+    
     await sendMessage.mutateAsync({
       conversation: activeConversation,
-      text: messageText.trim()
+      text: textToSend
     });
-    setMessageText("");
   };
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
