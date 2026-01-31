@@ -2244,6 +2244,9 @@ export type Database = {
           state: string | null
           subdomain: string | null
           updated_at: string
+          watermark_enabled: boolean | null
+          watermark_logo_url: string | null
+          watermark_opacity: number | null
           whatsapp: string | null
           youtube: string | null
         }
@@ -2285,6 +2288,9 @@ export type Database = {
           state?: string | null
           subdomain?: string | null
           updated_at?: string
+          watermark_enabled?: boolean | null
+          watermark_logo_url?: string | null
+          watermark_opacity?: number | null
           whatsapp?: string | null
           youtube?: string | null
         }
@@ -2326,6 +2332,9 @@ export type Database = {
           state?: string | null
           subdomain?: string | null
           updated_at?: string
+          watermark_enabled?: boolean | null
+          watermark_logo_url?: string | null
+          watermark_opacity?: number | null
           whatsapp?: string | null
           youtube?: string | null
         }

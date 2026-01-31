@@ -74,6 +74,10 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
             // Logo size fields
             logo_width: data.logo_width,
             logo_height: data.logo_height,
+            // Watermark fields
+            watermark_enabled: data.watermark_enabled,
+            watermark_opacity: data.watermark_opacity,
+            watermark_logo_url: data.watermark_logo_url,
             organization_name: (data.organizations as any)?.name || 'Imobiliária',
           });
         }

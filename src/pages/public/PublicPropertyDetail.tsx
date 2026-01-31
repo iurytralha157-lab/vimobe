@@ -98,6 +98,9 @@ export default function PublicPropertyDetail() {
         title={property.titulo} 
         primaryColor={primaryColor}
         videoUrl={(property as any).video_imovel}
+        watermarkEnabled={siteConfig?.watermark_enabled || false}
+        watermarkOpacity={siteConfig?.watermark_opacity || 20}
+        watermarkUrl={siteConfig?.watermark_logo_url || siteConfig?.logo_url}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

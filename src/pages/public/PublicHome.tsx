@@ -180,6 +180,21 @@ export default function PublicHome() {
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
                       
+                      {/* Watermark Overlay */}
+                      {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
+                        <div 
+                          className="absolute bottom-3 right-3 pointer-events-none select-none"
+                          style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
+                        >
+                          <img 
+                            src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
+                            alt=""
+                            className="max-h-6 max-w-20 object-contain drop-shadow-lg"
+                            draggable={false}
+                          />
+                        </div>
+                      )}
+                      
                       {/* Badge */}
                       <div className="absolute top-4 left-4">
                         <span 
@@ -297,6 +312,21 @@ export default function PublicHome() {
                         alt={property.titulo}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
+                      
+                      {/* Watermark Overlay */}
+                      {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
+                        <div 
+                          className="absolute bottom-3 right-3 pointer-events-none select-none"
+                          style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
+                        >
+                          <img 
+                            src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
+                            alt=""
+                            className="max-h-6 max-w-20 object-contain drop-shadow-lg"
+                            draggable={false}
+                          />
+                        </div>
+                      )}
                       
                       {/* Badge */}
                       <div className="absolute top-4 left-4">

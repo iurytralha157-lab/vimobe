@@ -1,20 +1,27 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, X, Images, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Images, Play, Download } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
+import { downloadWithWatermark } from '@/lib/watermark-utils';
 
 interface PropertyGalleryProps {
   images: string[];
   title: string;
   primaryColor?: string;
   videoUrl?: string | null;
+  watermarkEnabled?: boolean;
+  watermarkOpacity?: number;
+  watermarkUrl?: string | null;
 }
 
 export default function PropertyGallery({ 
   images, 
   title, 
   primaryColor = '#F97316',
-  videoUrl 
+  videoUrl,
+  watermarkEnabled = false,
+  watermarkOpacity = 20,
+  watermarkUrl,
 }: PropertyGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -101,6 +108,21 @@ export default function PropertyGallery({
 
   const youtubeId = videoUrl ? getYouTubeId(videoUrl) : null;
 
+  const handleDownload = async (imageUrl: string, index: number) => {
+    const filename = `${title.replace(/[^a-zA-Z0-9]/g, '-')}-${index + 1}.jpg`;
+    if (watermarkEnabled && watermarkUrl) {
+      await downloadWithWatermark(imageUrl, watermarkUrl, watermarkOpacity, filename);
+    } else {
+      // Direct download without watermark
+      const a = document.createElement('a');
+      a.href = imageUrl;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
   if (allMedia.length === 0) {
     return (
       <div className="w-full h-[300px] md:h-[400px] bg-gray-200 flex items-center justify-center">
@@ -153,6 +175,21 @@ export default function PropertyGallery({
                           className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                        
+                        {/* Watermark Overlay */}
+                        {watermarkEnabled && watermarkUrl && (
+                          <div 
+                            className="absolute bottom-2 right-2 pointer-events-none select-none"
+                            style={{ opacity: watermarkOpacity / 100 }}
+                          >
+                            <img 
+                              src={watermarkUrl} 
+                              alt=""
+                              className="max-h-6 md:max-h-8 max-w-16 md:max-w-24 object-contain drop-shadow-lg"
+                              draggable={false}
+                            />
+                          </div>
+                        )}
                       </button>
                     </div>
                   ))}
@@ -225,12 +262,36 @@ export default function PropertyGallery({
             <div className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing" ref={lightboxEmblaRef}>
               <div className="flex h-full items-center">
                 {allMedia.map((img, index) => (
-                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-4">
+                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-4 relative">
                     <img
                       src={img}
                       alt={`${title} - Foto ${index + 1}`}
                       className="max-w-full max-h-full object-contain"
                     />
+                    
+                    {/* Watermark Overlay in Lightbox */}
+                    {watermarkEnabled && watermarkUrl && (
+                      <div 
+                        className="absolute bottom-20 right-8 pointer-events-none select-none"
+                        style={{ opacity: watermarkOpacity / 100 }}
+                      >
+                        <img 
+                          src={watermarkUrl} 
+                          alt=""
+                          className="max-h-12 md:max-h-16 max-w-32 md:max-w-48 object-contain drop-shadow-lg"
+                          draggable={false}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Download Button */}
+                    <button
+                      onClick={() => handleDownload(img, index)}
+                      className="absolute bottom-20 left-8 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200 hover:scale-105"
+                      aria-label="Baixar imagem"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
                   </div>
                 ))}
               </div>
