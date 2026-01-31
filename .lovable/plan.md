@@ -1,77 +1,108 @@
 
-# Plano: Corrigir Campo de Texto e Melhorar Checkmarks do WhatsApp
+# Plano: Adicionar Campo de Comissão e Máscara de Moeda no Lead
 
-## Problemas Identificados
-
-### 1. Campo de texto não limpa após enviar
-O problema está na função `handleSendMessage` em `FloatingChat.tsx`:
-
-```typescript
-// Código atual (linha 216-221)
-await sendMessage.mutateAsync({
-  conversation: activeConversation,
-  text: messageText.trim()
-});
-setMessageText("");  // ← Limpa SÓ DEPOIS da mutação terminar
-```
-
-O campo só limpa quando o envio termina completamente. Se demorar, o usuário fica vendo o texto.
-
-### 2. Checkmarks (✓✓)
-O sistema JÁ tem a lógica de checkmarks implementada:
-- ⏱ Relógio = pendente
-- ✓ Um check = enviado
-- ✓✓ Dois checks = entregue
-- ✓✓ (azul) = lido
-
-O problema é que você só vê um check porque o webhook de status (`MESSAGES_UPDATE`) pode não estar chegando corretamente do Evolution API.
+## Resumo
+Vamos melhorar a aba "Negócio" do lead adicionando:
+1. **Máscara de moeda** no campo "Valor de interesse" (formatação com separadores de milhares)
+2. **Campo de comissão (%)** ao lado do valor de interesse
+3. **Preenchimento automático** da comissão quando um imóvel é selecionado (pega o `commission_percentage` do imóvel)
+4. **Cálculo do valor da comissão** exibido abaixo (valor de interesse × percentual)
 
 ---
 
-## Solução
+## Fluxo do Usuário
 
-### Parte 1: Limpar campo imediatamente
+```
+1. Usuário seleciona imóvel de interesse
+   ↓
+2. Valor de interesse preenchido automaticamente (preço do imóvel)
+   ↓
+3. Comissão (%) preenchida automaticamente (do imóvel)
+   ↓
+4. Card exibe: "Valor da Comissão: R$ X.XXX"
+```
 
-Vou modificar `handleSendMessage` para:
-1. Salvar o texto em variável local
-2. Limpar o campo ANTES de enviar
-3. Enviar a mensagem com o texto salvo
+**Se não houver imóvel selecionado:** O usuário pode digitar manualmente o valor de interesse e a comissão.
 
+---
+
+## Mudanças no Banco de Dados
+
+Adicionar um novo campo na tabela `leads`:
+
+| Campo | Tipo | Default | Descrição |
+|-------|------|---------|-----------|
+| `commission_percentage` | numeric | null | % de comissão do negócio |
+
+---
+
+## Mudanças no Frontend
+
+### 1. LeadDetailDialog.tsx
+
+**Estado do formulário:**
 ```typescript
-const handleSendMessage = async () => {
-  const textToSend = messageText.trim();
-  if (!textToSend || !activeConversation) return;
-  
-  // Limpa IMEDIATAMENTE (antes do envio)
-  setMessageText("");
-  
-  // Envia com o texto salvo
-  await sendMessage.mutateAsync({
-    conversation: activeConversation,
-    text: textToSend
-  });
+const [editForm, setEditForm] = useState({
+  // ... campos existentes
+  valor_interesse: '',
+  commission_percentage: '',  // NOVO
+});
+```
+
+**Funções de formatação (reutilizando padrão do PropertyFormDialog):**
+```typescript
+const formatCurrencyDisplay = (value: string): string => {
+  if (!value) return '';
+  const numbers = value.replace(/\D/g, '');
+  if (!numbers) return '';
+  return Number(numbers).toLocaleString('pt-BR');
+};
+
+const parseCurrencyInput = (value: string): string => {
+  return value.replace(/\D/g, '');
 };
 ```
 
-### Parte 2: Garantir checkmarks funcionando
+**Ao selecionar imóvel - atualizar comissão também:**
+```typescript
+const selectedProperty = properties.find(p => p.id === value);
+const propertyPrice = selectedProperty?.preco || null;
+const propertyCommission = selectedProperty?.commission_percentage || null;
 
-O código de status já está correto. Vou apenas:
+setEditForm({
+  ...editForm,
+  property_id: newValue,
+  valor_interesse: propertyPrice?.toString() || editForm.valor_interesse,
+  commission_percentage: propertyCommission?.toString() || editForm.commission_percentage
+});
+```
 
-1. **Verificar** se o realtime está recebendo updates de status
-2. **Adicionar log** no console para debug se necessário
-3. **Confirmar** que o webhook está configurado no Evolution API
+**Novo layout na aba Negócio:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ Imóvel de interesse                                      │
+│ [Dropdown: Selecionar imóvel]                           │
+├────────────────────────────┬────────────────────────────┤
+│ Valor de interesse         │ Comissão (%)              │
+│ R$ [1.500.000]             │ [5.5] %                   │
+└────────────────────────────┴────────────────────────────┘
 
-A lógica atual de exibição:
+┌─────────────────────────────────────────────────────────┐
+│ 💰 Valor da Comissão: R$ 82.500                         │
+│ (5.5% de R$ 1.500.000)                                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Hook de Criar Comissão
+
+Atualizar `useCreateCommissionOnWon` para usar a comissão do lead quando disponível:
 
 ```typescript
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case "sent":      return <Check />;       // ✓
-    case "delivered": return <CheckCheck />;  // ✓✓
-    case "read":      return <CheckCheck className="text-blue-400" />; // ✓✓ azul
-    default:          return <Clock />;       // ⏱
-  }
-};
+// Se o lead tem commission_percentage, usar esse valor
+// Senão, buscar do imóvel como fallback
+const commissionPercentage = lead.commission_percentage || property?.commission_percentage || 0;
 ```
 
 ---
@@ -80,39 +111,69 @@ const getStatusIcon = (status: string) => {
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/chat/FloatingChat.tsx` | Limpar campo antes do envio |
+| Migração SQL | Adicionar `commission_percentage` na tabela `leads` |
+| `src/integrations/supabase/types.ts` | Atualizar tipos (automático após migration) |
+| `src/components/leads/LeadDetailDialog.tsx` | Adicionar campo comissão + máscara de moeda |
+| `src/hooks/use-create-commission.ts` | Usar comissão do lead quando disponível |
+| `src/hooks/use-properties.ts` | Incluir `commission_percentage` no PROPERTY_LIST_FIELDS |
 
 ---
 
 ## Comportamento Esperado
 
-### Após a correção:
-
-| Ação | Comportamento |
-|------|---------------|
-| Digitar mensagem | Campo mostra o texto |
-| Clicar Enviar | Campo limpa IMEDIATAMENTE |
-| Mensagem aparece | Com ícone de relógio (⏱) |
-| Servidor confirma | Muda para 1 check (✓) |
-| Destinatário recebe | Muda para 2 checks (✓✓) |
-| Destinatário lê | 2 checks ficam azuis (✓✓) |
+| Cenário | Valor de Interesse | Comissão (%) | Resultado |
+|---------|-------------------|--------------|-----------|
+| Imóvel selecionado com preço R$500k e 5% | 500.000 (auto) | 5 (auto) | Comissão: R$ 25.000 |
+| Imóvel sem comissão cadastrada | Preço do imóvel (auto) | Vazio (editável) | Usuário define |
+| Sem imóvel, valores manuais | 300.000 (manual) | 6 (manual) | Comissão: R$ 18.000 |
+| Status "Ganho" | Usa valor do lead | Usa % do lead | Cria registro na tabela commissions |
 
 ---
 
-## Sobre os Checkmarks
+## Detalhes Técnicos
 
-O sistema já está preparado para mostrar dois risquinhos. Se você só está vendo um check, pode ser que:
+### Migration SQL
+```sql
+ALTER TABLE public.leads
+ADD COLUMN IF NOT EXISTS commission_percentage numeric DEFAULT NULL;
+```
 
-1. **O Evolution API não está enviando** o evento `MESSAGES_UPDATE` (configuração do webhook)
-2. **O destinatário não está online** (a mensagem foi entregue mas não lida)
-3. **O realtime está funcionando** e o status vai atualizar quando o destinatário receber
+### Campo com Máscara de Moeda
+```tsx
+<Input 
+  value={formatCurrencyDisplay(editForm.valor_interesse)}
+  onChange={e => setEditForm({
+    ...editForm,
+    valor_interesse: parseCurrencyInput(e.target.value)
+  })}
+  onBlur={() => {
+    const value = editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null;
+    updateLead.mutateAsync({ id: lead.id, valor_interesse: value });
+  }}
+  className="pl-9 rounded-xl"
+/>
+```
 
-Vou garantir que o código está 100% correto para receber e exibir os status quando chegarem.
+### Card de Valor da Comissão
+```tsx
+{valorInteresse > 0 && commissionPercentage > 0 && (
+  <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
+    <p className="text-orange-700 font-bold text-lg">
+      Valor da Comissão: R$ {(valorInteresse * commissionPercentage / 100).toLocaleString('pt-BR')}
+    </p>
+    <p className="text-sm text-orange-600">
+      ({commissionPercentage}% de R$ {valorInteresse.toLocaleString('pt-BR')})
+    </p>
+  </div>
+)}
+```
 
 ---
 
-## Resumo
+## Resumo das Mudanças
 
-Mudança simples e eficaz:
-- Campo de texto limpa instantaneamente ao enviar
-- Checkmarks já estão implementados e vão aparecer quando o Evolution API enviar os updates de status
+- **Máscara de moeda**: Valor de interesse formata automaticamente com pontos (ex: 1.500.000)
+- **Campo comissão**: Novo campo de % ao lado do valor
+- **Auto-preenchimento**: Ao selecionar imóvel, puxa preço E comissão automaticamente
+- **Cálculo visual**: Card mostrando o valor calculado da comissão
+- **Integração**: Quando o negócio é marcado como "Ganho", usa esses valores para criar a comissão na tabela `commissions`
