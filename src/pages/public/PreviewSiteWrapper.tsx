@@ -78,6 +78,8 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
             watermark_enabled: data.watermark_enabled,
             watermark_opacity: data.watermark_opacity,
             watermark_logo_url: data.watermark_logo_url,
+            watermark_size: (data as any).watermark_size ?? 80,
+            watermark_position: (data as any).watermark_position ?? 'bottom-right',
             organization_name: (data.organizations as any)?.name || 'Imobiliária',
           });
         }

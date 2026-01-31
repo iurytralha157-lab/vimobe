@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { getPositionClasses, WatermarkPosition } from '@/lib/watermark-utils';
 
 interface WatermarkedImageProps {
   src: string;
@@ -7,6 +8,8 @@ interface WatermarkedImageProps {
   watermarkUrl?: string | null;
   watermarkEnabled?: boolean;
   watermarkOpacity?: number;
+  watermarkSize?: number;
+  watermarkPosition?: WatermarkPosition;
   className?: string;
   imgClassName?: string;
   onClick?: () => void;
@@ -14,7 +17,7 @@ interface WatermarkedImageProps {
 
 /**
  * Image component with optional watermark overlay
- * The watermark is applied via CSS, positioned in the bottom-right corner
+ * The watermark is applied via CSS, positioned based on settings
  */
 export function WatermarkedImage({
   src,
@@ -22,11 +25,20 @@ export function WatermarkedImage({
   watermarkUrl,
   watermarkEnabled = false,
   watermarkOpacity = 20,
+  watermarkSize = 80,
+  watermarkPosition = 'bottom-right',
   className,
   imgClassName,
   onClick,
 }: WatermarkedImageProps) {
   const showWatermark = watermarkEnabled && watermarkUrl;
+  const positionClasses = getPositionClasses(watermarkPosition);
+  
+  // Calculate size based on setting (40-200px range mapped to 40-150px actual)
+  const sizeStyle = {
+    maxHeight: `${Math.max(24, Math.min(watermarkSize * 0.6, 100))}px`,
+    maxWidth: `${Math.max(40, Math.min(watermarkSize * 1.5, 200))}px`,
+  };
 
   return (
     <div className={cn('relative overflow-hidden', className)} onClick={onClick}>
@@ -38,13 +50,14 @@ export function WatermarkedImage({
       
       {showWatermark && (
         <div 
-          className="absolute bottom-2 right-2 md:bottom-4 md:right-4 pointer-events-none select-none"
+          className={cn('absolute pointer-events-none select-none', positionClasses)}
           style={{ opacity: watermarkOpacity / 100 }}
         >
           <img 
             src={watermarkUrl} 
             alt=""
-            className="max-h-8 md:max-h-12 max-w-20 md:max-w-32 object-contain drop-shadow-lg"
+            className="object-contain drop-shadow-lg"
+            style={sizeStyle}
             draggable={false}
           />
         </div>

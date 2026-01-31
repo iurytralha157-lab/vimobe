@@ -8,6 +8,7 @@ import { useState } from "react";
 import { usePublicContext } from "./usePublicContext";
 import { cn } from "@/lib/utils";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
+import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -183,13 +184,17 @@ export default function PublicHome() {
                       {/* Watermark Overlay */}
                       {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
                         <div 
-                          className="absolute bottom-3 right-3 pointer-events-none select-none"
+                          className={`absolute pointer-events-none select-none ${getPositionClasses((siteConfig?.watermark_position as WatermarkPosition) || 'bottom-right')}`}
                           style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
                         >
                           <img 
                             src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
                             alt=""
-                            className="max-h-6 max-w-20 object-contain drop-shadow-lg"
+                            style={{ 
+                              maxHeight: `${Math.max(20, (siteConfig?.watermark_size || 80) * 0.3)}px`,
+                              maxWidth: `${Math.max(40, (siteConfig?.watermark_size || 80) * 0.7)}px`
+                            }}
+                            className="object-contain drop-shadow-lg"
                             draggable={false}
                           />
                         </div>
@@ -316,13 +321,17 @@ export default function PublicHome() {
                       {/* Watermark Overlay */}
                       {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
                         <div 
-                          className="absolute bottom-3 right-3 pointer-events-none select-none"
+                          className={`absolute pointer-events-none select-none ${getPositionClasses((siteConfig?.watermark_position as WatermarkPosition) || 'bottom-right')}`}
                           style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
                         >
                           <img 
                             src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
                             alt=""
-                            className="max-h-6 max-w-20 object-contain drop-shadow-lg"
+                            style={{ 
+                              maxHeight: `${Math.max(20, (siteConfig?.watermark_size || 80) * 0.3)}px`,
+                              maxWidth: `${Math.max(40, (siteConfig?.watermark_size || 80) * 0.7)}px`
+                            }}
+                            className="object-contain drop-shadow-lg"
                             draggable={false}
                           />
                         </div>

@@ -101,6 +101,8 @@ export default function PublicPropertyDetail() {
         watermarkEnabled={siteConfig?.watermark_enabled || false}
         watermarkOpacity={siteConfig?.watermark_opacity || 20}
         watermarkUrl={siteConfig?.watermark_logo_url || siteConfig?.logo_url}
+        watermarkSize={siteConfig?.watermark_size || 80}
+        watermarkPosition={(siteConfig?.watermark_position as any) || 'bottom-right'}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, X, Images, Play, Download } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { downloadWithWatermark } from '@/lib/watermark-utils';
+import { downloadWithWatermark, getPositionClasses, WatermarkPosition } from '@/lib/watermark-utils';
 
 interface PropertyGalleryProps {
   images: string[];
@@ -12,6 +12,8 @@ interface PropertyGalleryProps {
   watermarkEnabled?: boolean;
   watermarkOpacity?: number;
   watermarkUrl?: string | null;
+  watermarkSize?: number;
+  watermarkPosition?: WatermarkPosition;
 }
 
 export default function PropertyGallery({ 
@@ -22,6 +24,8 @@ export default function PropertyGallery({
   watermarkEnabled = false,
   watermarkOpacity = 20,
   watermarkUrl,
+  watermarkSize = 80,
+  watermarkPosition = 'bottom-right',
 }: PropertyGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -111,7 +115,7 @@ export default function PropertyGallery({
   const handleDownload = async (imageUrl: string, index: number) => {
     const filename = `${title.replace(/[^a-zA-Z0-9]/g, '-')}-${index + 1}.jpg`;
     if (watermarkEnabled && watermarkUrl) {
-      await downloadWithWatermark(imageUrl, watermarkUrl, watermarkOpacity, filename);
+      await downloadWithWatermark(imageUrl, watermarkUrl, watermarkOpacity, filename, watermarkSize);
     } else {
       // Direct download without watermark
       const a = document.createElement('a');
@@ -179,13 +183,17 @@ export default function PropertyGallery({
                         {/* Watermark Overlay */}
                         {watermarkEnabled && watermarkUrl && (
                           <div 
-                            className="absolute bottom-2 right-2 pointer-events-none select-none"
+                            className={`absolute pointer-events-none select-none ${getPositionClasses(watermarkPosition)}`}
                             style={{ opacity: watermarkOpacity / 100 }}
                           >
                             <img 
                               src={watermarkUrl} 
                               alt=""
-                              className="max-h-6 md:max-h-8 max-w-16 md:max-w-24 object-contain drop-shadow-lg"
+                              style={{ 
+                                maxHeight: `${Math.max(20, watermarkSize * 0.3)}px`,
+                                maxWidth: `${Math.max(40, watermarkSize * 0.8)}px`
+                              }}
+                              className="object-contain drop-shadow-lg"
                               draggable={false}
                             />
                           </div>
@@ -272,13 +280,17 @@ export default function PropertyGallery({
                     {/* Watermark Overlay in Lightbox */}
                     {watermarkEnabled && watermarkUrl && (
                       <div 
-                        className="absolute bottom-20 right-8 pointer-events-none select-none"
+                        className={`absolute pointer-events-none select-none ${getPositionClasses(watermarkPosition)}`}
                         style={{ opacity: watermarkOpacity / 100 }}
                       >
                         <img 
                           src={watermarkUrl} 
                           alt=""
-                          className="max-h-12 md:max-h-16 max-w-32 md:max-w-48 object-contain drop-shadow-lg"
+                          style={{ 
+                            maxHeight: `${Math.max(30, watermarkSize * 0.5)}px`,
+                            maxWidth: `${Math.max(60, watermarkSize * 1.2)}px`
+                          }}
+                          className="object-contain drop-shadow-lg"
                           draggable={false}
                         />
                       </div>
