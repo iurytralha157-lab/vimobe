@@ -83,12 +83,26 @@ export function useCreateCommissionOnWon() {
 
       return commission;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       if (data) {
         queryClient.invalidateQueries({ queryKey: ['commissions'] });
         queryClient.invalidateQueries({ queryKey: ['financial-dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['enhanced-dashboard-stats'] });
-        toast.success('Comissão gerada automaticamente!');
+        queryClient.invalidateQueries({ queryKey: ['top-brokers'] });
+        
+        // Show detailed toast with commission amount
+        const commissionAmount = data.amount;
+        const baseValue = variables.valorInteresse || 0;
+        const percentage = variables.leadCommissionPercentage || 0;
+        
+        toast.success(
+          `Comissão de R$ ${commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} gerada!`,
+          { 
+            description: percentage > 0 
+              ? `${percentage}% de R$ ${baseValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` 
+              : undefined 
+          }
+        );
       }
     },
     onError: (error) => {

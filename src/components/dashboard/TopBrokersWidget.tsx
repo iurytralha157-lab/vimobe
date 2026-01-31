@@ -10,6 +10,7 @@ interface Broker {
   avatar_url: string | null;
   closedLeads: number;
   salesValue: number;
+  totalCommissions: number;
 }
 
 interface TopBrokersWidgetProps {
@@ -143,11 +144,18 @@ export function TopBrokersWidget({ brokers, isLoading, isFallbackMode }: TopBrok
                 )}
               </div>
 
-              {/* Value - only show when not in fallback mode */}
+              {/* Value and Commission - only show when not in fallback mode */}
               {!isFallbackMode && (
-                <span className="text-xs font-medium text-primary">
-                  {formatCurrency(broker.salesValue)}
-                </span>
+                <div className="text-right">
+                  <span className="text-xs font-medium text-primary block">
+                    {formatCurrency(broker.salesValue)}
+                  </span>
+                  {broker.totalCommissions > 0 && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                      Com: {formatCurrency(broker.totalCommissions)}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           );
