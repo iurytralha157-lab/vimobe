@@ -275,7 +275,7 @@ export default function PublicHome() {
       {allProperties.length > 0 && (
         <section className="py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
+            <div className="text-center mb-6 md:mb-12">
               <span 
                 className="text-sm font-semibold uppercase tracking-wider"
                 style={{ color: primaryColor }}
@@ -391,7 +391,8 @@ export default function PublicHome() {
 
       {/* Category Accordion Section */}
       <section className="py-0 bg-[#0D0D0D]">
-        <div className="h-[400px] md:h-[500px] flex overflow-hidden">
+        {/* Mobile: Grid 2x2, Desktop: Flex accordion */}
+        <div className="grid grid-cols-2 md:flex md:h-[500px] overflow-hidden">
           {categories.map((cat, idx) => (
             <Link
               key={cat.name}
@@ -399,12 +400,11 @@ export default function PublicHome() {
               onMouseEnter={() => setHoveredCategory(idx)}
               onMouseLeave={() => setHoveredCategory(null)}
               className={cn(
-                "relative h-full overflow-hidden transition-all duration-500 ease-out cursor-pointer",
-                hoveredCategory === null 
-                  ? "flex-1"
-                  : hoveredCategory === idx 
-                    ? "flex-[2]"
-                    : "flex-[0.6]"
+                "relative h-[180px] md:h-full overflow-hidden transition-all duration-500 ease-out cursor-pointer",
+                // Desktop: accordion behavior
+                "md:flex-1",
+                hoveredCategory !== null && hoveredCategory === idx && "md:flex-[2]",
+                hoveredCategory !== null && hoveredCategory !== idx && "md:flex-[0.6]"
               )}
             >
               <img
@@ -413,9 +413,10 @@ export default function PublicHome() {
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
                 style={{ transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)' }}
               />
-              <div className="absolute inset-0 bg-black/40 hover:bg-black/30 transition-colors" />
-              <div className="absolute left-0 top-1/2 -translate-y-1/2">
-                <span className="bg-white text-gray-900 px-4 py-2 text-sm font-semibold tracking-wide">
+              <div className="absolute inset-0 bg-black/40 md:hover:bg-black/30 transition-colors" />
+              {/* Mobile: label at bottom center, Desktop: left center */}
+              <div className="absolute inset-x-0 bottom-4 flex justify-center md:inset-x-auto md:bottom-auto md:left-0 md:top-1/2 md:-translate-y-1/2 md:block">
+                <span className="bg-white text-gray-900 px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold tracking-wide">
                   {cat.name}
                 </span>
               </div>

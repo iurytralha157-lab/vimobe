@@ -103,10 +103,10 @@ export default function PublicSiteLayout() {
                     src={siteConfig.logo_url} 
                     alt={siteConfig.site_title} 
                     style={{ 
-                      maxWidth: siteConfig.logo_width || 160, 
-                      maxHeight: siteConfig.logo_height || 50 
+                      maxWidth: Math.min(siteConfig.logo_width || 160, 140), 
+                      maxHeight: Math.min(siteConfig.logo_height || 50, 40) 
                     }}
-                    className="w-auto object-contain"
+                    className="w-auto object-contain lg:max-w-none lg:max-h-none"
                   />
                 ) : (
                   <span className="text-lg md:text-xl font-serif text-white tracking-wider">
@@ -284,133 +284,143 @@ export default function PublicSiteLayout() {
         className="text-white border-t border-white/10"
         style={{ backgroundColor: secondaryColor }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
             {/* Brand */}
-            <div>
-              {siteConfig.logo_url ? (
-                <img 
-                  src={siteConfig.logo_url} 
-                  alt={siteConfig.site_title} 
-                  style={{ 
-                    maxWidth: siteConfig.logo_width || 160, 
-                    maxHeight: siteConfig.logo_height || 50 
-                  }}
-                  className="w-auto object-contain mb-4"
-                />
-              ) : (
-                <h3 className="text-xl font-serif mb-4">{siteConfig.site_title}</h3>
-              )}
-              <p className="text-white/60 text-sm leading-relaxed mb-6">
+            <div className="text-center md:text-left">
+              <div className="flex justify-center md:justify-start">
+                {siteConfig.logo_url ? (
+                  <img 
+                    src={siteConfig.logo_url} 
+                    alt={siteConfig.site_title} 
+                    style={{ 
+                      maxWidth: siteConfig.logo_width || 160, 
+                      maxHeight: siteConfig.logo_height || 50 
+                    }}
+                    className="w-auto object-contain mb-4"
+                  />
+                ) : (
+                  <h3 className="text-xl font-serif mb-4">{siteConfig.site_title}</h3>
+                )}
+              </div>
+              <p className="text-white/60 text-sm leading-relaxed mb-4 md:mb-6">
                 {siteConfig.site_description || `Encontre o imóvel dos seus sonhos com a ${siteConfig.organization_name}.`}
               </p>
             </div>
 
-            {/* Menu */}
-            <div>
-              <h4 
-                className="text-sm font-semibold uppercase tracking-wider mb-4"
-                style={{ color: primaryColor }}
-              >
-                Menu
-              </h4>
-              <ul className="space-y-3">
-                {mainNavLinks.map((link) => (
-                  <li key={link.href}>
+            {/* Menu & Contact - 2 columns on mobile */}
+            <div className="grid grid-cols-2 md:contents gap-4 text-center md:text-left">
+              {/* Menu */}
+              <div>
+                <h4 
+                  className="text-sm font-semibold uppercase tracking-wider mb-3 md:mb-4"
+                  style={{ color: primaryColor }}
+                >
+                  Menu
+                </h4>
+                <ul className="space-y-2 md:space-y-3">
+                  {mainNavLinks.map((link) => (
+                    <li key={link.href}>
+                      <Link 
+                        to={getHref(link.href)}
+                        className="text-white/60 hover:text-white transition-colors text-sm"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
                     <Link 
-                      to={getHref(link.href)}
+                      to={getHref("contato")}
                       className="text-white/60 hover:text-white transition-colors text-sm"
                     >
-                      {link.label}
+                      CONTATO
                     </Link>
                   </li>
-                ))}
-                <li>
-                  <Link 
-                    to={getHref("contato")}
-                    className="text-white/60 hover:text-white transition-colors text-sm"
-                  >
-                    CONTATO
-                  </Link>
-                </li>
-              </ul>
-            </div>
+                </ul>
+              </div>
 
-            {/* Contact */}
-            <div>
-              <h4 
-                className="text-sm font-semibold uppercase tracking-wider mb-4"
-                style={{ color: primaryColor }}
-              >
-                Contato
-              </h4>
-              <ul className="space-y-3">
-                {siteConfig.phone && (
-                  <li>
-                    <a 
-                      href={`tel:${siteConfig.phone}`}
-                      className="flex items-center gap-3 text-white/60 hover:text-white transition-colors text-sm"
-                    >
-                      <Phone className="w-4 h-4 flex-shrink-0" />
-                      {siteConfig.phone}
-                    </a>
-                  </li>
-                )}
-                {siteConfig.whatsapp && organizationId && (
-                  <li>
-                    <ContactFormDialog
-                      organizationId={organizationId}
-                      whatsappNumber={siteConfig.whatsapp}
-                      primaryColor={primaryColor}
-                      trigger={
-                        <button className="flex items-center gap-3 text-white/60 hover:text-white transition-colors text-sm cursor-pointer">
-                          <MessageCircle className="w-4 h-4 flex-shrink-0" />
-                          WhatsApp
-                        </button>
-                      }
-                    />
-                  </li>
-                )}
-                {siteConfig.email && (
-                  <li>
-                    <a 
-                      href={`mailto:${siteConfig.email}`}
-                      className="flex items-center gap-3 text-white/60 hover:text-white transition-colors text-sm"
-                    >
-                      <Mail className="w-4 h-4 flex-shrink-0" />
-                      {siteConfig.email}
-                    </a>
-                  </li>
-                )}
-                {siteConfig.address && (
-                  <li className="flex items-start gap-3 text-white/60 text-sm">
-                    <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>
-                      {siteConfig.address}
-                      {siteConfig.city && <><br />{siteConfig.city}</>}
-                      {siteConfig.state && ` - ${siteConfig.state}`}
-                    </span>
-                  </li>
-                )}
-              </ul>
+              {/* Contact */}
+              <div>
+                <h4 
+                  className="text-sm font-semibold uppercase tracking-wider mb-3 md:mb-4"
+                  style={{ color: primaryColor }}
+                >
+                  Contato
+                </h4>
+                <ul className="space-y-2 md:space-y-3">
+                  {siteConfig.phone && (
+                    <li>
+                      <a 
+                        href={`tel:${siteConfig.phone}`}
+                        className="flex items-center justify-center md:justify-start gap-2 md:gap-3 text-white/60 hover:text-white transition-colors text-sm"
+                      >
+                        <Phone className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden md:inline">{siteConfig.phone}</span>
+                        <span className="md:hidden">Telefone</span>
+                      </a>
+                    </li>
+                  )}
+                  {siteConfig.whatsapp && organizationId && (
+                    <li className="flex justify-center md:justify-start">
+                      <ContactFormDialog
+                        organizationId={organizationId}
+                        whatsappNumber={siteConfig.whatsapp}
+                        primaryColor={primaryColor}
+                        trigger={
+                          <button className="flex items-center gap-2 md:gap-3 text-white/60 hover:text-white transition-colors text-sm cursor-pointer">
+                            <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                            WhatsApp
+                          </button>
+                        }
+                      />
+                    </li>
+                  )}
+                  {siteConfig.email && (
+                    <li>
+                      <a 
+                        href={`mailto:${siteConfig.email}`}
+                        className="flex items-center justify-center md:justify-start gap-2 md:gap-3 text-white/60 hover:text-white transition-colors text-sm"
+                      >
+                        <Mail className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden md:inline">{siteConfig.email}</span>
+                        <span className="md:hidden">E-mail</span>
+                      </a>
+                    </li>
+                  )}
+                </ul>
+              </div>
             </div>
+            
+            {/* Address - full width on mobile */}
+            {siteConfig.address && (
+              <div className="text-center md:text-left col-span-1">
+                <div className="flex items-start justify-center md:justify-start gap-2 text-white/60 text-sm">
+                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    {siteConfig.address}
+                    {siteConfig.city && <><br />{siteConfig.city}</>}
+                    {siteConfig.state && ` - ${siteConfig.state}`}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Social */}
-            <div>
+            <div className="text-center md:text-left">
               <h4 
-                className="text-sm font-semibold uppercase tracking-wider mb-4"
+                className="text-sm font-semibold uppercase tracking-wider mb-3 md:mb-4"
                 style={{ color: primaryColor }}
               >
                 Redes Sociais
               </h4>
-              <div className="flex gap-3">
+              <div className="flex gap-3 justify-center md:justify-start">
                 {siteConfig.instagram && (
                   <a 
                     href={siteConfig.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
-                    style={{ ':hover': { backgroundColor: primaryColor } } as React.CSSProperties}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
                   >

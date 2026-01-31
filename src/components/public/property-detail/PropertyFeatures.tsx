@@ -58,24 +58,24 @@ export default function PropertyFeatures({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Main Features - Inline Style */}
+    <div className="space-y-4 md:space-y-6">
+      {/* Main Features - Grid 2 columns on mobile, flex on desktop */}
       {features.length > 0 && (
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <div 
                 key={index} 
-                className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl"
+                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 bg-gray-50 rounded-xl"
               >
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `${primaryColor}15` }}
                 >
-                  <Icon className="w-5 h-5" style={{ color: primaryColor }} />
+                  <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: primaryColor }} />
                 </div>
-                <span className="text-base text-gray-900">
+                <span className="text-sm md:text-base text-gray-900">
                   <span className="font-bold">{feature.value}</span>{' '}
                   <span className="font-normal text-gray-500">{feature.label}</span>
                 </span>
@@ -85,23 +85,23 @@ export default function PropertyFeatures({
         </div>
       )}
 
-      {/* Additional Features - Inline Style */}
+      {/* Additional Features - Grid 2 columns on mobile, flex on desktop */}
       {additionalFeatures.length > 0 && (
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3">
           {additionalFeatures.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <div 
                 key={index} 
-                className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl"
+                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 bg-gray-50 rounded-xl"
               >
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `${primaryColor}15` }}
                 >
-                  <Icon className="w-5 h-5" style={{ color: primaryColor }} />
+                  <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: primaryColor }} />
                 </div>
-                <span className="text-base text-gray-900">
+                <span className="text-sm md:text-base text-gray-900">
                   <span className="font-normal text-gray-500">{feature.label}:</span>{' '}
                   <span className="font-bold">{feature.value}</span>
                 </span>
