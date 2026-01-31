@@ -241,11 +241,11 @@ export default function PublicProperties() {
                     )}
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
-                  <SheetHeader className="pb-4 border-b">
+                <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl flex flex-col">
+                  <SheetHeader className="pb-4 border-b flex-shrink-0">
                     <SheetTitle className="text-left">Filtrar Imóveis</SheetTitle>
                   </SheetHeader>
-                  <div className="mt-6 pb-20 overflow-auto">
+                  <div className="flex-1 mt-6 pb-20 overflow-y-auto overscroll-contain">
                     <PropertyFiltersContent
                       localSearch={localSearch}
                       setLocalSearch={handleSetLocalSearch}
