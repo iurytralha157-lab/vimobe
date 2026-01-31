@@ -1,108 +1,139 @@
 
-# Plano: Adicionar Campo de Comissão e Máscara de Moeda no Lead
 
-## Resumo
-Vamos melhorar a aba "Negócio" do lead adicionando:
-1. **Máscara de moeda** no campo "Valor de interesse" (formatação com separadores de milhares)
-2. **Campo de comissão (%)** ao lado do valor de interesse
-3. **Preenchimento automático** da comissão quando um imóvel é selecionado (pega o `commission_percentage` do imóvel)
-4. **Cálculo do valor da comissão** exibido abaixo (valor de interesse × percentual)
+# Plano: Ajustar Histórico do Lead e Garantir Responsável
 
----
+## Resumo do Pedido
 
-## Fluxo do Usuário
-
-```
-1. Usuário seleciona imóvel de interesse
-   ↓
-2. Valor de interesse preenchido automaticamente (preço do imóvel)
-   ↓
-3. Comissão (%) preenchida automaticamente (do imóvel)
-   ↓
-4. Card exibe: "Valor da Comissão: R$ X.XXX"
-```
-
-**Se não houver imóvel selecionado:** O usuário pode digitar manualmente o valor de interesse e a comissão.
+1. **Remover "Atividades recentes"** da aba Atividades (deixar só "Próximas atividades")
+2. **Melhorar o Histórico** com cronologia clara e labels mais descritivas:
+   - "Lead criado via webhook X" (origem)
+   - "Distribuído por [Fila] → [Responsável]" (em vez de "Responsável alterado")
+   - "Lead reentrou via [fonte]"
+   - "Redistribuído por [Fila] → [Novo Responsável]" (se aplicável)
+3. **Garantir que leads nunca fiquem sem responsável** após reentrada
+4. **Adicionar configuração de redistribuição em reentrada** nas filas de distribuição
 
 ---
 
-## Mudanças no Banco de Dados
+## Diagnóstico do Problema
 
-Adicionar um novo campo na tabela `leads`:
+### Cronologia Atual (Invertida)
+Olhando os dados do lead, a sequência está assim:
+```
+- Responsável alterado → Raquel (18:55:24) ← Round-robin distribuiu
+- Lead criado via webhook (18:55:25) ← Activity criada DEPOIS
+- Responsável removido (19:01:54) ← Reentrada limpou
+- Lead reentrou (19:01:55) ← Activity criada DEPOIS
+```
 
-| Campo | Tipo | Default | Descrição |
-|-------|------|---------|-----------|
-| `commission_percentage` | numeric | null | % de comissão do negócio |
+**Problema**: O trigger do round-robin atribui ANTES do webhook registrar a activity de criação, causando ordem invertida.
+
+### Lead Sem Responsável
+Quando o lead reentrou, o webhook setou `assigned_user_id = NULL` para forçar redistribuição, MAS a redistribuição não aconteceu porque não há trigger automático para chamar `handle_lead_intake` após o UPDATE.
 
 ---
 
-## Mudanças no Frontend
+## Arquitetura da Solução
 
-### 1. LeadDetailDialog.tsx
+### Parte 1: Ajustar Aba de Atividades
 
-**Estado do formulário:**
+Remover a seção "Atividades recentes" do `LeadDetailDialog.tsx` (linhas 1639-1690 no desktop, linhas 717-758 no mobile).
+
+**Resultado**: A aba "Atividades" mostrará apenas "Próximas atividades" (cadência).
+
+---
+
+### Parte 2: Melhorar Labels do Histórico
+
+Atualizar `use-lead-full-history.ts` para gerar labels mais descritivas:
+
+| Tipo | Label Atual | Label Nova |
+|------|-------------|------------|
+| `lead_created` | "Lead criado" | "Lead criado via [fonte/webhook_name]" |
+| `assignee_changed` (primeira) | "Responsável alterado" | "Distribuído por [fila] → [responsável]" |
+| `assignee_changed` (redistribuição) | "Responsável alterado" | "Redistribuído por [fila] → [responsável]" |
+| `assignee_changed` (remoção) | "Responsável alterado" | "Responsável removido" |
+| `lead_reentry` | "Lead reentrou" | "Lead reentrou via [fonte]" |
+
+A lógica vai usar os metadados já existentes para gerar as labels:
+- `metadata.webhook_name` para o nome do webhook
+- `metadata.from_user_name` / `metadata.to_user_name` para responsáveis
+- Consultar `assignments_log` para obter o nome da fila de distribuição
+
+---
+
+### Parte 3: Garantir Redistribuição Automática em Reentrada
+
+O problema é que `generic-webhook` seta `assigned_user_id = NULL` mas NÃO chama `handle_lead_intake` diretamente. O trigger `trigger_lead_intake` existe mas precisa ser verificado.
+
+**Solução**: Modificar `generic-webhook/index.ts` para chamar a RPC diretamente após limpar o responsável:
+
 ```typescript
-const [editForm, setEditForm] = useState({
-  // ... campos existentes
-  valor_interesse: '',
-  commission_percentage: '',  // NOVO
-});
-```
+// Após atualizar o lead (linha 180-183)
+const { error: updateError } = await supabase
+  .from('leads')
+  .update(updateData)
+  .eq('id', existingLead.id);
 
-**Funções de formatação (reutilizando padrão do PropertyFormDialog):**
-```typescript
-const formatCurrencyDisplay = (value: string): string => {
-  if (!value) return '';
-  const numbers = value.replace(/\D/g, '');
-  if (!numbers) return '';
-  return Number(numbers).toLocaleString('pt-BR');
-};
+// NOVO: Chamar redistribuição imediatamente
+const { data: redistributionResult } = await supabase
+  .rpc('handle_lead_intake', { p_lead_id: existingLead.id });
 
-const parseCurrencyInput = (value: string): string => {
-  return value.replace(/\D/g, '');
-};
-```
-
-**Ao selecionar imóvel - atualizar comissão também:**
-```typescript
-const selectedProperty = properties.find(p => p.id === value);
-const propertyPrice = selectedProperty?.preco || null;
-const propertyCommission = selectedProperty?.commission_percentage || null;
-
-setEditForm({
-  ...editForm,
-  property_id: newValue,
-  valor_interesse: propertyPrice?.toString() || editForm.valor_interesse,
-  commission_percentage: propertyCommission?.toString() || editForm.commission_percentage
-});
-```
-
-**Novo layout na aba Negócio:**
-```
-┌─────────────────────────────────────────────────────────┐
-│ Imóvel de interesse                                      │
-│ [Dropdown: Selecionar imóvel]                           │
-├────────────────────────────┬────────────────────────────┤
-│ Valor de interesse         │ Comissão (%)              │
-│ R$ [1.500.000]             │ [5.5] %                   │
-└────────────────────────────┴────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│ 💰 Valor da Comissão: R$ 82.500                         │
-│ (5.5% de R$ 1.500.000)                                  │
-└─────────────────────────────────────────────────────────┘
+if (redistributionResult?.assigned_user_id) {
+  console.log(`Lead redistributed to: ${redistributionResult.assigned_user_id}`);
+} else {
+  // Se não conseguiu redistribuir, manter o responsável anterior
+  await supabase
+    .from('leads')
+    .update({ assigned_user_id: oldAssigneeId })
+    .eq('id', existingLead.id);
+  console.log('No redistribution available, keeping original assignee');
+}
 ```
 
 ---
 
-## Hook de Criar Comissão
+### Parte 4: Configuração de Redistribuição em Reentrada
 
-Atualizar `useCreateCommissionOnWon` para usar a comissão do lead quando disponível:
+Adicionar configuração na fila de distribuição para controlar comportamento de reentrada:
 
-```typescript
-// Se o lead tem commission_percentage, usar esse valor
-// Senão, buscar do imóvel como fallback
-const commissionPercentage = lead.commission_percentage || property?.commission_percentage || 0;
+**Novo campo na tabela `round_robins`**:
+```sql
+ALTER TABLE round_robins 
+ADD COLUMN IF NOT EXISTS reentry_behavior TEXT DEFAULT 'redistribute';
+-- Valores: 'redistribute' | 'keep_assignee'
+
+COMMENT ON COLUMN round_robins.reentry_behavior IS 
+  'Comportamento quando lead reentrar: redistribute (nova distribuição) ou keep_assignee (mantém responsável atual)';
+```
+
+**UI em DistributionTab**: Adicionar toggle "Quando lead reentrar" com opções:
+- ✅ Redistribuir pela fila (padrão)
+- ➡️ Manter responsável atual
+
+---
+
+### Parte 5: Melhorar Registros de Activity com Nome da Fila
+
+Modificar a RPC `handle_lead_intake` para registrar uma activity com o nome da fila:
+
+```sql
+-- Dentro de handle_lead_intake, após atribuir o lead:
+INSERT INTO activities (lead_id, type, content, user_id, metadata)
+VALUES (
+  p_lead_id,
+  'assignee_changed',
+  'Distribuído por "' || v_queue.name || '" para ' || v_member.user_name,
+  v_assigned_user_id,
+  jsonb_build_object(
+    'distribution_queue_id', v_round_robin_id,
+    'distribution_queue_name', v_queue.name,
+    'from_user_id', NULL,
+    'to_user_id', v_assigned_user_id,
+    'to_user_name', v_member.user_name,
+    'is_initial_distribution', true
+  )
+);
 ```
 
 ---
@@ -111,69 +142,100 @@ const commissionPercentage = lead.commission_percentage || property?.commission_
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migração SQL | Adicionar `commission_percentage` na tabela `leads` |
-| `src/integrations/supabase/types.ts` | Atualizar tipos (automático após migration) |
-| `src/components/leads/LeadDetailDialog.tsx` | Adicionar campo comissão + máscara de moeda |
-| `src/hooks/use-create-commission.ts` | Usar comissão do lead quando disponível |
-| `src/hooks/use-properties.ts` | Incluir `commission_percentage` no PROPERTY_LIST_FIELDS |
+| `src/components/leads/LeadDetailDialog.tsx` | Remover seção "Atividades recentes" (desktop e mobile) |
+| `src/hooks/use-lead-full-history.ts` | Melhorar labels baseado nos metadados |
+| `supabase/functions/generic-webhook/index.ts` | Chamar redistribuição e manter responsável se falhar |
+| **Migration SQL** | Adicionar `reentry_behavior` na tabela `round_robins` |
+| **Migration SQL** | Atualizar RPC `handle_lead_intake` para registrar activity com nome da fila |
+| `src/components/crm-management/DistributionTab.tsx` | Adicionar toggle de comportamento em reentrada |
 
 ---
 
-## Comportamento Esperado
+## Fluxo Esperado Após Implementação
 
-| Cenário | Valor de Interesse | Comissão (%) | Resultado |
-|---------|-------------------|--------------|-----------|
-| Imóvel selecionado com preço R$500k e 5% | 500.000 (auto) | 5 (auto) | Comissão: R$ 25.000 |
-| Imóvel sem comissão cadastrada | Preço do imóvel (auto) | Vazio (editável) | Usuário define |
-| Sem imóvel, valores manuais | 300.000 (manual) | 6 (manual) | Comissão: R$ 18.000 |
-| Status "Ganho" | Usa valor do lead | Usa % do lead | Cria registro na tabela commissions |
+### Cenário: Lead novo via webhook
+
+```
+1. Webhook recebe lead
+2. Activity: "Lead criado via webhook Make"
+3. handle_lead_intake chamado
+4. Activity: "Distribuído por Fila Vendas → Raquel Fernandes"
+```
+
+### Cenário: Lead reentrou (config: redistribuir)
+
+```
+1. Webhook detecta telefone existente
+2. Activity: "Lead reentrou via webhook Make"
+3. handle_lead_intake chamado
+4. Activity: "Redistribuído por Fila Vendas → João Silva"
+```
+
+### Cenário: Lead reentrou (config: manter responsável)
+
+```
+1. Webhook detecta telefone existente
+2. Activity: "Lead reentrou via webhook Make"
+3. Activity: "Lead continua com Raquel Fernandes (configuração da fila)"
+```
+
+---
+
+## Cronologia Correta no Histórico
+
+Após as mudanças, o histórico mostrará (do mais recente para o mais antigo):
+
+```
+📦 Redistribuído por "Fila Vendas" → João Silva     há 2 min
+🔄 Lead reentrou via webhook "Make"                 há 2 min
+─────────────────────────────────────────────────────
+📦 Distribuído por "Fila Vendas" → Raquel Fernandes há 15 min
+✨ Lead criado via webhook "Make"                   há 15 min
+```
 
 ---
 
 ## Detalhes Técnicos
 
-### Migration SQL
-```sql
-ALTER TABLE public.leads
-ADD COLUMN IF NOT EXISTS commission_percentage numeric DEFAULT NULL;
-```
+### Labels Dinâmicas em use-lead-full-history.ts
 
-### Campo com Máscara de Moeda
-```tsx
-<Input 
-  value={formatCurrencyDisplay(editForm.valor_interesse)}
-  onChange={e => setEditForm({
-    ...editForm,
-    valor_interesse: parseCurrencyInput(e.target.value)
-  })}
-  onBlur={() => {
-    const value = editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null;
-    updateLead.mutateAsync({ id: lead.id, valor_interesse: value });
-  }}
-  className="pl-9 rounded-xl"
-/>
-```
-
-### Card de Valor da Comissão
-```tsx
-{valorInteresse > 0 && commissionPercentage > 0 && (
-  <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
-    <p className="text-orange-700 font-bold text-lg">
-      Valor da Comissão: R$ {(valorInteresse * commissionPercentage / 100).toLocaleString('pt-BR')}
-    </p>
-    <p className="text-sm text-orange-600">
-      ({commissionPercentage}% de R$ {valorInteresse.toLocaleString('pt-BR')})
-    </p>
-  </div>
-)}
+```typescript
+function getActivityLabel(activity: Activity): string {
+  const meta = activity.metadata as Record<string, any> || {};
+  
+  switch (activity.type) {
+    case 'lead_created':
+      if (meta.webhook_name) {
+        return `Lead criado via webhook "${meta.webhook_name}"`;
+      }
+      return `Lead criado via ${meta.source || 'manual'}`;
+      
+    case 'assignee_changed':
+      if (meta.distribution_queue_name && meta.to_user_name) {
+        const prefix = meta.is_initial_distribution ? 'Distribuído' : 'Redistribuído';
+        return `${prefix} por "${meta.distribution_queue_name}" → ${meta.to_user_name}`;
+      }
+      if (!meta.to_user_id) {
+        return 'Responsável removido';
+      }
+      return `Atribuído a ${meta.to_user_name || 'usuário'}`;
+      
+    case 'lead_reentry':
+      return `Lead reentrou via ${meta.webhook_name ? `webhook "${meta.webhook_name}"` : meta.source || 'sistema'}`;
+      
+    default:
+      return activityLabels[activity.type] || activity.type;
+  }
+}
 ```
 
 ---
 
 ## Resumo das Mudanças
 
-- **Máscara de moeda**: Valor de interesse formata automaticamente com pontos (ex: 1.500.000)
-- **Campo comissão**: Novo campo de % ao lado do valor
-- **Auto-preenchimento**: Ao selecionar imóvel, puxa preço E comissão automaticamente
-- **Cálculo visual**: Card mostrando o valor calculado da comissão
-- **Integração**: Quando o negócio é marcado como "Ganho", usa esses valores para criar a comissão na tabela `commissions`
+- **Aba Atividades**: Apenas "Próximas atividades" (cadência)
+- **Histórico**: Labels claras mostrando fila de distribuição e responsável
+- **Reentrada**: Sempre terá responsável (redistribui ou mantém)
+- **Configuração**: Nova opção nas filas para controlar comportamento de reentrada
+- **Cronologia**: Eventos ordenados corretamente com informações completas
+
