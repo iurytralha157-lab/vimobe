@@ -1,219 +1,288 @@
 
-# Plano: Correções Mobile para o Site Público
+# Plano: Marca d'Água nas Fotos do Site Público
 
-## Problemas Identificados
+## Funcionalidade
 
-Baseado nas screenshots e na análise do código, esses são os 6 problemas a corrigir:
-
-| # | Problema | Arquivo |
-|---|----------|---------|
-| 1 | Logo no header mobile precisa de controle separado | `PublicSiteLayout.tsx` |
-| 2 | Filtros mobile (Sheet) não permite scroll | `PublicProperties.tsx` |
-| 3 | Rodapé mobile - conteúdo desalinhado e muito espaçamento | `PublicSiteLayout.tsx` |
-| 4 | Características empilhadas verticalmente no mobile | `PropertyFeatures.tsx` |
-| 5 | Seção "Nosso Portfólio" com espaçamento excessivo | `PublicHome.tsx` |
-| 6 | Seção sanfona (categorias) bugada no mobile | `PublicHome.tsx` |
+Adicionar marca d'água sutil nas fotos dos imóveis exibidas no site público, com opções de personalização.
 
 ---
 
-## Soluções Técnicas
+## Configurações no Painel (Aparência > Marca d'Água)
 
-### 1. Controle de Logo para Mobile
+| Configuração | Descrição | Padrão |
+|--------------|-----------|--------|
+| **Ativar marca d'água** | Switch on/off | Desativado |
+| **Opacidade** | Slider de 5% a 50% | 20% |
+| **Logo personalizada** | Upload de logo específica para marca d'água | Logo principal |
 
-**Problema**: A logo usa as mesmas dimensões no desktop e mobile, ficando muito grande no header flutuante.
+---
 
-**Solução**: Criar limites específicos para mobile no header e menu lateral.
+## Como Funciona
 
-```tsx
-// No header mobile - limitar proporcionalmente
-<img 
-  src={siteConfig.logo_url} 
-  style={{ 
-    maxWidth: Math.min(siteConfig.logo_width || 160, 140), // Limite mobile: 140px
-    maxHeight: Math.min(siteConfig.logo_height || 50, 40)  // Limite mobile: 40px
-  }}
-/>
+### 1. Exibição no Site (Overlay CSS)
+
+```text
+┌─────────────────────────────────────┐
+│                                     │
+│     Foto do Imóvel                  │
+│                                     │
+│                     ┌──────────┐    │
+│                     │  LOGO    │    │  ← Marca d'água
+│                     │  20%     │    │    (canto inferior direito)
+│                     └──────────┘    │
+└─────────────────────────────────────┘
 ```
 
+A marca d'água será aplicada via **CSS overlay** em todas as imagens:
+- Galeria do imóvel (carrossel)
+- Lightbox (tela cheia)
+- Cards de imóveis nas listagens
+- Home (destaques e portfólio)
+
+### 2. Download com Marca d'Água Embutida
+
+Quando o usuário baixar uma foto (botão de download ou salvar imagem):
+- A imagem será processada via **Canvas API**
+- A marca d'água é renderizada diretamente na imagem
+- O download acontece com a logo embutida
+
 ---
 
-### 2. Filtros Mobile - Corrigir Scroll
+## Mudanças Técnicas
 
-**Problema**: O `SheetContent` atual não permite scroll interno, travando a navegação.
+### Parte 1: Banco de Dados
 
-**Solução**: Adicionar classes de overflow corretas no container interno.
+Nova migração para adicionar campos à tabela `organization_sites`:
 
-```tsx
-// De:
-<SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
-  <div className="mt-6 pb-20 overflow-auto">
-
-// Para:
-<SheetContent side="bottom" className="h-[85vh] rounded-t-3xl flex flex-col">
-  <div className="flex-1 mt-6 pb-20 overflow-y-auto overscroll-contain">
+```sql
+ALTER TABLE public.organization_sites
+ADD COLUMN IF NOT EXISTS watermark_enabled boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS watermark_opacity integer DEFAULT 20,
+ADD COLUMN IF NOT EXISTS watermark_logo_url text;
 ```
 
-A chave é usar `overscroll-contain` para evitar que o scroll "escape" para o body.
+Atualizar a função `resolve_site_domain` para incluir os novos campos no JSON retornado.
 
 ---
 
-### 3. Rodapé Mobile - Centralizar e Reduzir Espaçamento
+### Parte 2: Interface de Configurações
 
-**Problema**: Conteúdo alinhado à esquerda com muito espaço entre seções no mobile.
-
-**Solução**: Centralizar texto no mobile e reduzir paddings.
+Adicionar nova seção em **Aparência** (`SiteSettings.tsx`):
 
 ```tsx
-// Footer container
-<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
-    
-    {/* Brand - centralizar no mobile */}
-    <div className="text-center md:text-left">
-      <div className="flex justify-center md:justify-start">
-        <img ... />
-      </div>
-      ...
+<Card>
+  <CardHeader>
+    <CardTitle>Marca d'Água</CardTitle>
+    <CardDescription>
+      Adicione uma marca d'água sutil nas fotos dos imóveis
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-6">
+    {/* Switch para ativar */}
+    <div className="flex items-center justify-between">
+      <Label>Ativar marca d'água</Label>
+      <Switch checked={...} onCheckedChange={...} />
     </div>
 
-    {/* Menu e Contato em 2 colunas no mobile */}
-    <div className="grid grid-cols-2 md:contents gap-4">
-      {/* Menu */}
-      <div className="text-center md:text-left">...</div>
-      {/* Contato */}
-      <div className="text-center md:text-left">...</div>
+    {/* Slider de opacidade (5% a 50%) */}
+    <div className="space-y-3">
+      <Label>Opacidade: {opacity}%</Label>
+      <Slider 
+        value={[opacity]} 
+        min={5} max={50} step={5}
+        onValueChange={...}
+      />
     </div>
 
-    {/* Redes sociais - centralizar */}
-    <div className="text-center md:text-left">
-      <div className="flex gap-3 justify-center md:justify-start">...</div>
+    {/* Upload de logo personalizada */}
+    <div className="space-y-2">
+      <Label>Logo da marca d'água</Label>
+      <p className="text-sm text-muted-foreground">
+        Deixe em branco para usar a logo principal
+      </p>
+      {/* Botão de upload + preview */}
     </div>
-  </div>
-</div>
+  </CardContent>
+</Card>
 ```
 
 ---
 
-### 4. Características - Grid Lado a Lado no Mobile
+### Parte 3: Componente de Marca d'Água
 
-**Problema**: Cada característica ocupa uma linha inteira, ficando vertical.
-
-**Solução**: Usar grid de 2 colunas no mobile.
+Criar componente `WatermarkedImage.tsx`:
 
 ```tsx
-// De:
-<div className="flex flex-wrap gap-3">
+interface WatermarkedImageProps {
+  src: string;
+  alt: string;
+  watermarkUrl: string;
+  opacity: number;
+  className?: string;
+  onDownload?: () => void;
+}
 
-// Para:
-<div className="grid grid-cols-2 md:flex md:flex-wrap gap-3">
-  {features.map((feature, index) => (
-    <div 
-      key={index} 
-      className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-xl"
-    >
-      {/* Ícone menor no mobile */}
-      <div 
-        className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: `${primaryColor}15` }}
-      >
-        <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: primaryColor }} />
-      </div>
-      <span className="text-sm md:text-base text-gray-900">
-        <span className="font-bold">{feature.value}</span>{' '}
-        <span className="font-normal text-gray-500">{feature.label}</span>
-      </span>
-    </div>
-  ))}
-</div>
-```
-
----
-
-### 5. Seção "Nosso Portfólio" - Reduzir Espaçamento
-
-**Problema**: Muito espaço vertical entre o header da seção e os cards.
-
-**Solução**: Reduzir margin-bottom do título no mobile.
-
-```tsx
-// De:
-<div className="text-center mb-12">
-
-// Para:
-<div className="text-center mb-6 md:mb-12">
-```
-
----
-
-### 6. Seção Sanfona (Categorias) - Grid 2x2 no Mobile
-
-**Problema**: As 4 categorias aparecem lado a lado no mobile, ficando muito apertadas.
-
-**Solução**: Trocar para grid 2x2 no mobile.
-
-```tsx
-// De:
-<div className="h-[400px] md:h-[500px] flex overflow-hidden">
-  {categories.map((cat, idx) => (
-    <Link className="relative h-full overflow-hidden transition-all flex-1" />
-  ))}
-</div>
-
-// Para:
-<div className="grid grid-cols-2 md:flex md:h-[500px] overflow-hidden">
-  {categories.map((cat, idx) => (
-    <Link
-      className={cn(
-        "relative h-[200px] md:h-full overflow-hidden transition-all duration-500",
-        // Desktop: comportamento sanfona
-        "md:flex-1",
-        hoveredCategory !== null && hoveredCategory === idx && "md:flex-[2]",
-        hoveredCategory !== null && hoveredCategory !== idx && "md:flex-[0.6]"
-      )}
-    >
-      {/* Imagem */}
-      <img ... />
+export function WatermarkedImage({ src, alt, watermarkUrl, opacity, className }: Props) {
+  return (
+    <div className="relative">
+      <img src={src} alt={alt} className={className} />
       
-      {/* Label - posição diferente no mobile */}
-      <div className="absolute inset-x-0 bottom-0 md:inset-auto md:left-0 md:top-1/2 md:-translate-y-1/2">
-        <span className="bg-white text-gray-900 px-4 py-2 text-xs md:text-sm font-semibold">
-          {cat.name}
-        </span>
+      {/* Overlay da marca d'água */}
+      <div 
+        className="absolute bottom-4 right-4 pointer-events-none"
+        style={{ opacity: opacity / 100 }}
+      >
+        <img 
+          src={watermarkUrl} 
+          alt=""
+          className="max-h-12 max-w-32 object-contain"
+        />
       </div>
-    </Link>
-  ))}
+    </div>
+  );
+}
+```
+
+---
+
+### Parte 4: Função de Download com Marca d'Água
+
+Utilitário para renderizar a marca d'água na imagem via Canvas:
+
+```typescript
+// lib/watermark-utils.ts
+
+export async function downloadWithWatermark(
+  imageUrl: string,
+  watermarkUrl: string,
+  opacity: number,
+  filename: string
+): Promise<void> {
+  // 1. Carregar a imagem principal
+  const image = await loadImage(imageUrl);
+  
+  // 2. Carregar a logo da marca d'água
+  const watermark = await loadImage(watermarkUrl);
+  
+  // 3. Criar canvas com o tamanho da imagem
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d')!;
+  
+  // 4. Desenhar a imagem
+  ctx.drawImage(image, 0, 0);
+  
+  // 5. Configurar opacidade e desenhar marca d'água
+  ctx.globalAlpha = opacity / 100;
+  
+  // Calcular posição (canto inferior direito)
+  const watermarkHeight = Math.min(watermark.height, image.height * 0.1);
+  const watermarkWidth = (watermark.width / watermark.height) * watermarkHeight;
+  const x = image.width - watermarkWidth - 20;
+  const y = image.height - watermarkHeight - 20;
+  
+  ctx.drawImage(watermark, x, y, watermarkWidth, watermarkHeight);
+  
+  // 6. Converter para blob e fazer download
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob!);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, 'image/jpeg', 0.9);
+}
+```
+
+---
+
+### Parte 5: Integrar na Galeria
+
+Modificar `PropertyGallery.tsx`:
+
+1. Adicionar botão de download em cada imagem no lightbox
+2. Aplicar overlay de marca d'água em todas as imagens
+3. Usar a função de download com Canvas quando clicado
+
+```tsx
+// No lightbox
+<div className="relative">
+  <img src={img} alt={...} className="max-w-full max-h-full object-contain" />
+  
+  {/* Overlay de marca d'água */}
+  {watermarkEnabled && (
+    <div 
+      className="absolute bottom-4 right-4 pointer-events-none"
+      style={{ opacity: watermarkOpacity / 100 }}
+    >
+      <img src={watermarkUrl || logoUrl} alt="" className="max-h-16" />
+    </div>
+  )}
+  
+  {/* Botão de download */}
+  <button 
+    onClick={() => handleDownload(img)}
+    className="absolute bottom-4 left-4 bg-white/80 p-2 rounded-full"
+  >
+    <Download className="w-5 h-5" />
+  </button>
 </div>
 ```
 
-No mobile:
-- Grid 2x2 (2 colunas, 2 linhas)
-- Altura fixa de 200px cada
-- Label na parte inferior central
-- Sem efeito hover
+---
+
+### Parte 6: Aplicar nos Cards de Imóveis
+
+Modificar os cards em:
+- `PublicHome.tsx` (destaques e portfólio)
+- `PublicProperties.tsx` (listagem)
+
+Adicionar overlay de marca d'água quando `watermark_enabled = true`.
 
 ---
 
-## Arquivos a Modificar
+## Arquivos a Modificar/Criar
 
-| Arquivo | Mudanças |
-|---------|----------|
-| `PublicSiteLayout.tsx` | Logo mobile, rodapé centralizado |
-| `PublicProperties.tsx` | Scroll nos filtros mobile |
-| `PropertyFeatures.tsx` | Grid 2 colunas no mobile |
-| `PublicHome.tsx` | Espaçamento portfólio + grid categorias 2x2 |
+| Arquivo | Mudança |
+|---------|---------|
+| **Nova migração SQL** | Adicionar campos `watermark_enabled`, `watermark_opacity`, `watermark_logo_url` |
+| **Atualizar função SQL** | Incluir campos no `resolve_site_domain` |
+| `src/hooks/use-organization-site.ts` | Adicionar tipos dos novos campos |
+| `src/hooks/use-public-site.ts` | Adicionar tipos na interface `PublicSiteConfig` |
+| `src/pages/SiteSettings.tsx` | Nova seção "Marca d'Água" em Aparência |
+| `src/lib/watermark-utils.ts` | **CRIAR** - Função de download com Canvas |
+| `src/components/public/WatermarkedImage.tsx` | **CRIAR** - Componente de imagem com overlay |
+| `src/components/public/property-detail/PropertyGallery.tsx` | Adicionar marca d'água + botão download |
+| `src/pages/public/PublicHome.tsx` | Overlay nos cards |
+| `src/pages/public/PublicProperties.tsx` | Overlay nos cards |
 
 ---
 
-## Resultado Visual Mobile
+## Resultado Visual
 
-**Header**: Logo proporcional ao espaço disponível
+### Configurações
+Nova seção "Marca d'Água" na aba Aparência, com:
+- Toggle para ativar/desativar
+- Slider de opacidade (5% a 50%)
+- Upload de logo específica (opcional)
+- Preview da marca d'água aplicada
 
-**Filtros**: Sheet permite arrastar/scroll normalmente
+### No Site Público
+- Todas as fotos de imóveis mostram a logo no canto inferior direito
+- Opacidade sutil (padrão 20%) não atrapalha a visualização
+- Botão de download no lightbox
+- Downloads incluem a marca d'água permanentemente embutida
 
-**Características**: 2 colunas lado a lado (ex: "300 m²" | "4 Quartos")
+---
 
-**Portfólio**: Menos espaço entre título e cards
+## Comportamento por Cenário
 
-**Categorias**: Grid 2x2 com labels legíveis
-
-**Rodapé**: Conteúdo centralizado, mais compacto
+| Cenário | Comportamento |
+|---------|---------------|
+| Marca d'água desativada | Fotos exibidas normalmente, sem overlay |
+| Ativada com logo principal | Usa `logo_url` do site |
+| Ativada com logo personalizada | Usa `watermark_logo_url` |
+| Download da foto | Renderiza marca d'água via Canvas, salva com logo embutida |
+| Print screen | Overlay visível na captura |
