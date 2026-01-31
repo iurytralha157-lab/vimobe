@@ -141,6 +141,29 @@ Deno.serve(async (req) => {
       const oldAssigneeId = existingLead.assigned_user_id;
       const oldDealStatus = existingLead.deal_status;
       
+      // Verificar configuração de reentrada na fila de distribuição
+      // Primeiro, buscar a fila que seria usada para este lead
+      const { data: matchingQueue } = await supabase
+        .rpc('pick_round_robin_for_lead', { p_lead_id: existingLead.id });
+      
+      let queueReentryBehavior = 'redistribute'; // default
+      if (matchingQueue) {
+        const { data: queueData } = await supabase
+          .from('round_robins')
+          .select('reentry_behavior')
+          .eq('id', matchingQueue)
+          .single();
+        
+        if (queueData?.reentry_behavior) {
+          queueReentryBehavior = queueData.reentry_behavior;
+        }
+      }
+      
+      console.log(`Queue reentry behavior: ${queueReentryBehavior}`);
+      
+      // Se a fila está configurada para manter responsável E o lead tinha um responsável
+      const shouldKeepAssignee = queueReentryBehavior === 'keep_assignee' && oldAssigneeId;
+      
       // Determinar estágio de destino (mesmo lógica de lead novo)
       let targetStageId = webhook.target_stage_id;
       const targetPipelineId = webhook.target_pipeline_id;
@@ -159,7 +182,7 @@ Deno.serve(async (req) => {
         }
       }
       
-      // Preparar dados de atualização COMPLETA (como se fosse lead novo)
+      // Preparar dados de atualização
       const updateData: Record<string, any> = {
         // Dados do formulário
         ...(mappedData.name && mappedData.name !== 'unknown' && { name: mappedData.name }),
@@ -168,7 +191,8 @@ Deno.serve(async (req) => {
         // Resetar para reprocessamento completo
         stage_id: targetStageId || existingLead.stage_id,
         pipeline_id: targetPipelineId || existingLead.pipeline_id,
-        assigned_user_id: null, // Limpar para round-robin redistribuir
+        // Manter ou limpar responsável baseado na configuração
+        assigned_user_id: shouldKeepAssignee ? oldAssigneeId : null,
         deal_status: 'open', // Resetar status para aberto
         won_at: null,
         lost_at: null,
@@ -209,12 +233,81 @@ Deno.serve(async (req) => {
           from_status: oldDealStatus,
           to_status: 'open',
           previous_assignee_id: oldAssigneeId,
+          keep_assignee: shouldKeepAssignee,
           new_data: mappedData,
         }
       });
       
-      // O trigger trigger_lead_intake vai chamar handle_lead_intake automaticamente
-      // porque assigned_user_id foi setado para NULL
+      let finalAssigneeId = oldAssigneeId;
+      
+      if (shouldKeepAssignee) {
+        // Lead continua com o responsável anterior
+        console.log('Keeping original assignee per queue config:', oldAssigneeId);
+        
+        // Registrar que o lead continua com o mesmo responsável
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', oldAssigneeId)
+          .single();
+        
+        await supabase.from('activities').insert({
+          lead_id: existingLead.id,
+          type: 'assignee_changed',
+          content: `Lead continua com ${userData?.name || 'responsável anterior'} (configuração da fila)`,
+          user_id: oldAssigneeId,
+          metadata: {
+            to_user_id: oldAssigneeId,
+            to_user_name: userData?.name,
+            reason: 'keep_assignee_config',
+          }
+        });
+      } else {
+        // Chamar redistribuição via RPC
+        console.log('Calling handle_lead_intake for redistribution...');
+        const { data: redistributionResult, error: redistributionError } = await supabase
+          .rpc('handle_lead_intake', { p_lead_id: existingLead.id });
+        
+        if (redistributionError) {
+          console.error('Redistribution error:', redistributionError);
+        }
+        
+        if (redistributionResult?.assigned_user_id) {
+          console.log(`Lead redistributed to: ${redistributionResult.assigned_user_id}`);
+          finalAssigneeId = redistributionResult.assigned_user_id;
+        } else {
+          // Se não conseguiu redistribuir, manter o responsável anterior
+          if (oldAssigneeId) {
+            console.log('No redistribution available, keeping original assignee:', oldAssigneeId);
+            await supabase
+              .from('leads')
+              .update({ assigned_user_id: oldAssigneeId, assigned_at: new Date().toISOString() })
+              .eq('id', existingLead.id);
+            
+            // Registrar que o lead continua com o mesmo responsável
+            const { data: userData } = await supabase
+              .from('users')
+              .select('name')
+              .eq('id', oldAssigneeId)
+              .single();
+            
+            await supabase.from('activities').insert({
+              lead_id: existingLead.id,
+              type: 'assignee_changed',
+              content: `Lead continua com ${userData?.name || 'responsável anterior'}`,
+              user_id: oldAssigneeId,
+              metadata: {
+                to_user_id: oldAssigneeId,
+                to_user_name: userData?.name,
+                reason: 'no_redistribution_available',
+              }
+            });
+          } else {
+            console.log('No previous assignee and no redistribution available');
+            finalAssigneeId = null;
+          }
+        }
+      }
       
       // Aplicar tags configuradas
       const targetTagIds = webhook.target_tag_ids || [];
@@ -242,7 +335,8 @@ Deno.serve(async (req) => {
           success: true,
           lead_id: existingLead.id,
           reentry: true,
-          message: 'Lead reentered - moved to configured stage and queued for redistribution',
+          assigned_user_id: finalAssigneeId,
+          message: shouldKeepAssignee ? 'Lead reentered - kept original assignee' : 'Lead reentered and redistributed',
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

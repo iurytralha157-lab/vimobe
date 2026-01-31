@@ -27,6 +27,7 @@ interface QueueSettings {
   enable_redistribution?: boolean;
   preserve_position?: boolean;
   require_checkin?: boolean;
+  reentry_behavior?: 'redistribute' | 'keep_assignee';
 }
 
 interface CreateQueueInput {
@@ -68,7 +69,7 @@ export function useCreateQueueAdvanced() {
         })),
       };
       
-      // Create round robin
+      // Create round robin with reentry_behavior
       const { data: roundRobin, error: rrError } = await supabase
         .from('round_robins')
         .insert({
@@ -79,6 +80,7 @@ export function useCreateQueueAdvanced() {
           target_pipeline_id: input.target_pipeline_id || null,
           target_stage_id: input.target_stage_id || null,
           settings: fullSettings as any,
+          reentry_behavior: input.settings.reentry_behavior || 'redistribute',
         })
         .select()
         .single();
@@ -214,7 +216,7 @@ export function useUpdateQueueAdvanced() {
         })),
       };
       
-      // Update round robin
+      // Update round robin with reentry_behavior
       const { error: rrError } = await supabase
         .from('round_robins')
         .update({
@@ -224,6 +226,7 @@ export function useUpdateQueueAdvanced() {
           target_pipeline_id: input.target_pipeline_id || null,
           target_stage_id: input.target_stage_id || null,
           settings: fullSettings as any,
+          reentry_behavior: input.settings.reentry_behavior || 'redistribute',
         })
         .eq('id', id);
       

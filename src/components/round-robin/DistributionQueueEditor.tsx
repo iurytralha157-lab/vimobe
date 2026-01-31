@@ -66,6 +66,7 @@ interface QueueSettings {
   enable_redistribution?: boolean;
   preserve_position?: boolean;
   require_checkin?: boolean;
+  reentry_behavior?: 'redistribute' | 'keep_assignee';
 }
 
 interface ScheduleDay {
@@ -1014,6 +1015,30 @@ export function DistributionQueueEditor({
                     <p className="text-xs text-muted-foreground mt-1">
                       Usuários temporariamente indisponíveis mantêm sua posição quando voltam.
                     </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t">
+                  <div className="flex items-start gap-3">
+                    <Switch
+                      checked={formData.settings.reentry_behavior === 'keep_assignee'}
+                      onCheckedChange={checked => setFormData(prev => ({
+                        ...prev,
+                        settings: { 
+                          ...prev.settings, 
+                          reentry_behavior: checked ? 'keep_assignee' : 'redistribute' 
+                        },
+                      }))}
+                    />
+                    <div>
+                      <Label>Manter responsável em reentradas?</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formData.settings.reentry_behavior === 'keep_assignee' 
+                          ? 'Quando um lead reentrar, ele continuará com o responsável anterior (sem redistribuição).'
+                          : 'Quando um lead reentrar, ele será redistribuído pela fila normalmente.'
+                        }
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

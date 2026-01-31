@@ -35,7 +35,7 @@ const timelineEventLabels: Record<string, string> = {
   sla_overdue: 'SLA estourado',
 };
 
-// Mapping for activity types
+// Mapping for activity types (base labels, will be enhanced dynamically)
 const activityLabels: Record<string, string> = {
   stage_change: 'Movido para',
   note: 'Nota adicionada',
@@ -74,7 +74,75 @@ function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
   }
 }
 
+// Dynamic label generation based on activity metadata
+function getActivityLabel(activity: Activity): string {
+  const meta = (activity.metadata as Record<string, any>) || {};
+  
+  switch (activity.type) {
+    case 'lead_created':
+      if (meta.webhook_name) {
+        return `Lead criado via webhook "${meta.webhook_name}"`;
+      }
+      if (meta.source === 'webhook') {
+        return 'Lead criado via webhook';
+      }
+      if (meta.source === 'whatsapp') {
+        return 'Lead criado via WhatsApp';
+      }
+      if (meta.source === 'website') {
+        return 'Lead criado via site';
+      }
+      if (meta.source === 'meta_ads') {
+        return 'Lead criado via Meta Ads';
+      }
+      return `Lead criado via ${meta.source || 'manual'}`;
+      
+    case 'assignee_changed':
+      // Check if it's a distribution activity with queue name
+      if (meta.distribution_queue_name && meta.to_user_name) {
+        const prefix = meta.is_initial_distribution === false ? 'Redistribuído' : 'Distribuído';
+        return `${prefix} por "${meta.distribution_queue_name}" → ${meta.to_user_name}`;
+      }
+      // Check for removal (no to_user_id)
+      if (!meta.to_user_id && !meta.to_user_name) {
+        return 'Responsável removido';
+      }
+      // Manual assignment
+      if (meta.to_user_name) {
+        return `Atribuído a ${meta.to_user_name}`;
+      }
+      return 'Responsável alterado';
+      
+    case 'lead_reentry':
+      if (meta.webhook_name) {
+        return `Lead reentrou via webhook "${meta.webhook_name}"`;
+      }
+      if (meta.source === 'whatsapp') {
+        return 'Lead reentrou via WhatsApp';
+      }
+      return `Lead reentrou via ${meta.source || 'sistema'}`;
+      
+    case 'stage_change':
+      if (meta.from_stage && meta.to_stage) {
+        return `Movido: ${meta.from_stage} → ${meta.to_stage}`;
+      }
+      return 'Estágio alterado';
+      
+    default:
+      return activityLabels[activity.type] || activity.type;
+  }
+}
+
 function getActivityDetails(activity: Activity): string | undefined {
+  // For activities with dynamic labels, content is already in the label
+  if (['lead_created', 'assignee_changed', 'lead_reentry'].includes(activity.type)) {
+    // Return content if it exists and is different from what we'd generate
+    if (activity.content) {
+      return activity.content;
+    }
+    return undefined;
+  }
+  
   if (activity.content) return activity.content;
   
   if (activity.metadata && typeof activity.metadata === 'object') {
@@ -110,11 +178,11 @@ export function useLeadFullHistory(leadId: string) {
       isAutomation: e.is_automation,
     }));
 
-    // Convert activities
+    // Convert activities with dynamic labels
     const activityEvents: UnifiedHistoryEvent[] = activities.map((a) => ({
       id: `activity-${a.id}`,
       type: a.type,
-      label: activityLabels[a.type] || a.type,
+      label: getActivityLabel(a),
       content: getActivityDetails(a),
       timestamp: a.created_at,
       actor: a.user ? {
