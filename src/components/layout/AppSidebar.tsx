@@ -67,12 +67,30 @@ const allNavItems: NavItem[] = [{
     path: '/financeiro/relatorios'
   }]
 },
-// Imobiliária module
+// Imobiliária module with submenu
 {
   icon: Building2,
   labelKey: 'properties',
   path: '/properties',
-  module: 'properties'
+  module: 'properties',
+  adminOnly: true,
+  children: [{
+    icon: Building2,
+    labelKey: 'propertiesAll',
+    path: '/properties'
+  }, {
+    icon: Building2,
+    labelKey: 'propertiesRentals',
+    path: '/properties/rentals'
+  }, {
+    icon: Building2,
+    labelKey: 'propertiesCondos',
+    path: '/properties/condominiums'
+  }, {
+    icon: MapPin,
+    labelKey: 'propertiesLocations',
+    path: '/properties/locations'
+  }]
 },
 // Telecom modules
 {
