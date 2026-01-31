@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePublicContext } from "./usePublicContext";
 import PropertyFiltersContent from "@/components/public/PropertyFiltersContent";
+import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 
 export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -387,13 +388,17 @@ export default function PublicProperties() {
                           {/* Watermark Overlay */}
                           {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
                             <div 
-                              className="absolute bottom-16 right-3 pointer-events-none select-none"
+                              className={`absolute pointer-events-none select-none ${getPositionClasses((siteConfig?.watermark_position as WatermarkPosition) || 'bottom-right')}`}
                               style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
                             >
                               <img 
                                 src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
                                 alt=""
-                                className="max-h-5 max-w-16 object-contain drop-shadow-lg"
+                                style={{ 
+                                  maxHeight: `${Math.max(16, (siteConfig?.watermark_size || 80) * 0.25)}px`,
+                                  maxWidth: `${Math.max(32, (siteConfig?.watermark_size || 80) * 0.5)}px`
+                                }}
+                                className="object-contain drop-shadow-lg"
                                 draggable={false}
                               />
                             </div>

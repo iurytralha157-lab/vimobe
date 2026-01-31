@@ -764,23 +764,68 @@ Registro A (www):
 
                   {site?.watermark_enabled && (
                     <>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label>Opacidade</Label>
-                          <span className="text-sm font-medium text-muted-foreground">{site?.watermark_opacity || 20}%</span>
+                      <div className="grid sm:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label>Opacidade</Label>
+                            <span className="text-sm font-medium text-muted-foreground">{site?.watermark_opacity || 20}%</span>
+                          </div>
+                          <Slider
+                            value={[site?.watermark_opacity || 20]}
+                            onValueChange={(value) => updateSite.mutate({ watermark_opacity: value[0] })}
+                            min={5}
+                            max={50}
+                            step={5}
+                            className="w-full"
+                            disabled={!isAdmin}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Valores menores = mais sutil. Recomendado: 15-25%
+                          </p>
                         </div>
-                        <Slider
-                          value={[site?.watermark_opacity || 20]}
-                          onValueChange={(value) => updateSite.mutate({ watermark_opacity: value[0] })}
-                          min={5}
-                          max={50}
-                          step={5}
-                          className="w-full"
-                          disabled={!isAdmin}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Valores menores = mais sutil. Recomendado: 15-25%
-                        </p>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label>Tamanho (largura)</Label>
+                            <span className="text-sm font-medium text-muted-foreground">{site?.watermark_size || 80}px</span>
+                          </div>
+                          <Slider
+                            value={[site?.watermark_size || 80]}
+                            onValueChange={(value) => updateSite.mutate({ watermark_size: value[0] })}
+                            min={40}
+                            max={200}
+                            step={10}
+                            className="w-full"
+                            disabled={!isAdmin}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Ajuste o tamanho da logo na exibição
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label>Posição da marca d'água</Label>
+                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                          {[
+                            { value: 'top-left', label: '↖ Sup. Esq.' },
+                            { value: 'top-right', label: '↗ Sup. Dir.' },
+                            { value: 'center', label: '⊕ Centro' },
+                            { value: 'bottom-left', label: '↙ Inf. Esq.' },
+                            { value: 'bottom-right', label: '↘ Inf. Dir.' },
+                          ].map(({ value, label }) => (
+                            <Button
+                              key={value}
+                              variant={(site?.watermark_position || 'bottom-right') === value ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => updateSite.mutate({ watermark_position: value })}
+                              disabled={!isAdmin}
+                              className="text-xs"
+                            >
+                              {label}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="space-y-3">
@@ -828,22 +873,35 @@ Registro A (www):
                       {/* Preview */}
                       {(site?.watermark_logo_url || site?.logo_url) && (
                         <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                          <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização</Label>
+                          <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização (como aparece no site)</Label>
                           <div className="relative h-40 bg-gradient-to-br from-gray-300 to-gray-400 rounded overflow-hidden">
                             <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
                               Foto do Imóvel
                             </div>
                             <div 
-                              className="absolute bottom-3 right-3 pointer-events-none"
+                              className={`absolute pointer-events-none ${
+                                (site?.watermark_position || 'bottom-right') === 'top-left' ? 'top-3 left-3' :
+                                (site?.watermark_position || 'bottom-right') === 'top-right' ? 'top-3 right-3' :
+                                (site?.watermark_position || 'bottom-right') === 'bottom-left' ? 'bottom-3 left-3' :
+                                (site?.watermark_position || 'bottom-right') === 'center' ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' :
+                                'bottom-3 right-3'
+                              }`}
                               style={{ opacity: (site?.watermark_opacity || 20) / 100 }}
                             >
                               <img 
                                 src={site?.watermark_logo_url || site?.logo_url || ''} 
                                 alt="Watermark preview" 
-                                className="max-h-10 max-w-24 object-contain"
+                                style={{ 
+                                  maxHeight: `${Math.max(24, Math.min((site?.watermark_size || 80) * 0.4, 60))}px`,
+                                  maxWidth: `${Math.max(40, Math.min((site?.watermark_size || 80) * 1, 120))}px`
+                                }}
+                                className="object-contain"
                               />
                             </div>
                           </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            💡 No download, a marca d'água será aplicada em padrão repetido para proteção
+                          </p>
                         </div>
                       )}
                     </>

@@ -2,6 +2,8 @@
  * Utility functions for applying watermarks to images
  */
 
+export type WatermarkPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+
 /**
  * Load an image from URL and return as HTMLImageElement
  */
@@ -16,13 +18,34 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /**
+ * Get CSS position classes based on watermark position
+ */
+export function getPositionClasses(position: WatermarkPosition): string {
+  switch (position) {
+    case 'top-left':
+      return 'top-2 left-2 md:top-4 md:left-4';
+    case 'top-right':
+      return 'top-2 right-2 md:top-4 md:right-4';
+    case 'bottom-left':
+      return 'bottom-2 left-2 md:bottom-4 md:left-4';
+    case 'center':
+      return 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+    case 'bottom-right':
+    default:
+      return 'bottom-2 right-2 md:bottom-4 md:right-4';
+  }
+}
+
+/**
  * Download an image with watermark applied using Canvas API
+ * Uses a tiled/repeated pattern for better copyright protection
  */
 export async function downloadWithWatermark(
   imageUrl: string,
   watermarkUrl: string,
   opacity: number,
-  filename: string
+  filename: string,
+  watermarkSize: number = 80
 ): Promise<void> {
   try {
     // Load both images
@@ -40,19 +63,34 @@ export async function downloadWithWatermark(
     // Draw the main image
     ctx.drawImage(image, 0, 0);
 
-    // Calculate watermark dimensions (max 10% of image height)
-    const maxWatermarkHeight = image.height * 0.1;
-    const watermarkHeight = Math.min(watermark.height, maxWatermarkHeight);
+    // Calculate watermark dimensions based on size setting
+    // Size is treated as a percentage of the smaller image dimension
+    const minDimension = Math.min(image.width, image.height);
+    const watermarkHeight = minDimension * (watermarkSize / 800); // Smaller size for tiles
     const watermarkWidth = (watermark.width / watermark.height) * watermarkHeight;
 
-    // Position: bottom right with padding
-    const padding = Math.min(image.width, image.height) * 0.03;
-    const x = image.width - watermarkWidth - padding;
-    const y = image.height - watermarkHeight - padding;
-
-    // Apply opacity and draw watermark
+    // Apply opacity
     ctx.globalAlpha = opacity / 100;
-    ctx.drawImage(watermark, x, y, watermarkWidth, watermarkHeight);
+
+    // Create a tiled pattern across the image
+    // Calculate spacing for a nice grid pattern
+    const spacingX = watermarkWidth * 2.5;
+    const spacingY = watermarkHeight * 2.5;
+    
+    // Offset rows for a diagonal pattern effect
+    let rowIndex = 0;
+    for (let y = watermarkHeight; y < image.height - watermarkHeight/2; y += spacingY) {
+      const xOffset = rowIndex % 2 === 0 ? 0 : spacingX / 2;
+      for (let x = xOffset + watermarkWidth/2; x < image.width - watermarkWidth/2; x += spacingX) {
+        // Rotate slightly for visual interest
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(-25 * Math.PI / 180); // -25 degree rotation
+        ctx.drawImage(watermark, -watermarkWidth/2, -watermarkHeight/2, watermarkWidth, watermarkHeight);
+        ctx.restore();
+      }
+      rowIndex++;
+    }
 
     // Convert to blob and download
     canvas.toBlob(

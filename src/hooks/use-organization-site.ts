@@ -47,6 +47,8 @@ export interface OrganizationSite {
   watermark_enabled: boolean | null;
   watermark_opacity: number | null;
   watermark_logo_url: string | null;
+  watermark_size: number | null;
+  watermark_position: string | null;
   created_at: string;
   updated_at: string;
 }
