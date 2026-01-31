@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2 } from "lucide-react";
+import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -104,7 +104,7 @@ export default function SiteSettings() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner' | 'watermark') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -121,6 +121,8 @@ export default function SiteSettings() {
         await updateSite.mutateAsync({ hero_image_url: url });
       } else if (type === 'banner') {
         await updateSite.mutateAsync({ page_banner_url: url });
+      } else if (type === 'watermark') {
+        await updateSite.mutateAsync({ watermark_logo_url: url });
       }
       
       toast.success('Imagem enviada com sucesso!');
@@ -731,6 +733,121 @@ Registro A (www):
                       </label>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Watermark Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Droplets className="h-5 w-5" />
+                    Marca d'Água
+                  </CardTitle>
+                  <CardDescription>
+                    Adicione uma marca d'água sutil nas fotos dos imóveis para proteger seu conteúdo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Ativar marca d'água</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Quando ativo, a logo será exibida sobre as fotos dos imóveis
+                      </p>
+                    </div>
+                    <Switch
+                      checked={site?.watermark_enabled || false}
+                      onCheckedChange={(checked) => updateSite.mutate({ watermark_enabled: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+
+                  {site?.watermark_enabled && (
+                    <>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label>Opacidade</Label>
+                          <span className="text-sm font-medium text-muted-foreground">{site?.watermark_opacity || 20}%</span>
+                        </div>
+                        <Slider
+                          value={[site?.watermark_opacity || 20]}
+                          onValueChange={(value) => updateSite.mutate({ watermark_opacity: value[0] })}
+                          min={5}
+                          max={50}
+                          step={5}
+                          className="w-full"
+                          disabled={!isAdmin}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Valores menores = mais sutil. Recomendado: 15-25%
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label>Logo da marca d'água</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Deixe em branco para usar a logo principal do site
+                        </p>
+                        {site?.watermark_logo_url ? (
+                          <div className="border rounded-lg p-4 bg-muted flex items-center justify-between">
+                            <img src={site.watermark_logo_url} alt="Watermark" className="h-10 object-contain" />
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => updateSite.mutate({ watermark_logo_url: null })}
+                              disabled={!isAdmin}
+                            >
+                              Remover
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground text-sm">
+                            Usando logo principal: {site?.logo_url ? '✓ Configurada' : '⚠️ Não configurada'}
+                          </div>
+                        )}
+                        <div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileUpload(e, 'watermark')}
+                            className="hidden"
+                            id="watermark-upload"
+                            disabled={!isAdmin}
+                          />
+                          <label htmlFor="watermark-upload">
+                            <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
+                              <span>
+                                <Upload className="w-4 h-4 mr-2" />
+                                Enviar Logo Alternativa
+                              </span>
+                            </Button>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Preview */}
+                      {(site?.watermark_logo_url || site?.logo_url) && (
+                        <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                          <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização</Label>
+                          <div className="relative h-40 bg-gradient-to-br from-gray-300 to-gray-400 rounded overflow-hidden">
+                            <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
+                              Foto do Imóvel
+                            </div>
+                            <div 
+                              className="absolute bottom-3 right-3 pointer-events-none"
+                              style={{ opacity: (site?.watermark_opacity || 20) / 100 }}
+                            >
+                              <img 
+                                src={site?.watermark_logo_url || site?.logo_url || ''} 
+                                alt="Watermark preview" 
+                                className="max-h-10 max-w-24 object-contain"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

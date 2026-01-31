@@ -38,6 +38,10 @@ export interface PublicSiteConfig {
   // Logo size fields
   logo_width: number | null;
   logo_height: number | null;
+  // Watermark fields
+  watermark_enabled: boolean | null;
+  watermark_opacity: number | null;
+  watermark_logo_url: string | null;
   organization_name: string;
 }
 

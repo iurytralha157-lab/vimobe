@@ -384,6 +384,21 @@ export default function PublicProperties() {
                             {property.tipo_imovel}
                           </span>
                           
+                          {/* Watermark Overlay */}
+                          {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
+                            <div 
+                              className="absolute bottom-16 right-3 pointer-events-none select-none"
+                              style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
+                            >
+                              <img 
+                                src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
+                                alt=""
+                                className="max-h-5 max-w-16 object-contain drop-shadow-lg"
+                                draggable={false}
+                              />
+                            </div>
+                          )}
+                          
                           <div className="absolute bottom-4 left-4">
                             {property.valor_venda && (
                               <span className="text-2xl font-bold text-white drop-shadow-lg">

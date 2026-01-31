@@ -43,6 +43,10 @@ export interface OrganizationSite {
   // Logo size fields
   logo_width: number | null;
   logo_height: number | null;
+  // Watermark fields
+  watermark_enabled: boolean | null;
+  watermark_opacity: number | null;
+  watermark_logo_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -132,7 +136,7 @@ export function useUploadSiteAsset() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner' }) => {
+    mutationFn: async ({ file, type }: { file: File; type: 'logo' | 'favicon' | 'about' | 'hero' | 'banner' | 'watermark' }) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `site-${type}-${Date.now()}.${fileExt}`;
       const filePath = `sites/${fileName}`;
