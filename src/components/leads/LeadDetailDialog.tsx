@@ -137,6 +137,7 @@ export function LeadDetailDialog({
     uf: '',
     cep: '',
     valor_interesse: '',
+    commission_percentage: '',
     property_id: '',
     message: '',
     renda_familiar: '',
@@ -146,6 +147,18 @@ export function LeadDetailDialog({
     finalidade_compra: '',
     procura_financiamento: false
   });
+
+  // Currency formatting helpers
+  const formatCurrencyDisplay = (value: string): string => {
+    if (!value) return '';
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    return Number(numbers).toLocaleString('pt-BR');
+  };
+
+  const parseCurrencyInput = (value: string): string => {
+    return value.replace(/\D/g, '');
+  };
 
   // Sync edit form with lead data whenever lead changes
   // Use a ref to track if this is the initial load vs subsequent updates
@@ -167,6 +180,7 @@ export function LeadDetailDialog({
         uf: lead.uf || '',
         cep: lead.cep || '',
         valor_interesse: lead.valor_interesse?.toString() || '',
+        commission_percentage: lead.commission_percentage?.toString() || '',
         property_id: lead.property_id || '',
         message: lead.message || '',
         renda_familiar: lead.renda_familiar || '',
@@ -367,6 +381,7 @@ export function LeadDetailDialog({
         uf: editForm.uf || null,
         cep: editForm.cep || null,
         valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null,
+        commission_percentage: editForm.commission_percentage ? parseFloat(editForm.commission_percentage) : null,
         property_id: editForm.property_id || null,
         message: editForm.message || null,
         renda_familiar: editForm.renda_familiar || null,
@@ -526,7 +541,8 @@ export function LeadDetailDialog({
                   organizationId: profile.organization_id,
                   userId: lead.assigned_user_id,
                   propertyId: lead.property_id,
-                  valorInteresse: lead.valor_interesse
+                  valorInteresse: lead.valor_interesse,
+                  leadCommissionPercentage: lead.commission_percentage
                 });
               }
               
@@ -2016,10 +2032,12 @@ export function LeadDetailDialog({
                       const newValue = value === 'none' ? '' : value;
                       const selectedProperty = properties.find((p: any) => p.id === value);
                       const propertyPrice = selectedProperty?.preco || null;
+                      const propertyCommission = (selectedProperty as any)?.commission_percentage || null;
                       setEditForm({
                         ...editForm,
                         property_id: newValue,
-                        valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
+                        valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse,
+                        commission_percentage: propertyCommission ? propertyCommission.toString() : editForm.commission_percentage
                       });
                       const updateData: any = {
                         id: lead.id,
@@ -2027,6 +2045,9 @@ export function LeadDetailDialog({
                       };
                       if (propertyPrice) {
                         updateData.valor_interesse = propertyPrice;
+                      }
+                      if (propertyCommission) {
+                        updateData.commission_percentage = propertyCommission;
                       }
                       updateLead.mutateAsync(updateData).then(() => refetchStages());
                     }}>
@@ -2045,23 +2066,80 @@ export function LeadDetailDialog({
                   </div>
                 )}
 
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-2 block">Valor de interesse</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input type="number" value={editForm.valor_interesse} onChange={e => setEditForm({
-                      ...editForm,
-                      valor_interesse: e.target.value
-                    })} onBlur={() => {
-                      if (editForm.valor_interesse !== (lead.valor_interesse?.toString() || '')) {
-                        updateLead.mutateAsync({
-                          id: lead.id,
-                          valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null
-                        } as any);
-                      }
-                    }} placeholder="0,00" className="pl-9 rounded-xl" />
+                {/* Value and Commission fields side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Valor de interesse</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                      <Input 
+                        value={formatCurrencyDisplay(editForm.valor_interesse)} 
+                        onChange={e => setEditForm({
+                          ...editForm,
+                          valor_interesse: parseCurrencyInput(e.target.value)
+                        })} 
+                        onBlur={() => {
+                          const newValue = editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null;
+                          if (newValue !== lead.valor_interesse) {
+                            updateLead.mutateAsync({
+                              id: lead.id,
+                              valor_interesse: newValue
+                            } as any);
+                          }
+                        }} 
+                        placeholder="0" 
+                        className="pl-9 rounded-xl" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-2 block">Comissão (%)</Label>
+                    <div className="relative">
+                      <Input 
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={editForm.commission_percentage} 
+                        onChange={e => setEditForm({
+                          ...editForm,
+                          commission_percentage: e.target.value
+                        })} 
+                        onBlur={() => {
+                          const newValue = editForm.commission_percentage ? parseFloat(editForm.commission_percentage) : null;
+                          if (newValue !== lead.commission_percentage) {
+                            updateLead.mutateAsync({
+                              id: lead.id,
+                              commission_percentage: newValue
+                            } as any);
+                          }
+                        }} 
+                        placeholder="0" 
+                        className="pr-7 rounded-xl" 
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Commission Value Card */}
+                {parseFloat(editForm.valor_interesse) > 0 && parseFloat(editForm.commission_percentage) > 0 && (
+                  <div className="p-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-orange-700 dark:text-orange-300">
+                          Comissão: R$ {(parseFloat(editForm.valor_interesse) * parseFloat(editForm.commission_percentage) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-orange-600 dark:text-orange-400">
+                          {editForm.commission_percentage}% de R$ {parseFloat(editForm.valor_interesse).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Deal Status Summary Card */}
