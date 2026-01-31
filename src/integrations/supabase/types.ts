@@ -3130,6 +3130,7 @@ export type Database = {
           leads_distributed: number | null
           name: string
           organization_id: string
+          reentry_behavior: string | null
           settings: Json | null
           strategy: string | null
           target_pipeline_id: string | null
@@ -3143,6 +3144,7 @@ export type Database = {
           leads_distributed?: number | null
           name: string
           organization_id: string
+          reentry_behavior?: string | null
           settings?: Json | null
           strategy?: string | null
           target_pipeline_id?: string | null
@@ -3156,6 +3158,7 @@ export type Database = {
           leads_distributed?: number | null
           name?: string
           organization_id?: string
+          reentry_behavior?: string | null
           settings?: Json | null
           strategy?: string | null
           target_pipeline_id?: string | null

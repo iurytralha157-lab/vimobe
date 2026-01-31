@@ -716,45 +716,7 @@ export function LeadDetailDialog({
                   </div>}
               </div>
 
-              {/* Atividades recentes */}
-              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Activity className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <h3 className="font-medium text-sm">Atividades recentes</h3>
-                </div>
-                
-                {activitiesLoading ? <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div> : taskActivities.length > 0 ? <div className="relative">
-                    {/* Timeline line - z-0 to stay behind icons */}
-                    <div className="absolute z-0 left-[15px] top-5 bottom-5 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
-                    
-                    <div className="space-y-1">
-                      {taskActivities.slice(0, 4).map((activity: any) => {
-                const ActivityIcon = activityTypeIcons[activity.type] || CheckCircle;
-                return <div key={activity.id} className="relative flex items-start gap-3 p-2.5 rounded-lg hover:bg-accent/30">
-                          <div className="relative z-10 h-7 w-7 rounded-lg bg-card border border-primary/20 flex items-center justify-center shrink-0">
-                            <ActivityIcon className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{activityTypeLabels[activity.type] || activity.type}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {formatDistanceToNow(new Date(activity.created_at), {
-                        addSuffix: true,
-                        locale: ptBR
-                      })}
-                            </p>
-                          </div>
-                        </div>;
-              })}
-                    </div>
-                  </div> : <div className="text-center py-6 border border-dashed rounded-xl bg-muted/20">
-                    <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Nenhuma atividade</p>
-                  </div>}
-              </div>
+              {/* Seção removida - Histórico agora é a única fonte de eventos */}
             </div>}
 
           {/* Schedule Tab */}
@@ -1636,58 +1598,7 @@ export function LeadDetailDialog({
                   </div>}
               </div>
 
-              {/* Atividades recentes */}
-              <div className="p-5 rounded-xl bg-gradient-to-br from-card to-muted/30 border shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-primary" />
-                  </div>
-                  <h3 className="font-semibold">Atividades recentes</h3>
-                </div>
-                {activitiesLoading ? <div className="flex items-center justify-center py-12">
-                    <div className="relative">
-                      <div className="h-8 w-8 rounded-full border-2 border-primary/20" />
-                      <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                    </div>
-                  </div> : taskActivities.length > 0 ? <div className="relative">
-                    {/* Timeline line - z-0 to stay behind icons */}
-                    <div className="absolute z-0 left-[30px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/30 via-border to-transparent" />
-                    
-                    <div className="space-y-3">
-                      {taskActivities.slice(0, 5).map((activity: any, idx: number) => {
-                    const ActivityIcon = activityTypeIcons[activity.type] || CheckCircle;
-                    return <div key={activity.id} className="group relative flex items-start gap-3 p-3 rounded-xl hover:bg-accent/30 transition-all">
-                            <div className="relative z-10 h-9 w-9 rounded-xl bg-card border border-primary/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                              <ActivityIcon className="h-4 w-4 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium">
-                                {activityTypeLabels[activity.type] || activity.type}
-                              </p>
-                              {activity.content && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{activity.content}</p>}
-                              <p className="text-xs text-muted-foreground/70 mt-1.5 flex items-center gap-1.5">
-                                <Clock className="h-3 w-3" />
-                                {formatDistanceToNow(new Date(activity.created_at), {
-                            addSuffix: true,
-                            locale: ptBR
-                          })}
-                                {activity.user?.name && <>
-                                    <span className="text-muted-foreground/30">•</span>
-                                    {activity.user.name}
-                                  </>}
-                              </p>
-                            </div>
-                          </div>;
-                  })}
-                    </div>
-                  </div> : <div className="text-center py-10 border border-dashed rounded-xl bg-muted/20">
-                    <div className="h-12 w-12 rounded-2xl bg-muted mx-auto mb-3 flex items-center justify-center">
-                      <Activity className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <p className="font-medium text-muted-foreground">Nenhuma atividade registrada</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">As atividades aparecerão aqui</p>
-                  </div>}
-              </div>
+              {/* Seção removida - Histórico agora é a única fonte de eventos */}
             </div>
           </TabsContent>
 

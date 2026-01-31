@@ -37,6 +37,7 @@ export interface RoundRobin {
     enable_redistribution?: boolean;
     preserve_position?: boolean;
     require_checkin?: boolean;
+    reentry_behavior?: 'redistribute' | 'keep_assignee';
     schedule?: Array<{
       day: number;
       enabled: boolean;
@@ -44,6 +45,7 @@ export interface RoundRobin {
       end: string;
     }>;
   } | null;
+  reentry_behavior?: 'redistribute' | 'keep_assignee';
   // Joined data
   target_pipeline?: { id: string; name: string };
   target_stage?: { id: string; name: string; color: string };
