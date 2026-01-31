@@ -8,16 +8,17 @@ interface CreateCommissionParams {
   userId: string | null;
   propertyId: string | null;
   valorInteresse: number | null;
+  leadCommissionPercentage?: number | null;
 }
 
 export function useCreateCommissionOnWon() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ leadId, organizationId, userId, propertyId, valorInteresse }: CreateCommissionParams) => {
-      // Skip if no property or value
-      if (!propertyId || !valorInteresse || !userId) {
-        console.log('Skipping commission creation - missing data:', { propertyId, valorInteresse, userId });
+    mutationFn: async ({ leadId, organizationId, userId, propertyId, valorInteresse, leadCommissionPercentage }: CreateCommissionParams) => {
+      // Skip if no value or user
+      if (!valorInteresse || !userId) {
+        console.log('Skipping commission creation - missing data:', { valorInteresse, userId });
         return null;
       }
 
@@ -33,22 +34,26 @@ export function useCreateCommissionOnWon() {
         return null;
       }
 
-      // Get property commission percentage
-      const { data: property, error: propertyError } = await supabase
-        .from('properties')
-        .select('commission_percentage, title')
-        .eq('id', propertyId)
-        .single();
+      // Use lead commission percentage first, fallback to property if available
+      let commissionPercentage = leadCommissionPercentage || 0;
+      let propertyTitle = 'Negócio';
 
-      if (propertyError || !property) {
-        console.error('Error fetching property:', propertyError);
-        return null;
+      // If no lead commission but has property, get from property
+      if (commissionPercentage <= 0 && propertyId) {
+        const { data: property, error: propertyError } = await supabase
+          .from('properties')
+          .select('commission_percentage, title')
+          .eq('id', propertyId)
+          .single();
+
+        if (!propertyError && property) {
+          commissionPercentage = property.commission_percentage || 0;
+          propertyTitle = property.title || 'Imóvel';
+        }
       }
-
-      const commissionPercentage = property.commission_percentage || 0;
       
       if (commissionPercentage <= 0) {
-        console.log('Property has no commission percentage configured');
+        console.log('No commission percentage configured (neither on lead nor property)');
         return null;
       }
 
@@ -66,7 +71,7 @@ export function useCreateCommissionOnWon() {
           base_value: valorInteresse,
           amount: commissionAmount,
           status: 'forecast',
-          notes: `Comissão automática - ${property.title || 'Imóvel'}`
+          notes: `Comissão automática - ${propertyTitle}`
         })
         .select()
         .single();

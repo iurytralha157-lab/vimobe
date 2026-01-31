@@ -1706,6 +1706,7 @@ export type Database = {
         Row: {
           assigned_at: string | null
           assigned_user_id: string | null
+          commission_percentage: number | null
           created_at: string
           deal_status: string | null
           email: string | null
@@ -1735,6 +1736,7 @@ export type Database = {
         Insert: {
           assigned_at?: string | null
           assigned_user_id?: string | null
+          commission_percentage?: number | null
           created_at?: string
           deal_status?: string | null
           email?: string | null
@@ -1764,6 +1766,7 @@ export type Database = {
         Update: {
           assigned_at?: string | null
           assigned_user_id?: string | null
+          commission_percentage?: number | null
           created_at?: string
           deal_status?: string | null
           email?: string | null

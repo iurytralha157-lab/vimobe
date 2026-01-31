@@ -10,7 +10,8 @@ const PROPERTY_LIST_FIELDS = `
   id, code, title, tipo_de_imovel, tipo_de_negocio, 
   status, destaque, bairro, cidade, uf,
   quartos, banheiros, vagas, area_util, preco, 
-  imagem_principal, created_at, organization_id
+  imagem_principal, created_at, organization_id,
+  commission_percentage
 `;
 
 export function useProperties(search?: string) {
