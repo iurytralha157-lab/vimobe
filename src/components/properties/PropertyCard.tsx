@@ -5,6 +5,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
@@ -18,7 +19,11 @@ import {
   Building2,
   Pencil,
   Trash2,
-  Eye
+  Eye,
+  CheckCircle,
+  Globe,
+  Lock,
+  Percent
 } from 'lucide-react';
 import { Property } from '@/hooks/use-properties';
 
@@ -27,12 +32,25 @@ interface PropertyCardProps {
   onEdit: (property: Property) => void;
   onDelete: (id: string) => void;
   onPreview: (property: Property) => void;
+  onMarkSold?: (id: string) => void;
+  onToggleVisibility?: (id: string, isPublic: boolean) => void;
   formatPrice: (value: number | null, tipo: string | null) => string;
 }
 
-export function PropertyCard({ property, onEdit, onDelete, onPreview, formatPrice }: PropertyCardProps) {
+export function PropertyCard({ 
+  property, 
+  onEdit, 
+  onDelete, 
+  onPreview, 
+  onMarkSold,
+  onToggleVisibility,
+  formatPrice 
+}: PropertyCardProps) {
+  const isSold = property.status === 'vendido';
+  const isPublic = property.status !== 'privado';
+  
   return (
-    <Card className="overflow-hidden card-hover">
+    <Card className="overflow-hidden card-hover group">
       <div className="aspect-[4/3] bg-muted relative">
         {property.imagem_principal ? (
           <img src={property.imagem_principal} alt={property.title || ''} className="w-full h-full object-cover" />
@@ -43,12 +61,34 @@ export function PropertyCard({ property, onEdit, onDelete, onPreview, formatPric
             <Building2 className="h-12 w-12 text-muted-foreground/30" />
           </div>
         )}
-        {property.destaque && (
-          <Badge className="absolute top-2 left-2 bg-warning text-warning-foreground">
-            <Star className="h-3 w-3 mr-1" />
-            Destaque
-          </Badge>
+        
+        {/* Sold overlay */}
+        {isSold && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <Badge className="bg-success text-success-foreground text-lg px-4 py-2">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              VENDIDO
+            </Badge>
+          </div>
         )}
+        
+        {/* Top left badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {property.destaque && (
+            <Badge className="bg-warning text-warning-foreground">
+              <Star className="h-3 w-3 mr-1" />
+              Destaque
+            </Badge>
+          )}
+          {!isPublic && (
+            <Badge variant="secondary" className="bg-muted/90 text-muted-foreground">
+              <Lock className="h-3 w-3 mr-1" />
+              Privado
+            </Badge>
+          )}
+        </div>
+        
+        {/* Top right badges */}
         <div className="absolute top-2 right-2 flex gap-1">
           <Badge 
             variant={property.tipo_de_negocio === 'Venda' ? 'default' : 'secondary'}
@@ -59,6 +99,16 @@ export function PropertyCard({ property, onEdit, onDelete, onPreview, formatPric
             <Badge variant="outline" className="bg-background">Inativo</Badge>
           )}
         </div>
+        
+        {/* Commission badge bottom right */}
+        {(property as any).commission_percentage && (
+          <div className="absolute bottom-2 right-2">
+            <Badge variant="outline" className="bg-background/90 backdrop-blur-sm">
+              <Percent className="h-3 w-3 mr-1" />
+              {(property as any).commission_percentage}%
+            </Badge>
+          </div>
+        )}
       </div>
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-2">
@@ -72,16 +122,39 @@ export function PropertyCard({ property, onEdit, onDelete, onPreview, formatPric
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(property)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Editar
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onPreview(property)}>
                 <Eye className="h-4 w-4 mr-2" />
                 Visualizar
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(property)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {onMarkSold && !isSold && (
+                <DropdownMenuItem onClick={() => onMarkSold(property.id)}>
+                  <CheckCircle className="h-4 w-4 mr-2 text-success" />
+                  Marcar como Vendido
+                </DropdownMenuItem>
+              )}
+              {onToggleVisibility && (
+                <DropdownMenuItem onClick={() => onToggleVisibility(property.id, !isPublic)}>
+                  {isPublic ? (
+                    <>
+                      <Lock className="h-4 w-4 mr-2" />
+                      Tornar Privado
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="h-4 w-4 mr-2" />
+                      Tornar Público
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem 
-                className="text-destructive"
+                className="text-destructive focus:text-destructive"
                 onClick={() => onDelete(property.id)}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -129,7 +202,7 @@ export function PropertyCard({ property, onEdit, onDelete, onPreview, formatPric
           )}
         </div>
 
-        <p className="text-lg font-bold text-primary">
+        <p className={`text-lg font-bold ${isSold ? 'text-muted-foreground line-through' : 'text-primary'}`}>
           {formatPrice(property.preco, property.tipo_de_negocio)}
         </p>
       </CardContent>

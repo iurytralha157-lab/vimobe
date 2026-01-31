@@ -19,6 +19,8 @@ import Dashboard from "./pages/Dashboard";
 import Pipelines from "./pages/Pipelines";
 import Contacts from "./pages/Contacts";
 import Properties from "./pages/Properties";
+import PropertyRentals from "./pages/PropertyRentals";
+import PropertyLocations from "./pages/PropertyLocations";
 import CRMManagement from "./pages/CRMManagement";
 import Settings from "./pages/Settings";
 import SiteSettings from "./pages/SiteSettings";
@@ -201,6 +203,9 @@ function AppRoutes() {
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
           <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
+          <Route path="/properties/rentals" element={<ProtectedRoute><PropertyRentals /></ProtectedRoute>} />
+          <Route path="/properties/condominiums" element={<ProtectedRoute><PropertyLocations /></ProtectedRoute>} />
+          <Route path="/properties/locations" element={<ProtectedRoute><PropertyLocations /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/settings/site" element={<ProtectedRoute><AdminRoute><SiteSettings /></AdminRoute></ProtectedRoute>} />
           <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
