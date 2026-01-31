@@ -64,6 +64,7 @@ export interface TopBroker {
   avatar_url: string | null;
   closedLeads: number;
   salesValue: number;
+  totalCommissions: number;
 }
 
 export interface TopBrokersResult {
@@ -552,6 +553,23 @@ export function useTopBrokers(filters?: DashboardFilters) {
 
       // If we have won leads, use them for ranking
       if (wonLeads && wonLeads.length > 0) {
+        // Get all user IDs with won leads
+        const userIds = [...new Set(wonLeads.map((l: any) => l.assigned_user_id).filter(Boolean))];
+        
+        // Fetch commissions for these users
+        const { data: commissions } = await supabase
+          .from('commissions')
+          .select('user_id, amount, status')
+          .in('user_id', userIds);
+        
+        // Build commission totals map (only forecast, approved, paid)
+        const commissionTotals: Record<string, number> = {};
+        (commissions || []).forEach((c: any) => {
+          if (['forecast', 'approved', 'paid'].includes(c.status)) {
+            commissionTotals[c.user_id] = (commissionTotals[c.user_id] || 0) + (c.amount || 0);
+          }
+        });
+
         const brokerStats = wonLeads.reduce((acc: Record<string, TopBroker>, lead: any) => {
           const userId = lead.assigned_user_id;
           if (!userId || !lead.user) return acc;
@@ -563,6 +581,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
               avatar_url: lead.user.avatar_url,
               closedLeads: 0,
               salesValue: 0,
+              totalCommissions: commissionTotals[userId] || 0,
             };
           }
 
@@ -614,6 +633,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
             avatar_url: lead.user.avatar_url,
             closedLeads: 0, // In fallback mode, this represents total leads
             salesValue: 0,
+            totalCommissions: 0,
           };
         }
 

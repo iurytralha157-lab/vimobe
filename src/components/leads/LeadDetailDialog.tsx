@@ -37,6 +37,7 @@ import { toast } from 'sonner';
 import { formatPhoneForDisplay } from '@/lib/phone-utils';
 import { TagSelectorPopoverContent } from '@/components/ui/tag-selector';
 import { useCreateCommissionOnWon } from '@/hooks/use-create-commission';
+import { useUpdateLeadCommission } from '@/hooks/use-update-commission';
 const sourceLabels: Record<string, string> = {
   meta: 'Meta Ads',
   wordpress: 'WordPress',
@@ -237,6 +238,7 @@ export function LeadDetailDialog({
   const addTag = useAddLeadTag();
   const removeTag = useRemoveLeadTag();
   const createCommission = useCreateCommissionOnWon();
+  const updateCommission = useUpdateLeadCommission();
   const { profile, organization } = useAuth();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
@@ -366,6 +368,9 @@ export function LeadDetailDialog({
   };
   const handleSaveContact = async () => {
     try {
+      const newValorInteresse = editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null;
+      const newCommissionPercentage = editForm.commission_percentage ? parseFloat(editForm.commission_percentage) : null;
+      
       await updateLead.mutateAsync({
         id: lead.id,
         name: editForm.name,
@@ -380,8 +385,8 @@ export function LeadDetailDialog({
         cidade: editForm.cidade || null,
         uf: editForm.uf || null,
         cep: editForm.cep || null,
-        valor_interesse: editForm.valor_interesse ? parseFloat(editForm.valor_interesse) : null,
-        commission_percentage: editForm.commission_percentage ? parseFloat(editForm.commission_percentage) : null,
+        valor_interesse: newValorInteresse,
+        commission_percentage: newCommissionPercentage,
         property_id: editForm.property_id || null,
         message: editForm.message || null,
         renda_familiar: editForm.renda_familiar || null,
@@ -391,6 +396,21 @@ export function LeadDetailDialog({
         finalidade_compra: editForm.finalidade_compra || null,
         procura_financiamento: editForm.procura_financiamento || null
       } as any);
+      
+      // If lead is already "won" and valores changed, update the commission
+      if (lead.deal_status === 'won' && newValorInteresse && newCommissionPercentage) {
+        const oldValor = lead.valor_interesse || 0;
+        const oldPercentage = lead.commission_percentage || 0;
+        
+        if (newValorInteresse !== oldValor || newCommissionPercentage !== oldPercentage) {
+          updateCommission.mutate({
+            leadId: lead.id,
+            valorInteresse: newValorInteresse,
+            commissionPercentage: newCommissionPercentage
+          });
+        }
+      }
+      
       setIsEditingContact(false);
       refetchStages();
       toast.success('Dados salvos com sucesso!');
