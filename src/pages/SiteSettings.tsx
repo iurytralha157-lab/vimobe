@@ -131,6 +131,14 @@ export default function SiteSettings() {
     }
   };
 
+  const getPublishedSiteUrl = () => {
+    if (formData.subdomain) {
+      // URL do site publicado via slug
+      return `${window.location.origin}/sites/${formData.subdomain}`;
+    }
+    return null;
+  };
+
   const getSiteUrl = () => {
     if (formData.custom_domain && site?.domain_verified) {
       return `https://${formData.custom_domain}`;
@@ -139,6 +147,14 @@ export default function SiteSettings() {
       return `https://${formData.subdomain}.vimob.com.br`;
     }
     return null;
+  };
+
+  const copyPublishedLink = () => {
+    const url = getPublishedSiteUrl();
+    if (url) {
+      navigator.clipboard.writeText(url);
+      toast.success('Link copiado!');
+    }
   };
 
   const copyDnsInstructions = () => {
@@ -198,13 +214,19 @@ Registro A (www):
                 </Button>
               </a>
             )}
-            {getSiteUrl() && site?.is_active && (
-              <a href={getSiteUrl()!} target="_blank" rel="noopener noreferrer">
-                <Button>
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Visitar Site
+            {getPublishedSiteUrl() && site?.is_active && (
+              <>
+                <Button variant="outline" onClick={copyPublishedLink}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar Link
                 </Button>
-              </a>
+                <a href={getPublishedSiteUrl()!} target="_blank" rel="noopener noreferrer">
+                  <Button>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Visitar Site
+                  </Button>
+                </a>
+              </>
             )}
           </div>
         </div>
@@ -278,8 +300,42 @@ Registro A (www):
                   <CardDescription>Configure o endereço do seu site</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Link do Site Publicado */}
+                  {formData.subdomain && site?.is_active && (
+                    <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
+                              <Check className="w-4 h-4" />
+                              Site Publicado
+                            </h4>
+                            <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                              Seu site está online e acessível
+                            </p>
+                            <a 
+                              href={getPublishedSiteUrl()!} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-green-600 dark:text-green-400 hover:underline font-mono mt-2 block"
+                            >
+                              {getPublishedSiteUrl()}
+                            </a>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={copyPublishedLink} className="shrink-0">
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copiar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <div className="space-y-2">
-                    <Label>Subdomínio VIMOB (gratuito)</Label>
+                    <Label>Slug do Site</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Identificador único do seu site (usado na URL)
+                    </p>
                     <div className="flex gap-2">
                       <Input
                         placeholder="sua-imobiliaria"
@@ -287,8 +343,12 @@ Registro A (www):
                         onChange={(e) => setFormData({ ...formData, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                         disabled={!isAdmin}
                       />
-                      <span className="flex items-center text-muted-foreground">.vimob.com.br</span>
                     </div>
+                    {formData.subdomain && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        URL: <span className="font-mono">{window.location.origin}/sites/{formData.subdomain}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="border-t pt-6 space-y-4">
