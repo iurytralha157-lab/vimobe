@@ -17,11 +17,15 @@ export default function PublicSiteLayout() {
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
 
-  // Close mobile menu and scroll to top on route change
+  // Close mobile menu on route change (scroll handled by ScrollToTop component)
   useEffect(() => {
     setMobileMenuOpen(false);
-    window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // Helper function for footer link clicks
+  const handleFooterClick = () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
 
   if (isLoading) {
     return (
@@ -324,6 +328,7 @@ export default function PublicSiteLayout() {
                     <li key={link.href}>
                       <Link 
                         to={getHref(link.href)}
+                        onClick={handleFooterClick}
                         className="text-white/60 hover:text-white transition-colors text-sm"
                       >
                         {link.label}
@@ -333,6 +338,7 @@ export default function PublicSiteLayout() {
                   <li>
                     <Link 
                       to={getHref("contato")}
+                      onClick={handleFooterClick}
                       className="text-white/60 hover:text-white transition-colors text-sm"
                     >
                       CONTATO
