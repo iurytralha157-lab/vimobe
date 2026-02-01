@@ -61,6 +61,7 @@ import PublicPropertyDetail from "./pages/public/PublicPropertyDetail";
 import PublicAbout from "./pages/public/PublicAbout";
 import PublicContact from "./pages/public/PublicContact";
 import PreviewSiteWrapper from "./pages/public/PreviewSiteWrapper";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -180,6 +181,7 @@ function AppRoutes() {
       {/* Show impersonate banner when super admin is viewing as another org */}
       <ImpersonateBanner />
       
+      <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
         <Routes>
           <Route path="/auth" element={renderAuthRoute()} />

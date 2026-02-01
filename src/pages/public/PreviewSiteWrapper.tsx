@@ -3,6 +3,7 @@ import { useSearchParams, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { PublicSiteConfig } from '@/hooks/use-public-site';
 import { PublicContext, PublicContextType } from './usePublicContext';
+import { ScrollToTop } from '@/components/ScrollToTop';
 import PublicSiteLayout from './PublicSiteLayout';
 import PublicHome from './PublicHome';
 import PublicProperties from './PublicProperties';
@@ -142,8 +143,10 @@ function PreviewSiteRoutes() {
   const orgId = searchParams.get('org');
   
   return (
-    <Routes>
-      <Route path="/" element={<PublicSiteLayout />}>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/" element={<PublicSiteLayout />}>
         <Route index element={<PublicHome />} />
         <Route path="imoveis" element={<PublicProperties />} />
         <Route path="imoveis/:codigo" element={<PublicPropertyDetail />} />
@@ -152,7 +155,8 @@ function PreviewSiteRoutes() {
         <Route path="contato" element={<PublicContact />} />
         <Route path="mapa" element={<PublicMap />} />
       </Route>
-      <Route path="*" element={<Navigate to={`/site/preview?org=${orgId}`} replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to={`/site/preview?org=${orgId}`} replace />} />
+      </Routes>
+    </>
   );
 }
