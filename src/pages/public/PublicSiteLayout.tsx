@@ -17,9 +17,10 @@ export default function PublicSiteLayout() {
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
 
-  // Close mobile menu on route change
+  // Close mobile menu and scroll to top on route change
   useEffect(() => {
     setMobileMenuOpen(false);
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   if (isLoading) {
