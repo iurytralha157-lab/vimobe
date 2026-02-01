@@ -1,51 +1,62 @@
 
-# Plano: Scroll para o Topo ao Navegar
+# Plano: Correção do Scroll para o Topo
 
-## Problema
-Quando o usuário navega entre páginas no site imobiliário (público ou preview), a página abre na posição de scroll anterior ao invés de começar do topo. Isso acontece tanto no desktop quanto no mobile.
+## Problema Identificado
+Ao clicar nos links do rodapé, a página muda mas continua mostrando o rodapé ao invés de ir para o topo. Isso acontece tanto no mobile quanto no desktop.
 
-## Causa
-O React Router mantém a posição de scroll entre navegações. Isso é comportamento padrão em SPAs (Single Page Applications) e precisa ser corrigido manualmente.
-
-## Solução
-Criar um componente `ScrollToTop` que detecta mudanças de rota e automaticamente rola a janela para o topo.
+## Causa Raiz
+1. **Timing do scroll**: O `window.scrollTo(0, 0)` simples pode ser ignorado pelo browser mobile
+2. **Duplicação**: Há scroll to top em múltiplos lugares (ScrollToTop + PublicSiteLayout), causando possíveis conflitos
+3. **Query params**: O scroll só reage a mudanças no `pathname`, não em query parameters
 
 ---
 
-## Implementação
+## Solução
 
-### Parte 1: Criar Componente ScrollToTop
+### Parte 1: Melhorar o Componente ScrollToTop
 
-Novo arquivo `src/components/ScrollToTop.tsx`:
+Atualizar `src/components/ScrollToTop.tsx` para:
+- Usar `behavior: 'instant'` para scroll imediato
+- Adicionar fallback com `setTimeout` para garantir execução
+- Incluir `location.key` como dependência para capturar todas as navegações
 
 ```typescript
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-
-export function ScrollToTop() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  return null;
-}
+useEffect(() => {
+  // Scroll imediato
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  
+  // Fallback para garantir em mobile
+  const timeoutId = setTimeout(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, 0);
+  
+  return () => clearTimeout(timeoutId);
+}, [pathname]);
 ```
 
-### Parte 2: Aplicar no Site Público
+### Parte 2: Remover Duplicação no PublicSiteLayout
 
-Adicionar o componente em dois locais para cobrir todos os cenários:
+No `PublicSiteLayout.tsx`, remover o `window.scrollTo(0, 0)` do useEffect para evitar conflito com o componente ScrollToTop global.
 
-1. **`PublicSiteLayout.tsx`** - Para navegação dentro do site público
-   - Usar `useEffect` com `location.pathname` para scroll automático
+O useEffect deve ficar apenas:
+```typescript
+useEffect(() => {
+  setMobileMenuOpen(false);
+  // Scroll handled by ScrollToTop component
+}, [location.pathname]);
+```
 
-2. **`PreviewSiteWrapper.tsx`** - Para o modo preview
-   - Incluir `<ScrollToTop />` dentro das rotas
+### Parte 3: Adicionar onClick nos Links do Rodapé
 
-### Parte 3: Aplicar no App Principal (opcional)
+Adicionar `onClick` handler nos links do footer para forçar scroll mesmo quando navegando para a mesma página:
 
-Adicionar no `App.tsx` para todas as rotas do sistema, garantindo que o CRM também se beneficie.
+```typescript
+<Link 
+  to={getHref(link.href)}
+  onClick={() => window.scrollTo({ top: 0, behavior: 'instant' })}
+  className="..."
+>
+```
 
 ---
 
@@ -53,17 +64,14 @@ Adicionar no `App.tsx` para todas as rotas do sistema, garantindo que o CRM tamb
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/ScrollToTop.tsx` | **CRIAR** - Componente reutilizável |
-| `src/pages/public/PublicSiteLayout.tsx` | Adicionar scroll to top no useEffect |
-| `src/pages/public/PreviewSiteWrapper.tsx` | Importar e usar ScrollToTop |
-| `src/App.tsx` | Importar e usar ScrollToTop (global) |
+| `src/components/ScrollToTop.tsx` | Melhorar lógica de scroll com behavior instant e fallback |
+| `src/pages/public/PublicSiteLayout.tsx` | Remover scroll duplicado e adicionar onClick nos links do footer |
 
 ---
 
 ## Resultado Esperado
 
-- Ao clicar em um imóvel na listagem → página abre no topo
-- Ao navegar para "Contato" → página abre no topo
-- Ao voltar para "Imóveis" → página abre no topo
-- Funciona em mobile e desktop
-- Funciona no preview e no site publicado
+- Clicar em qualquer link do rodapé → página vai instantaneamente para o topo
+- Funciona no iPhone, Android e desktop
+- Funciona no modo preview e no site publicado
+- Sem conflitos ou comportamento estranho de scroll
