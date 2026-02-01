@@ -61,6 +61,7 @@ import PublicPropertyDetail from "./pages/public/PublicPropertyDetail";
 import PublicAbout from "./pages/public/PublicAbout";
 import PublicContact from "./pages/public/PublicContact";
 import PreviewSiteWrapper from "./pages/public/PreviewSiteWrapper";
+import PublishedSiteWrapper from "./pages/public/PublishedSiteWrapper";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
 const queryClient = new QueryClient({
@@ -235,6 +236,9 @@ function AppRoutes() {
           <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />
           {/* Legacy route with special characters - redirect to new route */}
           <Route path="/site/previsualização/*" element={<PreviewSiteWrapper />} />
+          
+          {/* Published Sites - accessible via slug */}
+          <Route path="/sites/:slug/*" element={<PublishedSiteWrapper />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
