@@ -1,149 +1,140 @@
 
 
-# Plano: Corrigir Distribuição de Leads via Webhook
+# Plano: Corrigir Filtro de Data na Pipeline e Dashboard
 
 ## Problema Identificado
 
-A função de distribuição `handle_lead_intake` no banco de dados está falhando silenciosamente porque referencia uma coluna que não existe:
+O filtro de data personalizado **não aplica `startOfDay` e `endOfDay`** nas datas selecionadas pelo usuário. Quando você seleciona apenas o dia 01/02:
 
-- **Função usa**: `v_queue.current_position`
-- **Coluna real na tabela**: `last_assigned_index`
+| O que deveria acontecer | O que está acontecendo |
+|-------------------------|------------------------|
+| `from: 2026-02-01 00:00:00` | `from: 2026-02-01 12:00:00` (hora do clique) |
+| `to: 2026-02-01 23:59:59` | `to: 2026-02-01 12:00:00` (hora do clique) |
 
-Isso faz com que os leads sejam criados corretamente, mas **não sejam distribuídos** para pipeline/estágio e responsável.
+Isso faz com que:
+- Leads criados entre 00:00 e 12:00 do dia 01 sejam **excluídos**
+- Leads criados depois das 12:00 do dia 01 sejam **excluídos** (to deveria ser 23:59:59)
 
-### Evidência nos logs do banco:
+Quando você seleciona 01 e 02 juntos:
+- O intervalo fica maior (01 12:00 até 02 12:00) e "por acaso" pega os leads
+
+---
+
+## Onde Está o Bug
+
+### 1. `date-filter-popover.tsx` (linha 51-53)
+
+O calendário retorna datas com a hora atual do navegador. Ao aplicar, não há conversão para início/fim do dia:
+
+```typescript
+// ATUAL (problemático)
+onCustomDateRangeChange?.({
+  from: tempDateRange.from,    // 2026-02-01T12:34:56
+  to: tempDateRange.to,        // 2026-02-01T12:34:56
+});
 ```
-ERROR: record "v_queue" has no field "current_position"
+
+### 2. `Pipelines.tsx` (linha 398-401)
+
+O componente usa o customDateRange diretamente, sem normalizar:
+
+```typescript
+// ATUAL (problemático)
+const dateRange = useMemo(() => {
+  if (customDateRange) return customDateRange; // Usa datas com hora errada
+  return getDateRangeFromPreset(datePreset);
+}, [datePreset, customDateRange]);
 ```
 
-### Leads afetados (exemplos recentes):
-| Lead | Status |
-|------|--------|
-| Luiz Vieira | pipeline_id: null, assigned: null |
-| Edney Carlos | pipeline_id: null, assigned: null |
-| João Batista | pipeline_id: null, assigned: null |
+### 3. Dashboard hooks (linhas 134-135 e 441-442)
+
+Usam `filters?.dateRange?.from/to?.toISOString()` diretamente:
+
+```typescript
+.gte('created_at', currentFrom.toISOString())  // Usa hora errada
+.lte('created_at', currentTo.toISOString())    // Usa hora errada
+```
 
 ---
 
 ## Solução
 
-Criar uma migration para corrigir a função `handle_lead_intake`, trocando todas as referências de `current_position` para `last_assigned_index`.
+Aplicar `startOfDay` e `endOfDay` no momento correto - quando o usuário confirma a seleção personalizada.
 
-### Linhas a corrigir na função:
+### Arquivo 1: `src/components/ui/date-filter-popover.tsx`
 
-1. **Linha ~99**: `v_next_index := COALESCE(v_queue.current_position, 0);`
-   - Trocar para: `v_next_index := COALESCE(v_queue.last_assigned_index, 0);`
+Corrigir a função `handleApplyCustomDate`:
 
-2. **Linha ~118-120**: `UPDATE round_robins SET current_position = ...`
-   - Trocar para: `UPDATE round_robins SET last_assigned_index = ...`
+```typescript
+import { startOfDay, endOfDay } from 'date-fns';
 
----
-
-## Implementação
-
-Criar migration SQL que:
-
-1. Recria a função `handle_lead_intake` com a coluna correta
-2. Mantém toda a lógica existente (distribuição, atividades, redistribuição)
-
-### Código da correção:
-
-```sql
--- Fix handle_lead_intake: trocar current_position por last_assigned_index
-CREATE OR REPLACE FUNCTION public.handle_lead_intake(p_lead_id uuid)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-DECLARE
-  -- ... declarações mantidas ...
-BEGIN
-  -- ... lógica mantida ...
-  
-  -- CORREÇÃO: usar last_assigned_index ao invés de current_position
-  v_next_index := COALESCE(v_queue.last_assigned_index, 0);
-  
-  -- ... mais lógica ...
-  
-  -- CORREÇÃO: atualizar last_assigned_index ao invés de current_position
-  UPDATE round_robins 
-  SET last_assigned_index = (v_next_index + 1) % v_member_count
-  WHERE id = v_round_robin_id;
-  
-  -- ... resto da função ...
-END;
-$function$;
+const handleApplyCustomDate = () => {
+  if (tempDateRange.from && tempDateRange.to) {
+    onDatePresetChange('custom');
+    onCustomDateRangeChange?.({
+      from: startOfDay(tempDateRange.from),  // 00:00:00
+      to: endOfDay(tempDateRange.to),        // 23:59:59
+    });
+    setDatePickerOpen(false);
+    setTempDateRange({});
+  }
+};
 ```
 
----
-
-## Ação Adicional
-
-Após aplicar a correção, podemos redistribuir os leads que ficaram "órfãos" chamando manualmente a função para cada um:
-
-```sql
--- Redistribuir leads sem responsável
-SELECT handle_lead_intake(id) 
-FROM leads 
-WHERE assigned_user_id IS NULL 
-  AND created_at > '2026-02-02'
-  AND source = 'webhook';
-```
+Esta é a correção mais limpa porque:
+1. Resolve o problema na origem (onde a data é selecionada)
+2. Todos os consumidores (Pipeline, Dashboard, etc.) recebem as datas já normalizadas
+3. Não precisa alterar nenhum outro arquivo
 
 ---
 
-## Arquivos a Modificar
+## Resumo das Mudanças
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/migrations/[nova].sql` | Recriar função com coluna correta |
+| `src/components/ui/date-filter-popover.tsx` | Adicionar `startOfDay` e `endOfDay` no `handleApplyCustomDate` |
 
 ---
 
 ## Resultado Esperado
 
-- Leads vindos de webhook serão automaticamente distribuídos
-- Pipeline e estágio serão atribuídos conforme configuração da fila
-- Responsável será atribuído via round-robin
-- Leads órfãos serão redistribuídos
+Após a correção:
+
+- Selecionar **apenas dia 01** → mostra leads de `01/02 00:00:00` até `01/02 23:59:59`
+- Selecionar **apenas dia 02** → mostra leads de `02/02 00:00:00` até `02/02 23:59:59`
+- Selecionar **01 a 02** → mostra leads de `01/02 00:00:00` até `02/02 23:59:59`
+
+Isso corrige tanto a Pipeline quanto o Dashboard, já que ambos usam o mesmo componente `DateFilterPopover`.
 
 ---
 
 ## Seção Técnica
 
-### Diferença entre as colunas
+### Por que isso acontece
 
-| Nome Atual | Nome na Função | Consequência |
-|------------|----------------|--------------|
-| `last_assigned_index` | `current_position` (errado) | Erro e falha silenciosa |
+O componente `react-day-picker` retorna objetos `Date` com a hora atual do navegador no momento do clique. Por exemplo, se você clica no dia 01 às 15:30, ele retorna `2026-02-01T15:30:00`.
 
-### Por que a migration anterior não funcionou
+A função `isWithinInterval` do `date-fns` faz uma comparação precisa de timestamps:
 
-A migration `20260131191958` criou a função referenciando `current_position`, mas:
-1. A coluna `current_position` nunca foi adicionada à tabela
-2. A tabela já tinha `last_assigned_index` de migrations anteriores
-3. O erro acontece em runtime, não na criação da função
+```typescript
+// Lead criado às 10:00 do dia 01
+leadDate = 2026-02-01T10:00:00
 
-### Fluxo após correção
+// Intervalo selecionado (clique às 15:30)
+from = 2026-02-01T15:30:00
+to = 2026-02-01T15:30:00
 
+// isWithinInterval retorna FALSE
+// porque 10:00 < 15:30 (leadDate está ANTES do intervalo)
 ```
-Webhook recebe lead
-    ↓
-Insert na tabela leads
-    ↓
-Trigger trigger_lead_intake dispara
-    ↓
-Função handle_lead_intake executa
-    ↓
-pick_round_robin_for_lead encontra fila
-    ↓
-Pipeline/Stage são atribuídos
-    ↓
-Próximo membro disponível é selecionado
-    ↓
-Lead é atribuído ao responsável
-    ↓
-Atividade é registrada
+
+### A correção
+
+```typescript
+from = startOfDay(2026-02-01) = 2026-02-01T00:00:00
+to = endOfDay(2026-02-01) = 2026-02-01T23:59:59.999
+
+// Agora isWithinInterval retorna TRUE
+// porque 10:00 está entre 00:00 e 23:59
 ```
 
