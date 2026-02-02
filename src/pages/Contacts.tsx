@@ -95,7 +95,7 @@ export default function Contacts() {
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
-  const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
+  const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
@@ -119,13 +119,8 @@ export default function Contacts() {
 
   // Calculate date range from preset or custom range
   const dateRange = useMemo(() => {
-    if (customDateRange) {
-      return customDateRange;
-    }
-    if (datePreset) {
-      return getDateRangeFromPreset(datePreset);
-    }
-    return null;
+    if (customDateRange) return customDateRange;
+    return getDateRangeFromPreset(datePreset);
   }, [datePreset, customDateRange]);
 
   // Build filters
@@ -415,10 +410,8 @@ export default function Contacts() {
 
                 {/* Date Filter - Using the nice DateFilterPopover */}
                 <DateFilterPopover
-                  datePreset={datePreset || 'last30days'}
-                  onDatePresetChange={(preset) => {
-                    handleFilterChange(setDatePreset)(preset);
-                  }}
+                  datePreset={datePreset}
+                  onDatePresetChange={handleFilterChange(setDatePreset)}
                   customDateRange={customDateRange}
                   onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
                   defaultPreset="last30days"
