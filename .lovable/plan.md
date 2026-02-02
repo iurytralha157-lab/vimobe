@@ -1,98 +1,77 @@
 
 
-# Plano: Corrigir Filtro de Data na Pipeline e Dashboard
+# Plano: Corrigir Inconsistência no Filtro de Data em Contatos
 
 ## Problema Identificado
 
-O filtro de data personalizado **não aplica `startOfDay` e `endOfDay`** nas datas selecionadas pelo usuário. Quando você seleciona apenas o dia 01/02:
+O usuário relatou que um lead aparece na **Pipeline** mas não em **Contatos**. Após investigação, identifiquei duas causas:
 
-| O que deveria acontecer | O que está acontecendo |
-|-------------------------|------------------------|
-| `from: 2026-02-01 00:00:00` | `from: 2026-02-01 12:00:00` (hora do clique) |
-| `to: 2026-02-01 23:59:59` | `to: 2026-02-01 12:00:00` (hora do clique) |
+### 1. Comportamento diferente entre Pipeline e Contatos
 
-Isso faz com que:
-- Leads criados entre 00:00 e 12:00 do dia 01 sejam **excluídos**
-- Leads criados depois das 12:00 do dia 01 sejam **excluídos** (to deveria ser 23:59:59)
+| Página | Filtro Padrão | Tipo de Filtro |
+|--------|---------------|----------------|
+| **Pipeline** | `last30days` | Client-side (após buscar todos) |
+| **Contatos** | `null` (sem filtro) | Server-side (no banco) |
 
-Quando você seleciona 01 e 02 juntos:
-- O intervalo fica maior (01 12:00 até 02 12:00) e "por acaso" pega os leads
+Quando o usuário seleciona um período específico (ex: "Hoje") em Contatos e não há leads nesse período, a lista fica vazia.
 
----
+### 2. Inconsistência visual no DateFilterPopover
 
-## Onde Está o Bug
-
-### 1. `date-filter-popover.tsx` (linha 51-53)
-
-O calendário retorna datas com a hora atual do navegador. Ao aplicar, não há conversão para início/fim do dia:
-
-```typescript
-// ATUAL (problemático)
-onCustomDateRangeChange?.({
-  from: tempDateRange.from,    // 2026-02-01T12:34:56
-  to: tempDateRange.to,        // 2026-02-01T12:34:56
-});
-```
-
-### 2. `Pipelines.tsx` (linha 398-401)
-
-O componente usa o customDateRange diretamente, sem normalizar:
-
-```typescript
-// ATUAL (problemático)
-const dateRange = useMemo(() => {
-  if (customDateRange) return customDateRange; // Usa datas com hora errada
-  return getDateRangeFromPreset(datePreset);
-}, [datePreset, customDateRange]);
-```
-
-### 3. Dashboard hooks (linhas 134-135 e 441-442)
-
-Usam `filters?.dateRange?.from/to?.toISOString()` diretamente:
-
-```typescript
-.gte('created_at', currentFrom.toISOString())  // Usa hora errada
-.lte('created_at', currentTo.toISOString())    // Usa hora errada
-```
+Na página de Contatos:
+- O estado `datePreset` começa como `null` (sem filtro = mostra todos)
+- Mas o botão exibe "Últimos 30 dias" porque usa `datePreset || 'last30days'`
+- Isso confunde o usuário sobre qual filtro está realmente ativo
 
 ---
 
 ## Solução
 
-Aplicar `startOfDay` e `endOfDay` no momento correto - quando o usuário confirma a seleção personalizada.
+Corrigir a página de Contatos para ter comportamento consistente com a Pipeline:
 
-### Arquivo 1: `src/components/ui/date-filter-popover.tsx`
+### Mudança 1: Iniciar com `'last30days'` ao invés de `null`
 
-Corrigir a função `handleApplyCustomDate`:
+Em `src/pages/Contacts.tsx`, linha 98:
 
 ```typescript
-import { startOfDay, endOfDay } from 'date-fns';
+// ANTES
+const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
 
-const handleApplyCustomDate = () => {
-  if (tempDateRange.from && tempDateRange.to) {
-    onDatePresetChange('custom');
-    onCustomDateRangeChange?.({
-      from: startOfDay(tempDateRange.from),  // 00:00:00
-      to: endOfDay(tempDateRange.to),        // 23:59:59
-    });
-    setDatePickerOpen(false);
-    setTempDateRange({});
-  }
-};
+// DEPOIS  
+const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
 ```
 
-Esta é a correção mais limpa porque:
-1. Resolve o problema na origem (onde a data é selecionada)
-2. Todos os consumidores (Pipeline, Dashboard, etc.) recebem as datas já normalizadas
-3. Não precisa alterar nenhum outro arquivo
+### Mudança 2: Atualizar tipo e lógica do dateRange
 
----
+```typescript
+// ANTES (linhas 121-129)
+const dateRange = useMemo(() => {
+  if (customDateRange) return customDateRange;
+  if (datePreset) return getDateRangeFromPreset(datePreset);
+  return null;
+}, [datePreset, customDateRange]);
 
-## Resumo das Mudanças
+// DEPOIS
+const dateRange = useMemo(() => {
+  if (customDateRange) return customDateRange;
+  return getDateRangeFromPreset(datePreset);
+}, [datePreset, customDateRange]);
+```
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/ui/date-filter-popover.tsx` | Adicionar `startOfDay` e `endOfDay` no `handleApplyCustomDate` |
+### Mudança 3: Atualizar o DateFilterPopover
+
+```typescript
+// ANTES (linhas 417-425)
+<DateFilterPopover
+  datePreset={datePreset || 'last30days'}
+  ...
+/>
+
+// DEPOIS
+<DateFilterPopover
+  datePreset={datePreset}
+  ...
+/>
+```
 
 ---
 
@@ -100,41 +79,47 @@ Esta é a correção mais limpa porque:
 
 Após a correção:
 
-- Selecionar **apenas dia 01** → mostra leads de `01/02 00:00:00` até `01/02 23:59:59`
-- Selecionar **apenas dia 02** → mostra leads de `02/02 00:00:00` até `02/02 23:59:59`
-- Selecionar **01 a 02** → mostra leads de `01/02 00:00:00` até `02/02 23:59:59`
+- **Pipeline** e **Contatos** terão o mesmo comportamento inicial (últimos 30 dias)
+- O botão de data mostrará corretamente o filtro ativo
+- Quando o usuário selecionar "Hoje" e não houver leads, ficará claro que é por causa do filtro
+- O usuário pode usar "Limpar filtros" para ver todos os contatos
 
-Isso corrige tanto a Pipeline quanto o Dashboard, já que ambos usam o mesmo componente `DateFilterPopover`.
+---
+
+## Resumo das Mudanças
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/Contacts.tsx` | Mudar estado inicial de `null` para `'last30days'` e ajustar lógica |
 
 ---
 
 ## Seção Técnica
 
-### Por que isso acontece
+### Por que o problema acontece
 
-O componente `react-day-picker` retorna objetos `Date` com a hora atual do navegador no momento do clique. Por exemplo, se você clica no dia 01 às 15:30, ele retorna `2026-02-01T15:30:00`.
+A página de Contatos foi projetada originalmente para não ter filtro de data por padrão (`datePreset = null`), mostrando todos os contatos. Porém:
 
-A função `isWithinInterval` do `date-fns` faz uma comparação precisa de timestamps:
+1. O `DateFilterPopover` usa `datePreset || 'last30days'` como fallback visual
+2. Isso faz o botão mostrar "Últimos 30 dias" mesmo quando não há filtro
+3. Quando o usuário clica em um preset (ex: "Hoje"), o filtro é aplicado no servidor
+4. Se não há leads nesse período, a lista fica vazia
 
-```typescript
-// Lead criado às 10:00 do dia 01
-leadDate = 2026-02-01T10:00:00
+Na Pipeline, o filtro padrão é `'last30days'` e é aplicado client-side após buscar até 500 leads, criando um comportamento diferente.
 
-// Intervalo selecionado (clique às 15:30)
-from = 2026-02-01T15:30:00
-to = 2026-02-01T15:30:00
-
-// isWithinInterval retorna FALSE
-// porque 10:00 < 15:30 (leadDate está ANTES do intervalo)
-```
-
-### A correção
+### Diferença técnica entre as páginas
 
 ```typescript
-from = startOfDay(2026-02-01) = 2026-02-01T00:00:00
-to = endOfDay(2026-02-01) = 2026-02-01T23:59:59.999
+// Pipeline - filtra CLIENT-SIDE
+const leads = await supabase.from('leads').select('*').limit(500);
+const filtered = leads.filter(l => isWithinInterval(l.created_at, dateRange));
 
-// Agora isWithinInterval retorna TRUE
-// porque 10:00 está entre 00:00 e 23:59
+// Contatos - filtra SERVER-SIDE (RPC)
+const contacts = await supabase.rpc('list_contacts_paginated', {
+  p_created_from: dateRange.from,
+  p_created_to: dateRange.to
+});
 ```
+
+A solução proposta alinha o comportamento inicial das duas páginas.
 
