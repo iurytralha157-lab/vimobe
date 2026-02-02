@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   DatePreset, 
@@ -49,8 +49,8 @@ export function DateFilterPopover({
     if (tempDateRange.from && tempDateRange.to) {
       onDatePresetChange('custom');
       onCustomDateRangeChange?.({
-        from: tempDateRange.from,
-        to: tempDateRange.to,
+        from: startOfDay(tempDateRange.from),
+        to: endOfDay(tempDateRange.to),
       });
       setDatePickerOpen(false);
       setTempDateRange({});
