@@ -34,8 +34,8 @@ interface MobileFiltersProps {
   setSelectedTag: (value: string) => void;
   selectedSource: string;
   setSelectedSource: (value: string) => void;
-  datePreset: DatePreset | null;
-  onDatePresetChange: (preset: DatePreset | null) => void;
+  datePreset: DatePreset;
+  onDatePresetChange: (preset: DatePreset) => void;
   customDateRange: { from: Date; to: Date } | null;
   onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
   pipelines: { id: string; name: string }[];
@@ -209,8 +209,8 @@ export function MobileFilters({
             <div className="space-y-2">
               <label className="text-sm font-medium">Período</label>
               <DateFilterPopover
-                datePreset={datePreset || 'last30days'}
-                onDatePresetChange={(preset) => onDatePresetChange(preset)}
+                datePreset={datePreset}
+                onDatePresetChange={onDatePresetChange}
                 customDateRange={customDateRange}
                 onCustomDateRangeChange={onCustomDateRangeChange}
                 triggerClassName="w-full justify-start"
