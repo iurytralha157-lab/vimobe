@@ -1,133 +1,95 @@
 
-# Análise: Sistema de Domínios do Site Imobiliário
 
-## Como Funciona Atualmente
+# Plano: Corrigir Distribuição de Leads via Webhook
 
-### 1. Estrutura do Banco de Dados
-A tabela `organization_sites` já possui os campos necessários:
-- `subdomain` - para subdomínios VIMOB (ex: `minhaempresa.vimob.com.br`)
-- `custom_domain` - para domínios próprios (ex: `www.minhaempresa.com.br`)
-- `domain_verified` - flag de verificação DNS
-- `domain_verified_at` - data da verificação
+## Problema Identificado
 
-### 2. Fluxo de Resolução de Domínio
-A edge function `resolve-site-domain` recebe um hostname e:
-1. Busca por `custom_domain` verificado
-2. Se não encontrar, busca por `subdomain`
-3. Retorna a configuração do site
+A função de distribuição `handle_lead_intake` no banco de dados está falhando silenciosamente porque referencia uma coluna que não existe:
 
-### 3. Verificação DNS
-A edge function `verify-domain-dns` usa a API do Google DNS para verificar se o domínio aponta para o IP `185.158.133.1` (IP do Lovable).
+- **Função usa**: `v_queue.current_position`
+- **Coluna real na tabela**: `last_assigned_index`
 
----
+Isso faz com que os leads sejam criados corretamente, mas **não sejam distribuídos** para pipeline/estágio e responsável.
 
-## O Problema
-
-O sistema tem a lógica pronta, **mas não funciona na prática** porque:
-
-1. **O domínio `vimob.com.br` não está configurado para resolver subdomínios** - Não adianta o usuário definir `minhaempresa` como subdomínio se `minhaempresa.vimob.com.br` não está apontando para o Lovable.
-
-2. **O site público só funciona em modo preview** - Atualmente, só funciona via `/site/preview?org=ID`. Não há rota pública que funcione em domínio externo.
-
-3. **O PublicSiteContext ignora domínios Lovable** - O código atual pula a resolução para domínios `lovable.app`, `lovable.dev`, etc.
-
----
-
-## Solução Proposta
-
-### Opção A: Subdomínios via Seu Domínio Personalizado (Recomendado)
-
-Como você usa `vimob.bettercompany.com.br` como domínio do CRM, podemos criar uma estrutura assim:
-
-| Tipo | URL | Uso |
-|------|-----|-----|
-| CRM | `vimob.bettercompany.com.br` | Sistema principal |
-| Sites | `sites.vimob.com.br/minhaempresa` | Sites publicados |
-| Preview | `vimob.bettercompany.com.br/site/preview?org=ID` | Preview interno |
-
-**Funcionamento:**
-1. Usuário configura o site no CRM
-2. Define um "slug" (ex: `minhaempresa`)
-3. Site fica disponível em `sites.vimob.com.br/minhaempresa`
-4. Quando quiser, aponta seu domínio próprio para Lovable
-
-### Opção B: Subdomínios Dinâmicos (Requer DNS Wildcard)
-
-Para usar `minhaempresa.vimob.com.br`:
-1. Configurar DNS wildcard `*.vimob.com.br → 185.158.133.1`
-2. Adicionar `*.vimob.com.br` no painel do Lovable
-3. O sistema já está preparado para resolver
-
----
-
-## Implementação Proposta
-
-### Parte 1: Rota de Sites Publicados
-
-Criar rota `/sites/:slug/*` que:
-1. Busca a organização pelo slug (subdomínio)
-2. Carrega a configuração do site
-3. Renderiza o site público
-
+### Evidência nos logs do banco:
 ```
-/sites/minhaempresa           → Home
-/sites/minhaempresa/imoveis   → Listagem
-/sites/minhaempresa/imovel/AP001 → Detalhe
+ERROR: record "v_queue" has no field "current_position"
 ```
 
-### Parte 2: Atualizar Configurações de Domínio
-
-Na página de configurações, mostrar:
-- **Link do Site Publicado**: `https://vimob.bettercompany.com.br/sites/minhaempresa`
-- **Botão Copiar Link**
-- **Instruções para domínio próprio** (manter as atuais)
-
-### Parte 3: Resolver Domínios Próprios
-
-Para clientes que apontem seu domínio:
-1. Usuário configura DNS: `www.cliente.com.br → 185.158.133.1`
-2. Adiciona `www.cliente.com.br` no campo "Domínio Próprio"
-3. Sistema verifica o DNS
-4. Quando verificado, o site funciona no domínio do cliente
-
-**Limitação**: Para domínios próprios funcionarem, precisam ser adicionados no painel do Lovable como domínios customizados. Isso é uma limitação da plataforma.
+### Leads afetados (exemplos recentes):
+| Lead | Status |
+|------|--------|
+| Luiz Vieira | pipeline_id: null, assigned: null |
+| Edney Carlos | pipeline_id: null, assigned: null |
+| João Batista | pipeline_id: null, assigned: null |
 
 ---
 
-## Resumo da Arquitetura
+## Solução
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         ACESSO AO SITE                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  OPÇÃO 1: Preview (desenvolvimento)                             │
-│  └─ /site/preview?org=UUID                                      │
-│                                                                 │
-│  OPÇÃO 2: Site Publicado via Slug (imediato)                    │
-│  └─ /sites/minhaempresa                                         │
-│  └─ https://vimob.bettercompany.com.br/sites/minhaempresa       │
-│                                                                 │
-│  OPÇÃO 3: Domínio Próprio (requer verificação DNS)              │
-│  └─ https://www.clienteimobiliaria.com.br                       │
-│  └─ Requer: registro A → 185.158.133.1                          │
-│  └─ Requer: domínio adicionado no painel Lovable                │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Criar uma migration para corrigir a função `handle_lead_intake`, trocando todas as referências de `current_position` para `last_assigned_index`.
+
+### Linhas a corrigir na função:
+
+1. **Linha ~99**: `v_next_index := COALESCE(v_queue.current_position, 0);`
+   - Trocar para: `v_next_index := COALESCE(v_queue.last_assigned_index, 0);`
+
+2. **Linha ~118-120**: `UPDATE round_robins SET current_position = ...`
+   - Trocar para: `UPDATE round_robins SET last_assigned_index = ...`
+
+---
+
+## Implementação
+
+Criar migration SQL que:
+
+1. Recria a função `handle_lead_intake` com a coluna correta
+2. Mantém toda a lógica existente (distribuição, atividades, redistribuição)
+
+### Código da correção:
+
+```sql
+-- Fix handle_lead_intake: trocar current_position por last_assigned_index
+CREATE OR REPLACE FUNCTION public.handle_lead_intake(p_lead_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  -- ... declarações mantidas ...
+BEGIN
+  -- ... lógica mantida ...
+  
+  -- CORREÇÃO: usar last_assigned_index ao invés de current_position
+  v_next_index := COALESCE(v_queue.last_assigned_index, 0);
+  
+  -- ... mais lógica ...
+  
+  -- CORREÇÃO: atualizar last_assigned_index ao invés de current_position
+  UPDATE round_robins 
+  SET last_assigned_index = (v_next_index + 1) % v_member_count
+  WHERE id = v_round_robin_id;
+  
+  -- ... resto da função ...
+END;
+$function$;
 ```
 
 ---
 
-## Sobre o Email em Outra Plataforma
+## Ação Adicional
 
-Quando o cliente usa email em UOL, Hostinger, etc:
-- Ele **NÃO** deve alterar os registros MX (email)
-- Ele deve apenas adicionar registros **A** para o site
-- As instruções que já mostramos estão corretas:
-  - Tipo: A | Nome: @ | Valor: 185.158.133.1
-  - Tipo: A | Nome: www | Valor: 185.158.133.1
+Após aplicar a correção, podemos redistribuir os leads que ficaram "órfãos" chamando manualmente a função para cada um:
 
-Isso **não afeta** o email, apenas o site.
+```sql
+-- Redistribuir leads sem responsável
+SELECT handle_lead_intake(id) 
+FROM leads 
+WHERE assigned_user_id IS NULL 
+  AND created_at > '2026-02-02'
+  AND source = 'webhook';
+```
 
 ---
 
@@ -135,22 +97,53 @@ Isso **não afeta** o email, apenas o site.
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/App.tsx` | Adicionar rota `/sites/:slug/*` |
-| `src/pages/public/PublishedSiteWrapper.tsx` | **CRIAR** - Similar ao PreviewSiteWrapper mas usa slug |
-| `src/pages/SiteSettings.tsx` | Mostrar link do site publicado |
-| `src/hooks/use-organization-site.ts` | Adicionar campo slug (reusar subdomain) |
+| `supabase/migrations/[nova].sql` | Recriar função com coluna correta |
 
 ---
 
-## Teste Imediato
+## Resultado Esperado
 
-Após implementação, você poderá:
-1. Definir um slug (ex: `teste`) nas configurações do site
-2. Acessar `https://vimob.bettercompany.com.br/sites/teste`
-3. Ver o site funcionando imediatamente, sem precisar configurar DNS
+- Leads vindos de webhook serão automaticamente distribuídos
+- Pipeline e estágio serão atribuídos conforme configuração da fila
+- Responsável será atribuído via round-robin
+- Leads órfãos serão redistribuídos
 
-Para domínios próprios, ainda seria necessário:
-1. Cliente apontar DNS para `185.158.133.1`
-2. Adicionar o domínio no painel do Lovable
-3. Aguardar verificação
+---
+
+## Seção Técnica
+
+### Diferença entre as colunas
+
+| Nome Atual | Nome na Função | Consequência |
+|------------|----------------|--------------|
+| `last_assigned_index` | `current_position` (errado) | Erro e falha silenciosa |
+
+### Por que a migration anterior não funcionou
+
+A migration `20260131191958` criou a função referenciando `current_position`, mas:
+1. A coluna `current_position` nunca foi adicionada à tabela
+2. A tabela já tinha `last_assigned_index` de migrations anteriores
+3. O erro acontece em runtime, não na criação da função
+
+### Fluxo após correção
+
+```
+Webhook recebe lead
+    ↓
+Insert na tabela leads
+    ↓
+Trigger trigger_lead_intake dispara
+    ↓
+Função handle_lead_intake executa
+    ↓
+pick_round_robin_for_lead encontra fila
+    ↓
+Pipeline/Stage são atribuídos
+    ↓
+Próximo membro disponível é selecionado
+    ↓
+Lead é atribuído ao responsável
+    ↓
+Atividade é registrada
+```
 
