@@ -131,19 +131,22 @@ export default function Pipelines() {
   // Check if user has lead_view_all permission
   const { data: hasLeadViewAll = false, isLoading: permissionLoading } = useHasPermission('lead_view_all');
   
-  // Set initial filter based on user role AND permissions
+  // Check if user is a team leader (can edit cadences = is admin OR team leader)
+  const isTeamLeader = useCanEditCadences();
+  
+  // Set initial filter based on user role, permissions, AND team leadership
   // Wait for permission to load before deciding the filter
   useEffect(() => {
     if (filterUser === undefined && profile?.id && !permissionLoading) {
-      // For admin, super_admin, OR users with lead_view_all permission: show all
-      if (isAdmin || hasLeadViewAll) {
+      // For admin, super_admin, users with lead_view_all permission, OR team leaders: show all
+      if (isAdmin || hasLeadViewAll || isTeamLeader) {
         setFilterUser('all');
       } else {
         // For regular users without permission, pre-select their own name
         setFilterUser(profile.id);
       }
     }
-  }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading]);
+  }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading, isTeamLeader]);
   
   const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined);
   const { data: users = [] } = useOrganizationUsers();
