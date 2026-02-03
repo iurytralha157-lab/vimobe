@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   Shield,
+  Lightbulb,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemSettings } from '@/hooks/use-system-settings';
@@ -25,6 +26,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Building2, label: 'Organizações', path: '/admin/organizations' },
   { icon: Users, label: 'Usuários', path: '/admin/users' },
+  { icon: Lightbulb, label: 'Solicitações', path: '/admin/requests' },
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
 

@@ -6,7 +6,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Shield
+  Shield,
+  Lightbulb
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Building2, label: 'Organizações', path: '/admin/organizations' },
   { icon: Users, label: 'Usuários', path: '/admin/users' },
+  { icon: Lightbulb, label: 'Solicitações', path: '/admin/requests' },
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
 

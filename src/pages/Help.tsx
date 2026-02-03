@@ -1,5 +1,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionContent,
@@ -24,9 +25,14 @@ import {
   Zap,
   UserPlus,
   Phone,
-  Globe
+  Globe,
+  Lightbulb,
+  Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
+import { QuickActions } from '@/components/help/QuickActions';
+import { MyRequestsList } from '@/components/help/MyRequestsList';
+import { FeatureRequestDialog } from '@/components/help/FeatureRequestDialog';
 
 const helpSections = [
   {
@@ -64,8 +70,8 @@ const helpSections = [
         answer: 'Clique no card do lead para abrir o painel de detalhes. Na aba "Histórico" você vê todas as atividades: mensagens enviadas, ligações realizadas, mudanças de estágio, tarefas concluídas e anotações.'
       },
       {
-        question: 'Como adicionar anotações em um lead?',
-        answer: 'Abra os detalhes do lead clicando no card. Na aba "Atividades" você pode adicionar observações, registrar ligações e adicionar informações importantes que ficarão salvas no histórico.'
+        question: 'Como alterar nome, cor e ordem das colunas?',
+        answer: 'Clique no ícone de engrenagem ao lado do nome da pipeline. No editor de estágios você pode renomear colunas, alterar cores, reordenar arrastando e adicionar/remover etapas do funil.'
       },
       {
         question: 'Como filtrar leads?',
@@ -78,6 +84,10 @@ const helpSections = [
     title: 'WhatsApp e Conversas',
     items: [
       {
+        question: 'Como conectar o WhatsApp?',
+        answer: 'Acesse Configurações > WhatsApp e clique em "Nova Sessão". Escaneie o QR Code com seu celular. Após conectar, você poderá enviar e receber mensagens diretamente pelo CRM.'
+      },
+      {
         question: 'Como enviar mensagens pelo CRM?',
         answer: 'Acesse o menu "Conversas" para ver todas as conversas ativas. Clique em uma conversa para abrir o chat e enviar mensagens. Você também pode iniciar uma conversa clicando no botão de WhatsApp no card do lead.'
       },
@@ -88,10 +98,6 @@ const helpSections = [
       {
         question: 'Como enviar arquivos e imagens?',
         answer: 'No chat, clique no ícone de anexo ao lado do campo de texto. Você pode enviar fotos, documentos PDF e outros arquivos. Eles serão entregues via WhatsApp para o cliente.'
-      },
-      {
-        question: 'Como ver conversas não lidas?',
-        answer: 'Conversas com mensagens não lidas aparecem destacadas na lista com um indicador numérico. O ícone do chat flutuante também mostra a quantidade total de mensagens não lidas.'
       },
     ]
   },
@@ -104,16 +110,16 @@ const helpSections = [
         answer: 'Cadências são sequências de tarefas automáticas que são criadas quando um lead entra em um estágio. Por exemplo: dia 0 = ligação de boas-vindas, dia 1 = mensagem de follow-up, dia 3 = envio de material. Isso garante um acompanhamento consistente.'
       },
       {
+        question: 'Como configurar cadências por estágio?',
+        answer: 'Acesse CRM > Cadências. Selecione o estágio desejado e adicione as tarefas com seus respectivos dias. Você pode definir tipo (ligação, mensagem, visita), título, descrição e mensagem recomendada.'
+      },
+      {
         question: 'Como marcar uma tarefa como concluída?',
         answer: 'Nas tarefas do lead, clique no checkbox ao lado da tarefa. Ela será marcada como concluída e removida da sua lista de pendências. O sistema registra quem concluiu e quando.'
       },
       {
         question: 'Como criar tarefas manuais?',
         answer: 'Abra os detalhes do lead e clique em "Nova Tarefa". Defina o título, tipo (ligação, mensagem, visita), data de vencimento e descrição. A tarefa aparecerá na sua agenda e no painel do lead.'
-      },
-      {
-        question: 'Onde vejo todas as minhas tarefas?',
-        answer: 'O Dashboard mostra as tarefas do dia. A Agenda mostra todas as tarefas em formato de calendário. Você pode filtrar por data, tipo e status (pendente, concluída, atrasada).'
       },
     ]
   },
@@ -127,7 +133,7 @@ const helpSections = [
       },
       {
         question: 'Como sincronizar com Google Agenda?',
-        answer: 'Em Configurações > Integrações, conecte sua conta Google. Após autorizar, seus eventos do CRM serão sincronizados automaticamente com sua agenda Google e vice-versa.'
+        answer: 'Na tela da Agenda, clique em "Conectar Google Agenda". Autorize o acesso e seus eventos serão sincronizados automaticamente entre o CRM e sua agenda Google.'
       },
       {
         question: 'Como visualizar a agenda de toda equipe?',
@@ -148,12 +154,8 @@ const helpSections = [
         answer: 'Cada imóvel recebe um código automático baseado no tipo: AP (Apartamento), CA (Casa), TE (Terreno), CO (Comercial), SA (Sala), LA (Laje). O número incrementa automaticamente: AP0001, AP0002, etc.'
       },
       {
-        question: 'Como vincular um imóvel a um lead?',
-        answer: 'Nos detalhes do lead, selecione o imóvel de interesse no campo específico. Você também pode fazer isso ao criar o lead. Leads podem ter interesse em múltiplos imóveis.'
-      },
-      {
-        question: 'Como destacar imóveis importantes?',
-        answer: 'Na lista de imóveis, use o botão de estrela para marcar como destaque. Imóveis em destaque aparecem primeiro nas buscas e podem ser usados para campanhas específicas.'
+        question: 'Como publicar imóveis no site?',
+        answer: 'Ao cadastrar ou editar um imóvel, marque a opção "Publicar no site". Configure o site em Configurações > Site para personalizar cores, logo e informações de contato.'
       },
     ]
   },
@@ -166,12 +168,8 @@ const helpSections = [
         answer: 'Tags são etiquetas coloridas para categorizar leads. Exemplos: "Quente" (alta probabilidade), "Investidor", "Alto Padrão", "Urgente". Elas facilitam filtrar e organizar seus leads.'
       },
       {
-        question: 'Como aplicar tags em leads?',
-        answer: 'Abra os detalhes do lead e clique em "Adicionar Tag". Selecione uma tag existente ou crie uma nova com nome e cor. Você pode aplicar múltiplas tags em um mesmo lead.'
-      },
-      {
-        question: 'Como filtrar leads por tags?',
-        answer: 'No pipeline e na lista de contatos, use o filtro de tags. Você pode selecionar uma ou mais tags para ver apenas os leads que possuem todas elas.'
+        question: 'Como criar e gerenciar tags?',
+        answer: 'Acesse CRM > Tags. Crie novas tags com nome e cor. Você pode aplicar tags nos leads através do card ou edição de detalhes. Tags podem ser usadas em regras de distribuição.'
       },
     ]
   },
@@ -184,12 +182,12 @@ const helpSections = [
         answer: 'A roleta distribui automaticamente novos leads entre os corretores da equipe. Quando um lead chega (via Meta, site ou manualmente), ele é atribuído ao próximo corretor da fila de forma justa e equilibrada.'
       },
       {
-        question: 'Como funciona a distribuição por peso?',
-        answer: 'Você pode definir pesos diferentes para cada corretor. Por exemplo, um corretor sênior pode ter peso 2 e receber o dobro de leads que um júnior com peso 1.'
+        question: 'Como configurar regras de distribuição?',
+        answer: 'Acesse CRM > Distribuição. Crie filas com os usuários participantes e defina pesos. Adicione regras para direcionar leads específicos (por fonte, campanha, tag) para filas diferentes.'
       },
       {
-        question: 'Posso ter roletas diferentes?',
-        answer: 'Sim! Crie roletas específicas por campanha, tipo de imóvel ou fonte. Exemplo: leads do Instagram vão para a roleta A, leads do site para a roleta B.'
+        question: 'Como funciona a distribuição por peso?',
+        answer: 'Você pode definir pesos diferentes para cada corretor. Por exemplo, um corretor sênior pode ter peso 2 e receber o dobro de leads que um júnior com peso 1.'
       },
     ]
   },
@@ -205,23 +203,19 @@ const helpSections = [
         question: 'Os leads chegam em tempo real?',
         answer: 'Sim! Após configurar, os leads do Meta são recebidos instantaneamente. Eles aparecem na coluna "Novo Lead" do pipeline e são distribuídos pela roleta automaticamente.'
       },
-      {
-        question: 'Como mapear campanhas para imóveis?',
-        answer: 'Nas configurações do Meta, crie regras de mapeamento: leads de uma campanha específica são automaticamente associados a um código de imóvel.'
-      },
     ]
   },
   {
     icon: Globe,
-    title: 'Integração WordPress/Site',
+    title: 'Site Público',
     items: [
       {
-        question: 'Como receber leads do meu site?',
-        answer: 'Acesse Configurações > Webhooks e copie a URL do webhook. Configure seu formulário WordPress para enviar os dados para essa URL. Os leads chegarão automaticamente no CRM.'
+        question: 'Como configurar meu site?',
+        answer: 'Acesse Configurações > Site. Configure título, cores, logo, informações de contato e redes sociais. Ative o site e ele ficará disponível no subdomínio configurado ou domínio personalizado.'
       },
       {
-        question: 'Quais campos são importados?',
-        answer: 'Os campos padrão são: nome, email, telefone, mensagem e código do imóvel. Campos personalizados também podem ser mapeados nas configurações.'
+        question: 'Como conectar domínio próprio?',
+        answer: 'Em Configurações > Site, adicione seu domínio personalizado. Siga as instruções para configurar o DNS apontando para nossos servidores. A verificação é automática.'
       },
     ]
   },
@@ -230,16 +224,12 @@ const helpSections = [
     title: 'Financeiro',
     items: [
       {
-        question: 'Como registrar uma venda?',
-        answer: 'No menu Contratos, clique em "Novo Contrato". Preencha os dados do cliente, imóvel, valor e condições de pagamento. O sistema calcula automaticamente as comissões baseado nas regras configuradas.'
+        question: 'Como registrar receitas e despesas?',
+        answer: 'No menu Financeiro > Lançamentos, clique em "Novo Lançamento". Defina tipo (receita ou despesa), valor, categoria, data de vencimento e descrição. Você pode parcelar e configurar recorrência.'
       },
       {
         question: 'Como acompanhar comissões?',
         answer: 'O menu Comissões mostra todas as comissões pendentes, aprovadas e pagas. Você vê o valor, corretor responsável, contrato relacionado e pode gerenciar o fluxo de aprovação.'
-      },
-      {
-        question: 'Como lançar despesas e receitas?',
-        answer: 'No menu Financeiro > Lançamentos, registre receitas e despesas com categoria, data de vencimento e competência. Use para controlar fluxo de caixa da imobiliária.'
       },
     ]
   },
@@ -285,7 +275,11 @@ const helpSections = [
       },
       {
         question: 'Como criar uma automação?',
-        answer: 'No menu Automações, clique em "Nova Automação". Defina o gatilho (ex: lead criado), as condições (ex: fonte = Meta) e as ações (ex: enviar mensagem de boas-vindas).'
+        answer: 'No menu Automações, clique em "Nova Automação". Use o editor visual para definir o gatilho (ex: lead criado), condições e ações. Conecte os blocos arrastando as conexões.'
+      },
+      {
+        question: 'Como configurar automação por estágio?',
+        answer: 'No editor de estágios da pipeline, você pode definir ações automáticas quando um lead entra: mudar status, atribuir responsável ou executar automação completa.'
       },
     ]
   },
@@ -295,11 +289,11 @@ const helpSections = [
     items: [
       {
         question: 'Que notificações recebo?',
-        answer: 'Você recebe notificações de: novos leads atribuídos, mensagens de clientes, tarefas vencendo, leads parados há muito tempo e menções de colegas.'
+        answer: 'Você recebe notificações de: novos leads atribuídos, mensagens de clientes, tarefas vencendo, leads parados há muito tempo, ganho de leads e respostas a solicitações.'
       },
       {
-        question: 'Como configurar notificações?',
-        answer: 'Em Configurações > Notificações, escolha quais alertas deseja receber e por qual canal (push no navegador, email). Você pode silenciar temporariamente se necessário.'
+        question: 'Como visualizar notificações?',
+        answer: 'Clique no ícone de sino no cabeçalho. Notificações não lidas aparecem com contador. Clique em uma notificação para ir diretamente ao item relacionado.'
       },
     ]
   },
@@ -321,10 +315,29 @@ const helpSections = [
       },
     ]
   },
+  {
+    icon: UserPlus,
+    title: 'Equipes e Funções',
+    items: [
+      {
+        question: 'Como criar uma equipe?',
+        answer: 'Acesse CRM > Equipes e clique em "Nova Equipe". Defina nome, adicione membros e selecione o líder. Vincule pipelines específicas à equipe para controle de acesso.'
+      },
+      {
+        question: 'O que um líder de equipe pode fazer?',
+        answer: 'Líderes visualizam todos os leads da equipe e pipelines vinculadas, podem editar cadências e configurar distribuição. Não têm acesso às áreas financeiras ou configurações globais.'
+      },
+      {
+        question: 'Como configurar funções (RBAC)?',
+        answer: 'Em Configurações > Funções, crie papéis personalizados (ex: Backoffice, Gerente, Vendedor) e defina permissões específicas para cada área do sistema.'
+      },
+    ]
+  },
 ];
 
 export default function Help() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
 
   const filteredSections = helpSections.map(section => ({
     ...section,
@@ -337,10 +350,10 @@ export default function Help() {
 
   return (
     <AppLayout title="Central de Ajuda">
-      <div className="animate-in">
+      <div className="animate-in space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <HelpCircle className="h-6 w-6 text-primary" />
             </div>
@@ -349,10 +362,31 @@ export default function Help() {
               <p className="text-muted-foreground">Tudo que você precisa saber para usar o CRM</p>
             </div>
           </div>
+          
+          <Button onClick={() => setRequestDialogOpen(true)} className="gap-2">
+            <Lightbulb className="h-4 w-4" />
+            Sugerir Melhoria
+          </Button>
         </div>
 
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Ações Rápidas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <QuickActions />
+          </CardContent>
+        </Card>
+
+        {/* My Requests */}
+        <MyRequestsList />
+
         {/* Search */}
-        <div className="relative mb-8 max-w-xl">
+        <div className="relative max-w-xl">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <input
             type="text"
@@ -395,27 +429,17 @@ export default function Help() {
           <Card className="p-12 text-center">
             <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-semibold mb-2">Nenhum resultado encontrado</h3>
-            <p className="text-muted-foreground">
-              Tente buscar por outros termos ou navegue pelas seções acima.
+            <p className="text-muted-foreground text-sm">
+              Tente buscar com outras palavras ou navegue pelas categorias acima.
             </p>
           </Card>
         )}
 
-        {/* Contact */}
-        <Card className="mt-8">
-          <CardContent className="p-6 text-center">
-            <h3 className="font-semibold mb-2">Ainda precisa de ajuda?</h3>
-            <p className="text-muted-foreground mb-4">
-              Nossa equipe de suporte está pronta para ajudar você.
-            </p>
-            <a 
-              href="mailto:suporte@vettercrm.com" 
-              className="text-primary hover:underline"
-            >
-              suporte@vettercrm.com
-            </a>
-          </CardContent>
-        </Card>
+        {/* Feature Request Dialog */}
+        <FeatureRequestDialog 
+          open={requestDialogOpen} 
+          onOpenChange={setRequestDialogOpen} 
+        />
       </div>
     </AppLayout>
   );
