@@ -14,7 +14,7 @@ export type Lead = Tables<'leads'> & {
 const LEAD_LIST_FIELDS = `
   id, name, phone, email, source, created_at, updated_at,
   stage_id, assigned_user_id, pipeline_id, organization_id,
-  property_code, message,
+  property_code, message, deal_status, won_at, lost_at,
   stage:stages(id, name, color, stage_key),
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url)
 `;
