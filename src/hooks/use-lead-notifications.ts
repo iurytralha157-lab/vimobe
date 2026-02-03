@@ -44,7 +44,7 @@ export async function notifyLeadCreated({
       user_id: assignedUserId,
       organization_id: organizationId,
       lead_id: leadId,
-      title: '🆕 Novo lead atribuído a você!',
+      title: 'Novo lead recebido',
       content: `${leadName} foi atribuído a você (origem: ${sourceLabel})`,
       type: 'lead',
     });
@@ -77,7 +77,7 @@ export async function notifyLeadCreated({
                 user_id: leader.user_id,
                 organization_id: organizationId,
                 lead_id: leadId,
-                title: '🆕 Novo lead na sua equipe!',
+                title: 'Novo lead na equipe',
                 content: `${leadName} entrou na pipeline da sua equipe (origem: ${sourceLabel})`,
                 type: 'lead',
               });
@@ -107,7 +107,7 @@ export async function notifyLeadCreated({
             user_id: admin.id,
             organization_id: organizationId,
             lead_id: leadId,
-            title: '🆕 Novo lead criado',
+            title: 'Novo lead criado',
             content: `${leadName} foi criado na organização (origem: ${sourceLabel})`,
             type: 'lead',
           });
