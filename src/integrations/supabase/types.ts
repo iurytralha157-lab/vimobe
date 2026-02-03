@@ -4637,6 +4637,7 @@ export type Database = {
           user_name: string
         }[]
       }
+      get_user_led_pipeline_ids: { Args: never; Returns: string[] }
       get_user_led_team_ids: { Args: never; Returns: string[] }
       get_user_organization_id: { Args: never; Returns: string }
       get_user_organization_role: {
