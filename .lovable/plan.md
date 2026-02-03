@@ -1,96 +1,82 @@
 
 
-# Plano: Corrigir Inconsistência no Filtro de Data em Contatos
+# Plano: Corrigir Visibilidade de Sessões WhatsApp (Privacidade)
 
 ## Problema Identificado
 
-O usuário relatou que um lead aparece na **Pipeline** mas não em **Contatos**. Após investigação, identifiquei duas causas:
+O administrador Fernando está com acesso configurado corretamente na sessão "maikson" e é proprietário de "Vendas MCMV", mas não consegue ver as conversas porque há uma inconsistência entre as regras de acesso:
 
-### 1. Comportamento diferente entre Pipeline e Contatos
+| Componente | Comportamento Atual | Comportamento Esperado |
+|------------|---------------------|------------------------|
+| `useHasWhatsAppAccess` | Retorna `true` para admins automaticamente | Verificar acesso real (proprietário OU acesso explícito) |
+| `useAccessibleSessions` | Retorna apenas sessões com acesso (correto) | ✓ Já está correto |
+| RLS `whatsapp_conversations` | Usa `is_admin()` dando acesso total | Verificar proprietário OU acesso explícito |
+| RLS `whatsapp_messages` | Provavelmente usa `is_admin()` também | Verificar proprietário OU acesso explícito |
 
-| Página | Filtro Padrão | Tipo de Filtro |
-|--------|---------------|----------------|
-| **Pipeline** | `last30days` | Client-side (após buscar todos) |
-| **Contatos** | `null` (sem filtro) | Server-side (no banco) |
+### Regra de Negócio Desejada
 
-Quando o usuário seleciona um período específico (ex: "Hoje") em Contatos e não há leads nesse período, a lista fica vazia.
-
-### 2. Inconsistência visual no DateFilterPopover
-
-Na página de Contatos:
-- O estado `datePreset` começa como `null` (sem filtro = mostra todos)
-- Mas o botão exibe "Últimos 30 dias" porque usa `datePreset || 'last30days'`
-- Isso confunde o usuário sobre qual filtro está realmente ativo
+1. **Proprietário** da sessão: vê todas as conversas daquela sessão
+2. **Usuário com acesso concedido** (checkzinho em "Acessos"): vê as conversas daquela sessão
+3. **Admin SEM acesso configurado**: NÃO vê conversas de outras sessões (privacidade)
+4. **Super Admin**: mantém acesso total para suporte técnico
 
 ---
 
 ## Solução
 
-Corrigir a página de Contatos para ter comportamento consistente com a Pipeline:
+### Mudança 1: Atualizar `use-whatsapp-access.ts`
 
-### Mudança 1: Iniciar com `'last30days'` ao invés de `null`
-
-Em `src/pages/Contacts.tsx`, linha 98:
+Remover a exceção automática para admins. O hook deve verificar se o usuário tem acesso real (proprietário OU acesso explícito):
 
 ```typescript
-// ANTES
-const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
+// ANTES (linha 17-19)
+if (profile.role === 'admin') {
+  return true;
+}
 
-// DEPOIS  
-const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
+// DEPOIS - REMOVER essa exceção
+// Agora admins também precisam ser proprietários ou ter acesso concedido
 ```
 
-### Mudança 2: Atualizar tipo e lógica do dateRange
+### Mudança 2: Atualizar RLS de `whatsapp_conversations`
 
-```typescript
-// ANTES (linhas 121-129)
-const dateRange = useMemo(() => {
-  if (customDateRange) return customDateRange;
-  if (datePreset) return getDateRangeFromPreset(datePreset);
-  return null;
-}, [datePreset, customDateRange]);
+Remover `is_admin()` das policies de SELECT e UPDATE:
 
-// DEPOIS
-const dateRange = useMemo(() => {
-  if (customDateRange) return customDateRange;
-  return getDateRangeFromPreset(datePreset);
-}, [datePreset, customDateRange]);
+```sql
+-- Policy: Users can view conversations from accessible sessions
+-- ANTES:
+(owner_user_id = auth.uid() OR is_admin() OR session_id IN (...))
+
+-- DEPOIS:
+(owner_user_id = auth.uid() OR session_id IN (...))
 ```
 
-### Mudança 3: Atualizar o DateFilterPopover
+### Mudança 3: Atualizar RLS de `whatsapp_messages`
 
-```typescript
-// ANTES (linhas 417-425)
-<DateFilterPopover
-  datePreset={datePreset || 'last30days'}
-  ...
-/>
+Mesma correção para garantir consistência.
 
-// DEPOIS
-<DateFilterPopover
-  datePreset={datePreset}
-  ...
-/>
-```
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/use-whatsapp-access.ts` | Remover exceção para `role === 'admin'` |
+| Nova migration SQL | Atualizar RLS policies de `whatsapp_conversations` e `whatsapp_messages` |
 
 ---
 
 ## Resultado Esperado
 
-Após a correção:
+Após a correção, Fernando verá:
 
-- **Pipeline** e **Contatos** terão o mesmo comportamento inicial (últimos 30 dias)
-- O botão de data mostrará corretamente o filtro ativo
-- Quando o usuário selecionar "Hoje" e não houver leads, ficará claro que é por causa do filtro
-- O usuário pode usar "Limpar filtros" para ver todos os contatos
+- ✅ Conversas da sessão "Vendas MCMV" (proprietário)
+- ✅ Conversas da sessão "maikson" (acesso concedido)
+- ❌ Conversas de Gabriel, Guilherme, Raquel (sem acesso)
 
----
-
-## Resumo das Mudanças
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/Contacts.tsx` | Mudar estado inicial de `null` para `'last30days'` e ajustar lógica |
+No dropdown "Todos os canais" aparecerá:
+- "Vendas MCMV" 
+- "maikson"
 
 ---
 
@@ -98,28 +84,24 @@ Após a correção:
 
 ### Por que o problema acontece
 
-A página de Contatos foi projetada originalmente para não ter filtro de data por padrão (`datePreset = null`), mostrando todos os contatos. Porém:
+O hook `useHasWhatsAppAccess` retorna `true` para admins (linha 17-19), fazendo o FloatingChat aparecer. Porém, o `useAccessibleSessions` corretamente não inclui sessões extras para admins.
 
-1. O `DateFilterPopover` usa `datePreset || 'last30days'` como fallback visual
-2. Isso faz o botão mostrar "Últimos 30 dias" mesmo quando não há filtro
-3. Quando o usuário clica em um preset (ex: "Hoje"), o filtro é aplicado no servidor
-4. Se não há leads nesse período, a lista fica vazia
+A query de conversas usa as sessions acessíveis do hook, mas a RLS do banco tem `OR is_admin()` que não está sendo usado porque a filtragem é feita pelo hook antes.
 
-Na Pipeline, o filtro padrão é `'last30days'` e é aplicado client-side após buscar até 500 leads, criando um comportamento diferente.
+O resultado é uma tela vazia: o chat abre mas não há sessões nem conversas.
 
-### Diferença técnica entre as páginas
+### RLS a ser removida
 
-```typescript
-// Pipeline - filtra CLIENT-SIDE
-const leads = await supabase.from('leads').select('*').limit(500);
-const filtered = leads.filter(l => isWithinInterval(l.created_at, dateRange));
-
-// Contatos - filtra SERVER-SIDE (RPC)
-const contacts = await supabase.rpc('list_contacts_paginated', {
-  p_created_from: dateRange.from,
-  p_created_to: dateRange.to
-});
+```sql
+-- Remover is_admin() das policies:
+-- 1. "Users can view conversations from accessible sessions" (SELECT)
+-- 2. "Users can update conversations from accessible sessions" (UPDATE)
 ```
 
-A solução proposta alinha o comportamento inicial das duas páginas.
+### Impacto da mudança
+
+- Admins perdem visibilidade automática de todas as conversas
+- Admins podem se conceder acesso a qualquer sessão via "Acessos"
+- Super Admins mantêm acesso total para suporte técnico
+- Privacidade das conversas é preservada conforme solicitado
 
