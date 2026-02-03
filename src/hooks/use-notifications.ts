@@ -203,13 +203,19 @@ export function useNotifications() {
   useEffect(() => {
     if (!profile?.id) return;
 
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const reconnectDelay = 2000;
+
     const setupChannel = () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
 
+      console.log('📡 Setting up notifications realtime channel for user:', profile.id);
+
       const channel = supabase
-        .channel('notifications-realtime-v3')
+        .channel(`notifications-realtime-v4-${profile.id}`)
         .on(
           'postgres_changes',
           {
@@ -219,7 +225,7 @@ export function useNotifications() {
             filter: `user_id=eq.${profile.id}`,
           },
           (payload) => {
-            console.log('🔔 New notification received:', payload);
+            console.log('🔔 New notification received via Realtime:', payload);
             
             const newNotification = payload.new as Notification;
             
@@ -228,10 +234,10 @@ export function useNotifications() {
             const isLeadNotification = newNotification.type === 'lead' || newNotification.type === 'new_lead';
             
             if (isWhatsAppNotification) {
-              console.log('WhatsApp notification received (silent):', newNotification.title);
+              console.log('💬 WhatsApp notification (silent):', newNotification.title);
             } else if (isLeadNotification) {
               // New lead - play cha-ching sound
-              console.log('🔔 Playing new-lead sound for:', newNotification.title);
+              console.log('🆕 Playing new-lead sound for:', newNotification.title);
               playSound('new-lead', 0.7);
               
               toast.success('🆕 Novo Lead!', {
@@ -267,8 +273,18 @@ export function useNotifications() {
         )
         .subscribe((status) => {
           console.log('📡 Notifications channel status:', status);
-          if (status === 'CHANNEL_ERROR') {
-            setTimeout(() => setupChannel(), 3000);
+          
+          if (status === 'SUBSCRIBED') {
+            reconnectAttempts = 0;
+            console.log('✅ Realtime notifications connected successfully!');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error('❌ Realtime channel error, attempting reconnect...');
+            if (reconnectAttempts < maxReconnectAttempts) {
+              reconnectAttempts++;
+              setTimeout(() => setupChannel(), reconnectDelay * reconnectAttempts);
+            }
+          } else if (status === 'CLOSED') {
+            console.warn('⚠️ Realtime channel closed');
           }
         });
 
@@ -279,6 +295,7 @@ export function useNotifications() {
 
     return () => {
       if (channelRef.current) {
+        console.log('🔌 Disconnecting notifications channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
