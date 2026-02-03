@@ -240,7 +240,7 @@ export function useNotifications() {
               console.log('🆕 Playing new-lead sound for:', newNotification.title);
               playSound('new-lead', 0.7);
               
-              toast.success('🆕 Novo Lead!', {
+              toast.success('Novo Lead Recebido', {
                 description: newNotification.content || newNotification.title,
                 duration: 10000,
               });
