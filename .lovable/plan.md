@@ -1,186 +1,87 @@
 
-# Plano: Implementação de Push Notifications Nativas com Firebase Cloud Messaging
+# Plano: Corrigir Notificações Instantâneas e Push iOS
 
-## Resumo Executivo
-Implementar sistema de notificações push nativas para iOS e Android usando Firebase Cloud Messaging (FCM), integrando com o sistema existente de notificações do CRM para alertar sobre novos leads, tarefas e eventos financeiros mesmo quando o app está fechado.
+## Diagnóstico Completo
 
----
+Após investigação, encontrei **dois problemas distintos**:
 
-## Arquitetura Proposta
+### Problema 1: Notificações demoram ~2 minutos
+**Causa raiz**: A tabela `notifications` **não está habilitada para Supabase Realtime**.
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                         ARQUITETURA FCM                             │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────┐     ┌──────────────────┐     ┌────────────────┐  │
-│  │   App Mobile │────>│  Supabase DB     │────>│ Edge Function  │  │
-│  │  (Capacitor) │     │ push_tokens      │     │ send-push      │  │
-│  └──────────────┘     └──────────────────┘     └────────┬───────┘  │
-│         │                                               │          │
-│         │  Registra Token FCM                           │          │
-│         v                                               v          │
-│  ┌──────────────┐                              ┌────────────────┐  │
-│  │ @capacitor/  │                              │ Firebase FCM   │  │
-│  │ push-notif.  │<─────────────────────────────│    API v1      │  │
-│  └──────────────┘     Envia Push Notification  └────────────────┘  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+O código usa Realtime para receber notificações instantâneas:
+```javascript
+supabase.channel('notifications-realtime-v3')
+  .on('postgres_changes', { event: 'INSERT', table: 'notifications' })
 ```
 
----
+Mas sem a tabela estar publicada no Realtime, isso não funciona. O sistema recorre ao fallback de polling a cada 30 segundos.
 
-## Etapas de Implementação
+### Problema 2: Push no iPhone não funciona
+**Causa**: Push Notifications nativas só funcionam em apps compilados via Capacitor. Se você está acessando pelo browser Safari no iPhone, push nativo não é possível.
 
-### Etapa 1: Configuração de Segurança (Pré-requisito)
-**Importante**: A chave de Service Account que você compartilhou contém uma chave privada sensível que foi exposta. Você deve:
-
-1. Acessar o Console do Firebase > Configurações do Projeto > Contas de serviço
-2. Gerar uma nova chave privada
-3. Revogar a chave antiga (`4a6f04be7c...`)
-4. Adicionar a nova chave como secret no Lovable Cloud
-
-**Secret a ser adicionado:**
-- Nome: `FIREBASE_SERVICE_ACCOUNT`
-- Valor: JSON completo da nova Service Account Key
+**Opções para iOS:**
+1. **Compilar o app como iOS nativo** - Requer Xcode/Mac e configuração APNs
+2. **Usar Web Push (limitado no iOS)** - Safari 16.4+ suporta Web Push em PWAs instaladas
 
 ---
 
-### Etapa 2: Criar Tabela de Tokens Push (Banco de Dados)
-Nova tabela para armazenar tokens de dispositivos:
+## Solução Proposta
 
-**Tabela: `push_tokens`**
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| id | UUID | Chave primária |
-| user_id | UUID | Referência ao usuário |
-| organization_id | UUID | Referência à organização |
-| token | TEXT | Token FCM do dispositivo |
-| platform | TEXT | 'android', 'ios' ou 'web' |
-| device_info | JSONB | Informações do dispositivo |
-| is_active | BOOLEAN | Se o token está ativo |
-| created_at | TIMESTAMPTZ | Data de criação |
-| updated_at | TIMESTAMPTZ | Última atualização |
+### Etapa 1: Habilitar Realtime na tabela notifications (CRÍTICO)
 
-**Políticas RLS:**
-- Usuários podem gerenciar seus próprios tokens
-- Service role pode acessar todos (para envio de push)
+Nova migration para adicionar a tabela à publicação Realtime:
 
----
-
-### Etapa 3: Edge Function para Envio de Push (Backend)
-Nova Edge Function `send-push-notification`:
-
-**Funcionalidades:**
-- Autenticação com Firebase usando Google Auth Library
-- Envio de notificações via FCM HTTP v1 API
-- Suporte a dados extras (lead_id, tipo, ação)
-- Tratamento de tokens inválidos (desativar automaticamente)
-
-**Triggers automáticos:**
-- Integração com trigger existente `notify_on_lead_insert`
-- Integração com `notification-scheduler` para tarefas/financeiro
-
----
-
-### Etapa 4: Hook de Push Notifications (Frontend)
-Novo hook `src/hooks/use-push-notifications.ts`:
-
-**Responsabilidades:**
-1. Verificar se está em ambiente Capacitor
-2. Solicitar permissão de push
-3. Obter token FCM do dispositivo
-4. Registrar/atualizar token no Supabase
-5. Configurar listeners para push recebido
-6. Navegação ao clicar na notificação
-
-**Comportamento:**
-- Só ativa em ambiente nativo (Capacitor)
-- Fallback silencioso em ambiente web
-- Atualiza token automaticamente ao mudar
-
----
-
-### Etapa 5: Integração com Sistema Existente
-Modificar hooks e triggers existentes:
-
-**Arquivos a modificar:**
-- `src/hooks/use-notifications.ts` - Integrar inicialização do push
-- `src/components/layout/AppLayout.tsx` - Garantir hook é chamado
-- `supabase/functions/notification-scheduler/index.ts` - Adicionar chamada de push
-
-**Lógica de envio:**
-```text
-Notificação criada no DB
-        │
-        v
-Trigger detecta INSERT
-        │
-        v
-Chama Edge Function send-push
-        │
-        v
-Busca tokens do usuário
-        │
-        v
-Envia via FCM para cada token ativo
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ```
 
----
+Isso fará as notificações aparecerem **instantaneamente** (em ~100ms em vez de 30 segundos).
 
-### Etapa 6: Configuração Capacitor (Instruções para você)
+### Etapa 2: Adicionar Realtime para leads também
 
-Após eu implementar o código, você precisará:
+Para garantir que o pipeline atualize instantaneamente quando um novo lead chega:
 
-1. **No projeto local (após git pull):**
-   ```bash
-   npm install @capacitor/push-notifications
-   npx cap sync
-   ```
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.leads;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pipeline_stages;
+```
 
-2. **Arquivo `google-services.json`:**
-   - Copiar para `android/app/google-services.json`
+### Etapa 3: Otimizar o hook de notificações
 
-3. **Para iOS (se aplicável):**
-   - Configurar APNs no Firebase Console
-   - Adicionar `GoogleService-Info.plist` ao projeto Xcode
+Melhorias no código:
+- Aumentar logs para debug
+- Garantir reconexão automática em caso de desconexão
 
 ---
 
-## Prioridades de Notificação Push
+## Sobre Push no iPhone
 
-| Tipo | Prioridade | Ação ao Clicar |
-|------|-----------|----------------|
-| Novo Lead | Alta | Abre detalhes do lead |
-| Tarefa atrasada | Alta | Abre agenda/lead |
-| Conta vencendo | Alta | Abre financeiro |
-| Tarefa agendada | Normal | Abre agenda |
-| Feature request | Baixa | Abre Central de Ajuda |
+O push nativo para iOS requer:
 
----
+1. **Conta Apple Developer** ($99/ano)
+2. **Certificado APNs** configurado no Firebase Console
+3. **Arquivo GoogleService-Info.plist** no projeto Xcode
+4. **Compilação via Xcode** em um Mac
 
-## Arquivos a Criar/Modificar
+Se você quiser seguir por esse caminho, eu posso preparar instruções detalhadas. Mas isso está fora do que posso fazer diretamente no Lovable - requer configuração local.
 
-**Novos arquivos:**
-1. `supabase/migrations/xxx_create_push_tokens.sql` - Tabela e RLS
-2. `supabase/functions/send-push-notification/index.ts` - Edge Function
-3. `src/hooks/use-push-notifications.ts` - Hook Capacitor
-4. `capacitor.config.ts` - Configuração Capacitor (se não existir)
-
-**Arquivos modificados:**
-1. `supabase/config.toml` - Adicionar nova função
-2. `src/hooks/use-notifications.ts` - Integrar push
-3. `src/components/layout/AppLayout.tsx` - Inicializar push
-4. `supabase/functions/notification-scheduler/index.ts` - Chamar push
-5. `package.json` - Adicionar dependência Capacitor
+**Alternativa simples**: Com o Realtime funcionando, as notificações no app aparecerão instantaneamente (com som e toast). Isso já resolve boa parte do problema imediato.
 
 ---
 
-## Próximo Passo Imediato
+## Arquivos a Modificar
 
-Antes de implementar, você precisa:
+| Arquivo | Alteração |
+|---------|-----------|
+| Nova migration SQL | Habilitar Realtime nas tabelas |
+| `src/hooks/use-notifications.ts` | Logs adicionais e tratamento de reconexão |
 
-1. **Gerar nova Service Account Key** no Firebase Console (a atual foi exposta)
-2. **Clicar no botão que aparecerá** para adicionar o secret `FIREBASE_SERVICE_ACCOUNT`
+---
 
-Confirme quando tiver a nova chave pronta que eu prossigo com a implementação!
+## Resultado Esperado
+
+Após a implementação:
+- ⚡ Notificações aparecem em **~100ms** (instantâneo)
+- 🔔 Som de "cha-ching" toca imediatamente
+- 🍞 Toast aparece na hora
+- 📱 Push nativo pendente de configuração local (iOS)
