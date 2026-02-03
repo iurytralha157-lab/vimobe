@@ -225,10 +225,11 @@ export function useNotifications() {
             
             // Skip WhatsApp message notifications (silent)
             const isWhatsAppNotification = newNotification.type === 'whatsapp' || newNotification.type === 'message';
+            const isLeadNotification = newNotification.type === 'lead' || newNotification.type === 'new_lead';
             
             if (isWhatsAppNotification) {
               console.log('WhatsApp notification received (silent):', newNotification.title);
-            } else if (newNotification.type === 'lead') {
+            } else if (isLeadNotification) {
               // New lead - play cha-ching sound
               console.log('🔔 Playing new-lead sound for:', newNotification.title);
               playSound('new-lead', 0.7);
@@ -256,10 +257,11 @@ export function useNotifications() {
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
             queryClient.invalidateQueries({ queryKey: ['unread-notifications-count'] });
             
-            if (newNotification.type === 'lead') {
+            if (isLeadNotification) {
               queryClient.invalidateQueries({ queryKey: ['leads'] });
               queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
               queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+              queryClient.invalidateQueries({ queryKey: ['contacts-list'] });
             }
           }
         )

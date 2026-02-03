@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 const typeIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
+  new_lead: UserPlus,
   task: CheckSquare,
   contract: FileText,
   commission: DollarSign,
@@ -21,7 +22,8 @@ const typeIcons: Record<string, typeof Bell> = {
 };
 
 const typeLabels: Record<string, string> = {
-  lead: 'Lead',
+  lead: 'Novo Lead',
+  new_lead: 'Novo Lead',
   task: 'Tarefa',
   contract: 'Contrato',
   commission: 'Comissão',
