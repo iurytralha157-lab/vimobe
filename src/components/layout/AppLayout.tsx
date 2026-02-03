@@ -8,6 +8,7 @@ import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -19,6 +20,9 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
   
   // Start WhatsApp session health monitoring
   useWhatsAppHealthMonitor();
+  
+  // Initialize native push notifications (only in Capacitor)
+  usePushNotifications();
 
   return (
     <div className="h-screen flex w-full bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
