@@ -120,8 +120,11 @@ export function useCreateStageAutomation() {
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stage-automations'] });
+    onSuccess: (_, variables) => {
+      // Invalidate all stage-automations queries (uses partial matching)
+      queryClient.invalidateQueries({ queryKey: ['stage-automations'], refetchType: 'all' });
+      // Also refetch the specific stage query immediately
+      queryClient.refetchQueries({ queryKey: ['stage-automations', variables.stage_id] });
       toast.success('Automação criada com sucesso');
     },
     onError: (error) => {
