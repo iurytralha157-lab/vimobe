@@ -138,10 +138,36 @@ export function useUpdateStageAutomation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<StageAutomation> & { id: string }) => {
+    mutationFn: async ({ id, ...data }: Partial<CreateAutomationData> & { id: string }) => {
+      // Build action_config based on automation type (same logic as create)
+      let actionConfig: Record<string, unknown> = {};
+      
+      if (data.automation_type === 'change_assignee_on_enter') {
+        if (data.action_config && (data.action_config as any).target_user_id) {
+          actionConfig = data.action_config;
+        } else if (data.target_user_id) {
+          actionConfig = { target_user_id: data.target_user_id };
+        }
+      } else if (data.automation_type === 'change_deal_status_on_enter') {
+        if (data.action_config && (data.action_config as any).deal_status) {
+          actionConfig = data.action_config;
+        } else if (data.deal_status) {
+          actionConfig = { deal_status: data.deal_status };
+        }
+      }
+
+      const updateData = {
+        automation_type: data.automation_type,
+        trigger_days: data.trigger_days || null,
+        target_stage_id: data.target_stage_id || null,
+        whatsapp_template: data.whatsapp_template || null,
+        alert_message: data.alert_message || null,
+        action_config: Object.keys(actionConfig).length > 0 ? (actionConfig as Json) : null,
+      };
+
       const { data: result, error } = await supabase
         .from('stage_automations')
-        .update(data as any)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -150,7 +176,7 @@ export function useUpdateStageAutomation() {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stage-automations'] });
+      queryClient.invalidateQueries({ queryKey: ['stage-automations'], refetchType: 'all' });
       toast.success('Automação atualizada com sucesso');
     },
     onError: (error) => {
