@@ -1,71 +1,80 @@
 
-# Plano: Corrigir Notificações Instantâneas e Push iOS
+# Plano: Melhorar Mensagens de Notificação e Configurar Push Nativo
 
-## Diagnóstico Completo
+## Resumo do Diagnóstico
 
-Após investigação, encontrei **dois problemas distintos**:
+Encontrei os seguintes pontos:
 
-### Problema 1: Notificações demoram ~2 minutos
-**Causa raiz**: A tabela `notifications` **não está habilitada para Supabase Realtime**.
+### 1. Mensagens com emoji "🆕" que você quer remover
+As notificações são criadas em **3 lugares** com o emoji:
 
-O código usa Realtime para receber notificações instantâneas:
-```javascript
-supabase.channel('notifications-realtime-v3')
-  .on('postgres_changes', { event: 'INSERT', table: 'notifications' })
-```
+| Local | Título atual |
+|-------|-------------|
+| `use-lead-notifications.ts` linha 47 | "🆕 Novo lead atribuído a você!" |
+| `use-lead-notifications.ts` linha 80 | "🆕 Novo lead na sua equipe!" |
+| `use-lead-notifications.ts` linha 110 | "🆕 Novo lead criado" |
+| `use-notifications.ts` linha 243 | Toast: "🆕 Novo Lead!" |
 
-Mas sem a tabela estar publicada no Realtime, isso não funciona. O sistema recorre ao fallback de polling a cada 30 segundos.
+### 2. Push Nativo (app fechado)
+O sistema de push nativo já está **parcialmente configurado**:
+- Tabela `push_tokens` existe (mas está vazia - não há apps nativos registrados)
+- Edge Function `send-push-notification` existe
+- Trigger no banco já dispara push quando notificação é criada
+- Hook `usePushNotifications` já registra tokens
 
-### Problema 2: Push no iPhone não funciona
-**Causa**: Push Notifications nativas só funcionam em apps compilados via Capacitor. Se você está acessando pelo browser Safari no iPhone, push nativo não é possível.
-
-**Opções para iOS:**
-1. **Compilar o app como iOS nativo** - Requer Xcode/Mac e configuração APNs
-2. **Usar Web Push (limitado no iOS)** - Safari 16.4+ suporta Web Push em PWAs instaladas
+**Por que não funciona com app fechado:**
+Push nativo requer compilar o app via Capacitor (Xcode para iOS). No browser, mesmo no celular, só funciona quando o app está aberto.
 
 ---
 
 ## Solução Proposta
 
-### Etapa 1: Habilitar Realtime na tabela notifications (CRÍTICO)
+### Etapa 1: Remover emojis e deixar mensagens profissionais
 
-Nova migration para adicionar a tabela à publicação Realtime:
+**Arquivo:** `src/hooks/use-lead-notifications.ts`
 
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+| Antes | Depois |
+|-------|--------|
+| "🆕 Novo lead atribuído a você!" | "Novo lead recebido" |
+| "🆕 Novo lead na sua equipe!" | "Novo lead na equipe" |
+| "🆕 Novo lead criado" | "Novo lead criado" |
+
+**Arquivo:** `src/hooks/use-notifications.ts`
+
+| Antes | Depois |
+|-------|--------|
+| Toast: "🆕 Novo Lead!" | "Novo Lead Recebido" |
+
+### Etapa 2: Melhorar descrição das notificações
+
+Manter o conteúdo descritivo que você gostou:
+- Nome do lead
+- Origem (Webhook, Meta, etc.)
+- Pipeline (quando aplicável)
+
+Exemplo final:
 ```
-
-Isso fará as notificações aparecerem **instantaneamente** (em ~100ms em vez de 30 segundos).
-
-### Etapa 2: Adicionar Realtime para leads também
-
-Para garantir que o pipeline atualize instantaneamente quando um novo lead chega:
-
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.leads;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.pipeline_stages;
+Título: "Novo lead recebido"
+Descrição: "João Silva atribuído a você (origem: Webhook, pipeline: Vendas)"
 ```
-
-### Etapa 3: Otimizar o hook de notificações
-
-Melhorias no código:
-- Aumentar logs para debug
-- Garantir reconexão automática em caso de desconexão
 
 ---
 
-## Sobre Push no iPhone
+## Sobre Push Nativo para iOS
 
-O push nativo para iOS requer:
+Para receber notificações com o app fechado no iPhone, você precisa:
 
-1. **Conta Apple Developer** ($99/ano)
-2. **Certificado APNs** configurado no Firebase Console
-3. **Arquivo GoogleService-Info.plist** no projeto Xcode
-4. **Compilação via Xcode** em um Mac
+1. **Mac com Xcode** instalado
+2. **Conta Apple Developer** ($99/ano)
+3. **Configurar APNs** no Firebase Console:
+   - Criar chave de autenticação APNs no Apple Developer Portal
+   - Upload da chave no Firebase > Configurações > Cloud Messaging
+4. **Baixar GoogleService-Info.plist** do Firebase e adicionar ao projeto iOS
+5. **Compilar o app via Xcode**
 
-Se você quiser seguir por esse caminho, eu posso preparar instruções detalhadas. Mas isso está fora do que posso fazer diretamente no Lovable - requer configuração local.
+Este é um processo que precisa ser feito localmente no seu Mac. Quando quiser seguir por esse caminho, posso te dar instruções passo a passo detalhadas.
 
-**Alternativa simples**: Com o Realtime funcionando, as notificações no app aparecerão instantaneamente (com som e toast). Isso já resolve boa parte do problema imediato.
+**Alternativa imediata:** Com as notificações Realtime funcionando, você já recebe alertas instantâneos sempre que o app estiver aberto (que é o caso mais comum durante o trabalho).
 
 ---
 
@@ -73,15 +82,15 @@ Se você quiser seguir por esse caminho, eu posso preparar instruções detalhad
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Nova migration SQL | Habilitar Realtime nas tabelas |
-| `src/hooks/use-notifications.ts` | Logs adicionais e tratamento de reconexão |
+| `src/hooks/use-lead-notifications.ts` | Remover emojis, ajustar títulos profissionais |
+| `src/hooks/use-notifications.ts` | Remover emoji do toast |
 
 ---
 
 ## Resultado Esperado
 
 Após a implementação:
-- ⚡ Notificações aparecem em **~100ms** (instantâneo)
-- 🔔 Som de "cha-ching" toca imediatamente
-- 🍞 Toast aparece na hora
-- 📱 Push nativo pendente de configuração local (iOS)
+- Notificações com visual limpo e profissional (sem emojis)
+- Títulos claros: "Novo lead recebido", "Novo lead na equipe"
+- Descrição mantém todas as informações úteis (nome, origem, pipeline)
+- Push nativo pendente de configuração local (iOS/Android)
