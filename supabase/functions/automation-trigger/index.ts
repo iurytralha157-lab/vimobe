@@ -95,23 +95,27 @@ Deno.serve(async (req) => {
 
     console.log(`Resolved organization_id: ${organizationId}`);
 
-    // Map event types to trigger types
-    const triggerTypeMap: Record<string, string> = {
-      message_received: "message_received",
-      lead_stage_changed: "stage_change",
-      lead_created: "lead_created",
-      tag_added: "tag_added",
-      tag_removed: "tag_removed",
+    // Map event types to trigger types (mapeamento de eventos para tipos de trigger)
+    // O frontend usa 'lead_stage_changed' mas o banco salva como 'lead_stage_changed'
+    const triggerTypeMap: Record<string, string[]> = {
+      message_received: ["message_received"],
+      lead_stage_changed: ["lead_stage_changed", "stage_change"], // aceita ambos os formatos
+      lead_created: ["lead_created"],
+      tag_added: ["tag_added"],
+      tag_removed: ["tag_removed"],
     };
 
-    const triggerType = triggerTypeMap[event_type];
-    if (!triggerType) {
+    const triggerTypes = triggerTypeMap[event_type];
+    if (!triggerTypes) {
       console.log(`Unknown event type: ${event_type}`);
       return new Response(
         JSON.stringify({ success: true, message: "Unknown event type, skipping" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log(`Looking for automations with trigger types: ${triggerTypes.join(', ')}`);
+
 
     // Find active automations matching this trigger
     const { data: automations, error: automationsError } = await supabaseAdmin
@@ -122,7 +126,7 @@ Deno.serve(async (req) => {
         connections:automation_connections(*)
       `)
       .eq("organization_id", organizationId)
-      .eq("trigger_type", triggerType)
+      .in("trigger_type", triggerTypes)
       .eq("is_active", true);
 
     if (automationsError) {
@@ -131,14 +135,14 @@ Deno.serve(async (req) => {
     }
 
     if (!automations || automations.length === 0) {
-      console.log(`No active automations found for trigger: ${triggerType}`);
+      console.log(`No active automations found for trigger types: ${triggerTypes.join(', ')}`);
       return new Response(
         JSON.stringify({ success: true, message: "No matching automations" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Found ${automations.length} automation(s) for trigger: ${triggerType}`);
+    console.log(`Found ${automations.length} automation(s) for trigger types: ${triggerTypes.join(', ')}`);
 
     // Process each matching automation
     for (const automation of automations) {
@@ -147,7 +151,7 @@ Deno.serve(async (req) => {
         const triggerConfig = automation.trigger_config || {};
         
         // Validate conditions based on trigger type
-        if (!validateTriggerConditions(triggerType, triggerConfig, data)) {
+        if (!validateTriggerConditions(automation.trigger_type, triggerConfig, data)) {
           console.log(`Automation ${automation.id} conditions not met, skipping`);
           continue;
         }
@@ -254,6 +258,7 @@ function validateTriggerConditions(
       return true;
 
     case "stage_change":
+    case "lead_stage_changed":
       // Check specific stage transition
       if (config.from_stage_id && config.from_stage_id !== data.old_stage_id) {
         return false;

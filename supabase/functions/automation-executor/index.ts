@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     console.log(`Processing node: ${currentNode.node_type} (${currentNode.action_type || ""})`);
 
     let nextNodeId: string | null = null;
-    const nodeConfig = currentNode.config || {};
+    const nodeConfig = currentNode.node_config || currentNode.config || {};
 
     try {
       // Process node based on type
@@ -247,22 +247,87 @@ async function markExecutionFailed(supabase: any, executionId: string, error: st
 // deno-lint-ignore no-explicit-any
 async function processActionNode(
   supabase: any,
-  node: { action_type: string; config: Record<string, unknown> },
+  node: { action_type: string; node_config?: Record<string, unknown>; config?: Record<string, unknown> },
   execution: { lead_id?: string; conversation_id?: string; organization_id: string },
   _executionData: Record<string, unknown>,
   supabaseUrl: string,
   evolutionApiUrl?: string,
   evolutionApiKey?: string
 ) {
-  const config = node.config || {};
+  // Suportar ambos os formatos de config
+  const config = node.node_config || node.config || {};
   const actionType = node.action_type;
 
   console.log(`Executing action: ${actionType}`, config);
 
   switch (actionType) {
     case "send_whatsapp":
+      // Se tem session_id específica configurada, usar ela
+      const configuredSessionId = config.session_id as string;
+      
+      if (configuredSessionId) {
+        // Enviar usando sessão específica configurada
+        const { data: session } = await supabase
+          .from("whatsapp_sessions")
+          .select("*")
+          .eq("id", configuredSessionId)
+          .single();
+        
+        if (!session) {
+          console.log("Configured session not found:", configuredSessionId);
+          return;
+        }
+        
+        // Precisamos do telefone do lead
+        if (execution.lead_id) {
+          const { data: lead } = await supabase
+            .from("leads")
+            .select("phone, name")
+            .eq("id", execution.lead_id)
+            .single();
+          
+          if (!lead || !lead.phone) {
+            console.log("Lead has no phone number");
+            return;
+          }
+          
+          if (evolutionApiUrl && evolutionApiKey) {
+            const messageContent = replaceVariables(
+              config.message as string || config.template_content as string || "",
+              execution,
+              { contact_name: lead.name, contact_phone: lead.phone }
+            );
+
+            const response = await fetch(
+              `${evolutionApiUrl}/message/sendText/${session.instance_name}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  apikey: evolutionApiKey,
+                },
+                body: JSON.stringify({
+                  number: lead.phone,
+                  text: messageContent,
+                }),
+              }
+            );
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("Error sending WhatsApp message:", errorText);
+              throw new Error(`Failed to send WhatsApp: ${errorText}`);
+            }
+
+            console.log("WhatsApp message sent successfully via configured session");
+          }
+        }
+        return;
+      }
+      
+      // Fallback para conversation_id (comportamento original)
       if (!execution.conversation_id) {
-        console.log("No conversation_id, skipping WhatsApp send");
+        console.log("No conversation_id or session_id configured, skipping WhatsApp send");
         return;
       }
 

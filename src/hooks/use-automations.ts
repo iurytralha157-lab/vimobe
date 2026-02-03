@@ -193,7 +193,7 @@ export function useCreateAutomation() {
       await supabase.from('automation_nodes').insert([{
         automation_id: automation.id,
         node_type: 'trigger',
-        config: { trigger_type: data.trigger_type, ...(data.trigger_config || {}) } as Json,
+        node_config: { trigger_type: data.trigger_type, ...(data.trigger_config || {}) } as Json,
         position_x: 250,
         position_y: 50,
       }]);
@@ -292,7 +292,7 @@ export function useSaveAutomationFlow() {
         automation_id: automationId,
         node_type: node.node_type || 'action',
         action_type: node.action_type || null,
-        config: (node.config || {}) as Json,
+        node_config: (node.config || {}) as Json,
         position_x: node.position_x || 0,
         position_y: node.position_y || 0,
       }));
