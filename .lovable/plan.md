@@ -1,321 +1,276 @@
 
+# Plano: Evolução Completa do Painel Super Admin
 
-# Sistema de Comunicados e Barra de Notificação
+## Resumo das Melhorias Solicitadas
 
-## Visão Geral
-
-Implementação de um sistema completo de comunicados (announcements) que permite ao Super Admin publicar avisos para todos os usuários do sistema, exibindo uma barra de notificação visível no topo de todas as páginas e também enviando notificações individuais para cada usuário.
-
----
-
-## Funcionalidades
-
-### Para o Super Admin
-- Nova seção "Comunicados" no painel de configurações do admin
-- Formulário para criar/ativar um comunicado com:
-  - **Mensagem** (texto do aviso)
-  - **Botão opcional** (título + link)
-  - **Status** (ativo/inativo)
-- Ao publicar, além da barra aparecer, notificações são enviadas para todos os usuários ativos
-
-### Para os Usuários
-- Barra laranja no topo da tela quando houver comunicado ativo
-- Botão X para dispensar (armazenado no localStorage)
-- Botão opcional com link
-- Também recebe notificação no sino
+Com base na análise do código atual, identifico diversas melhorias necessárias para transformar o painel Super Admin em um centro de controle completo.
 
 ---
 
-## Design da Barra
+## Diagnóstico de Problemas Atuais
 
+### 1. Botões Desativar/Excluir Organizações
+**Status:** Funcionando corretamente no código
+- O botão de desativar chama `handleToggleActive` que usa `updateOrganization.mutate`
+- O botão de excluir abre um dialog de confirmação e chama `deleteOrganization.mutateAsync`
+- Possível problema: pode ser RLS ou falta de permissão na edge function
+
+### 2. Comunicados
+**Status:** Já implementado mas pode precisar de organização visual
+- Está na aba "Configurações" mas pode não estar visível se a página for muito longa
+- Funciona: barra laranja no topo + notificações
+
+---
+
+## Funcionalidades a Implementar
+
+### Fase 1: Sistema de Planos SaaS para Organizações
+
+#### Novo Menu: "Planos" no Admin
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ [Laranja]  Nova atualização disponível! Confira as novidades.  [Saiba mais] [X]│
-└─────────────────────────────────────────────────────────────────────────────────┘
+/admin/plans - Gerenciar planos de assinatura
 ```
 
-- Cor de fundo: `bg-orange-500`
-- Texto branco
-- Posição: fixed no topo, acima de tudo (z-50)
-- Botão de fechar (X) no canto direito
-- Botão opcional de ação
-
----
-
-## Alterações Técnicas
-
-### 1. Banco de Dados
-
-Adicionar nova tabela `announcements` para gerenciar os comunicados:
-
+#### Tabela: `admin_subscription_plans`
 ```sql
-CREATE TABLE announcements (
+CREATE TABLE admin_subscription_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  message TEXT NOT NULL,
-  button_text TEXT,
-  button_url TEXT,
-  is_active BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id)
+  name TEXT NOT NULL,                    -- Ex: "Básico", "Profissional", "Enterprise"
+  description TEXT,
+  price NUMERIC(10,2) NOT NULL,          -- Valor mensal
+  billing_cycle TEXT DEFAULT 'monthly', -- monthly, yearly
+  trial_days INTEGER DEFAULT 7,          -- Dias de trial
+  max_users INTEGER DEFAULT 10,
+  max_leads INTEGER,                     -- Limite de leads (null = ilimitado)
+  modules TEXT[] DEFAULT '{}',           -- Módulos incluídos
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Apenas um comunicado ativo por vez (gerenciado via lógica)
--- RLS: Super admins podem gerenciar, todos podem ler ativos
-ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Anyone can read active announcements"
-  ON announcements FOR SELECT
-  USING (is_active = true);
-
-CREATE POLICY "Super admins can manage announcements"
-  ON announcements FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'super_admin'
-    )
-  );
 ```
 
-### 2. Hook - use-announcements.ts
-
-Novo hook para buscar o comunicado ativo:
-
-```typescript
-// src/hooks/use-announcements.ts
-export function useActiveAnnouncement() {
-  return useQuery({
-    queryKey: ['active-announcement'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*')
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutos
-  });
-}
+#### Alterações na tabela `organizations`
+```sql
+ALTER TABLE organizations 
+ADD COLUMN plan_id UUID REFERENCES admin_subscription_plans(id),
+ADD COLUMN trial_ends_at TIMESTAMPTZ,     -- Data de expiração do trial
+ADD COLUMN subscription_type TEXT DEFAULT 'trial' 
+  CHECK (subscription_type IN ('trial', 'paid', 'free')); -- free = parceria
 ```
 
-### 3. Componente - AnnouncementBanner.tsx
+### Fase 2: Controle de Trial Automático
 
-Barra de notificação global:
+#### Lógica de Bloqueio
+- Quando `subscription_type = 'trial'` e `trial_ends_at < now()`:
+  - Usuário pode fazer login
+  - Exibe modal de "Trial Expirado" com CTA para contato via WhatsApp
+  - Impede navegação até regularizar
 
+#### Edge Function: `trial-checker`
+- Roda diariamente via cron
+- Verifica trials expirados
+- Atualiza status automaticamente
+- Envia notificação para super admin
+
+### Fase 3: Dashboard Financeiro Real
+
+#### MRR Calculado Automaticamente
 ```typescript
-// src/components/announcements/AnnouncementBanner.tsx
-
-function AnnouncementBanner() {
-  const { data: announcement } = useActiveAnnouncement();
-  const [dismissed, setDismissed] = useState(false);
-
-  // Check localStorage for dismissed state
-  useEffect(() => {
-    const dismissedId = localStorage.getItem('dismissed_announcement');
-    if (dismissedId === announcement?.id) {
-      setDismissed(true);
+const calculateMRR = (organizations) => {
+  return organizations.reduce((total, org) => {
+    if (org.subscription_type === 'paid' && org.plan) {
+      return total + org.plan.price;
     }
-  }, [announcement?.id]);
+    return total;
+  }, 0);
+};
+```
 
-  const handleDismiss = () => {
-    if (announcement) {
-      localStorage.setItem('dismissed_announcement', announcement.id);
-    }
-    setDismissed(true);
-  };
+#### Métricas Adicionais
+- Total MRR (Receita Mensal Recorrente)
+- Organizações por tipo (Trial, Pago, Gratuito/Parceria)
+- Trials expirando esta semana
+- Conversão Trial → Pago
 
-  if (!announcement || dismissed) return null;
+### Fase 4: Comunicados Avançados
 
-  return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-orange-500 text-white py-2 px-4 flex items-center justify-center gap-4">
-      <span className="text-sm font-medium">{announcement.message}</span>
-      
-      {announcement.button_text && announcement.button_url && (
-        <a 
-          href={announcement.button_url}
-          target="_blank"
-          className="bg-white text-orange-600 px-3 py-1 rounded text-sm font-medium hover:bg-orange-50"
-        >
-          {announcement.button_text}
-        </a>
-      )}
-      
-      <button onClick={handleDismiss} className="ml-auto p-1">
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
+#### Opções Adicionais
+```typescript
+interface AnnouncementOptions {
+  message: string;
+  buttonText?: string;
+  buttonUrl?: string;
+  // NOVOS CAMPOS:
+  showBanner: boolean;           // Exibir barra no topo
+  sendNotification: boolean;     // Enviar como notificação
+  targetType: 'all' | 'organizations' | 'admins' | 'specific';
+  targetIds?: string[];          // IDs específicos se targetType = 'specific'
 }
 ```
 
-### 4. Integração no Layout
-
-Adicionar a barra no `App.tsx` ou nos layouts:
-
-```typescript
-// src/App.tsx - Adicionar acima de tudo
-<>
-  <AnnouncementBanner />
-  <ImpersonateBanner />
-  <ScrollToTop />
-  {/* ... resto */}
-</>
+#### Alterações na tabela `announcements`
+```sql
+ALTER TABLE announcements
+ADD COLUMN show_banner BOOLEAN DEFAULT true,
+ADD COLUMN send_notification BOOLEAN DEFAULT true,
+ADD COLUMN target_type TEXT DEFAULT 'all',
+ADD COLUMN target_organization_ids UUID[],
+ADD COLUMN target_user_ids UUID[];
 ```
 
-Ajustar padding quando a barra estiver visível.
+### Fase 5: Central de Ajuda Editável
 
-### 5. Painel Admin - Gerenciamento
-
-Nova seção em `AdminSettings.tsx`:
-
-```typescript
-// Card de Comunicados
-<Card>
-  <CardHeader>
-    <CardTitle className="flex items-center gap-2">
-      <Megaphone className="h-5 w-5" />
-      Comunicados
-    </CardTitle>
-    <CardDescription>
-      Exiba um aviso no topo de todas as telas para todos os usuários
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="space-y-2">
-      <Label>Mensagem do comunicado</Label>
-      <Textarea 
-        placeholder="Nova atualização disponível! Confira as novidades."
-        value={announcementMessage}
-        onChange={(e) => setAnnouncementMessage(e.target.value)}
-      />
-    </div>
-    
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label>Texto do botão (opcional)</Label>
-        <Input 
-          placeholder="Saiba mais"
-          value={buttonText}
-          onChange={(e) => setButtonText(e.target.value)}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>Link do botão (opcional)</Label>
-        <Input 
-          placeholder="https://..."
-          value={buttonUrl}
-          onChange={(e) => setButtonUrl(e.target.value)}
-        />
-      </div>
-    </div>
-
-    <div className="flex items-center gap-4">
-      <Switch 
-        checked={announcementActive}
-        onCheckedChange={setAnnouncementActive}
-      />
-      <Label>Comunicado ativo</Label>
-    </div>
-
-    <Button onClick={handleSaveAnnouncement}>
-      <Save className="h-4 w-4 mr-2" />
-      Salvar e Publicar
-    </Button>
-  </CardContent>
-</Card>
+#### Nova tabela: `help_articles`
+```sql
+CREATE TABLE help_articles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,              -- Suporta Markdown
+  video_url TEXT,                     -- URL do vídeo (YouTube, Vimeo)
+  image_url TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-### 6. Envio de Notificações em Massa
+#### Interface de Edição
+- Editor de texto rico para criar/editar artigos
+- Upload de imagens
+- Embed de vídeos do YouTube
+- Organização por categorias
 
-Ao ativar um comunicado, também cria notificações para todos os usuários:
+### Fase 6: Alertas como Notificações
 
-```typescript
-async function publishAnnouncement(message: string, buttonText?: string, buttonUrl?: string) {
-  // 1. Desativar comunicados anteriores
-  await supabase
-    .from('announcements')
-    .update({ is_active: false })
-    .eq('is_active', true);
+#### Transformar alertas atuais em notificações do sistema
+Quando detectar:
+- Trial expirando em 7 dias → Notificação para super admin
+- Organização inativa há 30 dias → Notificação
+- Organização suspensa → Alerta visual
 
-  // 2. Criar novo comunicado
-  const { data: announcement, error } = await supabase
-    .from('announcements')
-    .insert({
-      message,
-      button_text: buttonText || null,
-      button_url: buttonUrl || null,
-      is_active: true,
-      created_by: userId,
-    })
-    .select()
-    .single();
+---
 
-  // 3. Buscar todos os usuários ativos
-  const { data: users } = await supabase
-    .from('users')
-    .select('id, organization_id')
-    .eq('is_active', true);
+## Reorganização do Layout
 
-  // 4. Criar notificações em lote
-  if (users && users.length > 0) {
-    const notifications = users.map(user => ({
-      user_id: user.id,
-      organization_id: user.organization_id,
-      title: 'Comunicado',
-      content: message,
-      type: 'system',
-    }));
+### Nova Estrutura da Sidebar Admin
+```text
+📊 Dashboard          (atual)
+🏢 Organizações       (atual)
+👥 Usuários           (atual)
+📋 Planos             (NOVO)
+💡 Solicitações       (atual - manter)
+📢 Comunicados        (NOVO - separar de configurações)
+❓ Central de Ajuda   (NOVO - editor)
+⚙️ Configurações      (atual - só logos/sistema)
+```
 
-    await supabase.from('notifications').insert(notifications);
-  }
-}
+### Dashboard Melhorado
+```text
+┌────────────────────────────────────────────────────────────┐
+│  CARDS PRINCIPAIS                                          │
+├───────────┬───────────┬───────────┬───────────┬───────────┤
+│ Total     │ Pagas     │ Em Trial  │ Gratuitas │ MRR       │
+│ Orgs      │ (ativas)  │ (7 dias)  │ (parceria)│ R$ X.XXX  │
+├───────────┴───────────┴───────────┴───────────┴───────────┤
+│                                                            │
+│  ALERTAS (agora mais proeminentes)                        │
+│  ⚠️ 3 trials expiram esta semana                           │
+│  ⚠️ 2 organizações inativas há 30+ dias                    │
+│                                                            │
+├────────────────────────────────────────────────────────────┤
+│  GRÁFICOS                                                  │
+│  [Crescimento]              [Status]                       │
+│  [Receita por mês]          [Conversão Trial→Pago]        │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Arquivos a Criar/Modificar
+## Arquivos a Criar
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/migrations/xxx_create_announcements.sql` | Criar tabela |
-| `src/hooks/use-announcements.ts` | Novo hook |
-| `src/components/announcements/AnnouncementBanner.tsx` | Novo componente |
-| `src/pages/admin/AdminSettings.tsx` | Adicionar seção de comunicados |
-| `src/App.tsx` | Integrar barra no layout |
-| `src/integrations/supabase/types.ts` | Atualizar tipos |
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/xxx_admin_plans.sql` | Tabela de planos + alterações em organizations |
+| `supabase/migrations/xxx_announcements_advanced.sql` | Campos adicionais para comunicados |
+| `supabase/migrations/xxx_help_articles.sql` | Tabela de artigos de ajuda |
+| `src/pages/admin/AdminPlans.tsx` | Gerenciamento de planos SaaS |
+| `src/pages/admin/AdminAnnouncements.tsx` | Comunicados avançados (separado) |
+| `src/pages/admin/AdminHelpEditor.tsx` | Editor da central de ajuda |
+| `src/hooks/use-admin-plans.ts` | CRUD de planos |
+| `src/hooks/use-help-articles.ts` | CRUD de artigos |
+| `src/components/admin/TrialExpiredModal.tsx` | Modal de trial expirado |
+| `supabase/functions/trial-checker/index.ts` | Verificador automático de trials |
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/admin/AdminSidebar.tsx` | Adicionar novos menus |
+| `src/pages/admin/AdminDashboard.tsx` | Métricas financeiras reais |
+| `src/pages/admin/AdminSettings.tsx` | Remover comunicados (vai para página própria) |
+| `src/pages/admin/AdminOrganizations.tsx` | Adicionar coluna de plano |
+| `src/pages/admin/AdminOrganizationDetail.tsx` | Seção de plano/billing |
+| `src/hooks/use-super-admin.ts` | Incluir dados de planos |
+| `src/hooks/use-announcements.ts` | Suporte a targets |
+| `src/App.tsx` | Verificação de trial expirado + novas rotas |
+| `src/pages/Help.tsx` | Carregar artigos do banco |
 
 ---
 
-## Fluxo de Uso
+## Fluxo de Trial Expirado
 
 ```text
-1. Super Admin acessa Configurações do Sistema
-2. Na seção "Comunicados", preenche a mensagem
-3. Opcionalmente adiciona texto e link do botão
-4. Ativa o comunicado e salva
-5. Sistema:
-   - Desativa comunicados anteriores
-   - Cria novo comunicado ativo
-   - Envia notificação para todos os usuários
-6. Usuários veem:
-   - Barra laranja no topo (pode fechar)
-   - Notificação no sino
-7. Quando fecham, fica salvo no localStorage
-8. Se outro comunicado for publicado, aparece novamente
+1. Usuário faz login
+2. Sistema verifica: subscription_type = 'trial' && trial_ends_at < now()
+3. Se expirado:
+   - Permite acesso à tela
+   - Exibe modal de bloqueio:
+     ┌─────────────────────────────────────┐
+     │  ⏰ Seu período de teste expirou    │
+     │                                     │
+     │  Entre em contato para continuar    │
+     │  usando o sistema.                  │
+     │                                     │
+     │  [💬 Falar via WhatsApp]            │
+     │  (abre WhatsApp do super admin)     │
+     └─────────────────────────────────────┘
+   - Modal não fecha (bloqueia sistema)
 ```
 
 ---
 
-## Considerações
+## Prioridade de Implementação
 
-1. **Apenas um comunicado ativo**: Ao ativar um novo, os anteriores são desativados
-2. **Dispensa persistente**: Usar localStorage com o ID do comunicado para não mostrar o mesmo novamente
-3. **Novo comunicado = nova exibição**: Se o ID mudar, a barra aparece de novo
-4. **Notificações assíncronas**: Envio em batch para não travar a UI
-5. **Z-index alto (z-50)**: Garante visibilidade acima de tudo
+1. **Crítico:** Verificar/corrigir botões desativar/excluir
+2. **Alto:** Sistema de planos + trial automático
+3. **Alto:** Reorganização visual do dashboard
+4. **Médio:** Comunicados avançados com targets
+5. **Médio:** Editor da central de ajuda
+6. **Baixo:** Alertas como notificações push
 
+---
+
+## Considerações Técnicas
+
+1. **Trial automático:** Usar cron do Supabase para verificar diariamente
+2. **Modal de bloqueio:** Verificar no `AuthContext` após login
+3. **MRR:** Calcular em tempo real baseado nos planos atribuídos
+4. **Editor de ajuda:** Usar biblioteca de Markdown (react-markdown ou similar)
+5. **Comunicados com targets:** Filtrar notificações no momento do envio
+
+---
+
+## Resumo Visual
+
+```text
+Antes:                          Depois:
+├── Dashboard                   ├── Dashboard (melhorado)
+├── Organizações                ├── Organizações (com planos)
+├── Usuários                    ├── Usuários
+├── Solicitações                ├── Planos (NOVO)
+└── Configurações               ├── Solicitações
+    └── (comunicados aqui)      ├── Comunicados (NOVO)
+                                ├── Central de Ajuda (NOVO)
+                                └── Configurações (simplificado)
+```
