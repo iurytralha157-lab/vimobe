@@ -1,240 +1,164 @@
 
 
-# Auditoria e Plano: Push Notifications Remotas (iOS/Android)
+# Plano: Correções de UI Mobile no Dashboard
 
-## 1. Resultado da Auditoria
+## Problemas Identificados
 
-### O que já existe (Backend 95% pronto!)
+Analisando as imagens e o código, identifiquei 4 problemas:
 
-| Componente | Status | Detalhes |
-|------------|--------|----------|
-| **Tabela `push_tokens`** | ✅ Existe | Armazena tokens por user/organization/platform |
-| **Edge Function `send-push-notification`** | ✅ Existe | Usa FCM HTTP v1 API corretamente |
-| **Secret `FIREBASE_SERVICE_ACCOUNT`** | ✅ Configurado | JSON do Service Account está no Supabase |
-| **Trigger automático** | ✅ Existe | `trigger_push_on_notification_insert` dispara push ao inserir notification |
-| **Hook `usePushNotifications`** | ✅ Existe | Pede permissão, registra token, salva no banco |
-| **Inicialização no App** | ✅ Existe | `AppLayout.tsx` chama `usePushNotifications()` |
-| **Capacitor Push** | ✅ Instalado | `@capacitor/push-notifications` no package.json |
+| Problema | Local | Causa |
+|----------|-------|-------|
+| 1. Filtros mal distribuídos | Dashboard mobile | Layout `flex-wrap` sem organização no mobile |
+| 2. Header "andando" | Todas as páginas | Header não tem `sticky`, rola com a página |
+| 3. Logo bugada no menu lateral | MobileSidebar | Botão X do Sheet sobrepõe a logo (position absolute) |
+| 4. Evolução de Negócios sumiu | Dashboard mobile | Gráfico está nas Tabs mas não está sendo renderizado corretamente |
 
-### Diagnóstico: Por que não funciona com app fechado?
+---
 
+## Solução Detalhada
+
+### 1. Filtros do Dashboard Mobile
+
+**Problema:** Os filtros ficam "jogados" no mobile, sem organização visual.
+
+**Solução:** Criar um botão "Filtros" que abre um Sheet/Popover com todos os filtros organizados verticalmente.
+
+**Antes:**
 ```text
-+------------------+     +------------------+     +------------------+
-|   Lead Created   | --> | Notification DB  | --> | Trigger pg_net   |
-|   (webhook/app)  |     | INSERT           |     | HTTP POST        |
-+------------------+     +------------------+     +------------------+
-                                                          |
-                                                          v
-                                            +---------------------------+
-                                            | send-push-notification    |
-                                            | Edge Function             |
-                                            +---------------------------+
-                                                          |
-                                                          v
-                                            +---------------------------+
-                                            | Firebase Cloud Messaging  |
-                                            | FCM HTTP v1 API           |
-                                            +---------------------------+
-                                                          |
-                                                          v
-                                            +---------------------------+
-                                            | APNs (Apple) / FCM (And)  |
-                                            +---------------------------+
-                                                          |
-                                                          v
-                                            +---------------------------+
-                                            | Push no dispositivo       | ❌ FALHA AQUI
-                                            +---------------------------+
+[Últimos 30 dias] [Todas equipes ▼]
+      [Todos ▼] [Todas origens ▼]
 ```
 
-**O problema NÃO está no código, está na configuração externa:**
-
-1. **iOS requer configuração APNs no Firebase** - Sem isso, o Firebase não consegue enviar para iPhones
-2. **O projeto Capacitor não foi buildado localmente** - `capacitor.config.ts` não existe no projeto
-3. **Nenhum token registrado** - A tabela `push_tokens` está vazia (nenhum dispositivo se registrou ainda)
-
----
-
-## 2. O que você PRECISA fazer (configuração externa)
-
-### Passo 1: Criar projeto Firebase (se ainda não existe)
-
-1. Acesse **console.firebase.google.com**
-2. Clique **"Adicionar projeto"**
-3. Nome: `vimob-crm`
-4. Desative Analytics (não precisa)
-5. Clique **"Criar projeto"**
-
-### Passo 2: Adicionar App iOS no Firebase
-
-1. No console Firebase, clique no ícone **iOS (maçã)**
-2. **Bundle ID**: `app.lovable.106c422f8c2149a5968a18f4ac50cb74`
-3. **Apelido**: `Vimob iOS`
-4. Baixe o arquivo `GoogleService-Info.plist`
-5. **Guarde esse arquivo** - vai usar no Xcode
-
-### Passo 3: Configurar APNs no Firebase (CRÍTICO para iOS)
-
-Você precisa de uma conta Apple Developer ($99/ano) e Mac com Xcode.
-
-**No Apple Developer Portal (developer.apple.com):**
-
-1. Acesse **Certificates, Identifiers & Profiles**
-2. Vá em **Keys** → clique **"+"**
-3. Nome: `Vimob Push Key`
-4. Marque **"Apple Push Notifications service (APNs)"**
-5. Clique **Continue** → **Register**
-6. **IMPORTANTE:** Baixe o arquivo `.p8` (só pode baixar UMA vez!)
-7. Anote o **Key ID** (10 caracteres, ex: `ABC123DEFG`)
-8. Anote o **Team ID** (aparece no canto superior direito, ex: `XYZ789`)
-
-**No Firebase Console:**
-
-1. Vá em **Configurações do projeto** (ícone engrenagem)
-2. Aba **"Cloud Messaging"**
-3. Na seção **"Apple app configuration"**, clique **"Upload"**
-4. Faça upload do arquivo `.p8`
-5. Preencha o **Key ID** e **Team ID**
-
-### Passo 4: Gerar Service Account (se ainda não fez)
-
-1. No Firebase Console → **Configurações** → **Contas de serviço**
-2. Clique **"Gerar nova chave privada"**
-3. Baixe o JSON
-4. Atualize o secret `FIREBASE_SERVICE_ACCOUNT` no Supabase se necessário
-
-### Passo 5: Configurar App Android (bônus)
-
-1. No Firebase Console, clique no ícone **Android**
-2. **Package name**: `app.lovable.106c422f8c2149a5968a18f4ac50cb74`
-3. Baixe `google-services.json`
-4. **Guarde esse arquivo** - vai usar no Android Studio
-
----
-
-## 3. O que EU vou fazer (melhorias no código)
-
-### 3.1 Melhorar o payload APNs para iOS
-
-O payload atual não tem `alert` explícito que é necessário para notificações visíveis no iOS com app fechado.
-
-**Mudança na Edge Function:**
-
-```javascript
-apns: {
-  headers: {
-    "apns-priority": "10",
-    "apns-push-type": "alert",
-  },
-  payload: {
-    aps: {
-      alert: {
-        title: title,
-        body: body,
-      },
-      sound: "default",
-      badge: 1,
-      "mutable-content": 1,
-      "content-available": 1,
-    },
-  },
-},
-```
-
-### 3.2 Adicionar logging melhorado
-
-Para facilitar debug de problemas de push.
-
-### 3.3 Criar `capacitor.config.ts`
-
-Arquivo de configuração necessário para build nativo.
-
----
-
-## 4. Arquivos que serão modificados
-
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `supabase/functions/send-push-notification/index.ts` | Modificar | Melhorar payload APNs para iOS |
-| `capacitor.config.ts` | Criar | Configuração Capacitor com hot-reload |
-
----
-
-## 5. Checklist de Testes
-
-Após toda a configuração estar completa:
-
-| Cenário | Como testar |
-|---------|-------------|
-| ✅ App em **foreground** | Crie um lead via webhook, notificação aparece in-app |
-| ✅ App em **background** | Minimize o app, crie um lead, push aparece na barra de status |
-| ✅ App **fechado** (killed) | Force close no app, crie um lead, push aparece |
-| ✅ iPhone **bloqueado** | Bloqueie a tela, crie um lead, push aparece na lock screen |
-| ⚠️ **Modo Foco** ativo | Depende das configurações do usuário no iOS |
-| ⚠️ **Permissões negadas** | Se o usuário negou, não recebe push |
-
----
-
-## 6. Resumo do Status
-
+**Depois:**
 ```text
-╔═══════════════════════════════════════════════════════════════╗
-║                    PUSH NOTIFICATIONS STATUS                   ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Backend (Edge Function)     ✅ PRONTO                        ║
-║  Tabela push_tokens          ✅ PRONTO                        ║
-║  Trigger automático          ✅ PRONTO                        ║
-║  Firebase Service Account    ✅ CONFIGURADO                   ║
-║  Hook usePushNotifications   ✅ PRONTO                        ║
-║  Capacitor instalado         ✅ PRONTO                        ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Firebase Project            ❌ VOCÊ PRECISA CRIAR            ║
-║  APNs Auth Key (.p8)         ❌ VOCÊ PRECISA CONFIGURAR       ║
-║  App build local (Xcode)     ❌ VOCÊ PRECISA FAZER            ║
-║  Token registrado            ❌ NENHUM DISPOSITIVO AINDA      ║
-╚═══════════════════════════════════════════════════════════════╝
+Desktop: [Últimos 30 dias] [Todas equipes ▼] [Todos ▼] [Todas origens ▼]
+
+Mobile: [Últimos 30 dias] [⚙️ Filtros]
+                              ↓ (abre popover)
+                    ┌─────────────────────┐
+                    │ Equipe: [Todas ▼]   │
+                    │ Corretor: [Todos ▼] │
+                    │ Origem: [Todas ▼]   │
+                    │ [Limpar filtros]    │
+                    └─────────────────────┘
+```
+
+### 2. Header Fixo
+
+**Problema:** O header rola junto com a página, causando sensação de "página se mexendo".
+
+**Solução:** Adicionar `sticky top-0 z-40 bg-background` no header.
+
+**Arquivo:** `src/components/layout/AppHeader.tsx`
+
+**Mudança:**
+```typescript
+// De:
+<header className="h-12 flex items-center px-2 lg:px-6 mx-3 mt-3">
+
+// Para:
+<header className="sticky top-0 z-40 h-12 flex items-center px-2 lg:px-6 mx-3 pt-3 bg-background">
+```
+
+### 3. Logo do Menu Lateral
+
+**Problema:** O botão X (fechar) do Sheet está em `absolute right-4 top-4`, sobrepondo a área da logo.
+
+**Solução:** Ajustar o padding-top do header da logo no MobileSidebar e posicionar o X de forma que não sobreponha.
+
+**Arquivo:** `src/components/layout/MobileSidebar.tsx`
+
+**Mudança:** Adicionar padding-right na área da logo para evitar conflito com o X.
+
+### 4. Gráfico de Evolução no Mobile
+
+**Problema:** O gráfico "Evolução de Negócios" não aparece no mobile mesmo quando a tab "Evolução" está selecionada.
+
+**Análise do código:** O Dashboard tem tabs para mobile:
+- Tab "Funil" → `{funnelComponent}`  
+- Tab "Evolução" → `{DealsEvolutionChart}`
+
+Olhando a imagem IMG_4372.png, vejo que a tab "Evolução" está selecionada mas mostra "Evolução de Negócios" com espaço vazio abaixo. Isso indica que o gráfico está renderizando mas sem dados visíveis (ou com altura insuficiente).
+
+**Solução:** Garantir altura mínima fixa no gráfico para mobile.
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/dashboard/DashboardFilters.tsx` | Adicionar versão colapsada para mobile |
+| `src/components/layout/AppHeader.tsx` | Tornar header sticky |
+| `src/components/layout/MobileSidebar.tsx` | Ajustar padding para evitar sobreposição do X |
+| `src/components/dashboard/DealsEvolutionChart.tsx` | Garantir altura mínima no mobile |
+
+---
+
+## Detalhes Técnicos
+
+### DashboardFilters - Nova Estrutura Mobile
+
+```typescript
+// Detectar mobile
+const isMobile = useIsMobile();
+
+// Mobile: botão que abre popover
+// Desktop: filtros inline como hoje
+
+{isMobile ? (
+  <div className="flex items-center gap-2">
+    <DateFilterPopover ... />
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8">
+          <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />
+          Filtros
+          {hasActiveFilters && <Badge className="ml-1">•</Badge>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-4">
+        {/* Filtros empilhados verticalmente */}
+        <div className="space-y-3">
+          {/* Team */}
+          {/* User */}
+          {/* Source */}
+          {/* Clear button */}
+        </div>
+      </PopoverContent>
+    </Popover>
+  </div>
+) : (
+  // Desktop - layout atual
+)}
+```
+
+### AppHeader - Sticky
+
+```typescript
+<header className="sticky top-0 z-40 h-12 flex items-center px-2 lg:px-6 mx-3 pt-3 bg-background">
+```
+
+### MobileSidebar - Ajuste da Logo
+
+```typescript
+// Adicionar pr-8 (padding-right) no container da logo para evitar conflito com o X
+<div className="p-4 pr-10 border-b border-border">
+```
+
+### DealsEvolutionChart - Altura Mobile
+
+```typescript
+// Garantir altura mínima no container do gráfico
+<div className="flex-1 min-h-[200px] h-[200px] sm:h-auto">
 ```
 
 ---
 
-## Seção Técnica
+## Resultado Esperado
 
-### Payload FCM correto para iOS (tela bloqueada)
-
-Para que push funcione com iPhone bloqueado, o payload precisa:
-
-1. **Campo `notification`** - obrigatório para exibição automática
-2. **APNs headers** - `apns-push-type: alert` e `apns-priority: 10`
-3. **APS alert object** - com `title` e `body` explícitos
-4. **mutable-content: 1** - permite extensões de notificação
-
-### Fluxo de Push Remoto
-
-```text
-1. Lead criado (webhook/app)
-       ↓
-2. Trigger insere em `notifications`
-       ↓
-3. Trigger `trigger_push_on_notification_insert` executa
-       ↓
-4. pg_net faz POST para `send-push-notification`
-       ↓
-5. Edge Function busca tokens do usuário
-       ↓
-6. Edge Function gera access_token Firebase (JWT RS256)
-       ↓
-7. POST para FCM HTTP v1 API
-       ↓
-8. Firebase envia para APNs (iOS) ou FCM (Android)
-       ↓
-9. Push aparece no dispositivo
-```
-
-### Capacidades iOS necessárias (Xcode)
-
-No arquivo `.entitlements` e no Xcode:
-
-- **Push Notifications** capability
-- **Background Modes** → Remote notifications
-- **aps-environment**: `production` (ou `development` para testes)
+1. **Filtros organizados:** No mobile, apenas o filtro de data aparece junto com um botão "Filtros" que abre os demais
+2. **Header fixo:** O cabeçalho fica sempre visível no topo durante o scroll
+3. **Menu lateral limpo:** A logo não é mais sobreposta pelo botão X
+4. **Gráfico visível:** O gráfico de evolução aparece com altura adequada no mobile
 
