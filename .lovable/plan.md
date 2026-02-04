@@ -1,212 +1,227 @@
 
 
-# Plano: Correção de UI Mobile para Configurações e Gestão
+# Plano: Implementação de Web Push Notifications
 
-## Problemas Identificados
+## Contexto Atual
 
-Analisando as imagens enviadas, identifiquei os seguintes problemas:
+O projeto já possui uma estrutura sólida de push notifications para **apps nativos** (Capacitor/FCM), mas não tem suporte para **Web Push** (navegadores). Vou implementar Web Push usando VAPID keys para que usuários no navegador também recebam notificações mesmo com a aba fechada.
 
-| Problema | Página | Causa |
-|----------|--------|-------|
-| 1. Menu de tabs só com ícones | Configurações | `<span className="hidden sm:inline">` esconde os textos no mobile, ficando apenas ícones confusos |
-| 2. Tabs cortadas/quebradas | Gestão | A `TabsList` não tem scroll horizontal, tabs de "Equipes" e "Pipelines" ficam fora da tela |
-| 3. Conteúdo flutuando | Gestão | Cards de equipe aparecem parcialmente visíveis no canto da tela |
+### O que já existe:
+| Componente | Status | Descrição |
+|------------|--------|-----------|
+| `push_tokens` table | Existe | Tabela com colunas: user_id, token, platform, is_active |
+| `send-push-notification` Edge Function | Existe | Envia via FCM (para apps nativos) |
+| `usePushNotifications` hook | Existe | Apenas para Capacitor (ignora web) |
+| VAPID Keys | Não existe | Precisa adicionar |
+| Service Worker Push | Não existe | Precisa criar |
+| Web Push Hook | Não existe | Precisa criar |
+| Prompt UI | Não existe | Precisa criar |
 
 ---
 
-## Solução Proposta
-
-### Abordagem: Select no Mobile
-
-Para ambas as páginas, vou implementar um padrão consistente:
-- **Desktop:** Tabs horizontais como estão hoje
-- **Mobile:** `Select` (dropdown) que mostra a opção selecionada por extenso
+## Arquitetura Web Push
 
 ```text
-ANTES (Mobile):
-┌─────────────────────────────────┐
-│ [📷] [🏢] [👥] [🛡️] [📘] [🌐] [📱] │  ← Ícones confusos
-└─────────────────────────────────┘
-
-DEPOIS (Mobile):
-┌─────────────────────────────────┐
-│  📷 Meu Perfil               ▼  │  ← Select claro
-└─────────────────────────────────┘
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Navegador     │────▶│  Supabase Edge   │────▶│  Push Service   │
+│   (Frontend)    │     │  Function        │     │  (Web Push)     │
+│                 │◀────│                  │◀────│                 │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+        │                        │
+        ▼                        ▼
+ Service Worker           VAPID Auth
+  (sw-push.js)        (Private/Public Keys)
 ```
 
 ---
 
-## Arquivos a Modificar
+## Arquivos a Criar/Modificar
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/Settings.tsx` | Substituir tabs por Select no mobile |
-| `src/pages/CRMManagement.tsx` | Substituir tabs por Select no mobile |
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/hooks/use-web-push.ts` | Criar | Hook para gerenciar Web Push |
+| `src/components/pwa/WebPushPrompt.tsx` | Criar | Popup para solicitar permissão |
+| `public/sw-push.js` | Criar | Service Worker para push |
+| `vite.config.ts` | Modificar | Incluir sw-push.js no build |
+| `src/components/layout/AppLayout.tsx` | Modificar | Adicionar WebPushPrompt |
+| `supabase/functions/send-push-notification/index.ts` | Modificar | Adicionar suporte a Web Push via VAPID |
 
 ---
 
 ## Implementação Detalhada
 
-### 1. Settings.tsx - Select Mobile
+### 1. Criar Hook `use-web-push.ts`
 
 ```typescript
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// No componente:
-const isMobile = useIsMobile();
-const [activeTab, setActiveTab] = useState('profile');
-
-// Definir lista de tabs com ícones e labels
-const settingsTabs = [
-  { value: 'profile', label: t.settings.myProfile, icon: Camera },
-  { value: 'organization', label: t.settings.company, icon: Building2 },
-  { value: 'users', label: t.settings.usersTab, icon: Users },
-  // ... condicionais para roles, webhooks, etc
-];
-
-// Renderização:
-{isMobile ? (
-  <Select value={activeTab} onValueChange={setActiveTab}>
-    <SelectTrigger className="w-full">
-      <SelectValue>
-        <div className="flex items-center gap-2">
-          {CurrentIcon && <CurrentIcon className="h-4 w-4" />}
-          <span>{currentLabel}</span>
-        </div>
-      </SelectValue>
-    </SelectTrigger>
-    <SelectContent>
-      {settingsTabs.map(tab => (
-        <SelectItem key={tab.value} value={tab.value}>
-          <div className="flex items-center gap-2">
-            <tab.icon className="h-4 w-4" />
-            <span>{tab.label}</span>
-          </div>
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-) : (
-  <TabsList>
-    {/* Tabs desktop como estão */}
-  </TabsList>
-)}
+// Funcionalidades:
+// - Detectar suporte a Web Push (navigator.serviceWorker + PushManager)
+// - Solicitar permissão (Notification.requestPermission)
+// - Criar subscription (pushManager.subscribe com VAPID key)
+// - Salvar subscription no Supabase (tabela push_tokens com platform='web')
+// - Gerenciar estado (isSubscribed, isSupported, etc)
 ```
 
-### 2. CRMManagement.tsx - Select Mobile
+O hook vai:
+1. Verificar se o navegador suporta Web Push
+2. Registrar o Service Worker se ainda não estiver
+3. Obter ou criar a subscription usando a VAPID public key
+4. Salvar no banco (mesma tabela `push_tokens`, platform='web')
 
-A mesma abordagem, mas com as tabs específicas de Gestão:
+### 2. Criar Service Worker `public/sw-push.js`
+
+```javascript
+// Listener para evento 'push'
+self.addEventListener('push', function(event) {
+  const data = event.data?.json() || {};
+  const title = data.title || 'Nova notificação';
+  const options = {
+    body: data.body || '',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-72x72.png',
+    data: data.data || {},
+    vibrate: [200, 100, 200],
+    tag: data.tag || 'notification',
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Listener para clique na notificação
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.openWindow(url)
+  );
+});
+```
+
+### 3. Criar Componente `WebPushPrompt.tsx`
+
+UI similar ao InstallPrompt existente:
+- Banner fixo no bottom pedindo permissão
+- Botão "Ativar notificações" 
+- Botão X para dispensar
+- Persistir dismiss no localStorage por 7 dias
+- Só mostrar se: Web Push suportado + não inscrito + não dispensado
+
+### 4. Atualizar `vite.config.ts`
 
 ```typescript
-const managementTabs = [
-  { value: 'teams', label: 'Equipes', icon: Users },
-  { value: 'pipelines', label: 'Pipelines', icon: GitBranch },
-  { value: 'distribution', label: 'Distribuição', icon: Shuffle },
-  { value: 'pool', label: 'Bolsão', icon: Timer },
-  { value: 'tags', label: 'Tags', icon: Tags },
-];
+VitePWA({
+  // ... config existente ...
+  workbox: {
+    // ... config existente ...
+    // Adicionar:
+    importScripts: ['/sw-push.js'],
+  },
+})
+```
 
-{isMobile ? (
-  <Select value={activeTab} onValueChange={setActiveTab}>
-    <SelectTrigger className="w-full">
-      <SelectValue>
-        <div className="flex items-center gap-2">
-          {CurrentIcon && <CurrentIcon className="h-4 w-4" />}
-          <span>{currentLabel}</span>
-        </div>
-      </SelectValue>
-    </SelectTrigger>
-    <SelectContent>
-      {managementTabs.map(tab => (
-        <SelectItem key={tab.value} value={tab.value}>
-          <div className="flex items-center gap-2">
-            <tab.icon className="h-4 w-4" />
-            <span>{tab.label}</span>
-          </div>
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-) : (
-  <TabsList>
-    {/* Tabs como estão */}
-  </TabsList>
-)}
+Isso faz com que o Workbox (service worker do PWA) importe nosso código de push.
+
+### 5. Atualizar Edge Function para Web Push
+
+A edge function atual usa FCM para apps nativos. Para Web Push, precisamos enviar via protocolo Web Push (RFC 8030) usando as VAPID keys.
+
+```typescript
+// Detectar platform na tabela
+if (tokenRecord.platform === 'web') {
+  // Enviar via Web Push (webpush library)
+  await sendWebPush(tokenRecord.token, title, body, data);
+} else {
+  // Enviar via FCM (código atual)
+  await sendFCMNotification(tokenRecord.token, ...);
+}
+```
+
+### 6. Atualizar AppLayout
+
+```tsx
+import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
+
+// Dentro do componente:
+<WebPushPrompt />
 ```
 
 ---
 
-## Resultado Visual Esperado
+## Secrets Necessários
 
-### Configurações (Mobile)
-```text
-┌─────────────────────────────────┐
-│ ≡  Configurações          🌙 🔔 │
-├─────────────────────────────────┤
-│  📷 Meu Perfil               ▼  │  ← Select dropdown
-├─────────────────────────────────┤
-│  ┌───────────────────────────┐  │
-│  │       Meu Perfil          │  │
-│  │  Gerencie suas informações│  │
-│  │        pessoais           │  │
-│  │                           │  │
-│  │  [Foto]  André Rocha      │  │
-│  │  ...                      │  │
-│  └───────────────────────────┘  │
-└─────────────────────────────────┘
-```
+| Nome | Onde adicionar | Valor |
+|------|----------------|-------|
+| `VITE_VAPID_PUBLIC_KEY` | `.env` (frontend) | A chave pública VAPID fornecida |
+| `VAPID_PRIVATE_KEY` | Supabase Secrets | A chave privada VAPID fornecida |
 
-### Gestão (Mobile)
+A chave pública pode ficar no código (é pública mesmo), mas vou usar env var para facilitar troca futura.
+
+---
+
+## Fluxo do Usuário
+
 ```text
-┌─────────────────────────────────┐
-│ ≡  Gestão                 🌙 🔔 │
-├─────────────────────────────────┤
-│  👥 Equipes                  ▼  │  ← Select dropdown
-├─────────────────────────────────┤
-│  Equipes                        │
-│  2 equipes · 5 membros          │
-│        [+ Nova Equipe]          │
-│                                 │
-│  ┌───────────────────────────┐  │
-│  │ 👥 Time Comercial         │  │
-│  │ 3 membros · 👑 André      │  │
-│  └───────────────────────────┘  │
-└─────────────────────────────────┘
+1. Usuário abre o app no navegador (desktop/mobile)
+           ↓
+2. WebPushPrompt aparece (se não inscrito e não dispensado)
+           ↓
+3. Usuário clica "Ativar notificações"
+           ↓
+4. Browser pede permissão nativa
+           ↓
+5. Se aceito:
+   - Service Worker registra subscription
+   - Hook salva no Supabase (push_tokens, platform='web')
+           ↓
+6. Quando um evento dispara notificação:
+   - Edge function busca tokens do user
+   - Para platform='web': envia via Web Push protocol
+   - Service Worker recebe e mostra
+           ↓
+7. Usuário clica na notificação → abre o app na URL correta
 ```
 
 ---
 
 ## Seção Técnica
 
-### Por que Select ao invés de Scroll Horizontal?
+### Estrutura do Token Web Push
 
-1. **Clareza:** O usuário vê exatamente a seção atual
-2. **Acessibilidade:** Evita scroll acidental e swipe conflicts
-3. **Consistência:** Padrão comum em apps mobile (iOS usa muito)
-4. **Espaço:** Libera área vertical para o conteúdo
-
-### Lógica de Tabs Condicionais (Settings)
-
-A página de Settings tem tabs que aparecem condicionalmente baseado em:
-- `profile?.role === 'admin'` → mostra aba "Funções"
-- `hasWebhooksModule` → mostra aba "Webhooks"
-- `hasWordpressModule` → mostra aba "WordPress"
-- `hasWhatsAppModule` → mostra aba "WhatsApp"
-
-A lista de tabs será construída dinamicamente com `useMemo` para refletir essas condições.
-
-### Mudança Controlada de Tabs
-
-O componente `Tabs` do Radix aceita `value` e `onValueChange`, então posso controlar o estado externamente:
-
-```typescript
-<Tabs value={activeTab} onValueChange={setActiveTab}>
-  {/* O Select ou TabsList alteram o mesmo estado */}
-  {isMobile ? <Select ... /> : <TabsList ... />}
-  
-  <TabsContent value="profile">...</TabsContent>
-  {/* ... */}
-</Tabs>
+O token Web Push é um objeto JSON com:
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": {
+    "p256dh": "...",
+    "auth": "..."
+  }
+}
 ```
+
+Vamos salvar como JSON string na coluna `token` da tabela `push_tokens`.
+
+### Biblioteca Web Push no Edge Function
+
+Usaremos a implementação manual do protocolo Web Push (VAPID + ECDH encryption) pois não há biblioteca Deno nativa disponível. Alternativa: usar um serviço intermediário ou implementar os headers VAPID manualmente.
+
+### Diferença FCM vs Web Push
+
+| Aspecto | FCM (Atual) | Web Push (Novo) |
+|---------|-------------|-----------------|
+| Platform | Android/iOS nativos | Navegadores |
+| Auth | Firebase Service Account | VAPID Keys |
+| Protocol | FCM HTTP v1 | RFC 8030 + RFC 8291 |
+| Token | FCM Registration Token | PushSubscription Object |
+
+### Compatibilidade
+
+| Navegador | Suporte |
+|-----------|---------|
+| Chrome (desktop) | Sim |
+| Chrome (Android) | Sim |
+| Firefox | Sim |
+| Edge | Sim |
+| Safari (macOS 13+) | Sim |
+| Safari (iOS 16.4+) | Sim (PWA instalado) |
 
