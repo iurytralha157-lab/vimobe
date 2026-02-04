@@ -52,7 +52,11 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminAudit from "./pages/admin/AdminAudit";
 import AdminRequests from "./pages/admin/AdminRequests";
+import AdminPlans from "./pages/admin/AdminPlans";
+import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
+import AdminHelpEditor from "./pages/admin/AdminHelpEditor";
 import ImportCristiano from "./pages/admin/ImportCristiano";
+import { TrialExpiredModal } from "./components/admin/TrialExpiredModal";
 import Notifications from "./pages/Notifications";
 
 // Public site pages
@@ -187,6 +191,9 @@ function AppRoutes() {
       {/* Show impersonate banner when super admin is viewing as another org */}
       <ImpersonateBanner />
       
+      {/* Trial expired modal */}
+      <TrialExpiredModal />
+      
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
         <Routes>
@@ -198,6 +205,9 @@ function AppRoutes() {
           <Route path="/admin/organizations" element={<SuperAdminRoute><AdminOrganizations /></SuperAdminRoute>} />
           <Route path="/admin/organizations/:id" element={<SuperAdminRoute><AdminOrganizationDetail /></SuperAdminRoute>} />
           <Route path="/admin/users" element={<SuperAdminRoute><AdminUsers /></SuperAdminRoute>} />
+          <Route path="/admin/plans" element={<SuperAdminRoute><AdminPlans /></SuperAdminRoute>} />
+          <Route path="/admin/announcements" element={<SuperAdminRoute><AdminAnnouncements /></SuperAdminRoute>} />
+          <Route path="/admin/help-editor" element={<SuperAdminRoute><AdminHelpEditor /></SuperAdminRoute>} />
           <Route path="/admin/settings" element={<SuperAdminRoute><AdminSettings /></SuperAdminRoute>} />
           <Route path="/admin/requests" element={<SuperAdminRoute><AdminRequests /></SuperAdminRoute>} />
           <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
