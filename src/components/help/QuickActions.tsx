@@ -126,15 +126,20 @@ export function QuickActions() {
     return true;
   }).slice(0, 6); // Show max 6 actions
 
+  const handleClick = (path: string) => {
+    navigate(path);
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {availableActions.map((action) => (
-        <Card
+        <button
           key={action.path}
-          className="group hover:border-primary/50 transition-colors cursor-pointer"
-          onClick={() => navigate(action.path)}
+          type="button"
+          className="group text-left w-full rounded-lg border bg-card hover:border-primary/50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          onClick={() => handleClick(action.path)}
         >
-          <CardContent className="p-4 flex items-start gap-3">
+          <div className="p-4 flex items-start gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
               <action.icon className="h-5 w-5 text-primary" />
             </div>
@@ -149,8 +154,8 @@ export function QuickActions() {
                 {action.description}
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </button>
       ))}
     </div>
   );
