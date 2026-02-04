@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Building2, Plus, Check, Facebook, AlertCircle, Globe, Copy, Loader2, Code, Camera, Settings2, ExternalLink, MessageCircle, Smartphone, Trash2, Shield } from 'lucide-react';
+import { Users, Building2, Plus, Check, Facebook, AlertCircle, Globe, Copy, Loader2, Code, Camera, Settings2, ExternalLink, MessageCircle, Smartphone, Trash2, Shield, LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOrganizationUsers, useUpdateUser } from '@/hooks/use-users';
@@ -31,6 +31,14 @@ import { RolesTab } from '@/components/settings/RolesTab';
 import { Webhook } from 'lucide-react';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useOrganizationRoles, useUserOrganizationRoles, useAssignUserRole } from '@/hooks/use-organization-roles';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+interface TabItem {
+  value: string;
+  label: string;
+  icon: LucideIcon;
+}
+
 export default function Settings() {
   const {
     profile,
@@ -266,43 +274,75 @@ export default function Settings() {
     t
   } = useLanguage();
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wordpress-webhook`;
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState('profile');
+
+  // Build tabs list dynamically based on permissions and modules
+  const settingsTabs: TabItem[] = useMemo(() => {
+    const tabs: TabItem[] = [
+      { value: 'profile', label: t.settings.myProfile, icon: Camera },
+      { value: 'organization', label: t.settings.company, icon: Building2 },
+      { value: 'users', label: t.settings.usersTab, icon: Users },
+    ];
+
+    if (profile?.role === 'admin' || isSuperAdmin) {
+      tabs.push({ value: 'roles', label: 'Funções', icon: Shield });
+    }
+
+    if (hasWebhooksModule) {
+      tabs.push({ value: 'webhooks', label: 'Webhooks', icon: Webhook });
+    }
+
+    tabs.push({ value: 'meta', label: t.settings.meta, icon: Facebook });
+
+    if (hasWordpressModule) {
+      tabs.push({ value: 'wordpress', label: t.settings.wordpress, icon: Globe });
+    }
+
+    if (hasWhatsAppModule) {
+      tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: Smartphone });
+    }
+
+    return tabs;
+  }, [t, profile?.role, isSuperAdmin, hasWebhooksModule, hasWordpressModule, hasWhatsAppModule]);
+
+  const currentTab = settingsTabs.find(tab => tab.value === activeTab);
+  const CurrentIcon = currentTab?.icon;
+
   return <AppLayout title={t.settings.title}>
       <div className="animate-in">
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="profile" className="gap-2">
-              <Camera className="h-4 w-4" />
-              <span className="hidden sm:inline font-extralight">{t.settings.myProfile}</span>
-            </TabsTrigger>
-            <TabsTrigger value="organization" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.settings.company}</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.settings.usersTab}</span>
-            </TabsTrigger>
-            {(profile?.role === 'admin' || isSuperAdmin) && <TabsTrigger value="roles" className="gap-2">
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Funções</span>
-              </TabsTrigger>}
-            {hasWebhooksModule && <TabsTrigger value="webhooks" className="gap-2">
-                <Webhook className="h-4 w-4" />
-                <span className="hidden sm:inline">Webhooks</span>
-              </TabsTrigger>}
-            <TabsTrigger value="meta" className="gap-2">
-              <Facebook className="h-4 w-4" />
-              <span className="hidden sm:inline">{t.settings.meta}</span>
-            </TabsTrigger>
-            {hasWordpressModule && <TabsTrigger value="wordpress" className="gap-2">
-                <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">{t.settings.wordpress}</span>
-              </TabsTrigger>}
-            {hasWhatsAppModule && <TabsTrigger value="whatsapp" className="gap-2">
-                <Smartphone className="h-4 w-4" />
-                <span className="hidden sm:inline">WhatsApp</span>
-              </TabsTrigger>}
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          {isMobile ? (
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {CurrentIcon && <CurrentIcon className="h-4 w-4" />}
+                    <span>{currentTab?.label}</span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {settingsTabs.map(tab => (
+                  <SelectItem key={tab.value} value={tab.value}>
+                    <div className="flex items-center gap-2">
+                      <tab.icon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <TabsList className="flex-wrap h-auto gap-1">
+              {settingsTabs.map(tab => (
+                <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
+                  <tab.icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
 
           {/* Profile Tab */}
           <TabsContent value="profile">
