@@ -78,7 +78,7 @@ const PERMISSION_GROUPS: Record<string, { label: string; keys: string[] }> = {
   reports: { label: 'Relatórios', keys: ['reports_view'] },
   // Dentro de "leads"
   lead_visibility: { label: 'Visibilidade de Leads', keys: ['lead_view_all', 'lead_view_own', 'lead_view_team'] },
-  lead_actions: { label: 'Ações em Leads', keys: ['lead_edit', 'lead_delete', 'lead_assign', 'lead_transfer'] },
+  lead_actions: { label: 'Ações em Leads', keys: ['lead_edit', 'lead_delete', 'lead_assign', 'lead_transfer', 'pipeline_lock'] },
   // Dentro de "data"
   customers: { label: 'Clientes Telecom', keys: ['customers_view_all', 'customers_view_own', 'customers_edit'] },
   data_export: { label: 'Exportação', keys: ['data_export'] },
