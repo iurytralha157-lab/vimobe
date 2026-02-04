@@ -10,6 +10,7 @@ import { SuperAdminRoute } from "@/components/guards/SuperAdminRoute";
 import { AdminRoute } from "@/components/guards/AdminRoute";
 import { PermissionGuard } from "@/components/guards/PermissionGuard";
 import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
+import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 
 
@@ -180,6 +181,9 @@ function AppRoutes() {
 
   return (
     <>
+      {/* Show announcement banner at very top */}
+      <AnnouncementBanner />
+      
       {/* Show impersonate banner when super admin is viewing as another org */}
       <ImpersonateBanner />
       

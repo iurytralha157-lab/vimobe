@@ -59,6 +59,39 @@ export type Database = {
           },
         ]
       }
+      announcements: {
+        Row: {
+          button_text: string | null
+          button_url: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          message: string
+          updated_at: string | null
+        }
+        Insert: {
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          message: string
+          updated_at?: string | null
+        }
+        Update: {
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       assignments_log: {
         Row: {
           assigned_at: string | null

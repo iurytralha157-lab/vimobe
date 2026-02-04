@@ -5,11 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Save, Upload, Loader2, Sun, Moon, Maximize2, RefreshCw } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Save, Upload, Loader2, Sun, Moon, Maximize2, RefreshCw, Megaphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 import { useForceRefreshBroadcast } from '@/hooks/use-force-refresh';
+import { useActiveAnnouncement, useAnnouncements } from '@/hooks/use-announcements';
 
 interface SystemSettingsValue {
   logo_url_light?: string | null;
@@ -44,7 +47,38 @@ export default function AdminSettings() {
   const [logoHeight, setLogoHeight] = useState(40);
   const [broadcastingRefresh, setBroadcastingRefresh] = useState(false);
   
+  // Announcements state
+  const [announcementMessage, setAnnouncementMessage] = useState('');
+  const [buttonText, setButtonText] = useState('');
+  const [buttonUrl, setButtonUrl] = useState('');
+  
   const { broadcastRefresh } = useForceRefreshBroadcast();
+  const { data: activeAnnouncement } = useActiveAnnouncement();
+  const { publish, deactivate, isPublishing, isDeactivating } = useAnnouncements();
+  
+  // Preencher campos com comunicado ativo
+  useEffect(() => {
+    if (activeAnnouncement) {
+      setAnnouncementMessage(activeAnnouncement.message || '');
+      setButtonText(activeAnnouncement.button_text || '');
+      setButtonUrl(activeAnnouncement.button_url || '');
+    }
+  }, [activeAnnouncement]);
+
+  const handlePublishAnnouncement = async () => {
+    if (!announcementMessage.trim()) {
+      toast.error('Informe a mensagem do comunicado');
+      return;
+    }
+    await publish({ message: announcementMessage, buttonText, buttonUrl });
+  };
+
+  const handleDeactivateAnnouncement = async () => {
+    await deactivate();
+    setAnnouncementMessage('');
+    setButtonText('');
+    setButtonUrl('');
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -522,6 +556,80 @@ export default function AdminSettings() {
               <Save className="h-4 w-4 mr-2" />
               Salvar
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Announcements Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Comunicados
+            </CardTitle>
+            <CardDescription>
+              Exiba um aviso no topo de todas as telas para todos os usuários. 
+              Ao publicar, uma notificação também é enviada para todos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {activeAnnouncement && (
+              <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg border border-orange-200 dark:border-orange-800 mb-4">
+                <p className="text-sm text-orange-800 dark:text-orange-200 font-medium">
+                  ✅ Comunicado ativo: "{activeAnnouncement.message}"
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Mensagem do comunicado</Label>
+              <Textarea 
+                placeholder="Nova atualização disponível! Confira as novidades."
+                value={announcementMessage}
+                onChange={(e) => setAnnouncementMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Texto do botão (opcional)</Label>
+                <Input 
+                  placeholder="Saiba mais"
+                  value={buttonText}
+                  onChange={(e) => setButtonText(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Link do botão (opcional)</Label>
+                <Input 
+                  placeholder="https://..."
+                  value={buttonUrl}
+                  onChange={(e) => setButtonUrl(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button 
+                onClick={handlePublishAnnouncement}
+                disabled={isPublishing || !announcementMessage.trim()}
+              >
+                {isPublishing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <Megaphone className="h-4 w-4 mr-2" />
+                {activeAnnouncement ? 'Atualizar e Publicar' : 'Publicar Comunicado'}
+              </Button>
+
+              {activeAnnouncement && (
+                <Button 
+                  variant="outline"
+                  onClick={handleDeactivateAnnouncement}
+                  disabled={isDeactivating}
+                >
+                  {isDeactivating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Desativar Comunicado
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 
