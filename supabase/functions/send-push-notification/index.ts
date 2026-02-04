@@ -13,6 +13,172 @@ interface PushPayload {
   priority?: 'high' | 'normal';
 }
 
+interface WebPushSubscription {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+// ==================== VAPID/Web Push Functions ====================
+
+// Importa a chave privada VAPID
+function getVapidKeys() {
+  const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+  const publicKey = Deno.env.get("VITE_VAPID_PUBLIC_KEY") || "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWjUfBw5nc02KFFL6pr1jM51bHv0CllEuy5ypnldeYLMhYSbQbKlWHK7T9VK1CF2xVgH_9HOc3tavj0iuT1mEzA";
+  
+  if (!privateKey) {
+    throw new Error("VAPID_PRIVATE_KEY not configured");
+  }
+
+  return { privateKey, publicKey };
+}
+
+// Base64URL encode/decode helpers
+function base64UrlEncode(data: Uint8Array | ArrayBuffer): string {
+  const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function base64UrlDecode(str: string): Uint8Array {
+  const padding = '='.repeat((4 - (str.length % 4)) % 4);
+  const base64 = (str + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// Parse PEM private key
+function parsePrivateKey(pem: string): Uint8Array {
+  // Remove PEM headers if present
+  let keyData = pem
+    .replace(/-----BEGIN (EC )?PRIVATE KEY-----/g, '')
+    .replace(/-----END (EC )?PRIVATE KEY-----/g, '')
+    .replace(/\s/g, '');
+  
+  return base64UrlDecode(keyData);
+}
+
+// Create VAPID JWT for authorization
+async function createVapidJwt(audience: string, subject: string, privateKeyPem: string): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + 12 * 60 * 60; // 12 hours
+
+  const header = { alg: "ES256", typ: "JWT" };
+  const payload = {
+    aud: audience,
+    exp: exp,
+    sub: subject,
+  };
+
+  const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const unsignedToken = `${headerB64}.${payloadB64}`;
+
+  // Import the ECDSA private key
+  const keyData = parsePrivateKey(privateKeyPem);
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    keyData.buffer as ArrayBuffer,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+
+  // Sign the token
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    cryptoKey,
+    new TextEncoder().encode(unsignedToken)
+  );
+
+  // Convert signature from DER to raw format (64 bytes: r + s)
+  const sigArray = new Uint8Array(signature);
+  const signatureB64 = base64UrlEncode(sigArray);
+
+  return `${unsignedToken}.${signatureB64}`;
+}
+
+// Send Web Push notification
+async function sendWebPushNotification(
+  subscriptionJson: string,
+  title: string,
+  body: string,
+  data: Record<string, any> = {},
+  priority: 'high' | 'normal' = 'high'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
+    const { privateKey, publicKey } = getVapidKeys();
+
+    // Extract audience from endpoint
+    const endpointUrl = new URL(subscription.endpoint);
+    const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
+
+    // Create VAPID JWT
+    const jwt = await createVapidJwt(audience, "mailto:suporte@vimob.com.br", privateKey);
+
+    // Prepare payload
+    const payload = JSON.stringify({
+      title,
+      body,
+      data,
+      priority,
+      tag: `notification-${Date.now()}`,
+    });
+
+    console.log(`[WebPush] Sending to endpoint: ${subscription.endpoint.substring(0, 50)}...`);
+
+    // Send the push message
+    const response = await fetch(subscription.endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `vapid t=${jwt}, k=${publicKey}`,
+        "Content-Type": "application/octet-stream",
+        "Content-Encoding": "aes128gcm",
+        "TTL": priority === 'high' ? "86400" : "3600",
+        "Urgency": priority === 'high' ? "high" : "normal",
+      },
+      body: new TextEncoder().encode(payload),
+    });
+
+    if (response.status === 201 || response.status === 200) {
+      console.log("[WebPush] Sent successfully");
+      return { success: true };
+    }
+
+    // Handle specific error codes
+    if (response.status === 404 || response.status === 410) {
+      console.log("[WebPush] Subscription expired/invalid");
+      return { success: false, error: "invalid_token" };
+    }
+
+    const errorText = await response.text();
+    console.error(`[WebPush] Error ${response.status}:`, errorText);
+    return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+
+  } catch (error) {
+    console.error("[WebPush] Error:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
+// ==================== FCM Functions (existing) ====================
+
 // Get Firebase access token using Service Account
 async function getFirebaseAccessToken(): Promise<string> {
   const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
@@ -248,16 +414,17 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${tokens.length} active tokens`);
 
-    // Get Firebase access token
-    let accessToken: string;
-    try {
-      accessToken = await getFirebaseAccessToken();
-    } catch (error) {
-      console.error("Failed to get Firebase access token:", error);
-      return new Response(
-        JSON.stringify({ error: "Firebase authentication failed", details: String(error) }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Get Firebase access token only if we have non-web tokens
+    const hasNativeTokens = tokens.some(t => t.platform !== 'web');
+    let accessToken: string | null = null;
+    
+    if (hasNativeTokens) {
+      try {
+        accessToken = await getFirebaseAccessToken();
+      } catch (error) {
+        console.error("Failed to get Firebase access token:", error);
+        // Continue - we might still send to web tokens
+      }
     }
 
     // Send to all tokens
@@ -266,14 +433,34 @@ Deno.serve(async (req) => {
     const invalidTokenIds: string[] = [];
 
     for (const tokenRecord of tokens) {
-      const result = await sendFCMNotification(
-        tokenRecord.token,
-        accessToken,
-        payload.title,
-        payload.body || "",
-        payload.data || {},
-        payload.priority || "high"
-      );
+      let result: { success: boolean; error?: string };
+      
+      if (tokenRecord.platform === 'web') {
+        // Send via Web Push
+        console.log(`[Push] Sending Web Push to token ID: ${tokenRecord.id}`);
+        result = await sendWebPushNotification(
+          tokenRecord.token,
+          payload.title,
+          payload.body || "",
+          payload.data || {},
+          payload.priority || "high"
+        );
+      } else {
+        // Send via FCM for native apps
+        if (!accessToken) {
+          console.error("[Push] No FCM access token available for native token");
+          result = { success: false, error: "No FCM access token" };
+        } else {
+          result = await sendFCMNotification(
+            tokenRecord.token,
+            accessToken,
+            payload.title,
+            payload.body || "",
+            payload.data || {},
+            payload.priority || "high"
+          );
+        }
+      }
 
       if (result.success) {
         sentCount++;
