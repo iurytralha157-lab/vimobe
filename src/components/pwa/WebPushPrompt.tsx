@@ -25,26 +25,31 @@ export function WebPushPrompt() {
   useEffect(() => {
     // Não mostra em apps nativos (usa push nativo via Capacitor)
     if (Capacitor.isNativePlatform()) {
+      setShowPrompt(false);
       return;
     }
 
     // Não mostra se não está logado
-    if (!user) {
+    if (!user?.id) {
+      setShowPrompt(false);
       return;
     }
 
     // Não mostra se não é suportado
     if (!isSupported) {
+      setShowPrompt(false);
       return;
     }
 
     // Não mostra se já está inscrito
     if (isSubscribed) {
+      setShowPrompt(false);
       return;
     }
 
     // Não mostra se já negou permissão
     if (permission === 'denied') {
+      setShowPrompt(false);
       return;
     }
 
@@ -61,6 +66,7 @@ export function WebPushPrompt() {
       const diffDays = (now.getTime() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
       
       if (diffDays < DISMISS_DURATION_DAYS) {
+        setShowPrompt(false);
         return;
       }
     }
@@ -71,7 +77,7 @@ export function WebPushPrompt() {
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [user, isSupported, isSubscribed, isLoading, permission]);
+  }, [user?.id, isSupported, isSubscribed, isLoading, permission]);
 
   const handleEnable = async () => {
     setIsSubscribing(true);
@@ -89,6 +95,11 @@ export function WebPushPrompt() {
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
     setShowPrompt(false);
   };
+
+  // Não renderiza se usuário não está logado (proteção adicional)
+  if (!user?.id) {
+    return null;
+  }
 
   if (!showPrompt) {
     return null;
