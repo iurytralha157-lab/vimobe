@@ -1,17 +1,16 @@
 import { Eye, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 export function ImpersonateBanner() {
   const { impersonating, stopImpersonate } = useAuth();
-  const navigate = useNavigate();
 
   if (!impersonating) return null;
 
   const handleStopImpersonate = async () => {
     await stopImpersonate();
-    navigate('/admin');
+    // Use window.location instead of useNavigate to avoid Router context issues
+    window.location.href = '/admin';
   };
 
   return (
