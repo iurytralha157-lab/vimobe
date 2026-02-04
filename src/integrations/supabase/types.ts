@@ -59,6 +59,51 @@ export type Database = {
           },
         ]
       }
+      admin_subscription_plans: {
+        Row: {
+          billing_cycle: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_leads: number | null
+          max_users: number | null
+          modules: string[] | null
+          name: string
+          price: number
+          trial_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          billing_cycle?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_leads?: number | null
+          max_users?: number | null
+          modules?: string[] | null
+          name: string
+          price?: number
+          trial_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          billing_cycle?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_leads?: number | null
+          max_users?: number | null
+          modules?: string[] | null
+          name?: string
+          price?: number
+          trial_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           button_text: string | null
@@ -68,6 +113,11 @@ export type Database = {
           id: string
           is_active: boolean | null
           message: string
+          send_notification: boolean | null
+          show_banner: boolean | null
+          target_organization_ids: string[] | null
+          target_type: string | null
+          target_user_ids: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -78,6 +128,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           message: string
+          send_notification?: boolean | null
+          show_banner?: boolean | null
+          target_organization_ids?: string[] | null
+          target_type?: string | null
+          target_user_ids?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -88,6 +143,11 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           message?: string
+          send_notification?: boolean | null
+          show_banner?: boolean | null
+          target_organization_ids?: string[] | null
+          target_type?: string | null
+          target_user_ids?: string[] | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1341,6 +1401,45 @@ export type Database = {
           },
         ]
       }
+      help_articles: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          title: string
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          title: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           created_at: string | null
@@ -2464,9 +2563,12 @@ export type Database = {
           logo_url: string | null
           max_users: number
           name: string
+          plan_id: string | null
           segment: string | null
           subscription_status: string
+          subscription_type: string | null
           theme_mode: string | null
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -2481,9 +2583,12 @@ export type Database = {
           logo_url?: string | null
           max_users?: number
           name: string
+          plan_id?: string | null
           segment?: string | null
           subscription_status?: string
+          subscription_type?: string | null
           theme_mode?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -2498,12 +2603,23 @@ export type Database = {
           logo_url?: string | null
           max_users?: number
           name?: string
+          plan_id?: string | null
           segment?: string | null
           subscription_status?: string
+          subscription_type?: string | null
           theme_mode?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "admin_subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permissions: {
         Row: {
