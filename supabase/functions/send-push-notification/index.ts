@@ -107,35 +107,59 @@ async function sendFCMNotification(
   const serviceAccount = JSON.parse(serviceAccountJson!);
   const projectId = serviceAccount.project_id;
 
+  // Convert all data values to strings (FCM requirement)
+  const stringData = Object.fromEntries(
+    Object.entries(data).map(([k, v]) => [k, String(v)])
+  );
+
+  // FCM HTTP v1 message structure optimized for iOS lock screen visibility
   const message = {
     message: {
       token: token,
+      // notification field is REQUIRED for automatic display on iOS/Android
       notification: {
         title: title,
         body: body,
       },
-      data: Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [k, String(v)])
-      ),
+      // data payload for custom handling when app is open
+      data: stringData,
+      // Android-specific configuration
       android: {
         priority: priority,
         notification: {
           sound: "default",
           click_action: "FCM_PLUGIN_ACTIVITY",
           channel_id: "crm_notifications",
+          default_sound: true,
+          default_vibrate_timings: true,
+          visibility: "PUBLIC",
         },
       },
+      // iOS-specific configuration (CRITICAL for lock screen notifications)
       apns: {
+        headers: {
+          "apns-priority": priority === 'high' ? "10" : "5",
+          "apns-push-type": "alert",
+        },
         payload: {
           aps: {
+            alert: {
+              title: title,
+              body: body,
+            },
             sound: "default",
             badge: 1,
+            "mutable-content": 1,
             "content-available": 1,
           },
         },
       },
     },
   };
+
+  console.log(`[FCM] Sending to token: ${token.substring(0, 20)}...`);
+  console.log(`[FCM] Project ID: ${projectId}`);
+  console.log(`[FCM] Title: ${title}, Body: ${body?.substring(0, 50) || '(empty)'}...`);
 
   try {
     const response = await fetch(
@@ -153,23 +177,27 @@ async function sendFCMNotification(
     const result = await response.json();
 
     if (!response.ok) {
-      console.error("FCM error:", result);
+      console.error("[FCM] Error response:", JSON.stringify(result));
       
       // Check for invalid token errors
-      if (result.error?.details?.some((d: any) => 
+      const errorCode = result.error?.details?.find((d: any) => 
         d.errorCode === "UNREGISTERED" || 
-        d.errorCode === "INVALID_ARGUMENT"
-      )) {
+        d.errorCode === "INVALID_ARGUMENT" ||
+        d["@type"]?.includes("BadRequest")
+      );
+      
+      if (errorCode || result.error?.code === 404 || result.error?.code === 400) {
+        console.log("[FCM] Token is invalid or unregistered");
         return { success: false, error: "invalid_token" };
       }
       
       return { success: false, error: result.error?.message || "FCM send failed" };
     }
 
-    console.log("FCM sent successfully:", result.name);
+    console.log("[FCM] Sent successfully, message ID:", result.name);
     return { success: true };
   } catch (error) {
-    console.error("FCM request error:", error);
+    console.error("[FCM] Request error:", error);
     return { success: false, error: String(error) };
   }
 }
