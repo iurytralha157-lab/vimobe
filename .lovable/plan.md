@@ -1,37 +1,64 @@
 
 
-# Plano: Implementação de Web Push Notifications
+# Plano: Tour Guiado de Onboarding para Novos Clientes
 
-## Contexto Atual
+## Contexto
 
-O projeto já possui uma estrutura sólida de push notifications para **apps nativos** (Capacitor/FCM), mas não tem suporte para **Web Push** (navegadores). Vou implementar Web Push usando VAPID keys para que usuários no navegador também recebam notificações mesmo com a aba fechada.
+Você quer substituir o checklist estático atual (que aparece toda vez no dashboard) por um **tour guiado interativo** que:
 
-### O que já existe:
-| Componente | Status | Descrição |
-|------------|--------|-----------|
-| `push_tokens` table | Existe | Tabela com colunas: user_id, token, platform, is_active |
-| `send-push-notification` Edge Function | Existe | Envia via FCM (para apps nativos) |
-| `usePushNotifications` hook | Existe | Apenas para Capacitor (ignora web) |
-| VAPID Keys | Não existe | Precisa adicionar |
-| Service Worker Push | Não existe | Precisa criar |
-| Web Push Hook | Não existe | Precisa criar |
-| Prompt UI | Não existe | Precisa criar |
+1. Aparece apenas para **usuários novos** (primeira vez no sistema)
+2. Mostra as páginas importantes com **popups apontando onde clicar**
+3. Ensina a **cadastrar usuários** e **configurar WhatsApp**
+4. Tem um botão "Dispensar ajuda" que **nunca mais mostra**
+5. É **leve e não intrusivo**
 
 ---
 
-## Arquitetura Web Push
+## O que será feito
+
+| Ação | Descrição |
+|------|-----------|
+| Remover | OnboardingChecklist do Dashboard |
+| Criar | Componente de Tour Guiado com popups |
+| Criar | Hook para gerenciar estado do tour |
+| Adicionar | Campo `onboarding_completed` no banco |
+| Integrar | Tour no AppLayout |
+
+---
+
+## Fluxo do Usuário
 
 ```text
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Navegador     │────▶│  Supabase Edge   │────▶│  Push Service   │
-│   (Frontend)    │     │  Function        │     │  (Web Push)     │
-│                 │◀────│                  │◀────│                 │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-        │                        │
-        ▼                        ▼
- Service Worker           VAPID Auth
-  (sw-push.js)        (Private/Public Keys)
+1. Usuário faz login pela primeira vez
+           ↓
+2. Sistema detecta: onboarding_completed = false
+           ↓
+3. Modal de boas-vindas aparece
+   "Olá! Vamos te mostrar como usar o sistema?"
+   [Começar Tour] [Dispensar]
+           ↓
+4. Se "Começar Tour":
+   - Passo 1: Highlight na Sidebar → "Aqui você navega pelo sistema"
+   - Passo 2: Aponta para Configurações → "Clique aqui para adicionar usuários"
+   - Passo 3: Aponta para WhatsApp → "Configure seu WhatsApp aqui"
+   - Passo 4: Finaliza → "Pronto! Explore o sistema"
+           ↓
+5. Se "Dispensar" (em qualquer momento):
+   - Marca onboarding_completed = true
+   - Nunca mais aparece
 ```
+
+---
+
+## Passos do Tour
+
+| Passo | Elemento Alvo | Título | Descrição |
+|-------|---------------|--------|-----------|
+| 1 | Sidebar | Navegação | "Use o menu lateral para acessar todas as funcionalidades do CRM" |
+| 2 | Dashboard link | Dashboard | "Aqui você vê os indicadores principais do seu negócio" |
+| 3 | Pipelines link | Pipeline | "Gerencie seus leads e oportunidades visualmente" |
+| 4 | Settings link | Configurações | "Adicione usuários e configure sua equipe aqui" |
+| 5 | WhatsApp link (se módulo ativo) | WhatsApp | "Conecte seu WhatsApp para atender clientes" |
 
 ---
 
@@ -39,189 +66,155 @@ O projeto já possui uma estrutura sólida de push notifications para **apps nat
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/hooks/use-web-push.ts` | Criar | Hook para gerenciar Web Push |
-| `src/components/pwa/WebPushPrompt.tsx` | Criar | Popup para solicitar permissão |
-| `public/sw-push.js` | Criar | Service Worker para push |
-| `vite.config.ts` | Modificar | Incluir sw-push.js no build |
-| `src/components/layout/AppLayout.tsx` | Modificar | Adicionar WebPushPrompt |
-| `supabase/functions/send-push-notification/index.ts` | Modificar | Adicionar suporte a Web Push via VAPID |
+| `src/components/onboarding/GuidedTour.tsx` | Criar | Componente principal do tour |
+| `src/components/onboarding/TourStep.tsx` | Criar | Popup individual de cada passo |
+| `src/hooks/use-onboarding-tour.ts` | Criar | Hook para gerenciar estado do tour |
+| `src/components/layout/AppLayout.tsx` | Modificar | Adicionar GuidedTour |
+| `src/pages/Dashboard.tsx` | Modificar | Remover OnboardingChecklist |
+| SQL Migration | Adicionar | Coluna `onboarding_completed` na tabela users |
 
 ---
 
-## Implementação Detalhada
+## UI do Tour
 
-### 1. Criar Hook `use-web-push.ts`
-
-```typescript
-// Funcionalidades:
-// - Detectar suporte a Web Push (navigator.serviceWorker + PushManager)
-// - Solicitar permissão (Notification.requestPermission)
-// - Criar subscription (pushManager.subscribe com VAPID key)
-// - Salvar subscription no Supabase (tabela push_tokens com platform='web')
-// - Gerenciar estado (isSubscribed, isSupported, etc)
-```
-
-O hook vai:
-1. Verificar se o navegador suporta Web Push
-2. Registrar o Service Worker se ainda não estiver
-3. Obter ou criar a subscription usando a VAPID public key
-4. Salvar no banco (mesma tabela `push_tokens`, platform='web')
-
-### 2. Criar Service Worker `public/sw-push.js`
-
-```javascript
-// Listener para evento 'push'
-self.addEventListener('push', function(event) {
-  const data = event.data?.json() || {};
-  const title = data.title || 'Nova notificação';
-  const options = {
-    body: data.body || '',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
-    data: data.data || {},
-    vibrate: [200, 100, 200],
-    tag: data.tag || 'notification',
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
-});
-
-// Listener para clique na notificação
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  const url = event.notification.data?.url || '/';
-  event.waitUntil(
-    clients.openWindow(url)
-  );
-});
-```
-
-### 3. Criar Componente `WebPushPrompt.tsx`
-
-UI similar ao InstallPrompt existente:
-- Banner fixo no bottom pedindo permissão
-- Botão "Ativar notificações" 
-- Botão X para dispensar
-- Persistir dismiss no localStorage por 7 dias
-- Só mostrar se: Web Push suportado + não inscrito + não dispensado
-
-### 4. Atualizar `vite.config.ts`
-
-```typescript
-VitePWA({
-  // ... config existente ...
-  workbox: {
-    // ... config existente ...
-    // Adicionar:
-    importScripts: ['/sw-push.js'],
-  },
-})
-```
-
-Isso faz com que o Workbox (service worker do PWA) importe nosso código de push.
-
-### 5. Atualizar Edge Function para Web Push
-
-A edge function atual usa FCM para apps nativos. Para Web Push, precisamos enviar via protocolo Web Push (RFC 8030) usando as VAPID keys.
-
-```typescript
-// Detectar platform na tabela
-if (tokenRecord.platform === 'web') {
-  // Enviar via Web Push (webpush library)
-  await sendWebPush(tokenRecord.token, title, body, data);
-} else {
-  // Enviar via FCM (código atual)
-  await sendFCMNotification(tokenRecord.token, ...);
-}
-```
-
-### 6. Atualizar AppLayout
-
-```tsx
-import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
-
-// Dentro do componente:
-<WebPushPrompt />
-```
-
----
-
-## Secrets Necessários
-
-| Nome | Onde adicionar | Valor |
-|------|----------------|-------|
-| `VITE_VAPID_PUBLIC_KEY` | `.env` (frontend) | A chave pública VAPID fornecida |
-| `VAPID_PRIVATE_KEY` | Supabase Secrets | A chave privada VAPID fornecida |
-
-A chave pública pode ficar no código (é pública mesmo), mas vou usar env var para facilitar troca futura.
-
----
-
-## Fluxo do Usuário
+### Modal de Boas-vindas (Passo inicial)
 
 ```text
-1. Usuário abre o app no navegador (desktop/mobile)
-           ↓
-2. WebPushPrompt aparece (se não inscrito e não dispensado)
-           ↓
-3. Usuário clica "Ativar notificações"
-           ↓
-4. Browser pede permissão nativa
-           ↓
-5. Se aceito:
-   - Service Worker registra subscription
-   - Hook salva no Supabase (push_tokens, platform='web')
-           ↓
-6. Quando um evento dispara notificação:
-   - Edge function busca tokens do user
-   - Para platform='web': envia via Web Push protocol
-   - Service Worker recebe e mostra
-           ↓
-7. Usuário clica na notificação → abre o app na URL correta
+┌─────────────────────────────────────────┐
+│                                         │
+│          🎉 Bem-vindo ao Vimob!         │
+│                                         │
+│   Vamos te mostrar como configurar      │
+│   seu CRM em poucos passos.             │
+│                                         │
+│   [Começar Tour]  [Não, obrigado]       │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+### Popup de Passo (Apontando para elemento)
+
+```text
+                    ┌──────────────────────────────────────┐
+   ┌────────────────│  📍 Configurações                    │
+   │ Dashboard      │                                      │
+   │ Pipelines      │  Clique aqui para adicionar novos    │
+   │ Conversas      │  usuários à sua equipe.              │
+   │ Contatos       │                                      │
+   │                │  [Anterior] [Próximo] [Pular tudo]   │
+   │ ► Configurações└──────────────────────────────────────┘
+   │ Ajuda          
+   └────────────────
 ```
 
 ---
 
-## Seção Técnica
+## Implementação Técnica
 
-### Estrutura do Token Web Push
+### 1. Adicionar coluna no banco
 
-O token Web Push é um objeto JSON com:
-```json
-{
-  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
-  "keys": {
-    "p256dh": "...",
-    "auth": "..."
-  }
+```sql
+ALTER TABLE users ADD COLUMN onboarding_completed BOOLEAN DEFAULT FALSE;
+```
+
+### 2. Hook use-onboarding-tour.ts
+
+```typescript
+export function useOnboardingTour() {
+  const { profile, refreshProfile } = useAuth();
+  
+  // Verificar se deve mostrar o tour
+  const shouldShowTour = profile && !profile.onboarding_completed;
+  
+  // Estado local do tour
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  
+  // Marcar como concluído
+  const completeTour = async () => {
+    await supabase.from('users')
+      .update({ onboarding_completed: true })
+      .eq('id', profile.id);
+    await refreshProfile();
+  };
+  
+  // Dispensar tour
+  const dismissTour = async () => {
+    await completeTour();
+    setIsActive(false);
+  };
+  
+  return {
+    shouldShowTour,
+    isActive,
+    currentStep,
+    startTour: () => setIsActive(true),
+    nextStep: () => setCurrentStep(s => s + 1),
+    prevStep: () => setCurrentStep(s => Math.max(0, s - 1)),
+    dismissTour,
+    completeTour,
+  };
 }
 ```
 
-Vamos salvar como JSON string na coluna `token` da tabela `push_tokens`.
+### 3. Componente GuidedTour.tsx
 
-### Biblioteca Web Push no Edge Function
+O componente vai:
+- Mostrar modal de boas-vindas se `shouldShowTour` e não `isActive`
+- Quando ativo, renderizar `TourStep` posicionado próximo ao elemento alvo
+- Usar CSS para destacar o elemento (spotlight effect)
+- Navegação: Anterior, Próximo, Pular
 
-Usaremos a implementação manual do protocolo Web Push (VAPID + ECDH encryption) pois não há biblioteca Deno nativa disponível. Alternativa: usar um serviço intermediário ou implementar os headers VAPID manualmente.
+### 4. Posicionamento do Popup
 
-### Diferença FCM vs Web Push
+Usar `getBoundingClientRect()` do elemento alvo para posicionar o popup:
 
-| Aspecto | FCM (Atual) | Web Push (Novo) |
-|---------|-------------|-----------------|
-| Platform | Android/iOS nativos | Navegadores |
-| Auth | Firebase Service Account | VAPID Keys |
-| Protocol | FCM HTTP v1 | RFC 8030 + RFC 8291 |
-| Token | FCM Registration Token | PushSubscription Object |
+```typescript
+const tourSteps = [
+  {
+    target: '[data-tour="sidebar"]',
+    title: 'Menu de Navegação',
+    description: 'Use o menu para acessar todas as funcionalidades',
+    position: 'right',
+  },
+  {
+    target: '[data-tour="settings"]',
+    title: 'Configurações',
+    description: 'Adicione usuários e configure sua equipe aqui',
+    position: 'right',
+  },
+  // ...
+];
+```
 
-### Compatibilidade
+### 5. Remover OnboardingChecklist
 
-| Navegador | Suporte |
-|-----------|---------|
-| Chrome (desktop) | Sim |
-| Chrome (Android) | Sim |
-| Firefox | Sim |
-| Edge | Sim |
-| Safari (macOS 13+) | Sim |
-| Safari (iOS 16.4+) | Sim (PWA instalado) |
+No Dashboard.tsx, simplesmente remover a linha:
+```tsx
+// REMOVER:
+<OnboardingChecklist />
+```
+
+---
+
+## Diferenças do Sistema Atual
+
+| Aspecto | Antes (Checklist) | Depois (Tour) |
+|---------|-------------------|---------------|
+| Quando aparece | Sempre no dashboard | Só primeira vez |
+| Persistência | localStorage (pode resetar) | Banco de dados |
+| Interatividade | Lista de tarefas | Popups guiados |
+| Dispensar | Temporário (pode voltar) | Permanente |
+| Localização | Dentro do dashboard | Overlay global |
+
+---
+
+## Resultado Visual Esperado
+
+O tour terá:
+- **Overlay escuro** cobrindo a tela (exceto elemento destacado)
+- **Popup com seta** apontando para o elemento
+- **Botões de navegação** claros
+- **Animações suaves** entre passos
+- **Design consistente** com o resto do app (cores, fontes)
 
