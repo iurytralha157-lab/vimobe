@@ -54,7 +54,7 @@ export default function AdminSettings() {
   
   const { broadcastRefresh } = useForceRefreshBroadcast();
   const { data: activeAnnouncement } = useActiveAnnouncement();
-  const { publish, deactivate, isPublishing, isDeactivating } = useAnnouncements();
+  const { publish, deactivate, currentAnnouncement } = useAnnouncements();
   
   // Preencher campos com comunicado ativo
   useEffect(() => {
@@ -70,11 +70,13 @@ export default function AdminSettings() {
       toast.error('Informe a mensagem do comunicado');
       return;
     }
-    await publish({ message: announcementMessage, buttonText, buttonUrl });
+    await publish.mutateAsync({ message: announcementMessage, buttonText, buttonUrl });
   };
 
   const handleDeactivateAnnouncement = async () => {
-    await deactivate();
+    if (currentAnnouncement) {
+      await deactivate.mutateAsync(currentAnnouncement.id);
+    }
     setAnnouncementMessage('');
     setButtonText('');
     setButtonUrl('');
@@ -612,9 +614,9 @@ export default function AdminSettings() {
             <div className="flex flex-wrap gap-3 pt-2">
               <Button 
                 onClick={handlePublishAnnouncement}
-                disabled={isPublishing || !announcementMessage.trim()}
+                disabled={publish.isPending || !announcementMessage.trim()}
               >
-                {isPublishing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {publish.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 <Megaphone className="h-4 w-4 mr-2" />
                 {activeAnnouncement ? 'Atualizar e Publicar' : 'Publicar Comunicado'}
               </Button>
@@ -623,9 +625,9 @@ export default function AdminSettings() {
                 <Button 
                   variant="outline"
                   onClick={handleDeactivateAnnouncement}
-                  disabled={isDeactivating}
+                  disabled={deactivate.isPending}
                 >
-                  {isDeactivating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {deactivate.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Desativar Comunicado
                 </Button>
               )}

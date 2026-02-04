@@ -7,7 +7,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  Lightbulb
+  Lightbulb,
+  Package,
+  Megaphone,
+  HelpCircle
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -21,7 +24,10 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Building2, label: 'Organizações', path: '/admin/organizations' },
   { icon: Users, label: 'Usuários', path: '/admin/users' },
+  { icon: Package, label: 'Planos', path: '/admin/plans' },
   { icon: Lightbulb, label: 'Solicitações', path: '/admin/requests' },
+  { icon: Megaphone, label: 'Comunicados', path: '/admin/announcements' },
+  { icon: HelpCircle, label: 'Central de Ajuda', path: '/admin/help-editor' },
   { icon: Settings, label: 'Configurações', path: '/admin/settings' },
 ];
 
