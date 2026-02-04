@@ -1,77 +1,169 @@
 
 
-# Plano de Recuperação Completa - Bolsão Nexo Imóveis
+# Plano: Permissão "Travar Pipeline" + Notificação de Movimentação (Telecom)
 
-## Diagnóstico Final
+## Resumo
 
-O bolsão não só redistribuiu os leads entre usuários, mas também **moveu todos eles para o estágio inicial** ("Contato inicial") porque a função `handle_lead_intake` aplica o `target_stage_id` da fila de Round Robin.
+Duas funcionalidades serão implementadas:
 
-### Status Atual
+1. **Nova permissão `pipeline_lock`**: Impede que usuários movam leads entre colunas/estágios no Kanban
+2. **Notificação de movimentação (apenas Telecom)**: Quando um lead é movido, notifica as partes interessadas
 
-| Situação | Quantidade |
-|----------|------------|
-| Precisa restaurar estágio | **114 leads** |
-| Sem histórico (ficam em "Contato inicial") | 40 leads |
-| Estágio já correto | 7 leads |
-| **Total afetados** | 161 leads |
+---
 
-### Estágios a Restaurar
+## Funcionalidade 1: Permissão "Travar Pipeline"
 
-| Estágio Original | Leads |
-|-----------------|-------|
-| Qualificação | 108 |
-| Perdido | 5 |
-| Follow up | 1 |
+### O que faz
+- Usuários com essa permissão **NÃO podem** arrastar leads entre colunas no Kanban
+- Eles **podem** ver a pipeline normalmente
+- Eles **podem** criar novos leads
+- O drag-and-drop fica desabilitado visualmente
 
-### Situação dos Usuários
+### Comportamento
+- Se o usuário tem a permissão `pipeline_lock` ativada na sua função, o Kanban aparece sem capacidade de arrastar
+- Administradores e Super Admins nunca são afetados (sempre podem mover)
 
-O rollback anterior **funcionou** - os usuários já foram restaurados para os originais. O problema é apenas o **estágio**.
+---
 
-## Ação de Recuperação
+## Funcionalidade 2: Notificação de Movimentação (Telecom Only)
 
-Executar um UPDATE que restaura o `stage_id` de cada lead baseado no histórico de atividades (`activities.type = 'stage_change'`) de antes das 05:08 UTC.
+### O que faz
+- Quando um lead é movido de uma coluna para outra, uma notificação é enviada
+- **Apenas para organizações do segmento Telecom**
 
-### SQL de Rollback dos Estágios
+### Quem recebe a notificação
+Seguindo a mesma lógica de `notifyLeadCreated`:
+1. **Vendedor atribuído** ao lead
+2. **Líderes das equipes** vinculadas à pipeline
+3. **Administradores** da organização
+
+### Mensagem da notificação
+- **Título**: "Lead movido"
+- **Conteúdo**: "{Nome do lead} foi movido de '{Estágio anterior}' para '{Novo estágio}'"
+
+---
+
+## Alterações Técnicas
+
+### 1. Banco de Dados
+
+Inserir nova permissão na tabela `available_permissions`:
 
 ```sql
--- Restaurar estágios originais dos leads redistribuídos
--- Baseado no histórico de activities (stage_change) antes da redistribuição
-
-UPDATE leads l
-SET 
-  stage_id = estagio.stage_id_antes,
-  stage_entered_at = NOW()
-FROM (
-  SELECT DISTINCT ON (a.lead_id)
-    a.lead_id,
-    (a.metadata->>'to_stage_id')::uuid as stage_id_antes
-  FROM activities a
-  WHERE a.type = 'stage_change'
-    AND a.created_at < '2026-02-04 05:08:00+00'
-    AND a.lead_id IN (
-      SELECT DISTINCT lead_id 
-      FROM lead_pool_history 
-      WHERE organization_id = '818394bf-8c57-445e-be2f-b964c2569235'
-        AND redistributed_at > NOW() - INTERVAL '30 minutes'
-    )
-  ORDER BY a.lead_id, a.created_at DESC
-) estagio
-WHERE l.id = estagio.lead_id
-  AND l.stage_id != estagio.stage_id_antes;
+INSERT INTO available_permissions (key, name, description, category)
+VALUES (
+  'pipeline_lock',
+  'Travar movimentação no pipeline',
+  'Impede que o usuário arraste leads entre estágios no Kanban',
+  'leads'
+);
 ```
 
-## Resultado Esperado
+### 2. Frontend - RolesTab.tsx
 
-- **114 leads** voltarão para seus estágios originais (Qualificação, Perdido, Follow up)
-- **40 leads** permanecerão em "Contato inicial" (não tinham histórico de movimentação)
-- Os usuários já estão restaurados pelo rollback anterior
-- O bolsão já está desativado para a organização
+Adicionar a nova permissão ao grupo `lead_actions`:
 
-## Seção Técnica
+```typescript
+// Alterar linha 81
+lead_actions: { 
+  label: 'Ações em Leads', 
+  keys: ['lead_edit', 'lead_delete', 'lead_assign', 'lead_transfer', 'pipeline_lock'] 
+},
+```
 
-A função `redistribute_lead_from_pool` chama `handle_lead_intake`, que por sua vez:
-1. Busca a fila de Round Robin ativa
-2. Se a fila tem `target_pipeline_id` e `target_stage_id` configurados, **aplica esses valores ao lead**
-3. Isso resultou em todos os leads sendo movidos para o estágio inicial
+### 3. Frontend - Pipelines.tsx
 
-Este comportamento precisará ser corrigido no futuro para que o bolsão **não altere o estágio** dos leads - apenas o usuário responsável.
+**a) Verificar permissão:**
+```typescript
+const { data: hasPipelineLock = false } = useHasPermission('pipeline_lock');
+```
+
+**b) Desabilitar drag-and-drop:**
+- Se `hasPipelineLock === true` E usuário não é admin, desabilitar o `DragDropContext`
+- Mostrar cursor padrão em vez de "grab" nos cards
+
+**c) Adicionar notificação para Telecom:**
+- Após o update bem-sucedido em `handleDragEnd`, se `isTelecom === true`, chamar `notifyLeadMoved`
+
+### 4. Nova função - use-lead-notifications.ts
+
+Criar função `notifyLeadMoved`:
+
+```typescript
+interface NotifyLeadMovedParams {
+  leadId: string;
+  leadName: string;
+  organizationId: string;
+  pipelineId: string;
+  fromStage: string;
+  toStage: string;
+  assignedUserId?: string | null;
+}
+
+export async function notifyLeadMoved({
+  leadId,
+  leadName,
+  organizationId,
+  pipelineId,
+  fromStage,
+  toStage,
+  assignedUserId,
+}: NotifyLeadMovedParams): Promise<void> {
+  // Mesma lógica de notifyLeadCreated
+  // 1. Notificar vendedor atribuído
+  // 2. Notificar líderes das equipes da pipeline
+  // 3. Notificar administradores
+}
+```
+
+---
+
+## Fluxo Visual
+
+### Permissão Travar Pipeline
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│                    Configurações                        │
+│                  Aba: Funções                           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  [✓] Editar leads                                       │
+│  [✓] Excluir leads                                      │
+│  [✓] Atribuir leads                                     │
+│  [✓] Transferir leads                                   │
+│  [ ] Travar movimentação no pipeline  ← NOVA OPÇÃO      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Comportamento no Kanban
+
+**Usuário COM permissão `pipeline_lock`:**
+- Cards aparecem normalmente
+- Cursor permanece normal (sem ícone de "mão")
+- Tentar arrastar não faz nada
+
+**Usuário SEM permissão `pipeline_lock` (ou admin):**
+- Comportamento normal, pode arrastar
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/migrations/xxx_add_pipeline_lock.sql` | Inserir nova permissão |
+| `src/components/settings/RolesTab.tsx` | Adicionar key ao grupo de ações |
+| `src/pages/Pipelines.tsx` | Verificar permissão e bloquear drag; chamar notifyLeadMoved para Telecom |
+| `src/hooks/use-lead-notifications.ts` | Criar função `notifyLeadMoved` |
+
+---
+
+## Considerações
+
+1. **Admins nunca são bloqueados**: A verificação de `hasPipelineLock` só se aplica a usuários não-admin
+2. **Notificação é assíncrona**: Não bloqueia a UI, roda em background após o move
+3. **Apenas Telecom**: A notificação de movimentação só é disparada se `organization.segment === 'telecom'`
+4. **Evita duplicatas**: Usa Set de IDs como na função existente `notifyLeadCreated`
+
