@@ -71,6 +71,7 @@ import { useAssignLeadRoundRobin } from '@/hooks/use-assign-lead-roundrobin';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 import { useStageVGV } from '@/hooks/use-vgv';
 import { useHasPermission } from '@/hooks/use-organization-roles';
+import { notifyLeadMoved } from '@/hooks/use-lead-notifications';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -130,6 +131,12 @@ export default function Pipelines() {
   
   // Check if user has lead_view_all permission
   const { data: hasLeadViewAll = false, isLoading: permissionLoading } = useHasPermission('lead_view_all');
+  
+  // Check if user has pipeline_lock permission (restricts drag-and-drop)
+  const { data: hasPipelineLock = false } = useHasPermission('pipeline_lock');
+  
+  // Determine if drag should be disabled: user has pipeline_lock AND is not admin
+  const isDragDisabled = hasPipelineLock && !isAdmin;
   
   // Check if user is a team leader (can edit cadences = is admin OR team leader)
   const isTeamLeader = useCanEditCadences();
@@ -358,6 +365,25 @@ export default function Pipelines() {
         toast.success(`Lead movido para ${newStage?.name}`);
       }
       
+      // Notificar partes interessadas para Telecom
+      if (isTelecom && profile?.organization_id && selectedPipelineId) {
+        // Buscar dados do lead para obter nome e assigned_user_id
+        const sourceStage = stages.find(s => s.id === oldStageId);
+        const movedLead = sourceStage?.leads?.find((l: any) => l.id === draggableId);
+        
+        if (movedLead) {
+          notifyLeadMoved({
+            leadId: draggableId,
+            leadName: movedLead.name,
+            organizationId: profile.organization_id,
+            pipelineId: selectedPipelineId,
+            fromStage: oldStage?.name || 'Desconhecido',
+            toStage: newStage?.name || 'Desconhecido',
+            assignedUserId: movedLead.assigned_user_id,
+          }).catch(err => console.error('Erro ao notificar movimentação:', err));
+        }
+      }
+      
       // Forçar refetch para garantir sincronização com banco (trigger pode ter alterado outros campos)
       await refetch();
       
@@ -366,7 +392,7 @@ export default function Pipelines() {
       queryClient.setQueryData(queryKey, previousData);
       toast.error('Erro ao mover lead: ' + error.message);
     }
-  }, [stages, selectedPipelineId, queryClient, refetch]);
+  }, [stages, selectedPipelineId, queryClient, refetch, isTelecom, profile?.organization_id]);
 
   // handleCreateLead agora é gerenciado pelo CreateLeadDialog
 
@@ -849,6 +875,7 @@ export default function Pipelines() {
                               index={index}
                               onClick={() => setSelectedLead(lead)}
                               onAssignNow={(leadId) => assignLeadRoundRobin.mutate(leadId)}
+                              isDragDisabled={isDragDisabled}
                             />
                           ))}
                           {provided.placeholder}
