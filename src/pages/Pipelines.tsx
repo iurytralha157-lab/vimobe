@@ -261,7 +261,20 @@ export default function Pipelines() {
     const oldStage = stages.find(s => s.id === oldStageId);
     const newStage = stages.find(s => s.id === newStageId);
     
-    // Optimistic update - atualiza o cache imediatamente
+    // Buscar automações ANTES do update otimista para saber se deal_status mudará
+    const { data: stageAutomations } = await supabase
+      .from('stage_automations')
+      .select('automation_type, action_config')
+      .eq('stage_id', newStageId)
+      .eq('is_active', true);
+    
+    const statusAutomation = stageAutomations?.find(
+      (a: any) => a.automation_type === 'change_deal_status_on_enter'
+    );
+    const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null;
+    const newDealStatus = actionConfig?.deal_status as string | undefined;
+    
+    // Optimistic update - agora inclui deal_status se houver automação
     const queryKey = ['stages-with-leads', selectedPipelineId];
     const previousData = queryClient.getQueryData(queryKey);
     
@@ -285,12 +298,18 @@ export default function Pipelines() {
       
       const [movedLead] = newStages[sourceStageIndex].leads.splice(leadIndex, 1);
       
-      // Atualiza o stage_id do lead e adiciona na nova coluna
+      // Atualiza o stage_id do lead e deal_status se houver automação
       const updatedLead = {
         ...movedLead,
         stage_id: newStageId,
         stage_entered_at: new Date().toISOString(),
         stage: newStages[destStageIndex],
+        // Aplicar deal_status otimisticamente se houver automação configurada
+        ...(newDealStatus && {
+          deal_status: newDealStatus,
+          won_at: newDealStatus === 'won' ? new Date().toISOString() : movedLead.won_at,
+          lost_at: newDealStatus === 'lost' ? new Date().toISOString() : movedLead.lost_at,
+        }),
       };
       
       // Insere na posição correta na coluna de destino
@@ -324,37 +343,30 @@ export default function Pipelines() {
         },
       });
       
-      // Check if destination stage has active automations for dynamic toast
-      const { data: stageAutomations } = await supabase
-        .from('stage_automations')
-        .select('automation_type, action_config')
-        .eq('stage_id', newStageId)
-        .eq('is_active', true);
-      
-      const statusAutomation = stageAutomations?.find(
-        (a: any) => a.automation_type === 'change_deal_status_on_enter'
-      );
-      
-      const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null;
-      if (actionConfig?.deal_status) {
+      // Toast dinâmico baseado nas automações
+      if (newDealStatus) {
         const statusLabels: Record<string, string> = {
           won: 'Ganho',
           lost: 'Perdido',
           open: 'Aberto'
         };
-        const statusLabel = statusLabels[actionConfig.deal_status as string] || actionConfig.deal_status;
+        const statusLabel = statusLabels[newDealStatus] || newDealStatus;
         toast.success(`Lead alterado para ${statusLabel}`, {
           description: `Movido para ${newStage?.name}`
         });
       } else {
         toast.success(`Lead movido para ${newStage?.name}`);
       }
+      
+      // Forçar refetch para garantir sincronização com banco (trigger pode ter alterado outros campos)
+      await refetch();
+      
     } catch (error: any) {
       // Rollback em caso de erro
       queryClient.setQueryData(queryKey, previousData);
       toast.error('Erro ao mover lead: ' + error.message);
     }
-  }, [stages, selectedPipelineId, queryClient]);
+  }, [stages, selectedPipelineId, queryClient, refetch]);
 
   // handleCreateLead agora é gerenciado pelo CreateLeadDialog
 
