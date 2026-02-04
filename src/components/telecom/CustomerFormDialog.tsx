@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -133,6 +134,34 @@ export function CustomerFormDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação de campos obrigatórios para Telecom
+    const requiredFields = [
+      { field: 'name', label: 'Nome' },
+      { field: 'cpf_cnpj', label: 'CPF/CNPJ' },
+      { field: 'rg', label: 'RG' },
+      { field: 'birth_date', label: 'Data de Nascimento' },
+      { field: 'phone', label: 'WhatsApp' },
+      { field: 'email', label: 'Email' },
+      { field: 'mother_name', label: 'Nome da Mãe' },
+      { field: 'uf', label: 'UF' },
+      { field: 'city', label: 'Cidade' },
+      { field: 'neighborhood', label: 'Bairro' },
+      { field: 'address', label: 'Endereço' },
+      { field: 'number', label: 'Número' },
+    ];
+    
+    const missingFields = requiredFields.filter(({ field }) => {
+      const value = formData[field as keyof typeof formData];
+      return !value || (typeof value === 'string' && value.trim() === '');
+    });
+    
+    if (missingFields.length > 0) {
+      const fieldNames = missingFields.map(f => f.label).join(', ');
+      toast.error(`Campos obrigatórios não preenchidos: ${fieldNames}`);
+      return;
+    }
+    
     onSubmit(formData);
   };
 
@@ -175,45 +204,49 @@ export function CustomerFormDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
+                  <Label htmlFor="cpf_cnpj">CPF/CNPJ *</Label>
                   <Input
                     id="cpf_cnpj"
                     value={formData.cpf_cnpj || ''}
                     onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
                     placeholder="000.000.000-00"
+                    required
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rg">RG</Label>
+                  <Label htmlFor="rg">RG *</Label>
                   <Input
                     id="rg"
                     value={formData.rg || ''}
                     onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
                     placeholder="00.000.000-0"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="birth_date">Data de Nascimento</Label>
+                  <Label htmlFor="birth_date">Data de Nascimento *</Label>
                   <Input
                     id="birth_date"
                     type="date"
                     value={formData.birth_date || ''}
                     onChange={(e) => setFormData({ ...formData, birth_date: e.target.value || null })}
+                    required
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">WhatsApp</Label>
+                  <Label htmlFor="phone">WhatsApp *</Label>
                   <Input
                     id="phone"
                     value={formData.phone || ''}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="(00) 00000-0000"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -229,22 +262,24 @@ export function CustomerFormDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email || ''}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="email@exemplo.com"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="mother_name">Nome da Mãe</Label>
+                  <Label htmlFor="mother_name">Nome da Mãe *</Label>
                   <Input
                     id="mother_name"
                     value={formData.mother_name || ''}
                     onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
                     placeholder="Nome completo da mãe"
+                    required
                   />
                 </div>
               </div>
@@ -256,7 +291,7 @@ export function CustomerFormDialog({
               
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="uf">UF</Label>
+                  <Label htmlFor="uf">UF *</Label>
                   <Select
                     value={formData.uf || ''}
                     onValueChange={(value) => setFormData({ 
@@ -277,7 +312,7 @@ export function CustomerFormDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="city">Cidade</Label>
+                  <Label htmlFor="city">Cidade *</Label>
                   <Select
                     value={formData.city || ''}
                     onValueChange={(value) => setFormData({ 
@@ -309,7 +344,7 @@ export function CustomerFormDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="neighborhood">Bairro</Label>
+                <Label htmlFor="neighborhood">Bairro *</Label>
                 <Select
                   value={formData.neighborhood || ''}
                   onValueChange={(value) => setFormData({ ...formData, neighborhood: value })}
@@ -328,21 +363,23 @@ export function CustomerFormDialog({
 
               <div className="grid grid-cols-4 gap-4">
                 <div className="col-span-2 space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
+                  <Label htmlFor="address">Endereço *</Label>
                   <Input
                     id="address"
                     value={formData.address || ''}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     placeholder="Rua, Avenida..."
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="number">Número</Label>
+                  <Label htmlFor="number">Número *</Label>
                   <Input
                     id="number"
                     value={formData.number || ''}
                     onChange={(e) => setFormData({ ...formData, number: e.target.value })}
                     placeholder="123"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
