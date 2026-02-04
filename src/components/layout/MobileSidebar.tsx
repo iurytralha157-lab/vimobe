@@ -175,7 +175,7 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
         {/* Logo header */}
-        <div className="p-4 border-b border-border">
+        <div className="p-4 pr-12 border-b border-border">
           {logoUrl ? (
             <img 
               src={logoUrl} 
