@@ -2554,62 +2554,107 @@ export type Database = {
         Row: {
           accent_color: string | null
           admin_notes: string | null
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          complemento: string | null
           created_at: string
           created_by: string | null
+          email: string | null
+          endereco: string | null
           id: string
+          inscricao_estadual: string | null
           is_active: boolean
           last_access_at: string | null
           logo_size: number | null
           logo_url: string | null
           max_users: number
           name: string
+          nome_fantasia: string | null
+          numero: string | null
           plan_id: string | null
+          razao_social: string | null
           segment: string | null
           subscription_status: string
           subscription_type: string | null
+          telefone: string | null
           theme_mode: string | null
           trial_ends_at: string | null
+          uf: string | null
           updated_at: string
+          website: string | null
+          whatsapp: string | null
         }
         Insert: {
           accent_color?: string | null
           admin_notes?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
+          endereco?: string | null
           id?: string
+          inscricao_estadual?: string | null
           is_active?: boolean
           last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
           max_users?: number
           name: string
+          nome_fantasia?: string | null
+          numero?: string | null
           plan_id?: string | null
+          razao_social?: string | null
           segment?: string | null
           subscription_status?: string
           subscription_type?: string | null
+          telefone?: string | null
           theme_mode?: string | null
           trial_ends_at?: string | null
+          uf?: string | null
           updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
         }
         Update: {
           accent_color?: string | null
           admin_notes?: string | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
+          endereco?: string | null
           id?: string
+          inscricao_estadual?: string | null
           is_active?: boolean
           last_access_at?: string | null
           logo_size?: number | null
           logo_url?: string | null
           max_users?: number
           name?: string
+          nome_fantasia?: string | null
+          numero?: string | null
           plan_id?: string | null
+          razao_social?: string | null
           segment?: string | null
           subscription_status?: string
           subscription_type?: string | null
+          telefone?: string | null
           theme_mode?: string | null
           trial_ends_at?: string | null
+          uf?: string | null
           updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {
