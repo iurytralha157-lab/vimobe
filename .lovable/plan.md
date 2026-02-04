@@ -1,245 +1,69 @@
 
+# Plano de Recuperação - Bolsão Nexo Imóveis
 
-# Diagnóstico e Correção: Pipeline e Automações de Estágio
+## Situação Identificada
 
-## Problemas Identificados
+| Métrica | Valor |
+|---------|-------|
+| Organização | Nexo Imóveis |
+| Total de leads afetados | 161 |
+| Leads que PRECISAM de rollback | 132 (usuário mudou) |
+| Leads que ficaram igual | 29 (mesmo usuário) |
+| Período da redistribuição | ~05:08 - 05:09 UTC (há ~6 minutos) |
 
-### Problema 1: Automações com `action_config` NULL
-Encontrei automações ativas no banco de dados que estão **mal configuradas**:
+## O que aconteceu
 
-```
-id: ffba0b1b-f0da-4dbb-addd-1b02df6ffe17
-stage_name: Perdido
-automation_type: change_deal_status_on_enter
-action_config: NULL  ← PROBLEMA! Deveria ter {"deal_status": "lost"}
-```
+O pool-checker redistribuiu os leads porque:
+1. Os leads estavam em estágios de "Contato inicial" 
+2. Não tinham `first_touch_at` (nenhum contato registrado)
+3. O `pool_timeout_minutes` foi atingido
 
-A função do banco **pula essas automações** porque verifica:
-```sql
-IF v_automation.automation_type IN ('change_deal_status_on_enter', ...)
-   AND (v_action_config IS NULL OR v_action_config = '{}'::jsonb) THEN
-  CONTINUE; -- Skip this automation, it's misconfigured
-```
+## Ação de Recuperação
 
-**Causa raiz**: O formulário de automação salva corretamente, mas algumas automações antigas foram criadas antes da correção do hook.
+Vou executar um UPDATE que:
+1. **Restaurar o `assigned_user_id` original** de cada lead
+2. Usar o histórico do `lead_pool_history` para obter o usuário correto
+3. Atualizar apenas os 132 leads que realmente mudaram de usuário
 
-### Problema 2: Trigger BEFORE vs UI otimista
-O trigger `execute_stage_automations` roda como **BEFORE UPDATE**, ou seja, ele modifica o `NEW.deal_status` antes de salvar. Porém, o frontend faz **atualização otimista** do cache e não sabe que o status mudou.
+**Nota**: Os estágios NÃO foram alterados pelo bolsão - ele só muda o usuário responsável. Os leads continuam no mesmo estágio ("Contato inicial").
 
-O código atual no `handleDragEnd`:
-```typescript
-// Optimistic update - NÃO inclui deal_status atualizado
-const updatedLead = {
-  ...movedLead,
-  stage_id: newStageId,
-  stage_entered_at: new Date().toISOString(),
-  // ❌ Falta: deal_status não é atualizado aqui!
-};
-```
-
-Depois ele mostra um toast dizendo "Lead alterado para Perdido", mas o card continua mostrando "Aberto" até o refetch.
-
-### Problema 3: Falta de refetch imediato após mudança de status
-Após mover o lead, o código busca as automações e mostra toast, mas **não força refetch** para atualizar a UI com o novo status.
-
----
-
-## Solução Proposta
-
-### Correção 1: Atualizar `action_config` das automações mal configuradas
-Executar SQL para corrigir as automações existentes com `action_config` NULL:
+## SQL de Rollback
 
 ```sql
--- Corrigir automações de status sem action_config
-UPDATE stage_automations
-SET action_config = jsonb_build_object('deal_status', 'lost')
-WHERE automation_type = 'change_deal_status_on_enter'
-  AND (action_config IS NULL OR action_config = '{}')
-  AND stage_id IN (SELECT id FROM stages WHERE LOWER(name) LIKE '%perdido%');
+-- Rollback: Restaurar usuários originais dos leads redistribuídos
+-- Baseado no histórico do lead_pool_history
 
-UPDATE stage_automations
-SET action_config = jsonb_build_object('deal_status', 'won')
-WHERE automation_type = 'change_deal_status_on_enter'
-  AND (action_config IS NULL OR action_config = '{}')
-  AND stage_id IN (SELECT id FROM stages WHERE LOWER(name) LIKE '%ganho%' OR LOWER(name) LIKE '%fechado%');
+UPDATE leads l
+SET 
+  assigned_user_id = rollback.original_user_id,
+  assigned_at = NOW() -- Reset timestamp para evitar re-redistribuição imediata
+FROM (
+  -- Pegar o PRIMEIRO from_user_id de cada lead (o usuário original antes do ciclo de redistribuição)
+  SELECT DISTINCT ON (lead_id)
+    lead_id,
+    from_user_id as original_user_id
+  FROM lead_pool_history
+  WHERE organization_id = '818394bf-8c57-445e-be2f-b964c2569235'
+    AND redistributed_at > NOW() - INTERVAL '15 minutes'
+    AND from_user_id != to_user_id
+  ORDER BY lead_id, redistributed_at ASC
+) rollback
+WHERE l.id = rollback.lead_id;
 ```
 
-### Correção 2: Melhorar `handleDragEnd` em Pipelines.tsx
-1. **Verificar automações ANTES** de fazer update otimista
-2. **Incluir deal_status na atualização otimista** se houver automação
-3. **Forçar refetch** após o update para garantir sincronização
+## Ação Adicional: Desativar o Bolsão
 
-### Correção 3: Adicionar validação no frontend
-No `AutomationForm.tsx`, garantir que `deal_status` sempre seja enviado quando o tipo é `change_deal_status_on_enter`.
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/Pipelines.tsx` | Atualizar `handleDragEnd` para aplicar deal_status no update otimista e forçar refetch |
-| SQL Migration | Corrigir automações existentes com action_config NULL |
-
----
-
-## Código das Correções
-
-### 1. Pipelines.tsx - handleDragEnd melhorado
-
-```typescript
-const handleDragEnd = useCallback(async (result: DropResult) => {
-  const { destination, source, draggableId } = result;
-  
-  if (!destination) return;
-  if (destination.droppableId === source.droppableId && destination.index === source.index) return;
-  
-  const newStageId = destination.droppableId;
-  const oldStageId = source.droppableId;
-  const oldStage = stages.find(s => s.id === oldStageId);
-  const newStage = stages.find(s => s.id === newStageId);
-  
-  // 🔥 NOVO: Verificar automações ANTES de fazer update otimista
-  const { data: stageAutomations } = await supabase
-    .from('stage_automations')
-    .select('automation_type, action_config')
-    .eq('stage_id', newStageId)
-    .eq('is_active', true);
-  
-  const statusAutomation = stageAutomations?.find(
-    (a: any) => a.automation_type === 'change_deal_status_on_enter'
-  );
-  const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null;
-  const newDealStatus = actionConfig?.deal_status as string | undefined;
-  
-  // Optimistic update - AGORA inclui deal_status se houver automação
-  const queryKey = ['stages-with-leads', selectedPipelineId];
-  const previousData = queryClient.getQueryData(queryKey);
-  
-  queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
-    if (!old) return old;
-    
-    const sourceStageIndex = old.findIndex(s => s.id === oldStageId);
-    const destStageIndex = old.findIndex(s => s.id === newStageId);
-    
-    if (sourceStageIndex === -1 || destStageIndex === -1) return old;
-    
-    const newStages = old.map(stage => ({
-      ...stage,
-      leads: [...(stage.leads || [])],
-    }));
-    
-    const leadIndex = newStages[sourceStageIndex].leads.findIndex((l: any) => l.id === draggableId);
-    if (leadIndex === -1) return old;
-    
-    const [movedLead] = newStages[sourceStageIndex].leads.splice(leadIndex, 1);
-    
-    // 🔥 NOVO: Incluir deal_status e timestamps no update otimista
-    const updatedLead = {
-      ...movedLead,
-      stage_id: newStageId,
-      stage_entered_at: new Date().toISOString(),
-      stage: newStages[destStageIndex],
-      // Aplicar deal_status se houver automação
-      ...(newDealStatus && {
-        deal_status: newDealStatus,
-        won_at: newDealStatus === 'won' ? new Date().toISOString() : null,
-        lost_at: newDealStatus === 'lost' ? new Date().toISOString() : null,
-      }),
-    };
-    
-    newStages[destStageIndex].leads.splice(destination.index, 0, updatedLead);
-    
-    return newStages;
-  });
-  
-  try {
-    const { error } = await supabase
-      .from('leads')
-      .update({ 
-        stage_id: newStageId,
-        stage_entered_at: new Date().toISOString(),
-      })
-      .eq('id', draggableId);
-    
-    if (error) throw error;
-    
-    // Log activity...
-    const { data: userData } = await supabase.auth.getUser();
-    await supabase.from('activities').insert({
-      lead_id: draggableId,
-      type: 'stage_change',
-      content: `Movido de "${oldStage?.name}" para "${newStage?.name}"`,
-      user_id: userData.user?.id,
-      metadata: {
-        from_stage: oldStage?.name,
-        to_stage: newStage?.name,
-        from_stage_id: oldStageId,
-        to_stage_id: newStageId,
-      },
-    });
-    
-    // Toast e refetch
-    if (newDealStatus) {
-      const statusLabels: Record<string, string> = {
-        won: 'Ganho',
-        lost: 'Perdido',
-        open: 'Aberto'
-      };
-      toast.success(`Lead alterado para ${statusLabels[newDealStatus] || newDealStatus}`, {
-        description: `Movido para ${newStage?.name}`
-      });
-    } else {
-      toast.success(`Lead movido para ${newStage?.name}`);
-    }
-    
-    // 🔥 NOVO: Forçar refetch para garantir sincronização com banco
-    // Isso é necessário porque o trigger pode ter alterado outros campos
-    await refetch();
-    
-  } catch (error: any) {
-    queryClient.setQueryData(queryKey, previousData);
-    toast.error('Erro ao mover lead: ' + error.message);
-  }
-}, [stages, selectedPipelineId, queryClient, refetch]);
-```
-
-### 2. SQL Migration - Corrigir automações existentes
+Após o rollback, vou desativar o pool para evitar nova redistribuição:
 
 ```sql
--- Corrigir automações change_deal_status_on_enter que estão sem action_config
--- Inferir o status baseado no nome do estágio
-
--- Automações de "Perdido" sem config
-UPDATE stage_automations sa
-SET action_config = '{"deal_status": "lost"}'::jsonb
-FROM stages s
-WHERE sa.stage_id = s.id
-  AND sa.automation_type = 'change_deal_status_on_enter'
-  AND (sa.action_config IS NULL OR sa.action_config = '{}')
-  AND (LOWER(s.name) LIKE '%perdido%' OR LOWER(s.name) LIKE '%lost%');
-
--- Automações de "Ganho/Fechado" sem config  
-UPDATE stage_automations sa
-SET action_config = '{"deal_status": "won"}'::jsonb
-FROM stages s
-WHERE sa.stage_id = s.id
-  AND sa.automation_type = 'change_deal_status_on_enter'
-  AND (sa.action_config IS NULL OR sa.action_config = '{}')
-  AND (LOWER(s.name) LIKE '%ganho%' OR LOWER(s.name) LIKE '%won%' OR LOWER(s.name) LIKE '%fechado%' OR LOWER(s.name) LIKE '%closed%');
+-- Desativar pool temporariamente para a organização Nexo
+UPDATE pipelines
+SET pool_enabled = false
+WHERE organization_id = '818394bf-8c57-445e-be2f-b964c2569235';
 ```
 
----
+## Resultado Esperado
 
-## Resumo do que será feito
-
-1. **Migração SQL**: Corrigir automações existentes com `action_config` NULL
-2. **Pipelines.tsx**: 
-   - Buscar automações ANTES do update otimista
-   - Aplicar `deal_status` no cache imediatamente
-   - Forçar refetch após sucesso
-3. **Resultado**: Quando arrastar lead para "Perdido", ele vai:
-   - Mudar visualmente para "Perdido" instantaneamente
-   - Mostrar toast "Lead alterado para Perdido"
-   - Sincronizar com banco de dados
-
+- 132 leads voltarão aos usuários originais
+- Os estágios permanecem iguais (bolsão não altera estágio)
+- Pool será desativado para evitar repetição
