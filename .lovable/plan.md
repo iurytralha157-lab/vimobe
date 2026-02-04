@@ -1,69 +1,77 @@
 
-# Plano de Recuperação - Bolsão Nexo Imóveis
 
-## Situação Identificada
+# Plano de Recuperação Completa - Bolsão Nexo Imóveis
 
-| Métrica | Valor |
-|---------|-------|
-| Organização | Nexo Imóveis |
-| Total de leads afetados | 161 |
-| Leads que PRECISAM de rollback | 132 (usuário mudou) |
-| Leads que ficaram igual | 29 (mesmo usuário) |
-| Período da redistribuição | ~05:08 - 05:09 UTC (há ~6 minutos) |
+## Diagnóstico Final
 
-## O que aconteceu
+O bolsão não só redistribuiu os leads entre usuários, mas também **moveu todos eles para o estágio inicial** ("Contato inicial") porque a função `handle_lead_intake` aplica o `target_stage_id` da fila de Round Robin.
 
-O pool-checker redistribuiu os leads porque:
-1. Os leads estavam em estágios de "Contato inicial" 
-2. Não tinham `first_touch_at` (nenhum contato registrado)
-3. O `pool_timeout_minutes` foi atingido
+### Status Atual
+
+| Situação | Quantidade |
+|----------|------------|
+| Precisa restaurar estágio | **114 leads** |
+| Sem histórico (ficam em "Contato inicial") | 40 leads |
+| Estágio já correto | 7 leads |
+| **Total afetados** | 161 leads |
+
+### Estágios a Restaurar
+
+| Estágio Original | Leads |
+|-----------------|-------|
+| Qualificação | 108 |
+| Perdido | 5 |
+| Follow up | 1 |
+
+### Situação dos Usuários
+
+O rollback anterior **funcionou** - os usuários já foram restaurados para os originais. O problema é apenas o **estágio**.
 
 ## Ação de Recuperação
 
-Vou executar um UPDATE que:
-1. **Restaurar o `assigned_user_id` original** de cada lead
-2. Usar o histórico do `lead_pool_history` para obter o usuário correto
-3. Atualizar apenas os 132 leads que realmente mudaram de usuário
+Executar um UPDATE que restaura o `stage_id` de cada lead baseado no histórico de atividades (`activities.type = 'stage_change'`) de antes das 05:08 UTC.
 
-**Nota**: Os estágios NÃO foram alterados pelo bolsão - ele só muda o usuário responsável. Os leads continuam no mesmo estágio ("Contato inicial").
-
-## SQL de Rollback
+### SQL de Rollback dos Estágios
 
 ```sql
--- Rollback: Restaurar usuários originais dos leads redistribuídos
--- Baseado no histórico do lead_pool_history
+-- Restaurar estágios originais dos leads redistribuídos
+-- Baseado no histórico de activities (stage_change) antes da redistribuição
 
 UPDATE leads l
 SET 
-  assigned_user_id = rollback.original_user_id,
-  assigned_at = NOW() -- Reset timestamp para evitar re-redistribuição imediata
+  stage_id = estagio.stage_id_antes,
+  stage_entered_at = NOW()
 FROM (
-  -- Pegar o PRIMEIRO from_user_id de cada lead (o usuário original antes do ciclo de redistribuição)
-  SELECT DISTINCT ON (lead_id)
-    lead_id,
-    from_user_id as original_user_id
-  FROM lead_pool_history
-  WHERE organization_id = '818394bf-8c57-445e-be2f-b964c2569235'
-    AND redistributed_at > NOW() - INTERVAL '15 minutes'
-    AND from_user_id != to_user_id
-  ORDER BY lead_id, redistributed_at ASC
-) rollback
-WHERE l.id = rollback.lead_id;
-```
-
-## Ação Adicional: Desativar o Bolsão
-
-Após o rollback, vou desativar o pool para evitar nova redistribuição:
-
-```sql
--- Desativar pool temporariamente para a organização Nexo
-UPDATE pipelines
-SET pool_enabled = false
-WHERE organization_id = '818394bf-8c57-445e-be2f-b964c2569235';
+  SELECT DISTINCT ON (a.lead_id)
+    a.lead_id,
+    (a.metadata->>'to_stage_id')::uuid as stage_id_antes
+  FROM activities a
+  WHERE a.type = 'stage_change'
+    AND a.created_at < '2026-02-04 05:08:00+00'
+    AND a.lead_id IN (
+      SELECT DISTINCT lead_id 
+      FROM lead_pool_history 
+      WHERE organization_id = '818394bf-8c57-445e-be2f-b964c2569235'
+        AND redistributed_at > NOW() - INTERVAL '30 minutes'
+    )
+  ORDER BY a.lead_id, a.created_at DESC
+) estagio
+WHERE l.id = estagio.lead_id
+  AND l.stage_id != estagio.stage_id_antes;
 ```
 
 ## Resultado Esperado
 
-- 132 leads voltarão aos usuários originais
-- Os estágios permanecem iguais (bolsão não altera estágio)
-- Pool será desativado para evitar repetição
+- **114 leads** voltarão para seus estágios originais (Qualificação, Perdido, Follow up)
+- **40 leads** permanecerão em "Contato inicial" (não tinham histórico de movimentação)
+- Os usuários já estão restaurados pelo rollback anterior
+- O bolsão já está desativado para a organização
+
+## Seção Técnica
+
+A função `redistribute_lead_from_pool` chama `handle_lead_intake`, que por sua vez:
+1. Busca a fila de Round Robin ativa
+2. Se a fila tem `target_pipeline_id` e `target_stage_id` configurados, **aplica esses valores ao lead**
+3. Isso resultou em todos os leads sendo movidos para o estágio inicial
+
+Este comportamento precisará ser corrigido no futuro para que o bolsão **não altere o estágio** dos leads - apenas o usuário responsável.
