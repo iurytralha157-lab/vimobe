@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useWebPush } from '@/hooks/use-web-push';
 import { useAuth } from '@/contexts/AuthContext';
 import { Capacitor } from '@capacitor/core';
+import { toast } from 'sonner';
 
 const DISMISS_KEY = 'web-push-prompt-dismissed';
 const DISMISS_DURATION_DAYS = 7;
@@ -87,7 +88,10 @@ export function WebPushPrompt() {
     setIsSubscribing(false);
     
     if (success) {
+      toast.success('Notificações ativadas com sucesso!');
       setShowPrompt(false);
+    } else {
+      toast.error('Não foi possível ativar as notificações. Verifique as permissões do navegador.');
     }
   };
 

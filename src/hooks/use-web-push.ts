@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
 // Converte base64 URL-safe para Uint8Array (necessário para applicationServerKey)
+// Suporta tanto chaves raw (65 bytes) quanto SPKI (91 bytes)
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
@@ -18,6 +19,18 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
+
+  console.log('[WebPush] VAPID key decoded, length:', outputArray.length);
+
+  // Se a chave for maior que 65 bytes, provavelmente é SPKI
+  // A chave raw EC P-256 está nos últimos 65 bytes do SPKI
+  if (outputArray.length > 65) {
+    console.log('[WebPush] Detectado formato SPKI, extraindo chave raw...');
+    const rawKey = outputArray.slice(-65);
+    console.log('[WebPush] Chave raw extraída, primeiro byte:', rawKey[0].toString(16));
+    return rawKey.buffer as ArrayBuffer;
+  }
+
   return outputArray.buffer as ArrayBuffer;
 }
 
@@ -141,14 +154,20 @@ export function useWebPush() {
 
   // Solicita permissão e cria subscription
   const subscribe = useCallback(async (): Promise<boolean> => {
+    console.log('[WebPush] Iniciando subscription...');
+    console.log('[WebPush] VAPID key configurada:', VAPID_PUBLIC_KEY ? `${VAPID_PUBLIC_KEY.length} chars` : 'NÃO CONFIGURADA');
+    
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
       // Solicita permissão
+      console.log('[WebPush] Solicitando permissão...');
       const permission = await Notification.requestPermission();
+      console.log('[WebPush] Permissão:', permission);
       setState(prev => ({ ...prev, permission }));
 
       if (permission !== 'granted') {
+        console.log('[WebPush] Permissão negada pelo usuário');
         setState(prev => ({ 
           ...prev, 
           isLoading: false, 
@@ -158,18 +177,25 @@ export function useWebPush() {
       }
 
       // Aguarda o Service Worker estar pronto
+      console.log('[WebPush] Aguardando Service Worker...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('[WebPush] Service Worker pronto:', registration.scope);
 
       // Cria subscription
+      console.log('[WebPush] Criando subscription com PushManager...');
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey,
       });
 
       console.log('[WebPush] Subscription criada:', subscription.endpoint);
 
       // Salva no banco
+      console.log('[WebPush] Salvando subscription no banco...');
       await saveSubscription(subscription);
+      console.log('[WebPush] Subscription salva com sucesso!');
 
       setState(prev => ({ 
         ...prev, 
@@ -181,10 +207,12 @@ export function useWebPush() {
       return true;
     } catch (error) {
       console.error('[WebPush] Erro ao inscrever:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao ativar notificações';
+      console.error('[WebPush] Mensagem de erro:', errorMessage);
       setState(prev => ({ 
         ...prev, 
         isLoading: false, 
-        error: error instanceof Error ? error.message : 'Erro ao ativar notificações' 
+        error: errorMessage 
       }));
       return false;
     }
