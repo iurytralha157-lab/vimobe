@@ -155,8 +155,23 @@ export default function FinancialReports() {
 
   const totalReceivables = receivables.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalPayables = payables.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalPaid = paidEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalOverdue = overdueEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
+  
+  // Filter payments by paid_date instead of due_date
+  const paidInPeriod = entries?.filter(e => {
+    if (e.status !== 'paid' || !e.paid_date) return false;
+    const paidDate = new Date(e.paid_date);
+    return paidDate >= start && paidDate <= end;
+  }) || [];
+  
+  const totalPaid = paidInPeriod.reduce((sum, e) => sum + (e.amount || 0), 0);
+  
+  // Overdue: pending entries with due_date < today, EXCLUDING paid entries
+  const overdueEntriesFiltered = entries?.filter(e => 
+    e.status !== 'paid' && 
+    (e.status === 'overdue' || (e.status === 'pending' && new Date(e.due_date) < new Date()))
+  ) || [];
+  
+  const totalOverdue = overdueEntriesFiltered.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const handleExportExcel = () => {
     let data: any[] = [];
@@ -361,15 +376,16 @@ export default function FinancialReports() {
         );
 
       case 'payments':
+        const paymentsData = paidInPeriod;
         return isMobile ? (
           <Card>
             <CardContent className="p-0">
-              {paidEntries.length === 0 ? (
+              {paymentsData.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
                   Nenhum pagamento no período
                 </div>
               ) : (
-                paidEntries.map((entry) => (
+                paymentsData.map((entry) => (
                   <EntryCardMobile key={entry.id} entry={entry} />
                 ))
               )}
@@ -386,14 +402,14 @@ export default function FinancialReports() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paidEntries.length === 0 ? (
+              {paymentsData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                     Nenhum pagamento no período
                   </TableCell>
                 </TableRow>
               ) : (
-                paidEntries.map((entry) => (
+                paymentsData.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>{entry.description}</TableCell>
                     <TableCell>
@@ -417,19 +433,19 @@ export default function FinancialReports() {
               <CardContent className="p-3 md:p-4">
                 <p className="text-xs md:text-sm text-destructive">Total em Atraso</p>
                 <p className="text-xl md:text-3xl font-bold text-destructive">{formatCurrency(totalOverdue)}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">{overdueEntries.length} lançamentos</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{overdueEntriesFiltered.length} lançamentos</p>
               </CardContent>
             </Card>
 
             {isMobile ? (
               <Card>
                 <CardContent className="p-0">
-                  {overdueEntries.length === 0 ? (
+                  {overdueEntriesFiltered.length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground">
                       Nenhuma pendência encontrada
                     </div>
                   ) : (
-                    overdueEntries.map((entry) => (
+                    overdueEntriesFiltered.map((entry) => (
                       <EntryCardMobile key={entry.id} entry={entry} />
                     ))
                   )}
@@ -447,14 +463,14 @@ export default function FinancialReports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {overdueEntries.length === 0 ? (
+                  {overdueEntriesFiltered.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         Nenhuma pendência encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
-                    overdueEntries.map((entry) => (
+                    overdueEntriesFiltered.map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell>{entry.description}</TableCell>
                         <TableCell>

@@ -418,12 +418,20 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
           <FinancialCard
             title="A Receber (30d)"
             value={formatCurrency(data?.receivable30 || 0)}
+            description="Vence em até 30 dias"
             icon={TrendingUp}
             variant="success"
           />
           <FinancialCard
             title="A Receber (60d)"
             value={formatCurrency(data?.receivable60 || 0)}
+            description="Vence entre 31-60 dias"
+            icon={Calendar}
+          />
+          <FinancialCard
+            title="A Receber (90d)"
+            value={formatCurrency(data?.receivable90 || 0)}
+            description="Vence entre 61-90 dias"
             icon={Calendar}
           />
           <FinancialCard
@@ -432,19 +440,21 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
             icon={TrendingDown}
             variant="warning"
           />
-          <FinancialCard
-            title="Comissões Pend."
-            value={formatCurrency(data?.pendingCommissions || 0)}
-            icon={DollarSign}
-          />
         </div>
 
-        {/* Second Row */}
+        {/* Second Row - Comissões e Vencidos */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
           <FinancialCard
             title="Comissões Prev."
             value={formatCurrency(data?.forecastCommissions || 0)}
+            description="Aguardando aprovação"
             icon={Clock}
+          />
+          <FinancialCard
+            title="Comissões Pend."
+            value={formatCurrency(data?.pendingCommissions || 0)}
+            description="Aprovadas, aguardando pgto"
+            icon={DollarSign}
           />
           <FinancialCard
             title="Comissões Pagas"
@@ -457,11 +467,6 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
             value={formatCurrency(totalOverdue)}
             icon={AlertTriangle}
             variant="destructive"
-          />
-          <FinancialCard
-            title="A Receber (90d)"
-            value={formatCurrency(data?.receivable90 || 0)}
-            icon={Calendar}
           />
         </div>
 
