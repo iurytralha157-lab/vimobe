@@ -1,78 +1,123 @@
 
-# Plano de Melhoria: Relatórios Financeiros
+# Plano de Correção: Auditoria do Dashboard
 
-## Diagnóstico
+## Diagnóstico Completo
 
-O relatório "Fechamento Mensal" mostra R$ 0,00 porque **não há lançamentos com vencimento em fevereiro/2026**:
+Após análise detalhada do código, identifiquei **inconsistências na lógica de visibilidade** entre o Dashboard e a Pipeline. O problema principal é que o Dashboard usa apenas `role === 'admin'` para determinar quem vê todos os dados, enquanto a Pipeline considera também `super_admin`, a permissão `lead_view_all` e líderes de equipe.
 
-| Lançamentos Existentes | Vencimento |
-|------------------------|------------|
-| Venda - Lead Teste Financeiro (R$ 250k) | 07/03/2026 |
-| Venda - Isabelle (R$ 195k) | 01/03/2026 |
-| Venda - Marinoni (R$ 1.3M) | 06/03/2026 |
-| Teste Marketing (R$ 25k - pago) | 08/01/2026 |
+## Problemas Encontrados
 
-Nenhum lançamento tem `due_date` entre 01/02/2026 e 28/02/2026.
+### 1. Verificação de Permissões Incompleta (CRÍTICO)
 
-## Problema de UX
+**Localização**: `src/hooks/use-dashboard-stats.ts`
 
-O relatório funciona corretamente, mas confunde o usuário porque:
-1. Ele espera ver um resumo geral, não apenas do mês atual
-2. Há lançamentos futuros (março) que não aparecem
-3. Há lançamentos passados pagos (janeiro) que também não aparecem
+| Hook | Problema |
+|------|----------|
+| `useEnhancedDashboardStats` | Verifica apenas `role === 'admin'` |
+| `useLeadsChartData` | Verifica apenas `role === 'admin'` |
+| `useFunnelData` | Verifica apenas `role === 'admin'` |
+| `useLeadSourcesData` | Verifica apenas `role === 'admin'` |
+| `useUpcomingTasks` | Verifica apenas `role === 'admin'` |
+| `useDealsEvolutionData` | Verifica apenas `role === 'admin'` |
 
-## Solução Proposta
+**Consequência**: Usuários com permissão `lead_view_all` (ex: Backoffice) veem todos os leads na Pipeline, mas apenas os próprios no Dashboard.
 
-Melhorar os relatórios para serem mais úteis:
+### 2. Top Brokers sem Filtro de Visibilidade
 
-### Mudanças no Fechamento Mensal
+**Localização**: `src/hooks/use-dashboard-stats.ts` (hook `useTopBrokers`)
 
-1. **Adicionar visão "Geral"** que mostra todos os lançamentos pendentes (sem filtro de período)
-2. **Melhorar a seleção de período** para incluir meses futuros
-3. **Mostrar mensagem informativa** quando não há dados no período
+O ranking de corretores mostra todos os corretores da organização, mesmo para usuários não-admin. Isso pode vazar informações de performance.
 
-### Arquivo a Alterar
+### 3. Filtros Visíveis para Usuários sem Permissão
+
+**Localização**: `src/components/dashboard/DashboardFilters.tsx`
+
+O filtro de "Corretor" aparece para todos, mas usuários sem `lead_view_all` não deveriam poder filtrar por outros corretores.
+
+## O que está funcionando
+
+- KPICards, Funil, Origens, Evolução: renderização OK
+- Filtros de data e origem: funcionais
+- Dashboard Telecom: lógica de visibilidade correta (usa `isAdmin || isSuperAdmin`)
+- RPCs `get_funnel_data` e `get_lead_sources_data`: recebem userId corretamente
+
+## Correções Propostas
+
+### Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/FinancialReports.tsx` | Adicionar opção "Todos" no filtro de período; melhorar feedback quando vazio |
+| `src/hooks/use-dashboard-stats.ts` | Adicionar verificação de `super_admin` e `lead_view_all` em 6 hooks |
+| `src/components/dashboard/DashboardFilters.tsx` | Ocultar filtro de Corretor para usuários sem permissão |
+| (Opcional) `src/hooks/use-dashboard-stats.ts` | Ocultar TopBrokers para corretores |
 
 ### Detalhes Técnicos
 
+**1. Criar função auxiliar para verificar visibilidade ampla**
+
 ```typescript
-// Adicionar opção "Todos" no período
-const periodOptions = [
-  { value: 'all', label: 'Todos' },        // NOVO
-  { value: 'current', label: 'Mês Atual' },
-  { value: 'next', label: 'Próximo Mês' }, // NOVO
-  { value: 'last', label: 'Mês Anterior' },
-  { value: 'quarter', label: 'Últimos 3 meses' },
-];
-
-// Ajustar getPeriodDates
-case 'all':
-  return { start: null, end: null }; // Sem filtro
-case 'next':
-  return { start: startOfMonth(addMonths(now, 1)), end: endOfMonth(addMonths(now, 1)) };
-
-// Ajustar filteredEntries
-const filteredEntries = entries?.filter(e => {
-  if (!start || !end) return true; // Sem filtro quando "Todos"
-  const date = new Date(e.due_date);
-  return date >= start && date <= end;
-}) || [];
+// Em use-dashboard-stats.ts
+async function checkCanViewAllLeads(userId: string): Promise<boolean> {
+  // Verificar role
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  
+  if (userData?.role === 'admin' || userData?.role === 'super_admin') {
+    return true;
+  }
+  
+  // Verificar permissão lead_view_all
+  const { data: hasPermission } = await supabase.rpc('user_has_permission', {
+    p_permission_key: 'lead_view_all',
+    p_user_id: userId,
+  });
+  
+  return !!hasPermission;
+}
 ```
 
-### Adicionar feedback visual
+**2. Aplicar em todos os hooks afetados**
 
-Quando não houver dados no período selecionado, mostrar:
-- Quantos lançamentos existem em outros períodos
-- Sugestão para mudar o filtro
+```typescript
+// Substituir em cada hook:
+// ANTES
+const isAdmin = currentUserRole === 'admin';
+
+// DEPOIS
+const canViewAll = await checkCanViewAllLeads(currentUserId);
+```
+
+**3. Ajustar filtro de Corretor no frontend**
+
+```typescript
+// Em DashboardFilters.tsx
+const { data: canViewAll = false } = useHasPermission('lead_view_all');
+const showUserFilter = isAdmin || canViewAll;
+
+// Só renderiza UserFilter se showUserFilter for true
+{showUserFilter && <UserFilter />}
+```
+
+**4. Opcional: Ocultar TopBrokers para corretores**
+
+Corretores veriam apenas sua própria posição, não o ranking completo. Isso protege informações de performance.
 
 ## Resultado Esperado
 
-| Período | Antes | Depois |
+Após as correções:
+
+| Cenário | Antes | Depois |
 |---------|-------|--------|
-| Mês Atual (fev) | R$ 0,00 | R$ 0,00 + mensagem "Há X lançamentos em outros meses" |
-| Próximo Mês (mar) | - | R$ 3M+ (os lançamentos de março) |
-| Todos | - | Todos os lançamentos pendentes |
+| Backoffice (lead_view_all) | Vê só seus leads no Dashboard | Vê todos os leads |
+| Super Admin | Vê só seus leads (não tinha `super_admin` check) | Vê todos os leads |
+| Corretor comum | Vê filtro de Corretor | Não vê filtro de Corretor |
+| Líder de equipe | Vê só seus leads | Vê leads da equipe |
+
+## Prioridade de Implementação
+
+1. **Alta**: Corrigir verificação de `super_admin` e `lead_view_all`
+2. **Média**: Ocultar filtro de Corretor para quem não pode usar
+3. **Baixa**: Revisar visibilidade do TopBrokers
