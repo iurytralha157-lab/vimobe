@@ -148,10 +148,9 @@ export function StageSettingsDialog({
         </DialogHeader>
         
         <Tabs defaultValue="general" className="mt-4">
-          <TabsList className="w-full grid grid-cols-4 mb-4">
+          <TabsList className="w-full grid grid-cols-3 mb-4">
             <TabsTrigger value="general" className="text-xs">Configurações Gerais</TabsTrigger>
             <TabsTrigger value="cadence" className="text-xs">Cadência de tarefas</TabsTrigger>
-            <TabsTrigger value="integrations" className="text-xs">Integrações</TabsTrigger>
             <TabsTrigger value="automations" className="text-xs">Automações</TabsTrigger>
           </TabsList>
           
@@ -322,13 +321,6 @@ export function StageSettingsDialog({
                 </div>
               </div>
             )}
-          </TabsContent>
-          
-          {/* Integrations Tab */}
-          <TabsContent value="integrations" className="space-y-4">
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              Nenhuma integração configurada
-            </div>
           </TabsContent>
           
           {/* Automations Tab */}

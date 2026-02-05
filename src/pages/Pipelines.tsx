@@ -64,6 +64,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage } from '@/hooks/use-stages';
+import { useLoadMoreLeads } from '@/hooks/use-stages';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
@@ -120,6 +121,7 @@ export default function Pipelines() {
   const createPipeline = useCreatePipeline();
   const deletePipeline = useDeletePipeline();
   const createStage = useCreateStage();
+  const loadMoreLeads = useLoadMoreLeads();
   
   // Set initial pipeline when pipelines load
   useEffect(() => {
@@ -174,6 +176,20 @@ export default function Pipelines() {
   
   const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
   const isLoading = pipelinesLoading || stagesLoading;
+
+  // Handler para carregar mais leads de uma coluna específica
+  const handleLoadMore = useCallback((stageId: string) => {
+    if (!selectedPipelineId) return;
+    
+    const stage = stages.find(s => s.id === stageId);
+    const currentCount = stage?.leads?.length || 0;
+    
+    loadMoreLeads.mutate({
+      pipelineId: selectedPipelineId,
+      stageId,
+      offset: currentCount,
+    });
+  }, [selectedPipelineId, stages, loadMoreLeads]);
 
   // Real-time subscription for leads and tags updates
   useEffect(() => {
@@ -815,7 +831,7 @@ export default function Pipelines() {
                         className="text-xs shrink-0"
                         style={{ backgroundColor: `${stage.color}20`, color: stage.color }}
                       >
-                        {stage.leads?.length || 0}
+                      {stage.total_lead_count || stage.leads?.length || 0}
                       </Badge>
                       {/* VGV Badge */}
                       {stageVGVMap.get(stage.id)?.openVGV ? (
@@ -879,6 +895,24 @@ export default function Pipelines() {
                             />
                           ))}
                           {provided.placeholder}
+                          
+                          {/* Botão Carregar Mais */}
+                          {stage.has_more && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-xs text-muted-foreground hover:text-foreground mt-2"
+                              onClick={() => handleLoadMore(stage.id)}
+                              disabled={loadMoreLeads.isPending}
+                            >
+                              {loadMoreLeads.isPending && loadMoreLeads.variables?.stageId === stage.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <ChevronDown className="h-3 w-3 mr-1" />
+                              )}
+                              Carregar mais ({stage.total_lead_count - (stage.leads?.length || 0)} restantes)
+                            </Button>
+                          )}
                         </div>
                       )}
                     </Droppable>

@@ -1,5 +1,6 @@
-
 # Plano: Paginação por Coluna + Remoção da Aba Integrações
+
+**STATUS: ✅ IMPLEMENTADO**
 
 ## Visão Geral
 
@@ -150,8 +151,8 @@ Esta abordagem é mais simples e mantém a compatibilidade com o drag-and-drop.
 
 ## Ordem de Implementação
 
-1. Remover aba "Integrações" do StageSettingsDialog
-2. Modificar use-stages.ts para limitar leads por coluna
-3. Adicionar hook useLoadMoreLeads
-4. Implementar botão "Carregar mais" no Pipelines.tsx
-5. Testar drag-and-drop após carregar mais leads
+1. ✅ Remover aba "Integrações" do StageSettingsDialog
+2. ✅ Modificar use-stages.ts para limitar leads por coluna (100 por estágio)
+3. ✅ Adicionar hook useLoadMoreLeads com enriquecimento de tags e WhatsApp
+4. ✅ Implementar botão "Carregar mais" no Pipelines.tsx
+5. Testar drag-and-drop após carregar mais leads (pronto para teste manual)
