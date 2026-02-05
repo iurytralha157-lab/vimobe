@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isWithinInterval, parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, parseISO, startOfWeek, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { checkLeadVisibility, applyVisibilityFilter } from './use-lead-visibility';
 
 export interface TelecomDashboardStats {
   totalCustomers: number;
@@ -33,13 +34,12 @@ interface DashboardFilters {
 }
 
 export function useTelecomDashboardStats(filters?: DashboardFilters) {
-  const { organization, profile, isSuperAdmin } = useAuth();
-  const isAdmin = profile?.role === 'admin' || isSuperAdmin;
+  const { organization, profile } = useAuth();
 
   return useQuery({
-    queryKey: ['telecom-dashboard-stats', organization?.id, filters, isAdmin, profile?.id],
+    queryKey: ['telecom-dashboard-stats', organization?.id, filters, profile?.id],
     queryFn: async () => {
-      if (!organization?.id) {
+      if (!organization?.id || !profile?.id) {
         return {
           totalCustomers: 0,
           activeCustomers: 0,
@@ -51,15 +51,18 @@ export function useTelecomDashboardStats(filters?: DashboardFilters) {
         };
       }
 
+      // Get visibility level (admin, team leader, or normal user)
+      const visibility = await checkLeadVisibility(profile.id);
+
       // Build base query conditions
       const buildQuery = (baseQuery: any) => {
         let q = baseQuery.eq('organization_id', organization.id);
         
-        // Apply user filter for non-admins
-        if (!isAdmin && profile?.id) {
-          q = q.eq('seller_id', profile.id);
-        } else if (filters?.userId) {
+        // Apply visibility filter or explicit user filter
+        if (filters?.userId) {
           q = q.eq('seller_id', filters.userId);
+        } else {
+          q = applyVisibilityFilter(q, visibility, 'seller_id');
         }
         
         return q;
@@ -138,13 +141,15 @@ export function useTelecomDashboardStats(filters?: DashboardFilters) {
 }
 
 export function useTelecomEvolutionData(filters?: DashboardFilters) {
-  const { organization, profile, isSuperAdmin } = useAuth();
-  const isAdmin = profile?.role === 'admin' || isSuperAdmin;
+  const { organization, profile } = useAuth();
 
   return useQuery({
-    queryKey: ['telecom-evolution-data', organization?.id, filters, isAdmin, profile?.id],
+    queryKey: ['telecom-evolution-data', organization?.id, filters, profile?.id],
     queryFn: async (): Promise<TelecomEvolutionPoint[]> => {
-      if (!organization?.id) return [];
+      if (!organization?.id || !profile?.id) return [];
+
+      // Get visibility level (admin, team leader, or normal user)
+      const visibility = await checkLeadVisibility(profile.id);
 
       // Determine date range
       const dateTo = filters?.dateTo || new Date();
@@ -158,11 +163,11 @@ export function useTelecomEvolutionData(filters?: DashboardFilters) {
         .gte('created_at', dateFrom.toISOString())
         .lte('created_at', dateTo.toISOString());
 
-      // Apply user filter for non-admins
-      if (!isAdmin && profile?.id) {
-        query = query.eq('seller_id', profile.id);
-      } else if (filters?.userId) {
+      // Apply visibility filter or explicit user filter
+      if (filters?.userId) {
         query = query.eq('seller_id', filters.userId);
+      } else {
+        query = applyVisibilityFilter(query, visibility, 'seller_id');
       }
 
       const { data: customers, error } = await query;
