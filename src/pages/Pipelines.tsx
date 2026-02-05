@@ -276,8 +276,35 @@ export default function Pipelines() {
           return;
         }
       }
-     // Lead não encontrado nos stages carregados - pode estar paginado
-     // Não limpar URL ainda, deixar para quando encontrar
+      // Lead não encontrado nos stages carregados - buscar diretamente no banco
+      const fetchLead = async () => {
+        try {
+          const { data: lead, error } = await supabase
+            .from('leads')
+            .select(`
+              *,
+              assigned_user:profiles!leads_assigned_user_id_fkey(id, name, avatar_url),
+              stage:stages(id, name, color),
+              tags:lead_tags(tag:tags(id, name, color))
+            `)
+            .eq('id', leadId)
+            .single();
+          
+          if (!error && lead) {
+            // Transformar tags para o formato esperado pelo LeadDetailDialog
+            const formattedLead = {
+              ...lead,
+              tags: lead.tags?.map((lt: any) => lt.tag) || []
+            };
+            setSelectedLead(formattedLead);
+            navigate('/crm/pipelines', { replace: true });
+          }
+        } catch (err) {
+          console.error('Error fetching lead from URL:', err);
+        }
+      };
+      
+      fetchLead();
     }
   }, [location.search, stages, navigate]); // timestamp implícito via location.search
 
