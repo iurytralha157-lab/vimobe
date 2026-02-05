@@ -263,6 +263,7 @@ export default function Pipelines() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const leadId = params.get('lead_id') || params.get('lead');
+   const timestamp = params.get('t'); // Usar timestamp como dependência para forçar re-execução
     
     if (leadId && stages.length > 0) {
       // Find lead in any stage
@@ -272,11 +273,13 @@ export default function Pipelines() {
           setSelectedLead(lead);
           // Clear the URL param after opening
           navigate('/crm/pipelines', { replace: true });
-          break;
+          return;
         }
       }
+     // Lead não encontrado nos stages carregados - pode estar paginado
+     // Não limpar URL ainda, deixar para quando encontrar
     }
-  }, [location.search, stages, navigate]);
+  }, [location.search, stages, navigate]); // timestamp implícito via location.search
 
   const queryClient = useQueryClient();
 

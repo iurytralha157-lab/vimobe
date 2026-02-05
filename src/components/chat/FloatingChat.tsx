@@ -237,9 +237,12 @@ export function FloatingChat() {
 
   const handleViewLead = (leadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+   console.log('[FloatingChat] handleViewLead triggered, leadId:', leadId);
     closeChat();
     // Usar timestamp para forçar React Router a detectar mudança mesmo na mesma página
-    navigate(`/crm/pipelines?lead=${leadId}&t=${Date.now()}`);
+   const url = `/crm/pipelines?lead=${leadId}&t=${Date.now()}`;
+   console.log('[FloatingChat] Navigating to:', url);
+   navigate(url);
   };
 
   const handleSendMessage = async () => {
@@ -477,11 +480,16 @@ export function FloatingChat() {
     const remainingTags = tags.slice(2);
 
     const handleViewLeadClick = () => {
+     console.log('[FloatingChat] handleViewLeadClick triggered, leadId:', leadId);
       if (leadId) {
         closeChat();
         // Usar timestamp para forçar o React Router a detectar a mudança
         // mesmo quando já estamos na mesma página
-        navigate(`/crm/pipelines?lead=${leadId}&t=${Date.now()}`);
+       const url = `/crm/pipelines?lead=${leadId}&t=${Date.now()}`;
+       console.log('[FloatingChat] Navigating to:', url);
+       navigate(url);
+     } else {
+       console.warn('[FloatingChat] No leadId found in handleViewLeadClick!');
       }
     };
 
