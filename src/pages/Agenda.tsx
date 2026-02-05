@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, List, LayoutGrid } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -13,10 +13,24 @@ import { UserFilter } from '@/components/schedule/UserFilter';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
 export default function Agenda() {
   const {
     profile
   } = useAuth();
+  
+  // Check if user is team leader via RPC
+  const { data: isTeamLeader = false } = useQuery({
+    queryKey: ['is-team-leader', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return false;
+      const { data } = await supabase.rpc('is_team_leader', { check_user_id: profile.id });
+      return data || false;
+    },
+    enabled: !!profile?.id,
+  });
   const {
     data: users = []
   } = useUsers();
@@ -78,7 +92,7 @@ export default function Agenda() {
   };
 
   // Check if user is admin or team leader
-  const canFilterUsers = profile?.role === 'admin';
+  const canFilterUsers = profile?.role === 'admin' || isTeamLeader;
   return <AppLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
@@ -126,23 +140,33 @@ export default function Agenda() {
             {/* Google Calendar Connect */}
             <GoogleCalendarConnect />
 
-            {/* Quick stats */}
+            {/* Quick stats - filtered for current week only */}
             <div className="bg-card rounded-xl p-4 space-y-4 border-0">
               <h3 className="font-semibold">Resumo da semana</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 bg-accent/50 rounded-lg">
-                  <p className="text-2xl font-bold text-primary">
-                    {events.filter(e => e.status !== 'completed').length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Pendentes</p>
-                </div>
-                <div className="text-center p-3 bg-success/10 rounded-lg">
-                  <p className="text-2xl font-bold text-success">
-                    {events.filter(e => e.status === 'completed').length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Concluídas</p>
-                </div>
-              </div>
+              {(() => {
+                const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+                const weekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
+                const weekEvents = events.filter(e => {
+                  const eventDate = new Date(e.start_time);
+                  return isWithinInterval(eventDate, { start: weekStart, end: weekEnd });
+                });
+                return (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-accent/50 rounded-lg">
+                      <p className="text-2xl font-bold text-primary">
+                        {weekEvents.filter(e => e.status !== 'completed').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Pendentes</p>
+                    </div>
+                    <div className="text-center p-3 bg-success/10 rounded-lg">
+                      <p className="text-2xl font-bold text-success">
+                        {weekEvents.filter(e => e.status === 'completed').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Concluídas</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Atividades do dia selecionado */}

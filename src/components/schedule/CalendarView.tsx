@@ -10,7 +10,7 @@ const eventTypeColors: Record<EventType, string> = {
   email: 'bg-orange-500',
   meeting: 'bg-purple-500',
   task: 'bg-amber-500',
-  message: 'bg-amber-500',
+  message: 'bg-teal-500',
   visit: 'bg-pink-500'
 };
 interface CalendarViewProps {
@@ -124,7 +124,7 @@ export function CalendarView({
           <span>Tarefa</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-amber-500" />
+          <div className="w-2 h-2 rounded-full bg-teal-500" />
           <span>Mensagem</span>
         </div>
         <div className="flex items-center gap-1.5">
