@@ -1,26 +1,15 @@
 
-
-# Plano: Adicionar Seletor de Etapa no Follow-up Builder
+# Plano: Seletor de Pipeline + Etapa no Follow-up Builder
 
 ## Problema Identificado
 
-Na tela de criação de Follow-up, quando você seleciona **"Mudou de etapa"** como gatilho, não aparece um campo para escolher **qual etapa específica** vai disparar a automação.
-
-Atualmente só existe tratamento para "Tag adicionada":
-```
-if (triggerType === 'tag_added') → mostra seletor de TAG
-if (triggerType === 'lead_stage_changed') → NÃO mostra nada ❌
-```
+Atualmente o seletor de **"Etapa específica"** mostra todas as etapas de **todas as pipelines** misturadas. Isso causa confusão quando existem múltiplas pipelines (ex: Imobiliário e Telecom), pois etapas com nomes iguais de pipelines diferentes aparecem juntas sem distinção.
 
 ---
 
 ## Solução
 
-Adicionar um seletor de **"Etapa específica"** que aparece quando o gatilho é "Mudou de etapa", similar ao que já existe para tags.
-
----
-
-## Fluxo Corrigido
+Adicionar um seletor de **Pipeline** antes do seletor de **Etapa**, criando um fluxo hierárquico:
 
 ```text
 ┌──────────────────────────────────────────────┐
@@ -29,15 +18,19 @@ Adicionar um seletor de **"Etapa específica"** que aparece quando o gatilho é 
 │ │ Mudou de etapa                      ▼    ││
 │ └──────────────────────────────────────────┘│
 │                                              │
-│ ETAPA ESPECÍFICA  ← NOVO CAMPO              │
+│ PIPELINE  ← NOVO CAMPO                      │
+│ ┌──────────────────────────────────────────┐│
+│ │ Selecione a pipeline...            ▼     ││
+│ │  • Pipeline Imobiliário                  ││
+│ │  • Pipeline Telecom                      ││
+│ └──────────────────────────────────────────┘│
+│                                              │
+│ ETAPA ESPECÍFICA                            │
 │ ┌──────────────────────────────────────────┐│
 │ │ Selecione a etapa...               ▼     ││
-│ │  • Novo                                  ││
-│ │  • Em atendimento                        ││
-│ │  • Qualificado                           ││
+│ │  • Novo         (filtrado pela pipeline) ││
 │ │  • Proposta                              ││
 │ │  • Ganho                                 ││
-│ │  • Perdido                               ││
 │ └──────────────────────────────────────────┘│
 └──────────────────────────────────────────────┘
 ```
@@ -48,83 +41,77 @@ Adicionar um seletor de **"Etapa específica"** que aparece quando o gatilho é 
 
 ### Arquivo: `src/components/automations/FollowUpBuilder.tsx`
 
-1. **Importar hook de estágios:**
+1. **Importar hook de pipelines:**
    ```typescript
-   import { useStages } from '@/hooks/use-stages';
+   import { useStages, usePipelines } from '@/hooks/use-stages';
    ```
 
-2. **Adicionar estado para etapa selecionada:**
+2. **Adicionar estado para pipeline selecionada:**
    ```typescript
-   const [stageId, setStageId] = useState<string>('');
-   const { data: stages } = useStages();
+   const [pipelineId, setPipelineId] = useState<string>('');
+   const { data: pipelines } = usePipelines();
    ```
 
-3. **Adicionar seletor condicional após o seletor de tags (linha ~460):**
+3. **Atualizar useStages para filtrar por pipeline:**
+   ```typescript
+   const { data: stages } = useStages(pipelineId || undefined);
+   ```
+
+4. **Limpar etapa quando pipeline muda:**
+   ```typescript
+   useEffect(() => {
+     setStageId('');
+   }, [pipelineId]);
+   ```
+
+5. **Adicionar seletor de pipeline antes da etapa:**
    ```typescript
    {triggerType === 'lead_stage_changed' && (
-     <div className="space-y-2">
-       <Label className="text-xs font-semibold uppercase text-muted-foreground">
-         Etapa específica
-       </Label>
-       <Select value={stageId} onValueChange={setStageId}>
-         <SelectTrigger>
-           <SelectValue placeholder="Selecione a etapa..." />
-         </SelectTrigger>
-         <SelectContent>
-           {stages?.map((stage) => (
-             <SelectItem key={stage.id} value={stage.id}>
-               <div className="flex items-center gap-2">
-                 <div 
-                   className="w-3 h-3 rounded-full" 
-                   style={{ backgroundColor: stage.color || '#888' }}
-                 />
-                 {stage.name}
-               </div>
-             </SelectItem>
-           ))}
-         </SelectContent>
-       </Select>
-     </div>
+     <>
+       <div className="space-y-2">
+         <Label>Pipeline</Label>
+         <Select value={pipelineId} onValueChange={setPipelineId}>
+           ...pipelines
+         </Select>
+       </div>
+       
+       {pipelineId && (
+         <div className="space-y-2">
+           <Label>Etapa específica</Label>
+           <Select value={stageId} onValueChange={setStageId}>
+             ...stages (já filtrados pela pipeline)
+           </Select>
+         </div>
+       )}
+     </>
    )}
    ```
 
-4. **Atualizar validação no handleSave (linha ~262):**
+6. **Atualizar validação:**
    ```typescript
-   if (triggerType === 'lead_stage_changed' && !stageId) {
-     toast.error('Selecione uma etapa para o gatilho');
+   if (triggerType === 'lead_stage_changed' && !pipelineId) {
+     toast.error('Selecione uma pipeline');
      return;
    }
    ```
 
-5. **Atualizar trigger_config no save (linha ~281):**
+7. **Salvar pipeline_id no trigger_config:**
    ```typescript
-   trigger_config: 
-     triggerType === 'tag_added' 
-       ? { tag_id: tagId } 
-       : triggerType === 'lead_stage_changed'
-         ? { to_stage_id: stageId }
-         : {},
-   ```
-
-6. **Atualizar config do nó trigger (linha ~300):**
-   ```typescript
-   config: { 
-     trigger_type: triggerType, 
-     tag_id: tagId,
-     to_stage_id: stageId,
-   },
+   trigger_config: triggerType === 'lead_stage_changed'
+     ? { pipeline_id: pipelineId, to_stage_id: stageId }
+     : ...
    ```
 
 ---
 
 ## Resultado Esperado
 
-| Gatilho Selecionado | Campo Adicional |
-|---------------------|-----------------|
-| Tag adicionada | Seletor de TAG com cor |
-| Mudou de etapa | Seletor de ETAPA com cor |
-| Lead criado | Nenhum |
-| Manual | Nenhum |
+| Passo | Campo | Ação |
+|-------|-------|------|
+| 1 | Disparar quando | Seleciona "Mudou de etapa" |
+| 2 | Pipeline | Aparece seletor → escolhe "Pipeline Imobiliário" |
+| 3 | Etapa específica | Aparece seletor com apenas etapas da pipeline selecionada |
+| 4 | Salvar | Automação vinculada à pipeline + etapa corretas |
 
 ---
 
@@ -132,5 +119,4 @@ Adicionar um seletor de **"Etapa específica"** que aparece quando o gatilho é 
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/automations/FollowUpBuilder.tsx` | Adicionar import, estado, seletor e validação para etapa |
-
+| `src/components/automations/FollowUpBuilder.tsx` | Adicionar estado pipelineId, importar usePipelines, seletores encadeados e validação |
