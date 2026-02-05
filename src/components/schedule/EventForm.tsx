@@ -9,7 +9,8 @@ import {
   MessageSquare, 
   MapPin,
   X,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,9 +21,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn, getCurrentTimeForInput, getBrasiliaTime } from '@/lib/utils';
 import { User } from 'lucide-react';
-import { useCreateScheduleEvent, useUpdateScheduleEvent, EventType, ScheduleEvent } from '@/hooks/use-schedule-events';
+import { useCreateScheduleEvent, useUpdateScheduleEvent, useDeleteScheduleEvent, EventType, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
 
 const eventTypes: { type: EventType; label: string; icon: React.ElementType }[] = [
@@ -58,6 +60,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
   const { data: users = [] } = useUsers();
   const createEvent = useCreateScheduleEvent();
   const updateEvent = useUpdateScheduleEvent();
+  const deleteEvent = useDeleteScheduleEvent();
 
   const [selectedType, setSelectedType] = useState<EventType>('call');
   const [title, setTitle] = useState('');
@@ -132,7 +135,13 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
     onOpenChange(false);
   };
 
-  const isLoading = createEvent.isPending || updateEvent.isPending;
+  const handleDelete = async () => {
+    if (!event) return;
+    await deleteEvent.mutateAsync({ id: event.id, google_event_id: event.google_event_id });
+    onOpenChange(false);
+  };
+
+  const isLoading = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -295,13 +304,41 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={isLoading || !title.trim() || !selectedUserId}>
-              {isLoading ? 'Salvando...' : 'Salvar'}
-            </Button>
+          <div className="flex justify-between pt-2">
+            {event ? (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10" disabled={isLoading}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir atividade?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. A atividade será removida permanentemente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : (
+              <div />
+            )}
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSubmit} disabled={isLoading || !title.trim() || !selectedUserId}>
+                {isLoading ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
