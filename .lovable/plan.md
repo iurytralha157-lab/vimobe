@@ -1,97 +1,268 @@
 
-# Plano: Corrigir Gráfico "Evolução de Clientes" Telecom
+# Plano: Sistema de Tempo de Resposta e Aba de Documentos no Lead
 
-## Problema Raiz Identificado
+## Visão Geral
 
-O gráfico de barras está sendo renderizado, mas as barras são **invisíveis** porque:
+Este plano aborda duas funcionalidades importantes:
 
-1. **30 barras muito finas**: Com 30 dias no eixo X, cada barra tem apenas ~20px de largura
-2. **Valores muito baixos**: Com apenas 1-7 clientes por dia, as barras têm altura de poucos pixels
-3. **Container sem altura fixa**: O container usa `min-h-[200px]` mas sem altura fixa, pode estar comprimido
-4. **Escala Y inadequada**: O Recharts pode estar usando uma escala que torna valores pequenos invisíveis
-
-### Dados Reais do Paulo (15 clientes):
-- 6 Novos, 2 Instalados, 7 Aguardando
-- Espalhados em apenas 3-4 dias dos últimos 30
+1. **Tempo de Resposta (First Response)** - Metrificar o tempo desde a entrada do lead até a primeira ação do corretor
+2. **Aba de Documentos** - Permitir upload e armazenamento de arquivos no card do lead
 
 ---
 
-## Solução: Mudar para AreaChart (igual ao Imobiliário)
+## FUNCIONALIDADE 1: Tempo de Resposta
 
-O `AreaChart` com linhas funciona muito melhor para dados esparsos porque:
-- Linhas conectam os pontos e são sempre visíveis
-- Áreas preenchidas dão feedback visual mesmo com poucos dados
-- Funciona bem com muitos pontos no eixo X
+### Contexto Atual
 
-### Mudanças no Componente
+Já existe infraestrutura parcialmente construída:
+- Edge Function `calculate-first-response` pronta para calcular e salvar os dados
+- Hook `use-lead-timeline.ts` com placeholders para métricas (retornando valores vazios)
+- KPICards exibe "Tempo Resp." mas com valor "--"
+- Tabela `leads` tem apenas `first_touch_at`, faltam as colunas de first response
 
-**Arquivo:** `src/components/dashboard/TelecomEvolutionChart.tsx`
+### O Que Falta
 
-```typescript
-// Trocar BarChart por AreaChart (igual ao DealsEvolutionChart)
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+| Componente | Status | Ação |
+|------------|--------|------|
+| Colunas no banco (leads) | Faltando | Adicionar colunas |
+| Colunas no banco (pipelines) | Faltando | Adicionar configurações |
+| Gatilhos de ação | Faltando | Implementar nos botões |
+| Hooks de métricas | Placeholders | Implementar queries reais |
+| Dashboard | Visual pronto | Conectar dados reais |
+| Performance Corretor | Visual pronto | Conectar dados reais |
 
-// Adicionar gradientes para cada status
-<defs>
-  <linearGradient id="gradientNovos" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4} />
-    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-  </linearGradient>
-  <linearGradient id="gradientInstalados" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stopColor="#22C55E" stopOpacity={0.4} />
-    <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
-  </linearGradient>
-  // ... outros gradientes
-</defs>
+---
 
-// Usar Area em vez de Bar
-<Area
-  type="monotone"
-  dataKey="novos"
-  stroke="#3B82F6"
-  strokeWidth={2}
-  fill="url(#gradientNovos)"
-  dot={false}
-/>
+### Fase 1: Estrutura de Banco de Dados
+
+Adicionar colunas na tabela `leads`:
+
+```text
+first_response_at          TIMESTAMPTZ
+first_response_seconds     INTEGER
+first_response_channel     TEXT        -- 'whatsapp', 'phone', 'email'
+first_response_actor_user_id UUID
+first_response_is_automation BOOLEAN DEFAULT FALSE
+first_touch_seconds        INTEGER
+first_touch_channel        TEXT
+first_touch_actor_user_id  UUID
 ```
 
-### Mudança de Altura
+Adicionar colunas na tabela `pipelines` (configuração):
 
-```typescript
-// Altura fixa igual ao gráfico que funciona
-<div className="flex-1 min-h-[220px] h-[220px] sm:h-auto">
+```text
+first_response_start                TEXT DEFAULT 'lead_created'  -- ou 'lead_assigned'
+include_automation_in_first_response BOOLEAN DEFAULT TRUE
 ```
 
 ---
 
-## Alternativa: Otimizar BarChart
+### Fase 2: Gatilhos nas Ações do Corretor
 
-Se preferir manter barras, ajustar:
+Implementar chamadas ao `calculate-first-response` em 3 pontos:
 
-1. **Altura fixa do container**
-2. **Largura mínima das barras** via `barSize={12}`
-3. **Escala Y com domínio mínimo** via `domain={[0, 'auto']}`
-4. **Reduzir intervalos** (semanal em vez de diário para 30 dias)
+**WhatsApp (já implementado no message-sender):**
+- Quando o corretor envia a primeira mensagem via chat flutuante
+- A Edge Function `message-sender` já chama `calculate-first-response`
+
+**Telefone (novo gatilho):**
+- Quando o corretor clica no botão "Ligar" no LeadDetailDialog ou LeadCard
+- Componentes: `LeadDetailDialog.tsx` (linha 536) e `LeadCard.tsx` (linha 97-101)
+
+**Email (novo gatilho):**
+- Quando o corretor clica no botão "Email" 
+- Componentes: `LeadDetailDialog.tsx` (linha 545-548) e `LeadCard.tsx` (linha 110-116)
+
+**Implementação dos gatilhos:**
+
+```text
+Para cada ação (phone/email):
+1. Buscar organization_id e lead_id do contexto
+2. Verificar se lead já tem first_response_at (evitar dupla contagem)
+3. Chamar Edge Function calculate-first-response com:
+   - lead_id
+   - channel: 'phone' ou 'email'
+   - actor_user_id: ID do corretor logado
+   - is_automation: false
+   - organization_id
+4. Prosseguir com a ação original (abrir tel: ou gmail)
+```
 
 ---
 
-## Recomendação
+### Fase 3: Implementar Hooks de Métricas
 
-**Usar AreaChart** - é a mesma abordagem do gráfico imobiliário que funciona perfeitamente. O código será mais consistente e o resultado visual garantido.
+Atualizar `use-lead-timeline.ts`:
+
+**useFirstResponseMetrics:**
+- Query na tabela `leads` filtrando por período
+- Calcular média, mediana, % dentro do SLA
+- Usar `first_response_seconds` como fonte de dados
+
+**useFirstResponseRanking:**
+- Agrupar por `first_response_actor_user_id`
+- Calcular média por corretor
+- Retornar ranking ordenado pelo melhor tempo
 
 ---
 
-## Resumo das Alterações
+### Fase 4: Conectar Dashboard
 
+**KPICards - Tempo de Resposta:**
+- Atualizar `useEnhancedDashboardStats` para calcular média de `first_response_seconds`
+- Formatar usando `formatResponseTime()` já existente
+
+**Performance de Corretores:**
+- O hook `use-broker-performance.ts` já busca tempo de resposta via `activities`
+- Atualizar para usar `first_response_seconds` direto da tabela `leads`
+- Mais preciso e performático
+
+---
+
+### Fase 5: Configuração por Pipeline (Opcional)
+
+Permitir que cada pipeline defina:
+- Quando o timer começa: "Quando lead entra" vs "Quando lead é atribuído"
+- Se automações contam como primeira resposta
+
+---
+
+## FUNCIONALIDADE 2: Aba de Documentos no Lead
+
+### Arquitetura
+
+```text
+lead_documents (nova tabela)
+├── id UUID
+├── organization_id UUID (FK)
+├── lead_id UUID (FK)
+├── uploaded_by UUID (FK users)
+├── file_name TEXT
+├── file_type TEXT (mime type)
+├── file_size INTEGER
+├── storage_path TEXT (caminho no bucket)
+├── created_at TIMESTAMPTZ
+
+Storage Bucket: lead-documents (privado)
+```
+
+---
+
+### Fase 1: Banco de Dados e Storage
+
+**Nova tabela `lead_documents`:**
+- Armazena metadados dos arquivos
+- RLS: Apenas quem tem acesso ao lead pode ver/fazer upload
+
+**Novo bucket `lead-documents`:**
+- Privado (não público)
+- RLS baseado em acesso ao lead
+
+---
+
+### Fase 2: Nova Aba no LeadDetailDialog
+
+Adicionar aba "Documentos" na lista de tabs (junto com Atividades, Agenda, Contato, Negócio, Histórico):
+
+```text
+tabs = [
+  { id: 'activities', label: 'Atividades', icon: Activity },
+  { id: 'schedule', label: 'Agenda', icon: Calendar },
+  { id: 'contact', label: 'Contato', icon: Contact },
+  { id: 'deal', label: 'Negócio', icon: Handshake },
+  { id: 'documents', label: 'Documentos', icon: FileText },  // NOVO
+  { id: 'history', label: 'Histórico', icon: History },
+]
+```
+
+---
+
+### Fase 3: Interface de Documentos
+
+**Componente LeadDocumentsTab:**
+- Lista de documentos existentes com:
+  - Ícone baseado no tipo (PDF, imagem, áudio)
+  - Nome do arquivo
+  - Data de upload
+  - Quem fez upload
+  - Botão de download
+  - Botão de visualizar (abre em nova aba ou modal)
+  - Botão de excluir (apenas para quem fez upload ou admin)
+
+- Botão de upload:
+  - Aceita: PDF, imagens (JPG, PNG, WEBP), áudio, documentos Office
+  - Limite: 10MB por arquivo
+  - Upload direto para Supabase Storage
+
+---
+
+### Fase 4: Hook de Documentos
+
+Novo hook `use-lead-documents.ts`:
+
+```text
+useLeadDocuments(leadId)
+- Lista todos os documentos do lead
+- Include: quem fez upload (nome, avatar)
+
+useUploadDocument()
+- Upload para Storage
+- Cria registro na tabela
+- Retorna URL assinada
+
+useDeleteDocument()
+- Remove do Storage
+- Remove da tabela
+```
+
+---
+
+## Resumo de Arquivos
+
+### Migrations SQL
+| Arquivo | Descrição |
+|---------|-----------|
+| add_first_response_columns.sql | Colunas em leads e pipelines |
+| create_lead_documents.sql | Tabela + bucket + RLS |
+
+### Frontend - Tempo de Resposta
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/dashboard/TelecomEvolutionChart.tsx` | Substituir BarChart por AreaChart, adicionar gradientes, altura fixa |
+| src/components/leads/LeadDetailDialog.tsx | Adicionar gatilhos em phone/email |
+| src/components/leads/LeadCard.tsx | Adicionar gatilhos em phone/email |
+| src/hooks/use-lead-timeline.ts | Implementar queries reais |
+| src/hooks/use-dashboard-stats.ts | Conectar avgResponseTime real |
+| src/hooks/use-broker-performance.ts | Usar first_response_seconds |
 
+### Frontend - Documentos
+| Arquivo | Mudança |
+|---------|---------|
+| src/hooks/use-lead-documents.ts | Novo hook |
+| src/components/leads/LeadDocumentsTab.tsx | Novo componente |
+| src/components/leads/LeadDetailDialog.tsx | Adicionar aba documentos |
+
+---
+
+## Ordem de Implementação Sugerida
+
+**Bloco 1 - Tempo de Resposta (prioridade)**
+1. Migration: adicionar colunas
+2. Atualizar gatilhos nos botões
+3. Implementar hooks de métricas
+4. Conectar Dashboard e Performance
+
+**Bloco 2 - Documentos**
+1. Migration: tabela + bucket
+2. Criar hook de documentos
+3. Criar componente da aba
+4. Integrar no LeadDetailDialog
+
+---
+
+## Considerações Técnicas
+
+- **Idempotência**: A Edge Function já verifica se `first_response_at` existe antes de calcular
+- **WhatsApp**: Já está integrado no `message-sender`
+- **Phone/Email**: Como são ações externas, marcamos no momento do clique (intenção de contato)
+- **RLS Documentos**: Segue a mesma lógica de acesso ao lead (assigned_user, team, admin)
+- **Storage**: Bucket privado com URLs assinadas para download
