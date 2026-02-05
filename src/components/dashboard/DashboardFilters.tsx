@@ -18,6 +18,7 @@ import { useTeams } from '@/hooks/use-teams';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { 
   DatePreset, 
   sourceOptions,
@@ -57,9 +58,21 @@ export function DashboardFilters({
   const { data: teams = [] } = useTeams();
   const { data: users = [] } = useOrganizationUsers();
   const isMobile = useIsMobile();
+  const { hasPermission } = useUserPermissions();
 
   // Filter teams based on user role
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  
+  // Check if user can view all leads (admin, super_admin, or has lead_view_all permission)
+  const canViewAllLeads = isAdmin || hasPermission('lead_view_all');
+  
+  // Check if user is a team leader
+  const isTeamLeader = teams.some(team => 
+    team.members?.some(m => m.user_id === profile?.id && m.is_leader)
+  );
+  
+  // Show user filter only for those with full visibility or team leaders
+  const showUserFilter = canViewAllLeads || isTeamLeader;
   
   // Get available teams (admin sees all, team leader sees their teams, user sees nothing)
   const availableTeams = isAdmin 
@@ -198,10 +211,12 @@ export function DashboardFilters({
               )}
 
               {/* User */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Corretor</label>
-                <UserFilter />
-              </div>
+              {showUserFilter && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Corretor</label>
+                  <UserFilter />
+                </div>
+              )}
 
               {/* Source */}
               <div className="space-y-1.5">
@@ -267,27 +282,29 @@ export function DashboardFilters({
         </Select>
       )}
 
-      {/* User Filter */}
-      <Select
-        value={userId || 'all'}
-        onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
-      >
-        <SelectTrigger className={cn(
-          "h-8 w-auto min-w-[110px] text-xs",
-          userId && "border-primary text-primary"
-        )}>
-          <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-          <SelectValue placeholder="Corretor" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          {availableUsers.map((user) => (
-            <SelectItem key={user.id} value={user.id}>
-              {user.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {/* User Filter - only for users who can view all or team leaders */}
+      {showUserFilter && (
+        <Select
+          value={userId || 'all'}
+          onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
+        >
+          <SelectTrigger className={cn(
+            "h-8 w-auto min-w-[110px] text-xs",
+            userId && "border-primary text-primary"
+          )}>
+            <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+            <SelectValue placeholder="Corretor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {availableUsers.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Source Filter */}
       <Select
