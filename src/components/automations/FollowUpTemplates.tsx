@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, Clock, Calendar, Plus, Sparkles, Building2 } from 'lucide-react';
-import { FollowUpWizard } from './FollowUpWizard';
 
 export interface FollowUpTemplate {
   id: string;
@@ -223,23 +222,10 @@ Salva meu contato e até breve! 🤝`,
 ];
 
 interface FollowUpTemplatesProps {
-  onCreateFromTemplate: (automationId: string) => void;
+  onSelectTemplate: (template: FollowUpTemplate | null) => void;
 }
 
-export function FollowUpTemplates({ onCreateFromTemplate }: FollowUpTemplatesProps) {
-  const [selectedTemplate, setSelectedTemplate] = useState<FollowUpTemplate | null>(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
-
-  const handleSelectTemplate = (template: FollowUpTemplate) => {
-    setSelectedTemplate(template);
-    setWizardOpen(true);
-  };
-
-  const handleCreateCustom = () => {
-    setSelectedTemplate(null);
-    setWizardOpen(true);
-  };
-
+export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -253,9 +239,9 @@ export function FollowUpTemplates({ onCreateFromTemplate }: FollowUpTemplatesPro
             Comece rapidamente com sequências pré-configuradas para o mercado imobiliário
           </p>
         </div>
-        <Button variant="outline" onClick={handleCreateCustom}>
+        <Button variant="outline" onClick={() => onSelectTemplate(null)}>
           <Plus className="h-4 w-4 mr-2" />
-          Criar Personalizado
+          Criar do Zero
         </Button>
       </div>
 
@@ -265,7 +251,7 @@ export function FollowUpTemplates({ onCreateFromTemplate }: FollowUpTemplatesPro
           <Card 
             key={template.id} 
             className="cursor-pointer hover:border-primary/50 transition-colors group"
-            onClick={() => handleSelectTemplate(template)}
+            onClick={() => onSelectTemplate(template)}
           >
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -302,17 +288,6 @@ export function FollowUpTemplates({ onCreateFromTemplate }: FollowUpTemplatesPro
           </Card>
         ))}
       </div>
-
-      {/* Wizard Dialog */}
-      <FollowUpWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        template={selectedTemplate}
-        onComplete={(automationId) => {
-          setWizardOpen(false);
-          onCreateFromTemplate(automationId);
-        }}
-      />
     </div>
   );
 }
