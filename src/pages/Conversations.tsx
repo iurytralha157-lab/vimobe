@@ -39,13 +39,18 @@ export default function Conversations() {
   const {
     data: sessions
   } = useAccessibleSessions();
+  
+  // Extract accessible session IDs for filtering
+  const accessibleSessionIds = sessions?.map(s => s.id) || [];
+  
   const {
     data: conversations,
     isLoading: loadingConversations
-  } = useWhatsAppConversations(selectedSessionId === "all" ? undefined : selectedSessionId, {
-    hideGroups,
-    showArchived
-  });
+  } = useWhatsAppConversations(
+    selectedSessionId === "all" ? undefined : selectedSessionId, 
+    { hideGroups, showArchived },
+    selectedSessionId === "all" ? accessibleSessionIds : undefined
+  );
   const {
     data: messages,
     isLoading: loadingMessages
