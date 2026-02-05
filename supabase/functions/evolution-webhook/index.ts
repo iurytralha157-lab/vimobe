@@ -633,6 +633,11 @@ async function handleMessagesUpsert(
           } catch (triggerError) {
             console.error("Error calling automation trigger:", triggerError);
           }
+          // ===== STOP FOLLOW-UP ON REPLY =====
+          // Cancel running/waiting automation executions when lead replies
+          if (conversation.lead_id) {
+            await handleStopFollowUpOnReply(supabase, conversation.id, conversation.lead_id);
+          }
 
           // ===== NOTIFY USERS ABOUT NEW WHATSAPP MESSAGE (ONLY FOR LEADS) =====
           // Only notify if conversation has a lead_id linked (cadastrado na pipeline)
@@ -1832,5 +1837,110 @@ async function fetchAndSaveProfilePicture(
     }
   } catch (error) {
     console.log("Could not fetch profile picture:", error);
+  }
+}
+
+// ===== STOP FOLLOW-UP ON REPLY =====
+// When a lead responds to a WhatsApp message, cancel any waiting/running automation executions
+// and optionally move the lead to a configured stage
+async function handleStopFollowUpOnReply(
+  supabase: any,
+  conversationId: string,
+  leadId: string
+) {
+  try {
+    console.log(`Checking for follow-up automations to stop for lead ${leadId}`);
+    
+    // Find all running or waiting executions for this lead or conversation
+    const { data: executions, error: execError } = await supabase
+      .from("automation_executions")
+      .select(`
+        id,
+        lead_id,
+        conversation_id,
+        status,
+        automation:automations(
+          id,
+          name,
+          trigger_config
+        )
+      `)
+      .or(`lead_id.eq.${leadId},conversation_id.eq.${conversationId}`)
+      .in("status", ["running", "waiting"]);
+    
+    if (execError) {
+      console.error("Error fetching automation executions:", execError);
+      return;
+    }
+    
+    if (!executions || executions.length === 0) {
+      console.log("No running/waiting automations found for this lead");
+      return;
+    }
+    
+    console.log(`Found ${executions.length} automation execution(s) to check`);
+    
+    for (const exec of executions) {
+      const triggerConfig = exec.automation?.trigger_config || {};
+      
+      // Check if this automation should stop on reply
+      if (triggerConfig.stop_on_reply !== true) {
+        console.log(`Automation ${exec.automation?.name || exec.id} does not have stop_on_reply enabled, skipping`);
+        continue;
+      }
+      
+      console.log(`Cancelling execution ${exec.id} for automation "${exec.automation?.name}" due to lead reply`);
+      
+      // Cancel the execution
+      const { error: updateError } = await supabase
+        .from("automation_executions")
+        .update({
+          status: "cancelled",
+          completed_at: new Date().toISOString(),
+          error_message: "Cancelado: lead respondeu",
+        })
+        .eq("id", exec.id);
+      
+      if (updateError) {
+        console.error(`Error cancelling execution ${exec.id}:`, updateError);
+        continue;
+      }
+      
+      console.log(`Execution ${exec.id} cancelled successfully`);
+      
+      // Move lead to configured stage if specified
+      const onReplyStageId = triggerConfig.on_reply_move_to_stage_id;
+      if (onReplyStageId && leadId) {
+        console.log(`Moving lead ${leadId} to stage ${onReplyStageId} as configured`);
+        
+        const { error: moveError } = await supabase
+          .from("leads")
+          .update({
+            stage_id: onReplyStageId,
+            stage_entered_at: new Date().toISOString(),
+          })
+          .eq("id", leadId);
+        
+        if (moveError) {
+          console.error(`Error moving lead to stage:`, moveError);
+        } else {
+          console.log(`Lead ${leadId} moved to stage ${onReplyStageId}`);
+          
+          // Log the stage change in activities
+          await supabase.from("activities").insert({
+            lead_id: leadId,
+            type: "stage_change",
+            content: "Lead movido automaticamente (respondeu follow-up)",
+            metadata: {
+              reason: "stop_on_reply",
+              new_stage_id: onReplyStageId,
+              automation_id: exec.automation?.id,
+            },
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in handleStopFollowUpOnReply:", error);
   }
 }
