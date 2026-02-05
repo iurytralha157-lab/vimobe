@@ -107,7 +107,6 @@ export function MediaViewer({ src, type, isOpen, onClose, filename }: MediaViewe
                   zoom !== 1 && "cursor-zoom-out"
                 )}
                 style={{ transform: `scale(${zoom})` }}
-                crossOrigin="anonymous"
                 onError={handleError}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -121,7 +120,6 @@ export function MediaViewer({ src, type, isOpen, onClose, filename }: MediaViewe
                 controls
                 autoPlay
                 className="max-w-full max-h-[80vh]"
-                crossOrigin="anonymous"
                 onError={handleError}
               />
             )}
