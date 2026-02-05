@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
       // Find leads that need redistribution:
       // - Have an assigned user
       // - Were assigned before the cutoff time
-      // - Have no first_touch_at (no contact made)
+      // - Have no first_response_at (no contact via WhatsApp, Phone, or Email)
       // - Haven't exceeded max redistributions
       const { data: leads, error: leadsError } = await supabase
         .from("leads")
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
         .eq("pipeline_id", pipeline.id)
         .not("assigned_user_id", "is", null)
         .not("assigned_at", "is", null)
-        .is("first_touch_at", null)
+        .is("first_response_at", null)
         .lt("assigned_at", cutoffTime)
         .lt("redistribution_count", maxRedistributions);
 
