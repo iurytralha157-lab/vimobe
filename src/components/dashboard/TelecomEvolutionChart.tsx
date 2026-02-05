@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -154,13 +154,43 @@ export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChart
         </CardTitle>
       </CardHeader>
       <CardContent className="pb-4 flex-1 flex flex-col">
-        {/* Chart */}
-        <div className="flex-1 min-h-[200px]">
+        {/* Chart - Fixed height for visibility */}
+        <div className="flex-1 min-h-[220px] h-[220px] sm:h-auto sm:min-h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
+            <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
             >
+              <defs>
+                <linearGradient id="gradientNovos" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={STATUS_COLORS.novos} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={STATUS_COLORS.novos} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradientInstalados" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={STATUS_COLORS.instalados} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={STATUS_COLORS.instalados} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradientAguardando" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={STATUS_COLORS.aguardando} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={STATUS_COLORS.aguardando} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradientEmAnalise" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={STATUS_COLORS.em_analise} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={STATUS_COLORS.em_analise} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradientCancelado" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={STATUS_COLORS.cancelado} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={STATUS_COLORS.cancelado} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradientSuspenso" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={STATUS_COLORS.suspenso} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={STATUS_COLORS.suspenso} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradientInadimplente" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={STATUS_COLORS.inadimplente} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={STATUS_COLORS.inadimplente} stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 stroke="hsl(var(--border))" 
@@ -173,6 +203,7 @@ export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChart
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                 dy={8}
+                interval="preserveStartEnd"
               />
               <YAxis 
                 axisLine={false}
@@ -180,67 +211,82 @@ export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChart
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                 width={40}
                 allowDecimals={false}
+                domain={[0, 'auto']}
               />
               <Tooltip content={<CustomTooltip />} />
               
-              {/* Render stacked bars for active statuses */}
+              {/* Render areas for active statuses */}
               {activeStatuses.includes('instalados') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="instalados"
-                  stackId="stack"
-                  fill={STATUS_COLORS.instalados}
-                  radius={[0, 0, 0, 0]}
+                  stroke={STATUS_COLORS.instalados}
+                  strokeWidth={2}
+                  fill="url(#gradientInstalados)"
+                  dot={false}
                 />
               )}
               {activeStatuses.includes('novos') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="novos"
-                  stackId="stack"
-                  fill={STATUS_COLORS.novos}
-                  radius={[0, 0, 0, 0]}
+                  stroke={STATUS_COLORS.novos}
+                  strokeWidth={2}
+                  fill="url(#gradientNovos)"
+                  dot={false}
                 />
               )}
               {activeStatuses.includes('aguardando') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="aguardando"
-                  stackId="stack"
-                  fill={STATUS_COLORS.aguardando}
-                  radius={[0, 0, 0, 0]}
+                  stroke={STATUS_COLORS.aguardando}
+                  strokeWidth={2}
+                  fill="url(#gradientAguardando)"
+                  dot={false}
                 />
               )}
               {activeStatuses.includes('em_analise') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="em_analise"
-                  stackId="stack"
-                  fill={STATUS_COLORS.em_analise}
-                  radius={[0, 0, 0, 0]}
+                  stroke={STATUS_COLORS.em_analise}
+                  strokeWidth={2}
+                  fill="url(#gradientEmAnalise)"
+                  dot={false}
                 />
               )}
               {activeStatuses.includes('cancelado') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="cancelado"
-                  stackId="stack"
-                  fill={STATUS_COLORS.cancelado}
-                  radius={[0, 0, 0, 0]}
+                  stroke={STATUS_COLORS.cancelado}
+                  strokeWidth={2}
+                  fill="url(#gradientCancelado)"
+                  dot={false}
                 />
               )}
               {activeStatuses.includes('suspenso') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="suspenso"
-                  stackId="stack"
-                  fill={STATUS_COLORS.suspenso}
-                  radius={[0, 0, 0, 0]}
+                  stroke={STATUS_COLORS.suspenso}
+                  strokeWidth={2}
+                  fill="url(#gradientSuspenso)"
+                  dot={false}
                 />
               )}
               {activeStatuses.includes('inadimplente') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="inadimplente"
-                  stackId="stack"
-                  fill={STATUS_COLORS.inadimplente}
-                  radius={[4, 4, 0, 0]}
+                  stroke={STATUS_COLORS.inadimplente}
+                  strokeWidth={2}
+                  fill="url(#gradientInadimplente)"
+                  dot={false}
                 />
               )}
-            </BarChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
