@@ -1,220 +1,127 @@
 
+# Plano: Reorganizar Header do FloatingChat
 
-# Plano: Corrigir Visibilidade de Conversas WhatsApp para Admin
+## Problema Identificado
+O topo do chat flutuante está visualmente desorganizado com muitos elementos desalinhados:
+- Avatar, nome, telefone, "Ver Lead", ícone telefone, opções, minimizar, fechar - todos misturados
+- Falta hierarquia visual clara
+- Botões de controle do chat misturados com ações do contato
+- Espaço limitado não está sendo bem aproveitado
 
-## Diagnóstico
-
-### Causa Raiz Identificada
-
-O admin está vendo conversas de outras instâncias porque existe uma **política RLS muito permissiva** chamada `System can manage conversations` que permite acesso a **todas** as conversas da organização, ignorando o controle de acesso por sessão.
-
-**Políticas atuais em conflito:**
-
-| Política | Tipo | Problema |
-|----------|------|----------|
-| `System can manage conversations` | ALL | Permite acesso a TODAS as sessões da organização |
-| `Users can view conversations from accessible sessions` | SELECT | Correta - respeita owner + session_access |
-
-Como ambas são `PERMISSIVE`, o PostgreSQL combina com `OR`, e a política mais ampla vence.
-
-### Visualização do Problema
+## Solução Proposta
+Criar um header compacto e bem organizado especificamente para o FloatingChat, com três áreas distintas:
 
 ```text
-Política atual (errada):
-┌─────────────────────────────────────────────┐
-│ Admin Fernando (org 818394bf)               │
-│                                             │
-│ RLS: session.organization_id = minha_org    │
-│ ↓                                           │
-│ Vê TODAS as 5 sessões da organização ❌     │
-│ - Vendas MCMV (sua)                         │
-│ - Maikson (não tem acesso)                  │
-│ - Gabriel (não tem acesso)                  │
-│ - Guilherme (não tem acesso)                │
-│ - Raquel (não tem acesso)                   │
-└─────────────────────────────────────────────┘
-
-Comportamento correto (após correção):
-┌─────────────────────────────────────────────┐
-│ Admin Fernando (org 818394bf)               │
-│                                             │
-│ RLS: owner_user_id = eu OR session_access   │
-│ ↓                                           │
-│ Vê apenas sessões autorizadas ✓             │
-│ - Vendas MCMV (owner)                       │
-└─────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|  [←]  [Avatar] Nome do Contato           [Ver Lead] [-] [x]     |
+|              +55 (22) 99999-9999  [Tag1] [Tag2]                 |
++------------------------------------------------------------------+
 ```
 
----
+### Estrutura do Novo Header
 
-## Solução
+**Linha Principal (flexbox):**
+1. **Esquerda**: Botão voltar (←) + Avatar pequeno (32x32px)
+2. **Centro (flex-1)**: Nome do contato (truncado) 
+3. **Direita**: Botão "Ver Lead" (ícone apenas) + Minimizar + Fechar
 
-### Parte 1: Correção da RLS no Banco de Dados
+**Segunda Linha (abaixo do nome):**
+- Telefone formatado
+- Tags do lead (máximo 2 + contador)
+- Info de pipeline/estágio (se couber)
 
-Remover a política permissiva e garantir que apenas a política restritiva seja aplicada.
+### Mudanças Técnicas
 
-**SQL Migration:**
+1. **Criar novo componente `FloatingConversationHeader`** dentro do `FloatingChat.tsx`:
+   - Layout em duas linhas compactas
+   - Botão voltar integrado à esquerda
+   - Controles do chat (minimizar/fechar) à direita
+   - Avatar menor (32x32px) para economizar espaço
+   - Tags exibidas na segunda linha com o telefone
 
-```sql
--- 1. Remover política permissiva demais
-DROP POLICY IF EXISTS "System can manage conversations" ON whatsapp_conversations;
+2. **Simplificar a estrutura**:
+   - Remover o wrapper `relative` com botões sobrepostos
+   - Não usar mais o `ConversationHeader` genérico (feito para tela maior)
+   - Botão "Ver Lead" será apenas um ícone (ExternalLink) com tooltip
 
--- 2. Remover políticas duplicadas de super admin
-DROP POLICY IF EXISTS "Super admin access whatsapp_conversations" ON whatsapp_conversations;
-DROP POLICY IF EXISTS "Super admin can manage whatsapp conversations" ON whatsapp_conversations;
-DROP POLICY IF EXISTS "Super admin can view all whatsapp conversations" ON whatsapp_conversations;
+3. **Melhorar espaçamento**:
+   - Padding consistente (px-3 py-2)
+   - Gap adequado entre elementos
+   - Truncar textos longos
 
--- 3. Garantir que a política correta existe para SELECT
-DROP POLICY IF EXISTS "Users can view conversations from accessible sessions" ON whatsapp_conversations;
+### Código Principal
 
-CREATE POLICY "Users can view conversations from accessible sessions"
-ON whatsapp_conversations FOR SELECT
-USING (
-  is_super_admin() 
-  OR (
-    session_id IN (
-      SELECT ws.id 
-      FROM whatsapp_sessions ws
-      WHERE ws.organization_id = get_user_organization_id()
-        AND (
-          ws.owner_user_id = auth.uid()
-          OR EXISTS (
-            SELECT 1 FROM whatsapp_session_access wsa
-            WHERE wsa.session_id = ws.id
-              AND wsa.user_id = auth.uid()
-              AND wsa.can_view = true
-          )
-        )
-    )
-  )
-);
-
--- 4. Política para INSERT (webhooks e sistema)
-DROP POLICY IF EXISTS "Users can insert conversations for their organization" ON whatsapp_conversations;
-
-CREATE POLICY "Allow insert conversations for organization"
-ON whatsapp_conversations FOR INSERT
-WITH CHECK (
-  organization_id = get_user_organization_id()
-  OR is_super_admin()
-);
-
--- 5. Política para UPDATE (já existe e está correta)
--- A política existente já verifica owner_user_id e session_access
-
--- 6. Política para DELETE
-DROP POLICY IF EXISTS "Users can delete conversations from accessible sessions" ON whatsapp_conversations;
-
-CREATE POLICY "Users can delete conversations from accessible sessions"
-ON whatsapp_conversations FOR DELETE
-USING (
-  is_super_admin() 
-  OR (
-    session_id IN (
-      SELECT ws.id 
-      FROM whatsapp_sessions ws
-      WHERE ws.organization_id = get_user_organization_id()
-        AND (
-          ws.owner_user_id = auth.uid()
-          OR EXISTS (
-            SELECT 1 FROM whatsapp_session_access wsa
-            WHERE wsa.session_id = ws.id
-              AND wsa.user_id = auth.uid()
-              AND wsa.can_view = true
-          )
-        )
-    )
-  )
+```tsx
+const FloatingConversationHeader = () => (
+  <div className="border-b bg-card shrink-0">
+    {/* Linha 1: Navegação e info principal */}
+    <div className="flex items-center gap-2 px-3 py-2">
+      {/* Voltar */}
+      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={clearActiveConversation}>
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      
+      {/* Avatar */}
+      <Avatar className="h-8 w-8 shrink-0">
+        <AvatarImage src={activeConversation.contact_picture} />
+        <AvatarFallback className="text-xs">...</AvatarFallback>
+      </Avatar>
+      
+      {/* Nome e telefone */}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">{displayName}</p>
+        <p className="text-xs text-muted-foreground truncate">{phone}</p>
+      </div>
+      
+      {/* Ações */}
+      <div className="flex items-center gap-1 shrink-0">
+        {leadId && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleViewLead}>
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Ver Lead</TooltipContent>
+          </Tooltip>
+        )}
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={minimizeChat}>
+          <Minus className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={closeChat}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+    
+    {/* Linha 2: Tags e Pipeline (se houver) */}
+    {(tags.length > 0 || pipelineName) && (
+      <div className="flex items-center gap-1.5 px-3 pb-2 flex-wrap">
+        {/* Tags */}
+        {tags.slice(0,2).map(t => (
+          <Badge key={t.id} style={{...}} className="text-[9px] h-4">
+            {t.name}
+          </Badge>
+        ))}
+        {/* Pipeline → Stage */}
+        {pipelineName && (
+          <span className="text-[10px] text-muted-foreground">
+            {pipelineName} → {stageName}
+          </span>
+        )}
+      </div>
+    )}
+  </div>
 );
 ```
 
-### Parte 2: Proteção Adicional no Frontend (Defense in Depth)
+## Resultado Visual Esperado
 
-Modificar `useWhatsAppConversations` para filtrar conversas pelas sessões acessíveis quando "Todos os canais" estiver selecionado.
+- **Limpo e organizado**: Cada elemento tem seu lugar definido
+- **Hierarquia clara**: Nome em destaque, telefone/tags secundários
+- **Controles acessíveis**: Voltar à esquerda, ações à direita
+- **Compacto**: Otimizado para o espaço limitado do chat flutuante
+- **Consistente**: Segue o padrão visual do resto da aplicação
 
-**Arquivo:** `src/hooks/use-whatsapp-conversations.ts`
-
-```typescript
-export function useWhatsAppConversations(
-  sessionId?: string, 
-  filters?: ConversationFilters,
-  accessibleSessionIds?: string[]  // Novo parâmetro
-) {
-  const { profile } = useAuth();
-
-  return useQuery({
-    queryKey: ["whatsapp-conversations", sessionId, filters, accessibleSessionIds],
-    queryFn: async () => {
-      let query = supabase
-        .from("whatsapp_conversations")
-        .select(...)
-        .is("deleted_at", null)
-        .order("last_message_at", { ascending: false, nullsFirst: false });
-
-      if (sessionId) {
-        query = query.eq("session_id", sessionId);
-      } else if (accessibleSessionIds && accessibleSessionIds.length > 0) {
-        // NOVA LÓGICA: Filtrar por sessões acessíveis quando "Todos"
-        query = query.in("session_id", accessibleSessionIds);
-      }
-
-      // ... resto da query
-    },
-  });
-}
-```
-
-**Arquivo:** `src/pages/Conversations.tsx`
-
-```typescript
-// Passar IDs das sessões acessíveis para o hook
-const { data: sessions } = useAccessibleSessions();
-const accessibleSessionIds = sessions?.map(s => s.id) || [];
-
-const { data: conversations } = useWhatsAppConversations(
-  selectedSessionId === "all" ? undefined : selectedSessionId,
-  { hideGroups, showArchived },
-  selectedSessionId === "all" ? accessibleSessionIds : undefined  // Novo
-);
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| **Migração SQL** | Corrigir políticas RLS |
-| `src/hooks/use-whatsapp-conversations.ts` | Aceitar lista de sessões acessíveis |
-| `src/pages/Conversations.tsx` | Passar sessões acessíveis para o hook |
-
----
-
-## Resultado Esperado
-
-### Antes
-- Admin Fernando vê conversas de 5 sessões da organização
-- Checkbox "Todos os canais" lista todas as instâncias
-
-### Depois
-- Admin Fernando vê apenas conversas da sessão "Vendas MCMV" (que ele é dono)
-- "Todos os canais" mostra apenas sessões às quais tem acesso real
-- Para ver outras sessões, precisa receber acesso via "Gerenciar Acesso" em Configurações WhatsApp
-
----
-
-## Segurança
-
-Esta correção reforça a privacidade seguindo o princípio estabelecido na memória:
-
-> "A visibilidade das sessões e conversas do WhatsApp é estritamente restrita ao dono da sessão ou usuários com acesso concedido na tabela whatsapp_session_access. Esta restrição de privacidade aplica-se a todos os usuários, incluindo Administradores da organização."
-
----
-
-## Verificação Pós-Implementação
-
-1. Logar como admin que não é dono de nenhuma sessão → Não deve ver conversas
-2. Logar como admin dono de 1 sessão → Deve ver apenas conversas dessa sessão
-3. Conceder acesso a outra sessão via "Gerenciar Acesso" → Deve ver conversas das 2 sessões
-4. Super admin deve continuar vendo tudo (para suporte)
-
+## Arquivo a Modificar
+- `src/components/chat/FloatingChat.tsx`
