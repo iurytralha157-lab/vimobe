@@ -38,6 +38,7 @@ import { formatPhoneForDisplay } from '@/lib/phone-utils';
 import { TagSelectorPopoverContent } from '@/components/ui/tag-selector';
 import { useCreateCommissionOnWon } from '@/hooks/use-create-commission';
 import { useUpdateLeadCommission } from '@/hooks/use-update-commission';
+import { useDealStatusChange } from '@/hooks/use-deal-status-change';
 const sourceLabels: Record<string, string> = {
   meta: 'Meta Ads',
   wordpress: 'WordPress',
@@ -239,6 +240,7 @@ export function LeadDetailDialog({
   const removeTag = useRemoveLeadTag();
   const createCommission = useCreateCommissionOnWon();
   const updateCommission = useUpdateLeadCommission();
+  const dealStatusChange = useDealStatusChange();
   const { profile, organization } = useAuth();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
@@ -432,6 +434,26 @@ export function LeadDetailDialog({
       // Error handled by mutation
     }
   };
+  
+  // Centralized handler for deal status changes
+  const handleDealStatusChange = async (newStatus: string) => {
+    const previousStatus = lead.deal_status;
+    if (newStatus === previousStatus) return;
+    
+    await dealStatusChange.mutateAsync({
+      leadId: lead.id,
+      newStatus: newStatus as 'open' | 'won' | 'lost',
+      organizationId: profile?.organization_id || organization?.id || '',
+      userId: lead.assigned_user_id,
+      propertyId: lead.property_id,
+      valorInteresse: lead.valor_interesse,
+      commissionPercentage: lead.commission_percentage,
+      leadName: lead.name || 'Lead',
+    });
+    
+    refetchStages();
+  };
+  
   // Mostrar todas as atividades importantes no histórico recente
   const taskActivities = activities.filter((a: any) => 
     ['call', 'message', 'email', 'note', 'task_completed', 'lead_created', 'stage_change', 'assignee_changed', 'status_change', 'lead_reentry'].includes(a.type)
@@ -546,28 +568,7 @@ export function LeadDetailDialog({
         <div className="mt-3">
           <Select 
             value={lead.deal_status || 'open'} 
-            onValueChange={async (value) => {
-              const previousStatus = lead.deal_status;
-              await updateLead.mutateAsync({
-                id: lead.id,
-                deal_status: value,
-                lost_reason: value === 'lost' ? '' : null
-              } as any);
-              
-              // Auto-create commission when status changes to 'won'
-              if (value === 'won' && previousStatus !== 'won' && profile?.organization_id) {
-                createCommission.mutate({
-                  leadId: lead.id,
-                  organizationId: profile.organization_id,
-                  userId: lead.assigned_user_id,
-                  propertyId: lead.property_id,
-                  valorInteresse: lead.valor_interesse,
-                  leadCommissionPercentage: lead.commission_percentage
-                });
-              }
-              
-              refetchStages();
-            }}
+            onValueChange={handleDealStatusChange}
           >
             <SelectTrigger 
               className={cn(
@@ -1115,14 +1116,7 @@ export function LeadDetailDialog({
                   <Label className="text-xs text-muted-foreground mb-2 block">Status do Negócio</Label>
                   <Select 
                     value={lead.deal_status || 'open'} 
-                    onValueChange={async (value) => {
-                      await updateLead.mutateAsync({
-                        id: lead.id,
-                        deal_status: value,
-                        lost_reason: value === 'lost' ? '' : null
-                      } as any);
-                      refetchStages();
-                    }}
+                    onValueChange={handleDealStatusChange}
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Selecionar status" />
@@ -1333,14 +1327,7 @@ export function LeadDetailDialog({
             {/* Deal Status Badge */}
             <Select 
               value={lead.deal_status || 'open'} 
-              onValueChange={async (value) => {
-                await updateLead.mutateAsync({
-                  id: lead.id,
-                  deal_status: value,
-                  lost_reason: value === 'lost' ? '' : null
-                } as any);
-                refetchStages();
-              }}
+              onValueChange={handleDealStatusChange}
             >
               <SelectTrigger 
                 className={cn(
@@ -1862,14 +1849,7 @@ export function LeadDetailDialog({
                   <Label className="text-xs text-muted-foreground mb-2 block">Status do Negócio</Label>
                   <Select 
                     value={lead.deal_status || 'open'} 
-                    onValueChange={async (value) => {
-                      await updateLead.mutateAsync({
-                        id: lead.id,
-                        deal_status: value,
-                        lost_reason: value === 'lost' ? '' : null
-                      } as any);
-                      refetchStages();
-                    }}
+                    onValueChange={handleDealStatusChange}
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Selecionar status" />

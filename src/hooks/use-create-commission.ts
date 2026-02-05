@@ -11,14 +11,29 @@ interface CreateCommissionParams {
   leadCommissionPercentage?: number | null;
 }
 
+interface CreateReceivableParams {
+  leadId: string;
+  organizationId: string;
+  valorInteresse: number;
+  description?: string;
+  dueDays?: number;
+}
+
+// ETAPA 1: Criar comissão com fallbacks robustos
 export function useCreateCommissionOnWon() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ leadId, organizationId, userId, propertyId, valorInteresse, leadCommissionPercentage }: CreateCommissionParams) => {
-      // Skip if no value or user
-      if (!valorInteresse || !userId) {
-        console.log('Skipping commission creation - missing data:', { valorInteresse, userId });
+      // Skip if no value
+      if (!valorInteresse || valorInteresse <= 0) {
+        console.log('Skipping commission creation - no valor_interesse:', { valorInteresse });
+        return null;
+      }
+
+      // If no user assigned, log but continue (commission can be created without user for now)
+      if (!userId) {
+        console.log('No user assigned to lead, skipping commission for now:', leadId);
         return null;
       }
 
@@ -34,27 +49,43 @@ export function useCreateCommissionOnWon() {
         return null;
       }
 
-      // Use lead commission percentage first, fallback to property if available
+      // FALLBACK CHAIN: lead -> property -> organization -> default 5%
       let commissionPercentage = leadCommissionPercentage || 0;
-      let propertyTitle = 'Negócio';
+      let sourceLabel = 'Lead';
 
-      // If no lead commission but has property, get from property
+      // Try property if no lead commission
       if (commissionPercentage <= 0 && propertyId) {
-        const { data: property, error: propertyError } = await supabase
+        const { data: property } = await supabase
           .from('properties')
           .select('commission_percentage, title')
           .eq('id', propertyId)
           .single();
 
-        if (!propertyError && property) {
-          commissionPercentage = property.commission_percentage || 0;
-          propertyTitle = property.title || 'Imóvel';
+        if (property?.commission_percentage && property.commission_percentage > 0) {
+          commissionPercentage = property.commission_percentage;
+          sourceLabel = property.title || 'Imóvel';
         }
       }
-      
+
+      // Try organization default if still no commission
       if (commissionPercentage <= 0) {
-        console.log('No commission percentage configured (neither on lead nor property)');
-        return null;
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('default_commission_percentage, name')
+          .eq('id', organizationId)
+          .single();
+
+        if (org?.default_commission_percentage && org.default_commission_percentage > 0) {
+          commissionPercentage = org.default_commission_percentage;
+          sourceLabel = 'Padrão da empresa';
+        }
+      }
+
+      // Final fallback: 5%
+      if (commissionPercentage <= 0) {
+        commissionPercentage = 5;
+        sourceLabel = 'Padrão do sistema (5%)';
+        console.log('Using default 5% commission for lead:', leadId);
       }
 
       // Calculate commission amount
@@ -70,8 +101,9 @@ export function useCreateCommissionOnWon() {
           property_id: propertyId,
           base_value: valorInteresse,
           amount: commissionAmount,
+          percentage: commissionPercentage,
           status: 'forecast',
-          notes: `Comissão automática - ${propertyTitle}`
+          notes: `Comissão automática - ${sourceLabel}`
         })
         .select()
         .single();
@@ -81,33 +113,103 @@ export function useCreateCommissionOnWon() {
         throw error;
       }
 
-      return commission;
+      console.log('✅ Commission created:', { leadId, amount: commissionAmount, percentage: commissionPercentage });
+      return { commission, percentage: commissionPercentage };
     },
-    onSuccess: (data, variables) => {
-      if (data) {
+    onSuccess: (data) => {
+      if (data?.commission) {
         queryClient.invalidateQueries({ queryKey: ['commissions'] });
         queryClient.invalidateQueries({ queryKey: ['financial-dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['enhanced-dashboard-stats'] });
         queryClient.invalidateQueries({ queryKey: ['top-brokers'] });
+        queryClient.invalidateQueries({ queryKey: ['broker-performance'] });
         
-        // Show detailed toast with commission amount
-        const commissionAmount = data.amount;
-        const baseValue = variables.valorInteresse || 0;
-        const percentage = variables.leadCommissionPercentage || 0;
+        const commissionAmount = data.commission.amount;
+        const percentage = data.percentage;
         
         toast.success(
           `Comissão de R$ ${commissionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} gerada!`,
           { 
-            description: percentage > 0 
-              ? `${percentage}% de R$ ${baseValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` 
-              : undefined 
+            description: `${percentage}% sobre o valor do negócio`
           }
         );
       }
     },
     onError: (error) => {
       console.error('Error creating commission:', error);
-      // Don't show error toast - commission creation is a side effect
+    }
+  });
+}
+
+// ETAPA 2: Criar conta a receber automaticamente
+export function useCreateReceivableOnWon() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ leadId, organizationId, valorInteresse, description, dueDays = 30 }: CreateReceivableParams) => {
+      if (!valorInteresse || valorInteresse <= 0) {
+        console.log('Skipping receivable creation - no valor_interesse');
+        return null;
+      }
+
+      // Check if receivable already exists for this lead
+      const { data: existingEntry } = await supabase
+        .from('financial_entries')
+        .select('id')
+        .eq('lead_id', leadId)
+        .eq('type', 'receivable')
+        .maybeSingle();
+
+      if (existingEntry) {
+        console.log('Receivable already exists for lead:', leadId);
+        return null;
+      }
+
+      // Calculate due date (default 30 days from now)
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + dueDays);
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Create financial entry
+      const { data: entry, error } = await supabase
+        .from('financial_entries')
+        .insert({
+          organization_id: organizationId,
+          lead_id: leadId,
+          type: 'receivable',
+          amount: valorInteresse,
+          status: 'pending',
+          due_date: dueDate.toISOString().split('T')[0],
+          description: description || 'Venda - Negócio fechado',
+          notes: 'Gerado automaticamente ao marcar lead como ganho',
+          created_by: user?.id || null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating receivable:', error);
+        throw error;
+      }
+
+      console.log('✅ Receivable created:', { leadId, amount: valorInteresse });
+      return entry;
+    },
+    onSuccess: (data) => {
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
+        queryClient.invalidateQueries({ queryKey: ['financial-dashboard'] });
+        
+        toast.success(
+          `Conta a receber de R$ ${data.amount.toLocaleString('pt-BR', { minimumFractionDigits: 0 })} criada!`,
+          { description: `Vencimento: ${new Date(data.due_date).toLocaleDateString('pt-BR')}` }
+        );
+      }
+    },
+    onError: (error) => {
+      console.error('Error creating receivable:', error);
     }
   });
 }
