@@ -253,6 +253,8 @@ export function useFinancialDashboard() {
     queryKey: ['financial-dashboard', profile?.organization_id],
     queryFn: async () => {
       const today = new Date();
+      // Set today to start of day for consistent comparison
+      today.setHours(0, 0, 0, 0);
       const days30 = new Date(today);
       days30.setDate(days30.getDate() + 30);
       const days60 = new Date(today);
@@ -312,9 +314,21 @@ export function useFinancialDashboard() {
       const contracts = contractsData as { id: string; value: number; status: string; signing_date: string }[] || [];
 
       // Financial entries receivables
-      const entriesReceivable30 = receivables.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.amount || 0), 0);
-      const entriesReceivable60 = receivables.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.amount || 0), 0);
-      const entriesReceivable90 = receivables.filter(r => new Date(r.due_date) <= days90).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      // Changed to discrete ranges instead of cumulative
+      const entriesReceivable30 = receivables.filter(r => {
+        const dueDate = new Date(r.due_date);
+        return dueDate >= today && dueDate <= days30;
+      }).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      
+      const entriesReceivable60 = receivables.filter(r => {
+        const dueDate = new Date(r.due_date);
+        return dueDate > days30 && dueDate <= days60;
+      }).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      
+      const entriesReceivable90 = receivables.filter(r => {
+        const dueDate = new Date(r.due_date);
+        return dueDate > days60 && dueDate <= days90;
+      }).reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
       // Won leads value (simplified projection)
       const leadsValue = wonLeads.reduce((sum, l) => sum + Number(l.valor_interesse || 0), 0);
