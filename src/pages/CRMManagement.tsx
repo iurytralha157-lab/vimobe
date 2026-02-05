@@ -2,24 +2,75 @@ import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, Users, Timer, Tags, GitBranch, LucideIcon } from 'lucide-react';
+import { Shuffle, Users, Timer, Tags, GitBranch, ListChecks, LucideIcon } from 'lucide-react';
 import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Distribuição components
+// Tab components
 import { DistributionTab } from '@/components/crm-management/DistributionTab';
-// Equipes components  
 import { TeamsTab } from '@/components/crm-management/TeamsTab';
-// Bolsão component
 import { PoolTab } from '@/components/crm-management/PoolTab';
-// Tags component
 import { TagsTab } from '@/components/crm-management/TagsTab';
+import { CadencesTab } from '@/components/crm-management/CadencesTab';
+import { TabIntroCard } from '@/components/crm-management/TabIntroCard';
 
 interface TabItem {
   value: string;
   label: string;
   icon: LucideIcon;
 }
+
+// Intro card content for each tab
+const tabIntros: Record<string, { title: string; description: string; tips?: string[] }> = {
+  teams: {
+    title: 'Organize sua equipe',
+    description: 'Crie times de corretores e defina líderes para acompanhar o desempenho de cada grupo.',
+    tips: [
+      'Líderes têm acesso a todos os leads das pipelines vinculadas',
+      'Membros só veem seus próprios leads',
+    ],
+  },
+  pipelines: {
+    title: 'Vincule pipelines às equipes',
+    description: 'Conecte cada pipeline a uma ou mais equipes para controlar quem pode visualizar os negócios.',
+    tips: [
+      'Uma pipeline pode estar vinculada a múltiplas equipes',
+      'Equipes sem vínculos não verão leads no Kanban',
+    ],
+  },
+  distribution: {
+    title: 'Distribuição automática de leads',
+    description: 'Configure regras de round-robin para distribuir leads automaticamente entre os corretores disponíveis.',
+    tips: [
+      'Leads são distribuídos com base em disponibilidade e regras',
+      'Você pode criar filas por origem, cidade ou outros critérios',
+    ],
+  },
+  pool: {
+    title: 'Redistribuição por tempo de resposta',
+    description: 'Quando um corretor não faz contato dentro do tempo limite, o lead é passado para o próximo da fila.',
+    tips: [
+      'Defina o tempo máximo para primeiro contato',
+      'O sistema verifica automaticamente a cada minuto',
+    ],
+  },
+  cadences: {
+    title: 'Cadências de tarefas',
+    description: 'Crie tarefas automáticas que aparecem para os corretores conforme o lead avança no funil.',
+    tips: [
+      'Tarefas são criadas automaticamente ao mover o lead de estágio',
+      'Você pode incluir mensagens prontas para envio',
+    ],
+  },
+  tags: {
+    title: 'Organize leads com tags',
+    description: 'Crie etiquetas coloridas para categorizar e filtrar leads de forma rápida.',
+    tips: [
+      'Tags aparecem no Kanban e na lista de contatos',
+      'Use para marcar prioridade, interesse ou qualquer critério',
+    ],
+  },
+};
 
 export default function CRMManagement() {
   const [activeTab, setActiveTab] = useState('teams');
@@ -29,12 +80,14 @@ export default function CRMManagement() {
     { value: 'teams', label: 'Equipes', icon: Users },
     { value: 'pipelines', label: 'Pipelines', icon: GitBranch },
     { value: 'distribution', label: 'Distribuição', icon: Shuffle },
-    { value: 'pool', label: 'Bolsão', icon: Timer },
+    { value: 'pool', label: 'Redistribuição', icon: Timer },
+    { value: 'cadences', label: 'Cadências', icon: ListChecks },
     { value: 'tags', label: 'Tags', icon: Tags },
   ], []);
 
   const currentTab = managementTabs.find(tab => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
+  const currentIntro = tabIntros[activeTab];
 
   return (
     <AppLayout title="Gestão">
@@ -63,42 +116,28 @@ export default function CRMManagement() {
             </Select>
           ) : (
             <TabsList className="inline-flex h-11 p-1 bg-muted/50 rounded-xl">
-              <TabsTrigger 
-                value="teams" 
-                className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-              >
-                <Users className="h-4 w-4" />
-                Equipes
-              </TabsTrigger>
-              <TabsTrigger 
-                value="pipelines" 
-                className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-              >
-                <GitBranch className="h-4 w-4" />
-                Pipelines
-              </TabsTrigger>
-              <TabsTrigger 
-                value="distribution" 
-                className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-              >
-                <Shuffle className="h-4 w-4" />
-                Distribuição
-              </TabsTrigger>
-              <TabsTrigger 
-                value="pool" 
-                className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-              >
-                <Timer className="h-4 w-4" />
-                Bolsão
-              </TabsTrigger>
-              <TabsTrigger 
-                value="tags" 
-                className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-              >
-                <Tags className="h-4 w-4" />
-                Tags
-              </TabsTrigger>
+              {managementTabs.map(tab => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
+          )}
+
+          {/* Intro card for current tab */}
+          {currentIntro && CurrentIcon && (
+            <TabIntroCard
+              id={activeTab}
+              icon={CurrentIcon}
+              title={currentIntro.title}
+              description={currentIntro.description}
+              tips={currentIntro.tips}
+            />
           )}
 
           <TabsContent value="teams" className="mt-0">
@@ -115,6 +154,10 @@ export default function CRMManagement() {
 
           <TabsContent value="pool" className="mt-0">
             <PoolTab />
+          </TabsContent>
+
+          <TabsContent value="cadences" className="mt-0">
+            <CadencesTab />
           </TabsContent>
 
           <TabsContent value="tags" className="mt-0">

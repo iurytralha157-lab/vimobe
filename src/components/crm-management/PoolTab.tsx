@@ -305,48 +305,54 @@ export function PoolTab() {
                       <div className="space-y-2">
                         <Label className="flex items-center gap-2 text-sm">
                           <Clock className="h-4 w-4" />
-                          Tempo limite (minutos)
+                          Tempo máximo para primeiro contato
                         </Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={120}
-                          value={pipeline.pool_timeout_minutes}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || 10;
-                            updatePipelineMutation.mutate({
-                              pipelineId: pipeline.id,
-                              updates: { pool_timeout_minutes: Math.max(1, Math.min(120, value)) }
-                            });
-                          }}
-                          className="w-32"
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={120}
+                            value={pipeline.pool_timeout_minutes}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 10;
+                              updatePipelineMutation.mutate({
+                                pipelineId: pipeline.id,
+                                updates: { pool_timeout_minutes: Math.max(1, Math.min(120, value)) }
+                              });
+                            }}
+                            className="w-24"
+                          />
+                          <span className="text-sm text-muted-foreground">minutos</span>
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                          Tempo para o corretor fazer primeiro contato
+                          Se não houver contato neste período, o lead será redistribuído
                         </p>
                       </div>
                       
                       <div className="space-y-2">
                         <Label className="flex items-center gap-2 text-sm">
                           <RefreshCw className="h-4 w-4" />
-                          Máx. redistribuições
+                          Quantas vezes tentar outro corretor
                         </Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={10}
-                          value={pipeline.pool_max_redistributions}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || 3;
-                            updatePipelineMutation.mutate({
-                              pipelineId: pipeline.id,
-                              updates: { pool_max_redistributions: Math.max(1, Math.min(10, value)) }
-                            });
-                          }}
-                          className="w-32"
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={pipeline.pool_max_redistributions}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 3;
+                              updatePipelineMutation.mutate({
+                                pipelineId: pipeline.id,
+                                updates: { pool_max_redistributions: Math.max(1, Math.min(10, value)) }
+                              });
+                            }}
+                            className="w-24"
+                          />
+                          <span className="text-sm text-muted-foreground">vezes</span>
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                          Quantas vezes o lead pode ser redistribuído
+                          Após isso, o lead permanece com o último corretor atribuído
                         </p>
                       </div>
                     </div>
