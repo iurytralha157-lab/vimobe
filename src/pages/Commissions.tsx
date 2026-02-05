@@ -222,9 +222,9 @@ export default function Commissions() {
   const [ruleActive, setRuleActive] = useState(true);
 
   const statusMap: Record<string, string | undefined> = {
-    pending: 'approved',
+   pending: 'forecast',
     history: 'paid',
-    forecast: 'forecast',
+   forecast: 'approved',
     rules: undefined,
   };
 
