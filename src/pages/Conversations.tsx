@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft } from "lucide-react";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
+import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { CreateLeadDialog } from "@/components/conversations/CreateLeadDialog";
+import { ConversationHeader } from "@/components/whatsapp/ConversationHeader";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, useArchiveConversation, useDeleteConversation, WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
@@ -272,10 +274,32 @@ export default function Conversations() {
                   <div className="p-3 space-y-2 bg-secondary min-h-full">
                     {loadingMessages ? <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
+                      </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
                         <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">Nenhuma mensagem</p>
-                      </div> : messages?.map(msg => <MessageBubble key={msg.id} content={msg.content} messageType={msg.message_type} mediaUrl={msg.media_url} mediaMimeType={msg.media_mime_type} mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null} mediaError={msg.media_error} fromMe={msg.from_me} status={msg.status} sentAt={msg.sent_at} senderName={msg.sender_name} isGroup={selectedConversation.is_group} onRetryMedia={() => retryMediaDownload(msg.id)} />)}
+                      </div> : messages?.map((msg, index) => {
+                        const previousMsg = index > 0 ? messages[index - 1] : null;
+                        const showSeparator = shouldShowDateSeparator(msg.sent_at, previousMsg?.sent_at || null);
+                        return (
+                          <div key={msg.id}>
+                            {showSeparator && <DateSeparator date={new Date(msg.sent_at)} />}
+                            <MessageBubble 
+                              content={msg.content} 
+                              messageType={msg.message_type} 
+                              mediaUrl={msg.media_url} 
+                              mediaMimeType={msg.media_mime_type} 
+                              mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null} 
+                              mediaError={msg.media_error} 
+                              fromMe={msg.from_me} 
+                              status={msg.status} 
+                              sentAt={msg.sent_at} 
+                              senderName={msg.sender_name} 
+                              isGroup={selectedConversation.is_group} 
+                              onRetryMedia={() => retryMediaDownload(msg.id)} 
+                            />
+                          </div>
+                        );
+                      })}
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
@@ -423,58 +447,28 @@ export default function Conversations() {
         <main className="flex-1 flex flex-col bg-background min-w-0">
           {selectedConversation ? <>
               {/* Header do chat */}
-              <header className="h-14 px-4 border-b flex items-center justify-between bg-card shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar className="h-9 w-9 shrink-0">
-                    <AvatarImage src={selectedConversation.contact_picture || undefined} />
-                    <AvatarFallback className="text-sm bg-muted text-muted-foreground">
-                      {selectedConversation.is_group ? <Users className="w-4 h-4" /> : (selectedConversation.contact_name || selectedConversation.contact_phone)?.[0] || "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm truncate text-foreground">
-                        {selectedConversation.lead?.name || (selectedConversation.contact_name && selectedConversation.contact_name !== selectedConversation.contact_phone ? selectedConversation.contact_name : formatPhoneForDisplay(selectedConversation.contact_phone || ""))}
-                      </p>
-                      {selectedConversation.is_group && <Badge variant="secondary" className="text-[10px] h-4">
-                          Grupo
-                        </Badge>}
-                    </div>
-                    {selectedConversation.contact_presence === 'composing' ? <p className="text-xs text-primary animate-pulse">digitando...</p> : selectedConversation.contact_presence === 'recording' ? <p className="text-xs text-primary animate-pulse">🎤 gravando áudio...</p> : (selectedConversation.lead?.name || selectedConversation.contact_name) && (selectedConversation.lead?.name || selectedConversation.contact_name) !== selectedConversation.contact_phone ? <p className="text-xs text-muted-foreground truncate">
-                        {formatPhoneForDisplay(selectedConversation.contact_phone || "")}
-                      </p> : null}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {selectedConversation.lead && <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
-                      <Link to={`/crm/pipelines?lead=${selectedConversation.lead.id}`}>
-                        <User className="w-3.5 h-3.5 mr-1" />
-                        Ver Lead
-                      </Link>
-                    </Button>}
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Phone className="w-4 h-4" />
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-popover">
-                      <DropdownMenuItem onClick={() => handleArchive(selectedConversation)}>
-                        <Archive className="w-4 h-4 mr-2" />
-                        {selectedConversation.archived_at ? "Desarquivar" : "Arquivar"}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDelete(selectedConversation)} className="text-destructive">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </header>
+              <ConversationHeader
+                contactName={selectedConversation.lead?.name || selectedConversation.contact_name}
+                contactPhone={selectedConversation.contact_phone}
+                contactPicture={selectedConversation.contact_picture}
+                contactPresence={selectedConversation.contact_presence}
+                isGroup={selectedConversation.is_group}
+                isArchived={!!selectedConversation.archived_at}
+                leadId={selectedConversation.lead?.id}
+                leadTags={selectedConversation.lead?.tags}
+                pipelineName={selectedConversation.lead?.pipeline?.name}
+                stageName={selectedConversation.lead?.stage?.name}
+                stageColor={selectedConversation.lead?.stage?.color}
+                onArchive={() => handleArchive(selectedConversation)}
+                onDelete={() => handleDelete(selectedConversation)}
+                onCreateLead={() => {
+                  setCreateLeadContact({
+                    phone: selectedConversation.contact_phone || undefined,
+                    name: selectedConversation.contact_name || undefined
+                  });
+                  setCreateLeadOpen(true);
+                }}
+              />
 
               {/* Mensagens */}
               <div className="flex-1 overflow-hidden min-h-0">
@@ -485,7 +479,29 @@ export default function Conversations() {
                       </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
                         <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">Nenhuma mensagem</p>
-                      </div> : messages?.map(msg => <MessageBubble key={msg.id} content={msg.content} messageType={msg.message_type} mediaUrl={msg.media_url} mediaMimeType={msg.media_mime_type} mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null} mediaError={msg.media_error} fromMe={msg.from_me} status={msg.status} sentAt={msg.sent_at} senderName={msg.sender_name} isGroup={selectedConversation.is_group} onRetryMedia={() => retryMediaDownload(msg.id)} />)}
+                      </div> : messages?.map((msg, index) => {
+                        const previousMsg = index > 0 ? messages[index - 1] : null;
+                        const showSeparator = shouldShowDateSeparator(msg.sent_at, previousMsg?.sent_at || null);
+                        return (
+                          <div key={msg.id}>
+                            {showSeparator && <DateSeparator date={new Date(msg.sent_at)} />}
+                            <MessageBubble 
+                              content={msg.content} 
+                              messageType={msg.message_type} 
+                              mediaUrl={msg.media_url} 
+                              mediaMimeType={msg.media_mime_type} 
+                              mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null} 
+                              mediaError={msg.media_error} 
+                              fromMe={msg.from_me} 
+                              status={msg.status} 
+                              sentAt={msg.sent_at} 
+                              senderName={msg.sender_name} 
+                              isGroup={selectedConversation.is_group} 
+                              onRetryMedia={() => retryMediaDownload(msg.id)} 
+                            />
+                          </div>
+                        );
+                      })}
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
@@ -580,7 +596,7 @@ function ConversationItem({
           </div>
           
           {/* Tags abaixo da mensagem */}
-          {leadTags.length > 0 && <div className="flex items-center gap-1 mt-0.5">
+          {leadTags.length > 0 && <div className="flex items-center gap-1 mt-1 flex-wrap">
               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 font-medium" style={{
             backgroundColor: `${leadTags[0].tag.color}20`,
             color: leadTags[0].tag.color,
@@ -588,8 +604,17 @@ function ConversationItem({
           }}>
                 {leadTags[0].tag.name}
               </Badge>
-              {leadTags.length > 1 && <span className="text-[9px] text-muted-foreground">
-                  +{leadTags.length - 1}
+              {leadTags.length > 1 && leadTags[1] && (
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 font-medium" style={{
+                  backgroundColor: `${leadTags[1].tag.color}20`,
+                  color: leadTags[1].tag.color,
+                  borderColor: leadTags[1].tag.color
+                }}>
+                  {leadTags[1].tag.name}
+                </Badge>
+              )}
+              {leadTags.length > 2 && <span className="text-[9px] text-muted-foreground">
+                  +{leadTags.length - 2}
                 </span>}
             </div>}
         </div>
