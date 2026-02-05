@@ -525,7 +525,7 @@ export default function Conversations() {
                   </Button>
                 </div>
               </footer>
-            </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-primary-foreground">
+            </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30">
               <MessageSquare className="w-12 h-12 mb-3 opacity-50" />
               <p className="font-medium">Selecione uma conversa</p>
               <p className="text-sm">para começar a enviar mensagens</p>

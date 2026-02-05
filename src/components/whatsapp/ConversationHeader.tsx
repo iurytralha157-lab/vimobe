@@ -249,7 +249,7 @@ export function ConversationHeader({
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-48 bg-popover">
             {leadId && (
               <DropdownMenuItem asChild>
                 <Link to={`/crm/pipelines?lead=${leadId}`}>
