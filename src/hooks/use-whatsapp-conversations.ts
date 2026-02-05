@@ -80,11 +80,15 @@ export interface ConversationFilters {
   showArchived?: boolean;
 }
 
-export function useWhatsAppConversations(sessionId?: string, filters?: ConversationFilters) {
+export function useWhatsAppConversations(
+  sessionId?: string, 
+  filters?: ConversationFilters,
+  accessibleSessionIds?: string[]
+) {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ["whatsapp-conversations", sessionId, filters],
+    queryKey: ["whatsapp-conversations", sessionId, filters, accessibleSessionIds],
     queryFn: async () => {
       let query = supabase
         .from("whatsapp_conversations")
@@ -106,6 +110,12 @@ export function useWhatsAppConversations(sessionId?: string, filters?: Conversat
 
       if (sessionId) {
         query = query.eq("session_id", sessionId);
+      } else if (accessibleSessionIds && accessibleSessionIds.length > 0) {
+        // Defense in depth: filter by accessible sessions when "All channels" is selected
+        query = query.in("session_id", accessibleSessionIds);
+      } else if (!accessibleSessionIds) {
+        // No sessions accessible - return empty (shouldn't happen in normal flow)
+        return [];
       }
 
       // Filter archived
