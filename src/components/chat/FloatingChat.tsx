@@ -20,6 +20,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
+import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 
 export function FloatingChat() {
   const {
@@ -386,7 +387,16 @@ export function FloatingChat() {
               <p className="text-muted-foreground text-sm">Nenhuma mensagem</p>
               <p className="text-xs text-muted-foreground">Envie uma mensagem para começar</p>
             </div> : <div className="flex flex-col gap-2">
-              {messages?.map(msg => <ChatMessageBubble key={msg.id} message={msg} isGroup={activeConversation!.is_group} />)}
+              {messages?.map((msg, index) => {
+                const previousMsg = index > 0 ? messages[index - 1] : null;
+                const showSeparator = shouldShowDateSeparator(msg.sent_at, previousMsg?.sent_at || null);
+                return (
+                  <div key={msg.id}>
+                    {showSeparator && <DateSeparator date={new Date(msg.sent_at)} />}
+                    <ChatMessageBubble message={msg} isGroup={activeConversation!.is_group} />
+                  </div>
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>}
         </div>

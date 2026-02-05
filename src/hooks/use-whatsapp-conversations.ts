@@ -31,6 +31,17 @@ export interface WhatsAppConversation {
   lead?: {
     id: string;
     name: string;
+    pipeline_id?: string | null;
+    stage_id?: string | null;
+    pipeline?: {
+      id: string;
+      name: string;
+    } | null;
+    stage?: {
+      id: string;
+      name: string;
+      color: string | null;
+    } | null;
     tags?: Array<{
       tag: {
         id: string;
@@ -83,6 +94,10 @@ export function useWhatsAppConversations(sessionId?: string, filters?: Conversat
           lead:leads!whatsapp_conversations_lead_id_fkey(
             id, 
             name,
+            pipeline_id,
+            stage_id,
+            pipeline:pipelines(id, name),
+            stage:stages(id, name, color),
             tags:lead_tags(tag:tags(id, name, color))
           )
         `)
@@ -120,7 +135,7 @@ export function useWhatsAppConversations(sessionId?: string, filters?: Conversat
         // Buscar leads que correspondem aos telefones
         const { data: leads } = await supabase
           .from('leads')
-          .select('id, phone, name, tags:lead_tags(tag:tags(id, name, color))')
+          .select('id, phone, name, pipeline_id, stage_id, pipeline:pipelines(id, name), stage:stages(id, name, color), tags:lead_tags(tag:tags(id, name, color))')
           .not('phone', 'is', null);
         
         // Criar mapa de telefone normalizado -> lead
@@ -149,6 +164,10 @@ export function useWhatsAppConversations(sessionId?: string, filters?: Conversat
               lead: { 
                 id: matchingLead.id, 
                 name: matchingLead.name,
+                pipeline_id: matchingLead.pipeline_id,
+                stage_id: matchingLead.stage_id,
+                pipeline: matchingLead.pipeline as any,
+                stage: matchingLead.stage as any,
                 tags: matchingLead.tags as any
               } 
             };
