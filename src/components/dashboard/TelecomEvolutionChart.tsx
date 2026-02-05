@@ -2,14 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  TooltipProps,
 } from 'recharts';
 import { TelecomEvolutionPoint } from '@/hooks/use-telecom-dashboard-stats';
 
@@ -28,11 +28,45 @@ const STATUS_CONFIG = {
   inadimplente: { color: '#DC2626', label: 'Inadimplentes' },
 } as const;
 
+type StatusKey = keyof typeof STATUS_CONFIG;
+
+function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
+  if (!active || !payload || !payload.length) return null;
+
+  const hasData = payload.some(p => (p.value ?? 0) > 0);
+  if (!hasData) return null;
+
+  return (
+    <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-xl p-3 shadow-xl">
+      <p className="text-sm font-medium text-foreground mb-2">{label}</p>
+      <div className="space-y-1">
+        {payload
+          .filter(entry => (entry.value ?? 0) > 0)
+          .map((entry, index) => (
+            <div key={index} className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-2.5 h-2.5 rounded-full" 
+                  style={{ backgroundColor: entry.color }}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {STATUS_CONFIG[entry.dataKey as StatusKey]?.label || entry.dataKey}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-foreground">
+                {entry.value}
+              </span>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
 export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChartProps) {
-  // Loading state
   if (isLoading) {
     return (
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary" />
@@ -40,30 +74,30 @@ export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChart
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[250px] w-full" />
+          <Skeleton className="h-[280px] w-full rounded-xl" />
         </CardContent>
       </Card>
     );
   }
 
-  // Empty state
   if (!data || data.length === 0) {
     return (
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-primary" />
             Evolução de Clientes
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center justify-center h-[250px]">
-          <p className="text-sm text-muted-foreground">Nenhum dado disponível</p>
+        <CardContent className="flex flex-col items-center justify-center h-[280px]">
+          <TrendingUp className="h-10 w-10 text-muted-foreground/20 mb-2" />
+          <p className="text-sm text-muted-foreground">Nenhum dado no período</p>
         </CardContent>
       </Card>
     );
   }
 
-  // Calculate which statuses have data
+  // Calculate totals for legend
   const totals = data.reduce(
     (acc, item) => ({
       novos: acc.novos + item.novos,
@@ -77,115 +111,90 @@ export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChart
     { novos: 0, instalados: 0, aguardando: 0, em_analise: 0, cancelado: 0, suspenso: 0, inadimplente: 0 }
   );
 
-  const activeStatuses = (Object.keys(totals) as (keyof typeof totals)[]).filter(
+  const activeStatuses = (Object.keys(totals) as StatusKey[]).filter(
     (key) => totals[key] > 0
   );
 
+  // Order for visual stacking (most important first)
+  const statusOrder: StatusKey[] = ['instalados', 'novos', 'aguardando', 'em_analise', 'cancelado', 'suspenso', 'inadimplente'];
+  const orderedActiveStatuses = statusOrder.filter(s => activeStatuses.includes(s));
+
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-primary" />
           Evolução de Clientes
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div style={{ width: '100%', height: 250 }}>
-          <ResponsiveContainer>
-            <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+      <CardContent className="pb-4">
+        {/* Chart */}
+        <div className="h-[220px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+              <defs>
+                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                  <linearGradient key={key} id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={config.color} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={config.color} stopOpacity={0.05} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="hsl(var(--border))" 
+                opacity={0.4}
+                vertical={false}
+              />
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                dy={8}
                 interval="preserveStartEnd"
               />
               <YAxis 
-                tick={{ fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+                width={35}
                 allowDecimals={false}
-                width={30}
               />
-              <Tooltip />
-              <Legend />
+              <Tooltip content={<CustomTooltip />} />
               
-              {activeStatuses.includes('instalados') && (
-                <Line
+              {orderedActiveStatuses.map((status) => (
+                <Area
+                  key={status}
                   type="monotone"
-                  dataKey="instalados"
-                  name={STATUS_CONFIG.instalados.label}
-                  stroke={STATUS_CONFIG.instalados.color}
+                  dataKey={status}
+                  stroke={STATUS_CONFIG[status].color}
                   strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
+                  fill={`url(#gradient-${status})`}
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
                 />
-              )}
-              {activeStatuses.includes('novos') && (
-                <Line
-                  type="monotone"
-                  dataKey="novos"
-                  name={STATUS_CONFIG.novos.label}
-                  stroke={STATUS_CONFIG.novos.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {activeStatuses.includes('aguardando') && (
-                <Line
-                  type="monotone"
-                  dataKey="aguardando"
-                  name={STATUS_CONFIG.aguardando.label}
-                  stroke={STATUS_CONFIG.aguardando.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {activeStatuses.includes('em_analise') && (
-                <Line
-                  type="monotone"
-                  dataKey="em_analise"
-                  name={STATUS_CONFIG.em_analise.label}
-                  stroke={STATUS_CONFIG.em_analise.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {activeStatuses.includes('cancelado') && (
-                <Line
-                  type="monotone"
-                  dataKey="cancelado"
-                  name={STATUS_CONFIG.cancelado.label}
-                  stroke={STATUS_CONFIG.cancelado.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {activeStatuses.includes('suspenso') && (
-                <Line
-                  type="monotone"
-                  dataKey="suspenso"
-                  name={STATUS_CONFIG.suspenso.label}
-                  stroke={STATUS_CONFIG.suspenso.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-              {activeStatuses.includes('inadimplente') && (
-                <Line
-                  type="monotone"
-                  dataKey="inadimplente"
-                  name={STATUS_CONFIG.inadimplente.label}
-                  stroke={STATUS_CONFIG.inadimplente.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              )}
-            </LineChart>
+              ))}
+            </AreaChart>
           </ResponsiveContainer>
+        </div>
+
+        {/* Custom Legend */}
+        <div className="flex justify-center gap-4 pt-4 border-t border-border/50 mt-3 flex-wrap">
+          {orderedActiveStatuses.map((status) => (
+            <div key={status} className="flex items-center gap-1.5">
+              <div 
+                className="w-2.5 h-2.5 rounded-full" 
+                style={{ backgroundColor: STATUS_CONFIG[status].color }} 
+              />
+              <span className="text-[11px] text-muted-foreground">
+                {STATUS_CONFIG[status].label}
+              </span>
+              <span className="text-[11px] font-semibold text-foreground">
+                {totals[status]}
+              </span>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
