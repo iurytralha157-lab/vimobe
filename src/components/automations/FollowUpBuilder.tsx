@@ -40,7 +40,7 @@ import { WaitNode } from './nodes/WaitNode';
 import { StartNode } from './nodes/StartNode';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
-import { useStages } from '@/hooks/use-stages';
+import { useStages, usePipelines } from '@/hooks/use-stages';
 import { useCreateAutomation, useSaveAutomationFlow, TriggerType } from '@/hooks/use-automations';
 import { toast } from 'sonner';
 
@@ -67,7 +67,9 @@ const NODE_PALETTE = [
 function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpBuilderProps) {
   const { data: sessions } = useWhatsAppSessions();
   const { data: tags } = useTags();
-  const { data: stages } = useStages();
+  const { data: pipelines } = usePipelines();
+  const [pipelineId, setPipelineId] = useState<string>('');
+  const { data: stages } = useStages(pipelineId || undefined);
   const createAutomation = useCreateAutomation();
   const saveFlow = useSaveAutomationFlow();
   
@@ -180,6 +182,11 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     );
   }, [triggerType, setNodes]);
 
+  // Clear stage when pipeline changes
+  useEffect(() => {
+    setStageId('');
+  }, [pipelineId]);
+
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => addEdge({
@@ -267,6 +274,11 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       return;
     }
 
+    if (triggerType === 'lead_stage_changed' && !pipelineId) {
+      toast.error('Selecione uma pipeline para o gatilho');
+      return;
+    }
+
     if (triggerType === 'lead_stage_changed' && !stageId) {
       toast.error('Selecione uma etapa para o gatilho');
       return;
@@ -289,7 +301,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         trigger_config: triggerType === 'tag_added' 
           ? { tag_id: tagId } 
           : triggerType === 'lead_stage_changed'
-            ? { to_stage_id: stageId }
+            ? { pipeline_id: pipelineId, to_stage_id: stageId }
             : {},
       });
 
@@ -309,7 +321,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             id: node.id,
             node_type: 'trigger',
             action_type: null,
-            config: { trigger_type: triggerType, tag_id: tagId, to_stage_id: stageId },
+            config: { trigger_type: triggerType, tag_id: tagId, pipeline_id: pipelineId, to_stage_id: stageId },
             position_x: Math.round(node.position.x),
             position_y: Math.round(node.position.y),
           });
@@ -473,29 +485,51 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               )}
 
               {triggerType === 'lead_stage_changed' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Etapa específica
-                  </Label>
-                  <Select value={stageId} onValueChange={setStageId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a etapa..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {stages?.map((stage) => (
-                        <SelectItem key={stage.id} value={stage.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: stage.color || '#888' }}
-                            />
-                            {stage.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                      Pipeline
+                    </Label>
+                    <Select value={pipelineId} onValueChange={setPipelineId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a pipeline..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pipelines?.map((pipeline) => (
+                          <SelectItem key={pipeline.id} value={pipeline.id}>
+                            {pipeline.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {pipelineId && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                        Etapa específica
+                      </Label>
+                      <Select value={stageId} onValueChange={setStageId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a etapa..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stages?.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.id}>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: stage.color || '#888' }}
+                                />
+                                {stage.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Node Palette */}
