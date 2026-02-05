@@ -384,44 +384,34 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
         </div>
 
         {/* Summary Cards - Leads and Contracts */}
-        {((data?.totalLeadsValue || 0) > 0 || (data?.activeContracts || 0) > 0) && (
-          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-            <CardContent className="p-4 md:p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Award className="h-3 w-3" /> Leads Ganhos
-                  </p>
-                  <p className="text-lg md:text-2xl font-bold text-primary">{data?.wonLeadsCount || 0}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(data?.totalLeadsValue || 0)} em valor
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <FileText className="h-3 w-3" /> Contratos Ativos
-                  </p>
-                  <p className="text-lg md:text-2xl font-bold">{data?.activeContracts || 0}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(data?.totalContractsValue || 0)} em valor
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Comissões</p>
-                  <p className="text-lg md:text-2xl font-bold text-success">
-                    {formatCurrency((data?.forecastCommissions || 0) + (data?.pendingCommissions || 0) + (data?.paidCommissions || 0))}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Balanço Projetado</p>
-                  <p className={`text-lg md:text-2xl font-bold ${(data?.receivable90 || 0) - (data?.totalPayable || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {formatCurrency((data?.receivable90 || 0) - (data?.totalPayable || 0))}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+       {/* Summary Cards - Leads, Contracts, Commissions, Balance */}
+       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
+         <FinancialCard
+           title="Leads Ganhos"
+           value={String(data?.wonLeadsCount || 0)}
+           description={`${formatCurrency(data?.totalLeadsValue || 0)} em valor`}
+           icon={Award}
+           variant="success"
+         />
+         <FinancialCard
+           title="Contratos Ativos"
+           value={String(data?.activeContracts || 0)}
+           description={`${formatCurrency(data?.totalContractsValue || 0)} em valor`}
+           icon={FileText}
+         />
+         <FinancialCard
+           title="Total Comissões"
+           value={formatCurrency((data?.forecastCommissions || 0) + (data?.pendingCommissions || 0) + (data?.paidCommissions || 0))}
+           icon={DollarSign}
+           variant="success"
+         />
+         <FinancialCard
+           title="Balanço Projetado"
+           value={formatCurrency((data?.receivable90 || 0) - (data?.totalPayable || 0))}
+           icon={Target}
+           variant={(data?.receivable90 || 0) - (data?.totalPayable || 0) >= 0 ? 'success' : 'destructive'}
+         />
+       </div>
 
         {/* KPI Cards - Grid mais compacto no mobile */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
