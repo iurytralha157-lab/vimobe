@@ -42,6 +42,8 @@ import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
 import { useCreateAutomation, useSaveAutomationFlow, TriggerType } from '@/hooks/use-automations';
+import { useUsers } from '@/hooks/use-users';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 const nodeTypes = {
@@ -68,6 +70,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const { data: sessions } = useWhatsAppSessions();
   const { data: tags } = useTags();
   const { data: pipelines } = usePipelines();
+  const { data: users } = useUsers();
   const [pipelineId, setPipelineId] = useState<string>('');
   const { data: stages } = useStages(pipelineId || undefined);
   const createAutomation = useCreateAutomation();
@@ -84,6 +87,11 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [triggerType, setTriggerType] = useState<TriggerType>('tag_added');
   const [stageId, setStageId] = useState<string>('');
   const [tagId, setTagId] = useState<string>('');
+  
+  // New: User filter and stop on reply settings
+  const [filterUserId, setFilterUserId] = useState<string>('');
+  const [stopOnReply, setStopOnReply] = useState<boolean>(true);
+  const [onReplyStageId, setOnReplyStageId] = useState<string>('');
 
   const connectedSessions = sessions?.filter(s => s.status === 'connected') || [];
 
@@ -298,11 +306,16 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         name,
         description: `Follow-up com ${messageNodes.length} mensagens`,
         trigger_type: triggerType,
-        trigger_config: triggerType === 'tag_added' 
-          ? { tag_id: tagId } 
-          : triggerType === 'lead_stage_changed'
-            ? { pipeline_id: pipelineId, to_stage_id: stageId }
-            : {},
+        trigger_config: {
+          ...(triggerType === 'tag_added' ? { tag_id: tagId } : {}),
+          ...(triggerType === 'lead_stage_changed' ? { 
+            pipeline_id: pipelineId, 
+            to_stage_id: stageId 
+          } : {}),
+          filter_user_id: filterUserId || null,
+          stop_on_reply: stopOnReply,
+          on_reply_move_to_stage_id: stopOnReply ? (onReplyStageId || null) : null,
+        },
       });
 
       // Build nodes for database
@@ -321,7 +334,15 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             id: node.id,
             node_type: 'trigger',
             action_type: null,
-            config: { trigger_type: triggerType, tag_id: tagId, pipeline_id: pipelineId, to_stage_id: stageId },
+            config: { 
+              trigger_type: triggerType, 
+              tag_id: tagId, 
+              pipeline_id: pipelineId, 
+              to_stage_id: stageId,
+              filter_user_id: filterUserId || null,
+              stop_on_reply: stopOnReply,
+              on_reply_move_to_stage_id: stopOnReply ? (onReplyStageId || null) : null,
+            },
             position_x: Math.round(node.position.x),
             position_y: Math.round(node.position.y),
           });
@@ -532,6 +553,71 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                 </>
               )}
 
+              {/* User Filter */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Filtrar por usuário
+                </Label>
+                <Select value={filterUserId} onValueChange={setFilterUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os usuários" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos os usuários</SelectItem>
+                    <SelectItem value="__me__">Apenas meus leads</SelectItem>
+                    {users?.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Dispara apenas para leads do usuário selecionado
+                </p>
+              </div>
+
+              {/* Stop on Reply */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id="stop-on-reply"
+                    checked={stopOnReply} 
+                    onCheckedChange={(checked) => setStopOnReply(checked === true)} 
+                  />
+                  <Label htmlFor="stop-on-reply" className="text-sm cursor-pointer">
+                    Parar follow-up se lead responder
+                  </Label>
+                </div>
+                
+                {stopOnReply && pipelineId && (
+                  <div className="space-y-2 ml-6">
+                    <Label className="text-xs text-muted-foreground">
+                      Ao responder, mover para:
+                    </Label>
+                    <Select value={onReplyStageId} onValueChange={setOnReplyStageId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Não mover (apenas parar)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Não mover (apenas parar)</SelectItem>
+                        {stages?.map((stage) => (
+                          <SelectItem key={stage.id} value={stage.id}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: stage.color || '#888' }}
+                              />
+                              {stage.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
               {/* Node Palette */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -557,15 +643,30 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                 </div>
               </div>
 
-              {/* Variables Help */}
+              {/* Variables Help - Expanded */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
                   Variáveis disponíveis
                 </Label>
                 <div className="text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground">Lead:</p>
                   <code className="block bg-muted px-2 py-1 rounded">{'{{lead.name}}'}</code>
                   <code className="block bg-muted px-2 py-1 rounded">{'{{lead.phone}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.email}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.source}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.message}}'}</code>
+                  
+                  <p className="font-medium text-foreground pt-2">Telecom:</p>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.address}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.city}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.neighborhood}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.cep}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.plan_value}}'}</code>
+                  
+                  <p className="font-medium text-foreground pt-2">Outros:</p>
                   <code className="block bg-muted px-2 py-1 rounded">{'{{organization.name}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{date}}'}</code>
+                  <code className="block bg-muted px-2 py-1 rounded">{'{{time}}'}</code>
                 </div>
               </div>
             </div>

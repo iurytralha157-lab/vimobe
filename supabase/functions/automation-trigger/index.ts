@@ -150,8 +150,25 @@ Deno.serve(async (req) => {
         // Check trigger conditions
         const triggerConfig = automation.trigger_config || {};
         
+        // Fetch lead data for user filter validation if needed
+        let leadAssignedUserId: string | null = null;
+        if (data.lead_id && triggerConfig.filter_user_id) {
+          const { data: lead } = await supabaseAdmin
+            .from("leads")
+            .select("assigned_user_id")
+            .eq("id", data.lead_id)
+            .single();
+          leadAssignedUserId = lead?.assigned_user_id || null;
+        }
+        
         // Validate conditions based on trigger type
-        if (!validateTriggerConditions(automation.trigger_type, triggerConfig, data)) {
+        if (!validateTriggerConditions(
+          automation.trigger_type, 
+          triggerConfig, 
+          data,
+          automation.created_by,
+          leadAssignedUserId
+        )) {
           console.log(`Automation ${automation.id} conditions not met, skipping`);
           continue;
         }
@@ -239,8 +256,26 @@ Deno.serve(async (req) => {
 function validateTriggerConditions(
   triggerType: string,
   config: Record<string, unknown>,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  automationCreatedBy?: string | null,
+  leadAssignedUserId?: string | null
 ): boolean {
+  // Validate user filter first (applies to all trigger types)
+  if (config.filter_user_id) {
+    const filterUserId = config.filter_user_id as string;
+    
+    if (filterUserId === "__me__") {
+      // Compare with automation creator
+      if (leadAssignedUserId !== automationCreatedBy) {
+        console.log(`User filter (my leads) not matched: lead.assigned_user_id=${leadAssignedUserId}, automation.created_by=${automationCreatedBy}`);
+        return false;
+      }
+    } else if (leadAssignedUserId !== filterUserId) {
+      console.log(`User filter not matched: lead.assigned_user_id=${leadAssignedUserId}, filter_user_id=${filterUserId}`);
+      return false;
+    }
+  }
+
   switch (triggerType) {
     case "message_received":
       // Check session filter if configured

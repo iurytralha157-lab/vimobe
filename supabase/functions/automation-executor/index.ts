@@ -318,7 +318,8 @@ async function processActionNode(
           }
           
           if (evolutionApiUrl && evolutionApiKey) {
-            const messageContent = replaceVariables(
+            const messageContent = await replaceVariables(
+              supabase,
               config.message as string || config.template_content as string || "",
               execution,
               { contact_name: lead.name, contact_phone: lead.phone }
@@ -371,7 +372,8 @@ async function processActionNode(
 
       // Send message via Evolution API
       if (evolutionApiUrl && evolutionApiKey) {
-        const messageContent = replaceVariables(
+        const messageContent = await replaceVariables(
+          supabase,
           config.message as string || config.template_content as string || "",
           execution,
           conversation
@@ -566,21 +568,65 @@ function evaluateCondition(
   }
 }
 
-function replaceVariables(
+// deno-lint-ignore no-explicit-any
+async function replaceVariables(
+  supabase: any,
   template: string,
-  execution: { lead_id?: string; conversation_id?: string },
+  execution: { lead_id?: string; conversation_id?: string; organization_id: string },
   conversation?: { contact_name?: string; contact_phone?: string }
-): string {
+): Promise<string> {
   let result = template;
 
-  // Replace common variables
+  // Replace date/time first (always available)
+  result = result.replace(/\{\{date\}\}/g, new Date().toLocaleDateString("pt-BR"));
+  result = result.replace(/\{\{time\}\}/g, new Date().toLocaleTimeString("pt-BR"));
+
+  // Replace contact info from conversation
   if (conversation) {
     result = result.replace(/\{\{contact_name\}\}/g, conversation.contact_name || "");
     result = result.replace(/\{\{contact_phone\}\}/g, conversation.contact_phone || "");
   }
 
-  result = result.replace(/\{\{date\}\}/g, new Date().toLocaleDateString("pt-BR"));
-  result = result.replace(/\{\{time\}\}/g, new Date().toLocaleTimeString("pt-BR"));
+  // Fetch lead data if lead_id exists
+  if (execution.lead_id) {
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("*, organization:organizations(name)")
+      .eq("id", execution.lead_id)
+      .single();
+    
+    if (lead) {
+      result = result.replace(/\{\{lead\.name\}\}/g, lead.name || "");
+      result = result.replace(/\{\{lead\.phone\}\}/g, lead.phone || "");
+      result = result.replace(/\{\{lead\.email\}\}/g, lead.email || "");
+      result = result.replace(/\{\{lead\.source\}\}/g, lead.source || "");
+      result = result.replace(/\{\{lead\.message\}\}/g, lead.message || "");
+      result = result.replace(/\{\{lead\.valor_interesse\}\}/g, 
+        lead.valor_interesse ? `R$ ${Number(lead.valor_interesse).toLocaleString("pt-BR")}` : ""
+      );
+      result = result.replace(/\{\{organization\.name\}\}/g, lead.organization?.name || "");
+    }
+    
+    // Fetch telecom customer data if exists
+    const { data: customer } = await supabase
+      .from("telecom_customers")
+      .select("*")
+      .eq("lead_id", execution.lead_id)
+      .maybeSingle();
+    
+    if (customer) {
+      result = result.replace(/\{\{customer\.address\}\}/g, customer.address || "");
+      result = result.replace(/\{\{customer\.city\}\}/g, customer.city || "");
+      result = result.replace(/\{\{customer\.neighborhood\}\}/g, customer.neighborhood || "");
+      result = result.replace(/\{\{customer\.cep\}\}/g, customer.cep || "");
+      result = result.replace(/\{\{customer\.cpf_cnpj\}\}/g, customer.cpf_cnpj || "");
+      result = result.replace(/\{\{customer\.contracted_plan\}\}/g, customer.contracted_plan || "");
+      result = result.replace(/\{\{customer\.plan_value\}\}/g, 
+        customer.plan_value ? `R$ ${Number(customer.plan_value).toLocaleString("pt-BR")}` : ""
+      );
+      result = result.replace(/\{\{customer\.reference_point\}\}/g, customer.reference_point || "");
+    }
+  }
 
   return result;
 }
