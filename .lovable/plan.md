@@ -1,78 +1,154 @@
 
-# Plano: Corrigir carregamento da etapa específica no FollowUpBuilderEdit
+# Plano: Melhorar Histórico de Automações e Adicionar Notificações
 
-## Diagnóstico
+## Problemas Identificados
 
-O problema ocorre porque há uma **condição de corrida** no carregamento dos dados:
+### 1. Automação trava no "waiting" e não continua
+O `automation-delay-processor` existe mas **não tem cron job configurado**. Por isso, após enviar a primeira mensagem e entrar em "waiting", ninguém chama a função para continuar o fluxo.
 
-1. A automação é carregada do banco com `on_reply_move_to_stage_id = "9e4c8102-..."` ✅
-2. O estado `onReplyStageId` é setado corretamente ✅
-3. O `pipelineId` é setado, disparando a query de `stages`
-4. **Problema**: O Select renderiza com `value="9e4c8102-..."` mas os `stages` ainda não carregaram
-5. O Radix Select não encontra um `<SelectItem>` correspondente e não consegue exibir o valor
+### 2. Erro truncado no histórico
+A mensagem de erro aparece como `Failed to send WhatsApp: {"statu...` porque está limitada a 200px com `truncate`.
 
-### Por que o valor "some" mas não aparece no Select
+### 3. Falta de notificações
+Não há notificações para:
+- Automação iniciada
+- Automação concluída
+- Automação com erro
 
-O componente Radix `<Select>` só consegue exibir um valor se existir um `<SelectItem>` com aquele `value`. Como os stages demoram um momento para carregar (query assíncrona), o Select fica "vazio" visualmente mesmo tendo um valor válido no estado.
+### 4. Histórico não mostra nome do lead/automação
+Mostra apenas "Lead" genérico ao invés do nome real.
+
+---
 
 ## Solução
 
-Modificar a lógica para garantir que o Select sempre exiba corretamente o valor selecionado, mesmo enquanto os stages estão carregando.
+### Parte 1: Configurar Cron Job para o Delay Processor
 
-### Mudanças em `FollowUpBuilderEdit.tsx`
+Criar uma migration que configura o `pg_cron` para chamar o `automation-delay-processor` a cada minuto:
 
-1. **Adicionar estado para controlar quando os stages foram carregados após o pipelineId ser setado**
+```sql
+SELECT cron.schedule(
+  'automation-delay-processor',
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/automation-delay-processor',
+    headers := '{"Authorization": "Bearer SERVICE_ROLE_KEY"}'::jsonb,
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
 
-2. **Mostrar o nome da etapa selecionada mesmo antes dos stages carregarem** - Adicionar um fallback que mostra o ID ou um texto de loading enquanto a lista não está disponível
+### Parte 2: Melhorar ExecutionHistory.tsx
 
-3. **Alternativa mais simples**: Adicionar um `SelectItem` dinâmico para o valor atual caso ele não esteja na lista de stages carregados
+1. **Buscar dados relacionados** - Fazer join com `leads.name` e `automations.name`
+2. **Mostrar erro completo** - Remover `truncate` e permitir expansão do erro
+3. **Exibir nome do lead e automação** - Em vez de "Lead", mostrar "André Rocha - Follow-up 3 Dias"
 
 ```text
-Fluxo corrigido:
-┌──────────────────────────────────────────────────────────┐
-│ 1. automation carrega                                    │
-│ 2. setOnReplyStageId("9e4c8102-...")                    │
-│ 3. setPipelineId("074b4...")                            │
-│ 4. stages query inicia (loading)                         │
-│ 5. Select renderiza:                                     │
-│    - value = "9e4c8102-..."                             │
-│    - Items = [__none__] + (stages ainda vazio)          │
-│    - ADICIONAR: Item temporário para o valor atual      │
-│ 6. stages carrega → Select atualiza automaticamente     │
-└──────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ 🔴 André Rocha                     Concluído há 26 minutos  │
+│    Follow-up 3 Dias                                         │
+│    Iniciado há 26 minutos                                   │
+│                                                             │
+│    ⚠️ Erro: Número WhatsApp inválido (22974063727)          │
+│       Clique para ver detalhes                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Implementação técnica
+### Parte 3: Adicionar Notificações de Automação
+
+Modificar o `automation-executor` para criar notificações:
+
+1. **Ao iniciar** (quando a execução é criada):
+   - Título: `🤖 Automação Iniciada`
+   - Conteúdo: `"Follow-up 3 Dias" iniciou para André Rocha`
+
+2. **Ao concluir com sucesso**:
+   - Título: `✅ Automação Concluída`
+   - Conteúdo: `"Follow-up 3 Dias" finalizou para André Rocha`
+
+3. **Ao falhar**:
+   - Título: `❌ Automação Falhou`
+   - Conteúdo: `"Follow-up 3 Dias" falhou para André Rocha: Número WhatsApp inválido`
+
+---
+
+## Detalhes Técnicos
+
+### Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/migrations/new.sql` | Configurar cron job para automation-delay-processor |
+| `supabase/functions/automation-trigger/index.ts` | Enviar notificação ao criar execução |
+| `supabase/functions/automation-executor/index.ts` | Enviar notificações de conclusão/erro |
+| `src/hooks/use-automations.ts` | Buscar dados de lead e automação nas execuções |
+| `src/components/automations/ExecutionHistory.tsx` | Exibir nome do lead/automação e erro expandido |
+
+### Notificação - Estrutura
 
 ```typescript
-// Dentro do Select de onReplyStageId:
-<SelectContent>
-  <SelectItem value="__none__">Não mover (apenas parar)</SelectItem>
-  
-  {/* Se há um valor selecionado mas os stages ainda não carregaram,
-      adicionar um item placeholder para evitar que o Select fique vazio */}
-  {onReplyStageId && 
-   onReplyStageId !== "__none__" && 
-   !stages?.find(s => s.id === onReplyStageId) && (
-    <SelectItem value={onReplyStageId} disabled>
-      Carregando...
-    </SelectItem>
-  )}
-  
-  {stages?.map((stage) => (
-    <SelectItem key={stage.id} value={stage.id}>
-      {/* ... */}
-    </SelectItem>
-  ))}
-</SelectContent>
+// Inserir na tabela notifications
+{
+  user_id: lead.assigned_user_id || automation.created_by,
+  organization_id: execution.organization_id,
+  title: "🤖 Automação Iniciada",
+  content: `"${automation.name}" iniciou para ${lead.name}`,
+  type: "automation",
+  lead_id: execution.lead_id
+}
 ```
 
-### Mesma correção em `FollowUpBuilder.tsx`
+### Lógica de Notificação
 
-Aplicar a mesma lógica no componente de criação para consistência.
+1. **Quem recebe**: O usuário responsável pelo lead (assigned_user_id) OU o criador da automação se não tiver responsável
+2. **Tipo**: `automation` - para diferenciar no frontend e tocar som específico
+
+### Fluxo Corrigido
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  LEAD MOVIDO PARA ETAPA                                     │
+│         │                                                   │
+│         ▼                                                   │
+│  automation-trigger                                         │
+│  ├─ Cria execution (status: running)                       │
+│  ├─ 🔔 NOTIFICA: "Automação Iniciada"                      │
+│  └─ Chama automation-executor                               │
+│         │                                                   │
+│         ▼                                                   │
+│  automation-executor                                        │
+│  ├─ Envia mensagem WhatsApp                                │
+│  ├─ Encontra nó "delay"                                    │
+│  └─ Atualiza status para "waiting"                         │
+│         │                                                   │
+│         ▼ (1 minuto depois)                                 │
+│  automation-delay-processor (via cron)                      │
+│  ├─ Encontra execuções com next_execution_at <= agora      │
+│  └─ Chama automation-executor para continuar                │
+│         │                                                   │
+│         ▼                                                   │
+│  automation-executor                                        │
+│  ├─ Envia segunda mensagem                                 │
+│  ├─ Sem mais nós → marca "completed"                       │
+│  └─ 🔔 NOTIFICA: "Automação Concluída"                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Tratamento de Erros no Histórico
+
+Erros comuns serão traduzidos para português:
+- `exists: false` → "Número WhatsApp inválido ou não cadastrado"
+- `Connection refused` → "Falha na conexão com WhatsApp"
+- `timeout` → "Tempo limite excedido"
+
+---
 
 ## Benefícios
 
-- O valor selecionado sempre aparece no Select, mesmo durante o carregamento
-- Sem alteração na lógica de salvamento (que já está correta)
-- Experiência de usuário melhor - nunca vai parecer que "perdeu" o valor
+1. **Automações continuam funcionando** - Cron job processa os delays corretamente
+2. **Erros legíveis** - Usuário entende o que aconteceu
+3. **Notificações proativas** - Usuário fica sabendo em tempo real do status
+4. **Histórico rico** - Nome do lead e da automação visíveis
