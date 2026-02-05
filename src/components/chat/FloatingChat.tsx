@@ -238,7 +238,8 @@ export function FloatingChat() {
   const handleViewLead = (leadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     closeChat();
-    navigate(`/crm/pipelines?lead=${leadId}`);
+    // Usar timestamp para forçar React Router a detectar mudança mesmo na mesma página
+    navigate(`/crm/pipelines?lead=${leadId}&t=${Date.now()}`);
   };
 
   const handleSendMessage = async () => {
