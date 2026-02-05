@@ -1,90 +1,111 @@
 
-# Plano: Integrar Redistribuição com Tempo de Resposta
 
-## Contexto Atual
+# Auditoria Completa: Página de Agenda
 
-### Sistema de Redistribuição (Pool)
-- Usa a coluna `first_touch_at` para determinar se houve contato
-- A Edge Function `pool-checker` busca leads sem `first_touch_at` após timeout
-- A função SQL `redistribute_lead_from_pool` redistribui via `handle_lead_intake`
+## Resumo Geral
 
-### Sistema de Tempo de Resposta  
-- Usa `first_response_at` com métricas detalhadas (segundos, canal, usuário)
-- Gatilhos: WhatsApp (automático), Telefone (clique), Email (clique)
-- Edge Function `calculate-first-response` registra idempotentemente
-
-### Problema Identificado
-Os dois sistemas usam colunas diferentes, criando desconexão:
-- `first_touch_at` - usado pelo Pool (antigo)
-- `first_response_at` - usado pelas métricas (novo)
+A página de Agenda está **bem estruturada e funcional**. Após revisar todos os componentes, hooks e integrações, identifiquei alguns pontos de melhoria menores mas nada crítico que bloqueie a aprovação.
 
 ---
 
-## Solução Proposta
+## Análise dos Componentes
 
-Unificar os sistemas para que a **Redistribuição use o Tempo de Resposta** como critério:
+### Agenda.tsx (Página Principal)
+- Layout responsivo com grid para desktop/mobile
+- Toggle entre visão de calendário e lista
+- Filtro de usuários (apenas para admins)
+- Sidebar com Google Calendar Connect e resumo da semana
+- Navegação entre datas funcional
 
-```text
-Lead chega → Distribuído → Timer inicia
-         ↓
-     Corretor age? (Ligação/Mensagem/Email)
-         ↓               ↓
-        SIM             NÃO (timeout)
-         ↓               ↓
-first_response_at    Redistribui!
-   é registrado
-```
+### CalendarView.tsx
+- Calendário mensal com navegação entre meses
+- Indicadores visuais de eventos por tipo (dots coloridos)
+- Legenda de cores dos tipos de atividade
+- Seleção de data funcional
+
+### EventForm.tsx
+- Formulário completo com todos os campos necessários
+- Tipos de evento: Ligação, E-mail, Reunião, Tarefa, Mensagem, Visita
+- Seleção de duração com opções predefinidas
+- Integração com Google Calendar (sync automático)
+- Checkbox para marcar como concluída
+
+### EventsList.tsx
+- Agrupamento por data
+- Indicador de tarefas atrasadas (overdue)
+- Actions: concluir, editar, excluir
+- Avatar do usuário responsável
+
+### GoogleCalendarConnect.tsx
+- Conexão/desconexão do Google Calendar
+- Toggle de sincronização automática
+- Estados de loading bem tratados
+
+### use-schedule-events.ts
+- CRUD completo (create, update, delete, complete)
+- Sync bidirecional com Google Calendar
+- Tratamento de erros silencioso para sync (não bloqueia operações locais)
 
 ---
 
-## Alterações Técnicas
+## Problemas Identificados
 
-### 1. Atualizar Edge Function `pool-checker`
+### 1. Warning de Ref no Console
+**Gravidade: Baixa**
 
-Mudar a verificação de `first_touch_at` para `first_response_at`:
+O console mostra um warning:
+```
+Warning: Function components cannot be given refs. 
+Check the render method of `CRMManagement`.
+```
 
+Porém esse warning é da página **CRMManagement**, não da Agenda. Está relacionado ao componente `AppLayout` não usar `forwardRef`. Não afeta funcionalidade.
+
+### 2. Tarefa vs Mensagem - Mesma Cor
+**Gravidade: Baixa**
+
+Na legenda do calendário, "Tarefa" e "Mensagem" usam a mesma cor amber, dificultando diferenciá-las visualmente.
+
+### 3. Estatísticas do Resumo Usam Período Amplo
+**Gravidade: Informacional**
+
+O "Resumo da semana" conta eventos de ~70 dias (35 antes + 35 depois), não apenas da semana atual. Isso pode dar números maiores que o esperado.
+
+### 4. Falta Opção de Deletar Evento na Edição
+**Gravidade: Média**
+
+O `EventForm` não tem botão de excluir quando editando um evento. O usuário precisa fechar o dialog e excluir pela lista.
+
+### 5. Líderes de Equipe Não Conseguem Filtrar
+**Gravidade: Média**
+
+Apenas `role === 'admin'` pode ver o filtro de usuários. Líderes de equipe que precisam supervisionar sua equipe ficam sem essa opção.
+
+---
+
+## Plano de Melhorias (Opcional)
+
+### Fase 1: Correções Rápidas
+
+#### 1.1 Adicionar Botão de Excluir no EventForm
+Quando editando um evento existente, adicionar botão de excluir no rodapé do dialog.
+
+#### 1.2 Diferenciar Cores de Tarefa e Mensagem
+Sugestão: Mensagem = verde (teal-500), Tarefa = amber (manter)
+
+#### 1.3 Permitir Líderes Filtrarem Equipe
+Expandir a condição `canFilterUsers` para incluir team leaders:
 ```typescript
-// ANTES (atual)
-.is("first_touch_at", null)
-
-// DEPOIS (proposto)
-.is("first_response_at", null)
+const canFilterUsers = profile?.role === 'admin' || profile?.is_team_leader;
 ```
 
-O `first_response_at` já é preenchido automaticamente quando:
-- Corretor envia mensagem WhatsApp
-- Corretor clica em "Ligar" 
-- Corretor clica em "Email"
+### Fase 2: Melhorias de UX
 
-### 2. Atualizar Interface do PoolTab
+#### 2.1 Corrigir Estatísticas da Semana
+Filtrar eventos apenas da semana atual para o card "Resumo da semana".
 
-Melhorar a UX para deixar claro que a redistribuição é baseada no primeiro contato:
-
-- Renomear "Aguardando Contato" para descrição mais clara
-- Adicionar indicador visual dos canais monitorados (WhatsApp, Telefone, Email)
-- Mostrar qual canal disparou o first_response quando houver
-
-### 3. Manter Compatibilidade
-
-A Edge Function `calculate-first-response` já atualiza `first_touch_at` junto com `first_response_at` para ações humanas (não-automação), garantindo retrocompatibilidade:
-
-```typescript
-// Código existente em calculate-first-response
-if (!is_automation && actor_user_id) {
-  updateData.first_touch_at = now.toISOString();
-  // ...
-}
-```
-
-### 4. Sincronizar Dados Legados (Opcional)
-
-Criar migração que sincroniza leads antigos:
-```sql
-UPDATE leads 
-SET first_response_at = first_touch_at
-WHERE first_touch_at IS NOT NULL 
-  AND first_response_at IS NULL;
-```
+#### 2.2 Adicionar Drag & Drop no Calendário
+Permitir arrastar eventos entre dias para remarcar rapidamente.
 
 ---
 
@@ -92,63 +113,30 @@ WHERE first_touch_at IS NOT NULL
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/pool-checker/index.ts` | Trocar `.is("first_touch_at", null)` por `.is("first_response_at", null)` |
-| `src/components/crm-management/PoolTab.tsx` | Atualizar query para usar `first_response_at` e melhorar UI |
-| Nova migração SQL | Sincronizar dados legados e garantir consistência |
+| `src/components/schedule/EventForm.tsx` | Adicionar botão de excluir |
+| `src/components/schedule/CalendarView.tsx` | Alterar cor de "message" para teal-500 |
+| `src/pages/Agenda.tsx` | Expandir `canFilterUsers` para team leaders e corrigir estatísticas |
 
 ---
 
-## Fluxo Final Simplificado
+## Conclusão
 
-```text
-┌──────────────┐    ┌─────────────────┐    ┌────────────────┐
-│  Lead Chega  │───→│  Distribuição   │───→│  Timer Inicia  │
-│              │    │  (Round Robin)  │    │  assigned_at   │
-└──────────────┘    └─────────────────┘    └───────┬────────┘
-                                                   │
-                    ┌──────────────────────────────┼────────────────────────────────┐
-                    │                              │                                │
-                    ▼                              ▼                                ▼
-           ┌───────────────┐            ┌───────────────┐              ┌───────────────┐
-           │   WhatsApp    │            │    Telefone   │              │     Email     │
-           │   Enviado     │            │   (clique)    │              │   (clique)    │
-           └───────┬───────┘            └───────┬───────┘              └───────┬───────┘
-                   │                            │                              │
-                   └────────────────────────────┼──────────────────────────────┘
-                                                │
-                                                ▼
-                                   ┌───────────────────────┐
-                                   │  first_response_at    │
-                                   │  é preenchido         │
-                                   │  (para timer)         │
-                                   └───────────────────────┘
-                                                │
-                         ┌──────────────────────┴──────────────────────┐
-                         │                                             │
-                         ▼                                             ▼
-              ┌─────────────────────┐                      ┌─────────────────────┐
-              │  Dentro do timeout  │                      │  Excedeu timeout    │
-              │  Lead permanece     │                      │  + sem resposta     │
-              └─────────────────────┘                      └──────────┬──────────┘
-                                                                      │
-                                                                      ▼
-                                                           ┌─────────────────────┐
-                                                           │  REDISTRIBUI        │
-                                                           │  via Round Robin    │
-                                                           └─────────────────────┘
-```
+**A página de Agenda está PRONTA para produção.**
 
----
+Os problemas identificados são menores e não impedem o uso da funcionalidade:
 
-## Benefícios
+| Status | Item |
+|--------|------|
+| OK | Visualização de calendário |
+| OK | Criação/edição de eventos |
+| OK | Tipos de atividade diferenciados |
+| OK | Filtro de usuários (admin) |
+| OK | Integração Google Calendar |
+| OK | Lista de eventos com agrupamento |
+| OK | Conclusão de tarefas |
+| Melhoria | Botão excluir no form |
+| Melhoria | Cores diferenciadas |
+| Melhoria | Filtro para líderes |
 
-1. **Unificação**: Um único campo (`first_response_at`) para métricas e redistribuição
-2. **Precisão**: Apenas ações reais do corretor contam (não automações se configurado)
-3. **Métricas Ricas**: Saber exatamente qual canal e quanto tempo levou
-4. **Simplicidade**: Menos campos para gerenciar no banco
+Podemos dar o **OK na Agenda** e implementar as melhorias opcionais se quiser refinar ainda mais.
 
----
-
-## Observação Importante
-
-O campo `first_response_at` diferencia entre ações humanas e automações via flag `first_response_is_automation`. Se o pipeline estiver configurado para **não contar automações**, apenas ações manuais do corretor param o timer de redistribuição.
