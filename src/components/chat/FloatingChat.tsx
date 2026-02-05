@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Video, FileText, User, Phone, Users, Paperclip, Image, Mic, ExternalLink } from "lucide-react";
+import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Video, FileText, User, Phone, Users, Paperclip, Image, Mic, ExternalLink, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, WhatsAppConversation, WhatsAppMessage } from "@/hooks/use-whatsapp-conversations";
@@ -23,7 +23,13 @@ import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
 import { useNavigate } from "react-router-dom";
-import { ConversationHeader } from "@/components/whatsapp/ConversationHeader";
+import { formatPhoneForDisplay } from "@/lib/phone-utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 export function FloatingChat() {
   const {
@@ -454,59 +460,179 @@ export function FloatingChat() {
       );
     }
 
-    // Header com informações do lead quando há conversa ativa
+    // Header compacto e organizado para o FloatingChat
+    const displayName = activeConversation.lead?.name || 
+      (activeConversation.contact_name && activeConversation.contact_name !== activeConversation.contact_phone 
+        ? activeConversation.contact_name 
+        : formatPhoneForDisplay(activeConversation.contact_phone || ""));
+    
+    const phone = formatPhoneForDisplay(activeConversation.contact_phone || "");
+    const leadId = activeConversation.lead?.id;
+    const tags = activeConversation.lead?.tags || [];
+    const pipelineName = activeConversation.lead?.pipeline?.name;
+    const stageName = activeConversation.lead?.stage?.name;
+    const stageColor = activeConversation.lead?.stage?.color;
+    const visibleTags = tags.slice(0, 2);
+    const remainingTags = tags.slice(2);
+
+    const handleViewLeadClick = () => {
+      if (leadId) {
+        closeChat();
+        navigate(`/crm/pipelines?lead=${leadId}`);
+      }
+    };
+
     return (
-      <div className="relative">
-        {/* Botão de voltar sobreposto */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={cn(
-            "absolute left-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8",
-            mobile ? "hover:bg-muted" : "hover:bg-accent"
-          )} 
-          onClick={clearActiveConversation}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        
-        {/* Botões de minimizar/fechar */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1">
-          {!mobile && (
+      <TooltipProvider>
+        <div className="border-b bg-card shrink-0">
+          {/* Linha 1: Navegação e info principal */}
+          <div className="flex items-center gap-2 px-3 py-2">
+            {/* Botão Voltar */}
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8 hover:bg-accent" 
-              onClick={isMinimized ? maximizeChat : minimizeChat}
+              className="h-8 w-8 shrink-0" 
+              onClick={clearActiveConversation}
             >
-              <Minus className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
+            
+            {/* Avatar */}
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarImage src={activeConversation.contact_picture || undefined} />
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {activeConversation.is_group ? (
+                  <Users className="h-4 w-4" />
+                ) : (
+                  displayName?.[0]?.toUpperCase() || "?"
+                )}
+              </AvatarFallback>
+            </Avatar>
+            
+            {/* Nome */}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{displayName}</p>
+              {activeConversation.lead?.name && activeConversation.contact_phone && (
+                <p className="text-xs text-muted-foreground truncate">{phone}</p>
+              )}
+            </div>
+            
+            {/* Ações */}
+            <div className="flex items-center gap-1 shrink-0">
+              {leadId && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={handleViewLeadClick}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Ver Lead</TooltipContent>
+                </Tooltip>
+              )}
+              {!mobile && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={minimizeChat}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={closeChat}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Linha 2: Tags e Pipeline (se houver) */}
+          {(visibleTags.length > 0 || pipelineName) && (
+            <div className="flex items-center gap-1.5 px-3 pb-2 flex-wrap">
+              {/* Tags */}
+              {visibleTags.map((lt) => (
+                <Badge
+                  key={lt.tag.id}
+                  variant="secondary"
+                  className="text-[9px] px-1.5 py-0 h-4 font-medium"
+                  style={{
+                    backgroundColor: `${lt.tag.color}20`,
+                    color: lt.tag.color,
+                    borderColor: lt.tag.color,
+                  }}
+                >
+                  {lt.tag.name}
+                </Badge>
+              ))}
+              {remainingTags.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] px-1 py-0 h-4 cursor-help"
+                    >
+                      +{remainingTags.length}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[200px]">
+                    <div className="flex flex-wrap gap-1">
+                      {remainingTags.map((lt) => (
+                        <Badge
+                          key={lt.tag.id}
+                          variant="secondary"
+                          className="text-[9px] px-1.5 py-0 h-4"
+                          style={{
+                            backgroundColor: `${lt.tag.color}20`,
+                            color: lt.tag.color,
+                          }}
+                        >
+                          {lt.tag.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              
+              {/* Separador */}
+              {visibleTags.length > 0 && pipelineName && (
+                <span className="text-muted-foreground text-[10px]">•</span>
+              )}
+              
+              {/* Pipeline → Stage */}
+              {pipelineName && (
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <span className="truncate max-w-[80px]">{pipelineName}</span>
+                  {stageName && (
+                    <>
+                      <ArrowRight className="w-2.5 h-2.5" />
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] px-1 py-0 h-4"
+                        style={stageColor ? {
+                          borderColor: stageColor,
+                          color: stageColor,
+                        } : undefined}
+                      >
+                        {stageName}
+                      </Badge>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           )}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 hover:bg-accent" 
-            onClick={closeChat}
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </div>
-        
-        <ConversationHeader
-          contactName={activeConversation.lead?.name || activeConversation.contact_name}
-          contactPhone={activeConversation.contact_phone}
-          contactPicture={activeConversation.contact_picture}
-          contactPresence={activeConversation.contact_presence}
-          isGroup={activeConversation.is_group}
-          isArchived={!!activeConversation.archived_at}
-          leadId={activeConversation.lead?.id}
-          leadTags={activeConversation.lead?.tags}
-          pipelineName={activeConversation.lead?.pipeline?.name}
-          stageName={activeConversation.lead?.stage?.name}
-          stageColor={activeConversation.lead?.stage?.color}
-          className="pl-12 pr-20"
-        />
-      </div>
+      </TooltipProvider>
     );
   };
 
