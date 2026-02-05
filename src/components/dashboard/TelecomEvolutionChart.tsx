@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -157,18 +157,10 @@ export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChart
         {/* Chart */}
         <div className="flex-1 min-h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
+            <BarChart
               data={data}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
             >
-              <defs>
-                {Object.entries(STATUS_COLORS).map(([key, color]) => (
-                  <linearGradient key={key} id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={color} stopOpacity={0} />
-                  </linearGradient>
-                ))}
-              </defs>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 stroke="hsl(var(--border))" 
@@ -191,85 +183,64 @@ export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChart
               />
               <Tooltip content={<CustomTooltip />} />
               
-              {/* Render areas for active statuses */}
+              {/* Render stacked bars for active statuses */}
               {activeStatuses.includes('instalados') && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="instalados"
-                  stroke={STATUS_COLORS.instalados}
-                  strokeWidth={2}
-                  fill={`url(#gradient-instalados)`}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  stackId="stack"
+                  fill={STATUS_COLORS.instalados}
+                  radius={[0, 0, 0, 0]}
                 />
               )}
               {activeStatuses.includes('novos') && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="novos"
-                  stroke={STATUS_COLORS.novos}
-                  strokeWidth={2}
-                  fill={`url(#gradient-novos)`}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  stackId="stack"
+                  fill={STATUS_COLORS.novos}
+                  radius={[0, 0, 0, 0]}
                 />
               )}
               {activeStatuses.includes('aguardando') && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="aguardando"
-                  stroke={STATUS_COLORS.aguardando}
-                  strokeWidth={2}
-                  fill={`url(#gradient-aguardando)`}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  stackId="stack"
+                  fill={STATUS_COLORS.aguardando}
+                  radius={[0, 0, 0, 0]}
                 />
               )}
               {activeStatuses.includes('em_analise') && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="em_analise"
-                  stroke={STATUS_COLORS.em_analise}
-                  strokeWidth={2}
-                  fill={`url(#gradient-em_analise)`}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  stackId="stack"
+                  fill={STATUS_COLORS.em_analise}
+                  radius={[0, 0, 0, 0]}
                 />
               )}
               {activeStatuses.includes('cancelado') && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="cancelado"
-                  stroke={STATUS_COLORS.cancelado}
-                  strokeWidth={2}
-                  fill={`url(#gradient-cancelado)`}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  stackId="stack"
+                  fill={STATUS_COLORS.cancelado}
+                  radius={[0, 0, 0, 0]}
                 />
               )}
               {activeStatuses.includes('suspenso') && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="suspenso"
-                  stroke={STATUS_COLORS.suspenso}
-                  strokeWidth={2}
-                  fill={`url(#gradient-suspenso)`}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  stackId="stack"
+                  fill={STATUS_COLORS.suspenso}
+                  radius={[0, 0, 0, 0]}
                 />
               )}
               {activeStatuses.includes('inadimplente') && (
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="inadimplente"
-                  stroke={STATUS_COLORS.inadimplente}
-                  strokeWidth={2}
-                  fill={`url(#gradient-inadimplente)`}
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  stackId="stack"
+                  fill={STATUS_COLORS.inadimplente}
+                  radius={[4, 4, 0, 0]}
                 />
               )}
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
