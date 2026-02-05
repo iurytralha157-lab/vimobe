@@ -220,26 +220,48 @@ export function useTelecomEvolutionData(filters?: DashboardFilters) {
         });
       });
 
-      // Contar clientes na lógica correta de evolução:
-      // - Todos contam como "novos" na data de criação
-      // - "instalados" são contados pela data de instalação (não criação)
+      // Agrupar clientes por status atual na data de criação
+      // Isso mostra "quantos clientes criados em cada período estão em cada status hoje"
       customers.forEach((customer) => {
         const createdDate = parseISO(customer.created_at);
-        const createdKey = getIntervalKey(createdDate);
-        const createdPoint = grouped.get(createdKey);
+        const key = getIntervalKey(createdDate);
+        const point = grouped.get(key);
         
-        // Todo cliente conta como "novo" na data de criação
-        if (createdPoint) {
-          createdPoint.novos++;
-        }
-        
-        // Se tem installation_date, contar como instalado nessa data
-        if (customer.installation_date) {
-          const installDate = parseISO(customer.installation_date);
-          const installKey = getIntervalKey(installDate);
-          const installPoint = grouped.get(installKey);
-          if (installPoint) {
-            installPoint.instalados++;
+        if (point) {
+          // Mapear status para o campo correto
+          const status = customer.status?.toUpperCase();
+          
+          switch (status) {
+            case 'NOVO':
+            case 'NOVOS':
+              point.novos++;
+              break;
+            case 'INSTALADOS':
+            case 'INSTALADO':
+              point.instalados++;
+              break;
+            case 'AGUARDANDO':
+              point.aguardando++;
+              break;
+            case 'EM_ANALISE':
+            case 'EM ANÁLISE':
+              point.em_analise++;
+              break;
+            case 'CANCELADO':
+            case 'CANCELADOS':
+              point.cancelado++;
+              break;
+            case 'SUSPENSO':
+            case 'SUSPENSOS':
+              point.suspenso++;
+              break;
+            case 'INADIMPLENTE':
+            case 'INADIMPLENTES':
+              point.inadimplente++;
+              break;
+            default:
+              // Status não mapeado, conta como novo
+              point.novos++;
           }
         }
       });
