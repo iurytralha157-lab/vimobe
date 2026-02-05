@@ -23,6 +23,7 @@ import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
 import { useNavigate } from "react-router-dom";
+import { ConversationHeader } from "@/components/whatsapp/ConversationHeader";
 
 export function FloatingChat() {
   const {
@@ -403,35 +404,112 @@ export function FloatingChat() {
   if (!isOpen || (!loadingWhatsAppAccess && !hasWhatsAppAccess)) return null;
 
   // Shared content components
-  const ChatHeader = ({
+  const FloatingChatHeader = ({
     mobile = false
   }: {
     mobile?: boolean;
-  }) => <div className={cn("flex items-center justify-between shrink-0", mobile ? "px-4 py-3 bg-card border-b border-border" : "h-16 bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground px-5 shadow-sm")}>
-      <div className="flex items-center gap-2">
-        {activeConversation && <Button variant="ghost" size="icon" className={cn("h-8 w-8", mobile ? "hover:bg-muted" : "text-primary-foreground hover:bg-primary-foreground/20")} onClick={clearActiveConversation}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>}
-        <MessageCircle className={cn("h-5 w-5", mobile && "text-primary")} />
-        <span className={cn("font-medium", mobile ? "text-base" : "")}>
-          {activeConversation ? activeConversation.contact_name || activeConversation.contact_phone : "WhatsApp"}
-        </span>
-        {activeConversation?.is_group && <Badge variant="secondary" className="text-[10px] h-4">
-            Grupo
-          </Badge>}
-        {!isMinimized && unreadCount > 0 && !activeConversation && <Badge variant="secondary" className="h-5 min-w-5 flex items-center justify-center text-xs">
-            {unreadCount}
-          </Badge>}
-      </div>
-      <div className="flex items-center gap-1">
-        {!mobile && <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20" onClick={isMinimized ? maximizeChat : minimizeChat}>
-            <Minus className="h-4 w-4" />
-          </Button>}
-        <Button variant="ghost" size="icon" className={cn("h-8 w-8", mobile ? "hover:bg-muted" : "text-primary-foreground hover:bg-primary-foreground/20")} onClick={closeChat}>
-          <X className="h-4 w-4" />
+  }) => {
+    // Header padrão quando não há conversa ativa (lista de conversas)
+    if (!activeConversation) {
+      return (
+        <div className={cn(
+          "flex items-center justify-between shrink-0",
+          mobile 
+            ? "px-4 py-3 bg-card border-b border-border" 
+            : "h-16 bg-gradient-to-r from-primary via-primary to-primary/90 text-primary-foreground px-5 shadow-sm"
+        )}>
+          <div className="flex items-center gap-2">
+            <MessageCircle className={cn("h-5 w-5", mobile && "text-primary")} />
+            <span className={cn("font-medium", mobile ? "text-base" : "")}>WhatsApp</span>
+            {!isMinimized && unreadCount > 0 && (
+              <Badge variant="secondary" className="h-5 min-w-5 flex items-center justify-center text-xs">
+                {unreadCount}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {!mobile && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20" 
+                onClick={isMinimized ? maximizeChat : minimizeChat}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn(
+                "h-8 w-8", 
+                mobile ? "hover:bg-muted" : "text-primary-foreground hover:bg-primary-foreground/20"
+              )} 
+              onClick={closeChat}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Header com informações do lead quando há conversa ativa
+    return (
+      <div className="relative">
+        {/* Botão de voltar sobreposto */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className={cn(
+            "absolute left-2 top-1/2 -translate-y-1/2 z-10 h-8 w-8",
+            mobile ? "hover:bg-muted" : "hover:bg-accent"
+          )} 
+          onClick={clearActiveConversation}
+        >
+          <ArrowLeft className="h-4 w-4" />
         </Button>
+        
+        {/* Botões de minimizar/fechar */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1">
+          {!mobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 hover:bg-accent" 
+              onClick={isMinimized ? maximizeChat : minimizeChat}
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+          )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 hover:bg-accent" 
+            onClick={closeChat}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <ConversationHeader
+          contactName={activeConversation.lead?.name || activeConversation.contact_name}
+          contactPhone={activeConversation.contact_phone}
+          contactPicture={activeConversation.contact_picture}
+          contactPresence={activeConversation.contact_presence}
+          isGroup={activeConversation.is_group}
+          isArchived={!!activeConversation.archived_at}
+          leadId={activeConversation.lead?.id}
+          leadTags={activeConversation.lead?.tags}
+          pipelineName={activeConversation.lead?.pipeline?.name}
+          stageName={activeConversation.lead?.stage?.name}
+          stageColor={activeConversation.lead?.stage?.color}
+          className="pl-12 pr-20"
+        />
       </div>
-    </div>;
+    );
+  };
+
   const DisconnectedState = () => <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-card">
       <Phone className="h-12 w-12 text-muted-foreground mb-4" />
       <p className="text-muted-foreground mb-2">Nenhum WhatsApp conectado</p>
@@ -621,7 +699,7 @@ export function FloatingChat() {
               <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted-foreground/30 shrink-0" />
               
               {/* Header */}
-              <ChatHeader mobile />
+              <FloatingChatHeader mobile />
 
               {/* Content */}
               <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
@@ -650,7 +728,7 @@ export function FloatingChat() {
       <SessionSelectorDialog />
       <div className={cn("fixed bottom-4 right-4 z-50", "bg-card", "border border-border", "rounded-2xl", "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]", "ring-1 ring-border", "transition-all duration-300 ease-out", "flex flex-col overflow-hidden", "animate-scale-in", isMinimized ? "w-80 h-14" : "w-[420px] h-[600px]")}>
         {/* Header */}
-        <ChatHeader />
+        <FloatingChatHeader />
 
         {!isMinimized && (
           <>
