@@ -1,275 +1,220 @@
 
-# Plano de Melhorias Completas: Módulo de Conversas WhatsApp
 
-## Resumo Executivo
+# Plano: Corrigir Visibilidade de Conversas WhatsApp para Admin
 
-Após análise detalhada do código, identifiquei diversos pontos de melhoria para tornar o módulo de Conversas mais completo e funcional. O plano está dividido em 4 fases para garantir estabilidade.
+## Diagnóstico
 
----
+### Causa Raiz Identificada
 
-## Fase 1: Melhorias Visuais no Chat
+O admin está vendo conversas de outras instâncias porque existe uma **política RLS muito permissiva** chamada `System can manage conversations` que permite acesso a **todas** as conversas da organização, ignorando o controle de acesso por sessão.
 
-### 1.1 Separadores de Data nas Mensagens (Prioridade Alta)
+**Políticas atuais em conflito:**
 
-Implementar separadores visuais entre mensagens de dias diferentes, igual ao WhatsApp oficial (conforme print enviado).
+| Política | Tipo | Problema |
+|----------|------|----------|
+| `System can manage conversations` | ALL | Permite acesso a TODAS as sessões da organização |
+| `Users can view conversations from accessible sessions` | SELECT | Correta - respeita owner + session_access |
 
-**Arquivos a modificar:**
-- `src/pages/Conversations.tsx`
-- `src/components/chat/FloatingChat.tsx`
+Como ambas são `PERMISSIVE`, o PostgreSQL combina com `OR`, e a política mais ampla vence.
 
-**Implementação:**
-- Criar componente `DateSeparator` que exibe a data de forma amigável
-- Lógica: Comparar data da mensagem atual com anterior
-- Formatos: "Hoje", "Ontem", "Segunda-feira", "29/01/2026"
+### Visualização do Problema
 
 ```text
-Antes:
-┌─────────────────┐
-│ Msg 13:16       │
-│ Msg 13:25       │
-│ Msg 07:32       │  ← Outro dia, não tem indicação
-│ Msg 12:09       │
-└─────────────────┘
+Política atual (errada):
+┌─────────────────────────────────────────────┐
+│ Admin Fernando (org 818394bf)               │
+│                                             │
+│ RLS: session.organization_id = minha_org    │
+│ ↓                                           │
+│ Vê TODAS as 5 sessões da organização ❌     │
+│ - Vendas MCMV (sua)                         │
+│ - Maikson (não tem acesso)                  │
+│ - Gabriel (não tem acesso)                  │
+│ - Guilherme (não tem acesso)                │
+│ - Raquel (não tem acesso)                   │
+└─────────────────────────────────────────────┘
 
-Depois:
-┌─────────────────┐
-│ Msg 13:16       │
-│ Msg 13:25       │
-├─── Sexta-feira ─┤  ← Separador visual
-│ Msg 07:32       │
-│ Msg 12:09       │
-└─────────────────┘
+Comportamento correto (após correção):
+┌─────────────────────────────────────────────┐
+│ Admin Fernando (org 818394bf)               │
+│                                             │
+│ RLS: owner_user_id = eu OR session_access   │
+│ ↓                                           │
+│ Vê apenas sessões autorizadas ✓             │
+│ - Vendas MCMV (owner)                       │
+└─────────────────────────────────────────────┘
 ```
-
-### 1.2 Tags no Header da Conversa (Prioridade Alta)
-
-Ao abrir uma conversa, exibir:
-- Tags do lead (se existir lead vinculado)
-- Nome da pipeline e coluna atual
-- Botão "Criar Lead" se não existir lead
-
-**Arquivos a modificar:**
-- `src/pages/Conversations.tsx` (header da conversa desktop e mobile)
-- `src/components/whatsapp/ConversationHeader.tsx` (extrair lógica se necessário)
-
-**Dados necessários:**
-- Já temos `lead.tags` via join na query
-- Precisamos adicionar `pipeline` e `stage` ao select do lead
-
-```text
-┌──────────────────────────────────────────────────────────┐
-│ 👤 João Silva                                            │
-│ +55 61 99999-9999                                        │
-│ [Facebook] [MCMV]  •  Pipeline Telecom → DOCUMENTOS      │
-│                                         [+ Criar Lead]   │
-└──────────────────────────────────────────────────────────┘
-```
-
-### 1.3 Melhorar Exibição de Tags na Lista de Conversas
-
-Atualmente mostra apenas 1 tag. Melhorar para mostrar até 2 tags com tooltip para as demais.
-
-**Arquivo:** `src/pages/Conversations.tsx` (ConversationItem)
 
 ---
 
-## Fase 2: Correção de Bugs e Segurança
+## Solução
 
-### 2.1 Verificar Visibilidade de Sessões para Admin
+### Parte 1: Correção da RLS no Banco de Dados
 
-Análise do código revelou que o hook `useAccessibleSessions` já está correto:
-- Busca sessões que o usuário é `owner` OU tem acesso via `whatsapp_session_access`
-- Não dá acesso automático para admins
+Remover a política permissiva e garantir que apenas a política restritiva seja aplicada.
 
-**Problema potencial identificado:**
-O hook `useHasWhatsAppAccess` tem uma exceção para `super_admin`, mas não para `admin`. O código está correto.
+**SQL Migration:**
 
-**Verificação necessária:**
-- Confirmar que o admin em questão tem sessões próprias ou acessos concedidos
-- Verificar se há sessões órfãs (sem owner) sendo listadas por engano
-
-**Ação:** Adicionar logs detalhados para debug se o problema persistir.
-
-### 2.2 Verificar Salvamento de Áudio/Imagem
-
-Análise do banco mostrou que áudios e imagens **estão sendo salvos corretamente**:
-- `media_status: ready`
-- URLs válidas no Supabase Storage
-
-**Se ainda houver problemas de visualização:**
-- Verificar compatibilidade do navegador com `audio/ogg; codecs=opus`
-- MessageBubble já tem fallback com botão de download
-
----
-
-## Fase 3: Novas Funcionalidades
-
-### 3.1 Atalhos de Arquivos (Mídia Rápida)
-
-Criar sistema para usuários salvarem arquivos/imagens de uso frequente para envio rápido.
-
-**Nova tabela no banco:**
 ```sql
-create table whatsapp_quick_files (
-  id uuid primary key default gen_random_uuid(),
-  organization_id uuid references organizations(id) not null,
-  user_id uuid references auth.users(id),
-  name text not null,
-  file_url text not null,
-  file_type text not null, -- image, document, video
-  mime_type text,
-  created_at timestamptz default now()
+-- 1. Remover política permissiva demais
+DROP POLICY IF EXISTS "System can manage conversations" ON whatsapp_conversations;
+
+-- 2. Remover políticas duplicadas de super admin
+DROP POLICY IF EXISTS "Super admin access whatsapp_conversations" ON whatsapp_conversations;
+DROP POLICY IF EXISTS "Super admin can manage whatsapp conversations" ON whatsapp_conversations;
+DROP POLICY IF EXISTS "Super admin can view all whatsapp conversations" ON whatsapp_conversations;
+
+-- 3. Garantir que a política correta existe para SELECT
+DROP POLICY IF EXISTS "Users can view conversations from accessible sessions" ON whatsapp_conversations;
+
+CREATE POLICY "Users can view conversations from accessible sessions"
+ON whatsapp_conversations FOR SELECT
+USING (
+  is_super_admin() 
+  OR (
+    session_id IN (
+      SELECT ws.id 
+      FROM whatsapp_sessions ws
+      WHERE ws.organization_id = get_user_organization_id()
+        AND (
+          ws.owner_user_id = auth.uid()
+          OR EXISTS (
+            SELECT 1 FROM whatsapp_session_access wsa
+            WHERE wsa.session_id = ws.id
+              AND wsa.user_id = auth.uid()
+              AND wsa.can_view = true
+          )
+        )
+    )
+  )
+);
+
+-- 4. Política para INSERT (webhooks e sistema)
+DROP POLICY IF EXISTS "Users can insert conversations for their organization" ON whatsapp_conversations;
+
+CREATE POLICY "Allow insert conversations for organization"
+ON whatsapp_conversations FOR INSERT
+WITH CHECK (
+  organization_id = get_user_organization_id()
+  OR is_super_admin()
+);
+
+-- 5. Política para UPDATE (já existe e está correta)
+-- A política existente já verifica owner_user_id e session_access
+
+-- 6. Política para DELETE
+DROP POLICY IF EXISTS "Users can delete conversations from accessible sessions" ON whatsapp_conversations;
+
+CREATE POLICY "Users can delete conversations from accessible sessions"
+ON whatsapp_conversations FOR DELETE
+USING (
+  is_super_admin() 
+  OR (
+    session_id IN (
+      SELECT ws.id 
+      FROM whatsapp_sessions ws
+      WHERE ws.organization_id = get_user_organization_id()
+        AND (
+          ws.owner_user_id = auth.uid()
+          OR EXISTS (
+            SELECT 1 FROM whatsapp_session_access wsa
+            WHERE wsa.session_id = ws.id
+              AND wsa.user_id = auth.uid()
+              AND wsa.can_view = true
+          )
+        )
+    )
+  )
 );
 ```
 
-**Novos arquivos:**
-- `src/hooks/use-quick-files.ts` - Hook para CRUD
-- `src/components/whatsapp/QuickFilesPanel.tsx` - UI do painel
+### Parte 2: Proteção Adicional no Frontend (Defense in Depth)
 
-**Integração:**
-- Botão ao lado do anexo no input de mensagem
-- Drawer/popover com lista de arquivos salvos
-- Opção de adicionar arquivo à lista
+Modificar `useWhatsAppConversations` para filtrar conversas pelas sessões acessíveis quando "Todos os canais" estiver selecionado.
 
-```text
-┌─────────────────────────────────┐
-│ 📁 Meus Arquivos Rápidos        │
-├─────────────────────────────────┤
-│ 📷 Tabela de preços.pdf         │
-│ 📷 Logo empresa.png             │
-│ 📷 Catálogo produtos.pdf        │
-│                                 │
-│ [+ Adicionar arquivo]           │
-└─────────────────────────────────┘
-```
-
-### 3.2 Opção "Arquivadas" com Toggle Desativado por Padrão
-
-Atualmente já está correto (`showArchived: false` por padrão). 
-
-**Melhoria de UX:** Mudar de checkbox para um botão/toggle mais visível, similar ao Gmail.
-
----
-
-## Fase 4: Refinamentos Finais
-
-### 4.1 Criar Componente DateSeparator Reutilizável
+**Arquivo:** `src/hooks/use-whatsapp-conversations.ts`
 
 ```typescript
-// src/components/whatsapp/DateSeparator.tsx
-function DateSeparator({ date }: { date: Date }) {
-  const label = formatDateLabel(date); // "Hoje", "Ontem", "Segunda-feira", "29/01/2026"
-  
-  return (
-    <div className="flex items-center justify-center py-2">
-      <div className="px-3 py-1 bg-muted/50 rounded-full text-xs text-muted-foreground">
-        {label}
-      </div>
-    </div>
-  );
+export function useWhatsAppConversations(
+  sessionId?: string, 
+  filters?: ConversationFilters,
+  accessibleSessionIds?: string[]  // Novo parâmetro
+) {
+  const { profile } = useAuth();
+
+  return useQuery({
+    queryKey: ["whatsapp-conversations", sessionId, filters, accessibleSessionIds],
+    queryFn: async () => {
+      let query = supabase
+        .from("whatsapp_conversations")
+        .select(...)
+        .is("deleted_at", null)
+        .order("last_message_at", { ascending: false, nullsFirst: false });
+
+      if (sessionId) {
+        query = query.eq("session_id", sessionId);
+      } else if (accessibleSessionIds && accessibleSessionIds.length > 0) {
+        // NOVA LÓGICA: Filtrar por sessões acessíveis quando "Todos"
+        query = query.in("session_id", accessibleSessionIds);
+      }
+
+      // ... resto da query
+    },
+  });
 }
 ```
 
-### 4.2 Adicionar Pipeline/Stage à Query de Conversas
-
-Modificar `useWhatsAppConversations` para incluir dados de pipeline:
+**Arquivo:** `src/pages/Conversations.tsx`
 
 ```typescript
-lead:leads!whatsapp_conversations_lead_id_fkey(
-  id, 
-  name,
-  pipeline:pipelines(id, name),
-  stage:stages(id, name, color),
-  tags:lead_tags(tag:tags(id, name, color))
-)
+// Passar IDs das sessões acessíveis para o hook
+const { data: sessions } = useAccessibleSessions();
+const accessibleSessionIds = sessions?.map(s => s.id) || [];
+
+const { data: conversations } = useWhatsAppConversations(
+  selectedSessionId === "all" ? undefined : selectedSessionId,
+  { hideGroups, showArchived },
+  selectedSessionId === "all" ? accessibleSessionIds : undefined  // Novo
+);
 ```
 
 ---
 
-## Arquivos a Criar/Modificar
+## Arquivos a Modificar
 
-### Novos Arquivos
-| Arquivo | Descrição |
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/components/whatsapp/DateSeparator.tsx` | Separador de data entre mensagens |
-| `src/components/whatsapp/QuickFilesPanel.tsx` | Painel de arquivos rápidos |
-| `src/hooks/use-quick-files.ts` | Hook para gerenciar arquivos rápidos |
-
-### Arquivos Modificados
-| Arquivo | Alterações |
-|---------|------------|
-| `src/pages/Conversations.tsx` | Separadores de data, header melhorado, até 2 tags |
-| `src/components/chat/FloatingChat.tsx` | Separadores de data |
-| `src/hooks/use-whatsapp-conversations.ts` | Adicionar pipeline/stage ao select do lead |
+| **Migração SQL** | Corrigir políticas RLS |
+| `src/hooks/use-whatsapp-conversations.ts` | Aceitar lista de sessões acessíveis |
+| `src/pages/Conversations.tsx` | Passar sessões acessíveis para o hook |
 
 ---
 
-## Ordem de Implementação
+## Resultado Esperado
 
-1. **Separadores de data** - Impacto visual alto, implementação simples
-2. **Info no header** (tags, pipeline, criar lead) - UX importante
-3. **Melhorar exibição de tags na lista** - Refinamento
-4. **Quick Files** - Funcionalidade nova (requer migração de banco)
+### Antes
+- Admin Fernando vê conversas de 5 sessões da organização
+- Checkbox "Todos os canais" lista todas as instâncias
 
----
-
-## Estimativa de Complexidade
-
-| Tarefa | Complexidade | Arquivos |
-|--------|--------------|----------|
-| Separadores de data | Média | 3 |
-| Header com pipeline/tags | Média | 3 |
-| Tags na lista (2+) | Baixa | 1 |
-| Quick Files | Alta | 4 + migração |
+### Depois
+- Admin Fernando vê apenas conversas da sessão "Vendas MCMV" (que ele é dono)
+- "Todos os canais" mostra apenas sessões às quais tem acesso real
+- Para ver outras sessões, precisa receber acesso via "Gerenciar Acesso" em Configurações WhatsApp
 
 ---
 
-## Detalhes Técnicos: Separadores de Data
+## Segurança
 
-A lógica para agrupar mensagens por data:
+Esta correção reforça a privacidade seguindo o princípio estabelecido na memória:
 
-```typescript
-// Dentro do render de mensagens
-let lastDate: string | null = null;
-
-{messages?.map(msg => {
-  const msgDate = format(new Date(msg.sent_at), 'yyyy-MM-dd');
-  const showSeparator = lastDate !== msgDate;
-  lastDate = msgDate;
-  
-  return (
-    <>
-      {showSeparator && <DateSeparator date={new Date(msg.sent_at)} />}
-      <MessageBubble ... />
-    </>
-  );
-})}
-```
-
-Função para formatar label da data:
-
-```typescript
-function formatDateLabel(date: Date): string {
-  if (isToday(date)) return "Hoje";
-  if (isYesterday(date)) return "Ontem";
-  
-  const daysAgo = differenceInDays(new Date(), date);
-  if (daysAgo < 7) {
-    return format(date, "EEEE", { locale: ptBR }); // "Segunda-feira"
-  }
-  
-  return format(date, "dd/MM/yyyy"); // "29/01/2026"
-}
-```
+> "A visibilidade das sessões e conversas do WhatsApp é estritamente restrita ao dono da sessão ou usuários com acesso concedido na tabela whatsapp_session_access. Esta restrição de privacidade aplica-se a todos os usuários, incluindo Administradores da organização."
 
 ---
 
-## Próximos Passos
+## Verificação Pós-Implementação
 
-Após aprovação, implementarei na seguinte ordem:
-1. Fase 1.1 - Separadores de data
-2. Fase 1.2 - Header com info do lead
-3. Fase 1.3 - Tags melhoradas na lista
-4. Fase 3.1 - Quick Files (se aprovado banco)
+1. Logar como admin que não é dono de nenhuma sessão → Não deve ver conversas
+2. Logar como admin dono de 1 sessão → Deve ver apenas conversas dessa sessão
+3. Conceder acesso a outra sessão via "Gerenciar Acesso" → Deve ver conversas das 2 sessões
+4. Super admin deve continuar vendo tudo (para suporte)
 
-A Fase 2 (verificação de bugs) será feita em paralelo durante a implementação.
