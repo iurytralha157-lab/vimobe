@@ -9,6 +9,25 @@ interface ExecutionPayload {
   execution_id: string;
 }
 
+// Normalize phone number to international format (Brazil default)
+function normalizePhoneNumber(phone: string): string {
+  // Remove all non-digits
+  const digits = phone.replace(/\D/g, "");
+  
+  // If already starts with country code (55 for Brazil), return as-is
+  if (digits.startsWith("55") && digits.length >= 12) {
+    return digits;
+  }
+  
+  // If it's a Brazilian number (10-11 digits without country code), add 55
+  if (digits.length >= 10 && digits.length <= 11) {
+    return `55${digits}`;
+  }
+  
+  // Return as-is for other formats
+  return digits;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -334,7 +353,7 @@ async function processActionNode(
                   apikey: evolutionApiKey,
                 },
                 body: JSON.stringify({
-                  number: lead.phone,
+                  number: normalizePhoneNumber(lead.phone),
                   text: messageContent,
                 }),
               }
@@ -388,7 +407,7 @@ async function processActionNode(
               apikey: evolutionApiKey,
             },
             body: JSON.stringify({
-              number: conversation.contact_phone,
+              number: normalizePhoneNumber(conversation.contact_phone),
               text: messageContent,
             }),
           }
