@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
+import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { useNavigate } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import {
@@ -681,7 +682,19 @@ export function FloatingChat() {
                 return (
                   <div key={msg.id}>
                     {showSeparator && <DateSeparator date={new Date(msg.sent_at)} />}
-                    <ChatMessageBubble message={msg} isGroup={activeConversation!.is_group} />
+                    <MessageBubble
+                      content={msg.content}
+                      messageType={msg.message_type}
+                      mediaUrl={msg.media_url}
+                      mediaMimeType={msg.media_mime_type}
+                      mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null}
+                      mediaError={msg.media_error}
+                      fromMe={msg.from_me}
+                      status={msg.status}
+                      sentAt={msg.sent_at}
+                      senderName={msg.sender_name}
+                      isGroup={activeConversation!.is_group}
+                    />
                   </div>
                 );
               })}
@@ -896,104 +909,4 @@ export function FloatingChat() {
       </div>
     </>
   );
-}
-function ChatMessageBubble({
-  message,
-  isGroup
-}: {
-  message: WhatsAppMessage;
-  isGroup: boolean;
-}) {
-  const isFromMe = message.from_me;
-
-  // Check if URL is a temporary WhatsApp URL that won't work in browser
-  const isWhatsAppTempUrl = (url: string | null) => {
-    if (!url) return false;
-    return url.includes('mmg.whatsapp.net') || url.includes('.enc') || url.includes('pps.whatsapp.net');
-  };
-  const isValidMediaUrl = (url: string | null) => {
-    if (!url) return false;
-    return url.startsWith('https://') && !isWhatsAppTempUrl(url);
-  };
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "sent":
-        return <Check className="h-3 w-3" />;
-      case "delivered":
-        return <CheckCheck className="h-3 w-3" />;
-      case "read":
-      case "played":
-        return <CheckCheck className="h-3 w-3 text-blue-400" />;
-      default:
-        return <Clock className="h-3 w-3" />;
-    }
-  };
-  const renderContent = () => {
-    switch (message.message_type) {
-      case "image":
-        return <div>
-            {isValidMediaUrl(message.media_url) ? <a href={message.media_url} target="_blank" rel="noopener noreferrer">
-                <img src={message.media_url!} alt="Imagem" className="max-w-full rounded mb-1 cursor-pointer hover:opacity-90" />
-              </a> : <div className={cn("flex flex-col items-center justify-center gap-2 p-4 rounded-lg min-w-[160px]", isFromMe ? "bg-primary-foreground/10" : "bg-background/50")}>
-                <Image className="w-8 h-8 opacity-50" />
-                <span className="text-xs opacity-70">Imagem recebida</span>
-                <span className="text-[10px] opacity-50">(não disponível)</span>
-              </div>}
-            {message.content && message.content !== "[Imagem]" && <p className="text-sm">{message.content}</p>}
-          </div>;
-      case "audio":
-        return <div className="flex items-center gap-2">
-            {isValidMediaUrl(message.media_url) ? <audio controls className="max-w-[200px]">
-                <source src={message.media_url!} type={message.media_mime_type || "audio/ogg"} />
-              </audio> : <div className={cn("flex items-center gap-2 px-3 py-2 rounded-full min-w-[150px]", isFromMe ? "bg-primary-foreground/10" : "bg-background/50")}>
-                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", isFromMe ? "bg-primary-foreground/20" : "bg-muted-foreground/20")}>
-                  <Mic className="w-4 h-4" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-medium">Áudio recebido</span>
-                  <span className="text-[10px] opacity-50">(não disponível)</span>
-                </div>
-              </div>}
-          </div>;
-      case "video":
-        return <div>
-            {isValidMediaUrl(message.media_url) ? <video controls className="max-w-full rounded mb-1">
-                <source src={message.media_url!} type={message.media_mime_type || "video/mp4"} />
-              </video> : <div className={cn("flex flex-col items-center justify-center gap-2 p-4 rounded-lg min-w-[160px]", isFromMe ? "bg-primary-foreground/10" : "bg-background/50")}>
-                <Video className="w-8 h-8 opacity-50" />
-                <span className="text-xs opacity-70">Vídeo recebido</span>
-                <span className="text-[10px] opacity-50">(não disponível)</span>
-              </div>}
-          </div>;
-      case "document":
-        return <a href={isValidMediaUrl(message.media_url) ? message.media_url! : "#"} target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-2", isValidMediaUrl(message.media_url) && "hover:underline")}>
-            <FileText className="h-4 w-4" />
-            <span className="text-sm">{message.content || "Documento"}</span>
-            {!isValidMediaUrl(message.media_url) && <span className="text-[10px] opacity-50">(não disponível)</span>}
-          </a>;
-      default:
-        return <p className="text-sm whitespace-pre-wrap break-words [word-break:break-word]">
-            {message.content}
-          </p>;
-    }
-  };
-  return <div className={cn("flex w-full", isFromMe ? "justify-end" : "justify-start")}>
-      <div className={cn("inline-block rounded-lg px-3 py-1.5", "max-w-[85%] sm:max-w-[75%]", "break-words", isFromMe ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-chatBubble text-chatBubble-foreground rounded-bl-sm")}>
-        {/* Show sender name in group messages */}
-        {isGroup && !isFromMe && message.sender_name && <p className="text-xs font-medium text-blue-500 mb-1">
-            {message.sender_name}
-          </p>}
-        
-        {renderContent()}
-        
-        <div className={cn("flex items-center gap-1 mt-0.5", isFromMe ? "justify-end" : "justify-start")}>
-          <span className={cn("text-[10px]", isFromMe ? "text-primary-foreground/70" : "text-chatBubble-foreground/70")}>
-            {format(new Date(message.sent_at), "HH:mm")}
-          </span>
-          {isFromMe && <span className="text-primary-foreground/70">
-              {getStatusIcon(message.status)}
-            </span>}
-        </div>
-      </div>
-    </div>;
 }
