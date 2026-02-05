@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Plus, 
   Edit2, 
   Trash2, 
   Play, 
@@ -38,7 +36,6 @@ import {
   TRIGGER_TYPE_LABELS,
   TriggerType,
 } from '@/hooks/use-automations';
-import { CreateAutomationDialog } from './CreateAutomationDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -72,7 +69,6 @@ export function AutomationList({ onEdit }: AutomationListProps) {
   const { data: executions } = useAutomationExecutions();
   const deleteAutomation = useDeleteAutomation();
   const toggleAutomation = useToggleAutomation();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Calculate execution stats per automation
   const getExecutionStats = (automationId: string) => {
@@ -97,25 +93,14 @@ export function AutomationList({ onEdit }: AutomationListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Automação
-        </Button>
-      </div>
-
       {automations?.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center px-4">
             <Zap className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhuma automação criada</h3>
             <p className="text-muted-foreground mb-4 text-sm">
-              Crie fluxos automáticos para enviar mensagens, mover leads e muito mais
+              Vá para a aba "Modelos" para criar sua primeira automação
             </p>
-            <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Criar primeira automação
-            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -238,15 +223,6 @@ export function AutomationList({ onEdit }: AutomationListProps) {
           })}
         </div>
       )}
-
-      <CreateAutomationDialog 
-        open={createDialogOpen} 
-        onOpenChange={setCreateDialogOpen}
-        onCreated={(id) => {
-          setCreateDialogOpen(false);
-          onEdit(id);
-        }}
-      />
     </div>
   );
 }
