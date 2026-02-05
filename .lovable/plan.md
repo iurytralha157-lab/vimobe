@@ -1,109 +1,130 @@
 
-# Plano: Corrigir Exibição de Imagens no Chat
+# Plano: Corrigir Dashboard Telecom - Evolução de Clientes e Funil de Vendas
 
-## Problema Identificado
-As imagens não estão aparecendo no chat (tanto no FloatingChat quanto possivelmente na página principal de Conversations). Após análise, o código está correto em termos de estrutura - o `MessageBubble` está recebendo `mediaUrl` e `mediaStatus` corretamente.
+## Problemas Identificados
 
-## Causa Raiz
-O atributo `crossOrigin="anonymous"` nas tags `<img>` e `<video>` no componente `MessageBubble` está causando falhas de CORS. Quando esse atributo está presente:
+### 1. Gráfico "Evolução de Clientes" Mostrando "Nenhum dado disponível"
+O hook `useTelecomEvolutionData` agrupa clientes pelo **status atual** em vez de contabilizar corretamente a evolução. A lógica atual:
+- Busca clientes criados no período
+- Conta quantos têm cada status ATUALMENTE
 
-1. O navegador faz uma requisição CORS preflight
-2. O servidor Supabase Storage precisa retornar headers `Access-Control-Allow-Origin`
-3. Se os headers não estiverem configurados corretamente para o domínio de preview, a imagem falha em carregar
+Isso não faz sentido para um gráfico de "evolução" - um cliente que foi criado em janeiro como "NOVO" e hoje está "INSTALADO" aparece como "INSTALADO" na data de criação, distorcendo a visualização.
 
-O bucket `whatsapp-media` está configurado como público, então as imagens SÃO acessíveis - mas apenas sem requisições CORS.
+### 2. Funil de Vendas Mostrando 0 Leads em Todos os Estágios
+Mesmo com leads existentes nas pipelines (confirmado: REPROVADO tem 6, DOCUMENTOS tem 2, etc.), o funil mostra 0. As causas prováveis são:
+- Filtro de data padrão (`last30days`) filtrando por `created_at` pode excluir leads mais antigos que foram movidos recentemente
+- A RPC `get_funnel_data` filtra leads por `created_at`, mas deveria contar leads **atuais** em cada estágio
 
-## Solução
-Remover o atributo `crossOrigin="anonymous"` dos elementos `<img>` e `<video>` no componente `MessageBubble`. Este atributo:
+### 3. Origens de Leads Vazio
+Mesmo problema do funil - a RPC `get_lead_sources_data` também filtra por data de criação.
 
-- Só é necessário quando você quer manipular pixels da imagem via canvas
-- NÃO é necessário apenas para exibir imagens
-- O download continuará funcionando porque abre em nova aba
+---
 
-## Arquivo a Modificar
-- `src/components/whatsapp/MessageBubble.tsx`
+## Solução Proposta
 
-## Mudanças Específicas
+### Correção 1: Hook `useTelecomEvolutionData`
 
-### 1. Imagem (linha 520)
-```tsx
-// DE:
-<img
-  src={mediaUrl!}
-  alt={content || "Imagem"}
-  className="w-full h-auto object-cover"
-  crossOrigin="anonymous"  // REMOVER
-  onError={handleImageError}
-  onLoad={handleImageLoad}
-/>
+**Arquivo:** `src/hooks/use-telecom-dashboard-stats.ts`
 
-// PARA:
-<img
-  src={mediaUrl!}
-  alt={content || "Imagem"}
-  className="w-full h-auto object-cover"
-  onError={handleImageError}
-  onLoad={handleImageLoad}
-/>
+Alterar a lógica para mostrar uma evolução que faça sentido:
+- **Opção A (Recomendada):** Mostrar quantos clientes **entraram** (foram criados) em cada período, todos contando como "novos" no momento da criação
+- **Opção B:** Mostrar snapshot acumulativo do total de clientes por período
+
+Implementação da Opção A - mostrar novos clientes por período:
+
+```typescript
+// Em vez de agrupar por status atual, contar todos como "novos" na data de criação
+// E separadamente, contar instalações por installation_date
+
+customers.forEach((customer) => {
+  const createdDate = parseISO(customer.created_at);
+  const key = getIntervalKey(createdDate);
+  const point = grouped.get(key);
+  
+  if (point) {
+    // Todo cliente conta como "novo" na data de criação
+    point.novos++;
+    
+    // Se tem installation_date, contar também como instalado nessa data
+    if (customer.installation_date) {
+      const installDate = parseISO(customer.installation_date);
+      const installKey = getIntervalKey(installDate);
+      const installPoint = grouped.get(installKey);
+      if (installPoint) {
+        installPoint.instalados++;
+      }
+    }
+  }
+});
 ```
 
-### 2. Vídeo (linha 568)
-```tsx
-// DE:
-<video
-  src={mediaUrl!}
-  className="w-full h-auto"
-  preload="metadata"
-  crossOrigin="anonymous"  // REMOVER
-/>
+### Correção 2: Funil de Vendas - Remover Filtro de Data na Contagem
 
-// PARA:
-<video
-  src={mediaUrl!}
-  className="w-full h-auto"
-  preload="metadata"
-/>
+**Problema:** O funil deveria mostrar a contagem **atual** de leads em cada estágio, não filtrado por data de criação.
+
+**Arquivos a Modificar:**
+- `src/hooks/use-dashboard-stats.ts` - função `useFunnelData`
+
+Alterar para NÃO passar filtro de data para a RPC quando se trata do funil (o funil é um snapshot do estado atual):
+
+```typescript
+// No hook useFunnelData, o funil deveria mostrar estado atual
+// Não faz sentido filtrar por data de criação do lead
+
+const { data, error } = await (supabase as any).rpc('get_funnel_data', {
+  p_date_from: null,  // Não filtrar por data para o funil
+  p_date_to: null,
+  p_team_id: filters?.teamId || null,
+  p_user_id: effectiveUserId || null,
+  p_source: filters?.source || null,
+  p_pipeline_id: pipelineId || null,
+});
 ```
 
-### 3. MediaViewer - Imagem (arquivo MediaViewer.tsx, linha 89)
-```tsx
-// DE:
-<img
-  src={src}
-  crossOrigin="anonymous"  // REMOVER
-  onError={handleError}
-  ...
-/>
+### Correção 3: Origens de Leads - Manter Filtro de Data
 
-// PARA:
-<img
-  src={src}
-  onError={handleError}
-  ...
-/>
-```
+Para origens de leads, o filtro de data faz sentido (quantos leads vieram de cada fonte no período). Manter como está, mas verificar se os leads estão sendo criados dentro do período filtrado.
 
-### 4. MediaViewer - Vídeo (arquivo MediaViewer.tsx, linha 99)
-```tsx
-// DE:
-<video
-  src={src}
-  crossOrigin="anonymous"  // REMOVER
-  ...
-/>
+---
 
-// PARA:
-<video
-  src={src}
-  ...
-/>
-```
+## Detalhes Técnicos das Mudanças
+
+### Arquivo 1: `src/hooks/use-telecom-dashboard-stats.ts`
+
+Modificar a função `useTelecomEvolutionData` para:
+1. Buscar também o campo `installation_date` 
+2. Contar todos os clientes como "novos" na data de criação
+3. Contar clientes como "instalados" na data de instalação (não na data de criação)
+4. Manter os outros status como contagem acumulativa opcional
+
+### Arquivo 2: `src/hooks/use-dashboard-stats.ts`
+
+Na função `useFunnelData`:
+1. Não passar filtros de data para a RPC `get_funnel_data`
+2. O funil representa o estado atual da pipeline, não leads criados em um período
+
+---
 
 ## Resultado Esperado
-- Imagens e vídeos carregarão corretamente no chat
-- O download continuará funcionando (abre em nova aba)
-- O zoom de imagens funcionará normalmente
-- A experiência será consistente tanto no FloatingChat quanto na página principal
 
-## Observação
-Se futuramente for necessário usar `crossOrigin` (por exemplo, para manipulação via canvas), será preciso configurar os headers CORS no bucket do Supabase Storage através do dashboard do Supabase.
+1. **Evolução de Clientes:**
+   - Gráfico mostrará quantos clientes novos entraram por período
+   - Instalações serão contadas pela data real de instalação
+   - Visualização mais precisa e útil
+
+2. **Funil de Vendas:**
+   - Mostrará a contagem real de leads em cada estágio
+   - REPROVADO: 6, DOCUMENTOS: 2, etc.
+   - Filtros de equipe/usuário continuam funcionando
+
+3. **Origens de Leads:**
+   - Continuará filtrando por data de criação (faz sentido para análise)
+   - Mostrará distribuição correta por fonte
+
+---
+
+## Alternativa: Adicionar Toggle para Filtro de Data no Funil
+
+Se desejado, podemos adicionar um switch no dashboard para escolher entre:
+- "Leads atuais" (sem filtro de data) - padrão
+- "Leads criados no período" (com filtro de data)
