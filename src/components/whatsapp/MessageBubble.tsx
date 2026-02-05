@@ -517,7 +517,6 @@ export function MessageBubble({
                   src={mediaUrl!}
                   alt={content || "Imagem"}
                   className="w-full h-auto object-cover"
-                  crossOrigin="anonymous"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
                 />
@@ -565,7 +564,6 @@ export function MessageBubble({
                   src={mediaUrl!}
                   className="w-full h-auto"
                   preload="metadata"
-                  crossOrigin="anonymous"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                   <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
