@@ -289,6 +289,56 @@ export function useActivateContract() {
       const entries: Record<string, unknown>[] = [];
 
       // Commission entries for brokers
+      // Generate receivable entries based on contract installments
+      const installments = contract.installments || 1;
+      const downPayment = contract.down_payment || 0;
+      const remainingValue = totalValue - downPayment;
+      const installmentValue = remainingValue / installments;
+      
+      const receivableEntries = [];
+      
+      // Entry for down payment if exists
+      if (downPayment > 0) {
+        receivableEntries.push({
+          organization_id: orgId,
+          contract_id: contractId,
+          type: 'receivable',
+          category: 'Entrada',
+          description: `Entrada - Contrato ${contract.contract_number}`,
+          amount: downPayment,
+          due_date: new Date().toISOString().split('T')[0],
+          status: 'pending',
+          installment_number: 0,
+          total_installments: installments,
+          created_by: user?.id,
+        });
+      }
+      
+      // Entries for installments
+      for (let i = 1; i <= installments; i++) {
+        const dueDate = new Date();
+        dueDate.setMonth(dueDate.getMonth() + i);
+        
+        receivableEntries.push({
+          organization_id: orgId,
+          contract_id: contractId,
+          type: 'receivable',
+          category: 'Parcela',
+          description: `Parcela ${i}/${installments} - Contrato ${contract.contract_number}`,
+          amount: installmentValue,
+          due_date: dueDate.toISOString().split('T')[0],
+          status: 'pending',
+          installment_number: i,
+          total_installments: installments,
+          created_by: user?.id,
+        });
+      }
+      
+      // Insert receivable entries
+      if (receivableEntries.length > 0) {
+        await supabase.from('financial_entries').insert(receivableEntries as never[]);
+      }
+
       const commissions = brokers.map((broker) => ({
         organization_id: orgId,
         contract_id: contractId,
@@ -303,6 +353,22 @@ export function useActivateContract() {
 
       if (commissions.length > 0) {
         await (supabase as any).from('commissions').insert(commissions);
+      }
+      
+      // Also generate payable entry for commission payments
+      const totalCommissionValue = commissions.reduce((sum, c) => sum + c.calculated_value, 0);
+      if (totalCommissionValue > 0) {
+        await supabase.from('financial_entries').insert({
+          organization_id: orgId,
+          contract_id: contractId,
+          type: 'payable',
+          category: 'Comissão',
+          description: `Comissões - Contrato ${contract.contract_number}`,
+          amount: totalCommissionValue,
+          due_date: new Date().toISOString().split('T')[0],
+          status: 'pending',
+          created_by: user?.id,
+        } as never);
       }
 
       return contract;

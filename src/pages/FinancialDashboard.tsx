@@ -16,7 +16,9 @@ import {
   UserX,
   UserMinus,
   RefreshCw,
-  Target
+  Target,
+  FileText,
+  Award
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -364,6 +366,13 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
   };
   
   const totalOverdue = (data?.overdueReceivables || 0) + (data?.overduePayables || 0);
+  
+  // Commission status data for pie chart
+  const commissionPieData = [
+    { name: 'Previstas', value: data?.forecastCommissions || 0, fill: 'hsl(var(--muted-foreground))' },
+    { name: 'Pendentes', value: data?.pendingCommissions || 0, fill: 'hsl(var(--warning))' },
+    { name: 'Pagas', value: data?.paidCommissions || 0, fill: 'hsl(var(--success))' },
+  ].filter(d => d.value > 0);
 
   return (
     <AppLayout>
@@ -373,6 +382,46 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
           <h1 className="text-xl md:text-2xl font-bold">Dashboard Financeiro</h1>
           <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças</p>
         </div>
+
+        {/* Summary Cards - Leads and Contracts */}
+        {((data?.totalLeadsValue || 0) > 0 || (data?.activeContracts || 0) > 0) && (
+          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-4 md:p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Award className="h-3 w-3" /> Leads Ganhos
+                  </p>
+                  <p className="text-lg md:text-2xl font-bold text-primary">{data?.wonLeadsCount || 0}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(data?.totalLeadsValue || 0)} em valor
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <FileText className="h-3 w-3" /> Contratos Ativos
+                  </p>
+                  <p className="text-lg md:text-2xl font-bold">{data?.activeContracts || 0}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(data?.totalContractsValue || 0)} em valor
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Comissões</p>
+                  <p className="text-lg md:text-2xl font-bold text-success">
+                    {formatCurrency((data?.forecastCommissions || 0) + (data?.pendingCommissions || 0) + (data?.paidCommissions || 0))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Balanço Projetado</p>
+                  <p className={`text-lg md:text-2xl font-bold ${(data?.receivable90 || 0) - (data?.totalPayable || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatCurrency((data?.receivable90 || 0) - (data?.totalPayable || 0))}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* KPI Cards - Grid mais compacto no mobile */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
@@ -427,8 +476,8 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:gap-6">
-          {/* Monthly Cash Flow - Full Width */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+          {/* Monthly Cash Flow */}
           <Card>
             <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
               <CardTitle className="text-sm sm:text-base md:text-lg">Fluxo de Caixa Mensal</CardTitle>
@@ -456,45 +505,48 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
               )}
             </CardContent>
           </Card>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-          {/* Revenue by Type */}
+          {/* Commission Distribution */}
           <Card>
             <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
-              <CardTitle className="text-sm sm:text-base md:text-lg">Receita por Tipo</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Distribuição das receitas</CardDescription>
+              <CardTitle className="text-sm sm:text-base md:text-lg">Distribuição de Comissões</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Por status de pagamento</CardDescription>
             </CardHeader>
             <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
-              {pieData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px]">
+              {commissionPieData.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px]">
                   <PieChart>
                     <Pie
-                      data={pieData}
+                      data={commissionPieData}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
                       outerRadius={typeof window !== 'undefined' && window.innerWidth < 640 ? 50 : window.innerWidth < 768 ? 70 : 100}
-                      label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       labelLine={false}
                     >
-                      {pieData.map((entry, index) => (
+                      {commissionPieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />} 
+                      formatter={(value) => formatCurrency(value as number)}
+                    />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                   </PieChart>
                 </ChartContainer>
               ) : (
-                <div className="h-[180px] sm:h-[250px] md:h-[300px] flex items-center justify-center text-muted-foreground text-sm">
-                  Nenhum dado disponível
+                <div className="h-[200px] sm:h-[280px] md:h-[350px] flex items-center justify-center text-muted-foreground text-sm">
+                  Nenhuma comissão registrada
                 </div>
               )}
             </CardContent>
           </Card>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           {/* Pending vs Paid Comparison */}
           <Card>
             <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
@@ -507,6 +559,7 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
                   { name: 'Receber', value: data?.receivable30 || 0, fill: 'hsl(var(--success))' },
                   { name: 'Pagar', value: data?.totalPayable || 0, fill: 'hsl(var(--destructive))' },
                   { name: 'Comissões', value: data?.pendingCommissions || 0, fill: 'hsl(var(--primary))' },
+                  { name: 'Vencidos', value: totalOverdue, fill: 'hsl(var(--warning))' },
                 ]}>
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 9 }} width={35} />
@@ -519,46 +572,36 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
               </ChartContainer>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-          <Card>
-            <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                Valores em Atraso
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
-              <div className="space-y-2 sm:space-y-3">
-                <div className="flex justify-between items-center p-2 sm:p-3 bg-destructive/5 rounded-lg">
-                  <span className="text-xs sm:text-sm">A Receber Vencido</span>
-                  <span className="font-bold text-destructive text-xs sm:text-sm md:text-base">{formatCurrency(data?.overdueReceivables || 0)}</span>
-                </div>
-                <div className="flex justify-between items-center p-2 sm:p-3 bg-destructive/5 rounded-lg">
-                  <span className="text-xs sm:text-sm">A Pagar Vencido</span>
-                  <span className="font-bold text-destructive text-xs sm:text-sm md:text-base">{formatCurrency(data?.overduePayables || 0)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
+          {/* Combined Summary */}
+          <Card className="lg:row-span-1">
             <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 md:pb-4">
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base md:text-lg">
                 <DollarSign className="h-4 w-4 text-primary" />
-                Resumo de Comissões
+                Resumo Financeiro
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
               <div className="space-y-2 sm:space-y-3">
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-destructive/5 rounded-lg">
+                  <span className="text-xs sm:text-sm flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-destructive" /> A Receber Vencido
+                  </span>
+                  <span className="font-bold text-destructive text-xs sm:text-sm md:text-base">{formatCurrency(data?.overdueReceivables || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 sm:p-3 bg-destructive/5 rounded-lg">
+                  <span className="text-xs sm:text-sm flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-destructive" /> A Pagar Vencido
+                  </span>
+                  <span className="font-bold text-destructive text-xs sm:text-sm md:text-base">{formatCurrency(data?.overduePayables || 0)}</span>
+                </div>
                 <div className="flex justify-between items-center p-2 sm:p-3 bg-muted/50 rounded-lg">
-                  <span className="text-xs sm:text-sm">Previstas</span>
+                  <span className="text-xs sm:text-sm">Comissões Previstas</span>
                   <span className="font-bold text-xs sm:text-sm md:text-base">{formatCurrency(data?.forecastCommissions || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center p-2 sm:p-3 bg-success/10 rounded-lg">
-                  <span className="text-xs sm:text-sm">Pagas</span>
+                  <span className="text-xs sm:text-sm">Comissões Pagas</span>
                   <span className="font-bold text-success text-xs sm:text-sm md:text-base">{formatCurrency(data?.paidCommissions || 0)}</span>
                 </div>
               </div>

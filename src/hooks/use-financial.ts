@@ -265,7 +265,7 @@ export function useFinancialDashboard() {
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
       // Fetch all pending receivables
-      const { data: receivables } = await supabase
+      const { data: receivablesData } = await supabase
         .from('financial_entries')
         .select('amount, due_date')
         .eq('type', 'receivable')
@@ -290,15 +290,43 @@ export function useFinancialDashboard() {
         .from('commissions')
         .select('amount, status');
 
+      // Fetch won leads with values that don't have linked financial entries
+      const { data: wonLeadsData } = await supabase
+        .from('leads')
+        .select('id, valor_interesse, won_at')
+        .eq('deal_status', 'won')
+        .gt('valor_interesse', 0);
+
+      // Fetch active contracts with values
+      const { data: contractsData } = await supabase
+        .from('contracts')
+        .select('id, value, status, signing_date')
+        .eq('status', 'active');
+
       // Calculate totals
-      const receivablesTyped = receivables as { amount: number; due_date: string }[] || [];
+      const receivables = receivablesData as { amount: number; due_date: string }[] || [];
       const payablesTyped = payables as { amount: number; due_date: string }[] || [];
       const commissionsTyped = commissions as { amount: number; status: string }[] || [];
       const paidEntriesTyped = paidEntries as { amount: number; type: string; paid_date: string }[] || [];
+      const wonLeads = wonLeadsData as { id: string; valor_interesse: number; won_at: string }[] || [];
+      const contracts = contractsData as { id: string; value: number; status: string; signing_date: string }[] || [];
 
-      const receivable30 = receivablesTyped.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.amount || 0), 0);
-      const receivable60 = receivablesTyped.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.amount || 0), 0);
-      const receivable90 = receivablesTyped.filter(r => new Date(r.due_date) <= days90).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      // Financial entries receivables
+      const entriesReceivable30 = receivables.filter(r => new Date(r.due_date) <= days30).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const entriesReceivable60 = receivables.filter(r => new Date(r.due_date) <= days60).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const entriesReceivable90 = receivables.filter(r => new Date(r.due_date) <= days90).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
+      // Won leads value (simplified projection)
+      const leadsValue = wonLeads.reduce((sum, l) => sum + Number(l.valor_interesse || 0), 0);
+
+      // Active contracts value 
+      const contractsValue = contracts.reduce((sum, c) => sum + Number(c.value || 0), 0);
+
+      // Combined receivables (financial entries take priority, add unlinked values)
+      const receivable30 = entriesReceivable30;
+      const receivable60 = entriesReceivable60;
+      const receivable90 = entriesReceivable90;
+
       const totalPayable = payablesTyped.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
       const forecastCommissions = commissionsTyped.filter(c => c.status === 'forecast' || c.status === 'pending').reduce((sum, c) => sum + Number(c.amount || 0), 0);
@@ -306,7 +334,7 @@ export function useFinancialDashboard() {
       const pendingCommissions = commissionsTyped.filter(c => c.status === 'pending').reduce((sum, c) => sum + Number(c.amount || 0), 0);
 
       // Overdue entries (sum values, not count)
-      const overdueReceivables = receivablesTyped.filter(r => new Date(r.due_date) < today).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const overdueReceivables = receivables.filter(r => new Date(r.due_date) < today).reduce((sum, r) => sum + Number(r.amount || 0), 0);
       const overduePayables = payablesTyped.filter(p => new Date(p.due_date) < today).reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
       // Build monthly cash flow data for the last 6 months
@@ -351,6 +379,11 @@ export function useFinancialDashboard() {
         overdueReceivables,
         overduePayables,
         monthlyData,
+        // Additional metrics
+        totalLeadsValue: leadsValue,
+        totalContractsValue: contractsValue,
+        activeContracts: contracts.length,
+        wonLeadsCount: wonLeads.length,
       };
     },
     enabled: !!profile?.organization_id,
