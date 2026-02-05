@@ -40,6 +40,7 @@ import { WaitNode } from './nodes/WaitNode';
 import { StartNode } from './nodes/StartNode';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
+import { useStages } from '@/hooks/use-stages';
 import { useCreateAutomation, useSaveAutomationFlow, TriggerType } from '@/hooks/use-automations';
 import { toast } from 'sonner';
 
@@ -66,6 +67,7 @@ const NODE_PALETTE = [
 function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpBuilderProps) {
   const { data: sessions } = useWhatsAppSessions();
   const { data: tags } = useTags();
+  const { data: stages } = useStages();
   const createAutomation = useCreateAutomation();
   const saveFlow = useSaveAutomationFlow();
   
@@ -78,6 +80,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [name, setName] = useState(initialTemplate?.name || 'Meu Follow-up');
   const [sessionId, setSessionId] = useState<string>('');
   const [triggerType, setTriggerType] = useState<TriggerType>('tag_added');
+  const [stageId, setStageId] = useState<string>('');
   const [tagId, setTagId] = useState<string>('');
 
   const connectedSessions = sessions?.filter(s => s.status === 'connected') || [];
@@ -264,6 +267,11 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       return;
     }
 
+    if (triggerType === 'lead_stage_changed' && !stageId) {
+      toast.error('Selecione uma etapa para o gatilho');
+      return;
+    }
+
     const messageNodes = nodes.filter(n => n.type === 'message');
     if (messageNodes.length === 0) {
       toast.error('Adicione pelo menos uma mensagem');
@@ -278,7 +286,11 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         name,
         description: `Follow-up com ${messageNodes.length} mensagens`,
         trigger_type: triggerType,
-        trigger_config: triggerType === 'tag_added' ? { tag_id: tagId } : {},
+        trigger_config: triggerType === 'tag_added' 
+          ? { tag_id: tagId } 
+          : triggerType === 'lead_stage_changed'
+            ? { to_stage_id: stageId }
+            : {},
       });
 
       // Build nodes for database
@@ -297,7 +309,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             id: node.id,
             node_type: 'trigger',
             action_type: null,
-            config: { trigger_type: triggerType, tag_id: tagId },
+            config: { trigger_type: triggerType, tag_id: tagId, to_stage_id: stageId },
             position_x: Math.round(node.position.x),
             position_y: Math.round(node.position.y),
           });
@@ -452,6 +464,32 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                               style={{ backgroundColor: tag.color || '#888' }}
                             />
                             {tag.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {triggerType === 'lead_stage_changed' && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Etapa específica
+                  </Label>
+                  <Select value={stageId} onValueChange={setStageId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a etapa..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages?.map((stage) => (
+                        <SelectItem key={stage.id} value={stage.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: stage.color || '#888' }}
+                            />
+                            {stage.name}
                           </div>
                         </SelectItem>
                       ))}
