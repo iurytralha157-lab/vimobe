@@ -79,30 +79,45 @@ export function useStagesWithLeads(pipelineId?: string) {
         return [];
       }
       
-      // Query unificada: stages, leads e contagens em paralelo
-      const [stagesResult, leadsResult, leadCountsResult] = await Promise.all([
-        supabase
-          .from('stages')
-          .select('id, name, color, stage_key, position, pipeline_id')
-          .eq('pipeline_id', targetPipelineId)
-          .order('position'),
+      // Primeiro buscar stages para saber quantos temos
+      const stagesResult = await supabase
+        .from('stages')
+        .select('id, name, color, stage_key, position, pipeline_id')
+        .eq('pipeline_id', targetPipelineId)
+        .order('position');
+      
+      if (stagesResult.error) throw stagesResult.error;
+      const stages = stagesResult.data || [];
+      
+      // Buscar leads paginados por estágio em paralelo
+      const stageLeadsPromises = stages.map(stage =>
         (supabase as any)
           .from('leads')
           .select(LEAD_PIPELINE_FIELDS)
           .eq('pipeline_id', targetPipelineId)
-          .order('stage_entered_at', { ascending: false }),
-        // Contagem total de leads por estágio (para exibir no badge)
-        supabase
-          .from('leads')
-          .select('stage_id')
-          .eq('pipeline_id', targetPipelineId)
-          .not('stage_id', 'is', null)
-      ]);
+          .eq('stage_id', stage.id)
+          .order('stage_entered_at', { ascending: false })
+          .range(0, LEADS_PER_STAGE - 1)
+      );
       
-      if (stagesResult.error) throw stagesResult.error;
+      // Contagem total de leads por estágio
+      const leadCountsResult = await supabase
+        .from('leads')
+        .select('stage_id')
+        .eq('pipeline_id', targetPipelineId)
+        .not('stage_id', 'is', null);
       
-      const stages = stagesResult.data || [];
-      const leads = (leadsResult.data || []) as any[];
+      const stageLeadsResults = await Promise.all(stageLeadsPromises);
+      
+      // Combinar leads de todos os estágios em um array plano
+      const leads: any[] = [];
+      const leadsByStageRaw: Record<string, any[]> = {};
+      
+      stages.forEach((stage, index) => {
+        const stageLeads = stageLeadsResults[index]?.data || [];
+        leadsByStageRaw[stage.id] = stageLeads;
+        leads.push(...stageLeads);
+      });
       
       // Contar leads por estágio para exibir total real no badge
       const totalCountsByStage = (leadCountsResult.data || []).reduce((acc: Record<string, number>, l: any) => {
@@ -144,7 +159,6 @@ export function useStagesWithLeads(pipelineId?: string) {
             const normalized = normalizePhone(c.contact_phone);
             if (normalized) {
               const existing = phoneToWhatsApp.get(normalized);
-              // Soma unread_count se já existir (múltiplas conversas para mesmo telefone)
               phoneToWhatsApp.set(normalized, {
                 picture: c.contact_picture || existing?.picture || null,
                 unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
@@ -160,34 +174,33 @@ export function useStagesWithLeads(pipelineId?: string) {
         return acc;
       }, {} as Record<string, any>);
       
-      // Agrupar leads por stage
-      const leadsByStage = leads.reduce((acc: Record<string, any[]>, lead: any) => {
-        const stageId = lead.stage_id || 'no-stage';
-        if (!acc[stageId]) acc[stageId] = [];
-        
-        // Adicionar foto do WhatsApp e unread_count ao lead
-        let whatsapp_picture: string | null = null;
-        let unread_count = 0;
-        if (lead.phone) {
-          const normalizedPhone = normalizePhone(lead.phone);
-          const whatsappData = phoneToWhatsApp.get(normalizedPhone);
-          whatsapp_picture = whatsappData?.picture || null;
-          unread_count = whatsappData?.unread_count || 0;
-        }
-        
-        acc[stageId].push({
-          ...lead,
-          tags: tagsByLead[lead.id] || [],
-          stage: stagesById[stageId] || null,
-          whatsapp_picture,
-          unread_count,
+      // Enriquecer leads por estágio
+      const enrichedLeadsByStage: Record<string, any[]> = {};
+      
+      for (const stageId of Object.keys(leadsByStageRaw)) {
+        enrichedLeadsByStage[stageId] = leadsByStageRaw[stageId].map((lead: any) => {
+          let whatsapp_picture: string | null = null;
+          let unread_count = 0;
+          if (lead.phone) {
+            const normalizedPhone = normalizePhone(lead.phone);
+            const whatsappData = phoneToWhatsApp.get(normalizedPhone);
+            whatsapp_picture = whatsappData?.picture || null;
+            unread_count = whatsappData?.unread_count || 0;
+          }
+          
+          return {
+            ...lead,
+            tags: tagsByLead[lead.id] || [],
+            stage: stagesById[stageId] || null,
+            whatsapp_picture,
+            unread_count,
+          };
         });
-        return acc;
-      }, {} as Record<string, any[]>);
+      }
       
       return stages.map(stage => ({
         ...stage,
-        leads: (leadsByStage[stage.id] || []).slice(0, LEADS_PER_STAGE),
+        leads: enrichedLeadsByStage[stage.id] || [],
         total_lead_count: totalCountsByStage[stage.id] || 0,
         has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
       }));
