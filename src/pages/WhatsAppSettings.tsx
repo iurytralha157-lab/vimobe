@@ -33,7 +33,8 @@ import {
   useSessionAccess,
   useGrantSessionAccess,
   useRevokeSessionAccess,
-  WhatsAppSession
+  WhatsAppSession,
+  useRecreateWhatsAppInstance
 } from "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,6 +52,7 @@ export default function WhatsAppSettings() {
   const getQRCode = useGetQRCode();
   const getConnectionStatus = useGetConnectionStatus();
   const logoutSession = useLogoutSession();
+  const recreateInstance = useRecreateWhatsAppInstance();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -61,6 +63,7 @@ export default function WhatsAppSettings() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
+  const [instanceNotFound, setInstanceNotFound] = useState(false);
 
   const webhookUrl = `https://ulodfqdmoalttgbxrutj.supabase.co/functions/v1/evolution-webhook`;
 
@@ -205,6 +208,7 @@ export default function WhatsAppSettings() {
 
   const refreshQRCode = async (instanceName: string) => {
     setIsRefreshingQr(true);
+    setInstanceNotFound(false);
     try {
       const data = await getQRCode.mutateAsync(instanceName);
       // Handle different response formats from WPPConnect
@@ -219,6 +223,11 @@ export default function WhatsAppSettings() {
       }
     } catch (error) {
       console.error("Error getting QR code:", error);
+      // Check if error indicates instance doesn't exist
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("does not exist") || errorMessage.includes("Failed to get QR code")) {
+        setInstanceNotFound(true);
+      }
     } finally {
       setIsRefreshingQr(false);
     }
@@ -243,7 +252,21 @@ export default function WhatsAppSettings() {
   const handleOpenQRDialog = async (session: WhatsAppSession) => {
     setSelectedSession(session);
     setQrDialogOpen(true);
+    setInstanceNotFound(false);
     await refreshQRCode(session.instance_name);
+  };
+
+  const handleRecreateInstance = async () => {
+    if (!selectedSession) return;
+    
+    try {
+      await recreateInstance.mutateAsync(selectedSession);
+      setInstanceNotFound(false);
+      // After recreation, get the new QR code
+      await refreshQRCode(selectedSession.instance_name);
+    } catch (error) {
+      console.error("Error recreating instance:", error);
+    }
   };
 
   const handleOpenAccessDialog = (session: WhatsAppSession) => {
@@ -459,13 +482,22 @@ export default function WhatsAppSettings() {
             <DialogHeader>
               <DialogTitle>Escanear QR Code</DialogTitle>
               <DialogDescription>
-                Abra o WhatsApp no seu celular e escaneie o código abaixo
+                {instanceNotFound 
+                  ? "A instância não existe mais na Evolution API. Clique em 'Reconectar' para recriá-la."
+                  : "Abra o WhatsApp no seu celular e escaneie o código abaixo"}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center py-6">
-              {isRefreshingQr || getQRCode.isPending ? (
+              {isRefreshingQr || getQRCode.isPending || recreateInstance.isPending ? (
                 <div className="w-64 h-64 flex items-center justify-center bg-muted rounded-lg">
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : instanceNotFound ? (
+                <div className="w-64 h-64 flex flex-col items-center justify-center bg-muted rounded-lg">
+                  <XCircle className="w-12 h-12 text-destructive mb-4" />
+                  <p className="text-muted-foreground text-center px-4">
+                    Instância não encontrada
+                  </p>
                 </div>
               ) : qrCode ? (
                 <img 
@@ -481,21 +513,33 @@ export default function WhatsAppSettings() {
                 </div>
               )}
               <div className="flex gap-2 mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => selectedSession && refreshQRCode(selectedSession.instance_name)}
-                  disabled={isRefreshingQr}
-                >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingQr ? "animate-spin" : ""}`} />
-                  Atualizar
-                </Button>
-                <Button
-                  onClick={() => selectedSession && checkConnectionStatus(selectedSession)}
-                  disabled={getConnectionStatus.isPending}
-                >
-                  {getConnectionStatus.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Verificar Conexão
-                </Button>
+                {instanceNotFound ? (
+                  <Button
+                    onClick={handleRecreateInstance}
+                    disabled={recreateInstance.isPending}
+                  >
+                    {recreateInstance.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Reconectar Instância
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => selectedSession && refreshQRCode(selectedSession.instance_name)}
+                      disabled={isRefreshingQr}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshingQr ? "animate-spin" : ""}`} />
+                      Atualizar
+                    </Button>
+                    <Button
+                      onClick={() => selectedSession && checkConnectionStatus(selectedSession)}
+                      disabled={getConnectionStatus.isPending}
+                    >
+                      {getConnectionStatus.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Verificar Conexão
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </DialogContent>

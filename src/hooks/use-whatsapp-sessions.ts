@@ -349,6 +349,53 @@ export function useRevokeSessionAccess() {
   });
 }
 
+export function useRecreateWhatsAppInstance() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (session: WhatsAppSession) => {
+      // Recreate instance in Evolution API with the same instance name
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        "evolution-proxy",
+        {
+          body: {
+            action: "createInstance",
+            instanceName: session.instance_name,
+          },
+        }
+      );
+
+      if (fnError) throw fnError;
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to recreate instance");
+      }
+
+      // Update database status to disconnected (ready to scan QR)
+      await supabase
+        .from("whatsapp_sessions")
+        .update({ status: "disconnected" })
+        .eq("id", session.id);
+
+      return { session, evolutionData: result.data };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+      toast({
+        title: "Instância recriada",
+        description: "Escaneie o QR Code para conectar",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao recriar instância",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 export function useLogoutSession() {
   const queryClient = useQueryClient();
 
@@ -386,6 +433,7 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string>("disconnected");
+  const [needsRecreate, setNeedsRecreate] = useState(false);
   const queryClient = useQueryClient();
   const getQRCode = useGetQRCode();
   const getStatus = useGetConnectionStatus();
@@ -394,11 +442,22 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
     if (!session || isPolling) return;
     
     setIsPolling(true);
+    setNeedsRecreate(false);
     
     const pollQRCode = async () => {
       try {
         // Check connection status first
         const status = await getStatus.mutateAsync(session.instance_name);
+        
+        // Check if instance doesn't exist in Evolution API
+        if (status?.instanceNotFound) {
+          console.log("Instance not found in Evolution API, needs recreation");
+          setConnectionStatus("instance_not_found");
+          setNeedsRecreate(true);
+          setIsPolling(false);
+          return true; // Stop polling
+        }
+        
         const isConnected = status?.connected === true || status?.state === "open";
         
         if (isConnected) {
@@ -437,11 +496,11 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
     // Initial poll
     const connected = await pollQRCode();
     
-    if (!connected) {
+    if (!connected && !needsRecreate) {
       // Continue polling every 3 seconds
       const interval = setInterval(async () => {
         const isConnected = await pollQRCode();
-        if (isConnected) {
+        if (isConnected || needsRecreate) {
           clearInterval(interval);
         }
       }, 3000);
@@ -452,11 +511,12 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
         setIsPolling(false);
       }, 120000);
     }
-  }, [session, isPolling, getQRCode, getStatus, queryClient]);
+  }, [session, isPolling, getQRCode, getStatus, queryClient, needsRecreate]);
 
   const stopPolling = useCallback(() => {
     setIsPolling(false);
     setQrCode(null);
+    setNeedsRecreate(false);
   }, []);
 
   useEffect(() => {
@@ -471,5 +531,6 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
     connectionStatus,
     startPolling,
     stopPolling,
+    needsRecreate,
   };
 }
