@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
 import { formatPhoneForWhatsApp } from "@/lib/phone-utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StartConversationParams {
   phone: string;
@@ -13,9 +14,14 @@ interface StartConversationParams {
 
 export function useStartConversation() {
   const queryClient = useQueryClient();
+  const { organization } = useAuth();
 
   return useMutation({
     mutationFn: async ({ phone, sessionId, leadId, leadName }: StartConversationParams): Promise<WhatsAppConversation> => {
+      if (!organization?.id) {
+        throw new Error("Organização não encontrada");
+      }
+
       // Formatar o telefone com código do Brasil (+55)
       const cleanPhone = formatPhoneForWhatsApp(phone);
       const remoteJid = cleanPhone.includes("@") ? cleanPhone : `${cleanPhone}@c.us`;
@@ -56,6 +62,7 @@ export function useStartConversation() {
           lead_id: leadId || null,
           unread_count: 0,
           is_group: false,
+          organization_id: organization.id,
         })
         .select(`
           *,
