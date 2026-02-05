@@ -570,12 +570,12 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
                   Filtrar por usuário
                 </Label>
-                <Select value={filterUserId} onValueChange={setFilterUserId}>
+                <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os usuários" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os usuários</SelectItem>
+                    <SelectItem value="__all__">Todos os usuários</SelectItem>
                     <SelectItem value="__me__">Apenas meus leads</SelectItem>
                     {users?.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
@@ -607,12 +607,12 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                     <Label className="text-xs text-muted-foreground">
                       Ao responder, mover para:
                     </Label>
-                    <Select value={onReplyStageId} onValueChange={setOnReplyStageId}>
+                    <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Não mover (apenas parar)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Não mover (apenas parar)</SelectItem>
+                        <SelectItem value="__none__">Não mover (apenas parar)</SelectItem>
                         {stages?.map((stage) => (
                           <SelectItem key={stage.id} value={stage.id}>
                             <div className="flex items-center gap-2">
