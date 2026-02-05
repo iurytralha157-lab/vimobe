@@ -2561,6 +2561,7 @@ export type Database = {
           complemento: string | null
           created_at: string
           created_by: string | null
+          default_commission_percentage: number | null
           email: string | null
           endereco: string | null
           id: string
@@ -2596,6 +2597,7 @@ export type Database = {
           complemento?: string | null
           created_at?: string
           created_by?: string | null
+          default_commission_percentage?: number | null
           email?: string | null
           endereco?: string | null
           id?: string
@@ -2631,6 +2633,7 @@ export type Database = {
           complemento?: string | null
           created_at?: string
           created_by?: string | null
+          default_commission_percentage?: number | null
           email?: string | null
           endereco?: string | null
           id?: string
@@ -5047,6 +5050,7 @@ export type Database = {
           site_config: Json
         }[]
       }
+      sync_historical_commissions: { Args: never; Returns: Json }
       user_belongs_to_organization: {
         Args: { org_id: string }
         Returns: boolean

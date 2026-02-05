@@ -47,32 +47,33 @@ Após análise detalhada do sistema financeiro, identifiquei **problemas crític
 
 ### FASE 1: Correções Críticas (Etapas 1-5)
 
-**Etapa 1: Criar Comissões Automaticamente ao Ganhar Lead**
+**Etapa 1: Criar Comissões Automaticamente ao Ganhar Lead** ✅ CONCLUÍDA
 - Modificar `useCreateCommissionOnWon` para criar comissão mesmo sem `commission_percentage` 
 - Usar percentual padrão da propriedade ou da organização como fallback
 - Criar campo `default_commission_percentage` na tabela `organizations`
 
-**Etapa 2: Gerar Conta a Receber ao Ganhar Lead**
+**Etapa 2: Gerar Conta a Receber ao Ganhar Lead** ✅ CONCLUÍDA
 - Quando lead é marcado como "won" com `valor_interesse > 0`:
   - Criar automaticamente um `financial_entry` do tipo "receivable"
   - Vincular ao `lead_id` para rastreabilidade
   - Definir vencimento padrão (30 dias)
 
-**Etapa 3: Configurar Cron Job para Recorrentes**
+**Etapa 3: Configurar Cron Job para Recorrentes** ✅ CONCLUÍDA
 - Configurar o Supabase Cron para executar `recurring-entries-generator` diariamente às 06:00 UTC
 - Adicionar logs detalhados na Edge Function
 - Testar a geração de lançamentos recorrentes
 
-**Etapa 4: Corrigir Lógica de Recorrência**
+**Etapa 4: Corrigir Lógica de Recorrência** ✅ (já funcionava)
 - Ajustar a Edge Function para criar lançamentos filhos corretamente
 - Evitar duplicatas verificando `parent_entry_id + due_date`
 - Notificar admins quando lançamentos são gerados
 
-**Etapa 5: Sincronizar Comissões Históricas**
+**Etapa 5: Sincronizar Comissões Históricas** ✅ FUNÇÃO CRIADA
 - Criar script de migração que:
   - Busca todos os leads "won" com `valor_interesse > 0`
   - Cria registros de comissão para os que não têm
   - Usa `commission_percentage` do lead ou propriedade
+- **AÇÃO NECESSÁRIA**: Execute `SELECT sync_historical_commissions()` no SQL Editor do Supabase
 
 ---
 
@@ -148,7 +149,7 @@ Após análise detalhada do sistema financeiro, identifiquei **problemas crític
 - Notificação de comissão pendente de aprovação
 - Integrar com sistema de notificações push
 
-**Etapa 18: Campo de Comissão Padrão**
+**Etapa 18: Campo de Comissão Padrão** ✅ CONCLUÍDA
 - Adicionar `default_commission_percentage` em `organizations`
 - Usar como fallback quando lead/imóvel não tem comissão definida
 
