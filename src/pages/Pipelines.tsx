@@ -424,8 +424,10 @@ export default function Pipelines() {
       queryClient.setQueryData(queryKey, previousData);
       toast.error('Erro ao mover lead: ' + error.message);
     } finally {
-      // Liberar flag após completar (sucesso ou erro)
-      isDraggingRef.current = false;
+      // Liberar flag após delay para evitar flash visual da subscription
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 500);
     }
   }, [stages, selectedPipelineId, queryClient, refetch, isTelecom, profile?.organization_id]);
 
