@@ -262,7 +262,7 @@ export default function Pipelines() {
   // Open lead from URL query param (from notification click)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const leadId = params.get('lead_id');
+    const leadId = params.get('lead_id') || params.get('lead');
     
     if (leadId && stages.length > 0) {
       // Find lead in any stage
