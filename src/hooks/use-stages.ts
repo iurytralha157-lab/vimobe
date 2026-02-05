@@ -7,6 +7,9 @@ export type Stage = Tables<'stages'> & {
   lead_count?: number;
 };
 
+// Limite de leads por estágio para paginação
+const LEADS_PER_STAGE = 100;
+
 // Campos otimizados para leads no pipeline - only columns that exist in the database
 const LEAD_PIPELINE_FIELDS = `
   id, name, phone, email, source, created_at, 
@@ -76,8 +79,8 @@ export function useStagesWithLeads(pipelineId?: string) {
         return [];
       }
       
-      // Query unificada: stages e leads em paralelo
-      const [stagesResult, leadsResult] = await Promise.all([
+      // Query unificada: stages, leads e contagens em paralelo
+      const [stagesResult, leadsResult, leadCountsResult] = await Promise.all([
         supabase
           .from('stages')
           .select('id, name, color, stage_key, position, pipeline_id')
@@ -87,14 +90,27 @@ export function useStagesWithLeads(pipelineId?: string) {
           .from('leads')
           .select(LEAD_PIPELINE_FIELDS)
           .eq('pipeline_id', targetPipelineId)
-          .order('stage_entered_at', { ascending: false })
-          .limit(500) // Limite para performance
+          .order('stage_entered_at', { ascending: false }),
+        // Contagem total de leads por estágio (para exibir no badge)
+        supabase
+          .from('leads')
+          .select('stage_id')
+          .eq('pipeline_id', targetPipelineId)
+          .not('stage_id', 'is', null)
       ]);
       
       if (stagesResult.error) throw stagesResult.error;
       
       const stages = stagesResult.data || [];
       const leads = (leadsResult.data || []) as any[];
+      
+      // Contar leads por estágio para exibir total real no badge
+      const totalCountsByStage = (leadCountsResult.data || []).reduce((acc: Record<string, number>, l: any) => {
+        if (l.stage_id) {
+          acc[l.stage_id] = (acc[l.stage_id] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
       
       // Buscar tags apenas se houver leads
       const leadIds = leads.map((l: any) => l.id);
@@ -171,7 +187,9 @@ export function useStagesWithLeads(pipelineId?: string) {
       
       return stages.map(stage => ({
         ...stage,
-        leads: leadsByStage[stage.id] || [],
+        leads: (leadsByStage[stage.id] || []).slice(0, LEADS_PER_STAGE),
+        total_lead_count: totalCountsByStage[stage.id] || 0,
+        has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
       }));
     },
   });
@@ -321,6 +339,114 @@ export function useCreateStage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stages'] });
       queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
+    },
+  });
+}
+
+// Hook para carregar mais leads de um estágio específico
+export function useLoadMoreLeads() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      pipelineId, 
+      stageId, 
+      offset 
+    }: { 
+      pipelineId: string; 
+      stageId: string; 
+      offset: number;
+    }) => {
+      const { data, error } = await (supabase as any)
+        .from('leads')
+        .select(LEAD_PIPELINE_FIELDS)
+        .eq('pipeline_id', pipelineId)
+        .eq('stage_id', stageId)
+        .order('stage_entered_at', { ascending: false })
+        .range(offset, offset + LEADS_PER_STAGE - 1);
+      
+      if (error) throw error;
+      
+      // Buscar tags dos novos leads
+      const leadIds = (data || []).map((l: any) => l.id);
+      let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
+      
+      if (leadIds.length > 0) {
+        const { data: leadTags } = await supabase
+          .from('lead_tags')
+          .select('lead_id, tag:tags(id, name, color)')
+          .in('lead_id', leadIds);
+        
+        tagsByLead = (leadTags || []).reduce((acc, lt) => {
+          if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
+          if (lt.tag) acc[lt.lead_id].push(lt.tag as any);
+          return acc;
+        }, {} as Record<string, { id: string; name: string; color: string }[]>);
+      }
+      
+      // Buscar fotos do WhatsApp
+      const leadsWithPhone = (data || []).filter((l: any) => l.phone);
+      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
+      
+      if (leadsWithPhone.length > 0) {
+        const { data: conversations } = await supabase
+          .from('whatsapp_conversations')
+          .select('contact_phone, contact_picture, unread_count');
+        
+        (conversations || []).forEach(c => {
+          if (c.contact_phone) {
+            const normalized = normalizePhone(c.contact_phone);
+            if (normalized) {
+              const existing = phoneToWhatsApp.get(normalized);
+              phoneToWhatsApp.set(normalized, {
+                picture: c.contact_picture || existing?.picture || null,
+                unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
+              });
+            }
+          }
+        });
+      }
+      
+      // Enriquecer leads com tags e fotos
+      const enrichedLeads = (data || []).map((lead: any) => {
+        let whatsapp_picture: string | null = null;
+        let unread_count = 0;
+        if (lead.phone) {
+          const normalizedPhone = normalizePhone(lead.phone);
+          const whatsappData = phoneToWhatsApp.get(normalizedPhone);
+          whatsapp_picture = whatsappData?.picture || null;
+          unread_count = whatsappData?.unread_count || 0;
+        }
+        
+        return {
+          ...lead,
+          tags: tagsByLead[lead.id] || [],
+          whatsapp_picture,
+          unread_count,
+        };
+      });
+      
+      return { stageId, leads: enrichedLeads };
+    },
+    onSuccess: ({ stageId, leads }, { pipelineId }) => {
+      // Mesclar novos leads no cache existente
+      queryClient.setQueryData(['stages-with-leads', pipelineId], (old: any[] | undefined) => {
+        if (!old) return old;
+        
+        return old.map(stage => {
+          if (stage.id !== stageId) return stage;
+          
+          // Adicionar novos leads evitando duplicatas
+          const existingIds = new Set((stage.leads || []).map((l: any) => l.id));
+          const newLeads = leads.filter((l: any) => !existingIds.has(l.id));
+          
+          return {
+            ...stage,
+            leads: [...(stage.leads || []), ...newLeads],
+            has_more: stage.total_lead_count > (stage.leads?.length || 0) + newLeads.length,
+          };
+        });
+      });
     },
   });
 }
