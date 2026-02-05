@@ -89,6 +89,7 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
 }
 
 export function TelecomEvolutionChart({ data, isLoading }: TelecomEvolutionChartProps) {
+  console.log('[TelecomEvolutionChart] data:', data, 'isLoading:', isLoading);
   if (isLoading) {
     return (
       <Card className="overflow-hidden h-full flex flex-col">
