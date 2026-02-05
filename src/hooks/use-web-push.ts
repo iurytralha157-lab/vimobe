@@ -6,8 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
 
 // Converte base64 URL-safe para Uint8Array (necessário para applicationServerKey)
-// Suporta tanto chaves raw (65 bytes) quanto SPKI (91 bytes)
+// Suporta tanto chaves raw (65 bytes) quanto SPKI/DER (91 bytes)
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  // Adiciona padding se necessário
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
     .replace(/-/g, '+')
@@ -20,18 +21,28 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
     outputArray[i] = rawData.charCodeAt(i);
   }
 
-  console.log('[WebPush] VAPID key decoded, length:', outputArray.length);
+  console.log('[WebPush] VAPID key decoded, length:', outputArray.length, 'bytes');
 
-  // Se a chave for maior que 65 bytes, provavelmente é SPKI
-  // A chave raw EC P-256 está nos últimos 65 bytes do SPKI
-  if (outputArray.length > 65) {
-    console.log('[WebPush] Detectado formato SPKI, extraindo chave raw...');
-    const rawKey = outputArray.slice(-65);
-    console.log('[WebPush] Chave raw extraída, primeiro byte:', rawKey[0].toString(16));
-    return rawKey.buffer as ArrayBuffer;
+  // Se a chave tem 91 bytes, é formato SPKI/DER
+  // A chave pública EC P-256 raw (65 bytes começando com 0x04) está no offset 26
+  if (outputArray.length === 91) {
+    console.log('[WebPush] Detectado formato SPKI (91 bytes), extraindo chave raw P-256...');
+    const rawKey = outputArray.slice(26);
+    console.log('[WebPush] Chave raw extraída:', rawKey.length, 'bytes, primeiro byte:', '0x' + rawKey[0].toString(16));
+    if (rawKey[0] !== 0x04 || rawKey.length !== 65) {
+      console.warn('[WebPush] Aviso: chave extraída pode estar em formato incorreto');
+    }
+    return rawKey.buffer.slice(rawKey.byteOffset, rawKey.byteOffset + rawKey.byteLength);
   }
 
-  return outputArray.buffer as ArrayBuffer;
+  // Chave já em formato raw (65 bytes)
+  if (outputArray.length === 65) {
+    console.log('[WebPush] Chave já em formato raw (65 bytes)');
+  } else {
+    console.warn('[WebPush] Tamanho de chave inesperado:', outputArray.length);
+  }
+
+  return outputArray.buffer.slice(0, outputArray.byteLength);
 }
 
 interface WebPushState {
