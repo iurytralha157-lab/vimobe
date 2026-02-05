@@ -87,6 +87,17 @@ export function FloatingChat() {
   // Enable realtime
   useWhatsAppRealtimeConversations();
 
+  // Sync activeConversation with latest data from hook (including phone fallback leads)
+  useEffect(() => {
+    if (activeConversation && conversations) {
+      const updatedConv = conversations.find(c => c.id === activeConversation.id);
+      if (updatedConv && updatedConv.lead && !activeConversation.lead) {
+        // Lead foi encontrado via fallback - atualizar o contexto
+        openConversation(updatedConv);
+      }
+    }
+  }, [conversations, activeConversation?.id, activeConversation?.lead, openConversation]);
+
  // Track user scrolling to avoid auto-scroll interference
  const handleScrollArea = (e: React.UIEvent<HTMLDivElement>) => {
    const target = e.currentTarget;
