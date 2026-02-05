@@ -53,6 +53,8 @@ export function FloatingChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
+ const previousMessagesLengthRef = useRef<number>(0);
+ const isUserScrollingRef = useRef<boolean>(false);
   const {
     data: sessions,
     isLoading: loadingSessions
@@ -75,6 +77,13 @@ export function FloatingChat() {
 
   // Enable realtime
   useWhatsAppRealtimeConversations();
+
+ // Track user scrolling to avoid auto-scroll interference
+ const handleScrollArea = (e: React.UIEvent<HTMLDivElement>) => {
+   const target = e.currentTarget;
+   const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
+   isUserScrollingRef.current = !isAtBottom;
+ };
 
   // Save hide groups preference
   useEffect(() => {
@@ -119,12 +128,33 @@ export function FloatingChat() {
     }
   }, [pendingPhone, sessions]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom only when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth"
+    const currentLength = messages?.length || 0;
+    const previousLength = previousMessagesLengthRef.current;
+    
+    // Only auto-scroll if new messages arrived and user is not scrolling up
+    if (currentLength > previousLength || previousLength === 0) {
+      if (!isUserScrollingRef.current) {
+        requestAnimationFrame(() => {
+          messagesEndRef.current?.scrollIntoView({
+            behavior: previousLength === 0 ? "instant" : "smooth"
+          });
+        });
+      }
+    }
+    
+    previousMessagesLengthRef.current = currentLength;
+  }, [messages?.length]);
+
+  // Reset scroll state when changing conversations
+  useEffect(() => {
+    previousMessagesLengthRef.current = 0;
+    isUserScrollingRef.current = false;
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
     });
-  }, [messages]);
+  }, [activeConversation?.id]);
 
   // Pre-fill message from pendingMessage when conversation is active
   useEffect(() => {
@@ -398,7 +428,7 @@ export function FloatingChat() {
       </p>
     </div>;
   const MessagesView = () => <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1" onScrollCapture={handleScrollArea}>
         <div className="px-4 py-3">
           {loadingMessages ? <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
