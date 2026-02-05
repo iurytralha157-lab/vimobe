@@ -199,23 +199,28 @@ export function useNotifications() {
     playSound(type, volume);
   }, []);
 
-  // Subscribe to realtime notifications
+  // Subscribe to realtime notifications with exponential backoff
   useEffect(() => {
     if (!profile?.id) return;
 
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
-    const reconnectDelay = 2000;
+    const baseDelay = 1000;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let isUnmounting = false;
 
     const setupChannel = () => {
+      if (isUnmounting) return;
+      
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
 
       console.log('📡 Setting up notifications realtime channel for user:', profile.id);
 
       const channel = supabase
-        .channel(`notifications-realtime-v4-${profile.id}`)
+        .channel(`notifications-realtime-v5-${profile.id}-${Date.now()}`)
         .on(
           'postgres_changes',
           {
@@ -278,10 +283,19 @@ export function useNotifications() {
             reconnectAttempts = 0;
             console.log('✅ Realtime notifications connected successfully!');
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.error('❌ Realtime channel error, attempting reconnect...');
+            if (isUnmounting) return;
+            
             if (reconnectAttempts < maxReconnectAttempts) {
               reconnectAttempts++;
-              setTimeout(() => setupChannel(), reconnectDelay * reconnectAttempts);
+              // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+              const delay = baseDelay * Math.pow(2, reconnectAttempts - 1);
+              console.warn(`⚠️ Realtime channel error, reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+              
+              reconnectTimeout = setTimeout(() => {
+                if (!isUnmounting) setupChannel();
+              }, delay);
+            } else {
+              console.error('❌ Max reconnection attempts reached. Falling back to polling only.');
             }
           } else if (status === 'CLOSED') {
             console.warn('⚠️ Realtime channel closed');
@@ -294,6 +308,8 @@ export function useNotifications() {
     setupChannel();
 
     return () => {
+      isUnmounting = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (channelRef.current) {
         console.log('🔌 Disconnecting notifications channel');
         supabase.removeChannel(channelRef.current);
