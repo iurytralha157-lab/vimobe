@@ -40,11 +40,13 @@ import {
   AlertTriangle,
   TrendingUp,
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { toast } from 'sonner';
 
 const periodOptions = [
+   { value: 'all', label: 'Todos' },
   { value: 'current', label: 'Mês Atual' },
+   { value: 'next', label: 'Próximo Mês' },
   { value: 'last', label: 'Mês Anterior' },
   { value: 'quarter', label: 'Últimos 3 meses' },
 ];
@@ -130,8 +132,12 @@ export default function FinancialReports() {
   const getPeriodDates = () => {
     const now = new Date();
     switch (period) {
+       case 'all':
+         return { start: null, end: null };
       case 'current':
         return { start: startOfMonth(now), end: endOfMonth(now) };
+       case 'next':
+         return { start: startOfMonth(addMonths(now, 1)), end: endOfMonth(addMonths(now, 1)) };
       case 'last':
         return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) };
       case 'quarter':
@@ -141,9 +147,10 @@ export default function FinancialReports() {
     }
   };
 
-  const { start, end } = getPeriodDates();
+  const { start, end } = getPeriodDates() as { start: Date | null; end: Date | null };
 
   const filteredEntries = entries?.filter(e => {
+     if (!start || !end) return true;
     const date = new Date(e.due_date);
     return date >= start && date <= end;
   }) || [];
@@ -159,6 +166,7 @@ export default function FinancialReports() {
   // Filter payments by paid_date instead of due_date
   const paidInPeriod = entries?.filter(e => {
     if (e.status !== 'paid' || !e.paid_date) return false;
+     if (!start || !end) return true;
     const paidDate = new Date(e.paid_date);
     return paidDate >= start && paidDate <= end;
   }) || [];
@@ -172,6 +180,11 @@ export default function FinancialReports() {
   ) || [];
   
   const totalOverdue = overdueEntriesFiltered.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+   // Count entries in other periods for helpful messaging
+   const totalEntriesCount = entries?.length || 0;
+   const filteredEntriesCount = filteredEntries.length;
+   const entriesInOtherPeriods = totalEntriesCount - filteredEntriesCount;
 
   const handleExportExcel = () => {
     let data: any[] = [];
@@ -283,6 +296,18 @@ export default function FinancialReports() {
                 </CardContent>
               </Card>
             </div>
+
+             {filteredEntries.length === 0 && entriesInOtherPeriods > 0 && (
+               <div className="p-4 bg-muted/50 rounded-lg text-center">
+                 <p className="text-sm text-muted-foreground">
+                   Nenhum lançamento no período selecionado.
+                 </p>
+                 <p className="text-sm text-muted-foreground mt-1">
+                   Há <span className="font-medium text-foreground">{entriesInOtherPeriods}</span> lançamento(s) em outros períodos. 
+                   Tente selecionar "Todos" ou outro período.
+                 </p>
+               </div>
+             )}
 
             {isMobile ? (
               <Card>
