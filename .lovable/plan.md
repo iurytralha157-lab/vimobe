@@ -1,180 +1,126 @@
 
-# Plano: Corrigir Visibilidade do Dashboard para Supervisores/Líderes de Equipe
+# Plano: Corrigir Gráfico "Evolução de Clientes" - Telecom
 
 ## Problema Identificado
-O supervisor (Paulo) consegue ver leads na pipeline porque a RLS permite via `get_user_led_pipeline_ids()`, mas o Dashboard mostra tudo zerado porque os hooks de dados usam `checkCanViewAllLeads()` que **não considera líderes de equipe**.
 
-### Fluxo Atual (Quebrado)
-```
-Supervisor → checkCanViewAllLeads() → FALSE (não é admin, não tem lead_view_all)
-→ Busca apenas leads atribuídos a ele mesmo → Dashboard vazio
-```
+O gráfico "Evolução de Clientes" mostra a legenda com totais (Novos 1, Instalados 913, Aguardando 3, Cancelados 83), mas o gráfico em si está vazio/sem linhas.
 
-### Fluxo Correto
-```
-Supervisor → checkCanViewTeamLeads() → TRUE (é líder de equipe)
-→ Busca leads de todos os membros de suas equipes → Dashboard mostra dados da equipe
-```
+### Causa Raiz
+
+A lógica atual do hook `useTelecomEvolutionData`:
+
+1. **Busca clientes criados no período** (últimos 30 dias) - ✅ Correto
+2. **Conta "novos" pela data de criação** - ✅ Funciona
+3. **Conta "instalados" APENAS pela `installation_date`** - ❌ Problema!
+
+**Dados do banco:**
+- 1.236 clientes total
+- 856 clientes **sem** `installation_date` preenchido
+- A maioria das `installation_date` são de 2025 (fora do período)
+- Apenas 2 clientes têm `installation_date` nos últimos 30 dias
+
+**Resultado:** A legenda calcula totais de todos os registros retornados, mas os pontos individuais do gráfico têm valores muito baixos, fazendo as linhas não aparecerem.
 
 ---
 
 ## Solução Proposta
 
-### 1. Criar Nova Função Helper: `checkLeadVisibility`
+Mudar a lógica para um gráfico de evolução mais útil:
 
-**Arquivo:** `src/hooks/use-dashboard-stats.ts`
+### Nova Abordagem: Evolução por Status Atual
 
-Substituir `checkCanViewAllLeads` por uma função mais completa que retorna:
-- `{ canViewAll: true }` para admins/super_admins ou quem tem `lead_view_all`
-- `{ canViewAll: false, teamMemberIds: [...] }` para líderes de equipe
-- `{ canViewAll: false, userId: 'xxx' }` para usuários normais
+Em vez de tentar rastrear quando cada cliente mudou de status (complexo e requer histórico), mostrar a **distribuição atual dos clientes por período de criação**:
 
-```typescript
-interface LeadVisibility {
-  canViewAll: boolean;
-  teamMemberIds?: string[]; // IDs dos membros das equipes lideradas
-  userId?: string; // ID do próprio usuário (quando não pode ver nada além)
-}
-
-async function checkLeadVisibility(userId: string): Promise<LeadVisibility> {
-  // 1. Verificar role
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  
-  if (userData?.role === 'admin' || userData?.role === 'super_admin') {
-    return { canViewAll: true };
-  }
-  
-  // 2. Verificar permissão lead_view_all
-  const { data: hasViewAll } = await supabase.rpc('user_has_permission', {
-    p_permission_key: 'lead_view_all',
-    p_user_id: userId,
-  });
-  
-  if (hasViewAll) {
-    return { canViewAll: true };
-  }
-  
-  // 3. Verificar se é líder de equipe
-  const { data: isLeader } = await supabase.rpc('is_team_leader', { check_user_id: userId });
-  
-  if (isLeader) {
-    // Buscar IDs de todos os membros das equipes que lidera
-    const { data: ledTeamIds } = await supabase.rpc('get_user_led_team_ids');
-    
-    if (ledTeamIds && ledTeamIds.length > 0) {
-      const { data: members } = await supabase
-        .from('team_members')
-        .select('user_id')
-        .in('team_id', ledTeamIds);
-      
-      const memberIds = [...new Set(members?.map(m => m.user_id) || [])];
-      return { canViewAll: false, teamMemberIds: memberIds };
-    }
-  }
-  
-  // 4. Usuário normal - só vê próprios leads
-  return { canViewAll: false, userId };
-}
+```
+Para cada cliente criado no período:
+  - Incrementar o contador do STATUS ATUAL na data de criação
 ```
 
-### 2. Atualizar Hooks de Dashboard
+Isso mostra "quantos clientes criados em cada período estão em cada status hoje".
 
-**Hooks a modificar:**
-- `useEnhancedDashboardStats` 
-- `useFunnelData`
-- `useLeadSourcesData`
-- `useTopBrokers`
-- `useDealsEvolutionData`
-- `useUpcomingTasks`
-
-Para cada hook, substituir a lógica:
-
-```typescript
-// ANTES
-const canViewAll = await checkCanViewAllLeads(userId);
-if (!canViewAll && userId) {
-  query = query.eq('assigned_user_id', userId);
-}
-
-// DEPOIS
-const visibility = await checkLeadVisibility(userId);
-if (!visibility.canViewAll) {
-  if (visibility.teamMemberIds) {
-    // Líder de equipe: ver leads de todos os membros
-    query = query.in('assigned_user_id', visibility.teamMemberIds);
-  } else if (visibility.userId) {
-    // Usuário normal: só próprios leads
-    query = query.eq('assigned_user_id', visibility.userId);
-  }
-}
-```
-
-### 3. Atualizar Hooks do Telecom
+### Mudanças no Hook `useTelecomEvolutionData`
 
 **Arquivo:** `src/hooks/use-telecom-dashboard-stats.ts`
 
-Aplicar a mesma lógica de visibilidade para:
-- `useTelecomDashboardStats`
-- `useTelecomEvolutionData`
-
-Substituir a verificação simples `isAdmin` por `checkLeadVisibility` que considera líderes de equipe.
-
----
-
-## Detalhes Técnicos
-
-### Arquivos a Modificar
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/hooks/use-dashboard-stats.ts` | Criar `checkLeadVisibility`, atualizar todos os hooks |
-| `src/hooks/use-telecom-dashboard-stats.ts` | Importar e usar `checkLeadVisibility` |
-
-### Fluxo de Dados Após Correção
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      checkLeadVisibility()                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Admin/SuperAdmin ──► canViewAll: true ──► Vê todos os dados    │
-│                                                                  │
-│  lead_view_all ──────► canViewAll: true ──► Vê todos os dados   │
-│                                                                  │
-│  Líder de Equipe ────► teamMemberIds ───► Vê dados da equipe    │
-│                                                                  │
-│  Usuário Normal ─────► userId ──────────► Vê só próprios dados  │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+```typescript
+customers.forEach((customer) => {
+  const createdDate = parseISO(customer.created_at);
+  const key = getIntervalKey(createdDate);
+  const point = grouped.get(key);
+  
+  if (point) {
+    // Mapear status para o campo correto
+    const status = customer.status?.toLowerCase();
+    
+    switch (status) {
+      case 'novo':
+      case 'novos':
+        point.novos++;
+        break;
+      case 'instalados':
+      case 'instalado':
+        point.instalados++;
+        break;
+      case 'aguardando':
+        point.aguardando++;
+        break;
+      case 'em_analise':
+      case 'em análise':
+        point.em_analise++;
+        break;
+      case 'cancelado':
+      case 'cancelados':
+        point.cancelado++;
+        break;
+      case 'suspenso':
+      case 'suspensos':
+        point.suspenso++;
+        break;
+      case 'inadimplente':
+      case 'inadimplentes':
+        point.inadimplente++;
+        break;
+      default:
+        // Status não mapeado, pode ser "novo" por padrão
+        point.novos++;
+    }
+  }
+});
 ```
 
 ---
 
 ## Resultado Esperado
 
-1. **Supervisor Paulo** verá no dashboard:
-   - KPIs agregados de todos os leads da sua equipe
-   - Funil de vendas com leads da equipe
-   - Origens de leads da equipe
-   - Evolução de clientes da equipe
-   - Top corretores (apenas da sua equipe)
+O gráfico vai mostrar:
+- **Linha Azul (Novos):** Clientes com status NOVO criados em cada período
+- **Linha Verde (Instalados):** Clientes com status INSTALADOS criados em cada período
+- **Linha Amarela (Aguardando):** Clientes com status AGUARDANDO criados em cada período
+- etc.
 
-2. **Administrador** continua vendo todos os dados
-
-3. **Corretor comum** continua vendo apenas seus próprios dados
+A legenda continuará mostrando os totais corretos, e as linhas do gráfico vão corresponder a esses totais.
 
 ---
 
-## Considerações de Performance
+## Detalhes Técnicos
 
-A função `checkLeadVisibility` faz até 4 queries adicionais para líderes:
-1. Buscar role do usuário
-2. Verificar permissão `lead_view_all`
-3. Verificar se é líder (`is_team_leader`)
-4. Buscar IDs dos membros das equipes
+### Arquivo a Modificar
+- `src/hooks/use-telecom-dashboard-stats.ts`
 
-Para otimizar, o resultado pode ser cacheado na queryKey do React Query, evitando refetch desnecessário.
+### Alteração na Query
+Adicionar o campo `status` na query:
+```typescript
+.select('created_at, status, installation_date')
+// Já está incluindo status ✅
+```
+
+### Alteração na Lógica de Agrupamento
+Substituir a lógica atual (linhas 223-245) pela nova lógica que agrupa por status atual do cliente.
+
+---
+
+## Alternativa Considerada
+
+**Snapshot Acumulativo:** Mostrar o total acumulado de clientes por status ao longo do tempo. Isso seria mais complexo e exigiria buscar histórico de mudanças de status (que não existe estruturado no banco).
+
+A solução proposta é mais simples e mostra uma visão útil: "Quando os clientes foram criados e qual seu status atual".
