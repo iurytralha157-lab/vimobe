@@ -264,12 +264,12 @@ export default function PropertyLocations() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-4">
                   <CardTitle className="text-lg">Bairros</CardTitle>
-                  <Select value={selectedCityId} onValueChange={setSelectedCityId}>
+                  <Select value={selectedCityId || "__all__"} onValueChange={(v) => setSelectedCityId(v === "__all__" ? "" : v)}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filtrar por cidade" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas as cidades</SelectItem>
+                      <SelectItem value="__all__">Todas as cidades</SelectItem>
                       {cities.map(city => (
                         <SelectItem key={city.id} value={city.id}>
                           {city.name} {city.uf && `(${city.uf})`}
@@ -380,12 +380,12 @@ export default function PropertyLocations() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex items-center gap-4">
                   <CardTitle className="text-lg">Condomínios</CardTitle>
-                  <Select value={selectedNeighborhoodId} onValueChange={setSelectedNeighborhoodId}>
+                  <Select value={selectedNeighborhoodId || "__all__"} onValueChange={(v) => setSelectedNeighborhoodId(v === "__all__" ? "" : v)}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filtrar por bairro" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os bairros</SelectItem>
+                      <SelectItem value="__all__">Todos os bairros</SelectItem>
                       {neighborhoods.map(n => (
                         <SelectItem key={n.id} value={n.id}>{n.name}</SelectItem>
                       ))}
