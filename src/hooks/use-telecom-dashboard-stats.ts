@@ -27,10 +27,11 @@ export interface TelecomEvolutionPoint {
 }
 
 interface DashboardFilters {
+  dateRange?: { from: Date; to: Date };
   dateFrom?: Date;
   dateTo?: Date;
-  teamId?: string;
-  userId?: string;
+  teamId?: string | null;
+  userId?: string | null;
 }
 
 export function useTelecomDashboardStats(filters?: DashboardFilters) {
@@ -151,9 +152,9 @@ export function useTelecomEvolutionData(filters?: DashboardFilters) {
       // Get visibility level (admin, team leader, or normal user)
       const visibility = await checkLeadVisibility(profile.id);
 
-      // Determine date range
-      const dateTo = filters?.dateTo || new Date();
-      const dateFrom = filters?.dateFrom || new Date(dateTo.getTime() - 30 * 24 * 60 * 60 * 1000);
+      // Determine date range - support both dateRange and dateFrom/dateTo formats
+      const dateTo = filters?.dateRange?.to || filters?.dateTo || new Date();
+      const dateFrom = filters?.dateRange?.from || filters?.dateFrom || new Date(dateTo.getTime() - 30 * 24 * 60 * 60 * 1000);
 
       // Build query
       let query = supabase
