@@ -312,9 +312,9 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             pipeline_id: pipelineId, 
             to_stage_id: stageId 
           } : {}),
-          filter_user_id: filterUserId || null,
+          filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
           stop_on_reply: stopOnReply,
-          on_reply_move_to_stage_id: stopOnReply ? (onReplyStageId || null) : null,
+          on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
         },
       });
 
@@ -339,9 +339,9 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               tag_id: tagId, 
               pipeline_id: pipelineId, 
               to_stage_id: stageId,
-              filter_user_id: filterUserId || null,
+              filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
-              on_reply_move_to_stage_id: stopOnReply ? (onReplyStageId || null) : null,
+              on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
             },
             position_x: Math.round(node.position.x),
             position_y: Math.round(node.position.y),
