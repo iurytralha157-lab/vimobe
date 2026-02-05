@@ -1,126 +1,97 @@
 
-# Plano: Corrigir Gráfico "Evolução de Clientes" - Telecom
+# Plano: Corrigir Gráfico "Evolução de Clientes" Telecom
 
-## Problema Identificado
+## Problema Raiz Identificado
 
-O gráfico "Evolução de Clientes" mostra a legenda com totais (Novos 1, Instalados 913, Aguardando 3, Cancelados 83), mas o gráfico em si está vazio/sem linhas.
+O gráfico de barras está sendo renderizado, mas as barras são **invisíveis** porque:
 
-### Causa Raiz
+1. **30 barras muito finas**: Com 30 dias no eixo X, cada barra tem apenas ~20px de largura
+2. **Valores muito baixos**: Com apenas 1-7 clientes por dia, as barras têm altura de poucos pixels
+3. **Container sem altura fixa**: O container usa `min-h-[200px]` mas sem altura fixa, pode estar comprimido
+4. **Escala Y inadequada**: O Recharts pode estar usando uma escala que torna valores pequenos invisíveis
 
-A lógica atual do hook `useTelecomEvolutionData`:
-
-1. **Busca clientes criados no período** (últimos 30 dias) - ✅ Correto
-2. **Conta "novos" pela data de criação** - ✅ Funciona
-3. **Conta "instalados" APENAS pela `installation_date`** - ❌ Problema!
-
-**Dados do banco:**
-- 1.236 clientes total
-- 856 clientes **sem** `installation_date` preenchido
-- A maioria das `installation_date` são de 2025 (fora do período)
-- Apenas 2 clientes têm `installation_date` nos últimos 30 dias
-
-**Resultado:** A legenda calcula totais de todos os registros retornados, mas os pontos individuais do gráfico têm valores muito baixos, fazendo as linhas não aparecerem.
+### Dados Reais do Paulo (15 clientes):
+- 6 Novos, 2 Instalados, 7 Aguardando
+- Espalhados em apenas 3-4 dias dos últimos 30
 
 ---
 
-## Solução Proposta
+## Solução: Mudar para AreaChart (igual ao Imobiliário)
 
-Mudar a lógica para um gráfico de evolução mais útil:
+O `AreaChart` com linhas funciona muito melhor para dados esparsos porque:
+- Linhas conectam os pontos e são sempre visíveis
+- Áreas preenchidas dão feedback visual mesmo com poucos dados
+- Funciona bem com muitos pontos no eixo X
 
-### Nova Abordagem: Evolução por Status Atual
+### Mudanças no Componente
 
-Em vez de tentar rastrear quando cada cliente mudou de status (complexo e requer histórico), mostrar a **distribuição atual dos clientes por período de criação**:
-
-```
-Para cada cliente criado no período:
-  - Incrementar o contador do STATUS ATUAL na data de criação
-```
-
-Isso mostra "quantos clientes criados em cada período estão em cada status hoje".
-
-### Mudanças no Hook `useTelecomEvolutionData`
-
-**Arquivo:** `src/hooks/use-telecom-dashboard-stats.ts`
+**Arquivo:** `src/components/dashboard/TelecomEvolutionChart.tsx`
 
 ```typescript
-customers.forEach((customer) => {
-  const createdDate = parseISO(customer.created_at);
-  const key = getIntervalKey(createdDate);
-  const point = grouped.get(key);
-  
-  if (point) {
-    // Mapear status para o campo correto
-    const status = customer.status?.toLowerCase();
-    
-    switch (status) {
-      case 'novo':
-      case 'novos':
-        point.novos++;
-        break;
-      case 'instalados':
-      case 'instalado':
-        point.instalados++;
-        break;
-      case 'aguardando':
-        point.aguardando++;
-        break;
-      case 'em_analise':
-      case 'em análise':
-        point.em_analise++;
-        break;
-      case 'cancelado':
-      case 'cancelados':
-        point.cancelado++;
-        break;
-      case 'suspenso':
-      case 'suspensos':
-        point.suspenso++;
-        break;
-      case 'inadimplente':
-      case 'inadimplentes':
-        point.inadimplente++;
-        break;
-      default:
-        // Status não mapeado, pode ser "novo" por padrão
-        point.novos++;
-    }
-  }
-});
+// Trocar BarChart por AreaChart (igual ao DealsEvolutionChart)
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+
+// Adicionar gradientes para cada status
+<defs>
+  <linearGradient id="gradientNovos" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4} />
+    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+  </linearGradient>
+  <linearGradient id="gradientInstalados" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="5%" stopColor="#22C55E" stopOpacity={0.4} />
+    <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
+  </linearGradient>
+  // ... outros gradientes
+</defs>
+
+// Usar Area em vez de Bar
+<Area
+  type="monotone"
+  dataKey="novos"
+  stroke="#3B82F6"
+  strokeWidth={2}
+  fill="url(#gradientNovos)"
+  dot={false}
+/>
 ```
 
----
+### Mudança de Altura
 
-## Resultado Esperado
-
-O gráfico vai mostrar:
-- **Linha Azul (Novos):** Clientes com status NOVO criados em cada período
-- **Linha Verde (Instalados):** Clientes com status INSTALADOS criados em cada período
-- **Linha Amarela (Aguardando):** Clientes com status AGUARDANDO criados em cada período
-- etc.
-
-A legenda continuará mostrando os totais corretos, e as linhas do gráfico vão corresponder a esses totais.
-
----
-
-## Detalhes Técnicos
-
-### Arquivo a Modificar
-- `src/hooks/use-telecom-dashboard-stats.ts`
-
-### Alteração na Query
-Adicionar o campo `status` na query:
 ```typescript
-.select('created_at, status, installation_date')
-// Já está incluindo status ✅
+// Altura fixa igual ao gráfico que funciona
+<div className="flex-1 min-h-[220px] h-[220px] sm:h-auto">
 ```
-
-### Alteração na Lógica de Agrupamento
-Substituir a lógica atual (linhas 223-245) pela nova lógica que agrupa por status atual do cliente.
 
 ---
 
-## Alternativa Considerada
+## Alternativa: Otimizar BarChart
 
-**Snapshot Acumulativo:** Mostrar o total acumulado de clientes por status ao longo do tempo. Isso seria mais complexo e exigiria buscar histórico de mudanças de status (que não existe estruturado no banco).
+Se preferir manter barras, ajustar:
 
-A solução proposta é mais simples e mostra uma visão útil: "Quando os clientes foram criados e qual seu status atual".
+1. **Altura fixa do container**
+2. **Largura mínima das barras** via `barSize={12}`
+3. **Escala Y com domínio mínimo** via `domain={[0, 'auto']}`
+4. **Reduzir intervalos** (semanal em vez de diário para 30 dias)
+
+---
+
+## Recomendação
+
+**Usar AreaChart** - é a mesma abordagem do gráfico imobiliário que funciona perfeitamente. O código será mais consistente e o resultado visual garantido.
+
+---
+
+## Resumo das Alterações
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/dashboard/TelecomEvolutionChart.tsx` | Substituir BarChart por AreaChart, adicionar gradientes, altura fixa |
+
