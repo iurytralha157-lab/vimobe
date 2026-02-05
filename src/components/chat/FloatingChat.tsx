@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useFloatingChat } from "@/contexts/FloatingChatContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Video, FileText, User, Phone, Users, Paperclip, Image, Mic } from "lucide-react";
+import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Video, FileText, User, Phone, Users, Paperclip, Image, Mic, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, WhatsAppConversation, WhatsAppMessage } from "@/hooks/use-whatsapp-conversations";
@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
+import { useNavigate } from "react-router-dom";
 
 export function FloatingChat() {
   const {
@@ -74,6 +75,7 @@ export function FloatingChat() {
   const startConversation = useStartConversation();
   const findConversation = useFindConversationByPhone();
   const { data: hasWhatsAppAccess, isLoading: loadingWhatsAppAccess } = useHasWhatsAppAccess();
+  const navigate = useNavigate();
 
   // Enable realtime
   useWhatsAppRealtimeConversations();
@@ -217,11 +219,21 @@ export function FloatingChat() {
       console.error("Error starting conversation:", error);
     }
   };
-  const filteredConversations = conversations?.filter(conv => {
+  // Memoize filtered conversations to prevent re-renders that cause input focus loss
+  const filteredConversations = useMemo(() => {
+    return conversations?.filter(conv => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return conv.contact_name?.toLowerCase().includes(search) || conv.contact_phone?.includes(search);
   });
+  }, [conversations, searchTerm]);
+
+  const handleViewLead = (leadId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    closeChat();
+    navigate(`/crm/pipelines?lead=${leadId}`);
+  };
+
   const handleSendMessage = async () => {
     const textToSend = messageText.trim();
     if (!textToSend || !activeConversation) return;
@@ -494,7 +506,13 @@ export function FloatingChat() {
         </Select>}
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9" />
+        <Input 
+          placeholder="Buscar conversas..." 
+          value={searchTerm} 
+          onChange={e => setSearchTerm(e.target.value)} 
+          className="pl-8 h-9"
+          autoComplete="off"
+        />
       </div>
       <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
         <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
@@ -506,10 +524,10 @@ export function FloatingChat() {
         <div className="flex flex-col w-full max-w-full">
           {loadingConversations || loadingSessions ? <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div> : filteredConversations?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
+            </div> : !filteredConversations || filteredConversations.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
               <MessageCircle className="h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground text-sm">Nenhuma conversa</p>
-            </div> : filteredConversations?.map(conv => <div key={conv.id} className="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-accent hover:shadow-sm transition-all duration-200 border-b border-border active:bg-accent w-full max-w-full overflow-hidden box-border" onClick={() => openConversation(conv)}>
+            </div> : filteredConversations.map(conv => <div key={conv.id} className="group flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-accent hover:shadow-sm transition-all duration-200 border-b border-border active:bg-accent w-full max-w-full overflow-hidden box-border relative" onClick={() => openConversation(conv)}>
                 <Avatar className="h-12 w-12 shrink-0 ring-2 ring-background shadow-sm">
                   <AvatarImage src={conv.contact_picture || undefined} />
                   <AvatarFallback className="text-sm bg-primary/10 text-primary">
@@ -530,9 +548,22 @@ export function FloatingChat() {
                           Grupo
                         </Badge>}
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {conv.lead && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleViewLead(conv.lead!.id, e)}
+                          title="Ver lead no Pipeline"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {formatConversationTime(conv.last_message_at)}
-                    </span>
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-1 w-full overflow-hidden">
                     <p className="text-xs text-muted-foreground truncate flex-1 min-w-0" style={{
@@ -545,18 +576,29 @@ export function FloatingChat() {
                       </Badge>}
                   </div>
                   {/* Tags do lead */}
-                  {conv.lead?.tags && conv.lead.tags.length > 0 && <div className="flex items-center gap-1 mt-1">
-                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 font-medium truncate max-w-[100px]" style={{
-                backgroundColor: `${conv.lead.tags[0].tag.color}20`,
-                color: conv.lead.tags[0].tag.color,
-                borderColor: conv.lead.tags[0].tag.color
-              }}>
-                        {conv.lead.tags[0].tag.name}
-                      </Badge>
-                      {conv.lead.tags.length > 1 && <span className="text-[9px] text-muted-foreground">
-                          +{conv.lead.tags.length - 1}
-                        </span>}
-                    </div>}
+                  {conv.lead?.tags && conv.lead.tags.length > 0 && (
+                    <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                      {conv.lead.tags.slice(0, 2).map((lt, idx) => (
+                        <Badge 
+                          key={idx}
+                          variant="secondary" 
+                          className="text-[9px] px-1.5 py-0 h-4 font-medium truncate max-w-[80px]" 
+                          style={{
+                            backgroundColor: `${lt.tag.color}20`,
+                            color: lt.tag.color,
+                            borderColor: lt.tag.color
+                          }}
+                        >
+                          {lt.tag.name}
+                        </Badge>
+                      ))}
+                      {conv.lead.tags.length > 2 && (
+                        <span className="text-[9px] text-muted-foreground">
+                          +{conv.lead.tags.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>)}
         </div>
