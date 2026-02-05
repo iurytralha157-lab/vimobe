@@ -18,7 +18,8 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Camera
 } from "lucide-react";
 import { 
   useWhatsAppSessions, 
@@ -58,6 +59,7 @@ export function WhatsAppTab() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRefreshingQr, setIsRefreshingQr] = useState(false);
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
+  const [syncingPictures, setSyncingPictures] = useState(false);
 
   // Refs para evitar stale closures no polling
   const selectedSessionRef = useRef(selectedSession);
@@ -124,6 +126,54 @@ export function WhatsAppTab() {
       toast({ title: "Erro", description: "Não foi possível verificar a conexão", variant: "destructive" });
     } finally {
       setVerifyingSessionId(null);
+    }
+  };
+
+  const handleSyncProfilePictures = async () => {
+    if (!profile?.organization_id) return;
+    
+    setSyncingPictures(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+        body: { 
+          action: "fetchBulkProfilePictures", 
+          organizationId: profile.organization_id,
+          limit: 100
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data?.success) {
+        const updated = data.data?.updated || 0;
+        const total = data.data?.total || 0;
+        
+        if (updated > 0) {
+          toast({ 
+            title: "Fotos sincronizadas", 
+            description: `${updated} de ${total} fotos de perfil atualizadas` 
+          });
+          // Invalidar queries para atualizar a UI
+          queryClient.invalidateQueries({ queryKey: ["stages"] });
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+        } else {
+          toast({ 
+            title: "Nenhuma foto nova", 
+            description: data.data?.message || "Todas as conversas já possuem fotos" 
+          });
+        }
+      } else {
+        throw new Error(data?.error || "Erro desconhecido");
+      }
+    } catch (error) {
+      console.error("Error syncing pictures:", error);
+      toast({ 
+        title: "Erro ao sincronizar", 
+        description: "Não foi possível buscar as fotos de perfil", 
+        variant: "destructive" 
+      });
+    } finally {
+      setSyncingPictures(false);
     }
   };
 
@@ -247,10 +297,24 @@ export function WhatsAppTab() {
             Gerencie suas conexões de WhatsApp via Evolution API
           </CardDescription>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Conexão
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSyncProfilePictures}
+            disabled={syncingPictures || !sessions?.some(s => s.status === "connected")}
+          >
+            {syncingPictures ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Camera className="w-4 h-4 mr-2" />
+            )}
+            Sincronizar Fotos
+          </Button>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Conexão
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (

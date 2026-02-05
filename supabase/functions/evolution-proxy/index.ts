@@ -32,6 +32,10 @@ Deno.serve(async (req) => {
     const { action, ...params } = await req.json();
     console.log(`Evolution proxy action: ${action}`, params);
 
+    // Initialize Supabase client for actions that need it
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
     let result: EvolutionResponse;
 
     switch (action) {
@@ -96,6 +100,10 @@ Deno.serve(async (req) => {
 
       case "fetchAllGroups":
         result = await fetchAllGroups(EVOLUTION_API_URL, EVOLUTION_API_KEY, params.instanceName);
+        break;
+
+      case "fetchBulkProfilePictures":
+        result = await fetchBulkProfilePictures(EVOLUTION_API_URL, EVOLUTION_API_KEY, supabase, params);
         break;
 
       default:
@@ -779,4 +787,60 @@ async function fetchAllGroups(apiUrl: string, apiKey: string, instanceName: stri
     console.error("Fetch all groups error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
+}
+
+async function fetchBulkProfilePictures(apiUrl: string, apiKey: string, supabase: any, params: any): Promise<EvolutionResponse> {
+  const { organizationId, limit = 50 } = params;
+  if (!organizationId) return { success: false, error: "organizationId is required" };
+
+  console.log("Fetching bulk profile pictures for organization:", organizationId);
+
+  const { data: sessions } = await supabase
+    .from("whatsapp_sessions")
+    .select("id, instance_name")
+    .eq("organization_id", organizationId)
+    .eq("status", "connected");
+
+  if (!sessions?.length) return { success: true, data: { updated: 0, message: "No connected sessions" } };
+
+  const sessionIds = sessions.map((s: any) => s.id);
+  const { data: conversations } = await supabase
+    .from("whatsapp_conversations")
+    .select("id, contact_phone, session_id")
+    .in("session_id", sessionIds)
+    .is("contact_picture", null)
+    .eq("is_group", false)
+    .not("contact_phone", "is", null)
+    .order("last_message_at", { ascending: false })
+    .limit(limit);
+
+  if (!conversations?.length) return { success: true, data: { updated: 0, message: "All have pictures" } };
+
+  const sessionMap = new Map(sessions.map((s: any) => [s.id, s.instance_name]));
+  let updated = 0;
+
+  for (const conv of conversations) {
+    const instanceName = sessionMap.get(conv.session_id);
+    if (!instanceName) continue;
+    const formattedPhone = conv.contact_phone.replace(/\D/g, "");
+    try {
+      const response = await fetch(`${apiUrl}/chat/fetchProfilePictureUrl/${instanceName}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: apiKey },
+        body: JSON.stringify({ number: formattedPhone }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const pictureUrl = data.profilePictureUrl || data.wpiUrl;
+        if (pictureUrl) {
+          await supabase.from("whatsapp_conversations").update({ contact_picture: pictureUrl }).eq("id", conv.id);
+          updated++;
+        }
+      }
+    } catch (e) { console.log("Error fetching picture:", e); }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+
+  console.log("Updated", updated, "profile pictures");
+  return { success: true, data: { updated, total: conversations.length } };
 }
