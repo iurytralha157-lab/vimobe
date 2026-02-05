@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, SyntheticEvent } from "react";
-import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video } from "lucide-react";
+import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video, Volume2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,7 @@ export function MessageBubble({
   const [audioError, setAudioError] = useState<string | null>(null);
   const [audioReady, setAudioReady] = useState(false);
   const [mediaChecked, setMediaChecked] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
   
   // Waveform bars generated from mediaUrl or sentAt as seed
@@ -147,11 +148,24 @@ export function MessageBubble({
     return url.startsWith("http://") || url.startsWith("https://");
   };
 
+  const playbackRates = [1, 1.5, 2];
+  
+  const cyclePlaybackRate = () => {
+    const currentIndex = playbackRates.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % playbackRates.length;
+    const newRate = playbackRates[nextIndex];
+    setPlaybackRate(newRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = newRate;
+    }
+  };
+
   const handleAudioPlay = () => {
     if (audioRef.current && !audioError) {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
+        audioRef.current.playbackRate = playbackRate;
         audioRef.current.play().catch(err => {
           console.error('[Audio Play Error]', err);
           setAudioError('Erro ao reproduzir');
@@ -286,7 +300,8 @@ export function MessageBubble({
     const hasValidMedia = isValidMediaUrl(mediaUrl);
     
     if (hasValidMedia) {
-      const playedBars = Math.floor((audioProgress / 100) * waveformBars.length);
+      const progressPercent = audioProgress || 0;
+      const playedBars = Math.floor((progressPercent / 100) * waveformBars.length);
       
       // If there's an error, show fallback with download button
       if (audioError) {
@@ -329,68 +344,102 @@ export function MessageBubble({
       
       return (
         <div className={cn(
-          "flex items-center gap-2 py-1.5 px-1 min-w-[280px]",
+          "flex items-center gap-2 py-1.5 px-2 min-w-[280px]",
         )}>
-          {/* Play/Pause Button */}
+          {/* Speed Control Button - only show when playing or has progress */}
+          <button
+            onClick={cyclePlaybackRate}
+            className={cn(
+              "h-7 px-2 rounded-full text-xs font-medium shrink-0 transition-colors",
+              fromMe 
+                ? "bg-primary-foreground/20 hover:bg-primary-foreground/30" 
+                : "bg-muted-foreground/15 hover:bg-muted-foreground/25"
+            )}
+          >
+            {playbackRate}x
+          </button>
+          
+          {/* Play/Pause Button */}  
           <button
             onClick={handleAudioPlay}
             className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors",
+              "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors",
               fromMe 
                 ? "bg-primary-foreground/20 hover:bg-primary-foreground/30" 
                 : "bg-primary/15 hover:bg-primary/25"
             )}
           >
             {isPlaying ? (
-              <Pause className="w-5 h-5" />
+              <Pause className="w-4 h-4" />
             ) : (
-              <Play className="w-5 h-5 ml-0.5" />
+              <Play className="w-4 h-4 ml-0.5" />
             )}
           </button>
           
-          {/* Waveform */}
+          {/* Waveform with progress indicator */}
           <div className="flex-1 flex flex-col gap-1">
-            <div 
-              className="flex items-center gap-[2px] h-[32px] cursor-pointer"
-              onClick={handleWaveformClick}
-            >
-              {waveformBars.map((height, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "w-[3px] rounded-full transition-colors duration-150",
-                    index < playedBars
-                      ? fromMe 
-                        ? "bg-primary-foreground/80" 
-                        : "bg-primary/80"
-                      : fromMe 
-                        ? "bg-primary-foreground/30" 
-                        : "bg-primary/30"
-                  )}
-                  style={{ height: `${height * 100}%` }}
-                />
-              ))}
+            <div className="relative h-[28px] flex items-center">
+              {/* Waveform container */}
+              <div 
+                className="flex items-center gap-[2px] h-full w-full cursor-pointer"
+                onClick={handleWaveformClick}
+              >
+                {waveformBars.map((height, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "w-[3px] rounded-full transition-colors duration-100",
+                      index < playedBars
+                        ? fromMe 
+                          ? "bg-primary-foreground" 
+                          : "bg-primary"
+                        : fromMe 
+                          ? "bg-primary-foreground/30" 
+                          : "bg-primary/30"
+                    )}
+                    style={{ height: `${Math.max(height * 100, 15)}%` }}
+                  />
+                ))}
+              </div>
+              
+              {/* Progress indicator dot */}
+              <div 
+                className={cn(
+                  "absolute w-3 h-3 rounded-full shadow-sm transition-all duration-100 pointer-events-none",
+                  fromMe ? "bg-primary-foreground" : "bg-primary"
+                )}
+                style={{ 
+                  left: `calc(${progressPercent}% - 6px)`,
+                  top: '50%',
+                  transform: 'translateY(-50%)'
+                }}
+              />
             </div>
             
-            {/* Duration */}
+            {/* Time indicators */}
             <div className="flex items-center justify-between">
               <span className={cn(
                 "text-[11px]",
                 fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
               )}>
-                {isPlaying || currentTime > 0 
-                  ? formatDuration(currentTime) 
-                  : formatDuration(audioDuration)
-                }
+                {formatDuration(currentTime)}
               </span>
               <span className={cn(
-                "flex items-center gap-1",
+                "text-[11px]",
                 fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
               )}>
-                <span className="text-[11px]">{formatTime(sentAt)}</span>
-                {getStatusIcon()}
+                {formatDuration(audioDuration)}
               </span>
             </div>
+          </div>
+          
+          {/* Message timestamp and status */}
+          <div className={cn(
+            "flex items-center gap-1 shrink-0",
+            fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+          )}>
+            <span className="text-[11px]">{formatTime(sentAt)}</span>
+            {getStatusIcon()}
           </div>
           
           <audio
@@ -399,8 +448,9 @@ export function MessageBubble({
             preload="metadata"
             onEnded={() => {
               setIsPlaying(false);
-              setAudioProgress(0);
-              setCurrentTime(0);
+              // Don't reset progress - keep it at the end
+              setAudioProgress(100);
+              setCurrentTime(audioDuration);
             }}
             onTimeUpdate={handleAudioTimeUpdate}
             onLoadedMetadata={handleAudioLoadedMetadata}
