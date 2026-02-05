@@ -65,13 +65,53 @@ export interface FirstResponseFilters {
   slaSeconds?: number; // Default 600 (10 minutes)
 }
 
-// Placeholder for first response metrics - columns don't exist yet
+// Query real first response metrics from leads table
 export function useFirstResponseMetrics(filters: FirstResponseFilters = {}) {
   return useQuery({
     queryKey: ['first-response-metrics', filters],
     queryFn: async (): Promise<FirstResponseMetrics> => {
-      // Return empty metrics until first_response_* columns are added to leads table
-      return { average: 0, median: 0, count: 0, withinSla: 0, slaPercentage: 0 };
+      const slaSeconds = filters.slaSeconds || 600; // Default 10 minutes
+      
+      let query = supabase
+        .from('leads')
+        .select('first_response_seconds')
+        .not('first_response_seconds', 'is', null);
+      
+      if (filters.userId) {
+        query = query.eq('first_response_actor_user_id', filters.userId);
+      }
+      
+      if (filters.pipelineId) {
+        query = query.eq('pipeline_id', filters.pipelineId);
+      }
+      
+      if (filters.dateFrom) {
+        query = query.gte('first_response_at', filters.dateFrom);
+      }
+      
+      if (filters.dateTo) {
+        query = query.lte('first_response_at', filters.dateTo);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        return { average: 0, median: 0, count: 0, withinSla: 0, slaPercentage: 0 };
+      }
+      
+      const seconds = data.map(d => d.first_response_seconds!).sort((a, b) => a - b);
+      const count = seconds.length;
+      const sum = seconds.reduce((acc, s) => acc + s, 0);
+      const average = Math.round(sum / count);
+      const median = count % 2 === 0
+        ? Math.round((seconds[count / 2 - 1] + seconds[count / 2]) / 2)
+        : seconds[Math.floor(count / 2)];
+      const withinSla = seconds.filter(s => s <= slaSeconds).length;
+      const slaPercentage = Math.round((withinSla / count) * 100);
+      
+      return { average, median, count, withinSla, slaPercentage };
     }
   });
 }
@@ -86,13 +126,86 @@ export interface UserFirstResponseRanking {
   slaPercentage: number;
 }
 
-// Placeholder for first response ranking - columns don't exist yet
+// Query real first response ranking from leads table
 export function useFirstResponseRanking(filters: Omit<FirstResponseFilters, 'userId'> = {}) {
   return useQuery({
     queryKey: ['first-response-ranking', filters],
     queryFn: async (): Promise<UserFirstResponseRanking[]> => {
-      // Return empty rankings until first_response_* columns are added to leads table
-      return [];
+      const slaSeconds = filters.slaSeconds || 600; // Default 10 minutes
+      
+      let query = supabase
+        .from('leads')
+        .select(`
+          first_response_seconds,
+          first_response_actor_user_id,
+          actor:users!leads_first_response_actor_user_id_fkey(id, name, avatar_url)
+        `)
+        .not('first_response_seconds', 'is', null)
+        .not('first_response_actor_user_id', 'is', null);
+      
+      if (filters.pipelineId) {
+        query = query.eq('pipeline_id', filters.pipelineId);
+      }
+      
+      if (filters.dateFrom) {
+        query = query.gte('first_response_at', filters.dateFrom);
+      }
+      
+      if (filters.dateTo) {
+        query = query.lte('first_response_at', filters.dateTo);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching first response ranking:', error);
+        return [];
+      }
+      
+      if (!data || data.length === 0) {
+        return [];
+      }
+      
+      // Group by user
+      const userMap = new Map<string, { seconds: number[]; user: any }>();
+      
+      data.forEach((lead: any) => {
+        const userId = lead.first_response_actor_user_id;
+        if (!userMap.has(userId)) {
+          userMap.set(userId, { seconds: [], user: lead.actor });
+        }
+        userMap.get(userId)!.seconds.push(lead.first_response_seconds);
+      });
+      
+      // Calculate stats per user
+      const rankings: UserFirstResponseRanking[] = [];
+      
+      userMap.forEach((data, userId) => {
+        const seconds = data.seconds.sort((a, b) => a - b);
+        const count = seconds.length;
+        const sum = seconds.reduce((acc, s) => acc + s, 0);
+        const average = Math.round(sum / count);
+        const median = count % 2 === 0
+          ? Math.round((seconds[count / 2 - 1] + seconds[count / 2]) / 2)
+          : seconds[Math.floor(count / 2)];
+        const withinSla = seconds.filter(s => s <= slaSeconds).length;
+        const slaPercentage = Math.round((withinSla / count) * 100);
+        
+        rankings.push({
+          userId,
+          userName: data.user?.name || 'Desconhecido',
+          userAvatar: data.user?.avatar_url || null,
+          average,
+          median,
+          count,
+          slaPercentage,
+        });
+      });
+      
+      // Sort by average (fastest first)
+      rankings.sort((a, b) => a.average - b.average);
+      
+      return rankings;
     }
   });
 }

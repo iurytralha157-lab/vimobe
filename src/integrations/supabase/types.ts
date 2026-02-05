@@ -1909,7 +1909,15 @@ export type Database = {
           created_at: string
           deal_status: string | null
           email: string | null
+          first_response_actor_user_id: string | null
+          first_response_at: string | null
+          first_response_channel: string | null
+          first_response_is_automation: boolean | null
+          first_response_seconds: number | null
+          first_touch_actor_user_id: string | null
           first_touch_at: string | null
+          first_touch_channel: string | null
+          first_touch_seconds: number | null
           id: string
           interest_plan_id: string | null
           interest_property_id: string | null
@@ -1939,7 +1947,15 @@ export type Database = {
           created_at?: string
           deal_status?: string | null
           email?: string | null
+          first_response_actor_user_id?: string | null
+          first_response_at?: string | null
+          first_response_channel?: string | null
+          first_response_is_automation?: boolean | null
+          first_response_seconds?: number | null
+          first_touch_actor_user_id?: string | null
           first_touch_at?: string | null
+          first_touch_channel?: string | null
+          first_touch_seconds?: number | null
           id?: string
           interest_plan_id?: string | null
           interest_property_id?: string | null
@@ -1969,7 +1985,15 @@ export type Database = {
           created_at?: string
           deal_status?: string | null
           email?: string | null
+          first_response_actor_user_id?: string | null
+          first_response_at?: string | null
+          first_response_channel?: string | null
+          first_response_is_automation?: boolean | null
+          first_response_seconds?: number | null
+          first_touch_actor_user_id?: string | null
           first_touch_at?: string | null
+          first_touch_channel?: string | null
+          first_touch_seconds?: number | null
           id?: string
           interest_plan_id?: string | null
           interest_property_id?: string | null
@@ -1996,6 +2020,20 @@ export type Database = {
           {
             foreignKeyName: "leads_assigned_user_id_fkey"
             columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_first_response_actor_user_id_fkey"
+            columns: ["first_response_actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_first_touch_actor_user_id_fkey"
+            columns: ["first_touch_actor_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -2739,7 +2777,9 @@ export type Database = {
         Row: {
           created_at: string
           default_round_robin_id: string | null
+          first_response_start: string | null
           id: string
+          include_automation_in_first_response: boolean | null
           is_default: boolean | null
           name: string
           organization_id: string
@@ -2750,7 +2790,9 @@ export type Database = {
         Insert: {
           created_at?: string
           default_round_robin_id?: string | null
+          first_response_start?: string | null
           id?: string
+          include_automation_in_first_response?: boolean | null
           is_default?: boolean | null
           name: string
           organization_id: string
@@ -2761,7 +2803,9 @@ export type Database = {
         Update: {
           created_at?: string
           default_round_robin_id?: string | null
+          first_response_start?: string | null
           id?: string
+          include_automation_in_first_response?: boolean | null
           is_default?: boolean | null
           name?: string
           organization_id?: string

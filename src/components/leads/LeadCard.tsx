@@ -10,6 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { formatPhoneForDisplay } from '@/lib/phone-utils';
 import { SlaBadge } from './SlaBadge';
+import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Deal status labels and colors
 const dealStatusConfig = {
@@ -55,9 +57,9 @@ export function LeadCard({
   onAssignNow,
   isDragDisabled = false,
 }: LeadCardProps) {
-  const {
-    openNewChat
-  } = useFloatingChat();
+  const { openNewChat } = useFloatingChat();
+  const { profile } = useAuth();
+  const { recordFirstResponse } = useRecordFirstResponseOnAction();
   const stageTime = lead.stage_entered_at ? formatShortTime(new Date(lead.stage_entered_at)) : '-';
   const pendingTasks = lead.tasks_count?.pending || 0;
   const completedTasks = lead.tasks_count?.completed || 0;
@@ -94,9 +96,17 @@ export function LeadCard({
     }
     return `R$${value}`;
   };
-  const handlePhoneClick = (e: React.MouseEvent) => {
+  const handlePhoneClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.phone) {
+      // Registrar first response (não bloqueia a ação)
+      recordFirstResponse({
+        leadId: lead.id,
+        organizationId: lead.organization_id || profile?.organization_id || '',
+        channel: 'phone',
+        actorUserId: profile?.id || null,
+        firstResponseAt: lead.first_response_at,
+      });
       window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
     }
   };
@@ -107,9 +117,17 @@ export function LeadCard({
       openNewChat(lead.phone, lead.name);
     }
   };
-  const handleEmailClick = (e: React.MouseEvent) => {
+  const handleEmailClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.email) {
+      // Registrar first response (não bloqueia a ação)
+      recordFirstResponse({
+        leadId: lead.id,
+        organizationId: lead.organization_id || profile?.organization_id || '',
+        channel: 'email',
+        actorUserId: profile?.id || null,
+        firstResponseAt: lead.first_response_at,
+      });
       // Abre Gmail com destinatário preenchido no campo "Para"
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
       window.open(gmailUrl, '_blank');
