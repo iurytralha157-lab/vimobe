@@ -22,7 +22,8 @@ import { Badge } from '@/components/ui/badge';
 import { useFinancialEntries, useFinancialDashboard } from '@/hooks/use-financial';
 import { useCommissionsByBroker } from '@/hooks/use-commissions';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { SimplePeriodFilter } from '@/components/ui/date-filter-popover';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
 import { 
   formatCurrency, 
   formatDate, 
@@ -40,16 +41,8 @@ import {
   AlertTriangle,
   TrendingUp,
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
-
-const periodOptions = [
-   { value: 'all', label: 'Todos' },
-  { value: 'current', label: 'Mês Atual' },
-   { value: 'next', label: 'Próximo Mês' },
-  { value: 'last', label: 'Mês Anterior' },
-  { value: 'quarter', label: 'Últimos 3 meses' },
-];
 
 type ReportType = 'monthly' | 'cashflow' | 'commissions' | 'property' | 'payments' | 'overdue';
 
@@ -123,31 +116,17 @@ function CommissionCardMobile({ broker }: { broker: any }) {
 export default function FinancialReports() {
   const isMobile = useIsMobile();
   const [selectedReport, setSelectedReport] = useState<ReportType>('monthly');
-  const [period, setPeriod] = useState('current');
+  const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
 
   const { data: entries, isLoading: entriesLoading } = useFinancialEntries();
   const { data: dashboard } = useFinancialDashboard();
   const { data: commissionsByBroker, isLoading: commissionsLoading } = useCommissionsByBroker();
 
-  const getPeriodDates = () => {
-    const now = new Date();
-    switch (period) {
-       case 'all':
-         return { start: null, end: null };
-      case 'current':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-       case 'next':
-         return { start: startOfMonth(addMonths(now, 1)), end: endOfMonth(addMonths(now, 1)) };
-      case 'last':
-        return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) };
-      case 'quarter':
-        return { start: startOfMonth(subMonths(now, 2)), end: endOfMonth(now) };
-      default:
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-    }
-  };
-
-  const { start, end } = getPeriodDates() as { start: Date | null; end: Date | null };
+  // Get date range from preset or custom
+  const dateRange = customDateRange || getDateRangeFromPreset(datePreset);
+  const start = dateRange?.from || null;
+  const end = dateRange?.to || null;
 
   const filteredEntries = entries?.filter(e => {
      if (!start || !end) return true;
@@ -586,10 +565,13 @@ export default function FinancialReports() {
                   <CardDescription className="text-xs md:text-sm">{selectedReportConfig?.description}</CardDescription>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <SimplePeriodFilter
-                    value={period}
-                    onChange={setPeriod}
-                    options={periodOptions}
+                  <DateFilterPopover
+                    datePreset={datePreset}
+                    onDatePresetChange={setDatePreset}
+                    customDateRange={customDateRange}
+                    onCustomDateRangeChange={setCustomDateRange}
+                    defaultPreset="thisMonth"
+                    align="end"
                   />
                   <Button variant="outline" size="sm" onClick={handleExportCSV}>
                     <Download className="h-4 w-4 md:mr-1" />
