@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue, useMemo, useCallback } from 'react';
+import { useState, useEffect, useDeferredValue, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -117,6 +117,9 @@ export default function Pipelines() {
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
+  // Ref para bloquear refetch durante drag-and-drop (evita race condition)
+  const isDraggingRef = useRef(false);
+  
   const { data: pipelines = [], isLoading: pipelinesLoading } = usePipelines();
   const createPipeline = useCreatePipeline();
   const deletePipeline = useDeletePipeline();
@@ -206,8 +209,10 @@ export default function Pipelines() {
           filter: `organization_id=eq.${profile.organization_id}`,
         },
         () => {
-          // Force immediate refetch to update the kanban
-          refetch();
+          // NÃO refetch durante drag-and-drop ativo (evita race condition)
+          if (!isDraggingRef.current) {
+            refetch();
+          }
         }
       )
       .on(
@@ -218,8 +223,10 @@ export default function Pipelines() {
           table: 'lead_tags',
         },
         () => {
-          // Force immediate refetch when tags change
-          refetch();
+          // NÃO refetch durante drag-and-drop ativo
+          if (!isDraggingRef.current) {
+            refetch();
+          }
         }
       )
       .subscribe();
@@ -274,10 +281,19 @@ export default function Pipelines() {
   const queryClient = useQueryClient();
 
   const handleDragEnd = useCallback(async (result: DropResult) => {
+    // Marcar que estamos em processo de drag (bloqueia refetch da subscription)
+    isDraggingRef.current = true;
+    
     const { destination, source, draggableId } = result;
     
-    if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    if (!destination) {
+      isDraggingRef.current = false;
+      return;
+    }
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      isDraggingRef.current = false;
+      return;
+    }
     
     const newStageId = destination.droppableId;
     const oldStageId = source.droppableId;
@@ -407,6 +423,9 @@ export default function Pipelines() {
       // Rollback em caso de erro
       queryClient.setQueryData(queryKey, previousData);
       toast.error('Erro ao mover lead: ' + error.message);
+    } finally {
+      // Liberar flag após completar (sucesso ou erro)
+      isDraggingRef.current = false;
     }
   }, [stages, selectedPipelineId, queryClient, refetch, isTelecom, profile?.organization_id]);
 
