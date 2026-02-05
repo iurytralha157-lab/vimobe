@@ -396,7 +396,6 @@ export function MessageBubble({
           <audio
             ref={audioRef}
             src={mediaUrl!}
-            crossOrigin="anonymous"
             preload="metadata"
             onEnded={() => {
               setIsPlaying(false);
