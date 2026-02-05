@@ -478,7 +478,9 @@ export function FloatingChat() {
     const handleViewLeadClick = () => {
       if (leadId) {
         closeChat();
-        navigate(`/crm/pipelines?lead=${leadId}`);
+        // Usar timestamp para forçar o React Router a detectar a mudança
+        // mesmo quando já estamos na mesma página
+        navigate(`/crm/pipelines?lead=${leadId}&t=${Date.now()}`);
       }
     };
 
