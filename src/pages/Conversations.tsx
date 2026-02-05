@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft } from "lucide-react";
+import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic } from "lucide-react";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { CreateLeadDialog } from "@/components/conversations/CreateLeadDialog";
@@ -24,6 +24,7 @@ import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { useTags, Tag as TagType } from "@/hooks/use-tags";
 import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
 export default function Conversations() {
   const isMobile = useIsMobile();
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
@@ -109,6 +110,25 @@ export default function Conversations() {
       handleSendMessage();
     }
   };
+
+  const handleSendAudio = async (base64: string, mimetype: string) => {
+    if (!selectedConversation) return;
+    
+    await sendMessage.mutateAsync({
+      conversation: selectedConversation,
+      text: "",
+      mediaType: "audio",
+      base64,
+      mimetype,
+      filename: "audio.ogg"
+    });
+    
+    toast({
+      title: "Áudio enviado",
+      description: "Sua mensagem de voz foi enviada"
+    });
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedConversation) return;
@@ -519,10 +539,23 @@ export default function Conversations() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
-                  <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={handleKeyPress} className="flex-1 h-10" />
-                  <Button onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending} size="icon" className="h-10 w-10 shrink-0">
-                    {sendMessage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </Button>
+                  <Input 
+                    placeholder="Digite sua mensagem..." 
+                    value={messageText} 
+                    onChange={e => setMessageText(e.target.value)} 
+                    onKeyDown={handleKeyPress} 
+                    className="flex-1 h-10" 
+                  />
+                  {messageText.trim() ? (
+                    <Button onClick={handleSendMessage} disabled={sendMessage.isPending} size="icon" className="h-10 w-10 shrink-0">
+                      {sendMessage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
+                  ) : (
+                    <AudioRecorderButton 
+                      onSend={handleSendAudio}
+                      disabled={sendMessage.isPending}
+                    />
+                  )}
                 </div>
               </footer>
             </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30">

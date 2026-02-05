@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Mic, Video, FileText, User, Phone, Users, Paperclip, Image } from "lucide-react";
+import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Video, FileText, User, Phone, Users, Paperclip, Image, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, WhatsAppConversation, WhatsAppMessage } from "@/hooks/use-whatsapp-conversations";
@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
+import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
 
 export function FloatingChat() {
   const {
@@ -230,6 +231,25 @@ export function FloatingChat() {
       handleSendMessage();
     }
   };
+
+  const handleSendAudio = async (base64: string, mimetype: string) => {
+    if (!activeConversation) return;
+    
+    await sendMessage.mutateAsync({
+      conversation: activeConversation,
+      text: "",
+      mediaType: "audio",
+      base64,
+      mimetype,
+      filename: "audio.ogg"
+    });
+    
+    toast({
+      title: "Áudio enviado",
+      description: "Sua mensagem de voz foi enviada"
+    });
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeConversation) return;
@@ -418,9 +438,16 @@ export function FloatingChat() {
           className={cn("flex-1", mobile ? "h-11" : "h-10")}
           autoComplete="off"
         />
-        <Button size="icon" className={cn(mobile ? "h-10 w-10" : "h-10 w-10")} onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending}>
-          {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
+        {messageText.trim() ? (
+          <Button size="icon" className="h-10 w-10" onClick={handleSendMessage} disabled={sendMessage.isPending}>
+            {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        ) : (
+          <AudioRecorderButton 
+            onSend={handleSendAudio}
+            disabled={sendMessage.isPending}
+          />
+        )}
       </div>
     </div>
   );
