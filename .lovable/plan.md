@@ -1,55 +1,63 @@
 
-# Plano: Corrigir Animação de Drag-and-Drop no Dialog de Gerenciar Colunas
+# Plano: Usar MessageBubble Completo no FloatingChat
 
 ## Problema Identificado
-Quando o usuário arrasta um item no dialog "Gerenciar Colunas", o elemento aparece deslocado (geralmente na parte de baixo ou fora de posição). Isso é visível na imagem onde o item "Base" aparece destacado fora da lista durante o drag.
+O chat flutuante (`FloatingChat`) não exibe mensagens de áudio, imagens ou arquivos corretamente porque usa um componente interno simplificado (`ChatMessageBubble`) em vez do componente completo (`MessageBubble`) que existe em `src/components/whatsapp/MessageBubble.tsx`.
 
-## Causa Raiz
-Este é um problema conhecido da biblioteca `@hello-pangea/dnd` quando usada dentro de elementos com `transform` CSS. O `DialogContent` do Radix UI usa:
-```css
-translate-x-[-50%] translate-y-[-50%]
-```
+## Comparativo
 
-A biblioteca `@hello-pangea/dnd` usa `position: fixed` para posicionar o elemento sendo arrastado, mas o cálculo de posição é afetado pelo `transform` do elemento pai, causando o deslocamento visual.
+| Funcionalidade | ChatMessageBubble (FloatingChat) | MessageBubble (Conversations) |
+|----------------|----------------------------------|-------------------------------|
+| Imagens | Link simples, sem zoom | Visualizador com zoom e download |
+| Áudio | `<audio controls>` básico | Player com waveform, velocidade, progresso |
+| Vídeo | `<video controls>` básico | Visualizador fullscreen |
+| Documentos | Link simples | Card estilizado com download |
+| Status de mídia | ❌ Não suporta | ✅ pending/ready/failed |
+| Retry de mídia | ❌ Não suporta | ✅ Botão de retry |
 
 ## Solução
-Aplicar uma correção CSS ao item sendo arrastado (`snapshot.isDragging === true`) que reseta as propriedades `top` e `left` para `auto`:
-
-```tsx
-// Dentro do Draggable, modificar o style quando estiver arrastando
-{(provided, snapshot) => {
-  // Fix para transform parent offset
-  const style = {
-    ...provided.draggableProps.style,
-    ...(snapshot.isDragging && {
-      top: 'auto',
-      left: 'auto',
-    }),
-  };
-  
-  return (
-    <div
-      ref={provided.innerRef}
-      {...provided.draggableProps}
-      style={style}
-      className={cn(...)}
-    >
-      ...
-    </div>
-  );
-}}
-```
+Remover o componente `ChatMessageBubble` interno do `FloatingChat` e substituí-lo pelo `MessageBubble` importado de `@/components/whatsapp/MessageBubble.tsx`.
 
 ## Arquivo a Modificar
-- `src/components/pipelines/StagesEditorDialog.tsx`
+- `src/components/chat/FloatingChat.tsx`
 
-## Detalhes Técnicos
-1. Manter a estrutura existente do `Draggable`
-2. Sobrescrever o `style` fornecido pelo `provided.draggableProps.style` quando `snapshot.isDragging` for `true`
-3. Aplicar `top: 'auto'` e `left: 'auto'` para corrigir o offset causado pelo `transform` do Dialog
-4. Esta é a solução recomendada pela comunidade para este problema específico com modais
+## Mudanças
+
+### 1. Adicionar import do MessageBubble
+```tsx
+import { MessageBubble } from "@/components/whatsapp/MessageBubble";
+```
+
+### 2. Substituir uso do ChatMessageBubble pelo MessageBubble
+No trecho onde as mensagens são renderizadas (linha ~684):
+
+```tsx
+// DE:
+<ChatMessageBubble message={msg} isGroup={activeConversation!.is_group} />
+
+// PARA:
+<MessageBubble
+  content={msg.content}
+  messageType={msg.message_type}
+  mediaUrl={msg.media_url}
+  mediaMimeType={msg.media_mime_type}
+  mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null}
+  mediaError={msg.media_error}
+  fromMe={msg.from_me}
+  status={msg.status}
+  sentAt={msg.sent_at}
+  senderName={msg.sender_name}
+  isGroup={activeConversation!.is_group}
+/>
+```
+
+### 3. Remover o componente ChatMessageBubble
+Deletar a função `ChatMessageBubble` (linhas 900-999) que não será mais usada.
 
 ## Resultado Esperado
-- O item arrastado seguirá corretamente a posição do cursor
-- Não haverá mais "salto" ou deslocamento visual durante o drag
-- A experiência de reordenação das colunas será suave e intuitiva
+- O chat flutuante exibirá imagens clicáveis com zoom e download
+- Áudios terão o player completo com waveform e controles de velocidade
+- Vídeos terão visualizador fullscreen
+- Documentos terão card estilizado
+- Mídia pendente mostrará loading spinner
+- Mídia com falha terá botão de retry
