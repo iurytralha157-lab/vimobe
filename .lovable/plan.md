@@ -1,159 +1,154 @@
 
+# Plano: Integrar Redistribuição com Tempo de Resposta
 
-# Auditoria Completa: Página de Gestão CRM
+## Contexto Atual
 
-## Resumo da Análise
+### Sistema de Redistribuição (Pool)
+- Usa a coluna `first_touch_at` para determinar se houve contato
+- A Edge Function `pool-checker` busca leads sem `first_touch_at` após timeout
+- A função SQL `redistribute_lead_from_pool` redistribui via `handle_lead_intake`
 
-Fiz uma revisão detalhada de toda a estrutura da página de Gestão (`/crm/management`) e identifiquei oportunidades de melhoria em usabilidade, funcionalidades faltantes e correções de bugs.
+### Sistema de Tempo de Resposta  
+- Usa `first_response_at` com métricas detalhadas (segundos, canal, usuário)
+- Gatilhos: WhatsApp (automático), Telefone (clique), Email (clique)
+- Edge Function `calculate-first-response` registra idempotentemente
 
----
-
-## Problemas Identificados
-
-### 1. Aba de Cadências Não Está Incluída
-**Gravidade: Alta**
-
-O componente `CadencesTab` existe em `/src/components/crm-management/CadencesTab.tsx` mas **não está incluído** na página de Gestão. Isso significa que a funcionalidade de configurar cadências de tarefas automáticas por estágio está completamente inacessível aos usuários.
-
-### 2. Erro de Canal Realtime nas Notificações
-**Gravidade: Média**
-
-Os logs mostram `CHANNEL_ERROR` constante no hook de notificações:
-```
-📡 Notifications channel status: CHANNEL_ERROR
-❌ Realtime channel error, attempting reconnect...
-```
-Isso pode causar falhas nas atualizações em tempo real em toda a aplicação.
-
-### 3. Falta de Onboarding/Guias Visuais
-**Gravidade: Média**
-
-A página tem 5 abas (Equipes, Pipelines, Distribuição, Bolsão, Tags) mas não há:
-- Explicação visual do que cada uma faz
-- Tutorial para novos usuários
-- Indicadores de dependência (ex: "Configure Equipes primeiro")
-
-### 4. UX do PoolTab (Bolsão) Pode Ser Confusa
-**Gravidade: Baixa**
-
-- O conceito de "Bolsão" é técnico demais
-- Os campos "Tempo limite" e "Máx. redistribuições" podem não ser claros para usuários não-técnicos
-
-### 5. DistributionTab Sem Feedback de Prioridade
-**Gravidade: Baixa**
-
-Quando há múltiplas filas de distribuição, não fica claro qual tem prioridade sobre a outra se um lead corresponder a mais de uma regra.
+### Problema Identificado
+Os dois sistemas usam colunas diferentes, criando desconexão:
+- `first_touch_at` - usado pelo Pool (antigo)
+- `first_response_at` - usado pelas métricas (novo)
 
 ---
 
-## Plano de Melhorias
+## Solução Proposta
 
-### Fase 1: Correções Críticas
+Unificar os sistemas para que a **Redistribuição use o Tempo de Resposta** como critério:
 
-#### 1.1 Adicionar Aba de Cadências à Página
-- Incluir o `CadencesTab` na lista de abas
-- Adicionar ícone e label apropriados
-- Garantir que respeite o controle de módulos (`cadences`)
-
-#### 1.2 Corrigir Erro de Realtime Channel
-- Investigar e corrigir o problema de reconexão no `use-notifications.ts`
-- Implementar backoff exponencial para evitar reconexões infinitas
-
-### Fase 2: Melhorias de Usabilidade
-
-#### 2.1 Adicionar Cartões de Introdução por Aba
-Cada aba terá um card informativo opcional (dismissível) explicando:
-- **Equipes**: "Organize seus corretores em times e defina líderes para supervisão"
-- **Pipelines**: "Vincule pipelines às equipes para controlar quem pode ver cada negociação"
-- **Distribuição**: "Configure regras para distribuir leads automaticamente entre sua equipe"
-- **Bolsão**: "Redistribua leads automaticamente quando um corretor não fizer contato a tempo"
-- **Cadências**: "Crie tarefas automáticas para cada etapa do funil de vendas"
-- **Tags**: "Categorize leads para facilitar filtros e segmentação"
-
-#### 2.2 Renomear "Bolsão" para Algo Mais Claro
-Sugestões:
-- "Redistribuição Automática"
-- "Tempo de Resposta"
-- Manter "Bolsão" mas adicionar subtítulo explicativo
-
-#### 2.3 Melhorar Labels do Pool
-- "Tempo limite (minutos)" → "Tempo máximo para primeiro contato"
-- "Máx. redistribuições" → "Quantas vezes tentar outro corretor"
-
-### Fase 3: Novas Funcionalidades
-
-#### 3.1 Indicador de Status de Configuração
-Um painel lateral ou superior mostrando:
+```text
+Lead chega → Distribuído → Timer inicia
+         ↓
+     Corretor age? (Ligação/Mensagem/Email)
+         ↓               ↓
+        SIM             NÃO (timeout)
+         ↓               ↓
+first_response_at    Redistribui!
+   é registrado
 ```
-✓ 3 equipes configuradas
-✓ 2 pipelines vinculadas
-⚠ Distribuição não configurada
-✓ 5 tags criadas
-```
-
-#### 3.2 Ordem de Prioridade de Filas
-Permitir arrastar e soltar filas de distribuição para definir ordem de prioridade.
-
-#### 3.3 Preview de Distribuição
-Botão "Simular" que mostra para onde um lead hipotético seria enviado baseado nas regras atuais.
 
 ---
 
-## Detalhes Técnicos
+## Alterações Técnicas
 
-### Alterações em CRMManagement.tsx
+### 1. Atualizar Edge Function `pool-checker`
+
+Mudar a verificação de `first_touch_at` para `first_response_at`:
+
 ```typescript
-// Adicionar import
-import { CadencesTab } from '@/components/crm-management/CadencesTab';
-import { ListChecks } from 'lucide-react'; // ícone para cadências
+// ANTES (atual)
+.is("first_touch_at", null)
 
-// Adicionar ao array managementTabs
-{ value: 'cadences', label: 'Cadências', icon: ListChecks },
-
-// Adicionar TabsContent
-<TabsContent value="cadences" className="mt-0">
-  <CadencesTab />
-</TabsContent>
+// DEPOIS (proposto)
+.is("first_response_at", null)
 ```
 
-### Alterações em use-notifications.ts
-- Implementar exponential backoff no reconect
-- Adicionar limite máximo de tentativas
-- Fallback para polling quando canal falhar repetidamente
+O `first_response_at` já é preenchido automaticamente quando:
+- Corretor envia mensagem WhatsApp
+- Corretor clica em "Ligar" 
+- Corretor clica em "Email"
 
-### Novas Estruturas
+### 2. Atualizar Interface do PoolTab
+
+Melhorar a UX para deixar claro que a redistribuição é baseada no primeiro contato:
+
+- Renomear "Aguardando Contato" para descrição mais clara
+- Adicionar indicador visual dos canais monitorados (WhatsApp, Telefone, Email)
+- Mostrar qual canal disparou o first_response quando houver
+
+### 3. Manter Compatibilidade
+
+A Edge Function `calculate-first-response` já atualiza `first_touch_at` junto com `first_response_at` para ações humanas (não-automação), garantindo retrocompatibilidade:
+
 ```typescript
-// Novo componente para introdução
-interface OnboardingCard {
-  id: string;
-  title: string;
-  description: string;
-  dismissKey: string; // localStorage key
+// Código existente em calculate-first-response
+if (!is_automation && actor_user_id) {
+  updateData.first_touch_at = now.toISOString();
+  // ...
 }
 ```
 
----
+### 4. Sincronizar Dados Legados (Opcional)
 
-## Ordem de Implementação Recomendada
-
-| Prioridade | Tarefa | Esforço |
-|------------|--------|---------|
-| 1 | Adicionar aba Cadências | Baixo |
-| 2 | Corrigir erro Realtime | Médio |
-| 3 | Cards de introdução | Médio |
-| 4 | Melhorar labels do Pool | Baixo |
-| 5 | Indicador de status | Médio |
-| 6 | Prioridade de filas | Alto |
+Criar migração que sincroniza leads antigos:
+```sql
+UPDATE leads 
+SET first_response_at = first_touch_at
+WHERE first_touch_at IS NOT NULL 
+  AND first_response_at IS NULL;
+```
 
 ---
 
-## Observações Finais
+## Arquivos a Modificar
 
-A estrutura atual está bem organizada e os componentes são modulares. As principais preocupações são:
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/functions/pool-checker/index.ts` | Trocar `.is("first_touch_at", null)` por `.is("first_response_at", null)` |
+| `src/components/crm-management/PoolTab.tsx` | Atualizar query para usar `first_response_at` e melhorar UI |
+| Nova migração SQL | Sincronizar dados legados e garantir consistência |
 
-1. **Funcionalidade oculta**: Cadências existe mas não está acessível
-2. **Complexidade para novos usuários**: Falta onboarding
-3. **Erro silencioso de Realtime**: Pode afetar toda a UX da aplicação
+---
 
-Posso começar implementando as correções críticas (Cadências + Realtime) e depois avançar para as melhorias de UX conforme sua prioridade.
+## Fluxo Final Simplificado
 
+```text
+┌──────────────┐    ┌─────────────────┐    ┌────────────────┐
+│  Lead Chega  │───→│  Distribuição   │───→│  Timer Inicia  │
+│              │    │  (Round Robin)  │    │  assigned_at   │
+└──────────────┘    └─────────────────┘    └───────┬────────┘
+                                                   │
+                    ┌──────────────────────────────┼────────────────────────────────┐
+                    │                              │                                │
+                    ▼                              ▼                                ▼
+           ┌───────────────┐            ┌───────────────┐              ┌───────────────┐
+           │   WhatsApp    │            │    Telefone   │              │     Email     │
+           │   Enviado     │            │   (clique)    │              │   (clique)    │
+           └───────┬───────┘            └───────┬───────┘              └───────┬───────┘
+                   │                            │                              │
+                   └────────────────────────────┼──────────────────────────────┘
+                                                │
+                                                ▼
+                                   ┌───────────────────────┐
+                                   │  first_response_at    │
+                                   │  é preenchido         │
+                                   │  (para timer)         │
+                                   └───────────────────────┘
+                                                │
+                         ┌──────────────────────┴──────────────────────┐
+                         │                                             │
+                         ▼                                             ▼
+              ┌─────────────────────┐                      ┌─────────────────────┐
+              │  Dentro do timeout  │                      │  Excedeu timeout    │
+              │  Lead permanece     │                      │  + sem resposta     │
+              └─────────────────────┘                      └──────────┬──────────┘
+                                                                      │
+                                                                      ▼
+                                                           ┌─────────────────────┐
+                                                           │  REDISTRIBUI        │
+                                                           │  via Round Robin    │
+                                                           └─────────────────────┘
+```
+
+---
+
+## Benefícios
+
+1. **Unificação**: Um único campo (`first_response_at`) para métricas e redistribuição
+2. **Precisão**: Apenas ações reais do corretor contam (não automações se configurado)
+3. **Métricas Ricas**: Saber exatamente qual canal e quanto tempo levou
+4. **Simplicidade**: Menos campos para gerenciar no banco
+
+---
+
+## Observação Importante
+
+O campo `first_response_at` diferencia entre ações humanas e automações via flag `first_response_is_automation`. Se o pipeline estiver configurado para **não contar automações**, apenas ações manuais do corretor param o timer de redistribuição.
