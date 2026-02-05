@@ -15,6 +15,9 @@ import {
   UserPlus,
   Zap,
   Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -31,6 +34,7 @@ import {
   useAutomations, 
   useDeleteAutomation, 
   useToggleAutomation,
+  useAutomationExecutions,
   TRIGGER_TYPE_LABELS,
   TriggerType,
 } from '@/hooks/use-automations';
@@ -65,9 +69,23 @@ const getTriggerIcon = (triggerType: TriggerType) => {
 
 export function AutomationList({ onEdit }: AutomationListProps) {
   const { data: automations, isLoading } = useAutomations();
+  const { data: executions } = useAutomationExecutions();
   const deleteAutomation = useDeleteAutomation();
   const toggleAutomation = useToggleAutomation();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // Calculate execution stats per automation
+  const getExecutionStats = (automationId: string) => {
+    const automationExecutions = executions?.filter(e => e.automation_id === automationId) || [];
+    return {
+      running: automationExecutions.filter(e => e.status === 'running' || e.status === 'waiting').length,
+      completed: automationExecutions.filter(e => e.status === 'completed').length,
+      failed: automationExecutions.filter(e => e.status === 'failed').length,
+      lastRun: automationExecutions.length > 0 
+        ? new Date(automationExecutions[0].started_at)
+        : null,
+    };
+  };
 
   if (isLoading) {
     return (
@@ -104,6 +122,7 @@ export function AutomationList({ onEdit }: AutomationListProps) {
         <div className="grid gap-4">
           {automations?.map((automation) => {
             const TriggerIcon = getTriggerIcon(automation.trigger_type as TriggerType);
+            const stats = getExecutionStats(automation.id);
             
             return (
               <Card key={automation.id} className="group">
@@ -135,20 +154,53 @@ export function AutomationList({ onEdit }: AutomationListProps) {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
-                      <span className="truncate">
-                        <span className="hidden sm:inline">Gatilho: </span>
-                        {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
-                      </span>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="text-xs">
-                        {formatDistanceToNow(new Date(automation.created_at), { 
-                          addSuffix: true, 
-                          locale: ptBR 
-                        })}
-                      </span>
+                  <div className="flex flex-col gap-3">
+                    {/* Trigger info and stats */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
+                        <span className="truncate">
+                          <span className="hidden sm:inline">Gatilho: </span>
+                          {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
+                        </span>
+                        {stats.lastRun && (
+                          <>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="text-xs">
+                              Último run: {formatDistanceToNow(stats.lastRun, { 
+                                addSuffix: true, 
+                                locale: ptBR 
+                              })}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Execution stats */}
+                    {(stats.running > 0 || stats.completed > 0 || stats.failed > 0) && (
+                      <div className="flex items-center gap-4 text-xs">
+                        {stats.running > 0 && (
+                          <div className="flex items-center gap-1 text-primary">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                            <span>{stats.running} em andamento</span>
+                          </div>
+                        )}
+                        {stats.completed > 0 && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                            <span>{stats.completed} concluídas</span>
+                          </div>
+                        )}
+                        {stats.failed > 0 && (
+                          <div className="flex items-center gap-1 text-destructive">
+                            <XCircle className="h-3.5 w-3.5" />
+                            <span>{stats.failed} erros</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions */}
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="sm" onClick={() => onEdit(automation.id)} className="flex-1 sm:flex-none">
                         <Edit2 className="h-4 w-4 mr-1" />

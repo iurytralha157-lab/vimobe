@@ -51,6 +51,9 @@ verify_jwt = false
 [functions.automation-executor]
 verify_jwt = false
 
+[functions.automation-delay-processor]
+verify_jwt = false
+
 [functions.media-worker]
 verify_jwt = false
 

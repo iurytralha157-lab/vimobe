@@ -119,15 +119,40 @@ Deno.serve(async (req) => {
           break;
 
         case "delay":
-          // Calculate delay
-          const delayMinutes = nodeConfig.delay_minutes || nodeConfig.minutes || 0;
-          const delayHours = nodeConfig.delay_hours || nodeConfig.hours || 0;
-          const delayDays = nodeConfig.delay_days || nodeConfig.days || 0;
+          // Calculate delay - support both old format (delay_minutes/hours/days) and new format (delay_type + delay_value)
+          let totalDelayMs = 0;
           
-          const totalDelayMs = 
-            (delayMinutes * 60 * 1000) + 
-            (delayHours * 60 * 60 * 1000) + 
-            (delayDays * 24 * 60 * 60 * 1000);
+          // New format: delay_type + delay_value (from NodeConfigPanel)
+          const delayType = nodeConfig.delay_type as string;
+          const delayValue = Number(nodeConfig.delay_value) || 0;
+          
+          if (delayType && delayValue > 0) {
+            switch (delayType) {
+              case "minutes":
+                totalDelayMs = delayValue * 60 * 1000;
+                break;
+              case "hours":
+                totalDelayMs = delayValue * 60 * 60 * 1000;
+                break;
+              case "days":
+                totalDelayMs = delayValue * 24 * 60 * 60 * 1000;
+                break;
+              default:
+                totalDelayMs = delayValue * 60 * 1000; // Default to minutes
+            }
+          } else {
+            // Old format: delay_minutes, delay_hours, delay_days
+            const delayMinutes = Number(nodeConfig.delay_minutes || nodeConfig.minutes) || 0;
+            const delayHours = Number(nodeConfig.delay_hours || nodeConfig.hours) || 0;
+            const delayDays = Number(nodeConfig.delay_days || nodeConfig.days) || 0;
+            
+            totalDelayMs = 
+              (delayMinutes * 60 * 1000) + 
+              (delayHours * 60 * 60 * 1000) + 
+              (delayDays * 24 * 60 * 60 * 1000);
+          }
+
+          console.log(`Delay calculated: ${totalDelayMs}ms (type: ${delayType}, value: ${delayValue})`);
 
           if (totalDelayMs > 0) {
             const nextExecutionAt = new Date(Date.now() + totalDelayMs).toISOString();
@@ -154,6 +179,7 @@ Deno.serve(async (req) => {
                 JSON.stringify({ 
                   success: true, 
                   message: "Waiting for delay",
+                  delay_ms: totalDelayMs,
                   next_execution_at: nextExecutionAt 
                 }),
                 { headers: { ...corsHeaders, "Content-Type": "application/json" } }
