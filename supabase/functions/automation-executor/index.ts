@@ -14,16 +14,22 @@ function normalizePhoneNumber(phone: string): string {
   // Remove all non-digits
   const digits = phone.replace(/\D/g, "");
   
-  // If already starts with country code (55 for Brazil), return as-is
+  console.log(`Normalizing phone: "${phone}" -> digits: "${digits}" (length: ${digits.length})`);
+  
+  // If already starts with country code (55 for Brazil) and has 12+ digits, return as-is
   if (digits.startsWith("55") && digits.length >= 12) {
+    console.log(`Phone already has country code: ${digits}`);
     return digits;
   }
   
   // If it's a Brazilian number (10-11 digits without country code), add 55
   if (digits.length >= 10 && digits.length <= 11) {
-    return `55${digits}`;
+    const normalized = `55${digits}`;
+    console.log(`Added country code: ${normalized}`);
+    return normalized;
   }
   
+  console.log(`Phone format unknown, returning as-is: ${digits}`);
   // Return as-is for other formats
   return digits;
 }
