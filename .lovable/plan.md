@@ -116,7 +116,8 @@ Isso está **correto** - elas serão geradas nos dias certos.
 
 ## Checklist Final
 
-- [ ] Executar SQL de sincronização de dados históricos
+- [x] Executar SQL de sincronização de dados históricos ✅ (3 comissões + 3 receivables criados)
+- [x] Corrigir use-create-commission.ts para permitir comissão sem usuário ✅
 - [ ] Testar criação de novo lead → marcar como won → verificar comissão
 - [ ] Testar criação de novo contrato → ativar → verificar receivables
 - [ ] Testar formulário de lançamentos → criar, editar, marcar como pago

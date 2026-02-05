@@ -31,12 +31,6 @@ export function useCreateCommissionOnWon() {
         return null;
       }
 
-      // If no user assigned, log but continue (commission can be created without user for now)
-      if (!userId) {
-        console.log('No user assigned to lead, skipping commission for now:', leadId);
-        return null;
-      }
-
       // Check if commission already exists for this lead
       const { data: existingCommission } = await supabase
         .from('commissions')
@@ -97,7 +91,7 @@ export function useCreateCommissionOnWon() {
         .insert({
           organization_id: organizationId,
           lead_id: leadId,
-          user_id: userId,
+          user_id: userId || null,
           property_id: propertyId,
           base_value: valorInteresse,
           amount: commissionAmount,
