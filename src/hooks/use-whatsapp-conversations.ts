@@ -453,13 +453,23 @@ export function useSendWhatsAppMessage() {
 
       // Insert message in database with client_message_id for deduplication
       const messageId = data.data?.key?.id || clientMessageId;
+      
+      // Determine proper content - don't use filename as content for media messages
+      const isMediaMessage = !!(storedMediaUrl || base64);
+      const isFilenameOnly = text && (
+        text === filename || 
+        text.match(/^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|pdf|doc|docx)$/i) ||
+        text.match(/^\S+\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|pdf|doc|docx)$/i)
+      );
+      const actualContent = isMediaMessage && isFilenameOnly ? null : text;
+      
       const { error: insertError } = await supabase.from("whatsapp_messages").insert({
         conversation_id: conversation.id,
         session_id: conversation.session_id,
         message_id: messageId,
         client_message_id: clientMessageId,
         from_me: true,
-        content: text,
+        content: actualContent,
         message_type: mediaType || "text",
         media_url: storedMediaUrl || null,
         media_mime_type: mimetype || null,
@@ -500,6 +510,15 @@ export function useSendWhatsAppMessage() {
       const previousMessages = queryClient.getQueryData<WhatsAppMessage[]>(["whatsapp-messages", conversationId]);
 
       // Create optimistic message with client_message_id for deduplication
+      // Don't show filename as content
+      const isMediaMessage = !!(variables.mediaType && variables.mediaType !== "text");
+      const isFilenameContent = variables.text && (
+        variables.text === variables.filename ||
+        variables.text.match(/^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|pdf|doc|docx)$/i) ||
+        variables.text.match(/^\S+\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|pdf|doc|docx)$/i)
+      );
+      const optimisticContent = isMediaMessage && isFilenameContent ? null : variables.text;
+
       const optimisticMessage: WhatsAppMessage & { client_message_id?: string } = {
         id: optimisticId,
         conversation_id: conversationId,
@@ -507,7 +526,7 @@ export function useSendWhatsAppMessage() {
         message_id: optimisticId,
         client_message_id: optimisticId, // Important for deduplication with realtime
         from_me: true,
-        content: variables.text,
+        content: optimisticContent,
         message_type: variables.mediaType || "text",
         media_url: variables.mediaUrl || null,
         media_mime_type: variables.mimetype || null,
