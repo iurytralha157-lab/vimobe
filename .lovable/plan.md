@@ -1,268 +1,159 @@
 
-# Plano: Sistema de Tempo de Resposta e Aba de Documentos no Lead
 
-## Visão Geral
+# Auditoria Completa: Página de Gestão CRM
 
-Este plano aborda duas funcionalidades importantes:
+## Resumo da Análise
 
-1. **Tempo de Resposta (First Response)** - Metrificar o tempo desde a entrada do lead até a primeira ação do corretor
-2. **Aba de Documentos** - Permitir upload e armazenamento de arquivos no card do lead
+Fiz uma revisão detalhada de toda a estrutura da página de Gestão (`/crm/management`) e identifiquei oportunidades de melhoria em usabilidade, funcionalidades faltantes e correções de bugs.
 
 ---
 
-## FUNCIONALIDADE 1: Tempo de Resposta
+## Problemas Identificados
 
-### Contexto Atual
+### 1. Aba de Cadências Não Está Incluída
+**Gravidade: Alta**
 
-Já existe infraestrutura parcialmente construída:
-- Edge Function `calculate-first-response` pronta para calcular e salvar os dados
-- Hook `use-lead-timeline.ts` com placeholders para métricas (retornando valores vazios)
-- KPICards exibe "Tempo Resp." mas com valor "--"
-- Tabela `leads` tem apenas `first_touch_at`, faltam as colunas de first response
+O componente `CadencesTab` existe em `/src/components/crm-management/CadencesTab.tsx` mas **não está incluído** na página de Gestão. Isso significa que a funcionalidade de configurar cadências de tarefas automáticas por estágio está completamente inacessível aos usuários.
 
-### O Que Falta
+### 2. Erro de Canal Realtime nas Notificações
+**Gravidade: Média**
 
-| Componente | Status | Ação |
-|------------|--------|------|
-| Colunas no banco (leads) | Faltando | Adicionar colunas |
-| Colunas no banco (pipelines) | Faltando | Adicionar configurações |
-| Gatilhos de ação | Faltando | Implementar nos botões |
-| Hooks de métricas | Placeholders | Implementar queries reais |
-| Dashboard | Visual pronto | Conectar dados reais |
-| Performance Corretor | Visual pronto | Conectar dados reais |
+Os logs mostram `CHANNEL_ERROR` constante no hook de notificações:
+```
+📡 Notifications channel status: CHANNEL_ERROR
+❌ Realtime channel error, attempting reconnect...
+```
+Isso pode causar falhas nas atualizações em tempo real em toda a aplicação.
+
+### 3. Falta de Onboarding/Guias Visuais
+**Gravidade: Média**
+
+A página tem 5 abas (Equipes, Pipelines, Distribuição, Bolsão, Tags) mas não há:
+- Explicação visual do que cada uma faz
+- Tutorial para novos usuários
+- Indicadores de dependência (ex: "Configure Equipes primeiro")
+
+### 4. UX do PoolTab (Bolsão) Pode Ser Confusa
+**Gravidade: Baixa**
+
+- O conceito de "Bolsão" é técnico demais
+- Os campos "Tempo limite" e "Máx. redistribuições" podem não ser claros para usuários não-técnicos
+
+### 5. DistributionTab Sem Feedback de Prioridade
+**Gravidade: Baixa**
+
+Quando há múltiplas filas de distribuição, não fica claro qual tem prioridade sobre a outra se um lead corresponder a mais de uma regra.
 
 ---
 
-### Fase 1: Estrutura de Banco de Dados
+## Plano de Melhorias
 
-Adicionar colunas na tabela `leads`:
+### Fase 1: Correções Críticas
 
-```text
-first_response_at          TIMESTAMPTZ
-first_response_seconds     INTEGER
-first_response_channel     TEXT        -- 'whatsapp', 'phone', 'email'
-first_response_actor_user_id UUID
-first_response_is_automation BOOLEAN DEFAULT FALSE
-first_touch_seconds        INTEGER
-first_touch_channel        TEXT
-first_touch_actor_user_id  UUID
+#### 1.1 Adicionar Aba de Cadências à Página
+- Incluir o `CadencesTab` na lista de abas
+- Adicionar ícone e label apropriados
+- Garantir que respeite o controle de módulos (`cadences`)
+
+#### 1.2 Corrigir Erro de Realtime Channel
+- Investigar e corrigir o problema de reconexão no `use-notifications.ts`
+- Implementar backoff exponencial para evitar reconexões infinitas
+
+### Fase 2: Melhorias de Usabilidade
+
+#### 2.1 Adicionar Cartões de Introdução por Aba
+Cada aba terá um card informativo opcional (dismissível) explicando:
+- **Equipes**: "Organize seus corretores em times e defina líderes para supervisão"
+- **Pipelines**: "Vincule pipelines às equipes para controlar quem pode ver cada negociação"
+- **Distribuição**: "Configure regras para distribuir leads automaticamente entre sua equipe"
+- **Bolsão**: "Redistribua leads automaticamente quando um corretor não fizer contato a tempo"
+- **Cadências**: "Crie tarefas automáticas para cada etapa do funil de vendas"
+- **Tags**: "Categorize leads para facilitar filtros e segmentação"
+
+#### 2.2 Renomear "Bolsão" para Algo Mais Claro
+Sugestões:
+- "Redistribuição Automática"
+- "Tempo de Resposta"
+- Manter "Bolsão" mas adicionar subtítulo explicativo
+
+#### 2.3 Melhorar Labels do Pool
+- "Tempo limite (minutos)" → "Tempo máximo para primeiro contato"
+- "Máx. redistribuições" → "Quantas vezes tentar outro corretor"
+
+### Fase 3: Novas Funcionalidades
+
+#### 3.1 Indicador de Status de Configuração
+Um painel lateral ou superior mostrando:
+```
+✓ 3 equipes configuradas
+✓ 2 pipelines vinculadas
+⚠ Distribuição não configurada
+✓ 5 tags criadas
 ```
 
-Adicionar colunas na tabela `pipelines` (configuração):
+#### 3.2 Ordem de Prioridade de Filas
+Permitir arrastar e soltar filas de distribuição para definir ordem de prioridade.
 
-```text
-first_response_start                TEXT DEFAULT 'lead_created'  -- ou 'lead_assigned'
-include_automation_in_first_response BOOLEAN DEFAULT TRUE
+#### 3.3 Preview de Distribuição
+Botão "Simular" que mostra para onde um lead hipotético seria enviado baseado nas regras atuais.
+
+---
+
+## Detalhes Técnicos
+
+### Alterações em CRMManagement.tsx
+```typescript
+// Adicionar import
+import { CadencesTab } from '@/components/crm-management/CadencesTab';
+import { ListChecks } from 'lucide-react'; // ícone para cadências
+
+// Adicionar ao array managementTabs
+{ value: 'cadences', label: 'Cadências', icon: ListChecks },
+
+// Adicionar TabsContent
+<TabsContent value="cadences" className="mt-0">
+  <CadencesTab />
+</TabsContent>
 ```
 
----
+### Alterações em use-notifications.ts
+- Implementar exponential backoff no reconect
+- Adicionar limite máximo de tentativas
+- Fallback para polling quando canal falhar repetidamente
 
-### Fase 2: Gatilhos nas Ações do Corretor
-
-Implementar chamadas ao `calculate-first-response` em 3 pontos:
-
-**WhatsApp (já implementado no message-sender):**
-- Quando o corretor envia a primeira mensagem via chat flutuante
-- A Edge Function `message-sender` já chama `calculate-first-response`
-
-**Telefone (novo gatilho):**
-- Quando o corretor clica no botão "Ligar" no LeadDetailDialog ou LeadCard
-- Componentes: `LeadDetailDialog.tsx` (linha 536) e `LeadCard.tsx` (linha 97-101)
-
-**Email (novo gatilho):**
-- Quando o corretor clica no botão "Email" 
-- Componentes: `LeadDetailDialog.tsx` (linha 545-548) e `LeadCard.tsx` (linha 110-116)
-
-**Implementação dos gatilhos:**
-
-```text
-Para cada ação (phone/email):
-1. Buscar organization_id e lead_id do contexto
-2. Verificar se lead já tem first_response_at (evitar dupla contagem)
-3. Chamar Edge Function calculate-first-response com:
-   - lead_id
-   - channel: 'phone' ou 'email'
-   - actor_user_id: ID do corretor logado
-   - is_automation: false
-   - organization_id
-4. Prosseguir com a ação original (abrir tel: ou gmail)
-```
-
----
-
-### Fase 3: Implementar Hooks de Métricas
-
-Atualizar `use-lead-timeline.ts`:
-
-**useFirstResponseMetrics:**
-- Query na tabela `leads` filtrando por período
-- Calcular média, mediana, % dentro do SLA
-- Usar `first_response_seconds` como fonte de dados
-
-**useFirstResponseRanking:**
-- Agrupar por `first_response_actor_user_id`
-- Calcular média por corretor
-- Retornar ranking ordenado pelo melhor tempo
-
----
-
-### Fase 4: Conectar Dashboard
-
-**KPICards - Tempo de Resposta:**
-- Atualizar `useEnhancedDashboardStats` para calcular média de `first_response_seconds`
-- Formatar usando `formatResponseTime()` já existente
-
-**Performance de Corretores:**
-- O hook `use-broker-performance.ts` já busca tempo de resposta via `activities`
-- Atualizar para usar `first_response_seconds` direto da tabela `leads`
-- Mais preciso e performático
-
----
-
-### Fase 5: Configuração por Pipeline (Opcional)
-
-Permitir que cada pipeline defina:
-- Quando o timer começa: "Quando lead entra" vs "Quando lead é atribuído"
-- Se automações contam como primeira resposta
-
----
-
-## FUNCIONALIDADE 2: Aba de Documentos no Lead
-
-### Arquitetura
-
-```text
-lead_documents (nova tabela)
-├── id UUID
-├── organization_id UUID (FK)
-├── lead_id UUID (FK)
-├── uploaded_by UUID (FK users)
-├── file_name TEXT
-├── file_type TEXT (mime type)
-├── file_size INTEGER
-├── storage_path TEXT (caminho no bucket)
-├── created_at TIMESTAMPTZ
-
-Storage Bucket: lead-documents (privado)
+### Novas Estruturas
+```typescript
+// Novo componente para introdução
+interface OnboardingCard {
+  id: string;
+  title: string;
+  description: string;
+  dismissKey: string; // localStorage key
+}
 ```
 
 ---
 
-### Fase 1: Banco de Dados e Storage
+## Ordem de Implementação Recomendada
 
-**Nova tabela `lead_documents`:**
-- Armazena metadados dos arquivos
-- RLS: Apenas quem tem acesso ao lead pode ver/fazer upload
-
-**Novo bucket `lead-documents`:**
-- Privado (não público)
-- RLS baseado em acesso ao lead
-
----
-
-### Fase 2: Nova Aba no LeadDetailDialog
-
-Adicionar aba "Documentos" na lista de tabs (junto com Atividades, Agenda, Contato, Negócio, Histórico):
-
-```text
-tabs = [
-  { id: 'activities', label: 'Atividades', icon: Activity },
-  { id: 'schedule', label: 'Agenda', icon: Calendar },
-  { id: 'contact', label: 'Contato', icon: Contact },
-  { id: 'deal', label: 'Negócio', icon: Handshake },
-  { id: 'documents', label: 'Documentos', icon: FileText },  // NOVO
-  { id: 'history', label: 'Histórico', icon: History },
-]
-```
+| Prioridade | Tarefa | Esforço |
+|------------|--------|---------|
+| 1 | Adicionar aba Cadências | Baixo |
+| 2 | Corrigir erro Realtime | Médio |
+| 3 | Cards de introdução | Médio |
+| 4 | Melhorar labels do Pool | Baixo |
+| 5 | Indicador de status | Médio |
+| 6 | Prioridade de filas | Alto |
 
 ---
 
-### Fase 3: Interface de Documentos
+## Observações Finais
 
-**Componente LeadDocumentsTab:**
-- Lista de documentos existentes com:
-  - Ícone baseado no tipo (PDF, imagem, áudio)
-  - Nome do arquivo
-  - Data de upload
-  - Quem fez upload
-  - Botão de download
-  - Botão de visualizar (abre em nova aba ou modal)
-  - Botão de excluir (apenas para quem fez upload ou admin)
+A estrutura atual está bem organizada e os componentes são modulares. As principais preocupações são:
 
-- Botão de upload:
-  - Aceita: PDF, imagens (JPG, PNG, WEBP), áudio, documentos Office
-  - Limite: 10MB por arquivo
-  - Upload direto para Supabase Storage
+1. **Funcionalidade oculta**: Cadências existe mas não está acessível
+2. **Complexidade para novos usuários**: Falta onboarding
+3. **Erro silencioso de Realtime**: Pode afetar toda a UX da aplicação
 
----
+Posso começar implementando as correções críticas (Cadências + Realtime) e depois avançar para as melhorias de UX conforme sua prioridade.
 
-### Fase 4: Hook de Documentos
-
-Novo hook `use-lead-documents.ts`:
-
-```text
-useLeadDocuments(leadId)
-- Lista todos os documentos do lead
-- Include: quem fez upload (nome, avatar)
-
-useUploadDocument()
-- Upload para Storage
-- Cria registro na tabela
-- Retorna URL assinada
-
-useDeleteDocument()
-- Remove do Storage
-- Remove da tabela
-```
-
----
-
-## Resumo de Arquivos
-
-### Migrations SQL
-| Arquivo | Descrição |
-|---------|-----------|
-| add_first_response_columns.sql | Colunas em leads e pipelines |
-| create_lead_documents.sql | Tabela + bucket + RLS |
-
-### Frontend - Tempo de Resposta
-| Arquivo | Mudança |
-|---------|---------|
-| src/components/leads/LeadDetailDialog.tsx | Adicionar gatilhos em phone/email |
-| src/components/leads/LeadCard.tsx | Adicionar gatilhos em phone/email |
-| src/hooks/use-lead-timeline.ts | Implementar queries reais |
-| src/hooks/use-dashboard-stats.ts | Conectar avgResponseTime real |
-| src/hooks/use-broker-performance.ts | Usar first_response_seconds |
-
-### Frontend - Documentos
-| Arquivo | Mudança |
-|---------|---------|
-| src/hooks/use-lead-documents.ts | Novo hook |
-| src/components/leads/LeadDocumentsTab.tsx | Novo componente |
-| src/components/leads/LeadDetailDialog.tsx | Adicionar aba documentos |
-
----
-
-## Ordem de Implementação Sugerida
-
-**Bloco 1 - Tempo de Resposta (prioridade)**
-1. Migration: adicionar colunas
-2. Atualizar gatilhos nos botões
-3. Implementar hooks de métricas
-4. Conectar Dashboard e Performance
-
-**Bloco 2 - Documentos**
-1. Migration: tabela + bucket
-2. Criar hook de documentos
-3. Criar componente da aba
-4. Integrar no LeadDetailDialog
-
----
-
-## Considerações Técnicas
-
-- **Idempotência**: A Edge Function já verifica se `first_response_at` existe antes de calcular
-- **WhatsApp**: Já está integrado no `message-sender`
-- **Phone/Email**: Como são ações externas, marcamos no momento do clique (intenção de contato)
-- **RLS Documentos**: Segue a mesma lógica de acesso ao lead (assigned_user, team, admin)
-- **Storage**: Bucket privado com URLs assinadas para download
