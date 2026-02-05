@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, CheckCircle2, XCircle, Clock, Play, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Clock, Play, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAutomationExecutions, AutomationExecution } from '@/hooks/use-automations';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface ExecutionHistoryProps {
   automationId?: string;
@@ -59,6 +61,44 @@ const getStatusConfig = (status: string) => {
       };
   }
 };
+
+// Translate common error messages to Portuguese
+function translateError(error: string): string {
+  if (error.includes("exists") && error.includes("false")) {
+    return "Número WhatsApp inválido ou não cadastrado";
+  }
+  if (error.includes("Connection refused") || error.includes("ECONNREFUSED")) {
+    return "Falha na conexão com WhatsApp";
+  }
+  if (error.includes("timeout") || error.includes("ETIMEDOUT")) {
+    return "Tempo limite excedido";
+  }
+  if (error.includes("not connected")) {
+    return "Sessão WhatsApp desconectada";
+  }
+  if (error.includes("Node not found")) {
+    return "Nó de automação não encontrado";
+  }
+  if (error.includes("Failed to send WhatsApp")) {
+    // Extract the error details
+    const match = error.match(/Failed to send WhatsApp: (.+)/);
+    if (match) {
+      try {
+        const details = JSON.parse(match[1]);
+        if (details.status === "error" && details.message) {
+          return `Erro WhatsApp: ${details.message}`;
+        }
+      } catch {
+        // If not JSON, try to get a readable message
+        if (error.includes("exists")) {
+          return "Número WhatsApp inválido ou não cadastrado";
+        }
+      }
+    }
+    return "Falha ao enviar mensagem WhatsApp";
+  }
+  return error;
+}
 
 export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
   const { data: executions, isLoading } = useAutomationExecutions(automationId);
@@ -124,7 +164,7 @@ export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Histórico de Execuções</CardTitle>
-          <CardDescription>Últimas 100 execuções</CardDescription>
+          <CardDescription>Últimas 100 execuções • Atualiza automaticamente</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[400px]">
@@ -141,56 +181,103 @@ export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
 }
 
 function ExecutionRow({ execution }: { execution: AutomationExecution }) {
+  const [isOpen, setIsOpen] = useState(false);
   const statusConfig = getStatusConfig(execution.status);
   const StatusIcon = statusConfig.icon;
 
+  const leadName = execution.lead?.name || 'Lead desconhecido';
+  const automationName = execution.automation?.name || 'Automação';
+  const hasError = !!execution.error_message;
+  const translatedError = execution.error_message ? translateError(execution.error_message) : '';
+
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-      <div className="flex items-center gap-4">
-        <div className={`p-2 rounded-full ${statusConfig.bgClass} ${statusConfig.textClass}`}>
-          <StatusIcon className="h-4 w-4" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
-              {execution.lead_id ? `Lead` : execution.conversation_id ? 'Conversa' : 'Execução'}
-            </span>
-            <Badge variant={statusConfig.variant}>
-              {statusConfig.label}
-            </Badge>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className={`p-2 rounded-full shrink-0 ${statusConfig.bgClass} ${statusConfig.textClass}`}>
+            <StatusIcon className="h-4 w-4" />
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Iniciado {formatDistanceToNow(new Date(execution.started_at), { 
-              addSuffix: true, 
-              locale: ptBR 
-            })}
-            {execution.next_execution_at && execution.status === 'waiting' && (
-              <span className="ml-2">
-                • Próximo: {formatDistanceToNow(new Date(execution.next_execution_at), { 
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium truncate">
+                {leadName}
+              </span>
+              <Badge variant={statusConfig.variant} className="shrink-0">
+                {statusConfig.label}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {automationName}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Iniciado {formatDistanceToNow(new Date(execution.started_at), { 
+                addSuffix: true, 
+                locale: ptBR 
+              })}
+              {execution.next_execution_at && execution.status === 'waiting' && (
+                <span className="ml-2 text-accent-foreground">
+                  • Próximo: {formatDistanceToNow(new Date(execution.next_execution_at), { 
+                    addSuffix: true, 
+                    locale: ptBR 
+                  })}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="text-right hidden sm:block">
+            {execution.completed_at && (
+              <p className="text-xs text-muted-foreground">
+                Concluído {formatDistanceToNow(new Date(execution.completed_at), { 
                   addSuffix: true, 
                   locale: ptBR 
                 })}
-              </span>
+              </p>
             )}
-          </p>
+          </div>
+
+          {hasError && (
+            <CollapsibleTrigger asChild>
+              <button className="p-1 rounded hover:bg-muted">
+                {isOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+          )}
         </div>
       </div>
 
-      <div className="text-right">
-        {execution.completed_at && (
-          <p className="text-xs text-muted-foreground">
-            Concluído {formatDistanceToNow(new Date(execution.completed_at), { 
-              addSuffix: true, 
-              locale: ptBR 
-            })}
-          </p>
-        )}
-        {execution.error_message && (
-          <p className="text-xs text-destructive mt-1 max-w-[200px] truncate">
-            {execution.error_message}
-          </p>
-        )}
-      </div>
-    </div>
+      {hasError && (
+        <CollapsibleContent>
+          <div className="px-4 pb-4 pt-0">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <div className="space-y-1 min-w-0">
+                  <p className="text-sm font-medium text-destructive">
+                    {translatedError}
+                  </p>
+                  {execution.error_message !== translatedError && (
+                    <details className="text-xs text-muted-foreground">
+                      <summary className="cursor-pointer hover:text-foreground">
+                        Ver detalhes técnicos
+                      </summary>
+                      <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-x-auto whitespace-pre-wrap break-all">
+                        {execution.error_message}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
   );
 }

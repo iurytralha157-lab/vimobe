@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -190,6 +190,19 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Fetch lead name for notification
+        let leadName = "Lead";
+        if (data.lead_id) {
+          const { data: leadData } = await supabaseAdmin
+            .from("leads")
+            .select("name, assigned_user_id")
+            .eq("id", data.lead_id)
+            .single();
+          if (leadData) {
+            leadName = leadData.name || "Lead";
+          }
+        }
+
         // Create execution record
         const { data: execution, error: execError } = await supabaseAdmin
           .from("automation_executions")
@@ -215,6 +228,23 @@ Deno.serve(async (req) => {
         }
 
         console.log(`Created execution ${execution.id} for automation ${automation.id}`);
+
+        // Send "automation started" notification
+        const notifyUserId = data.lead_id 
+          ? (await supabaseAdmin.from("leads").select("assigned_user_id").eq("id", data.lead_id).single()).data?.assigned_user_id 
+          : automation.created_by;
+        
+        if (notifyUserId) {
+          await supabaseAdmin.from("notifications").insert({
+            user_id: notifyUserId,
+            organization_id: organizationId,
+            title: "🤖 Automação Iniciada",
+            content: `"${automation.name}" iniciou para ${leadName}`,
+            type: "automation",
+            lead_id: data.lead_id || null,
+          });
+          console.log(`Notification sent: automation started for ${leadName}`);
+        }
 
         // Call executor to process the first node
         const executorResponse = await fetch(`${SUPABASE_URL}/functions/v1/automation-executor`, {
