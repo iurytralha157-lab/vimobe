@@ -4,7 +4,8 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Percent, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +28,7 @@ interface OrganizationData {
   whatsapp: string;
   email: string;
   website: string;
+  default_commission_percentage: string;
 }
 
 export function OrganizationTab() {
@@ -52,6 +54,7 @@ export function OrganizationTab() {
     whatsapp: '',
     email: '',
     website: '',
+    default_commission_percentage: '5',
   });
 
   // Load organization data
@@ -74,6 +77,7 @@ export function OrganizationTab() {
         whatsapp: (organization as any).whatsapp || '',
         email: (organization as any).email || '',
         website: (organization as any).website || '',
+        default_commission_percentage: String((organization as any).default_commission_percentage || 5),
       });
     }
   }, [organization]);
@@ -102,6 +106,7 @@ export function OrganizationTab() {
           whatsapp: formData.whatsapp || null,
           email: formData.email || null,
           website: formData.website || null,
+          default_commission_percentage: parseFloat(formData.default_commission_percentage) || 5,
         })
         .eq('id', organization.id);
 
@@ -295,6 +300,46 @@ export function OrganizationTab() {
                 onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
                 disabled={!isAdmin}
               />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Financial Settings */}
+        <div className="space-y-4">
+          <h4 className="font-medium flex items-center gap-2">
+            Configurações Financeiras
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>Este percentual será usado como padrão para cálculo de comissões quando não houver um valor específico definido no lead ou imóvel.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Percent className="h-4 w-4" />
+                Comissão Padrão (%)
+              </Label>
+              <Input 
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="5"
+                value={formData.default_commission_percentage}
+                onChange={(e) => setFormData(prev => ({ ...prev, default_commission_percentage: e.target.value }))}
+                disabled={!isAdmin}
+              />
+              <p className="text-xs text-muted-foreground">
+                Usado quando o lead/imóvel não tem comissão específica definida
+              </p>
             </div>
           </div>
         </div>

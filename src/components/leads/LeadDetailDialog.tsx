@@ -440,6 +440,19 @@ export function LeadDetailDialog({
     const previousStatus = lead.deal_status;
     if (newStatus === previousStatus) return;
     
+    // Validation when marking as "won"
+    if (newStatus === 'won') {
+      const valorInteresse = lead.valor_interesse || 0;
+      
+      if (valorInteresse <= 0) {
+        // Show warning but allow to proceed
+        toast.warning('Valor de interesse não preenchido', {
+          description: 'Recomendamos preencher o valor antes de marcar como ganho para gerar comissões automaticamente.',
+          duration: 6000,
+        });
+      }
+    }
+    
     await dealStatusChange.mutateAsync({
       leadId: lead.id,
       newStatus: newStatus as 'open' | 'won' | 'lost',
