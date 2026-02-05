@@ -601,6 +601,14 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">Não mover (apenas parar)</SelectItem>
+                        {/* Fallback: show loading item if stage is selected but not yet in list */}
+                        {onReplyStageId && 
+                         onReplyStageId !== "__none__" && 
+                         !stages?.find(s => s.id === onReplyStageId) && (
+                          <SelectItem value={onReplyStageId} disabled>
+                            Carregando etapa...
+                          </SelectItem>
+                        )}
                         {stages?.map((stage) => (
                           <SelectItem key={stage.id} value={stage.id}>
                             <div className="flex items-center gap-2">
