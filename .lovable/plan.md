@@ -1,158 +1,132 @@
-# Plano: Paginação por Coluna + Remoção da Aba Integrações
 
-**STATUS: ✅ IMPLEMENTADO**
+# Correção: Bug de Lead Voltando à Coluna Anterior no Kanban
 
-## Visão Geral
+## Diagnóstico
 
-Implementar sistema de "carregar mais" por coluna no Kanban e remover a aba de Integrações vazia do dialog de configuração de estágio.
+O problema é uma **race condition** entre:
+1. **Update otimista** do drag-and-drop
+2. **Real-time subscription** que escuta mudanças na tabela `leads`
+3. **Refetch final** que sincroniza com o banco
+
+### Fluxo Atual (com bug)
+
+```text
+1. Usuário arrasta lead A → B
+2. Cache atualizado (A → B) ✓
+3. Supabase UPDATE enviado
+4. Banco atualiza lead
+5. Real-time subscription dispara refetch() ← PROBLEMA
+6. Refetch retorna dados (pode ser timing ruim)
+7. Lead "volta" para A visualmente
+```
+
+### Causa Raiz
+
+Na linha 207, a subscription dispara `refetch()` sempre que qualquer mudança acontece em `leads`. Durante o drag-and-drop, isso interfere com o update otimista.
 
 ---
 
-## 1. Paginação por Coluna (Carregar Mais)
+## Solução Proposta
 
-### Como vai funcionar
+Adicionar um **flag de proteção** que bloqueia o refetch da real-time subscription durante o processo de drag-and-drop.
 
-- Cada coluna exibe inicialmente **100 leads** (ordenados por `stage_entered_at` - mais recentes primeiro)
-- Se houver mais leads, um botão "Carregar mais" aparece no final da coluna
-- Ao clicar, carrega mais 100 leads daquela coluna específica
-- O contador no cabeçalho da coluna mostra o **total real** (ex: "150" mesmo exibindo 100)
-
-### Arquitetura
-
-O sistema atual busca todos os leads de uma pipeline de uma vez. Para implementar a paginação por coluna sem quebrar o drag-and-drop, vou:
-
-1. **Manter a query principal** com limite de 100 leads por estágio (ao invés de 500 global)
-2. **Adicionar estado de paginação** por coluna no Pipelines.tsx
-3. **Criar função de busca incremental** que carrega mais leads de uma coluna específica
-4. **Mesclar os dados** no cache do React Query
-
-### Arquivos a Modificar
+### Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/use-stages.ts` | Modificar `useStagesWithLeads` para limitar 100 leads por estágio + adicionar hook `useLoadMoreLeads` |
-| `src/pages/Pipelines.tsx` | Adicionar estado de paginação, botão "Carregar mais" por coluna |
+| `src/pages/Pipelines.tsx` | Adicionar ref `isDragging` para bloquear refetch durante drag |
 
 ---
 
-## 2. Remoção da Aba Integrações
+## Implementação Técnica
 
-### Alteração Simples
-
-Remover a aba "Integrações" do `TabsList` e seu conteúdo.
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/pipelines/StageSettingsDialog.tsx` | Remover `TabsTrigger` e `TabsContent` de "integrations" |
-
----
-
-## Detalhes Técnicos
-
-### use-stages.ts - Modificações
+### 1. Adicionar ref para controlar estado de drag
 
 ```typescript
-// ANTES: limite global de 500
-.limit(500)
+// Após os outros estados (linha ~118)
+const isDraggingRef = useRef(false);
+```
 
-// DEPOIS: limite por estágio via SQL
-// Usar window function para limitar 100 por stage_id
+### 2. Proteger a subscription contra refetch durante drag
 
-// Nova função para carregar mais leads de um estágio específico
-export function useLoadMoreLeads(pipelineId: string, stageId: string, offset: number) {
-  return useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase
-        .from('leads')
-        .select(LEAD_PIPELINE_FIELDS)
-        .eq('pipeline_id', pipelineId)
-        .eq('stage_id', stageId)
-        .order('stage_entered_at', { ascending: false })
-        .range(offset, offset + 99); // Próximos 100
-      
-      if (error) throw error;
-      return data;
+```typescript
+// Modificar a subscription (linhas 198-230)
+.on(
+  'postgres_changes',
+  {
+    event: '*',
+    schema: 'public',
+    table: 'leads',
+    filter: `organization_id=eq.${profile.organization_id}`,
+  },
+  () => {
+    // NÃO refetch durante drag-and-drop ativo
+    if (!isDraggingRef.current) {
+      refetch();
     }
-  });
-}
+  }
+)
 ```
 
-### Pipelines.tsx - Estado e UI
+### 3. Marcar início/fim do drag no handler
 
 ```typescript
-// Estado para controlar quantos leads carregar por coluna
-const [leadsLoadedPerStage, setLeadsLoadedPerStage] = useState<Record<string, number>>({});
-
-// No render da coluna, após os cards:
-{stage.leads?.length === 100 && (
-  <Button 
-    variant="ghost" 
-    size="sm" 
-    className="w-full text-xs text-muted-foreground"
-    onClick={() => handleLoadMore(stage.id)}
-  >
-    <ChevronDown className="h-3 w-3 mr-1" />
-    Carregar mais
-  </Button>
-)}
+const handleDragEnd = useCallback(async (result: DropResult) => {
+  // Marcar que estamos em processo de drag
+  isDraggingRef.current = true;
+  
+  const { destination, source, draggableId } = result;
+  
+  if (!destination) {
+    isDraggingRef.current = false;
+    return;
+  }
+  if (destination.droppableId === source.droppableId && destination.index === source.index) {
+    isDraggingRef.current = false;
+    return;
+  }
+  
+  // ... resto do código ...
+  
+  try {
+    // ... update no banco ...
+    
+    await refetch();
+    
+  } catch (error: any) {
+    queryClient.setQueryData(queryKey, previousData);
+    toast.error('Erro ao mover lead: ' + error.message);
+  } finally {
+    // Liberar flag após completar (sucesso ou erro)
+    isDraggingRef.current = false;
+  }
+}, [/* deps */]);
 ```
-
-### Abordagem Alternativa (Mais Simples)
-
-Como o limite de 100 por coluna é suficiente para 99% dos casos, posso simplificar:
-
-1. **Sem query SQL complexa**: Buscar todos normalmente, mas limitar no frontend
-2. **Botão "Carregar mais"**: Busca apenas daquela coluna específica
-3. **Merge no estado local**: Adiciona ao array de leads daquela coluna
-
-Esta abordagem é mais simples e mantém a compatibilidade com o drag-and-drop.
 
 ---
 
-## StageSettingsDialog.tsx - Remoção da Aba
+## Por que usar `useRef` ao invés de `useState`
 
-```typescript
-// ANTES: 4 colunas
-<TabsList className="w-full grid grid-cols-4 mb-4">
-  <TabsTrigger value="general">...</TabsTrigger>
-  <TabsTrigger value="cadence">...</TabsTrigger>
-  <TabsTrigger value="integrations">...</TabsTrigger>  // REMOVER
-  <TabsTrigger value="automations">...</TabsTrigger>
-</TabsList>
-
-// DEPOIS: 3 colunas
-<TabsList className="w-full grid grid-cols-3 mb-4">
-  <TabsTrigger value="general">...</TabsTrigger>
-  <TabsTrigger value="cadence">...</TabsTrigger>
-  <TabsTrigger value="automations">...</TabsTrigger>
-</TabsList>
-
-// Remover também o TabsContent de integrations
-```
+- `useRef` não causa re-render quando muda
+- Atualização é síncrona e imediata
+- Perfeito para flags de controle que não afetam a UI
 
 ---
 
 ## Resultado Esperado
 
 ### Antes
-
-- Pipeline carrega até 500 leads (pode ficar lento)
-- Leads antigos não aparecem
-- Aba "Integrações" vazia confunde usuário
+- Lead move → volta para coluna anterior (bug)
 
 ### Depois
-
-- Pipeline carrega 100 leads por coluna (mais rápido)
-- Botão "Carregar mais" permite ver leads antigos
-- Contador mostra total real (ex: "250" mesmo exibindo 100)
-- Interface mais limpa sem aba vazia
+- Lead move → permanece na coluna de destino
+- Real-time sync continua funcionando para outras atualizações (outros usuários, etc.)
 
 ---
 
-## Ordem de Implementação
+## Testes a Realizar
 
-1. ✅ Remover aba "Integrações" do StageSettingsDialog
-2. ✅ Modificar use-stages.ts para limitar leads por coluna (100 por estágio)
-3. ✅ Adicionar hook useLoadMoreLeads com enriquecimento de tags e WhatsApp
-4. ✅ Implementar botão "Carregar mais" no Pipelines.tsx
-5. Testar drag-and-drop após carregar mais leads (pronto para teste manual)
+1. Arrastar lead entre colunas → deve permanecer na nova coluna
+2. Outro usuário mover um lead → deve atualizar em tempo real
+3. Criar novo lead via webhook → deve aparecer automaticamente
+4. Mover lead rapidamente entre várias colunas → não deve bugar
