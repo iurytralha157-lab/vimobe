@@ -21,7 +21,10 @@ import {
   ArrowRight,
   Loader2,
   Play,
-  Settings2
+  Settings2,
+  MessageCircle,
+  Phone,
+  Mail
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -97,7 +100,7 @@ export function PoolTab() {
     enabled: !!organization?.id
   });
 
-  // Fetch leads currently in pool (assigned but no first_touch)
+  // Fetch leads currently in pool (assigned but no first_response - via WhatsApp, Phone, or Email)
   const { data: leadsInPool = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['leads-in-pool', organization?.id],
     queryFn: async () => {
@@ -111,7 +114,7 @@ export function PoolTab() {
         .eq('organization_id', organization!.id)
         .not('assigned_user_id', 'is', null)
         .not('assigned_at', 'is', null)
-        .is('first_touch_at', null)
+        .is('first_response_at', null)
         .order('assigned_at', { ascending: true })
         .limit(50);
       
@@ -324,8 +327,11 @@ export function PoolTab() {
                           />
                           <span className="text-sm text-muted-foreground">minutos</span>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Se não houver contato neste período, o lead será redistribuído
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          Monitorado via: 
+                          <MessageCircle className="h-3 w-3" /> 
+                          <Phone className="h-3 w-3" /> 
+                          <Mail className="h-3 w-3" />
                         </p>
                       </div>
                       
@@ -370,10 +376,15 @@ export function PoolTab() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Leads Aguardando Contato
+              Leads Aguardando Primeiro Contato
             </CardTitle>
-            <CardDescription>
-              Leads que ainda não receberam primeiro contato
+            <CardDescription className="flex items-center gap-2">
+              <span>Nenhum contato registrado via</span>
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <MessageCircle className="h-3 w-3" /> WhatsApp
+                <Phone className="h-3 w-3 ml-1" /> Telefone
+                <Mail className="h-3 w-3 ml-1" /> E-mail
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
