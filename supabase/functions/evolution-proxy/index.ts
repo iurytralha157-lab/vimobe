@@ -324,7 +324,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
     const rawCaption = caption || text || "";
     const isJustFilename = rawCaption && (
       rawCaption === filename || 
-      /^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp|mp4|mp3|pdf|doc|docx|ogg|wav|m4a)$/i.test(rawCaption)
+      /\.(png|jpg|jpeg|gif|webp|bmp|tiff|svg|mp4|mp3|pdf|doc|docx|ogg|wav|m4a|avi|mov|mkv|xlsx|xls|pptx|ppt|zip|rar)$/i.test(rawCaption)
     );
     const mediaCaption = isJustFilename ? "" : rawCaption;
 

@@ -438,8 +438,8 @@ export function useSendWhatsAppMessage() {
           ...((storedMediaUrl || base64) && { 
             mediaUrl: storedMediaUrl, 
             mediaType: mediaType || "image",
-            // Não enviar caption se for só o nome do arquivo
-            caption: text && text !== filename && !text.match(/^[a-f0-9-]+\.(png|jpg|jpeg|gif|webp|mp4|mp3|pdf|doc|docx)$/i) ? text : undefined,
+            // Não enviar caption se for só o nome do arquivo (qualquer extensão de mídia)
+            caption: text && text !== filename && !/\.(png|jpg|jpeg|gif|webp|mp4|mp3|pdf|doc|docx|ogg|wav|m4a|avi|mov|mkv|xlsx|xls|pptx|ppt|zip|rar)$/i.test(text) ? text : undefined,
             // Only send base64 if we don't have stored URL
             base64: storedMediaUrl ? undefined : base64,
             mimetype,
