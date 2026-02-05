@@ -78,6 +78,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initialPipelineId, setInitialPipelineId] = useState<string | null>(null);
   
   // Config
   const [name, setName] = useState('');
@@ -101,7 +102,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       
       const config = automation.trigger_config as Record<string, unknown> || {};
       if (config.tag_id) setTagId(config.tag_id as string);
-      if (config.pipeline_id) setPipelineId(config.pipeline_id as string);
+      if (config.pipeline_id) {
+        setPipelineId(config.pipeline_id as string);
+        setInitialPipelineId(config.pipeline_id as string);
+      }
       if (config.to_stage_id) setStageId(config.to_stage_id as string);
       if (config.filter_user_id) setFilterUserId(config.filter_user_id as string);
       if (typeof config.stop_on_reply === 'boolean') setStopOnReply(config.stop_on_reply);
@@ -179,12 +183,17 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
     }
   }, [triggerType, setNodes, isInitialized]);
 
-  // Clear stage when pipeline changes
+  // Clear stage when pipeline changes (only if user manually changed it, not on initial load)
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && pipelineId !== initialPipelineId) {
       setStageId('');
+      setOnReplyStageId('');
     }
-  }, [pipelineId, isInitialized]);
+    // After first manual change, reset initialPipelineId so subsequent changes also clear
+    if (isInitialized && initialPipelineId && pipelineId !== initialPipelineId) {
+      setInitialPipelineId(null);
+    }
+  }, [pipelineId, isInitialized, initialPipelineId]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -547,6 +556,12 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                           <SelectValue placeholder="Selecione a etapa..." />
                         </SelectTrigger>
                         <SelectContent>
+                          {/* Fallback: show loading item if stage is selected but not yet in list */}
+                          {stageId && !stages?.find(s => s.id === stageId) && (
+                            <SelectItem value={stageId} disabled>
+                              Carregando etapa...
+                            </SelectItem>
+                          )}
                           {stages?.map((stage) => (
                             <SelectItem key={stage.id} value={stage.id}>
                               <div className="flex items-center gap-2">
