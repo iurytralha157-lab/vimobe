@@ -5,6 +5,28 @@ import { ptBR } from 'date-fns/locale';
 import { DashboardFilters } from './use-dashboard-filters';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Helper: Check if user can view all leads (admin, super_admin, or has lead_view_all permission)
+async function checkCanViewAllLeads(userId: string): Promise<boolean> {
+  // Check role first
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  
+  if (userData?.role === 'admin' || userData?.role === 'super_admin') {
+    return true;
+  }
+  
+  // Check lead_view_all permission
+  const { data: hasPermission } = await supabase.rpc('user_has_permission', {
+    p_permission_key: 'lead_view_all',
+    p_user_id: userId,
+  });
+  
+  return !!hasPermission;
+}
+
 export interface DealsEvolutionPoint {
   date: string;
   ganhos: number;
@@ -127,7 +149,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         currentUserRole = userData?.role || 'user';
       }
       
-      const isAdmin = currentUserRole === 'admin';
+      // Check if user can view all leads (admin, super_admin, or has permission)
+      const canViewAll = currentUserId ? await checkCanViewAllLeads(currentUserId) : false;
       
       // Calculate date ranges for current and previous periods
       const now = new Date();
@@ -146,11 +169,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString());
 
-      // Role-based filter: non-admins only see their own leads
-      if (!isAdmin && currentUserId) {
+      // Role-based filter: users without full visibility only see their own leads
+      if (!canViewAll && currentUserId) {
         query = query.eq('assigned_user_id', currentUserId);
       } else if (filters?.userId) {
-        // Admin can filter by specific user
+        // Users with full visibility can filter by specific user
         query = query.eq('assigned_user_id', filters.userId);
       }
 
@@ -159,9 +182,9 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         query = query.eq('source', filters.source as any);
       }
 
-      // Apply team filter (only for admins)
+      // Apply team filter (only for users who can view all)
       let memberIds: string[] = [];
-      if (isAdmin && filters?.teamId) {
+      if (canViewAll && filters?.teamId) {
         const { data: teamMembers } = await supabase
           .from('team_members')
           .select('user_id')
@@ -203,7 +226,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .lte('created_at', previousTo.toISOString());
       
       // Role-based filter for previous period
-      if (!isAdmin && currentUserId) {
+      if (!canViewAll && currentUserId) {
         previousQuery = previousQuery.eq('assigned_user_id', currentUserId);
       } else if (filters?.userId) {
         previousQuery = previousQuery.eq('assigned_user_id', filters.userId);
@@ -376,7 +399,8 @@ export function useLeadsChartData() {
         currentUserRole = userData?.role || 'user';
       }
       
-      const isAdmin = currentUserRole === 'admin';
+      // Check if user can view all leads (admin, super_admin, or has permission)
+      const canViewAll = currentUserId ? await checkCanViewAllLeads(currentUserId) : false;
       const sevenDaysAgo = subDays(new Date(), 7).toISOString();
       
       // Query with role-based visibility
@@ -386,8 +410,8 @@ export function useLeadsChartData() {
         .gte('created_at', sevenDaysAgo)
         .order('created_at');
       
-      // Non-admins only see their own leads
-      if (!isAdmin && currentUserId) {
+      // Users without full visibility only see their own leads
+      if (!canViewAll && currentUserId) {
         query = query.eq('assigned_user_id', currentUserId);
       }
       
@@ -427,15 +451,9 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
   return useQuery({
     queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, pipelineId, user?.id],
     queryFn: async () => {
-      // Determina o userId: se um filtro foi passado usa ele, senão verifica role
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user?.id || '')
-        .single();
-      
-      const isAdmin = userData?.role === 'admin';
-      const effectiveUserId = filters?.userId || (!isAdmin ? user?.id : null);
+      // Check if user can view all leads (admin, super_admin, or has permission)
+      const canViewAll = user?.id ? await checkCanViewAllLeads(user.id) : false;
+      const effectiveUserId = filters?.userId || (!canViewAll ? user?.id : null);
       
       const { data, error } = await (supabase as any).rpc('get_funnel_data', {
         p_date_from: filters?.dateRange?.from?.toISOString() || null,
@@ -478,15 +496,9 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
   return useQuery({
     queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, pipelineId, user?.id],
     queryFn: async () => {
-      // Determina o userId: se um filtro foi passado usa ele, senão verifica role
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user?.id || '')
-        .single();
-      
-      const isAdmin = userData?.role === 'admin';
-      const effectiveUserId = filters?.userId || (!isAdmin ? user?.id : null);
+      // Check if user can view all leads (admin, super_admin, or has permission)
+      const canViewAll = user?.id ? await checkCanViewAllLeads(user.id) : false;
+      const effectiveUserId = filters?.userId || (!canViewAll ? user?.id : null);
       
       const { data, error } = await (supabase as any).rpc('get_lead_sources_data', {
         p_date_from: filters?.dateRange?.from?.toISOString() || null,
@@ -526,6 +538,15 @@ export function useTopBrokers(filters?: DashboardFilters) {
   return useQuery({
     queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.teamId],
     queryFn: async (): Promise<TopBrokersResult> => {
+      // Get current user to check visibility
+      const { data: { user } } = await supabase.auth.getUser();
+      const canViewAll = user?.id ? await checkCanViewAllLeads(user.id) : false;
+      
+      // Non-privileged users shouldn't see the full broker ranking
+      if (!canViewAll) {
+        return { brokers: [], isFallbackMode: false };
+      }
+      
       // First try: Get leads with won status using deal_status
       let query = supabase
         .from('leads')
@@ -673,11 +694,12 @@ export function useUpcomingTasks() {
         currentUserRole = userData?.role || 'user';
       }
       
-      const isAdmin = currentUserRole === 'admin';
+      // Check if user can view all leads (admin, super_admin, or has permission)
+      const canViewAll = currentUserId ? await checkCanViewAllLeads(currentUserId) : false;
       
       // For non-admins, first get their lead IDs
       let leadIds: string[] = [];
-      if (!isAdmin && currentUserId) {
+      if (!canViewAll && currentUserId) {
         const { data: userLeads } = await supabase
           .from('leads')
           .select('id')
@@ -704,8 +726,8 @@ export function useUpcomingTasks() {
         .order('due_date', { ascending: true })
         .limit(10);
       
-      // Non-admins only see tasks for their leads
-      if (!isAdmin && leadIds.length > 0) {
+      // Users without full visibility only see tasks for their leads
+      if (!canViewAll && leadIds.length > 0) {
         query = query.in('lead_id', leadIds);
       }
 
@@ -748,7 +770,8 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         currentUserRole = userData?.role || 'user';
       }
       
-      const isAdmin = currentUserRole === 'admin';
+      // Check if user can view all leads (admin, super_admin, or has permission)
+      const canViewAll = currentUserId ? await checkCanViewAllLeads(currentUserId) : false;
       
       // Calculate date range
       const now = new Date();
@@ -763,8 +786,8 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         .gte('created_at', dateFrom.toISOString())
         .lte('created_at', dateTo.toISOString());
 
-      // Role-based filter: non-admins only see their own leads
-      if (!isAdmin && currentUserId) {
+      // Role-based filter: users without full visibility only see their own leads
+      if (!canViewAll && currentUserId) {
         query = query.eq('assigned_user_id', currentUserId);
       } else if (filters?.userId) {
         query = query.eq('assigned_user_id', filters.userId);
@@ -775,8 +798,8 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
         query = query.eq('source', filters.source as any);
       }
 
-      // Apply team filter (only for admins)
-      if (isAdmin && filters?.teamId) {
+      // Apply team filter (only for users who can view all)
+      if (canViewAll && filters?.teamId) {
         const { data: teamMembers } = await supabase
           .from('team_members')
           .select('user_id')

@@ -1,5 +1,6 @@
-
 # Plano de Correção: Auditoria do Dashboard
+
+## ✅ Status: CONCLUÍDO
 
 ## Diagnóstico Completo
 
@@ -116,8 +117,14 @@ Após as correções:
 | Corretor comum | Vê filtro de Corretor | Não vê filtro de Corretor |
 | Líder de equipe | Vê só seus leads | Vê leads da equipe |
 
-## Prioridade de Implementação
+## Correções Implementadas
 
-1. **Alta**: Corrigir verificação de `super_admin` e `lead_view_all`
-2. **Média**: Ocultar filtro de Corretor para quem não pode usar
-3. **Baixa**: Revisar visibilidade do TopBrokers
+1. ✅ **Corrigida verificação de permissões** em `src/hooks/use-dashboard-stats.ts`
+   - Adicionada função `checkCanViewAllLeads()` que verifica `admin`, `super_admin` e `lead_view_all`
+   - Aplicada em: `useEnhancedDashboardStats`, `useLeadsChartData`, `useFunnelData`, `useLeadSourcesData`, `useUpcomingTasks`, `useDealsEvolutionData`
+
+2. ✅ **Filtro de Corretor ocultado** para usuários sem permissão em `src/components/dashboard/DashboardFilters.tsx`
+   - Usa `useUserPermissions` para verificar `lead_view_all`
+   - Também considera líderes de equipe
+
+3. ✅ **TopBrokers protegido** - retorna array vazio para usuários sem permissão de visualização global
