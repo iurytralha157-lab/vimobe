@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic } from "lucide-react";
+import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink } from "lucide-react";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { CreateLeadDialog } from "@/components/conversations/CreateLeadDialog";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, useArchiveConversation, useDeleteConversation, WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
 import { useAccessibleSessions } from "@/hooks/use-accessible-sessions";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
@@ -27,6 +27,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
 export default function Conversations() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,11 +92,16 @@ export default function Conversations() {
       });
     }
   }, [selectedConversation?.id]);
-  const filteredConversations = conversations?.filter(conv => {
-    if (!searchTerm) return true;
+  const filteredConversations = useMemo(() => {
+    if (!conversations) return [];
+    if (!searchTerm) return conversations;
     const search = searchTerm.toLowerCase();
-    return conv.contact_name?.toLowerCase().includes(search) || conv.contact_phone?.includes(search);
-  });
+    return conversations.filter(conv => 
+      conv.contact_name?.toLowerCase().includes(search) || 
+      conv.contact_phone?.includes(search) ||
+      conv.lead?.name?.toLowerCase().includes(search)
+    );
+  }, [conversations, searchTerm]);
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return;
     await sendMessage.mutateAsync({
@@ -391,7 +397,7 @@ export default function Conversations() {
               })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
                 leadId: conv.lead.id,
                 tagId
-              })} onCreateLead={() => {
+              })} onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} onCreateLead={() => {
                 setCreateLeadContact({
                   phone: conv.contact_phone || undefined,
                   name: conv.contact_name || undefined
@@ -457,7 +463,7 @@ export default function Conversations() {
             })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
               leadId: conv.lead.id,
               tagId
-            })} onCreateLead={() => {
+            })} onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} onCreateLead={() => {
               setCreateLeadContact({
                 phone: conv.contact_phone || undefined,
                 name: conv.contact_name || undefined
@@ -579,6 +585,7 @@ function ConversationItem({
   availableTags,
   onAddTag,
   onRemoveTag,
+  onViewLead,
   onCreateLead
 }: {
   conversation: WhatsAppConversation;
@@ -590,6 +597,7 @@ function ConversationItem({
   availableTags: TagType[];
   onAddTag: (tagId: string) => void;
   onRemoveTag: (tagId: string) => void;
+  onViewLead?: () => void;
   onCreateLead: () => void;
 }) {
   const leadTags = conversation.lead?.tags || [];
@@ -633,30 +641,48 @@ function ConversationItem({
               </Badge>}
           </div>
           
-          {/* Tags abaixo da mensagem */}
-          {leadTags.length > 0 && <div className="flex items-center gap-1 mt-1 flex-wrap">
-              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 font-medium" style={{
-            backgroundColor: `${leadTags[0].tag.color}20`,
-            color: leadTags[0].tag.color,
-            borderColor: leadTags[0].tag.color
-          }}>
-                {leadTags[0].tag.name}
-              </Badge>
-              {leadTags.length > 1 && leadTags[1] && (
-                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 font-medium" style={{
-                  backgroundColor: `${leadTags[1].tag.color}20`,
-                  color: leadTags[1].tag.color,
-                  borderColor: leadTags[1].tag.color
-                }}>
-                  {leadTags[1].tag.name}
+          {/* Tags do lead */}
+          {leadTags.length > 0 && (
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {leadTags.slice(0, 2).map((lt, idx) => (
+                <Badge 
+                  key={lt.tag.id} 
+                  variant="secondary" 
+                  className="text-[9px] px-1.5 py-0 h-4 font-medium" 
+                  style={{
+                    backgroundColor: `${lt.tag.color}20`,
+                    color: lt.tag.color,
+                    borderColor: lt.tag.color
+                  }}
+                >
+                  {lt.tag.name}
                 </Badge>
-              )}
-              {leadTags.length > 2 && <span className="text-[9px] text-muted-foreground">
+              ))}
+              {leadTags.length > 2 && (
+                <span className="text-[9px] text-muted-foreground">
                   +{leadTags.length - 2}
-                </span>}
-            </div>}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </button>
+
+      {/* Botão para ver lead */}
+      {onViewLead && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewLead();
+          }}
+          title="Ver lead no pipeline"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+        </Button>
+      )}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
