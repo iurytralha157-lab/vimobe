@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, parseISO, startOfWeek, startOfMonth } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, eachDayOfInterval, parseISO } from 'date-fns';
+
 import { checkLeadVisibility, applyVisibilityFilter } from './use-lead-visibility';
 
 export interface TelecomDashboardStats {
@@ -179,29 +179,10 @@ export function useTelecomEvolutionData(filters?: DashboardFilters) {
 
       if (!customers || customers.length === 0) return [];
 
-      // Determine grouping interval
-      const daysDiff = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24));
-      
-      let intervals: Date[];
-      let formatPattern: string;
-      let getIntervalKey: (date: Date) => string;
-
-      if (daysDiff <= 14) {
-        // Daily
-        intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
-        formatPattern = 'dd/MM';
-        getIntervalKey = (date) => format(date, 'yyyy-MM-dd');
-      } else if (daysDiff <= 90) {
-        // Weekly
-        intervals = eachWeekOfInterval({ start: dateFrom, end: dateTo }, { locale: ptBR });
-        formatPattern = "'Sem' w";
-        getIntervalKey = (date) => format(startOfWeek(date, { locale: ptBR }), 'yyyy-MM-dd');
-      } else {
-        // Monthly
-        intervals = eachMonthOfInterval({ start: dateFrom, end: dateTo });
-        formatPattern = 'MMM';
-        getIntervalKey = (date) => format(startOfMonth(date), 'yyyy-MM');
-      }
+      // Always use daily grouping for bar chart visibility
+      const intervals = eachDayOfInterval({ start: dateFrom, end: dateTo });
+      const formatPattern = 'dd/MM';
+      const getIntervalKey = (date: Date) => format(date, 'yyyy-MM-dd');
 
       // Group customers by interval and status at creation time
       const grouped = new Map<string, TelecomEvolutionPoint>();
@@ -209,7 +190,7 @@ export function useTelecomEvolutionData(filters?: DashboardFilters) {
       intervals.forEach((interval) => {
         const key = getIntervalKey(interval);
         grouped.set(key, {
-          date: format(interval, formatPattern, { locale: ptBR }),
+          date: format(interval, formatPattern),
           novos: 0,
           instalados: 0,
           aguardando: 0,
