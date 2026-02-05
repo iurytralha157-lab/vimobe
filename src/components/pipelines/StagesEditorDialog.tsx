@@ -193,13 +193,20 @@ export function StagesEditorDialog({
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              ...(snapshot.isDragging && {
+                                top: 'auto',
+                                left: 'auto',
+                              }),
+                            }}
                             className={cn(
                               "flex items-center gap-2 p-3 bg-card border rounded-lg transition-shadow",
                               snapshot.isDragging && "shadow-lg ring-2 ring-primary"
                             )}
                           >
                             <div
-                              {...provided.dragHandleProps}
                               className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
                             >
                               <GripVertical className="h-5 w-5" />
@@ -230,7 +237,7 @@ export function StagesEditorDialog({
                                   className="h-7 w-7"
                                   onClick={handleSaveEdit}
                                 >
-                                  <Check className="h-4 w-4 text-green-600" />
+                                  <Check className="h-4 w-4 text-emerald-600" />
                                 </Button>
                                 <Button
                                   variant="ghost"
