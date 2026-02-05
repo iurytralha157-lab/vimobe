@@ -1,5 +1,5 @@
 export { AutomationList } from './AutomationList';
-export { AutomationEditor } from './AutomationEditor';
-export { CreateAutomationDialog } from './CreateAutomationDialog';
-export { NodeConfigPanel } from './NodeConfigPanel';
-export { AddNodeDialog } from './AddNodeDialog';
+export { FollowUpBuilder } from './FollowUpBuilder';
+export { FollowUpBuilderEdit } from './FollowUpBuilderEdit';
+export { FollowUpTemplates } from './FollowUpTemplates';
+export { ExecutionHistory } from './ExecutionHistory';
