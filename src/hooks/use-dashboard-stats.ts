@@ -136,7 +136,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       // Build base query for current period - using deal_status for accurate conversion tracking
       let query = supabase
         .from('leads')
-        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status')
+        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds')
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString());
 
@@ -277,49 +277,23 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         ? Math.round(((closedLeads - prevClosedLeads) / prevClosedLeads) * 100) 
         : closedLeads > 0 ? 100 : 0;
 
-      // Calculate average response time from activities
+      // Calculate average response time using first_response_seconds (more accurate)
       let avgResponseTime = '--';
-      try {
-        const leadIds = leads?.map((l: any) => l.id) || [];
-        if (leadIds.length > 0) {
-          const { data: activities } = await supabase
-            .from('activities')
-            .select('lead_id, created_at')
-            .in('lead_id', leadIds.slice(0, 100)) // Limit for performance
-            .order('created_at', { ascending: true });
-          
-          if (activities && activities.length > 0) {
-            // Get first activity for each lead
-            const firstActivities = new Map<string, Date>();
-            activities.forEach((a: any) => {
-              if (!firstActivities.has(a.lead_id)) {
-                firstActivities.set(a.lead_id, new Date(a.created_at));
-              }
-            });
-            
-            // Calculate response times
-            const responseTimes: number[] = [];
-            leads?.forEach((lead: any) => {
-              const firstActivity = firstActivities.get(lead.id);
-              if (firstActivity) {
-                const leadCreated = new Date(lead.created_at);
-                const diff = firstActivity.getTime() - leadCreated.getTime();
-                if (diff > 0) {
-                  responseTimes.push(diff);
-                }
-              }
-            });
-            
-            if (responseTimes.length > 0) {
-              const avgMs = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
-              const hours = Math.floor(avgMs / (1000 * 60 * 60));
-              const minutes = Math.floor((avgMs % (1000 * 60 * 60)) / (1000 * 60));
-              avgResponseTime = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-            }
-          }
+      const leadsWithResponse = leads?.filter((l: any) => l.first_response_seconds != null) || [];
+      if (leadsWithResponse.length > 0) {
+        const totalSeconds = leadsWithResponse.reduce((sum: number, l: any) => sum + l.first_response_seconds, 0);
+        const avgSeconds = Math.round(totalSeconds / leadsWithResponse.length);
+        
+        if (avgSeconds < 60) {
+          avgResponseTime = `${avgSeconds}s`;
+        } else if (avgSeconds < 3600) {
+          const minutes = Math.floor(avgSeconds / 60);
+          avgResponseTime = `${minutes}m`;
+        } else {
+          const hours = Math.floor(avgSeconds / 3600);
+          const minutes = Math.floor((avgSeconds % 3600) / 60);
+          avgResponseTime = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
         }
-      } catch (e) {
-        console.error('Error calculating avg response time:', e);
       }
 
       return {

@@ -39,6 +39,7 @@ import { TagSelectorPopoverContent } from '@/components/ui/tag-selector';
 import { useCreateCommissionOnWon } from '@/hooks/use-create-commission';
 import { useUpdateLeadCommission } from '@/hooks/use-update-commission';
 import { useDealStatusChange } from '@/hooks/use-deal-status-change';
+import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 const sourceLabels: Record<string, string> = {
   meta: 'Meta Ads',
   wordpress: 'WordPress',
@@ -241,6 +242,7 @@ export function LeadDetailDialog({
   const createCommission = useCreateCommissionOnWon();
   const updateCommission = useUpdateLeadCommission();
   const dealStatusChange = useDealStatusChange();
+  const { recordFirstResponse } = useRecordFirstResponseOnAction();
   const { profile, organization } = useAuth();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
@@ -533,7 +535,16 @@ export function LeadDetailDialog({
         {/* Quick Actions Row */}
         <div className="flex items-center gap-2 mb-3">
           {lead.phone && <>
-              <Button variant="outline" size="sm" onClick={() => window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank')} className="h-9 flex-1 rounded-full border-2">
+              <Button variant="outline" size="sm" onClick={() => {
+                recordFirstResponse({
+                  leadId: lead.id,
+                  organizationId: lead.organization_id || profile?.organization_id || '',
+                  channel: 'phone',
+                  actorUserId: profile?.id || null,
+                  firstResponseAt: lead.first_response_at,
+                });
+                window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
+              }} className="h-9 flex-1 rounded-full border-2">
                 <Phone className="h-4 w-4 mr-1.5" />
                 Ligar
               </Button>
@@ -543,9 +554,16 @@ export function LeadDetailDialog({
               </Button>
             </>}
           {lead.email && <Button variant="outline" size="sm" onClick={() => {
-          const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
-          window.open(gmailUrl, '_blank');
-        }} className="h-9 w-9 p-0 rounded-full border-2 shrink-0">
+            recordFirstResponse({
+              leadId: lead.id,
+              organizationId: lead.organization_id || profile?.organization_id || '',
+              channel: 'email',
+              actorUserId: profile?.id || null,
+              firstResponseAt: lead.first_response_at,
+            });
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
+            window.open(gmailUrl, '_blank');
+          }} className="h-9 w-9 p-0 rounded-full border-2 shrink-0">
               <Mail className="h-4 w-4" />
             </Button>}
         </div>
