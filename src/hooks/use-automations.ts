@@ -72,6 +72,15 @@ export interface AutomationExecution {
   error_message: string | null;
   execution_data: Json;
   next_execution_at: string | null;
+  // Joined data
+  lead?: {
+    id: string;
+    name: string | null;
+  } | null;
+  automation?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface AutomationTemplate {
@@ -416,7 +425,11 @@ export function useAutomationExecutions(automationId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('automation_executions')
-        .select('*')
+        .select(`
+          *,
+          lead:leads(id, name),
+          automation:automations(id, name)
+        `)
         .order('started_at', { ascending: false })
         .limit(100);
 
@@ -429,5 +442,6 @@ export function useAutomationExecutions(automationId?: string) {
       return data as AutomationExecution[];
     },
     enabled: !!profile?.organization_id,
+    refetchInterval: 10000, // Refetch every 10 seconds to show live updates
   });
 }

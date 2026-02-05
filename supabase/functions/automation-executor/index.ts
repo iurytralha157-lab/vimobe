@@ -258,6 +258,14 @@ Deno.serve(async (req) => {
           .eq("id", execution_id);
 
         console.log(`Execution ${execution_id} completed`);
+
+        // Send completion notification
+        await sendAutomationNotification(
+          supabase,
+          execution,
+          automation,
+          "completed"
+        );
       }
 
       return new Response(
@@ -267,9 +275,18 @@ Deno.serve(async (req) => {
 
     } catch (nodeError) {
       console.error(`Error processing node ${currentNodeId}:`, nodeError);
-      await markExecutionFailed(supabase, execution_id, 
-        nodeError instanceof Error ? nodeError.message : "Unknown error"
+      const errorMsg = nodeError instanceof Error ? nodeError.message : "Unknown error";
+      await markExecutionFailed(supabase, execution_id, errorMsg);
+      
+      // Send failure notification
+      await sendAutomationNotification(
+        supabase,
+        execution,
+        automation,
+        "failed",
+        errorMsg
       );
+      
       throw nodeError;
     }
 
@@ -293,6 +310,77 @@ async function markExecutionFailed(supabase: any, executionId: string, error: st
       error_message: error,
     })
     .eq("id", executionId);
+}
+
+// Helper function to translate common error messages to Portuguese
+function translateError(error: string): string {
+  if (error.includes("exists") && error.includes("false")) {
+    return "Número WhatsApp inválido ou não cadastrado";
+  }
+  if (error.includes("Connection refused") || error.includes("ECONNREFUSED")) {
+    return "Falha na conexão com WhatsApp";
+  }
+  if (error.includes("timeout") || error.includes("ETIMEDOUT")) {
+    return "Tempo limite excedido";
+  }
+  if (error.includes("not connected")) {
+    return "Sessão WhatsApp desconectada";
+  }
+  // Return first 200 chars for other errors
+  return error.length > 200 ? error.substring(0, 200) + "..." : error;
+}
+
+// deno-lint-ignore no-explicit-any
+async function sendAutomationNotification(
+  supabase: any,
+  execution: { lead_id?: string; organization_id: string },
+  automation: { name: string; created_by?: string },
+  status: "completed" | "failed",
+  errorMessage?: string
+) {
+  try {
+    // Get lead info
+    let leadName = "Lead";
+    let notifyUserId: string | null = automation.created_by || null;
+    
+    if (execution.lead_id) {
+      const { data: lead } = await supabase
+        .from("leads")
+        .select("name, assigned_user_id")
+        .eq("id", execution.lead_id)
+        .single();
+      
+      if (lead) {
+        leadName = lead.name || "Lead";
+        notifyUserId = lead.assigned_user_id || automation.created_by || null;
+      }
+    }
+    
+    if (!notifyUserId) {
+      console.log("No user to notify for automation completion/failure");
+      return;
+    }
+    
+    const isSuccess = status === "completed";
+    const title = isSuccess ? "✅ Automação Concluída" : "❌ Automação Falhou";
+    const translatedError = errorMessage ? translateError(errorMessage) : "";
+    const content = isSuccess
+      ? `"${automation.name}" finalizou para ${leadName}`
+      : `"${automation.name}" falhou para ${leadName}: ${translatedError}`;
+    
+    await supabase.from("notifications").insert({
+      user_id: notifyUserId,
+      organization_id: execution.organization_id,
+      title,
+      content,
+      type: "automation",
+      lead_id: execution.lead_id || null,
+    });
+    
+    console.log(`Notification sent: automation ${status} for ${leadName}`);
+  } catch (notifError) {
+    console.error("Error sending automation notification:", notifError);
+  }
 }
 
 // deno-lint-ignore no-explicit-any
