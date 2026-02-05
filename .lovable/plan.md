@@ -1,164 +1,138 @@
 
-# Plano Final - Auditoria Completa do Sistema Financeiro
+# Plano de Correção: Criação Automática de Comissões via Trigger
 
-## Resumo da Auditoria
+## Problema Identificado
 
-Após análise detalhada, identifiquei os seguintes pontos que precisam de ajustes para finalizar o módulo financeiro:
+O lead **"Lead Teste Financeiro"** foi marcado como ganho com valor de R$ 250.000, mas a comissão e conta a receber **NÃO foram criadas**.
 
----
+**Causa raiz:** O lead foi arrastado para um estágio com automação "mudar para Ganho", que executa via trigger SQL. Este trigger apenas atualiza o `deal_status` e `won_at`, mas **não cria registros financeiros**.
 
-## Estado Atual do Sistema
+A criação de comissões só acontece quando:
+- O status é alterado manualmente no LeadDetailDialog (usa hook JavaScript)
 
-### O que está funcionando
-- Formulário de lançamentos financeiros (`FinancialEntryForm`) - código correto
-- Formulário de contratos (`ContractForm`) - código correto
-- Edge Function `recurring-entries-generator` - funcionando (processou 2 entradas, pulou porque hoje não é o dia de vencimento)
-- Cron job configurado para executar às 06:00 UTC diariamente
-- Campo `default_commission_percentage` nas organizações - configurado em 5%
-- Hook `useActivateContract` - gera receivables e commissions ao ativar contrato
-- Hook `useDealStatusChange` - gera comissão e receivable ao marcar lead como "won"
+## Solução Proposta
 
-### Problemas Identificados
+Criar um **trigger SQL** que cria comissão e receivable automaticamente quando `deal_status` muda para `'won'`.
 
-| Problema | Causa | Impacto |
-|----------|-------|---------|
-| **Comissões não aparecem** | Tabela `commissions` está vazia | Relatórios zerados |
-| **Receivables não existem** | Nenhum entry do tipo `receivable` foi criado | Dashboard mostra R$ 0 |
-| **4 leads "won" sem comissões** | Foram marcados como ganhos ANTES das correções serem implementadas | Dados históricos perdidos |
-| **Dashboard mostra zeros** | Sem dados de commissions nem receivables para exibir | KPIs incorretos |
-
----
-
-## Plano de Correção Final
-
-### Etapa 1: Sincronizar Leads Históricos
-Executar SQL para criar comissões e receivables para os 4 leads que foram marcados como "won" antes das correções:
+### Etapa 1: Criar Função de Auto-Criação de Comissão
 
 ```sql
--- Para cada lead won sem comissão vinculada
+CREATE OR REPLACE FUNCTION create_commission_on_won()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_commission_percentage numeric;
+  v_commission_amount numeric;
+  v_property_commission numeric;
+  v_org_commission numeric;
+BEGIN
+  -- Só executa se deal_status mudou para 'won' e tem valor_interesse
+  IF NEW.deal_status = 'won' 
+     AND (OLD.deal_status IS NULL OR OLD.deal_status != 'won')
+     AND NEW.valor_interesse > 0 THEN
+    
+    -- Verificar se já existe comissão para este lead
+    IF NOT EXISTS (SELECT 1 FROM commissions WHERE lead_id = NEW.id) THEN
+      
+      -- Buscar percentual do imóvel
+      SELECT commission_percentage INTO v_property_commission
+      FROM properties WHERE id = NEW.property_id;
+      
+      -- Buscar percentual da organização
+      SELECT default_commission_percentage INTO v_org_commission
+      FROM organizations WHERE id = NEW.organization_id;
+      
+      -- Fallback chain: lead -> property -> organization -> 5%
+      v_commission_percentage := COALESCE(
+        NULLIF(NEW.commission_percentage, 0),
+        NULLIF(v_property_commission, 0),
+        NULLIF(v_org_commission, 0),
+        5.0
+      );
+      
+      v_commission_amount := NEW.valor_interesse * (v_commission_percentage / 100);
+      
+      -- Criar comissão
+      INSERT INTO commissions (
+        organization_id, lead_id, user_id, property_id,
+        base_value, amount, percentage, status, notes
+      ) VALUES (
+        NEW.organization_id, NEW.id, NEW.assigned_user_id, NEW.property_id,
+        NEW.valor_interesse, v_commission_amount, v_commission_percentage,
+        'forecast', 'Comissão gerada automaticamente'
+      );
+    END IF;
+    
+    -- Verificar se já existe receivable para este lead
+    IF NOT EXISTS (
+      SELECT 1 FROM financial_entries 
+      WHERE lead_id = NEW.id AND type = 'receivable'
+    ) THEN
+      -- Criar conta a receber
+      INSERT INTO financial_entries (
+        organization_id, lead_id, type, amount, 
+        due_date, status, description
+      ) VALUES (
+        NEW.organization_id, NEW.id, 'receivable', NEW.valor_interesse,
+        (CURRENT_DATE + INTERVAL '30 days')::date,
+        'pending', 'Venda - ' || NEW.name
+      );
+    END IF;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### Etapa 2: Criar Trigger
+
+```sql
+CREATE TRIGGER trigger_create_commission_on_won
+AFTER UPDATE ON leads
+FOR EACH ROW
+WHEN (NEW.deal_status = 'won' AND OLD.deal_status IS DISTINCT FROM 'won')
+EXECUTE FUNCTION create_commission_on_won();
+```
+
+### Etapa 3: Criar Comissão para o Lead de Teste
+
+Após implementar o trigger, criar manualmente a comissão para o lead que você acabou de testar:
+
+```sql
 INSERT INTO commissions (organization_id, lead_id, user_id, base_value, amount, percentage, status, notes)
-SELECT 
-  l.organization_id,
-  l.id as lead_id,
-  l.assigned_user_id as user_id,
-  l.valor_interesse as base_value,
-  l.valor_interesse * (COALESCE(l.commission_percentage, o.default_commission_percentage, 5) / 100) as amount,
-  COALESCE(l.commission_percentage, o.default_commission_percentage, 5) as percentage,
-  'forecast' as status,
-  'Comissão gerada retroativamente' as notes
-FROM leads l
-JOIN organizations o ON l.organization_id = o.id
-WHERE l.deal_status = 'won'
-  AND l.valor_interesse > 0
-  AND NOT EXISTS (SELECT 1 FROM commissions c WHERE c.lead_id = l.id);
+VALUES (
+  'cd868dbb-924d-4e14-9bc8-5d3e67f44c3d',
+  'be635892-31ff-402b-8c12-d158bab36a1c',
+  '4ad539ef-1e16-4c43-9cad-0e3c76b2949b',
+  250000, 12500, 5, 'forecast', 'Comissão criada manualmente (teste)'
+);
 
--- Criar receivables para leads won sem entry vinculado
-INSERT INTO financial_entries (organization_id, lead_id, type, description, amount, due_date, status, created_at)
-SELECT 
-  l.organization_id,
-  l.id as lead_id,
-  'receivable' as type,
-  'Venda - ' || l.name as description,
-  l.valor_interesse as amount,
-  (l.won_at + interval '30 days')::date as due_date,
-  'pending' as status,
-  now() as created_at
-FROM leads l
-WHERE l.deal_status = 'won'
-  AND l.valor_interesse > 0
-  AND NOT EXISTS (SELECT 1 FROM financial_entries fe WHERE fe.lead_id = l.id AND fe.type = 'receivable');
+INSERT INTO financial_entries (organization_id, lead_id, type, amount, due_date, status, description)
+VALUES (
+  'cd868dbb-924d-4e14-9bc8-5d3e67f44c3d',
+  'be635892-31ff-402b-8c12-d158bab36a1c',
+  'receivable', 250000,
+  (CURRENT_DATE + INTERVAL '30 days')::date,
+  'pending', 'Venda - Lead Teste Financeiro'
+);
 ```
 
-### Etapa 2: Correção no Mapeamento de Campos
-O hook `useCommissions` usa `calculated_value`, mas a tabela tem `amount` como campo principal. Ajustar:
+### Etapa 4: Validar no Dashboard
 
-**Arquivo:** `src/hooks/use-commissions.ts`
-- Linha 177: Já tem fallback `(commission as any).amount ?? commission.calculated_value` ✓
-- Confirmar que está funcionando corretamente
+Após as correções, o dashboard financeiro deve mostrar:
+- **Comissões a Pagar:** R$ 12.500 (5% de R$ 250.000)
+- **A Receber:** R$ 250.000
 
-### Etapa 3: Testar Fluxo Completo
-1. Criar novo lead com `valor_interesse`
-2. Marcar como "won"
-3. Verificar se comissão foi criada
-4. Verificar se receivable foi criado
-5. Verificar se dashboard atualiza
+## Resumo das Alterações
 
-### Etapa 4: Validar Recorrência
-1. Criar lançamento com `is_recurring = true`
-2. Aguardar execução do cron (ou testar manualmente)
-3. Verificar se nova entrada foi gerada
+| Arquivo/Recurso | Alteração |
+|-----------------|-----------|
+| Migration SQL | Criar função `create_commission_on_won()` |
+| Migration SQL | Criar trigger `trigger_create_commission_on_won` |
+| Dados | Inserir comissão e receivable para lead de teste |
 
-### Etapa 5: Criar Receivables para Entradas Recorrentes que Estão Faltando
-As 2 entradas recorrentes (Marketing Vila do Sol R$150 e Aluguel Loja R$2000) ainda não geraram filhos porque:
-- Marketing: vencimento dia 20, hoje é dia 5
-- Aluguel: vencimento dia 21, hoje é dia 5
+## Benefícios
 
-Isso está **correto** - elas serão geradas nos dias certos.
-
----
-
-## Arquivos que Precisam de Ajustes Menores
-
-### 1. `src/hooks/use-create-commission.ts`
-- Verificar se a validação de `userId` está muito restritiva
-- Atualmente retorna `null` se não tiver usuário atribuído
-- **Sugestão:** Permitir criar comissão sem usuário (pode ser atribuída depois)
-
-### 2. `src/pages/FinancialDashboard.tsx`  
-- Adicionar indicadores de "Leads Ganhos sem Receivable"
-- Mostrar alerta quando há inconsistência de dados
-
-### 3. `src/hooks/use-financial.ts`
-- O `useFinancialDashboard` está correto, mas depende de ter dados
-- Após rodar a migração de dados históricos, os valores aparecerão
-
----
-
-## Checklist Final
-
-- [x] Executar SQL de sincronização de dados históricos ✅ (3 comissões + 3 receivables criados)
-- [x] Corrigir use-create-commission.ts para permitir comissão sem usuário ✅
-- [ ] Testar criação de novo lead → marcar como won → verificar comissão
-- [ ] Testar criação de novo contrato → ativar → verificar receivables
-- [ ] Testar formulário de lançamentos → criar, editar, marcar como pago
-- [ ] Verificar se dashboard mostra valores corretos
-- [ ] Testar exportação de relatórios
-
----
-
-## Detalhes Técnicos
-
-### Tabelas do Sistema Financeiro
-```
-financial_entries (amount, type: 'payable'|'receivable', status, is_recurring, parent_entry_id)
-commissions (amount, percentage, base_value, status: 'forecast'|'approved'|'paid')
-contracts (value, installments, down_payment, status)
-contract_brokers (commission_percentage, commission_value)
-organizations.default_commission_percentage
-```
-
-### Rotas do Módulo Financeiro
-```
-/financeiro            → FinancialDashboard
-/financeiro/contas     → FinancialEntries (lançamentos)
-/financeiro/contratos  → Contracts
-/financeiro/comissoes  → Commissions
-/financeiro/relatorios → FinancialReports
-```
-
-### Edge Functions
-```
-recurring-entries-generator → Cron 06:00 UTC diário ✓
-notification-scheduler     → Alertas de vencimento ✓
-```
-
----
-
-## Próximos Passos Recomendados
-
-1. **Executar migração de dados históricos** (SQL acima)
-2. **Testar fluxo completo** no preview
-3. **Verificar dashboard** após migração
-4. **Marcar etapa 20 como completa** - Testes e validação final
-
-O sistema financeiro está tecnicamente correto - o problema principal é que os leads foram marcados como "won" antes das integrações serem implementadas. Após executar a migração de sincronização, tudo deve funcionar normalmente.
+1. **Consistência:** Comissões são criadas independente de como o status foi alterado
+2. **Automação completa:** Estágios "Ganhos" funcionam end-to-end
+3. **Sem duplicatas:** Verificação de existência antes de inserir
