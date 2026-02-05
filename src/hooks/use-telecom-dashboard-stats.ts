@@ -215,38 +215,26 @@ export function useTelecomEvolutionData(filters?: DashboardFilters) {
         });
       });
 
+      // Contar clientes na lógica correta de evolução:
+      // - Todos contam como "novos" na data de criação
+      // - "instalados" são contados pela data de instalação (não criação)
       customers.forEach((customer) => {
         const createdDate = parseISO(customer.created_at);
-        const key = getIntervalKey(createdDate);
-        const point = grouped.get(key);
+        const createdKey = getIntervalKey(createdDate);
+        const createdPoint = grouped.get(createdKey);
         
-        if (point) {
-          const status = customer.status?.toUpperCase() || 'NOVO';
-          
-          switch (status) {
-            case 'NOVO':
-              point.novos++;
-              break;
-            case 'INSTALADOS':
-              point.instalados++;
-              break;
-            case 'AGUARDANDO':
-              point.aguardando++;
-              break;
-            case 'EM_ANALISE':
-              point.em_analise++;
-              break;
-            case 'CANCELADO':
-              point.cancelado++;
-              break;
-            case 'SUSPENSO':
-              point.suspenso++;
-              break;
-            case 'INADIMPLENTE':
-              point.inadimplente++;
-              break;
-            default:
-              point.novos++;
+        // Todo cliente conta como "novo" na data de criação
+        if (createdPoint) {
+          createdPoint.novos++;
+        }
+        
+        // Se tem installation_date, contar como instalado nessa data
+        if (customer.installation_date) {
+          const installDate = parseISO(customer.installation_date);
+          const installKey = getIntervalKey(installDate);
+          const installPoint = grouped.get(installKey);
+          if (installPoint) {
+            installPoint.instalados++;
           }
         }
       });

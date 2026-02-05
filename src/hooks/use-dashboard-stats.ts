@@ -455,9 +455,11 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
       const canViewAll = user?.id ? await checkCanViewAllLeads(user.id) : false;
       const effectiveUserId = filters?.userId || (!canViewAll ? user?.id : null);
       
+      // Funil mostra snapshot ATUAL dos leads - não filtra por data de criação
+      // Apenas aplica filtros de equipe/usuário/fonte/pipeline
       const { data, error } = await (supabase as any).rpc('get_funnel_data', {
-        p_date_from: filters?.dateRange?.from?.toISOString() || null,
-        p_date_to: filters?.dateRange?.to?.toISOString() || null,
+        p_date_from: null, // Não filtrar por data - funil é estado atual
+        p_date_to: null,
         p_team_id: filters?.teamId || null,
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
