@@ -1,130 +1,180 @@
 
-# Plano: Corrigir Dashboard Telecom - Evolução de Clientes e Funil de Vendas
+# Plano: Corrigir Visibilidade do Dashboard para Supervisores/Líderes de Equipe
 
-## Problemas Identificados
+## Problema Identificado
+O supervisor (Paulo) consegue ver leads na pipeline porque a RLS permite via `get_user_led_pipeline_ids()`, mas o Dashboard mostra tudo zerado porque os hooks de dados usam `checkCanViewAllLeads()` que **não considera líderes de equipe**.
 
-### 1. Gráfico "Evolução de Clientes" Mostrando "Nenhum dado disponível"
-O hook `useTelecomEvolutionData` agrupa clientes pelo **status atual** em vez de contabilizar corretamente a evolução. A lógica atual:
-- Busca clientes criados no período
-- Conta quantos têm cada status ATUALMENTE
+### Fluxo Atual (Quebrado)
+```
+Supervisor → checkCanViewAllLeads() → FALSE (não é admin, não tem lead_view_all)
+→ Busca apenas leads atribuídos a ele mesmo → Dashboard vazio
+```
 
-Isso não faz sentido para um gráfico de "evolução" - um cliente que foi criado em janeiro como "NOVO" e hoje está "INSTALADO" aparece como "INSTALADO" na data de criação, distorcendo a visualização.
-
-### 2. Funil de Vendas Mostrando 0 Leads em Todos os Estágios
-Mesmo com leads existentes nas pipelines (confirmado: REPROVADO tem 6, DOCUMENTOS tem 2, etc.), o funil mostra 0. As causas prováveis são:
-- Filtro de data padrão (`last30days`) filtrando por `created_at` pode excluir leads mais antigos que foram movidos recentemente
-- A RPC `get_funnel_data` filtra leads por `created_at`, mas deveria contar leads **atuais** em cada estágio
-
-### 3. Origens de Leads Vazio
-Mesmo problema do funil - a RPC `get_lead_sources_data` também filtra por data de criação.
+### Fluxo Correto
+```
+Supervisor → checkCanViewTeamLeads() → TRUE (é líder de equipe)
+→ Busca leads de todos os membros de suas equipes → Dashboard mostra dados da equipe
+```
 
 ---
 
 ## Solução Proposta
 
-### Correção 1: Hook `useTelecomEvolutionData`
+### 1. Criar Nova Função Helper: `checkLeadVisibility`
+
+**Arquivo:** `src/hooks/use-dashboard-stats.ts`
+
+Substituir `checkCanViewAllLeads` por uma função mais completa que retorna:
+- `{ canViewAll: true }` para admins/super_admins ou quem tem `lead_view_all`
+- `{ canViewAll: false, teamMemberIds: [...] }` para líderes de equipe
+- `{ canViewAll: false, userId: 'xxx' }` para usuários normais
+
+```typescript
+interface LeadVisibility {
+  canViewAll: boolean;
+  teamMemberIds?: string[]; // IDs dos membros das equipes lideradas
+  userId?: string; // ID do próprio usuário (quando não pode ver nada além)
+}
+
+async function checkLeadVisibility(userId: string): Promise<LeadVisibility> {
+  // 1. Verificar role
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  
+  if (userData?.role === 'admin' || userData?.role === 'super_admin') {
+    return { canViewAll: true };
+  }
+  
+  // 2. Verificar permissão lead_view_all
+  const { data: hasViewAll } = await supabase.rpc('user_has_permission', {
+    p_permission_key: 'lead_view_all',
+    p_user_id: userId,
+  });
+  
+  if (hasViewAll) {
+    return { canViewAll: true };
+  }
+  
+  // 3. Verificar se é líder de equipe
+  const { data: isLeader } = await supabase.rpc('is_team_leader', { check_user_id: userId });
+  
+  if (isLeader) {
+    // Buscar IDs de todos os membros das equipes que lidera
+    const { data: ledTeamIds } = await supabase.rpc('get_user_led_team_ids');
+    
+    if (ledTeamIds && ledTeamIds.length > 0) {
+      const { data: members } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .in('team_id', ledTeamIds);
+      
+      const memberIds = [...new Set(members?.map(m => m.user_id) || [])];
+      return { canViewAll: false, teamMemberIds: memberIds };
+    }
+  }
+  
+  // 4. Usuário normal - só vê próprios leads
+  return { canViewAll: false, userId };
+}
+```
+
+### 2. Atualizar Hooks de Dashboard
+
+**Hooks a modificar:**
+- `useEnhancedDashboardStats` 
+- `useFunnelData`
+- `useLeadSourcesData`
+- `useTopBrokers`
+- `useDealsEvolutionData`
+- `useUpcomingTasks`
+
+Para cada hook, substituir a lógica:
+
+```typescript
+// ANTES
+const canViewAll = await checkCanViewAllLeads(userId);
+if (!canViewAll && userId) {
+  query = query.eq('assigned_user_id', userId);
+}
+
+// DEPOIS
+const visibility = await checkLeadVisibility(userId);
+if (!visibility.canViewAll) {
+  if (visibility.teamMemberIds) {
+    // Líder de equipe: ver leads de todos os membros
+    query = query.in('assigned_user_id', visibility.teamMemberIds);
+  } else if (visibility.userId) {
+    // Usuário normal: só próprios leads
+    query = query.eq('assigned_user_id', visibility.userId);
+  }
+}
+```
+
+### 3. Atualizar Hooks do Telecom
 
 **Arquivo:** `src/hooks/use-telecom-dashboard-stats.ts`
 
-Alterar a lógica para mostrar uma evolução que faça sentido:
-- **Opção A (Recomendada):** Mostrar quantos clientes **entraram** (foram criados) em cada período, todos contando como "novos" no momento da criação
-- **Opção B:** Mostrar snapshot acumulativo do total de clientes por período
+Aplicar a mesma lógica de visibilidade para:
+- `useTelecomDashboardStats`
+- `useTelecomEvolutionData`
 
-Implementação da Opção A - mostrar novos clientes por período:
-
-```typescript
-// Em vez de agrupar por status atual, contar todos como "novos" na data de criação
-// E separadamente, contar instalações por installation_date
-
-customers.forEach((customer) => {
-  const createdDate = parseISO(customer.created_at);
-  const key = getIntervalKey(createdDate);
-  const point = grouped.get(key);
-  
-  if (point) {
-    // Todo cliente conta como "novo" na data de criação
-    point.novos++;
-    
-    // Se tem installation_date, contar também como instalado nessa data
-    if (customer.installation_date) {
-      const installDate = parseISO(customer.installation_date);
-      const installKey = getIntervalKey(installDate);
-      const installPoint = grouped.get(installKey);
-      if (installPoint) {
-        installPoint.instalados++;
-      }
-    }
-  }
-});
-```
-
-### Correção 2: Funil de Vendas - Remover Filtro de Data na Contagem
-
-**Problema:** O funil deveria mostrar a contagem **atual** de leads em cada estágio, não filtrado por data de criação.
-
-**Arquivos a Modificar:**
-- `src/hooks/use-dashboard-stats.ts` - função `useFunnelData`
-
-Alterar para NÃO passar filtro de data para a RPC quando se trata do funil (o funil é um snapshot do estado atual):
-
-```typescript
-// No hook useFunnelData, o funil deveria mostrar estado atual
-// Não faz sentido filtrar por data de criação do lead
-
-const { data, error } = await (supabase as any).rpc('get_funnel_data', {
-  p_date_from: null,  // Não filtrar por data para o funil
-  p_date_to: null,
-  p_team_id: filters?.teamId || null,
-  p_user_id: effectiveUserId || null,
-  p_source: filters?.source || null,
-  p_pipeline_id: pipelineId || null,
-});
-```
-
-### Correção 3: Origens de Leads - Manter Filtro de Data
-
-Para origens de leads, o filtro de data faz sentido (quantos leads vieram de cada fonte no período). Manter como está, mas verificar se os leads estão sendo criados dentro do período filtrado.
+Substituir a verificação simples `isAdmin` por `checkLeadVisibility` que considera líderes de equipe.
 
 ---
 
-## Detalhes Técnicos das Mudanças
+## Detalhes Técnicos
 
-### Arquivo 1: `src/hooks/use-telecom-dashboard-stats.ts`
+### Arquivos a Modificar
 
-Modificar a função `useTelecomEvolutionData` para:
-1. Buscar também o campo `installation_date` 
-2. Contar todos os clientes como "novos" na data de criação
-3. Contar clientes como "instalados" na data de instalação (não na data de criação)
-4. Manter os outros status como contagem acumulativa opcional
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/use-dashboard-stats.ts` | Criar `checkLeadVisibility`, atualizar todos os hooks |
+| `src/hooks/use-telecom-dashboard-stats.ts` | Importar e usar `checkLeadVisibility` |
 
-### Arquivo 2: `src/hooks/use-dashboard-stats.ts`
+### Fluxo de Dados Após Correção
 
-Na função `useFunnelData`:
-1. Não passar filtros de data para a RPC `get_funnel_data`
-2. O funil representa o estado atual da pipeline, não leads criados em um período
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      checkLeadVisibility()                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Admin/SuperAdmin ──► canViewAll: true ──► Vê todos os dados    │
+│                                                                  │
+│  lead_view_all ──────► canViewAll: true ──► Vê todos os dados   │
+│                                                                  │
+│  Líder de Equipe ────► teamMemberIds ───► Vê dados da equipe    │
+│                                                                  │
+│  Usuário Normal ─────► userId ──────────► Vê só próprios dados  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Resultado Esperado
 
-1. **Evolução de Clientes:**
-   - Gráfico mostrará quantos clientes novos entraram por período
-   - Instalações serão contadas pela data real de instalação
-   - Visualização mais precisa e útil
+1. **Supervisor Paulo** verá no dashboard:
+   - KPIs agregados de todos os leads da sua equipe
+   - Funil de vendas com leads da equipe
+   - Origens de leads da equipe
+   - Evolução de clientes da equipe
+   - Top corretores (apenas da sua equipe)
 
-2. **Funil de Vendas:**
-   - Mostrará a contagem real de leads em cada estágio
-   - REPROVADO: 6, DOCUMENTOS: 2, etc.
-   - Filtros de equipe/usuário continuam funcionando
+2. **Administrador** continua vendo todos os dados
 
-3. **Origens de Leads:**
-   - Continuará filtrando por data de criação (faz sentido para análise)
-   - Mostrará distribuição correta por fonte
+3. **Corretor comum** continua vendo apenas seus próprios dados
 
 ---
 
-## Alternativa: Adicionar Toggle para Filtro de Data no Funil
+## Considerações de Performance
 
-Se desejado, podemos adicionar um switch no dashboard para escolher entre:
-- "Leads atuais" (sem filtro de data) - padrão
-- "Leads criados no período" (com filtro de data)
+A função `checkLeadVisibility` faz até 4 queries adicionais para líderes:
+1. Buscar role do usuário
+2. Verificar permissão `lead_view_all`
+3. Verificar se é líder (`is_team_leader`)
+4. Buscar IDs dos membros das equipes
+
+Para otimizar, o resultado pode ser cacheado na queryKey do React Query, evitando refetch desnecessário.
