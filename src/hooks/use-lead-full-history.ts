@@ -42,6 +42,7 @@ const activityLabels: Record<string, string> = {
   call: 'Ligação realizada',
   email: 'Email enviado',
   message: 'Mensagem enviada',
+  automation_message: 'Mensagem automática',
   task_completed: 'Tarefa concluída',
   lead_created: 'Lead criado',
   contact_updated: 'Contato atualizado',
@@ -49,6 +50,8 @@ const activityLabels: Record<string, string> = {
   tag_removed: 'Tag removida',
   assignee_changed: 'Responsável alterado',
   lead_reentry: 'Lead reentrou',
+  automation_stage_move: 'Movido por automação',
+  automation_tag_added: 'Tag adicionada por automação',
 };
 
 function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
@@ -79,6 +82,10 @@ function getActivityLabel(activity: Activity): string {
   const meta = (activity.metadata as Record<string, any>) || {};
   
   switch (activity.type) {
+    case 'automation_message':
+      const channel = meta.channel || 'whatsapp';
+      return `📤 Mensagem automática (${channel === 'whatsapp' ? 'WhatsApp' : channel})`;
+      
     case 'lead_created':
       if (meta.webhook_name) {
         return `Lead criado via webhook "${meta.webhook_name}"`;
@@ -128,7 +135,17 @@ function getActivityLabel(activity: Activity): string {
       }
       return 'Estágio alterado';
       
+    case 'automation_stage_move':
+      return `🤖 Movido por automação`;
+      
+    case 'automation_tag_added':
+      return `🤖 Tag adicionada por automação`;
+      
     default:
+      // Check if it's an automation activity via metadata
+      if (meta.is_automation) {
+        return `🤖 ${activityLabels[activity.type] || activity.type}`;
+      }
       return activityLabels[activity.type] || activity.type;
   }
 }

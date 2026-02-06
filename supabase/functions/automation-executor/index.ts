@@ -383,6 +383,31 @@ async function sendAutomationNotification(
   }
 }
 
+// Helper function to log automation activity
+// deno-lint-ignore no-explicit-any
+async function logAutomationActivity(
+  supabase: any,
+  leadId: string | undefined,
+  type: string,
+  content: string,
+  metadata: Record<string, unknown> = {}
+) {
+  if (!leadId) return;
+  
+  try {
+    await supabase.from("activities").insert({
+      lead_id: leadId,
+      type,
+      content,
+      metadata: { ...metadata, is_automation: true },
+      user_id: null, // No user - it's automated
+    });
+    console.log(`Activity logged: ${type} for lead ${leadId}`);
+  } catch (err) {
+    console.error("Error logging activity:", err);
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 async function processActionNode(
   supabase: any,
@@ -460,6 +485,19 @@ async function processActionNode(
             }
 
             console.log("WhatsApp message sent successfully via configured session");
+            
+            // Log activity for sent message
+            await logAutomationActivity(
+              supabase,
+              execution.lead_id,
+              "automation_message",
+              messageContent.substring(0, 200) + (messageContent.length > 200 ? "..." : ""),
+              { 
+                channel: "whatsapp",
+                automation_action: "send_whatsapp",
+                session_id: configuredSessionId
+              }
+            );
           }
         }
         return;
@@ -514,6 +552,19 @@ async function processActionNode(
         }
 
         console.log("WhatsApp message sent successfully");
+        
+        // Log activity for sent message via conversation
+        await logAutomationActivity(
+          supabase,
+          execution.lead_id,
+          "automation_message",
+          messageContent.substring(0, 200) + (messageContent.length > 200 ? "..." : ""),
+          { 
+            channel: "whatsapp",
+            automation_action: "send_whatsapp",
+            conversation_id: execution.conversation_id
+          }
+        );
       }
       break;
 
