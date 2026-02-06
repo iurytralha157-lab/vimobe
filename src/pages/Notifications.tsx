@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bell, Check, CheckCheck, Loader2, UserPlus, CheckSquare, FileText, DollarSign, Info } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Bell, Check, CheckCheck, Loader2, UserPlus, CheckSquare, FileText, DollarSign, Info, MessageCircle, Settings, AlertTriangle, Zap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, Notification } from '@/hooks/use-notifications';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 const typeIcons: Record<string, typeof Bell> = {
@@ -19,6 +20,10 @@ const typeIcons: Record<string, typeof Bell> = {
   commission: DollarSign,
   system: Bell,
   info: Info,
+  message: MessageCircle,
+  whatsapp: MessageCircle,
+  warning: AlertTriangle,
+  automation: Zap,
 };
 
 const typeLabels: Record<string, string> = {
@@ -29,19 +34,73 @@ const typeLabels: Record<string, string> = {
   commission: 'Comissão',
   system: 'Sistema',
   info: 'Informação',
+  message: 'WhatsApp',
+  whatsapp: 'WhatsApp',
+  warning: 'Alerta',
+  automation: 'Automação',
 };
+
+const notificationCategories = {
+  all: { label: 'Todas', types: null as string[] | null, icon: Bell },
+  leads: { label: 'Leads', types: ['lead', 'new_lead'], icon: UserPlus },
+  whatsapp: { label: 'WhatsApp', types: ['message', 'whatsapp'], icon: MessageCircle },
+  system: { label: 'Sistema', types: ['warning', 'automation', 'system', 'info'], icon: Settings },
+  financial: { label: 'Financeiro', types: ['commission', 'contract'], icon: DollarSign },
+  tasks: { label: 'Tarefas', types: ['task'], icon: CheckSquare },
+};
+
+type CategoryKey = keyof typeof notificationCategories;
 
 export default function Notifications() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryKey>('all');
   const navigate = useNavigate();
 
   const { data: notifications = [], isLoading } = useNotifications();
   const markAsRead = useMarkNotificationRead();
   const markAllAsRead = useMarkAllNotificationsRead();
 
-  const filteredNotifications = filter === 'unread'
-    ? notifications.filter(n => !n.is_read)
-    : notifications;
+  // Count notifications per category (unread only)
+  const categoryCounts = useMemo(() => {
+    const counts: Record<CategoryKey, number> = {
+      all: 0,
+      leads: 0,
+      whatsapp: 0,
+      system: 0,
+      financial: 0,
+      tasks: 0,
+    };
+    
+    notifications.forEach(n => {
+      if (!n.is_read) {
+        counts.all++;
+        (Object.keys(notificationCategories) as CategoryKey[]).forEach(key => {
+          if (key !== 'all') {
+            const category = notificationCategories[key];
+            if (category.types?.includes(n.type)) {
+              counts[key]++;
+            }
+          }
+        });
+      }
+    });
+    
+    return counts;
+  }, [notifications]);
+
+  // Combined filtering: status + category
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter(n => {
+      // Status filter
+      if (filter === 'unread' && n.is_read) return false;
+      
+      // Category filter
+      const category = notificationCategories[categoryFilter];
+      if (category.types && !category.types.includes(n.type)) return false;
+      
+      return true;
+    });
+  }, [notifications, filter, categoryFilter]);
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -89,6 +148,45 @@ export default function Notifications() {
             </Button>
           )}
         </div>
+
+        {/* Category Filter */}
+        <ScrollArea className="w-full whitespace-nowrap pb-2">
+          <div className="flex gap-2">
+            {(Object.keys(notificationCategories) as CategoryKey[]).map((key) => {
+              const category = notificationCategories[key];
+              const CategoryIcon = category.icon;
+              const count = categoryCounts[key];
+              const isActive = categoryFilter === key;
+              
+              return (
+                <button
+                  key={key}
+                  onClick={() => setCategoryFilter(key)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-lg border transition-all shrink-0",
+                    isActive
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card hover:bg-muted border-border"
+                  )}
+                >
+                  <CategoryIcon className="h-4 w-4" />
+                  <span className="text-sm font-medium">{category.label}</span>
+                  {count > 0 && (
+                    <span className={cn(
+                      "text-xs rounded-full px-1.5 min-w-[20px] text-center",
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-primary/10 text-primary"
+                    )}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
 
         <Card>
           <CardHeader>
