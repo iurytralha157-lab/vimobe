@@ -1,103 +1,150 @@
 
-# Filtro de Categorias na Página de Notificações
+# Análise e Correção do Sistema de Distribuição
 
-## Objetivo
-Adicionar um filtro por categoria na página de notificações para permitir que os usuários separem facilmente notificações de WhatsApp, Leads e outras categorias.
+## Diagnóstico Detalhado
 
-## Categorias Propostas
+### Situação Atual (Confirmada via Banco de Dados)
 
-| Categoria | Tipos Incluídos | Ícone |
-|-----------|-----------------|-------|
-| Todas | Todos os tipos | Bell |
-| Leads | `lead`, `new_lead` | UserPlus |
-| WhatsApp | `message`, `whatsapp` | MessageCircle |
-| Sistema | `warning`, `automation`, `system`, `info` | Settings |
-| Financeiro | `commission`, `contract` | DollarSign |
-| Tarefas | `task` | CheckSquare |
+| Lead | Responsável | Tempo para Atribuição | Status |
+|------|-------------|----------------------|--------|
+| Tiago (imagem) | Maikson | 0 segundos | ✅ Atribuído |
+| Lucct | Maikson | 0 segundos | ✅ Atribuído |
+| DAYANARA | Distribuído | 0 segundos | ✅ Atribuído |
+| Gustavo | Distribuído | 0 segundos | ✅ Atribuído |
 
-## Interface do Usuário
+**Conclusão**: O sistema de distribuição está funcionando corretamente. Todos os leads estão sendo atribuídos instantaneamente.
+
+### Causa Raiz do Badge "Sem Responsável"
+
+O problema visual identificado na imagem ocorre por um **delay de sincronização entre o banco e a UI**:
 
 ```text
+Fluxo Atual:
 ┌─────────────────────────────────────────────────────────────────┐
-│  🔔 Notificações                                                │
-│  Você tem 5 notificações não lidas                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Filtro por Categoria:                                          │
-│  ┌──────┬───────┬──────────┬─────────┬────────────┬────────┐   │
-│  │ Todas│ Leads │ WhatsApp │ Sistema │ Financeiro │ Tarefas│   │
-│  │ (50) │ (1571)│  (148)   │  (182)  │    (5)     │  (0)   │   │
-│  └──────┴───────┴──────────┴─────────┴────────────┴────────┘   │
-│                                                                 │
-│  Status: [ Todas ] [ Não lidas (5) ]                            │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 👤 Novo Lead: João Silva                                │   │
-│  │    Origem: Meta Ads - Campanha Verão                    │   │
-│  │    há 2 minutos                            [✓ Marcar]   │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
+│ 1. Webhook recebe payload                                       │
+│ 2. INSERT lead (assigned_user_id = null)                       │
+│ 3. Trigger AFTER INSERT → handle_lead_intake()                 │
+│ 4. Lead é atribuído via round-robin (banco atualizado)         │
+│ 5. Realtime subscription dispara evento                        │
+│ 6. Frontend refetch() → UI atualizada                          │
 └─────────────────────────────────────────────────────────────────┘
+       └── Entre 3 e 6 há um delay de ~100-500ms onde a UI 
+           pode mostrar "Sem responsável" temporariamente
+```
+
+## Correções Propostas
+
+### 1. Melhorar Resposta do Webhook
+
+Após criar o lead, buscar os dados atualizados (pós-trigger) antes de retornar:
+
+**Arquivo**: `supabase/functions/generic-webhook/index.ts`
+
+```typescript
+// Após INSERT, buscar dados atualizados pelo trigger
+const { data: finalLead } = await supabase
+  .from('leads')
+  .select('id, pipeline_id, stage_id, assigned_user_id')
+  .eq('id', lead.id)
+  .single();
+
+return new Response(
+  JSON.stringify({
+    success: true,
+    lead_id: finalLead?.id,
+    pipeline_id: finalLead?.pipeline_id,
+    stage_id: finalLead?.stage_id,
+    assigned_user_id: finalLead?.assigned_user_id, // Valor correto pós-trigger
+  }),
+  ...
+);
+```
+
+### 2. Adicionar Debounce na Subscription Realtime
+
+Evitar flickering visual com um pequeno delay antes do refetch:
+
+**Arquivo**: `src/pages/Pipelines.tsx`
+
+```typescript
+// Adicionar debounce de 200ms para evitar flickering
+let refetchTimeout: NodeJS.Timeout;
+
+.on('postgres_changes', { ... }, () => {
+  if (!isDraggingRef.current) {
+    clearTimeout(refetchTimeout);
+    refetchTimeout = setTimeout(() => refetch(), 200);
+  }
+})
+```
+
+### 3. Melhorar Loading State no LeadCard
+
+Mostrar um estado transitório durante a atribuição:
+
+**Arquivo**: `src/components/leads/LeadCard.tsx`
+
+```typescript
+// Se o lead foi criado há menos de 3 segundos e não tem responsável,
+// mostrar "Atribuindo..." ao invés de "Sem responsável"
+const isRecentlyCreated = lead.created_at && 
+  (Date.now() - new Date(lead.created_at).getTime()) < 3000;
+
+{!lead.assignee && isRecentlyCreated ? (
+  <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5 animate-pulse">
+    <Loader2 className="h-2 w-2 mr-1 animate-spin" />
+    Atribuindo...
+  </Badge>
+) : !lead.assignee ? (
+  <Badge variant="destructive" ...>
+    Sem responsável
+  </Badge>
+) : (
+  // Avatar do responsável
+)}
 ```
 
 ## Arquivos a Modificar
 
-### 1. `src/pages/Notifications.tsx`
+1. `supabase/functions/generic-webhook/index.ts` - Buscar dados finais pós-trigger
+2. `src/pages/Pipelines.tsx` - Debounce na subscription realtime
+3. `src/components/leads/LeadCard.tsx` - Estado "Atribuindo..." para leads recentes
 
-**Mudanças:**
-- Adicionar import do ícone `MessageCircle` e `Settings` do lucide-react
-- Criar estado `categoryFilter` com valor padrão `'all'`
-- Adicionar mapeamento de categorias para tipos
-- Adicionar componente de filtro de categorias (usando Tabs ou Badges clicáveis)
-- Modificar a lógica de filtragem para combinar status (lidas/não lidas) + categoria
-- Adicionar ícone WhatsApp no mapeamento `typeIcons`
-- Adicionar label "WhatsApp" no mapeamento `typeLabels`
+## Impacto no Tempo de Resposta
 
-**Novo código:**
-```typescript
-// Categorias de notificação
-const notificationCategories = {
-  all: { label: 'Todas', types: null, icon: Bell },
-  leads: { label: 'Leads', types: ['lead', 'new_lead'], icon: UserPlus },
-  whatsapp: { label: 'WhatsApp', types: ['message', 'whatsapp'], icon: MessageCircle },
-  system: { label: 'Sistema', types: ['warning', 'automation', 'system', 'info'], icon: Settings },
-  financial: { label: 'Financeiro', types: ['commission', 'contract'], icon: DollarSign },
-  tasks: { label: 'Tarefas', types: ['task'], icon: CheckSquare },
-};
+O sistema de distribuição **não está afetando** o cálculo de tempo de resposta. O campo `first_response_at` permanece `null` até que o corretor faça contato real via:
+- WhatsApp (automático)
+- Telefone (clique no botão)
+- Email (clique no botão)
 
-// Estado adicional
-const [categoryFilter, setCategoryFilter] = useState<keyof typeof notificationCategories>('all');
+A distribuição instantânea (0 segundos) garante que o corretor receba o lead imediatamente para iniciar o atendimento.
 
-// Lógica de filtragem combinada
-const filteredNotifications = notifications.filter(n => {
-  // Filtro de status (lidas/não lidas)
-  if (filter === 'unread' && n.is_read) return false;
-  
-  // Filtro de categoria
-  const category = notificationCategories[categoryFilter];
-  if (category.types && !category.types.includes(n.type)) return false;
-  
-  return true;
-});
+## Detalhes Técnicos
+
+### Verificação do Trigger
+
+```sql
+-- O trigger AFTER INSERT está ativo e funcionando:
+CREATE TRIGGER trigger_lead_intake 
+  AFTER INSERT ON public.leads 
+  FOR EACH ROW 
+  EXECUTE FUNCTION public.trigger_handle_lead_intake();
 ```
 
-## Detalhes de Implementação
+### Verificação da Fila de Distribuição
 
-### Design Responsivo
-- Em desktop: filtros de categoria em linha horizontal
-- Em mobile: scroll horizontal nos filtros ou dropdown
+A organização tem uma fila ativa configurada:
+- **Nome**: "venda"
+- **Regra**: webhook_id = 450fb731-9e8a-4de5-8bb1-54eac611340f
+- **Estratégia**: Simple Round Robin
+- **Membros**: 6 participantes
 
-### Contadores por Categoria
-- Exibir contador de notificações não lidas por categoria
-- Esconder categorias com 0 notificações (opcional)
+### Dados do Lead "Tiago" (Confirmado no Banco)
 
-### Comportamento
-- Ao selecionar categoria, mantém o filtro de status atual
-- Reset para "Todas" ao clicar no header da página
-- Navegação via URL params (opcional para deep linking)
-
-## Benefícios
-
-1. **Organização**: Usuários podem focar em um tipo específico de notificação
-2. **Produtividade**: Separar notificações de WhatsApp (alto volume) das de leads (alta prioridade)
-3. **UX Melhorada**: Visual claro com contadores por categoria
+| Campo | Valor |
+|-------|-------|
+| `assigned_user_id` | 2a6c45cd-0cca-49a0-8db4-fb8d6114ed27 |
+| `assignee_name` | Maikson |
+| `created_at` | 2026-02-06 17:51:58 |
+| `assigned_at` | 2026-02-06 17:51:58 (mesmo momento) |
+| `distribution_queue` | "venda" |
