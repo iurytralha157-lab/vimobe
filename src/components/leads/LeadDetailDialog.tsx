@@ -28,6 +28,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
+import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
@@ -1135,6 +1136,9 @@ export function LeadDetailDialog({
                   </div>
                 </div>
               </div>
+
+              {/* Rastreamento / Tracking Section */}
+              <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
             </div>
             )
           )}

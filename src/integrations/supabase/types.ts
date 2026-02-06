@@ -1555,34 +1555,58 @@ export type Database = {
           ad_id: string | null
           adset_id: string | null
           campaign_id: string | null
+          contact_notes: string | null
           created_at: string
           form_id: string | null
+          form_name: string | null
           id: string
           lead_id: string
           page_id: string | null
           raw_payload: Json | null
+          source_type: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
           ad_id?: string | null
           adset_id?: string | null
           campaign_id?: string | null
+          contact_notes?: string | null
           created_at?: string
           form_id?: string | null
+          form_name?: string | null
           id?: string
           lead_id: string
           page_id?: string | null
           raw_payload?: Json | null
+          source_type?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
           ad_id?: string | null
           adset_id?: string | null
           campaign_id?: string | null
+          contact_notes?: string | null
           created_at?: string
           form_id?: string | null
+          form_name?: string | null
           id?: string
           lead_id?: string
           page_id?: string | null
           raw_payload?: Json | null
+          source_type?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: [
           {

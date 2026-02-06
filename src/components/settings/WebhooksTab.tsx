@@ -338,12 +338,22 @@ export function WebhooksTab() {
     "email": "joao@email.com",
     "message": "Interesse no imóvel",
     "property_id": "uuid-do-imovel",
-    "renda_familiar": "5000-10000",
-    "trabalha": true,
-    "profissao": "Engenheiro",
-    "faixa_valor_imovel": "300000-500000",
-    "finalidade_compra": "Moradia",
-    "procura_financiamento": true
+    
+    "campaign_id": "123456789",
+    "campaign_name": "Black Friday 2026",
+    "adset_id": "987654321",
+    "adset_name": "Leads Quentes - SP",
+    "ad_id": "456789123",
+    "ad_name": "Carrousel Imóveis",
+    "form_name": "Formulário Landing Page",
+    
+    "utm_source": "facebook",
+    "utm_medium": "cpc",
+    "utm_campaign": "black_friday_2026",
+    "utm_content": "carrousel_v2",
+    "utm_term": "apartamento zona sul",
+    
+    "contact_notes": "Lead interessado em financiamento"
   }'`}</pre>
                               </div>
                             </div>
@@ -392,19 +402,15 @@ export function WebhooksTab() {
           <Separator />
           <div className="space-y-2">
             <h4 className="font-medium">Campos aceitos</h4>
+            <p className="text-xs text-muted-foreground mb-3">Campos básicos do lead</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {[
                 { field: 'name', required: true },
-                { field: 'phone', required: true },
+                { field: 'phone', required: false },
                 { field: 'email', required: false },
                 { field: 'message', required: false },
                 { field: 'property_id', required: false },
-                { field: 'renda_familiar', required: false },
-                { field: 'trabalha', required: false },
-                { field: 'profissao', required: false },
-                { field: 'faixa_valor_imovel', required: false },
-                { field: 'finalidade_compra', required: false },
-                { field: 'procura_financiamento', required: false },
+                { field: 'plan_id', required: false },
               ].map(({ field, required }) => (
                 <div key={field} className="bg-muted rounded px-3 py-2 text-sm font-mono">
                   {field}{required && <span className="text-destructive">*</span>}
@@ -412,8 +418,36 @@ export function WebhooksTab() {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">* Campo obrigatório</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Campos booleanos (trabalha, procura_financiamento) aceitam: true, false, "sim", "nao"
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <h4 className="font-medium">Campos de rastreamento (opcionais)</h4>
+            <p className="text-xs text-muted-foreground mb-3">Dados de campanha, anúncio e UTM</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                'campaign_id',
+                'campaign_name',
+                'adset_id',
+                'adset_name',
+                'ad_id',
+                'ad_name',
+                'form_name',
+                'utm_source',
+                'utm_medium',
+                'utm_campaign',
+                'utm_content',
+                'utm_term',
+                'contact_notes',
+              ].map((field) => (
+                <div key={field} className="bg-primary/5 border border-primary/10 rounded px-3 py-2 text-sm font-mono text-primary">
+                  {field}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Esses campos são salvos automaticamente e exibidos na aba "Contato" do lead.
             </p>
           </div>
           <Separator />
