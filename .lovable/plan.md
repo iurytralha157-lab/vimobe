@@ -1,150 +1,151 @@
 
-# Análise e Correção do Sistema de Distribuição
+# Correção do Sistema de Imóvel de Interesse
 
-## Diagnóstico Detalhado
+## Problema Identificado
 
-### Situação Atual (Confirmada via Banco de Dados)
+Os leads chegam do webhook com o imóvel de interesse corretamente vinculado (exibindo R$1.3M no card), porém quando o usuário abre os detalhes do negócio, o campo mostra "Nenhum" e valor "R$ 0".
 
-| Lead | Responsável | Tempo para Atribuição | Status |
-|------|-------------|----------------------|--------|
-| Tiago (imagem) | Maikson | 0 segundos | ✅ Atribuído |
-| Lucct | Maikson | 0 segundos | ✅ Atribuído |
-| DAYANARA | Distribuído | 0 segundos | ✅ Atribuído |
-| Gustavo | Distribuído | 0 segundos | ✅ Atribuído |
+### Causa Raiz
 
-**Conclusão**: O sistema de distribuição está funcionando corretamente. Todos os leads estão sendo atribuídos instantaneamente.
+Existem **duas colunas diferentes** no banco de dados:
 
-### Causa Raiz do Badge "Sem Responsável"
+| Coluna | Uso | Status |
+|--------|-----|--------|
+| `interest_property_id` | Nova - usada pelo webhook | Preenchida corretamente |
+| `property_id` | Legacy - usada pelo formulário de edição | NULL |
 
-O problema visual identificado na imagem ocorre por um **delay de sincronização entre o banco e a UI**:
+O **LeadCard** lê de `interest_property` (relacionamento com `interest_property_id`) e funciona.
+O **LeadDetailDialog** lê de `property_id` (coluna diferente) e não encontra nada.
+
+Além disso, o webhook não está preenchendo o `valor_interesse` automaticamente a partir do preço do imóvel.
+
+## Dados Confirmados no Banco
 
 ```text
-Fluxo Atual:
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. Webhook recebe payload                                       │
-│ 2. INSERT lead (assigned_user_id = null)                       │
-│ 3. Trigger AFTER INSERT → handle_lead_intake()                 │
-│ 4. Lead é atribuído via round-robin (banco atualizado)         │
-│ 5. Realtime subscription dispara evento                        │
-│ 6. Frontend refetch() → UI atualizada                          │
-└─────────────────────────────────────────────────────────────────┘
-       └── Entre 3 e 6 há um delay de ~100-500ms onde a UI 
-           pode mostrar "Sem responsável" temporariamente
+Lead: Tiago
+├── interest_property_id: 4e54dd44-acce-4aeb-b637-c3a01555b9a1 ✅
+├── property_id: NULL ❌ (LeadDetailDialog lê daqui)
+├── valor_interesse: 0 ❌ (deveria ser R$1.300.000)
+└── Imóvel: CA0003 - casa de alto padrão (R$1.300.000)
 ```
 
-## Correções Propostas
+## Correções Necessárias
 
-### 1. Melhorar Resposta do Webhook
-
-Após criar o lead, buscar os dados atualizados (pós-trigger) antes de retornar:
+### 1. Webhook: Preencher `valor_interesse` automaticamente
 
 **Arquivo**: `supabase/functions/generic-webhook/index.ts`
 
-```typescript
-// Após INSERT, buscar dados atualizados pelo trigger
-const { data: finalLead } = await supabase
-  .from('leads')
-  .select('id, pipeline_id, stage_id, assigned_user_id')
-  .eq('id', lead.id)
-  .single();
+Ao criar o lead com `interest_property_id`, buscar o preço do imóvel e preencher `valor_interesse`:
 
-return new Response(
-  JSON.stringify({
-    success: true,
-    lead_id: finalLead?.id,
-    pipeline_id: finalLead?.pipeline_id,
-    stage_id: finalLead?.stage_id,
-    assigned_user_id: finalLead?.assigned_user_id, // Valor correto pós-trigger
-  }),
-  ...
-);
+```typescript
+// Buscar preço do imóvel resolvido
+let valorInteresse = null;
+if (resolvedPropertyId) {
+  const { data: prop } = await supabase
+    .from('properties')
+    .select('preco')
+    .eq('id', resolvedPropertyId)
+    .maybeSingle();
+  valorInteresse = prop?.preco || null;
+}
+if (resolvedPlanId && !valorInteresse) {
+  const { data: plan } = await supabase
+    .from('service_plans')
+    .select('price')
+    .eq('id', resolvedPlanId)
+    .maybeSingle();
+  valorInteresse = plan?.price || null;
+}
+
+// No INSERT, incluir:
+valor_interesse: valorInteresse,
 ```
 
-### 2. Adicionar Debounce na Subscription Realtime
+### 2. LeadDetailDialog: Usar `interest_property_id`
 
-Evitar flickering visual com um pequeno delay antes do refetch:
+**Arquivo**: `src/components/leads/LeadDetailDialog.tsx`
 
-**Arquivo**: `src/pages/Pipelines.tsx`
-
+**Mudança 1** - Atualizar o estado inicial do formulário (linha ~188):
 ```typescript
-// Adicionar debounce de 200ms para evitar flickering
-let refetchTimeout: NodeJS.Timeout;
+// De:
+property_id: lead.property_id || '',
 
-.on('postgres_changes', { ... }, () => {
-  if (!isDraggingRef.current) {
-    clearTimeout(refetchTimeout);
-    refetchTimeout = setTimeout(() => refetch(), 200);
-  }
-})
+// Para:
+interest_property_id: lead.interest_property_id || '',
+interest_plan_id: lead.interest_plan_id || '',
 ```
 
-### 3. Melhorar Loading State no LeadCard
-
-Mostrar um estado transitório durante a atribuição:
-
-**Arquivo**: `src/components/leads/LeadCard.tsx`
-
+**Mudança 2** - Atualizar o Select de imóvel (linhas ~1244-1274):
 ```typescript
-// Se o lead foi criado há menos de 3 segundos e não tem responsável,
-// mostrar "Atribuindo..." ao invés de "Sem responsável"
-const isRecentlyCreated = lead.created_at && 
-  (Date.now() - new Date(lead.created_at).getTime()) < 3000;
+// De:
+<Select value={editForm.property_id || 'none'} onValueChange={...}>
 
-{!lead.assignee && isRecentlyCreated ? (
-  <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5 animate-pulse">
-    <Loader2 className="h-2 w-2 mr-1 animate-spin" />
-    Atribuindo...
-  </Badge>
-) : !lead.assignee ? (
-  <Badge variant="destructive" ...>
-    Sem responsável
-  </Badge>
-) : (
-  // Avatar do responsável
-)}
+// Para:
+<Select value={lead.interest_property_id || 'none'} onValueChange={value => {
+  const newValue = value === 'none' ? null : value;
+  const selectedProperty = properties.find((p: any) => p.id === value);
+  updateLead.mutateAsync({
+    id: lead.id,
+    interest_property_id: newValue,
+    valor_interesse: selectedProperty?.preco || lead.valor_interesse
+  }).then(() => refetchStages());
+}}>
+```
+
+**Mudança 3** - Mesmo ajuste para Telecom (interest_plan_id):
+```typescript
+<Select value={lead.interest_plan_id || 'none'} onValueChange={value => {
+  const newValue = value === 'none' ? null : value;
+  const selectedPlan = servicePlans.find((p: any) => p.id === value);
+  updateLead.mutateAsync({
+    id: lead.id,
+    interest_plan_id: newValue,
+    valor_interesse: selectedPlan?.price || lead.valor_interesse
+  }).then(() => refetchStages());
+}}>
+```
+
+### 3. Atualizar leads existentes (SQL de correção)
+
+Para corrigir os leads já criados com `valor_interesse = 0`:
+
+```sql
+UPDATE leads l
+SET valor_interesse = p.preco
+FROM properties p
+WHERE l.interest_property_id = p.id
+  AND (l.valor_interesse IS NULL OR l.valor_interesse = 0)
+  AND p.preco > 0;
 ```
 
 ## Arquivos a Modificar
 
-1. `supabase/functions/generic-webhook/index.ts` - Buscar dados finais pós-trigger
-2. `src/pages/Pipelines.tsx` - Debounce na subscription realtime
-3. `src/components/leads/LeadCard.tsx` - Estado "Atribuindo..." para leads recentes
+1. `supabase/functions/generic-webhook/index.ts` - Preencher `valor_interesse` ao criar lead
+2. `src/components/leads/LeadDetailDialog.tsx` - Usar `interest_property_id` no formulário
 
-## Impacto no Tempo de Resposta
+## Fluxo Corrigido
 
-O sistema de distribuição **não está afetando** o cálculo de tempo de resposta. O campo `first_response_at` permanece `null` até que o corretor faça contato real via:
-- WhatsApp (automático)
-- Telefone (clique no botão)
-- Email (clique no botão)
-
-A distribuição instantânea (0 segundos) garante que o corretor receba o lead imediatamente para iniciar o atendimento.
-
-## Detalhes Técnicos
-
-### Verificação do Trigger
-
-```sql
--- O trigger AFTER INSERT está ativo e funcionando:
-CREATE TRIGGER trigger_lead_intake 
-  AFTER INSERT ON public.leads 
-  FOR EACH ROW 
-  EXECUTE FUNCTION public.trigger_handle_lead_intake();
+```text
+Webhook recebe lead
+      │
+      ▼
+Resolve interest_property_id → busca preco
+      │
+      ▼
+Cria lead com:
+├── interest_property_id: UUID do imóvel
+└── valor_interesse: R$1.300.000 (preço do imóvel)
+      │
+      ▼
+LeadCard exibe: R$1.3M ✅
+      │
+      ▼
+LeadDetailDialog lê interest_property_id
+└── Mostra: "CA0003 - casa de alto padrão" ✅
 ```
 
-### Verificação da Fila de Distribuição
+## Benefícios
 
-A organização tem uma fila ativa configurada:
-- **Nome**: "venda"
-- **Regra**: webhook_id = 450fb731-9e8a-4de5-8bb1-54eac611340f
-- **Estratégia**: Simple Round Robin
-- **Membros**: 6 participantes
-
-### Dados do Lead "Tiago" (Confirmado no Banco)
-
-| Campo | Valor |
-|-------|-------|
-| `assigned_user_id` | 2a6c45cd-0cca-49a0-8db4-fb8d6114ed27 |
-| `assignee_name` | Maikson |
-| `created_at` | 2026-02-06 17:51:58 |
-| `assigned_at` | 2026-02-06 17:51:58 (mesmo momento) |
-| `distribution_queue` | "venda" |
+1. **Consistência**: O valor exibido no card será o mesmo nos detalhes
+2. **Automação**: `valor_interesse` preenchido automaticamente
+3. **UX**: Corretor não precisa reselecionar o imóvel manualmente
