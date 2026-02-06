@@ -474,6 +474,7 @@ Deno.serve(async (req) => {
       ad_id: body.ad_id || null,
       ad_name: body.ad_name || null,
       form_name: body.form_name || null,
+      platform: body.platform || null,
       // UTM parameters
       utm_source: body.utm_source || null,
       utm_medium: body.utm_medium || null,
