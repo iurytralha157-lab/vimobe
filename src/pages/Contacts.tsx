@@ -161,7 +161,6 @@ export default function Contacts() {
     manual: 'Manual',
     meta: 'Meta Ads',
     site: 'Site',
-    wordpress: 'WordPress',
   };
 
   const dealStatusConfig = {
@@ -404,7 +403,6 @@ export default function Contacts() {
                     <SelectItem value="manual">Manual</SelectItem>
                     <SelectItem value="meta">Meta Ads</SelectItem>
                     <SelectItem value="site">Site</SelectItem>
-                    <SelectItem value="wordpress">WordPress</SelectItem>
                   </SelectContent>
                 </Select>
 

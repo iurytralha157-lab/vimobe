@@ -137,7 +137,6 @@ function getSourceLabel(source: string): string {
     meta: 'Meta Ads',
     facebook: 'Facebook',
     instagram: 'Instagram',
-    wordpress: 'WordPress',
     api: 'API',
     import: 'Importação',
   };

@@ -17,7 +17,6 @@ export type ModuleName =
   | 'reports'
   | 'automations'  // Automações
   | 'performance'  // Performance de Corretores
-  | 'wordpress'    // Integração WordPress
   | 'webhooks'     // Webhooks
   | 'site';        // Site Integrado
 

@@ -41,7 +41,6 @@ export const sourceOptions = [
   { value: 'all', label: 'Todas origens' },
   { value: 'meta', label: 'Meta Ads' },
   { value: 'site', label: 'Site' },
-  { value: 'wordpress', label: 'WordPress' },
   { value: 'whatsapp', label: 'WhatsApp' },
   { value: 'manual', label: 'Manual' },
 ];

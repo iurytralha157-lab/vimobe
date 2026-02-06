@@ -66,7 +66,6 @@ export const ptBR = {
     company: 'Empresa',
     usersTab: 'Usuários',
     meta: 'Meta',
-    wordpress: 'WordPress',
     
     // Profile tab
     profile: {
@@ -165,15 +164,6 @@ export const ptBR = {
         statusNegotiating: 'Negociando',
         editPage: 'Editar Página',
       },
-      wordpress: {
-        title: 'Integração WordPress',
-        description: 'Receba leads dos formulários do seu site WordPress',
-        webhookUrl: 'URL do Webhook',
-        copyUrl: 'Copiar URL',
-        apiKey: 'Chave da API',
-        enabled: 'Habilitado',
-        disabled: 'Desabilitado',
-      },
     },
   },
 
@@ -227,7 +217,6 @@ export const ptBR = {
     sources: {
       manual: 'Manual',
       meta: 'Meta Ads',
-      wordpress: 'WordPress',
       website: 'Website',
       referral: 'Indicação',
       other: 'Outro',

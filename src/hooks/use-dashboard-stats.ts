@@ -44,7 +44,6 @@ export interface ChartDataPoint {
   name: string;
   meta: number;
   site: number;
-  wordpress: number;
 }
 
 export interface FunnelDataPoint {
@@ -360,8 +359,7 @@ export function useLeadsChartData() {
         chartData.push({
           name: dayName,
           meta: dayLeads.filter((l: any) => l.source === 'meta').length,
-          site: dayLeads.filter((l: any) => l.source === 'site' || l.source === 'wordpress').length,
-          wordpress: dayLeads.filter((l: any) => l.source === 'wordpress').length,
+          site: dayLeads.filter((l: any) => l.source === 'site').length,
         });
       }
       
@@ -464,7 +462,6 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
       const sourceLabels: Record<string, string> = {
         'meta': 'Meta Ads',
         'site': 'Site',
-        'wordpress': 'WordPress',
         'whatsapp': 'WhatsApp',
         'manual': 'Manual',
         'webhook': 'Webhook',

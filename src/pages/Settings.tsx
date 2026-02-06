@@ -14,11 +14,10 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Building2, Plus, Check, Facebook, AlertCircle, Globe, Copy, Loader2, Code, Camera, Settings2, ExternalLink, MessageCircle, Smartphone, Trash2, Shield, LucideIcon } from 'lucide-react';
+import { Users, Building2, Plus, Check, Facebook, AlertCircle, Copy, Loader2, Camera, Settings2, ExternalLink, Smartphone, Trash2, Shield, LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOrganizationUsers, useUpdateUser } from '@/hooks/use-users';
-import { useWordPressIntegration, useCreateWordPressIntegration, useToggleWordPressIntegration } from '@/hooks/use-wordpress-integration';
 import { useMetaIntegrations } from '@/hooks/use-meta-integration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -52,12 +51,6 @@ export default function Settings() {
   } = useOrganizationUsers();
   const updateUser = useUpdateUser();
   const {
-    data: wpIntegration,
-    isLoading: wpLoading
-  } = useWordPressIntegration();
-  const createWpIntegration = useCreateWordPressIntegration();
-  const toggleWpIntegration = useToggleWordPressIntegration();
-  const {
     data: metaIntegrations = [],
     isLoading: metaLoading
   } = useMetaIntegrations();
@@ -81,7 +74,6 @@ export default function Settings() {
   const isMetaConnected = metaIntegrations.length > 0;
   const hasWhatsAppModule = hasModule('whatsapp');
   const hasWebhooksModule = hasModule('webhooks');
-  const hasWordpressModule = hasModule('wordpress');
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [orgName, setOrgName] = useState(organization?.name || '');
@@ -207,16 +199,6 @@ export default function Settings() {
       setCreatingUser(false);
     }
   };
-  const handleCreateWpIntegration = async () => {
-    await createWpIntegration.mutateAsync();
-  };
-  const handleToggleWpIntegration = async () => {
-    if (!wpIntegration) return;
-    await toggleWpIntegration.mutateAsync({
-      id: wpIntegration.id,
-      is_active: !wpIntegration.is_active
-    });
-  };
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado para a área de transferência!');
@@ -273,7 +255,6 @@ export default function Settings() {
   const {
     t
   } = useLanguage();
-  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/wordpress-webhook`;
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('profile');
 
@@ -295,16 +276,12 @@ export default function Settings() {
 
     tabs.push({ value: 'meta', label: t.settings.meta, icon: Facebook });
 
-    if (hasWordpressModule) {
-      tabs.push({ value: 'wordpress', label: t.settings.wordpress, icon: Globe });
-    }
-
     if (hasWhatsAppModule) {
       tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: Smartphone });
     }
 
     return tabs;
-  }, [t, profile?.role, isSuperAdmin, hasWebhooksModule, hasWordpressModule, hasWhatsAppModule]);
+  }, [t, profile?.role, isSuperAdmin, hasWebhooksModule, hasWhatsAppModule]);
 
   const currentTab = settingsTabs.find(tab => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
@@ -595,83 +572,6 @@ export default function Settings() {
                         {t.settings.integrations.meta.manageMeta}
                         <ExternalLink className="h-4 w-4 ml-auto" />
                       </Link>
-                    </Button>
-                  </>}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* WordPress Integration Tab */}
-          <TabsContent value="wordpress">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  {t.settings.integrations.wordpress.title}
-                </CardTitle>
-                <CardDescription>
-                  {t.settings.integrations.wordpress.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {wpLoading ? <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div> : wpIntegration ? <>
-                    {/* Connection Status */}
-                    <div className={`p-4 rounded-lg border ${wpIntegration.is_active ? 'border-success bg-success/5' : 'border-warning bg-warning/5'}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {wpIntegration.is_active ? <Check className="h-5 w-5 text-success" /> : <AlertCircle className="h-5 w-5 text-warning" />}
-                          <div>
-                            <p className="font-medium">
-                              {wpIntegration.is_active ? t.settings.integrations.wordpress.enabled : t.settings.integrations.wordpress.disabled}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {wpIntegration.leads_received || 0} {t.settings.integrations.meta.leadsReceived}
-                            </p>
-                          </div>
-                        </div>
-                        <Switch checked={wpIntegration.is_active} onCheckedChange={handleToggleWpIntegration} />
-                      </div>
-                    </div>
-
-                    {/* Webhook URL */}
-                    <div className="space-y-2">
-                      <Label>{t.settings.integrations.wordpress.webhookUrl}</Label>
-                      <div className="flex gap-2">
-                        <Input value={webhookUrl} readOnly className="font-mono text-sm" />
-                        <Button variant="outline" size="icon" onClick={() => copyToClipboard(webhookUrl)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* API Token */}
-                    <div className="space-y-2">
-                      <Label>{t.settings.integrations.wordpress.apiKey}</Label>
-                      <div className="flex gap-2">
-                        <Input value={wpIntegration.api_token} readOnly className="font-mono text-sm" type="password" />
-                        <Button variant="outline" size="icon" onClick={() => copyToClipboard(wpIntegration.api_token)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </> : <>
-                    <div className="p-4 rounded-lg border border-muted">
-                      <div className="flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{t.settings.integrations.wordpress.disabled}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {t.settings.integrations.wordpress.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button onClick={handleCreateWpIntegration} disabled={createWpIntegration.isPending}>
-                      {createWpIntegration.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      {t.common.add}
                     </Button>
                   </>}
               </CardContent>

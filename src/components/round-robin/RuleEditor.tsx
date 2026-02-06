@@ -26,10 +26,10 @@ import { RuleMatch } from '@/hooks/use-round-robin-rules';
 
 const SOURCES = [
   { value: 'meta', label: 'Meta Ads' },
-  { value: 'wordpress', label: 'WordPress' },
   { value: 'whatsapp', label: 'WhatsApp' },
   { value: 'manual', label: 'Manual' },
   { value: 'webhook', label: 'Webhook' },
+  { value: 'site', label: 'Site' },
 ];
 
 const DAYS_OF_WEEK = [
