@@ -1,143 +1,100 @@
 
 
-## Plano: Botão para Interromper Automações + Correção do Stop on Reply
+## Plano: Página de Login com Suporte a Tema Escuro
 
-### Diagnóstico do Problema
+### Problema Identificado
 
-**Problema 1: Falta de botão para interromper manualmente**
-- O componente `ExecutionHistory.tsx` exibe automações em andamento, mas não oferece opção para cancelá-las pela interface.
+A página de login (`src/pages/Auth.tsx`) está com estilos **hardcoded para tema claro**:
+- Fundo: `bg-gradient-to-br from-slate-50 to-slate-100` (sempre cinza claro)
+- Card: `bg-white` (sempre branco)
+- Labels: `text-slate-700`, `text-slate-400` (cores fixas para tema claro)
+- Inputs: `bg-slate-50` (fundo fixo claro)
+- Logo: `/logo.png` (fixa, não muda com tema)
 
-**Problema 2: Stop on Reply não funciona em alguns casos**
-- A função `handleStopFollowUpOnReply` no webhook só é chamada quando `conversation.lead_id` existe.
-- Quando um lead responde, a conversa pode não estar vinculada ao lead porque:
-  - O lead foi criado sem vincular à conversa original
-  - A conversa foi criada antes do lead existir
-- A busca por telefone já está implementada (linhas 639-675), mas pode falhar devido a formatos inconsistentes de telefone.
+### Solução
 
-### Solução Proposta
-
----
-
-### Parte 1: Botão de Interromper Execução
-
-**Arquivo: `src/components/automations/ExecutionHistory.tsx`**
-
-Adicionar botão "Interromper" para execuções com status `running` ou `waiting`:
-
-```text
-┌─────────────────────────────────────────────────┐
-│ Lead Fulano        ⏳ Aguardando    [Interromper]│
-│ Follow-up 10 Dias                               │
-│ Iniciado há 2 horas • Próximo: em 22 horas      │
-└─────────────────────────────────────────────────┘
-```
-
-**Alterações:**
-1. Criar novo hook `useCancelExecution` em `use-automations.ts`
-2. Adicionar botão com ícone `StopCircle` no `ExecutionRow`
-3. Confirmar ação com AlertDialog antes de cancelar
+Converter a página de login para usar:
+1. **Variáveis CSS do Tailwind** que respeitam o tema (`bg-background`, `bg-card`, `text-foreground`, etc.)
+2. **Hook `useTheme`** do next-themes para detectar o tema atual
+3. **Hook `useSystemSettings`** para buscar as logos configuradas (light/dark)
+4. **Seleção dinâmica da logo** baseada no `resolvedTheme`
 
 ---
 
-### Parte 2: Correção da Lógica Stop on Reply
+### Alterações no Arquivo `src/pages/Auth.tsx`
 
-**Arquivo: `supabase/functions/evolution-webhook/index.ts`**
-
-O problema está na busca por telefone. A função já busca o lead por telefone, mas pode falhar se:
-- O telefone do lead tem 9º dígito e a conversa não tem
-- Formatos diferentes (com/sem 55, com/sem 9)
-
-**Correção:**
-Melhorar a busca por telefone para incluir mais variações:
-
-```typescript
-// Antes: apenas 2 variações
-const phoneVariants = [
-  contactPhone,                    // 5522974063727
-  contactPhone.replace(/^55/, ''), // 22974063727
-];
-
-// Depois: 6+ variações para cobrir todos os casos
-const basePhone = contactPhone.replace(/^55/, '');
-const phoneVariants = [
-  contactPhone,                           // 5522974063727
-  basePhone,                              // 22974063727
-  `55${basePhone}`,                       // 5522974063727
-  // Variações com/sem 9º dígito
-  basePhone.replace(/^(\d{2})9/, '$1'),   // 2297406372 (sem 9)
-  basePhone.replace(/^(\d{2})(\d{8})$/, '$19$2'), // 22997406372 (com 9)
-];
-```
-
-**Adicionar log detalhado:**
-```typescript
-console.log(`Searching for lead with phone variants: ${phoneVariants.join(', ')}`);
-```
-
----
-
-### Resumo das Alterações
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/hooks/use-automations.ts` | Adicionar hook `useCancelExecution` |
-| `src/components/automations/ExecutionHistory.tsx` | Botão de interromper + AlertDialog |
-| `supabase/functions/evolution-webhook/index.ts` | Melhorar busca por telefone no stop on reply |
+| Elemento | Antes (Hardcoded) | Depois (Dinâmico) |
+|----------|-------------------|-------------------|
+| Container fundo | `from-slate-50 to-slate-100` | `bg-background` |
+| Card | `bg-white` | `bg-card` |
+| Labels | `text-slate-700` | `text-foreground` |
+| Inputs | `bg-slate-50` | `bg-muted` |
+| Botões secundários | `text-slate-400` | `text-muted-foreground` |
+| Logo | `/logo.png` (fixa) | Dinâmica via `useSystemSettings` + `useTheme` |
 
 ---
 
 ### Detalhes Técnicos
 
-**Hook useCancelExecution:**
+**1. Imports adicionais:**
 ```typescript
-export function useCancelExecution() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (executionId: string) => {
-      const { error } = await supabase
-        .from('automation_executions')
-        .update({ 
-          status: 'cancelled', 
-          completed_at: new Date().toISOString(),
-          error_message: 'Cancelado manualmente pelo usuário'
-        })
-        .eq('id', executionId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['automation-executions'] });
-      toast.success('Automação interrompida!');
-    },
-  });
-}
+import { useTheme } from 'next-themes';
+import { useSystemSettings } from '@/hooks/use-system-settings';
+import { useMemo } from 'react';
 ```
 
-**Botão no ExecutionRow:**
-```tsx
-{(execution.status === 'running' || execution.status === 'waiting') && (
-  <AlertDialog>
-    <AlertDialogTrigger asChild>
-      <Button variant="ghost" size="sm" className="text-destructive">
-        <StopCircle className="h-4 w-4 mr-1" />
-        Interromper
-      </Button>
-    </AlertDialogTrigger>
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Interromper automação?</AlertDialogTitle>
-        <AlertDialogDescription>
-          As mensagens pendentes não serão enviadas.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-        <AlertDialogAction onClick={() => cancelExecution.mutate(execution.id)}>
-          Confirmar
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
-)}
+**2. Hooks no componente:**
+```typescript
+const { resolvedTheme } = useTheme();
+const { data: systemSettings } = useSystemSettings();
+
+const logoUrl = useMemo(() => {
+  if (!systemSettings) return '/logo.png';
+  return resolvedTheme === 'dark' 
+    ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
+    : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
+}, [systemSettings, resolvedTheme]);
 ```
+
+**3. Classes CSS atualizadas:**
+
+```tsx
+// Container principal
+<div className="min-h-screen flex items-center justify-center bg-background px-4">
+
+// Card
+<div className="bg-card rounded-3xl p-9 border border-border shadow-lg">
+
+// Labels
+<Label className="text-sm text-foreground">Seu e-mail</Label>
+
+// Inputs
+<Input className="h-12 rounded-2xl bg-muted border-input" />
+
+// Botões de ícone
+<button className="... text-muted-foreground hover:text-foreground">
+
+// Logo dinâmica
+<img 
+  src={logoUrl} 
+  alt="Logo" 
+  className="h-16 w-auto mb-4" 
+/>
+```
+
+---
+
+### Resultado Visual Esperado
+
+**Tema Claro:**
+- Fundo cinza claro suave
+- Card branco com borda sutil
+- Logo para tema claro
+
+**Tema Escuro:**
+- Fundo preto premium (`0 0% 4%`)
+- Card escuro (`0 0% 7%`) com borda sutil
+- Logo para tema escuro
+
+O tema será preservado entre sessões porque o `next-themes` já salva a preferência no localStorage.
 
