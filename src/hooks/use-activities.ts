@@ -47,11 +47,14 @@ export function useActivities(leadId?: string) {
           user:users(id, name),
           lead:leads(id, name)
         `)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
       
       if (leadId) {
+        // When fetching for a specific lead, get ALL activities (no limit)
         query = query.eq('lead_id', leadId);
+      } else {
+        // Only limit when fetching all activities (general view)
+        query = query.limit(100);
       }
       
       const { data, error } = await query;
