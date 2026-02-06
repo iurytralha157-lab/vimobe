@@ -55,6 +55,7 @@ import AdminRequests from "./pages/admin/AdminRequests";
 import AdminPlans from "./pages/admin/AdminPlans";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminHelpEditor from "./pages/admin/AdminHelpEditor";
+import AdminDatabase from "./pages/admin/AdminDatabase";
 import ImportCristiano from "./pages/admin/ImportCristiano";
 import { TrialExpiredModal } from "./components/admin/TrialExpiredModal";
 import Notifications from "./pages/Notifications";
@@ -208,6 +209,7 @@ function AppRoutes() {
           <Route path="/admin/plans" element={<SuperAdminRoute><AdminPlans /></SuperAdminRoute>} />
           <Route path="/admin/announcements" element={<SuperAdminRoute><AdminAnnouncements /></SuperAdminRoute>} />
           <Route path="/admin/help-editor" element={<SuperAdminRoute><AdminHelpEditor /></SuperAdminRoute>} />
+          <Route path="/admin/database" element={<SuperAdminRoute><AdminDatabase /></SuperAdminRoute>} />
           <Route path="/admin/settings" element={<SuperAdminRoute><AdminSettings /></SuperAdminRoute>} />
           <Route path="/admin/requests" element={<SuperAdminRoute><AdminRequests /></SuperAdminRoute>} />
           <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
