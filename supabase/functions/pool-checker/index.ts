@@ -59,10 +59,15 @@ Deno.serve(async (req) => {
       const maxRedistributions = pipeline.pool_max_redistributions || 3;
       const cutoffTime = new Date(Date.now() - timeoutMinutes * 60 * 1000).toISOString();
 
-      console.log(`Checking pipeline ${pipeline.id}: timeout=${timeoutMinutes}min, max=${maxRedistributions}`);
+      // Pool activation date - only process leads assigned after this date
+      // This prevents legacy leads (without first_response_at) from being redistributed
+      const poolActivationDate = '2026-02-06T19:30:00.000Z';
+
+      console.log(`Checking pipeline ${pipeline.id}: timeout=${timeoutMinutes}min, max=${maxRedistributions}, activation=${poolActivationDate}`);
 
       // Find leads that need redistribution:
       // - Have an assigned user
+      // - Were assigned AFTER the pool activation date (prevents legacy data issues)
       // - Were assigned before the cutoff time
       // - Have no first_response_at (no contact via WhatsApp, Phone, or Email)
       // - Haven't exceeded max redistributions
@@ -73,6 +78,7 @@ Deno.serve(async (req) => {
         .not("assigned_user_id", "is", null)
         .not("assigned_at", "is", null)
         .is("first_response_at", null)
+        .gt("assigned_at", poolActivationDate)
         .lt("assigned_at", cutoffTime)
         .lt("redistribution_count", maxRedistributions);
 
