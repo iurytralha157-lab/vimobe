@@ -1,22 +1,27 @@
 
-# Correção: Colunas Faltantes na Tabela lead_meta
 
-## Problema Detectado
+# Correção Urgente: Aplicar Migration Pendente
 
-O webhook falhou ao inserir dados de rastreamento porque algumas colunas não existem na tabela `lead_meta`:
+## Problema Confirmado
 
-| Campo | Status |
-|-------|--------|
+O teste do webhook confirmou que **o lead é criado com sucesso**, mas os dados de rastreamento **não estão sendo salvos** porque as colunas não existem:
+
+```
+ERROR: Could not find the 'ad_name' column of 'lead_meta' in the schema cache
+```
+
+## Colunas Faltantes
+
+| Coluna | Status |
+|--------|--------|
 | `campaign_name` | ❌ Não existe |
 | `adset_name` | ❌ Não existe |
 | `ad_name` | ❌ Não existe |
 | `platform` | ❌ Não existe |
 
-O código do webhook está tentando inserir esses campos, mas eles não foram criados na migration.
-
 ## Solução
 
-Criar uma migration adicional para adicionar as colunas faltantes:
+### 1. Aplicar Migration SQL
 
 ```sql
 ALTER TABLE lead_meta 
@@ -26,16 +31,13 @@ ALTER TABLE lead_meta
   ADD COLUMN IF NOT EXISTS platform text;
 ```
 
-## Arquivos a Modificar
+### 2. Atualizar Tipos TypeScript
 
-| Arquivo | Ação |
-|---------|------|
-| Nova migration SQL | Adicionar colunas faltantes |
-| `src/integrations/supabase/types.ts` | Atualizar tipos com novos campos |
+Atualizar `src/integrations/supabase/types.ts` para incluir os novos campos na tabela `lead_meta`.
 
 ## Após a Correção
 
-Vou testar o webhook novamente para confirmar que:
-1. O lead é criado com sucesso
-2. Todos os dados de rastreamento são salvos em `lead_meta`
-3. Os dados aparecem na seção de Rastreamento do card do lead
+Testarei novamente o webhook para confirmar que:
+1. Todos os dados de rastreamento são salvos em `lead_meta`
+2. Os dados aparecem na seção "Rastreamento" do card do lead
+
