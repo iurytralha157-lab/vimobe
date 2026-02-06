@@ -464,6 +464,47 @@ Deno.serve(async (req) => {
       }
     });
 
+    // ===== SAVE TRACKING DATA TO lead_meta =====
+    const trackingData = {
+      // Campaign data
+      campaign_id: body.campaign_id || null,
+      campaign_name: body.campaign_name || null,
+      adset_id: body.adset_id || null,
+      adset_name: body.adset_name || null,
+      ad_id: body.ad_id || null,
+      ad_name: body.ad_name || null,
+      form_name: body.form_name || null,
+      // UTM parameters
+      utm_source: body.utm_source || null,
+      utm_medium: body.utm_medium || null,
+      utm_campaign: body.utm_campaign || null,
+      utm_content: body.utm_content || null,
+      utm_term: body.utm_term || null,
+      // Additional
+      contact_notes: body.contact_notes || null,
+      source_type: 'webhook',
+      raw_payload: body,
+    };
+
+    // Only insert if there's any tracking data
+    const hasTrackingData = Object.entries(trackingData)
+      .filter(([key]) => !['source_type', 'raw_payload'].includes(key))
+      .some(([_, value]) => value !== null);
+
+    if (hasTrackingData) {
+      const { error: metaError } = await supabase.from('lead_meta').insert({
+        lead_id: lead.id,
+        ...trackingData,
+      });
+      
+      if (metaError) {
+        console.error('Error inserting lead_meta:', metaError);
+        // Don't fail the request, just log the error
+      } else {
+        console.log('Tracking data saved to lead_meta');
+      }
+    }
+
     // Apply tags if configured (após lead criado com sucesso)
     const targetTagIds = webhook.target_tag_ids || [];
     if (targetTagIds.length > 0) {

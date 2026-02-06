@@ -15,6 +15,15 @@ export interface LeadMeta {
   platform: string | null;
   raw_payload: any;
   created_at: string;
+  // New tracking fields
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
+  form_name: string | null;
+  source_type: 'meta' | 'webhook' | null;
+  contact_notes: string | null;
 }
 
 export function useLeadMeta(leadId: string | null) {
