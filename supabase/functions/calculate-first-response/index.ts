@@ -141,8 +141,6 @@ Deno.serve(async (req) => {
       first_response_channel: channel,
       first_response_actor_user_id: actor_user_id,
       first_response_is_automation: is_automation,
-      // Reset SLA status when first response is recorded
-      sla_status: 'ok',
     };
 
     // If this is a human action (not automation), also record first_touch
@@ -174,11 +172,12 @@ Deno.serve(async (req) => {
         organization_id: organization_id,
         lead_id: lead_id,
         event_type: "first_response",
-        event_at: now.toISOString(),
-        actor_user_id: actor_user_id,
-        channel: channel,
-        is_automation: is_automation,
+        user_id: actor_user_id,
+        title: `Primeiro contato via ${channel}`,
+        description: `Tempo de resposta: ${diffSeconds} segundos`,
         metadata: {
+          channel: channel,
+          is_automation: is_automation,
           start_event_type: firstResponseStart,
           start_time: startTime.toISOString(),
           response_seconds: diffSeconds
@@ -198,11 +197,14 @@ Deno.serve(async (req) => {
           organization_id: organization_id,
           lead_id: lead_id,
           event_type: "whatsapp_message_sent",
-          event_at: now.toISOString(),
-          actor_user_id: actor_user_id,
-          channel: "whatsapp",
-          is_automation: is_automation,
-          metadata: { triggered_first_response: true }
+          user_id: actor_user_id,
+          title: "Mensagem WhatsApp enviada",
+          description: "Primeira mensagem que registrou tempo de resposta",
+          metadata: { 
+            channel: "whatsapp",
+            is_automation: is_automation,
+            triggered_first_response: true 
+          }
         });
     }
 
