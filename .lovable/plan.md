@@ -1,100 +1,63 @@
 
 
-## Plano: Página de Login com Suporte a Tema Escuro
+## Plano: Permitir Acesso Público às Configurações do Sistema
 
 ### Problema Identificado
 
-A página de login (`src/pages/Auth.tsx`) está com estilos **hardcoded para tema claro**:
-- Fundo: `bg-gradient-to-br from-slate-50 to-slate-100` (sempre cinza claro)
-- Card: `bg-white` (sempre branco)
-- Labels: `text-slate-700`, `text-slate-400` (cores fixas para tema claro)
-- Inputs: `bg-slate-50` (fundo fixo claro)
-- Logo: `/logo.png` (fixa, não muda com tema)
+A página de login não consegue carregar a logo correta porque:
+1. A tabela `system_settings` tem RLS habilitado
+2. A política de SELECT exige `auth.role() = 'authenticated'`
+3. Na página de login, o usuário ainda não está autenticado (role = `anon`)
+4. Portanto, a query retorna `[]` (vazio)
+5. O código faz fallback para `/logo.png` (que é a logo padrão, não a do tema)
 
 ### Solução
 
-Converter a página de login para usar:
-1. **Variáveis CSS do Tailwind** que respeitam o tema (`bg-background`, `bg-card`, `text-foreground`, etc.)
-2. **Hook `useTheme`** do next-themes para detectar o tema atual
-3. **Hook `useSystemSettings`** para buscar as logos configuradas (light/dark)
-4. **Seleção dinâmica da logo** baseada no `resolvedTheme`
+Criar uma nova política RLS que permita **leitura pública** das configurações do sistema:
 
----
-
-### Alterações no Arquivo `src/pages/Auth.tsx`
-
-| Elemento | Antes (Hardcoded) | Depois (Dinâmico) |
-|----------|-------------------|-------------------|
-| Container fundo | `from-slate-50 to-slate-100` | `bg-background` |
-| Card | `bg-white` | `bg-card` |
-| Labels | `text-slate-700` | `text-foreground` |
-| Inputs | `bg-slate-50` | `bg-muted` |
-| Botões secundários | `text-slate-400` | `text-muted-foreground` |
-| Logo | `/logo.png` (fixa) | Dinâmica via `useSystemSettings` + `useTheme` |
-
----
-
-### Detalhes Técnicos
-
-**1. Imports adicionais:**
-```typescript
-import { useTheme } from 'next-themes';
-import { useSystemSettings } from '@/hooks/use-system-settings';
-import { useMemo } from 'react';
+```sql
+CREATE POLICY "Anyone can view system settings"
+ON public.system_settings
+FOR SELECT
+TO public
+USING (true);
 ```
 
-**2. Hooks no componente:**
-```typescript
-const { resolvedTheme } = useTheme();
-const { data: systemSettings } = useSystemSettings();
+### Alterações Necessárias
 
-const logoUrl = useMemo(() => {
-  if (!systemSettings) return '/logo.png';
-  return resolvedTheme === 'dark' 
-    ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
-    : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
-}, [systemSettings, resolvedTheme]);
+| Tipo | Descrição |
+|------|-----------|
+| Migration SQL | Adicionar política de leitura pública para `system_settings` |
+
+### Script de Migração
+
+```sql
+-- Permitir que qualquer usuário (autenticado ou não) veja as configurações do sistema
+-- Isso é necessário para a página de login carregar a logo correta
+
+CREATE POLICY "Public can view system settings"
+ON public.system_settings
+FOR SELECT
+TO anon
+USING (true);
 ```
 
-**3. Classes CSS atualizadas:**
+### Por que é Seguro?
 
-```tsx
-// Container principal
-<div className="min-h-screen flex items-center justify-center bg-background px-4">
+1. **Dados não sensíveis**: A tabela `system_settings` contém apenas:
+   - URLs de logos (públicas)
+   - URLs de favicons (públicas)
+   - Número do WhatsApp (já é público no site)
+   - Dimensões da logo (não sensível)
 
-// Card
-<div className="bg-card rounded-3xl p-9 border border-border shadow-lg">
+2. **Apenas leitura**: A política é apenas para SELECT - INSERT/UPDATE continuam restritos a super admins
 
-// Labels
-<Label className="text-sm text-foreground">Seu e-mail</Label>
+3. **Padrão comum**: É comum que configurações visuais sejam públicas para personalizar a experiência antes do login
 
-// Inputs
-<Input className="h-12 rounded-2xl bg-muted border-input" />
+### Resultado Esperado
 
-// Botões de ícone
-<button className="... text-muted-foreground hover:text-foreground">
-
-// Logo dinâmica
-<img 
-  src={logoUrl} 
-  alt="Logo" 
-  className="h-16 w-auto mb-4" 
-/>
-```
-
----
-
-### Resultado Visual Esperado
-
-**Tema Claro:**
-- Fundo cinza claro suave
-- Card branco com borda sutil
-- Logo para tema claro
-
-**Tema Escuro:**
-- Fundo preto premium (`0 0% 4%`)
-- Card escuro (`0 0% 7%`) com borda sutil
-- Logo para tema escuro
-
-O tema será preservado entre sessões porque o `next-themes` já salva a preferência no localStorage.
+Após a migração:
+- Página de login carregará a logo correta baseada no tema (claro/escuro)
+- O `useSystemSettings` retornará os dados mesmo sem autenticação
+- O `useMemo` com `resolvedTheme` funcionará corretamente
 
