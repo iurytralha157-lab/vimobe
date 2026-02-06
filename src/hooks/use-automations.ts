@@ -416,6 +416,30 @@ export function useDeleteTemplate() {
   });
 }
 
+// Cancel a specific automation execution
+export function useCancelExecution() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (executionId: string) => {
+      const { error } = await supabase
+        .from('automation_executions')
+        .update({ 
+          status: 'cancelled', 
+          completed_at: new Date().toISOString(),
+          error_message: 'Cancelado manualmente pelo usuário'
+        })
+        .eq('id', executionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation-executions'] });
+      toast.success('Automação interrompida!');
+    },
+  });
+}
+
 // Execution logs
 export function useAutomationExecutions(automationId?: string) {
   const { profile } = useAuth();

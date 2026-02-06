@@ -4,9 +4,21 @@ import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, CheckCircle2, XCircle, Clock, Play, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { useAutomationExecutions, AutomationExecution } from '@/hooks/use-automations';
+import { Button } from '@/components/ui/button';
+import { Loader2, CheckCircle2, XCircle, Clock, Play, AlertTriangle, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
+import { useAutomationExecutions, useCancelExecution, AutomationExecution } from '@/hooks/use-automations';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface ExecutionHistoryProps {
   automationId?: string;
@@ -182,6 +194,7 @@ export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
 
 function ExecutionRow({ execution }: { execution: AutomationExecution }) {
   const [isOpen, setIsOpen] = useState(false);
+  const cancelExecution = useCancelExecution();
   const statusConfig = getStatusConfig(execution.status);
   const StatusIcon = statusConfig.icon;
 
@@ -189,6 +202,7 @@ function ExecutionRow({ execution }: { execution: AutomationExecution }) {
   const automationName = execution.automation?.name || 'Automação';
   const hasError = !!execution.error_message;
   const translatedError = execution.error_message ? translateError(execution.error_message) : '';
+  const canCancel = execution.status === 'running' || execution.status === 'waiting';
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -237,6 +251,39 @@ function ExecutionRow({ execution }: { execution: AutomationExecution }) {
               </p>
             )}
           </div>
+
+          {canCancel && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  disabled={cancelExecution.isPending}
+                >
+                  <StopCircle className="h-4 w-4 mr-1" />
+                  Interromper
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Interromper automação?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação irá cancelar a execução. As mensagens pendentes não serão enviadas.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => cancelExecution.mutate(execution.id)}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    Confirmar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
 
           {hasError && (
             <CollapsibleTrigger asChild>

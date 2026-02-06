@@ -639,29 +639,51 @@ async function handleMessagesUpsert(
           let leadIdForStop = conversation.lead_id;
           
           if (!leadIdForStop) {
-            // Try to find lead by phone number (with or without country code)
-            // Lead phone might be stored as 22974063727 while contactPhone is 5522974063727
-            const phoneVariants = [
-              contactPhone,                                    // 5522974063727
-              contactPhone.replace(/^55/, ''),                 // 22974063727
-            ];
+            // Try to find lead by phone number with multiple variations
+            // Covers: with/without country code 55, with/without 9th digit
+            const cleanPhone = contactPhone.replace(/\D/g, '');
+            const basePhone = cleanPhone.startsWith('55') ? cleanPhone.substring(2) : cleanPhone;
             
-            // Only add 55 prefix variant if phone doesn't start with 55
-            if (!contactPhone.startsWith('55')) {
-              phoneVariants.push(`55${contactPhone}`);         // edge case
+            // Generate all possible phone variations
+            const phoneVariants = new Set<string>();
+            
+            // Original formats
+            phoneVariants.add(cleanPhone);                      // 5522974063727
+            phoneVariants.add(basePhone);                       // 22974063727
+            phoneVariants.add(`55${basePhone}`);                // 5522974063727
+            
+            // Handle 9th digit variations for Brazilian mobile numbers
+            // DDD (2 digits) + 9 (optional) + number (8 digits)
+            if (basePhone.length === 11) {
+              // Has 9th digit, create variant without it
+              const ddd = basePhone.substring(0, 2);
+              const numberPart = basePhone.substring(3); // Skip the 9
+              const without9 = `${ddd}${numberPart}`;
+              phoneVariants.add(without9);                      // 2297406372
+              phoneVariants.add(`55${without9}`);               // 552297406372
+            } else if (basePhone.length === 10) {
+              // Missing 9th digit, create variant with it
+              const ddd = basePhone.substring(0, 2);
+              const numberPart = basePhone.substring(2);
+              const with9 = `${ddd}9${numberPart}`;
+              phoneVariants.add(with9);                         // 22997406372
+              phoneVariants.add(`55${with9}`);                  // 5522997406372
             }
+            
+            const variantsArray = Array.from(phoneVariants);
+            console.log(`Stop-on-reply: searching lead with phone variants: ${variantsArray.join(', ')}`);
             
             const { data: matchingLead } = await supabase
               .from("leads")
               .select("id")
               .eq("organization_id", session.organization_id)
-              .or(phoneVariants.map(p => `phone.eq.${p}`).join(','))
+              .or(variantsArray.map(p => `phone.eq.${p}`).join(','))
               .limit(1)
               .maybeSingle();
             
             if (matchingLead) {
               leadIdForStop = matchingLead.id;
-              console.log(`Found lead ${leadIdForStop} by phone match for stop-on-reply (phone variants: ${phoneVariants.join(', ')})`);
+              console.log(`Found lead ${leadIdForStop} by phone match for stop-on-reply`);
               
               // BONUS: Link the conversation to the lead for future messages
               await supabase
@@ -671,6 +693,8 @@ async function handleMessagesUpsert(
               
               // Update local variable too for notifications below
               conversation.lead_id = matchingLead.id;
+            } else {
+              console.log(`No lead found for phone variants: ${variantsArray.join(', ')}`);
             }
           }
           
