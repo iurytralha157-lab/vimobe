@@ -66,7 +66,6 @@ export const en = {
     company: 'Company',
     usersTab: 'Users',
     meta: 'Meta',
-    wordpress: 'WordPress',
     
     // Profile tab
     profile: {
@@ -165,15 +164,6 @@ export const en = {
         statusNegotiating: 'Negotiating',
         editPage: 'Edit Page',
       },
-      wordpress: {
-        title: 'WordPress Integration',
-        description: 'Receive leads from your WordPress site forms',
-        webhookUrl: 'Webhook URL',
-        copyUrl: 'Copy URL',
-        apiKey: 'API Key',
-        enabled: 'Enabled',
-        disabled: 'Disabled',
-      },
     },
   },
 
@@ -227,7 +217,6 @@ export const en = {
     sources: {
       manual: 'Manual',
       meta: 'Meta Ads',
-      wordpress: 'WordPress',
       website: 'Website',
       referral: 'Referral',
       other: 'Other',

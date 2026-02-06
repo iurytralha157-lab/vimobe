@@ -13,7 +13,6 @@ const sourceLabels: Record<string, string> = {
   manual: 'Manual',
   meta: 'Meta Ads',
   site: 'Site',
-  wordpress: 'WordPress',
 };
 
 export async function exportContacts({ leads, filename = 'contatos', exportFormat = 'xlsx' }: ExportOptions) {

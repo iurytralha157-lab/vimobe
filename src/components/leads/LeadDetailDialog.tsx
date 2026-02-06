@@ -43,7 +43,6 @@ import { useDealStatusChange } from '@/hooks/use-deal-status-change';
 import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 const sourceLabels: Record<string, string> = {
   meta: 'Meta Ads',
-  wordpress: 'WordPress',
   site: 'Site',
   manual: 'Manual',
   facebook: 'Facebook',

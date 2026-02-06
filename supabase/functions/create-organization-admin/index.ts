@@ -158,14 +158,14 @@ Deno.serve(async (req) => {
 
     if (segment === 'telecom') {
       enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'cadences', 'automations', 'performance', 'wordpress', 'webhooks', 'site'];
+      disabledModules = ['properties', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
     } else if (segment === 'imobiliario') {
       enabledModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'wordpress', 'webhooks', 'site'];
+      disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'webhooks', 'site'];
     } else {
       // servicos - basic modules
       enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'wordpress', 'webhooks', 'site'];
+      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
     }
 
     const allModuleRecords = [
