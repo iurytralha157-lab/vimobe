@@ -57,10 +57,17 @@ serve(async (req) => {
       const signature = req.headers.get("X-Hub-Signature-256") || "";
       
       // Verify signature in production
-      if (META_APP_SECRET && !verifySignature(rawBody, signature)) {
-        console.error("Invalid webhook signature");
-        // In development, we might skip verification
-        // return new Response("Invalid signature", { status: 403 });
+      if (META_APP_SECRET) {
+        if (!verifySignature(rawBody, signature)) {
+          console.error("Invalid webhook signature - rejecting request");
+          return new Response(
+            JSON.stringify({ error: "Invalid signature" }),
+            { status: 403, headers: corsHeaders }
+          );
+        }
+        console.log("✅ Meta webhook signature validated");
+      } else {
+        console.warn("⚠️ META_APP_SECRET not configured - signature validation disabled");
       }
 
       const body = JSON.parse(rawBody);
