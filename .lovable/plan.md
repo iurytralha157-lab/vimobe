@@ -1,43 +1,103 @@
 
+# Filtro de Categorias na Página de Notificações
 
-# Correção Urgente: Aplicar Migration Pendente
+## Objetivo
+Adicionar um filtro por categoria na página de notificações para permitir que os usuários separem facilmente notificações de WhatsApp, Leads e outras categorias.
 
-## Problema Confirmado
+## Categorias Propostas
 
-O teste do webhook confirmou que **o lead é criado com sucesso**, mas os dados de rastreamento **não estão sendo salvos** porque as colunas não existem:
+| Categoria | Tipos Incluídos | Ícone |
+|-----------|-----------------|-------|
+| Todas | Todos os tipos | Bell |
+| Leads | `lead`, `new_lead` | UserPlus |
+| WhatsApp | `message`, `whatsapp` | MessageCircle |
+| Sistema | `warning`, `automation`, `system`, `info` | Settings |
+| Financeiro | `commission`, `contract` | DollarSign |
+| Tarefas | `task` | CheckSquare |
 
+## Interface do Usuário
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  🔔 Notificações                                                │
+│  Você tem 5 notificações não lidas                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Filtro por Categoria:                                          │
+│  ┌──────┬───────┬──────────┬─────────┬────────────┬────────┐   │
+│  │ Todas│ Leads │ WhatsApp │ Sistema │ Financeiro │ Tarefas│   │
+│  │ (50) │ (1571)│  (148)   │  (182)  │    (5)     │  (0)   │   │
+│  └──────┴───────┴──────────┴─────────┴────────────┴────────┘   │
+│                                                                 │
+│  Status: [ Todas ] [ Não lidas (5) ]                            │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ 👤 Novo Lead: João Silva                                │   │
+│  │    Origem: Meta Ads - Campanha Verão                    │   │
+│  │    há 2 minutos                            [✓ Marcar]   │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
-ERROR: Could not find the 'ad_name' column of 'lead_meta' in the schema cache
+
+## Arquivos a Modificar
+
+### 1. `src/pages/Notifications.tsx`
+
+**Mudanças:**
+- Adicionar import do ícone `MessageCircle` e `Settings` do lucide-react
+- Criar estado `categoryFilter` com valor padrão `'all'`
+- Adicionar mapeamento de categorias para tipos
+- Adicionar componente de filtro de categorias (usando Tabs ou Badges clicáveis)
+- Modificar a lógica de filtragem para combinar status (lidas/não lidas) + categoria
+- Adicionar ícone WhatsApp no mapeamento `typeIcons`
+- Adicionar label "WhatsApp" no mapeamento `typeLabels`
+
+**Novo código:**
+```typescript
+// Categorias de notificação
+const notificationCategories = {
+  all: { label: 'Todas', types: null, icon: Bell },
+  leads: { label: 'Leads', types: ['lead', 'new_lead'], icon: UserPlus },
+  whatsapp: { label: 'WhatsApp', types: ['message', 'whatsapp'], icon: MessageCircle },
+  system: { label: 'Sistema', types: ['warning', 'automation', 'system', 'info'], icon: Settings },
+  financial: { label: 'Financeiro', types: ['commission', 'contract'], icon: DollarSign },
+  tasks: { label: 'Tarefas', types: ['task'], icon: CheckSquare },
+};
+
+// Estado adicional
+const [categoryFilter, setCategoryFilter] = useState<keyof typeof notificationCategories>('all');
+
+// Lógica de filtragem combinada
+const filteredNotifications = notifications.filter(n => {
+  // Filtro de status (lidas/não lidas)
+  if (filter === 'unread' && n.is_read) return false;
+  
+  // Filtro de categoria
+  const category = notificationCategories[categoryFilter];
+  if (category.types && !category.types.includes(n.type)) return false;
+  
+  return true;
+});
 ```
 
-## Colunas Faltantes
+## Detalhes de Implementação
 
-| Coluna | Status |
-|--------|--------|
-| `campaign_name` | ❌ Não existe |
-| `adset_name` | ❌ Não existe |
-| `ad_name` | ❌ Não existe |
-| `platform` | ❌ Não existe |
+### Design Responsivo
+- Em desktop: filtros de categoria em linha horizontal
+- Em mobile: scroll horizontal nos filtros ou dropdown
 
-## Solução
+### Contadores por Categoria
+- Exibir contador de notificações não lidas por categoria
+- Esconder categorias com 0 notificações (opcional)
 
-### 1. Aplicar Migration SQL
+### Comportamento
+- Ao selecionar categoria, mantém o filtro de status atual
+- Reset para "Todas" ao clicar no header da página
+- Navegação via URL params (opcional para deep linking)
 
-```sql
-ALTER TABLE lead_meta 
-  ADD COLUMN IF NOT EXISTS campaign_name text,
-  ADD COLUMN IF NOT EXISTS adset_name text,
-  ADD COLUMN IF NOT EXISTS ad_name text,
-  ADD COLUMN IF NOT EXISTS platform text;
-```
+## Benefícios
 
-### 2. Atualizar Tipos TypeScript
-
-Atualizar `src/integrations/supabase/types.ts` para incluir os novos campos na tabela `lead_meta`.
-
-## Após a Correção
-
-Testarei novamente o webhook para confirmar que:
-1. Todos os dados de rastreamento são salvos em `lead_meta`
-2. Os dados aparecem na seção "Rastreamento" do card do lead
-
+1. **Organização**: Usuários podem focar em um tipo específico de notificação
+2. **Produtividade**: Separar notificações de WhatsApp (alto volume) das de leads (alta prioridade)
+3. **UX Melhorada**: Visual claro com contadores por categoria
