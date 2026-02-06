@@ -1,154 +1,142 @@
 
-# Plano: Melhorar Histórico de Automações e Adicionar Notificações
+# Plano: Corrigir "Parar ao Responder" nas Automações
 
-## Problemas Identificados
+## Problema Identificado
 
-### 1. Automação trava no "waiting" e não continua
-O `automation-delay-processor` existe mas **não tem cron job configurado**. Por isso, após enviar a primeira mensagem e entrar em "waiting", ninguém chama a função para continuar o fluxo.
+O recurso "Parar ao Responder" não funciona porque há uma **desconexão entre leads e conversas**:
 
-### 2. Erro truncado no histórico
-A mensagem de erro aparece como `Failed to send WhatsApp: {"statu...` porque está limitada a 200px com `truncate`.
+```text
+┌───────────────────────────────────────────────────────────────────────┐
+│  AUTOMAÇÃO DISPARA                                                    │
+│                                                                       │
+│  automation_executions                                                │
+│  ├─ lead_id: b59be9f8... ✅                                          │
+│  └─ conversation_id: NULL ❌                                         │
+│                                                                       │
+│  LEAD RESPONDE NO WHATSAPP                                            │
+│                                                                       │
+│  whatsapp_conversations                                               │
+│  ├─ contact_phone: 5522974063727                                     │
+│  └─ lead_id: NULL ❌  ← Não vinculada ao lead!                       │
+│                                                                       │
+│  evolution-webhook verifica:                                          │
+│  if (conversation.lead_id) { handleStopFollowUpOnReply() }            │
+│                            ↑                                          │
+│                   Nunca executa porque lead_id é NULL                 │
+└───────────────────────────────────────────────────────────────────────┘
+```
 
-### 3. Falta de notificações
-Não há notificações para:
-- Automação iniciada
-- Automação concluída
-- Automação com erro
-
-### 4. Histórico não mostra nome do lead/automação
-Mostra apenas "Lead" genérico ao invés do nome real.
+O lead existe com telefone `22974063727`, a conversa existe com `5522974063727`, mas **não estão vinculados**.
 
 ---
 
 ## Solução
 
-### Parte 1: Configurar Cron Job para o Delay Processor
+Modificar o `evolution-webhook` para buscar o lead **pelo telefone** quando a conversa não tem `lead_id`, antes de decidir se deve parar a automação.
 
-Criar uma migration que configura o `pg_cron` para chamar o `automation-delay-processor` a cada minuto:
+### Mudança no `evolution-webhook/index.ts`
 
-```sql
-SELECT cron.schedule(
-  'automation-delay-processor',
-  '* * * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/automation-delay-processor',
-    headers := '{"Authorization": "Bearer SERVICE_ROLE_KEY"}'::jsonb,
-    body := '{}'::jsonb
-  );
-  $$
-);
+**Antes (linha 637-640):**
+```typescript
+if (conversation.lead_id) {
+  await handleStopFollowUpOnReply(supabase, conversation.id, conversation.lead_id);
+}
 ```
 
-### Parte 2: Melhorar ExecutionHistory.tsx
+**Depois:**
+```typescript
+// STOP ON REPLY: Check for active automations even if conversation has no lead_id
+// Leads may be created separately and not linked to conversations yet
+let leadIdForStop = conversation.lead_id;
 
-1. **Buscar dados relacionados** - Fazer join com `leads.name` e `automations.name`
-2. **Mostrar erro completo** - Remover `truncate` e permitir expansão do erro
-3. **Exibir nome do lead e automação** - Em vez de "Lead", mostrar "André Rocha - Follow-up 3 Dias"
+if (!leadIdForStop) {
+  // Try to find lead by phone number (with or without country code)
+  const phoneVariants = [
+    contactPhone,                                    // 5522974063727
+    contactPhone.replace(/^55/, ''),                 // 22974063727
+    `55${contactPhone}`,                            // 555522974063727 (edge case)
+  ];
+  
+  const { data: matchingLead } = await supabase
+    .from("leads")
+    .select("id")
+    .eq("organization_id", session.organization_id)
+    .or(phoneVariants.map(p => `phone.eq.${p}`).join(','))
+    .limit(1)
+    .maybeSingle();
+  
+  if (matchingLead) {
+    leadIdForStop = matchingLead.id;
+    console.log(`Found lead ${leadIdForStop} by phone match for stop-on-reply`);
+    
+    // BONUS: Link the conversation to the lead for future
+    await supabase
+      .from("whatsapp_conversations")
+      .update({ lead_id: matchingLead.id })
+      .eq("id", conversation.id);
+  }
+}
+
+if (leadIdForStop) {
+  await handleStopFollowUpOnReply(supabase, conversation.id, leadIdForStop);
+}
+```
+
+---
+
+## Fluxo Corrigido
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ 🔴 André Rocha                     Concluído há 26 minutos  │
-│    Follow-up 3 Dias                                         │
-│    Iniciado há 26 minutos                                   │
-│                                                             │
-│    ⚠️ Erro: Número WhatsApp inválido (22974063727)          │
-│       Clique para ver detalhes                              │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│  LEAD RESPONDE NO WHATSAPP                                            │
+│         │                                                             │
+│         ▼                                                             │
+│  evolution-webhook                                                    │
+│  ├─ conversation.lead_id = NULL?                                     │
+│  │         │                                                         │
+│  │         ▼ SIM                                                      │
+│  │  Busca lead pelo telefone (22974063727 ou 5522974063727)          │
+│  │         │                                                         │
+│  │         ▼ ENCONTROU                                                │
+│  │  ├─ Vincula conversa ao lead (update conversation.lead_id)        │
+│  │  └─ leadIdForStop = lead.id                                       │
+│  │                                                                   │
+│  ├─ if (leadIdForStop) handleStopFollowUpOnReply()                   │
+│  │         │                                                         │
+│  │         ▼                                                          │
+│  │  Cancela automações com stop_on_reply: true                       │
+│  │  Move lead para etapa configurada (se houver)                     │
+│  │                                                                   │
+│  └─ ✅ Automação parada com sucesso                                   │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
-### Parte 3: Adicionar Notificações de Automação
+---
 
-Modificar o `automation-executor` para criar notificações:
+## Benefícios Adicionais
 
-1. **Ao iniciar** (quando a execução é criada):
-   - Título: `🤖 Automação Iniciada`
-   - Conteúdo: `"Follow-up 3 Dias" iniciou para André Rocha`
-
-2. **Ao concluir com sucesso**:
-   - Título: `✅ Automação Concluída`
-   - Conteúdo: `"Follow-up 3 Dias" finalizou para André Rocha`
-
-3. **Ao falhar**:
-   - Título: `❌ Automação Falhou`
-   - Conteúdo: `"Follow-up 3 Dias" falhou para André Rocha: Número WhatsApp inválido`
+1. **Auto-vinculação**: Ao encontrar o lead pelo telefone, a conversa é automaticamente vinculada para futuras mensagens
+2. **Normalização de telefone**: Busca com e sem código de país (55)
+3. **Segurança**: Filtra por `organization_id` para não vincular leads de outras organizações
 
 ---
 
 ## Detalhes Técnicos
 
-### Arquivos a Modificar
+### Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/migrations/new.sql` | Configurar cron job para automation-delay-processor |
-| `supabase/functions/automation-trigger/index.ts` | Enviar notificação ao criar execução |
-| `supabase/functions/automation-executor/index.ts` | Enviar notificações de conclusão/erro |
-| `src/hooks/use-automations.ts` | Buscar dados de lead e automação nas execuções |
-| `src/components/automations/ExecutionHistory.tsx` | Exibir nome do lead/automação e erro expandido |
+| `supabase/functions/evolution-webhook/index.ts` | Adicionar busca de lead por telefone antes de chamar `handleStopFollowUpOnReply` |
 
-### Notificação - Estrutura
+### Lógica de Busca por Telefone
 
-```typescript
-// Inserir na tabela notifications
-{
-  user_id: lead.assigned_user_id || automation.created_by,
-  organization_id: execution.organization_id,
-  title: "🤖 Automação Iniciada",
-  content: `"${automation.name}" iniciou para ${lead.name}`,
-  type: "automation",
-  lead_id: execution.lead_id
-}
-```
+A busca considera que o telefone do lead pode estar salvo de diferentes formas:
+- `22974063727` (sem código de país)
+- `5522974063727` (com código de país)
 
-### Lógica de Notificação
+A busca usa OR para encontrar qualquer variante.
 
-1. **Quem recebe**: O usuário responsável pelo lead (assigned_user_id) OU o criador da automação se não tiver responsável
-2. **Tipo**: `automation` - para diferenciar no frontend e tocar som específico
+### Performance
 
-### Fluxo Corrigido
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  LEAD MOVIDO PARA ETAPA                                     │
-│         │                                                   │
-│         ▼                                                   │
-│  automation-trigger                                         │
-│  ├─ Cria execution (status: running)                       │
-│  ├─ 🔔 NOTIFICA: "Automação Iniciada"                      │
-│  └─ Chama automation-executor                               │
-│         │                                                   │
-│         ▼                                                   │
-│  automation-executor                                        │
-│  ├─ Envia mensagem WhatsApp                                │
-│  ├─ Encontra nó "delay"                                    │
-│  └─ Atualiza status para "waiting"                         │
-│         │                                                   │
-│         ▼ (1 minuto depois)                                 │
-│  automation-delay-processor (via cron)                      │
-│  ├─ Encontra execuções com next_execution_at <= agora      │
-│  └─ Chama automation-executor para continuar                │
-│         │                                                   │
-│         ▼                                                   │
-│  automation-executor                                        │
-│  ├─ Envia segunda mensagem                                 │
-│  ├─ Sem mais nós → marca "completed"                       │
-│  └─ 🔔 NOTIFICA: "Automação Concluída"                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Tratamento de Erros no Histórico
-
-Erros comuns serão traduzidos para português:
-- `exists: false` → "Número WhatsApp inválido ou não cadastrado"
-- `Connection refused` → "Falha na conexão com WhatsApp"
-- `timeout` → "Tempo limite excedido"
-
----
-
-## Benefícios
-
-1. **Automações continuam funcionando** - Cron job processa os delays corretamente
-2. **Erros legíveis** - Usuário entende o que aconteceu
-3. **Notificações proativas** - Usuário fica sabendo em tempo real do status
-4. **Histórico rico** - Nome do lead e da automação visíveis
+A busca adicional só acontece quando `conversation.lead_id` é NULL, então não afeta mensagens de leads já vinculados.
