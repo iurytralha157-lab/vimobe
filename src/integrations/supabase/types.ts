@@ -4878,47 +4878,6 @@ export type Database = {
           },
         ]
       }
-      wordpress_integrations: {
-        Row: {
-          api_token: string
-          created_at: string
-          id: string
-          is_active: boolean | null
-          last_lead_at: string | null
-          leads_received: number | null
-          organization_id: string
-          updated_at: string
-        }
-        Insert: {
-          api_token?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          last_lead_at?: string | null
-          leads_received?: number | null
-          organization_id: string
-          updated_at?: string
-        }
-        Update: {
-          api_token?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          last_lead_at?: string | null
-          leads_received?: number | null
-          organization_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "wordpress_integrations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
