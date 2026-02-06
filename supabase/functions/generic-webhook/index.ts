@@ -420,6 +420,35 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ===== BUSCAR PREÇO DO IMÓVEL/PLANO PARA PREENCHER valor_interesse =====
+    let valorInteresse = null;
+    
+    if (resolvedPropertyId) {
+      const { data: propData } = await supabase
+        .from('properties')
+        .select('preco')
+        .eq('id', resolvedPropertyId)
+        .maybeSingle();
+      
+      if (propData?.preco) {
+        valorInteresse = propData.preco;
+        console.log('Setting valor_interesse from property price:', valorInteresse);
+      }
+    }
+    
+    if (resolvedPlanId && !valorInteresse) {
+      const { data: planData } = await supabase
+        .from('service_plans')
+        .select('price')
+        .eq('id', resolvedPlanId)
+        .maybeSingle();
+      
+      if (planData?.price) {
+        valorInteresse = planData.price;
+        console.log('Setting valor_interesse from plan price:', valorInteresse);
+      }
+    }
+
     // Create lead (novo - não duplicado)
     // Note: pipeline_id and stage_id are left null - distribution queues will set them
     const { data: lead, error: leadError } = await supabase
@@ -435,6 +464,7 @@ Deno.serve(async (req) => {
         assigned_user_id: null,
         interest_property_id: resolvedPropertyId,
         interest_plan_id: resolvedPlanId,
+        valor_interesse: valorInteresse, // Auto-preenchido com preço do imóvel/plano
         source: 'webhook',
         source_webhook_id: webhook.id, // Track which webhook created this lead
       })

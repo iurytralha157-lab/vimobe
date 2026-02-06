@@ -1207,23 +1207,19 @@ export function LeadDetailDialog({
                 {isTelecom ? (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Plano de interesse</Label>
-                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
-                      const newValue = value === 'none' ? '' : value;
+                    <Select value={lead.interest_plan_id || 'none'} onValueChange={value => {
+                      const newValue = value === 'none' ? null : value;
                       const selectedPlan = servicePlans.find((p: any) => p.id === value);
                       const planPrice = selectedPlan?.price || null;
                       setEditForm({
                         ...editForm,
-                        property_id: newValue,
                         valor_interesse: planPrice ? planPrice.toString() : editForm.valor_interesse
                       });
-                      const updateData: any = {
+                      updateLead.mutateAsync({
                         id: lead.id,
-                        property_id: newValue || null
-                      };
-                      if (planPrice) {
-                        updateData.valor_interesse = planPrice;
-                      }
-                      updateLead.mutateAsync(updateData).then(() => refetchStages());
+                        interest_plan_id: newValue,
+                        valor_interesse: planPrice || lead.valor_interesse
+                      } as any).then(() => refetchStages());
                     }}>
                       <SelectTrigger className="rounded-xl">
                         <SelectValue placeholder="Selecionar plano" />
@@ -1241,23 +1237,19 @@ export function LeadDetailDialog({
                 ) : (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
-                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
-                      const newValue = value === 'none' ? '' : value;
+                    <Select value={lead.interest_property_id || 'none'} onValueChange={value => {
+                      const newValue = value === 'none' ? null : value;
                       const selectedProperty = properties.find((p: any) => p.id === value);
                       const propertyPrice = selectedProperty?.preco || null;
                       setEditForm({
                         ...editForm,
-                        property_id: newValue,
                         valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
                       });
-                      const updateData: any = {
+                      updateLead.mutateAsync({
                         id: lead.id,
-                        property_id: newValue || null
-                      };
-                      if (propertyPrice) {
-                        updateData.valor_interesse = propertyPrice;
-                      }
-                      updateLead.mutateAsync(updateData).then(() => refetchStages());
+                        interest_property_id: newValue,
+                        valor_interesse: propertyPrice || lead.valor_interesse
+                      } as any).then(() => refetchStages());
                     }}>
                       <SelectTrigger className="rounded-xl">
                         <SelectValue placeholder="Selecionar imóvel" />
