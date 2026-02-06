@@ -635,8 +635,47 @@ async function handleMessagesUpsert(
           }
           // ===== STOP FOLLOW-UP ON REPLY =====
           // Cancel running/waiting automation executions when lead replies
-          if (conversation.lead_id) {
-            await handleStopFollowUpOnReply(supabase, conversation.id, conversation.lead_id);
+          // Even if conversation has no lead_id, try to find lead by phone
+          let leadIdForStop = conversation.lead_id;
+          
+          if (!leadIdForStop) {
+            // Try to find lead by phone number (with or without country code)
+            // Lead phone might be stored as 22974063727 while contactPhone is 5522974063727
+            const phoneVariants = [
+              contactPhone,                                    // 5522974063727
+              contactPhone.replace(/^55/, ''),                 // 22974063727
+            ];
+            
+            // Only add 55 prefix variant if phone doesn't start with 55
+            if (!contactPhone.startsWith('55')) {
+              phoneVariants.push(`55${contactPhone}`);         // edge case
+            }
+            
+            const { data: matchingLead } = await supabase
+              .from("leads")
+              .select("id")
+              .eq("organization_id", session.organization_id)
+              .or(phoneVariants.map(p => `phone.eq.${p}`).join(','))
+              .limit(1)
+              .maybeSingle();
+            
+            if (matchingLead) {
+              leadIdForStop = matchingLead.id;
+              console.log(`Found lead ${leadIdForStop} by phone match for stop-on-reply (phone variants: ${phoneVariants.join(', ')})`);
+              
+              // BONUS: Link the conversation to the lead for future messages
+              await supabase
+                .from("whatsapp_conversations")
+                .update({ lead_id: matchingLead.id })
+                .eq("id", conversation.id);
+              
+              // Update local variable too for notifications below
+              conversation.lead_id = matchingLead.id;
+            }
+          }
+          
+          if (leadIdForStop) {
+            await handleStopFollowUpOnReply(supabase, conversation.id, leadIdForStop);
           }
 
           // ===== NOTIFY USERS ABOUT NEW WHATSAPP MESSAGE (ONLY FOR LEADS) =====
