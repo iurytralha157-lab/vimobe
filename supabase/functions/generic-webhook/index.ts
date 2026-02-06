@@ -529,13 +529,26 @@ Deno.serve(async (req) => {
 
     console.log('Lead created successfully:', lead.id);
 
+    // ===== BUSCAR DADOS FINAIS PÓS-TRIGGER =====
+    // O trigger AFTER INSERT (handle_lead_intake) pode ter atribuído pipeline, stage e responsável
+    // Aguardar um pequeno delay para garantir que o trigger executou
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const { data: finalLead } = await supabase
+      .from('leads')
+      .select('id, pipeline_id, stage_id, assigned_user_id')
+      .eq('id', lead.id)
+      .single();
+
+    console.log('Final lead data after trigger:', finalLead);
+
     return new Response(
       JSON.stringify({
         success: true,
-        lead_id: lead.id,
-        pipeline_id: lead.pipeline_id,
-        stage_id: lead.stage_id,
-        assigned_user_id: lead.assigned_user_id,
+        lead_id: finalLead?.id || lead.id,
+        pipeline_id: finalLead?.pipeline_id || lead.pipeline_id,
+        stage_id: finalLead?.stage_id || lead.stage_id,
+        assigned_user_id: finalLead?.assigned_user_id || lead.assigned_user_id,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

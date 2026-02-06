@@ -198,6 +198,19 @@ export default function Pipelines() {
   useEffect(() => {
     if (!profile?.organization_id) return;
 
+    // Debounce timeout para evitar flickering visual
+    let refetchTimeout: ReturnType<typeof setTimeout>;
+    
+    const debouncedRefetch = () => {
+      // NÃO refetch durante drag-and-drop ativo (evita race condition)
+      if (isDraggingRef.current) return;
+      
+      clearTimeout(refetchTimeout);
+      refetchTimeout = setTimeout(() => {
+        refetch();
+      }, 200); // 200ms debounce para aguardar triggers do banco
+    };
+    
     const channel = supabase
       .channel('pipeline-realtime')
       .on(
@@ -208,12 +221,7 @@ export default function Pipelines() {
           table: 'leads',
           filter: `organization_id=eq.${profile.organization_id}`,
         },
-        () => {
-          // NÃO refetch durante drag-and-drop ativo (evita race condition)
-          if (!isDraggingRef.current) {
-            refetch();
-          }
-        }
+        debouncedRefetch
       )
       .on(
         'postgres_changes',
@@ -222,12 +230,7 @@ export default function Pipelines() {
           schema: 'public',
           table: 'lead_tags',
         },
-        () => {
-          // NÃO refetch durante drag-and-drop ativo
-          if (!isDraggingRef.current) {
-            refetch();
-          }
-        }
+        debouncedRefetch
       )
       .subscribe();
 

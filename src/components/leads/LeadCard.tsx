@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { formatDistanceToNow } from 'date-fns';
@@ -135,6 +135,11 @@ export function LeadCard({
   };
   const isLost = lead.deal_status === 'lost';
   const isWon = lead.deal_status === 'won';
+  
+  // Verificar se o lead foi criado há menos de 3 segundos (aguardando atribuição)
+  const isRecentlyCreated = lead.created_at && 
+    (Date.now() - new Date(lead.created_at).getTime()) < 3000;
+  
   return <Draggable draggableId={lead.id} index={index} isDragDisabled={isDragDisabled}>
       {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...(isDragDisabled ? {} : provided.dragHandleProps)} className={cn("bg-card border-border rounded-lg p-3 transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", isDragDisabled ? "cursor-default" : "cursor-pointer", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
@@ -191,7 +196,7 @@ export function LeadCard({
           {/* Linha de ações rápidas e infos */}
           <TooltipProvider delayDuration={100}>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Avatar do responsável ou badge "Sem responsável" */}
+              {/* Avatar do responsável ou badge "Sem responsável" / "Atribuindo..." */}
               {lead.assignee ? <Tooltip>
                   <TooltipTrigger asChild>
                     <Avatar className="h-6 w-6 ring-2 ring-background shrink-0">
@@ -204,7 +209,12 @@ export function LeadCard({
                   <TooltipContent side="bottom" className="text-xs">
                     {lead.assignee.name}
                   </TooltipContent>
-                </Tooltip> : <Tooltip>
+                </Tooltip> : isRecentlyCreated ? (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5 animate-pulse">
+                    <Loader2 className="h-2 w-2 mr-1 animate-spin" />
+                    Atribuindo...
+                  </Badge>
+                ) : <Tooltip>
                   <TooltipTrigger asChild>
                     <Badge variant="destructive" className="text-[9px] px-1.5 py-0.5 cursor-pointer hover:bg-destructive/90 transition-colors" onClick={e => {
                 e.stopPropagation();
