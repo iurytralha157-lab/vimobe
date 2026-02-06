@@ -1553,8 +1553,11 @@ export type Database = {
       lead_meta: {
         Row: {
           ad_id: string | null
+          ad_name: string | null
           adset_id: string | null
+          adset_name: string | null
           campaign_id: string | null
+          campaign_name: string | null
           contact_notes: string | null
           created_at: string
           form_id: string | null
@@ -1562,6 +1565,7 @@ export type Database = {
           id: string
           lead_id: string
           page_id: string | null
+          platform: string | null
           raw_payload: Json | null
           source_type: string | null
           utm_campaign: string | null
@@ -1572,8 +1576,11 @@ export type Database = {
         }
         Insert: {
           ad_id?: string | null
+          ad_name?: string | null
           adset_id?: string | null
+          adset_name?: string | null
           campaign_id?: string | null
+          campaign_name?: string | null
           contact_notes?: string | null
           created_at?: string
           form_id?: string | null
@@ -1581,6 +1588,7 @@ export type Database = {
           id?: string
           lead_id: string
           page_id?: string | null
+          platform?: string | null
           raw_payload?: Json | null
           source_type?: string | null
           utm_campaign?: string | null
@@ -1591,8 +1599,11 @@ export type Database = {
         }
         Update: {
           ad_id?: string | null
+          ad_name?: string | null
           adset_id?: string | null
+          adset_name?: string | null
           campaign_id?: string | null
+          campaign_name?: string | null
           contact_notes?: string | null
           created_at?: string
           form_id?: string | null
@@ -1600,6 +1611,7 @@ export type Database = {
           id?: string
           lead_id?: string
           page_id?: string | null
+          platform?: string | null
           raw_payload?: Json | null
           source_type?: string | null
           utm_campaign?: string | null
