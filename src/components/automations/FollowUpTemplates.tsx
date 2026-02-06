@@ -15,7 +15,16 @@ export interface FollowUpTemplate {
     title: string;
     content: string;
   }[];
+  onReplyMessage?: string;
 }
+
+// Default message when lead replies
+export const DEFAULT_ON_REPLY_MESSAGE = `Olá {{lead.name}}! 🎉
+
+Que bom que você se interessou!
+Nossa equipe entrará em contato em breve para te atender.
+
+Enquanto isso, posso te ajudar com algo?`;
 
 // Pre-configured templates for real estate industry
 export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
@@ -25,6 +34,7 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     description: 'Sequência rápida de 3 mensagens para leads quentes',
     days: 3,
     industry: 'real_estate',
+    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
     messages: [
       {
         day: 1,
@@ -61,6 +71,7 @@ Se mudar de ideia, é só me chamar aqui!`,
     description: 'Sequência completa para nutrir leads interessados',
     days: 6,
     industry: 'real_estate',
+    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
     messages: [
       {
         day: 1,
@@ -124,6 +135,7 @@ Salva meu contato e chama quando precisar! 🤝`,
     description: 'Sequência estendida para leads que precisam mais tempo',
     days: 10,
     industry: 'real_estate',
+    onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
     messages: [
       {
         day: 1,

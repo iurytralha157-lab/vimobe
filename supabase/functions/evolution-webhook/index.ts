@@ -1897,11 +1897,13 @@ async function handleStopFollowUpOnReply(
         id,
         lead_id,
         conversation_id,
+        organization_id,
         status,
         automation:automations(
           id,
           name,
-          trigger_config
+          trigger_config,
+          created_by
         )
       `)
       .or(`lead_id.eq.${leadId},conversation_id.eq.${conversationId}`)
@@ -1918,6 +1920,13 @@ async function handleStopFollowUpOnReply(
     }
     
     console.log(`Found ${executions.length} automation execution(s) to check`);
+    
+    // Fetch lead info once for all executions
+    const { data: leadInfo } = await supabase
+      .from("leads")
+      .select("id, name, phone, assigned_user_id, organization_id")
+      .eq("id", leadId)
+      .single();
     
     for (const exec of executions) {
       const triggerConfig = exec.automation?.trigger_config || {};
@@ -1946,6 +1955,81 @@ async function handleStopFollowUpOnReply(
       }
       
       console.log(`Execution ${exec.id} cancelled successfully`);
+      
+      // ===== SEND AUTO-REPLY MESSAGE IF CONFIGURED =====
+      const onReplyMessage = triggerConfig.on_reply_message;
+      if (onReplyMessage && leadInfo?.phone) {
+        try {
+          console.log(`Sending auto-reply message for automation "${exec.automation?.name}"`);
+          
+          // Replace variables in message
+          let messageText = onReplyMessage
+            .replace(/\{\{lead\.name\}\}/gi, leadInfo.name || "")
+            .replace(/\{\{lead\.phone\}\}/gi, leadInfo.phone || "");
+          
+          // Get session to send message
+          const { data: sessions } = await supabase
+            .from("whatsapp_sessions")
+            .select("id, instance_name, status")
+            .eq("organization_id", exec.organization_id)
+            .eq("status", "connected")
+            .limit(1);
+          
+          if (sessions && sessions.length > 0) {
+            const session = sessions[0];
+            const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
+            const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
+            
+            if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
+              const formattedPhone = leadInfo.phone.replace(/\D/g, '');
+              const phoneWithCode = formattedPhone.startsWith("55") ? formattedPhone : `55${formattedPhone}`;
+              
+              const sendResponse = await fetch(`${EVOLUTION_API_URL}/message/sendText/${session.instance_name}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": EVOLUTION_API_KEY,
+                },
+                body: JSON.stringify({
+                  number: phoneWithCode,
+                  text: messageText,
+                }),
+              });
+              
+              if (sendResponse.ok) {
+                console.log(`Auto-reply message sent successfully to ${phoneWithCode}`);
+              } else {
+                console.error(`Failed to send auto-reply: ${await sendResponse.text()}`);
+              }
+            }
+          }
+        } catch (msgError) {
+          console.error("Error sending auto-reply message:", msgError);
+        }
+      }
+      
+      // ===== CREATE "LEAD RECOVERED" NOTIFICATION =====
+      try {
+        const notifyUserId = leadInfo?.assigned_user_id || exec.automation?.created_by;
+        if (notifyUserId) {
+          const leadName = leadInfo?.name || "Lead";
+          const automationName = exec.automation?.name || "Follow-up";
+          
+          await supabase.from("notifications").insert({
+            user_id: notifyUserId,
+            organization_id: exec.organization_id,
+            title: "🎉 Lead Recuperado!",
+            content: `"${leadName}" respondeu ao follow-up "${automationName}"`,
+            type: "lead",
+            lead_id: leadId,
+            is_read: false,
+          });
+          
+          console.log(`Notification "Lead Recuperado" sent to user ${notifyUserId}`);
+        }
+      } catch (notifError) {
+        console.error("Error sending lead recovered notification:", notifError);
+      }
       
       // Move lead to configured stage if specified
       const onReplyStageId = triggerConfig.on_reply_move_to_stage_id;
