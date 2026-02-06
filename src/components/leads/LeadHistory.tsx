@@ -50,9 +50,11 @@ const eventIcons: Record<string, React.ComponentType<{ className?: string }>> = 
   call: Phone,
   email: Mail,
   message: MessageSquare,
+  automation_message: Bot,
   task_completed: CheckCircle,
   contact_updated: UserCircle,
   assignee_changed: UserCircle,
+  lead_reentry: UserPlus,
 };
 
 const eventColors: Record<string, { text: string; bg: string }> = {
@@ -74,9 +76,11 @@ const eventColors: Record<string, { text: string; bg: string }> = {
   call: { text: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-900/50' },
   email: { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/50' },
   message: { text: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/50' },
+  automation_message: { text: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-100 dark:bg-violet-900/50' },
   task_completed: { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/50' },
   contact_updated: { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/50' },
   assignee_changed: { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/50' },
+  lead_reentry: { text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/50' },
 };
 
 const defaultColor = { text: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' };
