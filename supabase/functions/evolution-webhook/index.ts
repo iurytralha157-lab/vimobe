@@ -45,8 +45,6 @@ Deno.serve(async (req) => {
     const EVOLUTION_WEBHOOK_SECRET = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
 
     // ===== SECURITY: Validate webhook secret =====
-    // TEMPORARIAMENTE DESABILITADO para debug - reativar para produção
-    /*
     if (EVOLUTION_WEBHOOK_SECRET) {
       const incomingSecret = req.headers.get("x-webhook-secret") || 
                              req.headers.get("apikey") ||
@@ -59,9 +57,10 @@ Deno.serve(async (req) => {
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      console.log("✅ Evolution webhook secret validated");
+    } else {
+      console.warn("⚠️ EVOLUTION_WEBHOOK_SECRET not configured - webhook security disabled");
     }
-    */
-    console.log("⚠️ Webhook secret validation DISABLED - configure for production");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
