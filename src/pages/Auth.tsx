@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { z } from "zod";
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,12 +23,17 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function Auth() {
-  const {
-    signIn
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { signIn } = useAuth();
+  const { toast } = useToast();
+  const { resolvedTheme } = useTheme();
+  const { data: systemSettings } = useSystemSettings();
+
+  const logoUrl = useMemo(() => {
+    if (!systemSettings) return '/logo.png';
+    return resolvedTheme === 'dark' 
+      ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
+      : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
+  }, [systemSettings, resolvedTheme]);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
@@ -118,14 +125,14 @@ export default function Auth() {
      UI
   ======================= */
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-3xl p-9">
+        <div className="bg-card rounded-3xl p-9 border border-border shadow-lg">
 
           {/* LOGO + SUBTÍTULO */}
           <div className="flex flex-col items-center mb-5">
             <img 
-              src="/logo.png" 
+              src={logoUrl} 
               alt="Vetter CRM" 
               className="h-16 w-auto mb-4" 
               width={175}
@@ -144,42 +151,42 @@ export default function Auth() {
             /* LOGIN FORM */
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <Label className="text-sm text-slate-700">Seu e-mail</Label>
+                <Label className="text-sm text-foreground">Seu e-mail</Label>
                 <Input 
                   type="email" 
                   placeholder="seu@email.com" 
                   value={loginData.email} 
                   onChange={e => setLoginData({ ...loginData, email: e.target.value })} 
-                  className="h-12 rounded-2xl bg-slate-50" 
+                  className="h-12 rounded-2xl bg-muted" 
                 />
-                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
               </div>
 
               <div>
-                <Label className="text-sm text-slate-700">Sua senha</Label>
+                <Label className="text-sm text-foreground">Sua senha</Label>
                 <div className="relative">
                   <Input 
                     type={showPassword ? "text" : "password"} 
                     placeholder="••••••••" 
                     value={loginData.password} 
                     onChange={e => setLoginData({ ...loginData, password: e.target.value })} 
-                    className="h-12 rounded-2xl bg-slate-50 pr-12" 
+                    className="h-12 rounded-2xl bg-muted pr-12" 
                   />
                   <button 
                     type="button" 
                     onClick={() => setShowPassword(!showPassword)} 
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
+                {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
               </div>
 
               <Button 
                 type="submit" 
                 disabled={loading} 
-                className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold"
+                className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Entrar
@@ -209,11 +216,11 @@ export default function Auth() {
                     setMode('login');
                     setErrors({});
                   }}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft size={20} />
                 </button>
-                <span className="text-sm font-medium text-slate-700">Recuperar senha</span>
+                <span className="text-sm font-medium text-foreground">Recuperar senha</span>
               </div>
               
               <p className="text-sm text-muted-foreground">
@@ -221,24 +228,24 @@ export default function Auth() {
               </p>
               
               <div>
-                <Label className="text-sm text-slate-700">Seu e-mail</Label>
+                <Label className="text-sm text-foreground">Seu e-mail</Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     type="email" 
                     placeholder="seu@email.com" 
                     value={forgotEmail} 
                     onChange={e => setForgotEmail(e.target.value)} 
-                    className="h-12 rounded-2xl bg-slate-50 pl-11" 
+                    className="h-12 rounded-2xl bg-muted pl-11" 
                   />
                 </div>
-                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
               </div>
 
               <Button 
                 type="submit" 
                 disabled={loading} 
-                className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold"
+                className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Enviar link de recuperação
