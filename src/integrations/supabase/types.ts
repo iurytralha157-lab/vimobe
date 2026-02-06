@@ -4921,6 +4921,7 @@ export type Database = {
             Returns: string
           }
       get_dashboard_stats: { Args: never; Returns: Json }
+      get_database_stats_admin: { Args: never; Returns: Json }
       get_funnel_data: {
         Args: {
           p_date_from?: string
