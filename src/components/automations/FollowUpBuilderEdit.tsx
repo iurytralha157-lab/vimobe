@@ -91,6 +91,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  const [onReplyMessage, setOnReplyMessage] = useState<string>('');
 
   const connectedSessions = sessions?.filter(s => s.status === 'connected') || [];
 
@@ -110,6 +111,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       if (config.filter_user_id) setFilterUserId(config.filter_user_id as string);
       if (typeof config.stop_on_reply === 'boolean') setStopOnReply(config.stop_on_reply);
       if (config.on_reply_move_to_stage_id) setOnReplyStageId(config.on_reply_move_to_stage_id as string);
+      if (config.on_reply_message) setOnReplyMessage(config.on_reply_message as string);
       
       // Load nodes and edges
       const flowNodes: Node[] = [];
@@ -316,6 +318,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
           stop_on_reply: stopOnReply,
           on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
+          on_reply_message: stopOnReply && onReplyMessage?.trim() ? onReplyMessage.trim() : null,
         } as any,
       });
 
@@ -343,6 +346,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
               on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
+              on_reply_message: stopOnReply && onReplyMessage?.trim() ? onReplyMessage.trim() : null,
             },
             position_x: Math.round(node.position.x),
             position_y: Math.round(node.position.y),
@@ -617,38 +621,58 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                   </Label>
                 </div>
                 
-                {stopOnReply && pipelineId && (
-                  <div className="space-y-2 ml-6">
-                    <Label className="text-xs text-muted-foreground">
-                      Ao responder, mover para:
-                    </Label>
-                    <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Não mover (apenas parar)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Não mover (apenas parar)</SelectItem>
-                        {/* Fallback: show loading item if stage is selected but not yet in list */}
-                        {onReplyStageId && 
-                         onReplyStageId !== "__none__" && 
-                         !stages?.find(s => s.id === onReplyStageId) && (
-                          <SelectItem value={onReplyStageId} disabled>
-                            Carregando etapa...
-                          </SelectItem>
-                        )}
-                        {stages?.map((stage) => (
-                          <SelectItem key={stage.id} value={stage.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: stage.color || '#888' }}
-                              />
-                              {stage.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {stopOnReply && (
+                  <div className="space-y-4 ml-6">
+                    {pipelineId && (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Ao responder, mover para:
+                        </Label>
+                        <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Não mover (apenas parar)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Não mover (apenas parar)</SelectItem>
+                            {/* Fallback: show loading item if stage is selected but not yet in list */}
+                            {onReplyStageId && 
+                             onReplyStageId !== "__none__" && 
+                             !stages?.find(s => s.id === onReplyStageId) && (
+                              <SelectItem value={onReplyStageId} disabled>
+                                Carregando etapa...
+                              </SelectItem>
+                            )}
+                            {stages?.map((stage) => (
+                              <SelectItem key={stage.id} value={stage.id}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: stage.color || '#888' }}
+                                  />
+                                  {stage.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    
+                    {/* Auto-reply message */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Mensagem automática ao responder:
+                      </Label>
+                      <Textarea
+                        value={onReplyMessage}
+                        onChange={(e) => setOnReplyMessage(e.target.value)}
+                        placeholder="Ex: Que bom que você se interessou! Nossa equipe entrará em contato..."
+                        className="min-h-[80px] text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enviar esta mensagem automaticamente quando o lead responder
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
