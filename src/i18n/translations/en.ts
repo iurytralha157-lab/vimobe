@@ -45,6 +45,7 @@ export const en = {
     entries: 'Entries',
     commissions: 'Commissions',
     reports: 'Reports',
+    dre: 'Income Statement',
     performance: 'Performance',
     crmManagement: 'Management',
     settings: 'Settings',
