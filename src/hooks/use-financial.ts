@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-
+import { logAuditAction } from "./use-audit-logs";
 export interface FinancialCategory {
   id: string;
   organization_id: string;
@@ -151,6 +151,17 @@ export function useCreateFinancialEntry() {
         .single();
 
       if (error) throw error;
+
+      // Audit log: financial entry created
+      logAuditAction(
+        'create',
+        'financial_entry',
+        (result as any).id,
+        undefined,
+        { type: data.type, category: data.category, amount: data.amount, description: data.description },
+        orgId || undefined
+      ).catch(console.error);
+
       return result;
     },
     onSuccess: () => {
@@ -170,6 +181,13 @@ export function useUpdateFinancialEntry() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<FinancialEntry> & { id: string }) => {
+      // Fetch old data for audit
+      const { data: oldEntry } = await supabase
+        .from('financial_entries')
+        .select('type, category, amount, status, organization_id')
+        .eq('id', id)
+        .single();
+
       const { data: result, error } = await supabase
         .from('financial_entries')
         .update(data as never)
@@ -178,6 +196,17 @@ export function useUpdateFinancialEntry() {
         .single();
 
       if (error) throw error;
+
+      // Audit log: financial entry updated
+      logAuditAction(
+        'update',
+        'financial_entry',
+        id,
+        oldEntry as Record<string, unknown> || undefined,
+        data as Record<string, unknown>,
+        (oldEntry as any)?.organization_id
+      ).catch(console.error);
+
       return result;
     },
     onSuccess: () => {
@@ -228,12 +257,31 @@ export function useDeleteFinancialEntry() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Fetch entry data for audit before deletion
+      const { data: entryData } = await supabase
+        .from('financial_entries')
+        .select('type, category, amount, description, organization_id')
+        .eq('id', id)
+        .single();
+
       const { error } = await supabase
         .from('financial_entries')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Audit log: financial entry deleted
+      if (entryData) {
+        logAuditAction(
+          'delete',
+          'financial_entry',
+          id,
+          entryData as Record<string, unknown>,
+          undefined,
+          (entryData as any).organization_id
+        ).catch(console.error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
