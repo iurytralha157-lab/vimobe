@@ -1,344 +1,169 @@
 
 
-## Script de Limpeza Automática de Membros Inválidos
+# 🔍 Auditoria Completa do Pipeline/Kanban
 
-### Problema Identificado
+## Resumo Executivo
 
-Usuários "órfãos" (com `organization_id = NULL`) continuam como membros de equipes e filas de distribuição, causando:
-- Leads sendo atribuídos a usuários invisíveis
-- Avatares "?" nas listagens de equipes
-- Falhas na distribuição do Round Robin
-
-**Usuários órfãos encontrados:**
-- Maikson (maiamaikson29@gmail.com)
-- Vetter Co. (companyvetter@gmail.com)
+Analisei **1.147 linhas** do arquivo principal `Pipelines.tsx` + hooks relacionados. O código está **bem estruturado e robusto**, mas existem alguns pontos de atenção importantes.
 
 ---
 
-### Solução Proposta
+## ✅ O Que Está Funcionando Bem
 
-Criar uma Edge Function `cleanup-orphan-members` que:
-1. Identifica membros órfãos em `team_members` e `round_robin_members`
-2. Remove automaticamente esses registros
-3. Registra as ações em log
-4. Pode ser executada manualmente ou via cron
+| Área | Status | Observações |
+|------|--------|-------------|
+| **Drag-and-Drop** | ✅ Excelente | Usa `@hello-pangea/dnd`, update otimista com rollback, bloqueio de refetch durante drag |
+| **Paginação por Coluna** | ✅ Implementado | 100 leads por estágio, botão "Carregar mais" funcionando |
+| **Sincronização Real-time** | ✅ Bom | Subscription com debounce de 200ms, `isDraggingRef` evita race conditions |
+| **Visibilidade por Role** | ✅ Correto | RLS complexa com `lead_view_all`, `is_team_leader()`, `get_user_led_pipeline_ids()` |
+| **Permissão Pipeline Lock** | ✅ Implementado | `hasPipelineLock` desabilita drag para usuários restritos |
+| **Automações de Estágio** | ✅ Funcionando | 7 automações ativas (alert_on_inactivity, change_deal_status, change_assignee) |
+| **Filtros** | ✅ Completos | Data, responsável, tag, status do deal, busca por nome/telefone |
+| **Deep Link** | ✅ Funciona | `?lead_id=xxx` abre card diretamente, com fallback para buscar no banco |
 
 ---
 
-### Arquitetura
+## ⚠️ Problema Crítico Pendente
+
+### Maikson Ainda na Fila Round-Robin
+
+```sql
+-- Resultado da query:
+queue_name: venda
+user_name: Maikson
+user_org_id: NULL
+status: user_no_org
+```
+
+**Impacto**: Leads continuarão sendo atribuídos a este usuário "fantasma" até a limpeza ser executada.
+
+**Ação**: Executar a ferramenta de limpeza em `/admin/database` clicando em "Executar Limpeza".
+
+---
+
+## 🔧 Pontos de Atenção Identificados
+
+### 1. **Arquivo Pipelines.tsx Muito Grande (1.147 linhas)**
+
+O arquivo concentra muita lógica em um único componente.
+
+**Componentes que poderiam ser extraídos**:
+- `KanbanColumn.tsx` - Renderização de cada coluna
+- `PipelineFilters.tsx` - Barra de filtros
+- `PipelineToolbar.tsx` - Seletor de pipeline + botões
+- `usePipelineFilters.ts` - Hook para gerenciar estado dos filtros
+
+**Impacto**: Manutenibilidade a longo prazo.
+**Prioridade**: Baixa (funciona bem, mas pode dificultar futuras mudanças).
+
+---
+
+### 2. **Contador de Leads no Badge Pode Divergir**
+
+```typescript
+// Linha 888 do Pipelines.tsx
+{stage.total_lead_count || stage.leads?.length || 0}
+```
+
+O `total_lead_count` vem da contagem real no banco, mas `stage.leads?.length` é limitado pela paginação (100). Se o primeiro estiver nulo, mostra o valor paginado.
+
+**Status**: Funciona corretamente na maioria dos casos, mas vale monitorar.
+
+---
+
+### 3. **Automação Duplicada Detectada**
+
+```sql
+-- Duas automações idênticas na mesma coluna "Perdido":
+id: 6b05922e... | automation_type: change_deal_status_on_enter | deal_status: lost
+id: 891ca3d3... | automation_type: change_deal_status_on_enter | deal_status: lost
+```
+
+**Impacto**: Não causa problemas funcionais, mas é redundância desnecessária.
+
+**Ação Recomendada**: Remover uma das duplicatas manualmente.
+
+---
+
+### 4. **Potencial de Delay no Update Otimista**
+
+```typescript
+// Linhas 337-347 - Busca automações ANTES do update otimista
+const { data: stageAutomations } = await supabase
+  .from('stage_automations')
+  .select('automation_type, action_config')
+  .eq('stage_id', newStageId)
+  .eq('is_active', true);
+```
+
+Essa query adiciona ~50-100ms antes do update visual durante drag-and-drop.
+
+**Status**: Aceitável para garantir que o `deal_status` seja exibido corretamente.
+**Alternativa**: Cachear automações no frontend (trade-off de complexidade).
+
+---
+
+### 5. **LeadCard com 336 Linhas**
+
+O componente `LeadCard.tsx` também está crescendo. Mas está bem organizado e não apresenta bugs.
+
+---
+
+## 📊 Métricas do Sistema
+
+| Métrica | Valor |
+|---------|-------|
+| Pipelines no sistema | 4+ |
+| Automações ativas | 7 |
+| Leads sem responsável (7d) | 0 ✅ |
+| Membros órfãos | 1 (Maikson) ⚠️ |
+| Políticas RLS em leads | 4 (SELECT, INSERT, ALL x2) |
+
+---
+
+## 🏗️ Arquitetura do Pipeline
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│                cleanup-orphan-members                   │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  1. Buscar membros de equipe com user_id inválido      │
-│     → user deletado OU organization_id NULL            │
-│     → organization diferente da equipe                 │
-│                                                         │
-│  2. Buscar membros de round-robin com user_id inválido │
-│     → mesmas condições                                  │
-│                                                         │
-│  3. Deletar registros órfãos                           │
-│                                                         │
-│  4. Retornar relatório de limpeza                      │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+Pipelines.tsx (1147 linhas)
+├── Estado Local: filters, dialogs, selectedLead
+├── Hooks:
+│   ├── usePipelines() ────────> Busca lista de pipelines
+│   ├── useStagesWithLeads() ──> Busca estágios + leads paginados (100/coluna)
+│   ├── useLoadMoreLeads() ────> Carrega mais leads de um estágio
+│   ├── useOrganizationUsers() ─> Lista usuários para filtro
+│   ├── useTags() ─────────────> Lista tags para filtro
+│   ├── useHasPermission() ────> Verifica lead_view_all, pipeline_lock
+│   └── useCanEditCadences() ──> Verifica se pode editar (admin/líder)
+├── Real-time:
+│   └── Subscription em 'leads' e 'lead_tags' com debounce
+├── Drag-and-Drop:
+│   ├── DragDropContext + Droppable + Draggable
+│   ├── handleDragEnd() ───> Update otimista + rollback
+│   └── isDraggingRef ─────> Bloqueia refetch durante drag
+└── Componentes:
+    ├── LeadCard ──────────> Card de cada lead
+    ├── LeadDetailDialog ──> Modal de detalhes
+    ├── StageSettingsDialog > Config de estágio (cadência, automações)
+    ├── CreateLeadDialog ──> Criar novo lead
+    └── StagesEditorDialog ─> Gerenciar colunas
 ```
 
 ---
 
-### Arquivos a Criar/Editar
+## 🎯 Conclusão
 
-| Ação | Arquivo | Descrição |
-|------|---------|-----------|
-| **CRIAR** | `supabase/functions/cleanup-orphan-members/index.ts` | Edge Function de limpeza |
-| **EDITAR** | `supabase/config.toml` | Registrar nova função |
-| **EDITAR** | `src/pages/admin/AdminDatabase.tsx` | Adicionar botão de limpeza manual |
-| **CRIAR** | `src/hooks/use-cleanup-orphans.ts` | Hook para chamar a função |
+O módulo de **Pipeline/Kanban está estável e bem implementado**. Os principais pontos são:
 
----
-
-### Implementação Detalhada
-
-#### 1. Edge Function (`cleanup-orphan-members`)
-
-```typescript
-// Lógica principal
-async function cleanupOrphanMembers(supabase) {
-  const results = {
-    team_members_removed: [],
-    round_robin_members_removed: [],
-  };
-
-  // 1. Buscar membros de equipe órfãos
-  const orphanTeamMembers = await supabase.rpc('find_orphan_team_members');
-  
-  // 2. Deletar cada membro órfão
-  for (const member of orphanTeamMembers) {
-    await supabase
-      .from('team_members')
-      .delete()
-      .eq('id', member.id);
-    results.team_members_removed.push(member);
-  }
-
-  // 3. Buscar membros de round-robin órfãos
-  const orphanRRMembers = await supabase.rpc('find_orphan_rr_members');
-  
-  // 4. Deletar cada membro órfão
-  for (const member of orphanRRMembers) {
-    await supabase
-      .from('round_robin_members')
-      .delete()
-      .eq('id', member.id);
-    results.round_robin_members_removed.push(member);
-  }
-
-  return results;
-}
-```
-
-#### 2. RPC Functions no Banco
-
-Criar duas funções SQL para identificar membros órfãos:
-
-```sql
--- Encontrar membros de equipe órfãos
-CREATE OR REPLACE FUNCTION find_orphan_team_members()
-RETURNS TABLE (
-  member_id uuid,
-  team_id uuid,
-  user_id uuid,
-  team_name text,
-  reason text
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    tm.id,
-    tm.team_id,
-    tm.user_id,
-    t.name,
-    CASE 
-      WHEN u.id IS NULL THEN 'user_deleted'
-      WHEN u.organization_id IS NULL THEN 'user_no_org'
-      WHEN u.organization_id != t.organization_id THEN 'org_mismatch'
-    END
-  FROM team_members tm
-  JOIN teams t ON tm.team_id = t.id
-  LEFT JOIN users u ON tm.user_id = u.id
-  WHERE u.id IS NULL 
-     OR u.organization_id IS NULL 
-     OR u.organization_id != t.organization_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Encontrar membros de round-robin órfãos
-CREATE OR REPLACE FUNCTION find_orphan_rr_members()
-RETURNS TABLE (
-  member_id uuid,
-  round_robin_id uuid,
-  user_id uuid,
-  queue_name text,
-  reason text
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    rrm.id,
-    rrm.round_robin_id,
-    rrm.user_id,
-    rr.name,
-    CASE 
-      WHEN u.id IS NULL THEN 'user_deleted'
-      WHEN u.organization_id IS NULL THEN 'user_no_org'
-      WHEN u.organization_id != rr.organization_id THEN 'org_mismatch'
-    END
-  FROM round_robin_members rrm
-  JOIN round_robins rr ON rrm.round_robin_id = rr.id
-  LEFT JOIN users u ON rrm.user_id = u.id
-  WHERE u.id IS NULL 
-     OR u.organization_id IS NULL 
-     OR u.organization_id != rr.organization_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-#### 3. UI no Admin Database
-
-Adicionar seção "Manutenção" com:
-- Card mostrando quantidade de membros órfãos detectados
-- Botão "Executar Limpeza" que chama a Edge Function
-- Histórico das últimas limpezas (opcional)
+1. **Crítico**: Maikson órfão ainda na fila - **executar limpeza AGORA**
+2. **Menor**: Automação duplicada na coluna "Perdido" - limpar manualmente
+3. **Arquitetura**: Arquivo grande mas funcional - refatorar quando houver necessidade de novas features
 
 ---
 
-### Validação Preventiva
+## Próximas Auditorias Sugeridas
 
-Além da limpeza, adicionar validação nos hooks para evitar novos órfãos:
-
-#### `use-teams.ts` - Filtrar usuários válidos
-
-```typescript
-// Ao buscar usuários para seleção, filtrar apenas os da organização
-const { data: users } = await supabase
-  .from('users')
-  .select('id, name')
-  .eq('organization_id', currentOrgId)
-  .not('organization_id', 'is', null);
-```
-
-#### `use-round-robins.ts` - Validar ao adicionar membro
-
-```typescript
-// Antes de inserir, verificar se usuário pertence à organização
-const { data: user } = await supabase
-  .from('users')
-  .select('organization_id')
-  .eq('id', userId)
-  .single();
-
-if (!user?.organization_id || user.organization_id !== rrOrgId) {
-  throw new Error('Usuário não pertence a esta organização');
-}
-```
-
----
-
-### Opções de Execução
-
-| Modo | Frequência | Uso |
-|------|------------|-----|
-| **Manual** | Sob demanda | Botão no Admin Dashboard |
-| **Cron** | Diário às 3h | Limpeza automática preventiva |
-
-Para cron (opcional):
-```sql
-SELECT cron.schedule(
-  'cleanup-orphans-daily',
-  '0 3 * * *',
-  $$
-  SELECT net.http_post(
-    url:='https://<project>.supabase.co/functions/v1/cleanup-orphan-members',
-    headers:='{"Authorization": "Bearer <anon_key>"}'::jsonb
-  );
-  $$
-);
-```
-
----
-
-### Fluxo do Usuário
-
-1. Super Admin acessa `/admin/database`
-2. Vê card "Membros Órfãos" com contagem
-3. Clica em "Executar Limpeza"
-4. Sistema remove membros inválidos
-5. Toast mostra resultado: "3 membros removidos de equipes, 2 de filas"
-
----
-
-### Seção Técnica
-
-#### Migração SQL
-
-```sql
--- Funções para encontrar órfãos
-CREATE OR REPLACE FUNCTION public.find_orphan_team_members()...
-CREATE OR REPLACE FUNCTION public.find_orphan_rr_members()...
-
--- Função para executar limpeza (usada pela Edge Function)
-CREATE OR REPLACE FUNCTION public.cleanup_orphan_members()
-RETURNS jsonb AS $$
-DECLARE
-  team_count int;
-  rr_count int;
-BEGIN
-  -- Deletar membros de equipe órfãos
-  WITH deleted AS (
-    DELETE FROM team_members tm
-    USING teams t, users u
-    WHERE tm.team_id = t.id
-      AND tm.user_id = u.id
-      AND (u.organization_id IS NULL OR u.organization_id != t.organization_id)
-    RETURNING tm.id
-  )
-  SELECT count(*) INTO team_count FROM deleted;
-
-  -- Deletar de equipes onde usuário não existe mais
-  DELETE FROM team_members 
-  WHERE user_id NOT IN (SELECT id FROM users);
-  GET DIAGNOSTICS team_count = team_count + ROW_COUNT;
-
-  -- Deletar membros de round-robin órfãos
-  WITH deleted AS (
-    DELETE FROM round_robin_members rrm
-    USING round_robins rr, users u
-    WHERE rrm.round_robin_id = rr.id
-      AND rrm.user_id = u.id
-      AND (u.organization_id IS NULL OR u.organization_id != rr.organization_id)
-    RETURNING rrm.id
-  )
-  SELECT count(*) INTO rr_count FROM deleted;
-
-  -- Deletar de round-robins onde usuário não existe mais
-  DELETE FROM round_robin_members 
-  WHERE user_id NOT IN (SELECT id FROM users);
-  GET DIAGNOSTICS rr_count = rr_count + ROW_COUNT;
-
-  RETURN jsonb_build_object(
-    'team_members_removed', team_count,
-    'round_robin_members_removed', rr_count,
-    'executed_at', now()
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-#### Hook `use-cleanup-orphans.ts`
-
-```typescript
-export function useOrphanStats() {
-  return useQuery({
-    queryKey: ['orphan-stats'],
-    queryFn: async () => {
-      const { data: teamOrphans } = await supabase.rpc('find_orphan_team_members');
-      const { data: rrOrphans } = await supabase.rpc('find_orphan_rr_members');
-      return {
-        teamOrphans: teamOrphans || [],
-        rrOrphans: rrOrphans || [],
-        total: (teamOrphans?.length || 0) + (rrOrphans?.length || 0),
-      };
-    },
-  });
-}
-
-export function useCleanupOrphans() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('cleanup-orphan-members');
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['orphan-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['round-robins'] });
-      toast.success(`Limpeza concluída: ${data.team_members_removed} de equipes, ${data.round_robin_members_removed} de filas`);
-    },
-  });
-}
-```
-
----
-
-### Benefícios
-
-1. **Imediato**: Remove o Maikson e outros órfãos das filas
-2. **Preventivo**: Validação impede novos órfãos
-3. **Transparente**: Super Admin vê e controla a limpeza
-4. **Automatizável**: Pode rodar via cron diariamente
+1. **Conversas/WhatsApp** - Sincronização de mensagens, vinculação com leads
+2. **Contatos** - Listagem paginada, importação, exportação
+3. **Gestão CRM** - Equipes, round-robins, regras de distribuição
+4. **Financeiro** - Comissões, contratos, DRE
 
