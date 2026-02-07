@@ -1,5 +1,5 @@
 
-# Redesign da Página de Configurações
+# Redesign da Página de Configurações ✅ CONCLUÍDO
 
 ## Resumo das Mudanças
 
