@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-
+import { logAuditAction } from "./use-audit-logs";
 export interface CommissionRule {
   id: string;
   organization_id: string;
@@ -205,6 +205,16 @@ export function useApproveCommission() {
         .single();
 
       if (error) throw error;
+
+      // Audit log: commission approved
+      logAuditAction(
+        'approve',
+        'commission',
+        id,
+        { status: 'forecast' },
+        { status: 'approved', approved_by: user?.id }
+      ).catch(console.error);
+
       return result;
     },
     onSuccess: () => {
@@ -238,6 +248,16 @@ export function usePayCommission() {
         .single();
 
       if (error) throw error;
+
+      // Audit log: commission paid
+      logAuditAction(
+        'pay',
+        'commission',
+        id,
+        { status: 'approved' },
+        { status: 'paid', paid_by: user?.id }
+      ).catch(console.error);
+
       return result;
     },
     onSuccess: () => {
@@ -257,6 +277,13 @@ export function useCancelCommission() {
 
   return useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      // Get old status for audit
+      const { data: oldCommission } = await supabase
+        .from('commissions')
+        .select('status')
+        .eq('id', id)
+        .single();
+
       const { data: result, error } = await supabase
         .from('commissions')
         .update({
@@ -268,6 +295,16 @@ export function useCancelCommission() {
         .single();
 
       if (error) throw error;
+
+      // Audit log: commission cancelled
+      logAuditAction(
+        'cancel',
+        'commission',
+        id,
+        { status: (oldCommission as any)?.status },
+        { status: 'cancelled', notes }
+      ).catch(console.error);
+
       return result;
     },
     onSuccess: () => {

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-
+import { logAuditAction } from "./use-audit-logs";
 export interface ContractBroker {
   id: string;
   contract_id: string;
@@ -195,6 +195,21 @@ export function useCreateContract() {
         await (supabase as any).from('contract_brokers').insert(brokerEntries);
       }
 
+      // Audit log: contract created
+      logAuditAction(
+        'create',
+        'contract',
+        contractTyped.id,
+        undefined,
+        { 
+          contract_number: contractNumber, 
+          value: contractData.value, 
+          client_name: contractData.client_name,
+          contract_type: contractData.contract_type 
+        },
+        orgId
+      ).catch(console.error);
+
       return contractTyped;
     },
     onSuccess: () => {
@@ -213,6 +228,13 @@ export function useUpdateContract() {
 
   return useMutation({
     mutationFn: async ({ id, brokers, ...data }: UpdateContractInput) => {
+      // Fetch old data for audit
+      const { data: oldContract } = await (supabase as any)
+        .from('contracts')
+        .select('contract_number, value, status, client_name')
+        .eq('id', id)
+        .single();
+
       const { data: contract, error } = await (supabase as any)
         .from('contracts')
         .update(data)
@@ -237,6 +259,16 @@ export function useUpdateContract() {
           await (supabase as any).from('contract_brokers').insert(brokerEntries);
         }
       }
+
+      // Audit log: contract updated
+      logAuditAction(
+        'update',
+        'contract',
+        id,
+        oldContract || undefined,
+        data as Record<string, unknown>,
+        contract.organization_id
+      ).catch(console.error);
 
       return contract;
     },
@@ -497,12 +529,35 @@ export function useDeleteContract() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Fetch contract data for audit before deletion
+      const { data: contractData } = await (supabase as any)
+        .from('contracts')
+        .select('contract_number, value, client_name, organization_id')
+        .eq('id', id)
+        .single();
+
       const { error } = await supabase
         .from('contracts')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Audit log: contract deleted
+      if (contractData) {
+        logAuditAction(
+          'delete',
+          'contract',
+          id,
+          { 
+            contract_number: contractData.contract_number, 
+            value: contractData.value, 
+            client_name: contractData.client_name 
+          },
+          undefined,
+          contractData.organization_id
+        ).catch(console.error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
