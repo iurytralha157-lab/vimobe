@@ -1,57 +1,79 @@
 
-# Correção Final: Tabela Inexistente
+# Correção da Página de Contatos
 
 ## Problema Identificado
 
-A função `list_contacts_paginated` criada na última migração tem um erro na linha 170:
+A página de Contatos está vazia porque a função SQL `list_contacts_paginated` tem erros nas referências de colunas para o sistema RBAC.
 
-```sql
-LEFT JOIN pipeline_stages s ON s.id = l.stage_id
-```
-
-**A tabela `pipeline_stages` não existe.** O nome correto é apenas `stages`.
-
-Erro retornado pela API:
+**Erro retornado pela API:**
 ```json
-{"code":"42P01","message":"relation \"pipeline_stages\" does not exist"}
+{"code":"42703","message":"column orp.role_id does not exist"}
 ```
+
+## Causa Raiz
+
+A função foi criada com nomes de colunas incorretos para as tabelas de permissões:
+
+| Tabela | Coluna Usada (Errado) | Coluna Real (Correto) |
+|--------|----------------------|----------------------|
+| `user_organization_roles` | `role_id` | `organization_role_id` |
+| `organization_role_permissions` | `role_id` | `organization_role_id` |
+| `organization_role_permissions` | `permission_id` | `permission_key` |
 
 ## Solução
 
-Recriar a função corrigindo a referência da tabela:
+Recriar a função `list_contacts_paginated` corrigindo a lógica de verificação de permissões RBAC.
 
+**Código atual (linhas 73-92):**
 ```sql
--- ERRADO:
-LEFT JOIN pipeline_stages s ON s.id = l.stage_id
+-- ERRADO
+SELECT 
+  EXISTS (
+    SELECT 1 
+    FROM user_organization_roles uor
+    JOIN organization_role_permissions orp ON orp.role_id = uor.role_id
+    JOIN available_permissions ap ON ap.id = orp.permission_id
+    WHERE uor.user_id = v_user_id 
+      AND uor.organization_id = v_org_id
+      AND ap.key = 'lead_view_all'
+  ),
+  ...
+```
 
--- CORRETO:
-LEFT JOIN stages s ON s.id = l.stage_id
+**Código corrigido:**
+```sql
+-- CORRETO
+SELECT 
+  EXISTS (
+    SELECT 1 
+    FROM user_organization_roles uor
+    JOIN organization_role_permissions orp 
+      ON orp.organization_role_id = uor.organization_role_id
+    JOIN available_permissions ap 
+      ON ap.key = orp.permission_key
+    WHERE uor.user_id = v_user_id 
+      AND ap.key = 'lead_view_all'
+  ),
+  ...
 ```
 
 ## Mudanças Necessárias
 
-Uma única migração SQL será executada para:
+Uma migração SQL será executada para:
 
-1. Dropar a função atual (que tem o erro de tabela)
-2. Recriar a função idêntica, mas com `stages` ao invés de `pipeline_stages`
+1. Dropar a função atual com parâmetros incorretos
+2. Recriar a função com os JOINs corrigidos usando:
+   - `orp.organization_role_id = uor.organization_role_id`
+   - `ap.key = orp.permission_key`
 
 ## Resultado Esperado
 
 Após a correção:
 - A página de Contatos exibirá todos os leads normalmente
-- O erro 404 será eliminado
-- Filtros e paginação funcionarão corretamente
+- O erro 400 será eliminado
+- O sistema RBAC funcionará corretamente (lead_view_all, lead_view_team)
+- Filtros, busca e paginação funcionarão conforme esperado
 
 ## Detalhes Técnicos
 
-A migração corrigirá apenas a linha 170:
-
-```sql
--- De:
-LEFT JOIN pipeline_stages s ON s.id = l.stage_id
-
--- Para:
-LEFT JOIN stages s ON s.id = l.stage_id
-```
-
-Todas as outras partes da função (RBAC, filtros, ordenação) já estão corretas e serão mantidas.
+A correção afeta apenas as linhas 76-92 da função, que fazem a verificação de permissões RBAC. O restante da lógica (filtros, ordenação, tags, SLA) permanece inalterado.
