@@ -1,5 +1,8 @@
 project_id = "iemalzlfnbouobyjwlwi"
 
+[functions.cleanup-orphan-members]
+verify_jwt = false
+
 [functions.wordpress-webhook]
 verify_jwt = false
 

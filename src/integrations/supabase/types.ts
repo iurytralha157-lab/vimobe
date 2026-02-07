@@ -4893,6 +4893,7 @@ export type Database = {
         Returns: boolean
       }
       can_manage_session: { Args: { session_id: string }; Returns: boolean }
+      cleanup_orphan_members: { Args: never; Returns: Json }
       create_default_stages_for_pipeline: {
         Args: { p_org_id: string; p_pipeline_id: string }
         Returns: undefined
@@ -4920,6 +4921,26 @@ export type Database = {
             }
             Returns: string
           }
+      find_orphan_rr_members: {
+        Args: never
+        Returns: {
+          member_id: string
+          queue_name: string
+          reason: string
+          round_robin_id: string
+          user_id: string
+        }[]
+      }
+      find_orphan_team_members: {
+        Args: never
+        Returns: {
+          member_id: string
+          reason: string
+          team_id: string
+          team_name: string
+          user_id: string
+        }[]
+      }
       get_dashboard_stats: { Args: never; Returns: Json }
       get_database_stats_admin: { Args: never; Returns: Json }
       get_funnel_data: {
