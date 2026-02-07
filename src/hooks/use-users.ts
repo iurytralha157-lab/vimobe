@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
-
+import { logAuditAction } from './use-audit-logs';
 export type User = Tables<'users'>;
 
 export function useOrganizationUsers() {
@@ -28,6 +28,13 @@ export function useUpdateUser() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<User> & { id: string }) => {
+      // Fetch old data for audit log
+      const { data: oldUser } = await supabase
+        .from('users')
+        .select('name, role, organization_id, is_active')
+        .eq('id', id)
+        .single();
+      
       const { error } = await supabase
         .from('users')
         .update(updates)
@@ -52,6 +59,16 @@ export function useUpdateUser() {
             role: updates.role as 'admin' | 'user'
           });
       }
+      
+      // Audit log: user updated
+      logAuditAction(
+        'update',
+        'user',
+        id,
+        oldUser || undefined,
+        updates as Record<string, unknown>,
+        oldUser?.organization_id || undefined
+      ).catch(console.error);
       
       return { id, ...updates };
     },

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { logAuditAction } from './use-audit-logs';
 
 export interface OrganizationWithStats {
   id: string;
@@ -72,8 +73,18 @@ export function useSuperAdmin() {
 
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast.success(`Organização "${data.organization.name}" criada com sucesso!`);
+      
+      // Audit log: organization created
+      logAuditAction(
+        'create',
+        'organization',
+        data.organization.id,
+        undefined,
+        { name: variables.name, admin_email: variables.adminEmail, segment: variables.segment }
+      ).catch(console.error);
+      
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
@@ -93,12 +104,29 @@ export function useSuperAdmin() {
       admin_notes?: string;
     }) => {
       const { id, ...updates } = data;
+      
+      // Fetch old data for audit log
+      const { data: oldOrg } = await supabase
+        .from('organizations')
+        .select('name, is_active, subscription_status, max_users')
+        .eq('id', id)
+        .single();
+      
       const { error } = await supabase
         .from('organizations')
         .update(updates)
         .eq('id', id);
 
       if (error) throw error;
+      
+      // Audit log: organization updated
+      logAuditAction(
+        'update',
+        'organization',
+        id,
+        oldOrg || undefined,
+        updates
+      ).catch(console.error);
     },
     onSuccess: () => {
       toast.success('Organização atualizada!');
@@ -112,6 +140,13 @@ export function useSuperAdmin() {
   // Delete organization via edge function (bypasses RLS)
   const deleteOrganization = useMutation({
     mutationFn: async (organizationId: string) => {
+      // Fetch org name for audit log before deletion
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
+        .single();
+      
       const { data: result, error } = await supabase.functions.invoke('delete-organization', {
         body: { organizationId },
       });
@@ -123,6 +158,14 @@ export function useSuperAdmin() {
       if (result?.error) {
         throw new Error(result.error);
       }
+
+      // Audit log: organization deleted
+      logAuditAction(
+        'delete',
+        'organization',
+        organizationId,
+        { name: org?.name }
+      ).catch(console.error);
 
       return result;
     },
@@ -193,6 +236,15 @@ export function useSuperAdmin() {
         .eq('id', userId);
 
       if (error) throw error;
+      
+      // Audit log: user updated by super admin
+      logAuditAction(
+        'update',
+        'user',
+        userId,
+        undefined,
+        updates
+      ).catch(console.error);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
@@ -216,6 +268,13 @@ export function useSuperAdmin() {
       if (result?.error) {
         throw new Error(result.error);
       }
+      
+      // Audit log: user deleted by super admin
+      logAuditAction(
+        'delete',
+        'user',
+        userId
+      ).catch(console.error);
 
       return result;
     },
