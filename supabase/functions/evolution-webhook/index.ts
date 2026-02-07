@@ -460,6 +460,23 @@ async function handleMessagesUpsert(
             unread_count: fromMe ? 0 : (conversation.unread_count || 0) + unreadIncrement,
           })
           .eq("id", conversation.id);
+        
+        // ===== AUTO-SYNC PROFILE PICTURE =====
+        // If conversation has no picture and it's a received message (not from us), try to fetch it
+        // Run asynchronously to not block message processing
+        if (!isGroup && !fromMe && !conversation.contact_picture) {
+          console.log(`Conversation ${conversation.id} has no profile picture - fetching async...`);
+          // Use EdgeRuntime.waitUntil to run in background without blocking
+          if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+            EdgeRuntime.waitUntil(
+              fetchAndSaveProfilePicture(supabase, session, conversation.id, contactPhone)
+            );
+          } else {
+            // Fallback: run without waiting
+            fetchAndSaveProfilePicture(supabase, session, conversation.id, contactPhone)
+              .catch(err => console.log('Background profile picture fetch failed:', err));
+          }
+        }
       }
 
       // Process media if exists - download and store permanently
