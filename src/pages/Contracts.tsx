@@ -44,7 +44,17 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ContractStatusBadge } from '@/components/financial/ContractStatusBadge';
 import { ContractForm } from '@/components/financial/ContractForm';
-import { useContracts, useActivateContract, useDeleteContract, Contract } from '@/hooks/use-contracts';
+import { useContracts, useActivateContract, useDeleteContract, useRegenerateCommissions, Contract } from '@/hooks/use-contracts';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatCurrency, formatDate, exportToExcel, prepareContractsExport } from '@/lib/export-financial';
 import { 
@@ -61,7 +71,8 @@ import {
   Building2,
   User,
   Calendar,
-  SlidersHorizontal
+  SlidersHorizontal,
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -151,6 +162,7 @@ export default function Contracts() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [noBrokersDialogId, setNoBrokersDialogId] = useState<string | null>(null);
 
   const { data: contracts, isLoading } = useContracts({
     status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -159,6 +171,7 @@ export default function Contracts() {
 
   const activateContract = useActivateContract();
   const deleteContract = useDeleteContract();
+  const regenerateCommissions = useRegenerateCommissions();
 
   const filteredContracts = contracts?.filter(contract => {
     const leadName = contract.lead?.name?.toLowerCase() || '';
@@ -177,9 +190,19 @@ export default function Contracts() {
     toast.success('Arquivo exportado com sucesso');
   };
 
-  const handleActivate = async (id: string) => {
-    if (confirm('Tem certeza que deseja ativar este contrato? Isso irá gerar as parcelas e comissões automaticamente.')) {
-      await activateContract.mutateAsync(id);
+  const handleActivate = async (id: string, skipCommissions = false) => {
+    try {
+      await activateContract.mutateAsync({ contractId: id, skipCommissions });
+    } catch (error: any) {
+      if (error.message === 'NO_BROKERS') {
+        setNoBrokersDialogId(id);
+      }
+    }
+  };
+
+  const handleRegenerateCommissions = async (id: string) => {
+    if (confirm('Isso irá excluir as comissões atuais e gerar novas baseadas nos corretores vinculados. Continuar?')) {
+      await regenerateCommissions.mutateAsync(id);
     }
   };
 
@@ -408,6 +431,15 @@ export default function Contracts() {
                                   <DropdownMenuSeparator />
                                 </>
                               )}
+                              {contract.status === 'active' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleRegenerateCommissions(contract.id)}>
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Regenerar Comissões
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
                               <DropdownMenuItem onClick={() => handleEdit(contract)}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
@@ -479,6 +511,31 @@ export default function Contracts() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* No Brokers Warning Dialog */}
+        <AlertDialog open={!!noBrokersDialogId} onOpenChange={() => setNoBrokersDialogId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Contrato sem Corretores</AlertDialogTitle>
+              <AlertDialogDescription>
+                Este contrato não possui corretores vinculados. Deseja ativar o contrato sem gerar comissões?
+                <br /><br />
+                Você poderá adicionar corretores depois e usar o botão "Regenerar Comissões" para criá-las.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                if (noBrokersDialogId) {
+                  handleActivate(noBrokersDialogId, true);
+                }
+                setNoBrokersDialogId(null);
+              }}>
+                Ativar sem Comissões
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );

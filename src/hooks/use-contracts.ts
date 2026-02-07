@@ -257,7 +257,7 @@ export function useActivateContract() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (contractId: string) => {
+    mutationFn: async ({ contractId, skipCommissions = false }: { contractId: string; skipCommissions?: boolean }) => {
       // Get contract details
       const { data: contractRaw, error: contractError } = await (supabase as any)
         .from('contracts')
@@ -277,6 +277,11 @@ export function useActivateContract() {
 
       const brokers = (brokersRaw || []) as ContractBroker[];
 
+      // Warn if no brokers and not skipping
+      if (brokers.length === 0 && !skipCommissions) {
+        throw new Error('NO_BROKERS');
+      }
+
       // Update contract status
       await (supabase as any)
         .from('contracts')
@@ -286,9 +291,7 @@ export function useActivateContract() {
       // Generate receivable entries
       const orgId = organization?.id || profile?.organization_id;
       const totalValue = contract.value || 0;
-      const entries: Record<string, unknown>[] = [];
 
-      // Commission entries for brokers
       // Generate receivable entries based on contract installments
       const installments = contract.installments || 1;
       const downPayment = contract.down_payment || 0;
@@ -339,6 +342,106 @@ export function useActivateContract() {
         await supabase.from('financial_entries').insert(receivableEntries as never[]);
       }
 
+      // Generate commissions only if we have brokers
+      if (brokers.length > 0) {
+        const commissions = brokers.map((broker) => ({
+          organization_id: orgId,
+          contract_id: contractId,
+          user_id: broker.user_id,
+          property_id: contract.property_id,
+          base_value: totalValue,
+          percentage: broker.commission_percentage,
+          calculated_value: totalValue * (broker.commission_percentage / 100),
+          amount: totalValue * (broker.commission_percentage / 100),
+          status: 'forecast',
+          forecast_date: new Date().toISOString().split('T')[0],
+        }));
+
+        await (supabase as any).from('commissions').insert(commissions);
+        
+        // Also generate payable entry for commission payments
+        const totalCommissionValue = commissions.reduce((sum, c) => sum + c.calculated_value, 0);
+        if (totalCommissionValue > 0) {
+          await supabase.from('financial_entries').insert({
+            organization_id: orgId,
+            contract_id: contractId,
+            type: 'payable',
+            category: 'Comissão',
+            description: `Comissões - Contrato ${contract.contract_number}`,
+            amount: totalCommissionValue,
+            due_date: new Date().toISOString().split('T')[0],
+            status: 'pending',
+            created_by: user?.id,
+          } as never);
+        }
+      }
+
+      return contract;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['contract'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['commissions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-dashboard'] });
+      toast({ title: "Contrato ativado com sucesso", description: "Lançamentos financeiros gerados." });
+    },
+    onError: (error: Error) => {
+      if (error.message === 'NO_BROKERS') {
+        // Don't show error, let the UI handle this
+        throw error;
+      }
+      toast({ title: "Erro ao ativar contrato", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useRegenerateCommissions() {
+  const queryClient = useQueryClient();
+  const { profile, organization } = useAuth();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (contractId: string) => {
+      // Get contract details
+      const { data: contractRaw, error: contractError } = await (supabase as any)
+        .from('contracts')
+        .select('*')
+        .eq('id', contractId)
+        .single();
+
+      if (contractError) throw contractError;
+      const contract = contractRaw as Contract;
+
+      // Get brokers
+      const { data: brokersRaw } = await (supabase as any)
+        .from('contract_brokers')
+        .select('*')
+        .eq('contract_id', contractId);
+
+      const brokers = (brokersRaw || []) as ContractBroker[];
+      
+      if (brokers.length === 0) {
+        throw new Error('Este contrato não possui corretores vinculados. Edite o contrato e adicione corretores primeiro.');
+      }
+
+      // Delete existing commissions for this contract
+      await (supabase as any)
+        .from('commissions')
+        .delete()
+        .eq('contract_id', contractId);
+
+      // Delete existing commission payable entry
+      await supabase
+        .from('financial_entries')
+        .delete()
+        .eq('contract_id', contractId)
+        .eq('category', 'Comissão');
+
+      const orgId = organization?.id || profile?.organization_id;
+      const totalValue = contract.value || 0;
+
+      // Generate new commissions
       const commissions = brokers.map((broker) => ({
         organization_id: orgId,
         contract_id: contractId,
@@ -347,15 +450,14 @@ export function useActivateContract() {
         base_value: totalValue,
         percentage: broker.commission_percentage,
         calculated_value: totalValue * (broker.commission_percentage / 100),
+        amount: totalValue * (broker.commission_percentage / 100),
         status: 'forecast',
         forecast_date: new Date().toISOString().split('T')[0],
       }));
 
-      if (commissions.length > 0) {
-        await (supabase as any).from('commissions').insert(commissions);
-      }
-      
-      // Also generate payable entry for commission payments
+      await (supabase as any).from('commissions').insert(commissions);
+
+      // Generate payable entry for commission payments
       const totalCommissionValue = commissions.reduce((sum, c) => sum + c.calculated_value, 0);
       if (totalCommissionValue > 0) {
         await supabase.from('financial_entries').insert({
@@ -367,22 +469,24 @@ export function useActivateContract() {
           amount: totalCommissionValue,
           due_date: new Date().toISOString().split('T')[0],
           status: 'pending',
-          created_by: user?.id,
         } as never);
       }
 
-      return contract;
+      return { commissionsCount: commissions.length, totalValue: totalCommissionValue };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       queryClient.invalidateQueries({ queryKey: ['contract'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-entries'] });
       queryClient.invalidateQueries({ queryKey: ['financial-dashboard'] });
-      toast({ title: "Contrato ativado com sucesso", description: "Comissões foram geradas automaticamente." });
+      toast({ 
+        title: "Comissões regeneradas", 
+        description: `${data.commissionsCount} comissões criadas totalizando R$ ${data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
+      });
     },
     onError: (error: Error) => {
-      toast({ title: "Erro ao ativar contrato", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao regenerar comissões", description: error.message, variant: "destructive" });
     },
   });
 }
