@@ -34,6 +34,7 @@ import FinancialEntries from "./pages/FinancialEntries";
 import Contracts from "./pages/Contracts";
 import Commissions from "./pages/Commissions";
 import FinancialReports from "./pages/FinancialReports";
+import FinancialDRE from "./pages/FinancialDRE";
 import BrokerPerformancePage from "./pages/BrokerPerformance";
 import MetaSettings from "./pages/MetaSettings";
 import Automations from "./pages/Automations";
@@ -239,6 +240,7 @@ function AppRoutes() {
           <Route path="/financeiro/contratos" element={<ProtectedRoute><AdminRoute><Contracts /></AdminRoute></ProtectedRoute>} />
           <Route path="/financeiro/comissoes" element={<ProtectedRoute><AdminRoute><Commissions /></AdminRoute></ProtectedRoute>} />
           <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
+          <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
           <Route path="/reports/performance" element={<ProtectedRoute><BrokerPerformancePage /></ProtectedRoute>} />
           
           {/* Telecom Module */}

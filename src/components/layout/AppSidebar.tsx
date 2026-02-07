@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -65,6 +65,10 @@ const allNavItems: NavItem[] = [{
     icon: BarChart3,
     labelKey: 'reports',
     path: '/financeiro/relatorios'
+  }, {
+    icon: BarChart3,
+    labelKey: 'dre',
+    path: '/financeiro/dre'
   }]
 },
 // Imobiliária module with submenu

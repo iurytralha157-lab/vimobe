@@ -45,6 +45,7 @@ export const ptBR = {
     entries: 'Contas',
     commissions: 'Comissões',
     reports: 'Relatórios',
+    dre: 'DRE',
     performance: 'Performance',
     crmManagement: 'Gestão',
     settings: 'Configurações',
