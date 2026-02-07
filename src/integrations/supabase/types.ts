@@ -5136,6 +5136,47 @@ export type Database = {
               total_count: number
             }[]
           }
+        | {
+            Args: {
+              p_assignee_id?: string
+              p_created_from?: string
+              p_created_to?: string
+              p_deal_status?: string
+              p_limit?: number
+              p_page?: number
+              p_pipeline_id?: string
+              p_search?: string
+              p_sort_by?: string
+              p_sort_dir?: string
+              p_source?: string
+              p_stage_id?: string
+              p_tag_id?: string
+              p_unassigned?: boolean
+            }
+            Returns: {
+              assigned_user_id: string
+              assignee_avatar: string
+              assignee_name: string
+              created_at: string
+              deal_status: string
+              email: string
+              id: string
+              last_interaction_at: string
+              last_interaction_channel: string
+              last_interaction_preview: string
+              lost_reason: string
+              name: string
+              phone: string
+              pipeline_id: string
+              sla_status: string
+              source: string
+              stage_color: string
+              stage_id: string
+              stage_name: string
+              tags: Json
+              total_count: number
+            }[]
+          }
       normalize_phone: { Args: { phone_input: string }; Returns: string }
       notify_financial_entries: { Args: never; Returns: undefined }
       pick_round_robin_for_lead: {
