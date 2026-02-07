@@ -81,13 +81,16 @@ import { ImportContactsDialog } from '@/components/contacts/ImportContactsDialog
 import { TableSkeleton } from '@/components/contacts/TableSkeleton';
 import { EmptyState } from '@/components/contacts/EmptyState';
 import { useContactsList, type ContactListFilters } from '@/hooks/use-contacts-list';
-import { exportContacts } from '@/lib/export-contacts';
-import { useLeads, useLead, useDeleteLead } from '@/hooks/use-leads';
+import { exportContactsFiltered } from '@/lib/export-contacts';
+import { useLead, useDeleteLead } from '@/hooks/use-leads';
+import { useToast } from '@/hooks/use-toast';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
 
 export default function Contacts() {
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  
   // Filter states
   const [search, setSearch] = useState('');
   const [selectedPipeline, setSelectedPipeline] = useState<string>('all');
@@ -95,12 +98,14 @@ export default function Contacts() {
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
+  const [selectedDealStatus, setSelectedDealStatus] = useState<string>('all');
   const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
   const [pageInputValue, setPageInputValue] = useState('1');
+  const [isExporting, setIsExporting] = useState(false);
   
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -132,6 +137,7 @@ export default function Contacts() {
     unassigned: selectedAssignee === 'unassigned',
     tagId: selectedTag !== 'all' ? selectedTag : undefined,
     source: selectedSource !== 'all' ? selectedSource : undefined,
+    dealStatus: selectedDealStatus !== 'all' ? selectedDealStatus as 'open' | 'won' | 'lost' : undefined,
     createdFrom: dateRange ? format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
     createdTo: dateRange ? format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
     sortBy,
@@ -146,9 +152,6 @@ export default function Contacts() {
   const { data: stages = [] } = useStages(selectedPipeline !== 'all' ? selectedPipeline : undefined);
   const { data: users = [] } = useOrganizationUsers();
   const { data: tags = [] } = useTags();
-  
-  // For export, we need all leads (old hook) - only fetch when exporting
-  const { data: allLeads = [] } = useLeads();
   
   // Fetch selected lead for detail dialog
   const { data: selectedLead } = useLead(selectedContactId);
@@ -176,9 +179,43 @@ export default function Contacts() {
     setSelectedAssignee('all');
     setSelectedTag('all');
     setSelectedSource('all');
+    setSelectedDealStatus('all');
     setDatePreset(null);
     setCustomDateRange(null);
     setPage(1);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const count = await exportContactsFiltered({
+        filters: {
+          search: deferredSearch || undefined,
+          pipelineId: selectedPipeline !== 'all' ? selectedPipeline : undefined,
+          stageId: selectedStage !== 'all' ? selectedStage : undefined,
+          assigneeId: selectedAssignee !== 'all' && selectedAssignee !== 'unassigned' ? selectedAssignee : undefined,
+          unassigned: selectedAssignee === 'unassigned',
+          tagId: selectedTag !== 'all' ? selectedTag : undefined,
+          source: selectedSource !== 'all' ? selectedSource : undefined,
+          dealStatus: selectedDealStatus !== 'all' ? selectedDealStatus : undefined,
+          createdFrom: dateRange ? format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+          createdTo: dateRange ? format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+        },
+        filename: `contatos-${format(new Date(), 'yyyy-MM-dd')}`,
+      });
+      toast({
+        title: 'Exportação concluída',
+        description: `${count} contatos exportados com sucesso`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro na exportação',
+        description: error.message || 'Não foi possível exportar os contatos',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Clear selection when data changes
@@ -211,7 +248,8 @@ export default function Contacts() {
   };
 
   const hasActiveFilters = search || selectedPipeline !== 'all' || selectedStage !== 'all' || 
-    selectedAssignee !== 'all' || selectedTag !== 'all' || selectedSource !== 'all' || datePreset || customDateRange;
+    selectedAssignee !== 'all' || selectedTag !== 'all' || selectedSource !== 'all' || 
+    selectedDealStatus !== 'all' || datePreset || customDateRange;
 
   const activeFilterCount = [
     selectedPipeline !== 'all',
@@ -219,6 +257,7 @@ export default function Contacts() {
     selectedAssignee !== 'all',
     selectedTag !== 'all',
     selectedSource !== 'all',
+    selectedDealStatus !== 'all',
     datePreset || customDateRange,
   ].filter(Boolean).length;
 
@@ -280,11 +319,11 @@ export default function Contacts() {
                 Importar Contatos
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => exportContacts({ leads: allLeads })}
-                disabled={allLeads.length === 0}
+                onClick={handleExport}
+                disabled={isExporting || totalCount === 0}
               >
                 <Download className="h-4 w-4 mr-2 text-primary" />
-                Exportar Contatos
+                {isExporting ? 'Exportando...' : 'Exportar Contatos'}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -403,6 +442,34 @@ export default function Contacts() {
                     <SelectItem value="manual">Manual</SelectItem>
                     <SelectItem value="meta">Meta Ads</SelectItem>
                     <SelectItem value="site">Site</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Deal Status */}
+                <Select value={selectedDealStatus} onValueChange={handleFilterChange(setSelectedDealStatus)}>
+                  <SelectTrigger className="w-[130px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos status</SelectItem>
+                    <SelectItem value="open">
+                      <div className="flex items-center gap-2">
+                        <CircleDot className="h-3 w-3" />
+                        Aberto
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="won">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-3 w-3 text-emerald-600" />
+                        Ganho
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="lost">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-3 w-3 text-red-600" />
+                        Perdido
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 

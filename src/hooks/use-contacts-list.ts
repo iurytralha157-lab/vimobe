@@ -9,6 +9,7 @@ export interface ContactListFilters {
   unassigned?: boolean;
   tagId?: string;
   source?: string;
+  dealStatus?: 'open' | 'won' | 'lost';
   createdFrom?: string;
   createdTo?: string;
   sortBy?: 'created_at' | 'name' | 'last_interaction_at' | 'stage';
@@ -59,6 +60,7 @@ export function useContactsList(filters: ContactListFilters) {
         p_unassigned: filters.unassigned || false,
         p_tag_id: filters.tagId || null,
         p_source: filters.source || null,
+        p_deal_status: filters.dealStatus || null,
         p_created_from: filters.createdFrom || null,
         p_created_to: filters.createdTo || null,
         p_sort_by: filters.sortBy || 'created_at',
