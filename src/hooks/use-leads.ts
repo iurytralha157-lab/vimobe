@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 import { normalizePhone } from '@/lib/phone-utils';
 import { notifyLeadCreated } from './use-lead-notifications';
+import { logAuditAction } from './use-audit-logs';
 export type Lead = Tables<'leads'> & {
   tags?: { id: string; name: string; color: string }[];
   assignee?: { id: string; name: string; avatar_url: string | null };
@@ -304,6 +305,16 @@ export function useCreateLead() {
         content: `Lead "${lead.name}" foi criado`,
       });
       
+      // Audit log: lead created
+      logAuditAction(
+        'create',
+        'lead',
+        data.id,
+        undefined,
+        { name: lead.name, phone: lead.phone, source: lead.source || 'manual' },
+        organizationId
+      ).catch(console.error);
+      
       // Notificar todas as partes interessadas (vendedor, líderes, admins)
       await notifyLeadCreated({
         leadId: data.id,
@@ -415,6 +426,16 @@ export function useUpdateLead() {
         }
       }
       
+      // Audit log: lead updated
+      logAuditAction(
+        'update',
+        'lead',
+        id,
+        { stage_id: currentLead?.stage_id, assigned_user_id: currentLead?.assigned_user_id, name: currentLead?.name },
+        updates,
+        data.organization_id
+      ).catch(console.error);
+      
       return data;
     },
     onSuccess: () => {
@@ -435,6 +456,13 @@ export function useDeleteLead() {
   
   return useMutation({
     mutationFn: async (id: string) => {
+      // Fetch lead data before deleting for audit log
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('name, phone, organization_id')
+        .eq('id', id)
+        .single();
+      
       // Delete related notifications first to avoid FK constraint violation
       const { error: notifError } = await supabase
         .from('notifications')
@@ -449,6 +477,18 @@ export function useDeleteLead() {
         .eq('id', id);
       
       if (error) throw error;
+      
+      // Audit log: lead deleted
+      if (leadData) {
+        logAuditAction(
+          'delete',
+          'lead',
+          id,
+          { name: leadData.name, phone: leadData.phone },
+          undefined,
+          leadData.organization_id || undefined
+        ).catch(console.error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });

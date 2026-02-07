@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-
+import { logAuditAction } from '@/hooks/use-audit-logs';
 interface UserProfile {
   id: string;
   organization_id: string | null;
@@ -134,6 +134,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('users')
         .update({ organization_id: orgId })
         .eq('id', user.id);
+      
+      // Log impersonation start
+      logAuditAction('impersonate_start', 'organization', orgId, undefined, {
+        org_name: orgName,
+        started_at: new Date().toISOString()
+      }).catch(console.error);
     }
     
     const impersonateSession: ImpersonateSession = { orgId, orgName };
@@ -147,6 +153,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const stopImpersonate = async () => {
+    // Log impersonation stop before clearing state
+    if (user && impersonating) {
+      logAuditAction('impersonate_stop', 'organization', impersonating.orgId, undefined, {
+        org_name: impersonating.orgName,
+        stopped_at: new Date().toISOString()
+      }).catch(console.error);
+    }
+    
     // Restore the super admin's organization_id to null
     if (user) {
       await supabase
@@ -243,7 +257,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Log successful login (async to avoid blocking)
+    if (!error && data.user) {
+      setTimeout(() => {
+        logAuditAction('login', 'session', data.user.id, undefined, {
+          email,
+          login_at: new Date().toISOString()
+        }).catch(console.error);
+      }, 0);
+    }
+    
     return { error };
   };
 
@@ -262,6 +287,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Log logout before clearing states (capture user ID while we still have it)
+    const currentUserId = user?.id;
+    if (currentUserId) {
+      logAuditAction('logout', 'session', currentUserId).catch(console.error);
+    }
+    
     // Limpar estados PRIMEIRO (antes de qualquer await)
     // Isso garante que o logout funcione mesmo se a sessão já expirou no servidor
     setUser(null);
