@@ -5127,7 +5127,6 @@ export type Database = {
               name: string
               phone: string
               pipeline_id: string
-              pipeline_name: string
               sla_status: string
               source: string
               stage_color: string
