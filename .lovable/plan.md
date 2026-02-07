@@ -1,247 +1,344 @@
 
-## Plano: Correção do Bug de Comissões + Implementação do DRE
 
-### Parte 1: Correção do Bug de Comissões
+## Script de Limpeza Automática de Membros Inválidos
 
-**Problema identificado:** Quando um corretor é selecionado no formulário de contrato, ele não está sendo persistido corretamente na tabela `contract_brokers`. Por isso, quando o contrato é ativado, nenhuma comissão é gerada.
+### Problema Identificado
 
-**Solução proposta:**
+Usuários "órfãos" (com `organization_id = NULL`) continuam como membros de equipes e filas de distribuição, causando:
+- Leads sendo atribuídos a usuários invisíveis
+- Avatares "?" nas listagens de equipes
+- Falhas na distribuição do Round Robin
 
-1. **Investigar e corrigir o BrokerSelector**
-   - Verificar se o componente está salvando corretamente no submit
-   - Adicionar logs para debug
-   - Garantir que mobile e desktop salvem igual
-
-2. **Adicionar validação na ativação**
-   - Mostrar aviso se contrato não tem corretor vinculado
-   - Perguntar se deseja continuar sem gerar comissões
-
-3. **Criar botão "Regenerar Comissões"**
-   - Para contratos já ativados que não geraram comissões
-   - Permite corrigir sem precisar excluir e recriar
+**Usuários órfãos encontrados:**
+- Maikson (maiamaikson29@gmail.com)
+- Vetter Co. (companyvetter@gmail.com)
 
 ---
 
-### Parte 2: Implementação do DRE
+### Solução Proposta
 
-O DRE (Demonstrativo de Resultado do Exercício) mostrará a saúde financeira da organização seguindo a estrutura contábil.
+Criar uma Edge Function `cleanup-orphan-members` que:
+1. Identifica membros órfãos em `team_members` e `round_robin_members`
+2. Remove automaticamente esses registros
+3. Registra as ações em log
+4. Pode ser executada manualmente ou via cron
 
-#### Estrutura do DRE
+---
+
+### Arquitetura
 
 ```text
-=== DRE - Período XX/XX a XX/XX ===
-
-(+) RECEITA OPERACIONAL BRUTA
-    - Vendas de Imóveis
-    - Comissões sobre Vendas
-    - Locações
-    - Serviços
-
-(-) DEDUÇÕES DA RECEITA
-    - Impostos sobre Vendas
-    - Devoluções e Cancelamentos
-
-(=) RECEITA LÍQUIDA
-
-(-) CUSTOS OPERACIONAIS
-    - Custo de Vendas
-    - Comissões Pagas
-
-(=) LUCRO BRUTO
-
-(-) DESPESAS OPERACIONAIS
-    - Despesas Administrativas
-    - Folha de Pagamento
-    - Marketing e Publicidade
-    - Aluguel e Condomínio
-    - Utilities (água, luz, internet)
-    
-(=) RESULTADO OPERACIONAL (EBITDA)
-
-(-) DESPESAS FINANCEIRAS
-    - Juros e Multas
-    - Taxas Bancárias
-
-(+) RECEITAS FINANCEIRAS
-    - Rendimentos
-    - Juros Recebidos
-
-(=) RESULTADO ANTES IR/CS
-
-(-) Impostos sobre Lucro
-
-(=) LUCRO/PREJUÍZO LÍQUIDO
+┌─────────────────────────────────────────────────────────┐
+│                cleanup-orphan-members                   │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  1. Buscar membros de equipe com user_id inválido      │
+│     → user deletado OU organization_id NULL            │
+│     → organization diferente da equipe                 │
+│                                                         │
+│  2. Buscar membros de round-robin com user_id inválido │
+│     → mesmas condições                                  │
+│                                                         │
+│  3. Deletar registros órfãos                           │
+│                                                         │
+│  4. Retornar relatório de limpeza                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Arquitetura da Implementação
+### Arquivos a Criar/Editar
 
-#### Banco de Dados
-
-**Nova tabela: `dre_account_groups`**
-
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| id | uuid | ID único |
-| organization_id | uuid | Organização |
-| name | text | Nome do grupo (ex: "Receita Operacional") |
-| type | enum | 'revenue', 'deduction', 'cost', 'expense', 'financial' |
-| order | int | Ordem de exibição |
-| parent_id | uuid | Grupo pai (para hierarquia) |
-| is_system | bool | Se é padrão do sistema |
-
-**Nova tabela: `dre_account_mappings`**
-
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| id | uuid | ID único |
-| organization_id | uuid | Organização |
-| group_id | uuid | Grupo do DRE |
-| category | text | Categoria do financial_entries |
-| type | enum | 'receivable' ou 'payable' |
-
-Isso permite mapear as categorias existentes para os grupos do DRE.
+| Ação | Arquivo | Descrição |
+|------|---------|-----------|
+| **CRIAR** | `supabase/functions/cleanup-orphan-members/index.ts` | Edge Function de limpeza |
+| **EDITAR** | `supabase/config.toml` | Registrar nova função |
+| **EDITAR** | `src/pages/admin/AdminDatabase.tsx` | Adicionar botão de limpeza manual |
+| **CRIAR** | `src/hooks/use-cleanup-orphans.ts` | Hook para chamar a função |
 
 ---
 
-#### Frontend
+### Implementação Detalhada
 
-**Nova página: `/financial/dre`**
+#### 1. Edge Function (`cleanup-orphan-members`)
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/FinancialDRE.tsx` | Página principal do DRE |
-| `src/components/financial/DREReport.tsx` | Componente do relatório |
-| `src/components/financial/DREAccountConfig.tsx` | Configuração de contas |
-| `src/hooks/use-dre.ts` | Hook para buscar dados |
+```typescript
+// Lógica principal
+async function cleanupOrphanMembers(supabase) {
+  const results = {
+    team_members_removed: [],
+    round_robin_members_removed: [],
+  };
 
-**Funcionalidades:**
+  // 1. Buscar membros de equipe órfãos
+  const orphanTeamMembers = await supabase.rpc('find_orphan_team_members');
+  
+  // 2. Deletar cada membro órfão
+  for (const member of orphanTeamMembers) {
+    await supabase
+      .from('team_members')
+      .delete()
+      .eq('id', member.id);
+    results.team_members_removed.push(member);
+  }
 
-1. **Visualização do DRE**
-   - Filtro por período (mês, trimestre, ano, personalizado)
-   - Toggle entre regime de caixa vs competência
-   - Comparativo com período anterior
-   - Análise vertical (% sobre receita)
-   - Análise horizontal (variação entre períodos)
+  // 3. Buscar membros de round-robin órfãos
+  const orphanRRMembers = await supabase.rpc('find_orphan_rr_members');
+  
+  // 4. Deletar cada membro órfão
+  for (const member of orphanRRMembers) {
+    await supabase
+      .from('round_robin_members')
+      .delete()
+      .eq('id', member.id);
+    results.round_robin_members_removed.push(member);
+  }
 
-2. **Configuração de Contas**
-   - Mapear categorias existentes para grupos do DRE
-   - Criar novos grupos se necessário
-   - Definir ordem de exibição
+  return results;
+}
+```
 
-3. **Exportação**
-   - PDF formatado
-   - Excel com detalhamento
-   - Comparativo multi-período
+#### 2. RPC Functions no Banco
+
+Criar duas funções SQL para identificar membros órfãos:
+
+```sql
+-- Encontrar membros de equipe órfãos
+CREATE OR REPLACE FUNCTION find_orphan_team_members()
+RETURNS TABLE (
+  member_id uuid,
+  team_id uuid,
+  user_id uuid,
+  team_name text,
+  reason text
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    tm.id,
+    tm.team_id,
+    tm.user_id,
+    t.name,
+    CASE 
+      WHEN u.id IS NULL THEN 'user_deleted'
+      WHEN u.organization_id IS NULL THEN 'user_no_org'
+      WHEN u.organization_id != t.organization_id THEN 'org_mismatch'
+    END
+  FROM team_members tm
+  JOIN teams t ON tm.team_id = t.id
+  LEFT JOIN users u ON tm.user_id = u.id
+  WHERE u.id IS NULL 
+     OR u.organization_id IS NULL 
+     OR u.organization_id != t.organization_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Encontrar membros de round-robin órfãos
+CREATE OR REPLACE FUNCTION find_orphan_rr_members()
+RETURNS TABLE (
+  member_id uuid,
+  round_robin_id uuid,
+  user_id uuid,
+  queue_name text,
+  reason text
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    rrm.id,
+    rrm.round_robin_id,
+    rrm.user_id,
+    rr.name,
+    CASE 
+      WHEN u.id IS NULL THEN 'user_deleted'
+      WHEN u.organization_id IS NULL THEN 'user_no_org'
+      WHEN u.organization_id != rr.organization_id THEN 'org_mismatch'
+    END
+  FROM round_robin_members rrm
+  JOIN round_robins rr ON rrm.round_robin_id = rr.id
+  LEFT JOIN users u ON rrm.user_id = u.id
+  WHERE u.id IS NULL 
+     OR u.organization_id IS NULL 
+     OR u.organization_id != rr.organization_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### 3. UI no Admin Database
+
+Adicionar seção "Manutenção" com:
+- Card mostrando quantidade de membros órfãos detectados
+- Botão "Executar Limpeza" que chama a Edge Function
+- Histórico das últimas limpezas (opcional)
 
 ---
 
-### Fluxo de Dados
+### Validação Preventiva
 
-```text
-financial_entries
-    ↓
-(agrupado por category + type)
-    ↓
-dre_account_mappings
-    ↓
-(mapeado para grupos)
-    ↓
-dre_account_groups
-    ↓
-(estrutura hierárquica)
-    ↓
-DRE Formatado
+Além da limpeza, adicionar validação nos hooks para evitar novos órfãos:
+
+#### `use-teams.ts` - Filtrar usuários válidos
+
+```typescript
+// Ao buscar usuários para seleção, filtrar apenas os da organização
+const { data: users } = await supabase
+  .from('users')
+  .select('id, name')
+  .eq('organization_id', currentOrgId)
+  .not('organization_id', 'is', null);
+```
+
+#### `use-round-robins.ts` - Validar ao adicionar membro
+
+```typescript
+// Antes de inserir, verificar se usuário pertence à organização
+const { data: user } = await supabase
+  .from('users')
+  .select('organization_id')
+  .eq('id', userId)
+  .single();
+
+if (!user?.organization_id || user.organization_id !== rrOrgId) {
+  throw new Error('Usuário não pertence a esta organização');
+}
 ```
 
 ---
 
-### Arquivos a Modificar/Criar
+### Opções de Execução
 
-| Ação | Arquivo |
-|------|---------|
-| **CRIAR** | `src/pages/FinancialDRE.tsx` |
-| **CRIAR** | `src/components/financial/DREReport.tsx` |
-| **CRIAR** | `src/components/financial/DREAccountConfig.tsx` |
-| **CRIAR** | `src/components/financial/DRELineItem.tsx` |
-| **CRIAR** | `src/hooks/use-dre.ts` |
-| **EDITAR** | `src/App.tsx` (nova rota) |
-| **EDITAR** | `src/components/layout/AppSidebar.tsx` (novo item menu) |
-| **EDITAR** | `src/components/financial/BrokerSelector.tsx` (fix bug) |
-| **EDITAR** | `src/hooks/use-contracts.ts` (validação + regenerar) |
-| **MIGRAÇÃO** | Criar tabelas `dre_account_groups` e `dre_account_mappings` |
-| **MIGRAÇÃO** | Seed dos grupos padrão do DRE |
+| Modo | Frequência | Uso |
+|------|------------|-----|
+| **Manual** | Sob demanda | Botão no Admin Dashboard |
+| **Cron** | Diário às 3h | Limpeza automática preventiva |
+
+Para cron (opcional):
+```sql
+SELECT cron.schedule(
+  'cleanup-orphans-daily',
+  '0 3 * * *',
+  $$
+  SELECT net.http_post(
+    url:='https://<project>.supabase.co/functions/v1/cleanup-orphan-members',
+    headers:='{"Authorization": "Bearer <anon_key>"}'::jsonb
+  );
+  $$
+);
+```
+
+---
+
+### Fluxo do Usuário
+
+1. Super Admin acessa `/admin/database`
+2. Vê card "Membros Órfãos" com contagem
+3. Clica em "Executar Limpeza"
+4. Sistema remove membros inválidos
+5. Toast mostra resultado: "3 membros removidos de equipes, 2 de filas"
 
 ---
 
 ### Seção Técnica
 
-#### Hook use-dre.ts
-
-```typescript
-interface DRELine {
-  id: string;
-  name: string;
-  value: number;
-  previousValue?: number;
-  percentage?: number; // % sobre receita
-  variation?: number; // % variação período anterior
-  children?: DRELine[];
-  isTotal?: boolean;
-}
-
-interface DREData {
-  period: { start: string; end: string };
-  lines: DRELine[];
-  totals: {
-    grossRevenue: number;
-    netRevenue: number;
-    grossProfit: number;
-    operatingResult: number;
-    netResult: number;
-  };
-}
-```
-
-#### SQL para calcular DRE
+#### Migração SQL
 
 ```sql
-WITH entry_totals AS (
-  SELECT 
-    m.group_id,
-    SUM(CASE WHEN e.status = 'paid' THEN e.amount ELSE 0 END) as realized,
-    SUM(e.amount) as total
-  FROM financial_entries e
-  JOIN dre_account_mappings m ON e.category = m.category AND e.type = m.type
-  WHERE e.paid_date BETWEEN $1 AND $2
-  GROUP BY m.group_id
-)
-SELECT 
-  g.id,
-  g.name,
-  g.type,
-  g.order,
-  COALESCE(t.realized, 0) as value
-FROM dre_account_groups g
-LEFT JOIN entry_totals t ON g.id = t.group_id
-ORDER BY g.order;
+-- Funções para encontrar órfãos
+CREATE OR REPLACE FUNCTION public.find_orphan_team_members()...
+CREATE OR REPLACE FUNCTION public.find_orphan_rr_members()...
+
+-- Função para executar limpeza (usada pela Edge Function)
+CREATE OR REPLACE FUNCTION public.cleanup_orphan_members()
+RETURNS jsonb AS $$
+DECLARE
+  team_count int;
+  rr_count int;
+BEGIN
+  -- Deletar membros de equipe órfãos
+  WITH deleted AS (
+    DELETE FROM team_members tm
+    USING teams t, users u
+    WHERE tm.team_id = t.id
+      AND tm.user_id = u.id
+      AND (u.organization_id IS NULL OR u.organization_id != t.organization_id)
+    RETURNING tm.id
+  )
+  SELECT count(*) INTO team_count FROM deleted;
+
+  -- Deletar de equipes onde usuário não existe mais
+  DELETE FROM team_members 
+  WHERE user_id NOT IN (SELECT id FROM users);
+  GET DIAGNOSTICS team_count = team_count + ROW_COUNT;
+
+  -- Deletar membros de round-robin órfãos
+  WITH deleted AS (
+    DELETE FROM round_robin_members rrm
+    USING round_robins rr, users u
+    WHERE rrm.round_robin_id = rr.id
+      AND rrm.user_id = u.id
+      AND (u.organization_id IS NULL OR u.organization_id != rr.organization_id)
+    RETURNING rrm.id
+  )
+  SELECT count(*) INTO rr_count FROM deleted;
+
+  -- Deletar de round-robins onde usuário não existe mais
+  DELETE FROM round_robin_members 
+  WHERE user_id NOT IN (SELECT id FROM users);
+  GET DIAGNOSTICS rr_count = rr_count + ROW_COUNT;
+
+  RETURN jsonb_build_object(
+    'team_members_removed', team_count,
+    'round_robin_members_removed', rr_count,
+    'executed_at', now()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### Hook `use-cleanup-orphans.ts`
+
+```typescript
+export function useOrphanStats() {
+  return useQuery({
+    queryKey: ['orphan-stats'],
+    queryFn: async () => {
+      const { data: teamOrphans } = await supabase.rpc('find_orphan_team_members');
+      const { data: rrOrphans } = await supabase.rpc('find_orphan_rr_members');
+      return {
+        teamOrphans: teamOrphans || [],
+        rrOrphans: rrOrphans || [],
+        total: (teamOrphans?.length || 0) + (rrOrphans?.length || 0),
+      };
+    },
+  });
+}
+
+export function useCleanupOrphans() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('cleanup-orphan-members');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['orphan-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['round-robins'] });
+      toast.success(`Limpeza concluída: ${data.team_members_removed} de equipes, ${data.round_robin_members_removed} de filas`);
+    },
+  });
+}
 ```
 
 ---
 
-### Priorização Sugerida
+### Benefícios
 
-**Fase 1 (Correção urgente):**
-1. Fix do BrokerSelector
-2. Botão regenerar comissões
+1. **Imediato**: Remove o Maikson e outros órfãos das filas
+2. **Preventivo**: Validação impede novos órfãos
+3. **Transparente**: Super Admin vê e controla a limpeza
+4. **Automatizável**: Pode rodar via cron diariamente
 
-**Fase 2 (DRE básico):**
-1. Tabelas do banco
-2. Hook e página básica
-3. Visualização simples
-
-**Fase 3 (DRE avançado):**
-1. Configuração de contas
-2. Comparativos e análises
-3. Exportação PDF/Excel
