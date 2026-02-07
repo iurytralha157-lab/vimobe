@@ -1,79 +1,281 @@
 
-# Correção da Página de Contatos
+# Fase 1: Implementação de Logs de Auditoria
 
-## Problema Identificado
+## Resumo Executivo
 
-A página de Contatos está vazia porque a função SQL `list_contacts_paginated` tem erros nas referências de colunas para o sistema RBAC.
+Este plano implementa a primeira fase do sistema de auditoria, adicionando rastreamento de todas as ações críticas do sistema: login/logout, impersonação, e operações CRUD de leads e usuários.
 
-**Erro retornado pela API:**
-```json
-{"code":"42703","message":"column orp.role_id does not exist"}
-```
+---
 
-## Causa Raiz
+## O Que Será Implementado
 
-A função foi criada com nomes de colunas incorretos para as tabelas de permissões:
+### 1. Autenticação (Login/Logout/Impersonação)
+- Log de cada login bem-sucedido
+- Log de cada logout
+- Log de início e fim de impersonação por Super Admin
 
-| Tabela | Coluna Usada (Errado) | Coluna Real (Correto) |
-|--------|----------------------|----------------------|
-| `user_organization_roles` | `role_id` | `organization_role_id` |
-| `organization_role_permissions` | `role_id` | `organization_role_id` |
-| `organization_role_permissions` | `permission_id` | `permission_key` |
+### 2. CRUD de Leads
+- Log de criação de leads
+- Log de atualização de leads (com dados antigos e novos)
+- Log de exclusão de leads
 
-## Solução
+### 3. CRUD de Usuários
+- Log de atualização de usuários (incluindo mudanças de role)
 
-Recriar a função `list_contacts_paginated` corrigindo a lógica de verificação de permissões RBAC.
+### 4. Operações Super Admin
+- Log de criação de organizações
+- Log de atualização de organizações
+- Log de exclusão de organizações
+- Log de atualização de usuários pelo Super Admin
 
-**Código atual (linhas 73-92):**
-```sql
--- ERRADO
-SELECT 
-  EXISTS (
-    SELECT 1 
-    FROM user_organization_roles uor
-    JOIN organization_role_permissions orp ON orp.role_id = uor.role_id
-    JOIN available_permissions ap ON ap.id = orp.permission_id
-    WHERE uor.user_id = v_user_id 
-      AND uor.organization_id = v_org_id
-      AND ap.key = 'lead_view_all'
-  ),
-  ...
-```
+---
 
-**Código corrigido:**
-```sql
--- CORRETO
-SELECT 
-  EXISTS (
-    SELECT 1 
-    FROM user_organization_roles uor
-    JOIN organization_role_permissions orp 
-      ON orp.organization_role_id = uor.organization_role_id
-    JOIN available_permissions ap 
-      ON ap.key = orp.permission_key
-    WHERE uor.user_id = v_user_id 
-      AND ap.key = 'lead_view_all'
-  ),
-  ...
-```
+## Arquivos a Serem Modificados
 
-## Mudanças Necessárias
+| Arquivo | Alterações |
+|---------|------------|
+| `src/contexts/AuthContext.tsx` | Adicionar logs em `signIn`, `signOut`, `startImpersonate`, `stopImpersonate` |
+| `src/hooks/use-leads.ts` | Adicionar logs em `useCreateLead`, `useUpdateLead`, `useDeleteLead` |
+| `src/hooks/use-users.ts` | Adicionar log em `useUpdateUser` |
+| `src/hooks/use-super-admin.ts` | Adicionar logs em todas as mutations |
 
-Uma migração SQL será executada para:
-
-1. Dropar a função atual com parâmetros incorretos
-2. Recriar a função com os JOINs corrigidos usando:
-   - `orp.organization_role_id = uor.organization_role_id`
-   - `ap.key = orp.permission_key`
-
-## Resultado Esperado
-
-Após a correção:
-- A página de Contatos exibirá todos os leads normalmente
-- O erro 400 será eliminado
-- O sistema RBAC funcionará corretamente (lead_view_all, lead_view_team)
-- Filtros, busca e paginação funcionarão conforme esperado
+---
 
 ## Detalhes Técnicos
 
-A correção afeta apenas as linhas 76-92 da função, que fazem a verificação de permissões RBAC. O restante da lógica (filtros, ordenação, tags, SLA) permanece inalterado.
+### Função de Auditoria Existente
+
+O sistema já possui a função `logAuditAction` em `src/hooks/use-audit-logs.ts`:
+
+```typescript
+async function logAuditAction(
+  action: string,        // 'login', 'logout', 'create', 'update', 'delete'
+  entityType: string,    // 'session', 'lead', 'user', 'organization'
+  entityId?: string,     // ID da entidade afetada
+  oldData?: Record,      // Dados antes da alteração
+  newData?: Record,      // Dados após a alteração
+  organizationId?: string
+)
+```
+
+### Padrão de Ações a Serem Registradas
+
+| Ação | entity_type | Descrição |
+|------|-------------|-----------|
+| `login` | session | Usuário fez login |
+| `logout` | session | Usuário fez logout |
+| `impersonate_start` | organization | Super Admin iniciou impersonação |
+| `impersonate_stop` | organization | Super Admin encerrou impersonação |
+| `create` | lead | Novo lead criado |
+| `update` | lead | Lead atualizado |
+| `delete` | lead | Lead excluído |
+| `update` | user | Usuário atualizado |
+| `create` | organization | Nova organização criada |
+| `update` | organization | Organização atualizada |
+| `delete` | organization | Organização excluída |
+
+---
+
+## Implementação Detalhada
+
+### 1. AuthContext.tsx
+
+**Modificações na função `signIn`:**
+```typescript
+const signIn = async (email: string, password: string) => {
+  const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+  
+  if (!error && data.user) {
+    // Log audit action (usando setTimeout para evitar deadlock)
+    setTimeout(async () => {
+      await logAuditAction('login', 'session', data.user.id, undefined, {
+        email,
+        login_at: new Date().toISOString()
+      });
+    }, 0);
+  }
+  
+  return { error };
+};
+```
+
+**Modificações na função `signOut`:**
+```typescript
+const signOut = async () => {
+  // Log antes de limpar estados
+  if (user) {
+    await logAuditAction('logout', 'session', user.id);
+  }
+  // ... resto da função existente
+};
+```
+
+**Modificações na função `startImpersonate`:**
+```typescript
+const startImpersonate = async (orgId: string, orgName: string) => {
+  // Log da ação
+  await logAuditAction('impersonate_start', 'organization', orgId, undefined, {
+    org_name: orgName,
+    started_at: new Date().toISOString()
+  });
+  // ... resto da função existente
+};
+```
+
+**Modificações na função `stopImpersonate`:**
+```typescript
+const stopImpersonate = async () => {
+  // Log da ação
+  if (impersonating) {
+    await logAuditAction('impersonate_stop', 'organization', impersonating.orgId, undefined, {
+      org_name: impersonating.orgName,
+      stopped_at: new Date().toISOString()
+    });
+  }
+  // ... resto da função existente
+};
+```
+
+### 2. use-leads.ts
+
+**Em `useCreateLead`:**
+```typescript
+// Após criar o lead com sucesso
+await logAuditAction(
+  'create',
+  'lead',
+  data.id,
+  undefined,
+  { name: lead.name, phone: lead.phone, source: lead.source },
+  organizationId
+);
+```
+
+**Em `useUpdateLead`:**
+```typescript
+// Após atualizar o lead com sucesso
+await logAuditAction(
+  'update',
+  'lead',
+  id,
+  { stage_id: currentLead?.stage_id, assigned_user_id: currentLead?.assigned_user_id },
+  updates,
+  data.organization_id
+);
+```
+
+**Em `useDeleteLead`:**
+```typescript
+// Antes de excluir, buscar dados do lead
+const { data: leadData } = await supabase
+  .from('leads')
+  .select('name, phone, organization_id')
+  .eq('id', id)
+  .single();
+
+// Após excluir com sucesso
+await logAuditAction(
+  'delete',
+  'lead',
+  id,
+  leadData,
+  undefined,
+  leadData?.organization_id
+);
+```
+
+### 3. use-users.ts
+
+**Em `useUpdateUser`:**
+```typescript
+// Buscar dados antigos antes de atualizar
+const { data: oldUser } = await supabase
+  .from('users')
+  .select('name, role, organization_id, is_active')
+  .eq('id', id)
+  .single();
+
+// Após atualizar com sucesso
+await logAuditAction(
+  'update',
+  'user',
+  id,
+  oldUser,
+  updates,
+  oldUser?.organization_id
+);
+```
+
+### 4. use-super-admin.ts
+
+**Em `createOrganization`:**
+```typescript
+// No onSuccess
+await logAuditAction('create', 'organization', result.organization.id, undefined, {
+  name: data.name,
+  admin_email: data.adminEmail
+});
+```
+
+**Em `updateOrganization`:**
+```typescript
+// Antes de atualizar, buscar dados antigos
+const { data: oldOrg } = await supabase
+  .from('organizations')
+  .select('name, is_active, subscription_status')
+  .eq('id', id)
+  .single();
+
+// Após sucesso
+await logAuditAction('update', 'organization', id, oldOrg, updates);
+```
+
+**Em `deleteOrganization`:**
+```typescript
+// Buscar nome antes de excluir
+const { data: org } = await supabase
+  .from('organizations')
+  .select('name')
+  .eq('id', organizationId)
+  .single();
+
+// Após sucesso
+await logAuditAction('delete', 'organization', organizationId, { name: org?.name });
+```
+
+**Em `updateUser`:**
+```typescript
+await logAuditAction('update', 'user', userId, undefined, updates);
+```
+
+**Em `deleteUser`:**
+```typescript
+await logAuditAction('delete', 'user', userId);
+```
+
+---
+
+## Verificação Pós-Implementação
+
+Após a implementação, os logs aparecerão na página `/admin/audit` com:
+- Data/hora da ação
+- Usuário que executou
+- Tipo de ação (login, logout, create, update, delete, etc.)
+- Entidade afetada
+- Dados antigos e novos (quando aplicável)
+
+---
+
+## Considerações de Segurança
+
+- Logs de auditoria são gravados de forma assíncrona para não bloquear a operação principal
+- Erros na gravação de logs são capturados silenciosamente para não afetar a experiência do usuário
+- O `user_agent` é capturado automaticamente pela função `logAuditAction`
+
+---
+
+## Próximos Passos (Fases Futuras)
+
+- **Fase 2**: Edge function para capturar IP real do cliente
+- **Fase 3**: Expandir auditoria para módulo financeiro e equipes
+- **Fase 4**: Melhorias na interface de visualização de logs
