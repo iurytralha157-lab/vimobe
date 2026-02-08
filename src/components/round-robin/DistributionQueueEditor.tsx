@@ -50,6 +50,7 @@ import {
   Globe,
   Webhook
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useTeams } from '@/hooks/use-teams';
 import { useOrganizationUsers } from '@/hooks/use-users';
@@ -347,7 +348,18 @@ export function DistributionQueueEditor({
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim()) {
+      toast.error('Nome da fila é obrigatório');
+      return;
+    }
+    if (!formData.target_pipeline_id) {
+      toast.error('Pipeline de destino é obrigatório para a distribuição funcionar');
+      return;
+    }
+    if (!formData.target_stage_id) {
+      toast.error('Estágio inicial é obrigatório para a distribuição funcionar');
+      return;
+    }
     
     setSaving(true);
     try {
@@ -649,41 +661,42 @@ export function DistributionQueueEditor({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Pipeline de Destino</Label>
+                  <Label>Pipeline de Destino *</Label>
                   <Select 
-                    value={formData.target_pipeline_id || '__none__'} 
+                    value={formData.target_pipeline_id || ''} 
                     onValueChange={v => setFormData(prev => ({ 
                       ...prev, 
-                      target_pipeline_id: v === '__none__' ? '' : v,
+                      target_pipeline_id: v,
                       target_stage_id: ''
                     }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
+                    <SelectTrigger className={!formData.target_pipeline_id ? 'border-destructive' : ''}>
+                      <SelectValue placeholder="Selecione um pipeline..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Nenhum (usar padrão)</SelectItem>
                       {pipelines.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {!formData.target_pipeline_id && (
+                    <p className="text-xs text-destructive">Pipeline obrigatório para distribuição funcionar</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Estágio Inicial</Label>
+                  <Label>Estágio Inicial *</Label>
                   <Select 
-                    value={formData.target_stage_id || '__none__'} 
+                    value={formData.target_stage_id || ''} 
                     onValueChange={v => setFormData(prev => ({ 
                       ...prev, 
-                      target_stage_id: v === '__none__' ? '' : v 
+                      target_stage_id: v 
                     }))}
                     disabled={!formData.target_pipeline_id}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder={formData.target_pipeline_id ? "Selecione..." : "Selecione um pipeline"} />
+                    <SelectTrigger className={formData.target_pipeline_id && !formData.target_stage_id ? 'border-destructive' : ''}>
+                      <SelectValue placeholder={formData.target_pipeline_id ? "Selecione um estágio..." : "Selecione um pipeline primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Primeiro estágio</SelectItem>
                       {stages.map(s => (
                         <SelectItem key={s.id} value={s.id}>
                           <div className="flex items-center gap-2">
@@ -697,6 +710,9 @@ export function DistributionQueueEditor({
                       ))}
                     </SelectContent>
                   </Select>
+                  {formData.target_pipeline_id && !formData.target_stage_id && (
+                    <p className="text-xs text-destructive">Estágio obrigatório para distribuição funcionar</p>
+                  )}
                 </div>
               </div>
             </CollapsibleContent>
