@@ -19,7 +19,7 @@ export interface UnifiedHistoryEvent {
   isAutomation?: boolean;
 }
 
-// Mapping for timeline event types
+// Mapping for timeline event types (base labels - will be enhanced dynamically)
 const timelineEventLabels: Record<string, string> = {
   lead_created: 'Lead criado',
   lead_assigned: 'Atribuído',
@@ -54,10 +54,39 @@ const activityLabels: Record<string, string> = {
   automation_tag_added: 'Tag adicionada por automação',
 };
 
+// Dynamic label for lead_created based on source
+function getLeadCreatedLabel(metadata: Record<string, any> | null, source: 'timeline' | 'activity'): string {
+  const sourceLabel = metadata?.source_label || metadata?.source;
+  
+  if (sourceLabel) {
+    if (sourceLabel === 'meta_ads' || sourceLabel === 'Meta Ads') {
+      return '🎯 Lead criado via Meta Ads';
+    }
+    if (sourceLabel === 'whatsapp' || sourceLabel === 'WhatsApp') {
+      return '📱 Lead criado via WhatsApp';
+    }
+    if (sourceLabel === 'webhook' || sourceLabel === 'Webhook') {
+      const formName = metadata?.form_name || metadata?.webhook_name;
+      return formName ? `🔗 Lead criado via "${formName}"` : '🔗 Lead criado via Webhook';
+    }
+    if (sourceLabel === 'website' || sourceLabel === 'Site') {
+      return '🌐 Lead criado via Site';
+    }
+    if (sourceLabel === 'manual') {
+      return '✏️ Lead criado manualmente';
+    }
+    return `Lead criado via ${sourceLabel}`;
+  }
+  
+  return 'Lead criado';
+}
+
 function getTimelineEventLabel(event: LeadTimelineEvent): string {
   const metadata = event.metadata || {};
   
   switch (event.event_type) {
+    case 'lead_created':
+      return getLeadCreatedLabel(metadata, 'timeline');
     case 'stage_changed':
       const from = metadata.old_stage_name;
       const to = metadata.new_stage_name;
@@ -108,22 +137,7 @@ function getActivityLabel(activity: Activity): string {
       return `📤 Mensagem automática (${channel === 'whatsapp' ? 'WhatsApp' : channel})`;
       
     case 'lead_created':
-      if (meta.webhook_name) {
-        return `Lead criado via webhook "${meta.webhook_name}"`;
-      }
-      if (meta.source === 'webhook') {
-        return 'Lead criado via webhook';
-      }
-      if (meta.source === 'whatsapp') {
-        return 'Lead criado via WhatsApp';
-      }
-      if (meta.source === 'website') {
-        return 'Lead criado via site';
-      }
-      if (meta.source === 'meta_ads') {
-        return 'Lead criado via Meta Ads';
-      }
-      return `Lead criado via ${meta.source || 'manual'}`;
+      return getLeadCreatedLabel(meta, 'activity');
       
     case 'assignee_changed':
       // Check if it's a distribution activity with queue name
