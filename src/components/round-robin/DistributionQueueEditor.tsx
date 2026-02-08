@@ -443,29 +443,51 @@ export function DistributionQueueEditor({
       case 'meta_form':
         return (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Selecione os formulários Meta:</p>
+            <p className="text-xs text-muted-foreground">Selecione os formulários Meta (configurados ou não):</p>
             <div className="flex flex-wrap gap-1">
-              {metaFormConfigs.filter(f => f.is_active).map(form => (
-                <Badge
-                  key={form.form_id}
-                  variant={condition.values.includes(form.form_id) ? 'default' : 'outline'}
-                  className="cursor-pointer gap-1"
-                  onClick={() => {
-                    const newValues = condition.values.includes(form.form_id)
-                      ? condition.values.filter(v => v !== form.form_id)
-                      : [...condition.values, form.form_id];
-                    updateCondition(condition.id, { values: newValues });
-                  }}
-                >
-                  📝 {form.form_name || form.form_id}
-                </Badge>
-              ))}
-              {metaFormConfigs.filter(f => f.is_active).length === 0 && (
+              {metaFormConfigs.map(form => {
+                const isConfigured = form.is_active;
+                return (
+                  <Badge
+                    key={form.form_id}
+                    variant={condition.values.includes(form.form_id) ? 'default' : 'outline'}
+                    className={cn(
+                      "cursor-pointer gap-1",
+                      !isConfigured && "border-dashed"
+                    )}
+                    onClick={() => {
+                      const newValues = condition.values.includes(form.form_id)
+                        ? condition.values.filter(v => v !== form.form_id)
+                        : [...condition.values, form.form_id];
+                      updateCondition(condition.id, { values: newValues });
+                    }}
+                  >
+                    {isConfigured ? '✓' : '⚠️'} {form.form_name || form.form_id}
+                  </Badge>
+                );
+              })}
+              {metaFormConfigs.length === 0 && (
                 <span className="text-sm text-muted-foreground italic">
-                  {activeMetaIntegration ? 'Nenhum formulário configurado' : 'Meta Ads não configurado'}
+                  {activeMetaIntegration ? (
+                    <span>
+                      Nenhum formulário.{' '}
+                      <a href="/settings/integrations/meta" className="text-primary underline">Configurar Meta</a>
+                    </span>
+                  ) : (
+                    <span>
+                      Meta Ads não conectado.{' '}
+                      <a href="/settings/integrations/meta" className="text-primary underline">Conectar</a>
+                    </span>
+                  )}
                 </span>
               )}
             </div>
+            {metaFormConfigs.some(f => !f.is_active) && (
+              <p className="text-xs text-muted-foreground">
+                ⚠️ = Formulário sem mapeamento de campos.{' '}
+                <a href="/settings/integrations/meta" className="text-primary underline">Configurar</a>
+              </p>
+            )}
           </div>
         );
 

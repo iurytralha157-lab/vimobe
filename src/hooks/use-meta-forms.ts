@@ -101,6 +101,8 @@ export function useFetchPageForms() {
 }
 
 // Create or update form configuration
+// NOTE: pipeline_id, stage_id, default_status, assigned_user_id are LEGACY fields
+// Distribution is now handled by Round Robin in Gestão CRM
 export function useSaveFormConfig() {
   const queryClient = useQueryClient();
   const { profile } = useAuth();
@@ -110,10 +112,6 @@ export function useSaveFormConfig() {
       integrationId: string;
       formId: string;
       formName?: string;
-      pipelineId?: string;
-      stageId?: string;
-      defaultStatus?: string;
-      assignedUserId?: string;
       propertyId?: string;
       autoTags?: string[];
       fieldMapping?: Record<string, string>;
@@ -129,10 +127,12 @@ export function useSaveFormConfig() {
           integration_id: config.integrationId,
           form_id: config.formId,
           form_name: config.formName,
-          pipeline_id: config.pipelineId || null,
-          stage_id: config.stageId || null,
-          default_status: config.defaultStatus || "novo",
-          assigned_user_id: config.assignedUserId || null,
+          // Legacy fields - not used for new configs, Round Robin handles distribution
+          pipeline_id: null,
+          stage_id: null,
+          default_status: null,
+          assigned_user_id: null,
+          // Actual config fields
           property_id: config.propertyId || null,
           auto_tags: config.autoTags || [],
           field_mapping: config.fieldMapping || {},
