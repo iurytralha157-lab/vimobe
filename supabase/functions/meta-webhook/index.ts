@@ -217,10 +217,6 @@ serve(async (req) => {
                 email,
                 phone,
                 message: message || `Lead gerado via Facebook Lead Ads`,
-                cargo,
-                empresa,
-                cidade,
-                bairro,
                 source: "meta",
                 pipeline_id: null,       // Round Robin will set this
                 stage_id: null,          // Round Robin will set this
@@ -228,9 +224,6 @@ serve(async (req) => {
                 assigned_user_id: null,  // Round Robin will set this
                 meta_lead_id: leadgenId,
                 meta_form_id: formId,
-                custom_fields: Object.keys(customFields).length > 0 ? customFields : null,
-                source_detail: leadData.ad_name || null,
-                campaign_name: leadData.campaign_name || null,
               })
               .select("id")
               .single();
@@ -255,6 +248,21 @@ serve(async (req) => {
               console.log(`Applied ${autoTags.length} auto tags`);
             }
 
+            // Prepare contact_notes with extra data
+            const contactNotesLines: string[] = [];
+            if (cargo) contactNotesLines.push(`Cargo: ${cargo}`);
+            if (empresa) contactNotesLines.push(`Empresa: ${empresa}`);
+            if (cidade) contactNotesLines.push(`Cidade: ${cidade}`);
+            if (bairro) contactNotesLines.push(`Bairro: ${bairro}`);
+            if (Object.keys(customFields).length > 0) {
+              for (const [key, val] of Object.entries(customFields)) {
+                contactNotesLines.push(`${key}: ${val}`);
+              }
+            }
+            const contactNotes = contactNotesLines.length > 0 
+              ? contactNotesLines.join('\n') 
+              : null;
+
             // Create lead_meta record with tracking info
             await supabase
               .from("lead_meta")
@@ -269,6 +277,7 @@ serve(async (req) => {
                 adset_name: leadData.adset_name || null,
                 campaign_name: leadData.campaign_name || null,
                 platform: leadData.platform || null,
+                contact_notes: contactNotes,
                 raw_payload: leadData
               });
 
@@ -319,19 +328,6 @@ serve(async (req) => {
                 });
             }
 
-            // Also notify assigned user if different
-            if (assignedUserId && !admins?.find(a => a.id === assignedUserId)) {
-              await supabase
-                .from("notifications")
-                .insert({
-                  organization_id: integration.organization_id,
-                  user_id: assignedUserId,
-                  title: "Novo lead do Facebook",
-                  content: `${name} foi atribuído a você via ${integration.page_name}`,
-                  type: "lead",
-                  lead_id: newLead.id
-                });
-            }
           }
         }
       }
