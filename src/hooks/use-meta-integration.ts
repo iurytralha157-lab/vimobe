@@ -50,7 +50,7 @@ export function useMetaIntegrations() {
 // Get OAuth URL - now redirects to edge function callback
 export function useMetaGetAuthUrl() {
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (returnUrl: string) => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
@@ -63,6 +63,7 @@ export function useMetaGetAuthUrl() {
           },
           body: JSON.stringify({
             action: "get_auth_url",
+            return_url: returnUrl,
           }),
         }
       );

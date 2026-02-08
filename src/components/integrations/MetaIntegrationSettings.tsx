@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -70,18 +71,12 @@ import {
 import { MetaFormManager } from "./MetaFormManager";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-interface OAuthSuccessData {
-  type: 'META_OAUTH_SUCCESS';
-  pages: MetaPage[];
-  userToken: string;
+interface OAuthData {
+  success: boolean;
+  pages?: MetaPage[];
+  userToken?: string;
+  error?: string;
 }
-
-interface OAuthErrorData {
-  type: 'META_OAUTH_ERROR';
-  error: string;
-}
-
-type OAuthMessageData = OAuthSuccessData | OAuthErrorData;
 
 export function MetaIntegrationSettings() {
   const { t } = useLanguage();
@@ -94,6 +89,7 @@ export function MetaIntegrationSettings() {
     { value: "negociando", label: meta.statusNegotiating },
   ];
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isConnecting, setIsConnecting] = useState(false);
   const [availablePages, setAvailablePages] = useState<MetaPage[]>([]);
   const [userToken, setUserToken] = useState("");
@@ -118,61 +114,42 @@ export function MetaIntegrationSettings() {
   const disconnectPage = useMetaDisconnectPage();
   const togglePage = useMetaTogglePage();
 
-  // Listen for OAuth callback messages from popup
+  // Handle OAuth callback data from URL
   useEffect(() => {
-    const handleMessage = (event: MessageEvent<OAuthMessageData>) => {
-      // Validate message origin and type
-      if (!event.data || typeof event.data !== 'object') return;
-      
-      if (event.data.type === 'META_OAUTH_SUCCESS') {
-        console.log("Received OAuth success:", event.data.pages?.length, "pages");
-        setAvailablePages(event.data.pages || []);
-        setUserToken(event.data.userToken);
-        setShowPageSelector(true);
-        setIsConnecting(false);
-      } else if (event.data.type === 'META_OAUTH_ERROR') {
-        console.error("OAuth error received:", event.data.error);
-        toast.error(event.data.error || meta.errorConnecting);
-        setIsConnecting(false);
+    const oauthData = searchParams.get("meta_oauth_data");
+    if (oauthData) {
+      try {
+        const decoded = JSON.parse(atob(decodeURIComponent(oauthData))) as OAuthData;
+        console.log("OAuth callback data:", decoded);
+        
+        if (decoded.success && decoded.pages && decoded.userToken) {
+          setAvailablePages(decoded.pages);
+          setUserToken(decoded.userToken);
+          setShowPageSelector(true);
+          toast.success("Autenticação realizada com sucesso!");
+        } else if (decoded.error) {
+          toast.error(decoded.error);
+        }
+        
+        // Clear the URL params
+        setSearchParams({});
+      } catch (e) {
+        console.error("Failed to parse OAuth data:", e);
+        setSearchParams({});
       }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [meta.errorConnecting]);
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleConnect = async () => {
     try {
       setIsConnecting(true);
-      const result = await getAuthUrl.mutateAsync();
       
-      // Open popup for Facebook OAuth
-      const popup = window.open(
-        result.auth_url, 
-        'meta-oauth', 
-        'width=600,height=700,scrollbars=yes,resizable=yes'
-      );
+      // Get current URL as return URL
+      const returnUrl = window.location.href.split('?')[0];
+      const result = await getAuthUrl.mutateAsync(returnUrl);
       
-      // Check if popup was blocked
-      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-        toast.error("O popup foi bloqueado. Por favor, permita popups para este site.");
-        setIsConnecting(false);
-        return;
-      }
-      
-      // Monitor popup - reset state if closed without completing
-      const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
-          // Only reset if we didn't get a success message
-          setTimeout(() => {
-            if (!showPageSelector) {
-              setIsConnecting(false);
-            }
-          }, 1000);
-        }
-      }, 500);
-      
+      // Redirect to Facebook OAuth (same window - will redirect back)
+      window.location.href = result.auth_url;
     } catch (error) {
       toast.error(meta.errorStarting);
       setIsConnecting(false);
