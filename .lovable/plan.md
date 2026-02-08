@@ -1,62 +1,67 @@
 
-# Correção: Campo `metadata` inexistente
+# Correção: Tabela `lead_timeline` não existe
 
 ## Problema Identificado
 
-O lead chegou corretamente às **16:36:09** mas falhou na inserção:
-
+O último lead do Meta às **22:09:06** falhou com:
 ```
-record "v_lead" has no field "metadata"
+relation "lead_timeline" does not exist
 ```
 
 ## Causa Raiz
 
-Na linha 23 da função `handle_lead_intake`:
+A migração anterior introduziu um nome de tabela errado na função `handle_lead_intake`:
+
+| Usado (errado) | Correto |
+|----------------|---------|
+| `lead_timeline` | `lead_timeline_events` |
+
+Além disso, as colunas também estão incorretas:
+
 ```sql
-v_meta_form_id := v_lead.metadata->>'form_id';
+-- Código atual (errado):
+INSERT INTO lead_timeline (lead_id, event_type, event_data, created_by)
+
+-- Deveria ser:
+INSERT INTO lead_timeline_events (lead_id, organization_id, user_id, event_type, title, description, metadata)
 ```
-
-A tabela `leads` não possui coluna `metadata`. O `meta_form_id` já é uma coluna direta:
-
-| Coluna | Tipo |
-|--------|------|
-| `meta_lead_id` | text |
-| `meta_form_id` | text |
 
 ## Correção
 
-Alterar a linha para usar a coluna correta:
-```sql
-v_meta_form_id := v_lead.meta_form_id;
-```
-
-## Migração SQL
+Atualizar a função `handle_lead_intake` para usar a tabela correta com as colunas corretas:
 
 ```sql
-CREATE OR REPLACE FUNCTION handle_lead_intake(p_lead_id uuid)
-RETURNS jsonb
--- ...
-  -- ANTES (errado):
-  -- v_meta_form_id := v_lead.metadata->>'form_id';
-  
-  -- DEPOIS (correto):
-  v_meta_form_id := v_lead.meta_form_id;
+-- Criar evento de timeline com tabela e colunas corretas
+INSERT INTO lead_timeline_events (
+  lead_id, 
+  organization_id, 
+  user_id, 
+  event_type, 
+  title, 
+  description, 
+  metadata
+)
+VALUES (
+  p_lead_id,
+  v_org_id,
+  v_next_user_id,
+  'lead_created',
+  'Lead criado',
+  'Lead criado e distribuído automaticamente via Round Robin',
+  jsonb_build_object(
+    'source', v_lead.source,
+    'pipeline_id', v_queue.target_pipeline_id,
+    'stage_id', v_queue.target_stage_id,
+    'assigned_user_id', v_next_user_id,
+    'round_robin_id', v_queue.id
+  )
+);
 ```
 
 ## Arquivo Afetado
 
-- Nova migração SQL para corrigir `handle_lead_intake`
+- Nova migração SQL para corrigir a função `handle_lead_intake`
 
 ## Resultado Esperado
 
-Leads do Meta serão criados e distribuídos corretamente usando o campo `meta_form_id` que já existe na tabela `leads`.
-
-## Confirmação do Lead Recebido
-
-O webhook recebeu o lead com sucesso:
-- **Lead ID**: 2397208057393361
-- **Form ID**: 24938013762565906
-- **Preço do imóvel**: R$ 2.250.000 (buscado automaticamente)
-- **Tags automáticas**: 1 tag configurada
-
-Apenas a distribuição falhou por causa do campo inexistente.
+Leads do Meta serão criados, distribuídos e registrados na timeline corretamente.
