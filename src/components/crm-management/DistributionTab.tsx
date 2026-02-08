@@ -35,6 +35,10 @@ import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
 import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
+import { useMetaIntegrations } from '@/hooks/use-meta-integration';
+import { useMetaFormConfigs } from '@/hooks/use-meta-forms';
+import { useWebhooks } from '@/hooks/use-webhooks';
+import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useCreateQueueAdvanced, useUpdateQueueAdvanced } from '@/hooks/use-create-queue-advanced';
 import { DistributionQueueEditor } from '@/components/round-robin/DistributionQueueEditor';
 import { RulesManager } from '@/components/round-robin/RulesManager';
@@ -47,6 +51,9 @@ const matchTypeLabels: Record<string, string> = {
   property: 'Imóvel',
   source: 'Fonte',
   form: 'Formulário',
+  meta_form: 'Form Meta',
+  webhook: 'Webhook',
+  whatsapp_session: 'WhatsApp',
   interest_property: 'Imóvel',
   interest_plan: 'Plano',
   city: 'Cidade',
@@ -59,6 +66,11 @@ export function DistributionTab() {
   const { data: tags = [] } = useTags();
   const { data: properties = [] } = useProperties();
   const { data: plans = [] } = useServicePlans();
+  const { data: webhooks = [] } = useWebhooks();
+  const { data: whatsappSessions = [] } = useWhatsAppSessions();
+  const { data: metaIntegrations = [] } = useMetaIntegrations();
+  const activeMetaIntegration = metaIntegrations.find(i => i.is_connected);
+  const { data: metaFormConfigs = [] } = useMetaFormConfigs(activeMetaIntegration?.id);
   const updateRoundRobin = useUpdateRoundRobin();
   const deleteRoundRobin = useDeleteRoundRobin();
   const createQueue = useCreateQueueAdvanced();
@@ -259,6 +271,36 @@ export function DistributionTab() {
                           return (
                             <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
                               Plano: {plan?.name || rule.match_value?.substring(0, 10)}
+                            </Badge>
+                          );
+                        }
+                        
+                        // Se for formulário Meta, busca o nome do formulário
+                        if (rule.match_type === 'meta_form') {
+                          const metaForm = metaFormConfigs.find(f => f.form_id === rule.match_value);
+                          return (
+                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
+                              📝 {metaForm?.form_name || `Form ${rule.match_value?.substring(0, 8)}...`}
+                            </Badge>
+                          );
+                        }
+                        
+                        // Se for webhook, busca o nome do webhook
+                        if (rule.match_type === 'webhook') {
+                          const webhook = webhooks.find(w => w.id === rule.match_value);
+                          return (
+                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
+                              🔗 {webhook?.name || `Webhook ${rule.match_value?.substring(0, 8)}...`}
+                            </Badge>
+                          );
+                        }
+                        
+                        // Se for sessão WhatsApp, busca o nome da sessão
+                        if (rule.match_type === 'whatsapp_session') {
+                          const session = whatsappSessions.find(s => s.id === rule.match_value);
+                          return (
+                            <Badge key={rule.id} variant="outline" className="gap-1 text-xs">
+                              💬 {session?.display_name || session?.phone_number || session?.instance_name || 'WhatsApp'}
                             </Badge>
                           );
                         }
