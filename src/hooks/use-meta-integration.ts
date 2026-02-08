@@ -47,10 +47,10 @@ export function useMetaIntegrations() {
   });
 }
 
-// Get OAuth URL
+// Get OAuth URL - now redirects to edge function callback
 export function useMetaGetAuthUrl() {
   return useMutation({
-    mutationFn: async (redirectUri: string) => {
+    mutationFn: async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       
       const response = await fetch(
@@ -63,7 +63,6 @@ export function useMetaGetAuthUrl() {
           },
           body: JSON.stringify({
             action: "get_auth_url",
-            redirect_uri: redirectUri,
           }),
         }
       );
@@ -73,7 +72,7 @@ export function useMetaGetAuthUrl() {
         throw new Error(error.error || "Failed to get auth URL");
       }
 
-      return response.json();
+      return response.json() as Promise<{ auth_url: string }>;
     },
   });
 }

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -61,7 +60,6 @@ import { useStages } from "@/hooks/use-stages";
 import {
   useMetaIntegrations,
   useMetaGetAuthUrl,
-  useMetaExchangeToken,
   useMetaConnectPage,
   useMetaUpdatePage,
   useMetaDisconnectPage,
@@ -71,6 +69,19 @@ import {
 } from "@/hooks/use-meta-integration";
 import { MetaFormManager } from "./MetaFormManager";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+interface OAuthSuccessData {
+  type: 'META_OAUTH_SUCCESS';
+  pages: MetaPage[];
+  userToken: string;
+}
+
+interface OAuthErrorData {
+  type: 'META_OAUTH_ERROR';
+  error: string;
+}
+
+type OAuthMessageData = OAuthSuccessData | OAuthErrorData;
 
 export function MetaIntegrationSettings() {
   const { t } = useLanguage();
@@ -83,7 +94,6 @@ export function MetaIntegrationSettings() {
     { value: "negociando", label: meta.statusNegotiating },
   ];
 
-  const [searchParams, setSearchParams] = useSearchParams();
   const [isConnecting, setIsConnecting] = useState(false);
   const [availablePages, setAvailablePages] = useState<MetaPage[]>([]);
   const [userToken, setUserToken] = useState("");
@@ -103,53 +113,69 @@ export function MetaIntegrationSettings() {
   const { data: stages } = useStages(selectedPipelineId || undefined);
 
   const getAuthUrl = useMetaGetAuthUrl();
-  const exchangeToken = useMetaExchangeToken();
   const connectPage = useMetaConnectPage();
   const updatePage = useMetaUpdatePage();
   const disconnectPage = useMetaDisconnectPage();
   const togglePage = useMetaTogglePage();
 
-  // Handle OAuth callback
+  // Listen for OAuth callback messages from popup
   useEffect(() => {
-    const code = searchParams.get("code");
-    if (code && !isConnecting) {
-      setIsConnecting(true);
-      handleOAuthCallback(code);
-    }
-  }, [searchParams]);
+    const handleMessage = (event: MessageEvent<OAuthMessageData>) => {
+      // Validate message origin and type
+      if (!event.data || typeof event.data !== 'object') return;
+      
+      if (event.data.type === 'META_OAUTH_SUCCESS') {
+        console.log("Received OAuth success:", event.data.pages?.length, "pages");
+        setAvailablePages(event.data.pages || []);
+        setUserToken(event.data.userToken);
+        setShowPageSelector(true);
+        setIsConnecting(false);
+      } else if (event.data.type === 'META_OAUTH_ERROR') {
+        console.error("OAuth error received:", event.data.error);
+        toast.error(event.data.error || meta.errorConnecting);
+        setIsConnecting(false);
+      }
+    };
 
-  const handleOAuthCallback = async (code: string) => {
-    try {
-      const redirectUri = `${window.location.origin}/settings/integrations/meta`;
-      const result = await exchangeToken.mutateAsync({ code, redirectUri });
-      
-      setAvailablePages(result.pages || []);
-      setUserToken(result.user_token);
-      setShowPageSelector(true);
-      
-      // Clear code from URL
-      setSearchParams({});
-    } catch (error) {
-      toast.error(meta.errorConnecting);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [meta.errorConnecting]);
 
   const handleConnect = async () => {
     try {
-      const redirectUri = `${window.location.origin}/settings/integrations/meta`;
-      const result = await getAuthUrl.mutateAsync(redirectUri);
+      setIsConnecting(true);
+      const result = await getAuthUrl.mutateAsync();
       
-      // Open in new tab to bypass iframe restrictions
-      const popup = window.open(result.auth_url, '_blank', 'width=600,height=700,scrollbars=yes');
+      // Open popup for Facebook OAuth
+      const popup = window.open(
+        result.auth_url, 
+        'meta-oauth', 
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      );
       
-      // Fallback if popup was blocked
+      // Check if popup was blocked
       if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-        window.location.href = result.auth_url;
+        toast.error("O popup foi bloqueado. Por favor, permita popups para este site.");
+        setIsConnecting(false);
+        return;
       }
+      
+      // Monitor popup - reset state if closed without completing
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          // Only reset if we didn't get a success message
+          setTimeout(() => {
+            if (!showPageSelector) {
+              setIsConnecting(false);
+            }
+          }, 1000);
+        }
+      }, 500);
+      
     } catch (error) {
       toast.error(meta.errorStarting);
+      setIsConnecting(false);
     }
   };
 
