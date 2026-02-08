@@ -11,11 +11,232 @@ const META_APP_SECRET = Deno.env.get("META_APP_SECRET") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+// Generate HTML page that sends data to opener and closes
+function generateSuccessPage(pages: any[], userToken: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>Conexão realizada</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    h2 { margin-bottom: 0.5rem; }
+    p { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h2>Conexão realizada!</h2>
+    <p>Fechando esta janela...</p>
+  </div>
+  <script>
+    (function() {
+      const data = {
+        type: 'META_OAUTH_SUCCESS',
+        pages: ${JSON.stringify(pages)},
+        userToken: ${JSON.stringify(userToken)}
+      };
+      
+      if (window.opener) {
+        window.opener.postMessage(data, '*');
+        setTimeout(() => window.close(), 1000);
+      } else {
+        document.querySelector('p').textContent = 'Você pode fechar esta janela e voltar ao aplicativo.';
+      }
+    })();
+  </script>
+</body>
+</html>`;
+}
+
+// Generate HTML page for errors
+function generateErrorPage(error: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>Erro na conexão</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 400px;
+    }
+    .icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    h2 { margin-bottom: 0.5rem; }
+    p { opacity: 0.9; margin-bottom: 1rem; }
+    .error-detail {
+      background: rgba(0,0,0,0.2);
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">❌</div>
+    <h2>Erro na conexão</h2>
+    <p>Não foi possível conectar sua conta do Facebook.</p>
+    <div class="error-detail">${error}</div>
+    <p style="margin-top: 1rem;">Você pode fechar esta janela e tentar novamente.</p>
+  </div>
+  <script>
+    if (window.opener) {
+      window.opener.postMessage({ type: 'META_OAUTH_ERROR', error: ${JSON.stringify(error)} }, '*');
+    }
+  </script>
+</body>
+</html>`;
+}
+
 serve(async (req) => {
+  const url = new URL(req.url);
+  
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Handle OAuth callback (GET request from Facebook)
+  if (req.method === "GET") {
+    const code = url.searchParams.get("code");
+    const error = url.searchParams.get("error");
+    const errorDescription = url.searchParams.get("error_description");
+    
+    console.log("OAuth callback received", { hasCode: !!code, error, errorDescription });
+    
+    if (error) {
+      console.error("OAuth error from Facebook:", error, errorDescription);
+      return new Response(generateErrorPage(errorDescription || error), {
+        headers: { "Content-Type": "text/html" },
+      });
+    }
+    
+    if (!code) {
+      return new Response(generateErrorPage("Código de autorização não recebido"), {
+        headers: { "Content-Type": "text/html" },
+      });
+    }
+    
+    try {
+      // The redirect_uri must match exactly what was used in the auth request
+      const redirectUri = `${SUPABASE_URL}/functions/v1/meta-oauth`;
+      
+      // Exchange code for access token
+      console.log("Exchanging code for token...");
+      const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?` +
+        `client_id=${META_APP_ID}` +
+        `&client_secret=${META_APP_SECRET}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&code=${code}`;
+
+      const tokenResponse = await fetch(tokenUrl);
+      const tokenData = await tokenResponse.json();
+
+      if (tokenData.error) {
+        console.error("Token exchange error:", tokenData.error);
+        return new Response(generateErrorPage(tokenData.error.message), {
+          headers: { "Content-Type": "text/html" },
+        });
+      }
+
+      console.log("Token obtained, exchanging for long-lived token...");
+      
+      // Exchange for long-lived token
+      const longLivedUrl = `https://graph.facebook.com/v19.0/oauth/access_token?` +
+        `grant_type=fb_exchange_token` +
+        `&client_id=${META_APP_ID}` +
+        `&client_secret=${META_APP_SECRET}` +
+        `&fb_exchange_token=${tokenData.access_token}`;
+
+      const longLivedResponse = await fetch(longLivedUrl);
+      const longLivedData = await longLivedResponse.json();
+
+      if (longLivedData.error) {
+        console.error("Long-lived token error:", longLivedData.error);
+        return new Response(generateErrorPage(longLivedData.error.message), {
+          headers: { "Content-Type": "text/html" },
+        });
+      }
+
+      console.log("Long-lived token obtained, fetching pages...");
+      
+      // Get pages the user manages
+      const pagesUrl = `https://graph.facebook.com/v19.0/me/accounts?` +
+        `access_token=${longLivedData.access_token}` +
+        `&fields=id,name,access_token`;
+
+      const pagesResponse = await fetch(pagesUrl);
+      const pagesData = await pagesResponse.json();
+
+      if (pagesData.error) {
+        console.error("Pages fetch error:", pagesData.error);
+        return new Response(generateErrorPage(pagesData.error.message), {
+          headers: { "Content-Type": "text/html" },
+        });
+      }
+
+      const pages = (pagesData.data || []).map((page: any) => ({
+        id: page.id,
+        name: page.name,
+        access_token: page.access_token,
+      }));
+      
+      console.log(`Found ${pages.length} pages, sending to opener...`);
+
+      return new Response(generateSuccessPage(pages, longLivedData.access_token), {
+        headers: { "Content-Type": "text/html" },
+      });
+      
+    } catch (error: unknown) {
+      console.error("OAuth callback error:", error);
+      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      return new Response(generateErrorPage(message), {
+        headers: { "Content-Type": "text/html" },
+      });
+    }
+  }
+
+  // Handle POST requests (existing API)
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
@@ -65,8 +286,9 @@ serve(async (req) => {
 
     switch (action) {
       case "get_auth_url": {
-        // Generate OAuth URL for Meta - using valid Facebook Lead Ads scopes
-        // See: https://developers.facebook.com/docs/permissions
+        // Generate OAuth URL for Meta - redirect to this edge function
+        const callbackUrl = `${SUPABASE_URL}/functions/v1/meta-oauth`;
+        
         const scopes = [
           "pages_show_list",
           "pages_read_engagement",
@@ -78,11 +300,11 @@ serve(async (req) => {
 
         const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?` +
           `client_id=${META_APP_ID}` +
-          `&redirect_uri=${encodeURIComponent(redirect_uri)}` +
+          `&redirect_uri=${encodeURIComponent(callbackUrl)}` +
           `&scope=${encodeURIComponent(scopes)}` +
           `&response_type=code`;
 
-        console.log("Generated auth URL with scopes:", scopes);
+        console.log("Generated auth URL with callback:", callbackUrl);
 
         return new Response(JSON.stringify({ auth_url: authUrl }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
