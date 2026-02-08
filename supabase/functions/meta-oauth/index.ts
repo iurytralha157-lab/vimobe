@@ -13,10 +13,15 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 
 // Generate HTML page that sends data to opener and closes
 function generateSuccessPage(pages: any[], userToken: string): string {
+  const pagesJson = JSON.stringify(pages).replace(/</g, '\\u003c');
+  const tokenJson = JSON.stringify(userToken).replace(/</g, '\\u003c');
+  
   return `<!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <title>Conexão realizada</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conexao realizada</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -51,22 +56,27 @@ function generateSuccessPage(pages: any[], userToken: string): string {
 <body>
   <div class="container">
     <div class="spinner"></div>
-    <h2>Conexão realizada!</h2>
-    <p>Fechando esta janela...</p>
+    <h2>Conexao realizada!</h2>
+    <p id="status">Fechando esta janela...</p>
   </div>
   <script>
     (function() {
-      const data = {
+      var data = {
         type: 'META_OAUTH_SUCCESS',
-        pages: ${JSON.stringify(pages)},
-        userToken: ${JSON.stringify(userToken)}
+        pages: ${pagesJson},
+        userToken: ${tokenJson}
       };
       
-      if (window.opener) {
-        window.opener.postMessage(data, '*');
-        setTimeout(() => window.close(), 1000);
+      if (window.opener && !window.opener.closed) {
+        try {
+          window.opener.postMessage(data, '*');
+          document.getElementById('status').textContent = 'Fechando...';
+          setTimeout(function() { window.close(); }, 800);
+        } catch(e) {
+          document.getElementById('status').textContent = 'Voce pode fechar esta janela e voltar ao aplicativo.';
+        }
       } else {
-        document.querySelector('p').textContent = 'Você pode fechar esta janela e voltar ao aplicativo.';
+        document.getElementById('status').textContent = 'Voce pode fechar esta janela e voltar ao aplicativo.';
       }
     })();
   </script>
@@ -147,13 +157,13 @@ serve(async (req) => {
     if (error) {
       console.error("OAuth error from Facebook:", error, errorDescription);
       return new Response(generateErrorPage(errorDescription || error), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
     
     if (!code) {
-      return new Response(generateErrorPage("Código de autorização não recebido"), {
-        headers: { "Content-Type": "text/html" },
+      return new Response(generateErrorPage("Codigo de autorizacao nao recebido"), {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
     
@@ -175,7 +185,7 @@ serve(async (req) => {
       if (tokenData.error) {
         console.error("Token exchange error:", tokenData.error);
         return new Response(generateErrorPage(tokenData.error.message), {
-          headers: { "Content-Type": "text/html" },
+          headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
 
@@ -194,7 +204,7 @@ serve(async (req) => {
       if (longLivedData.error) {
         console.error("Long-lived token error:", longLivedData.error);
         return new Response(generateErrorPage(longLivedData.error.message), {
-          headers: { "Content-Type": "text/html" },
+          headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
 
@@ -211,7 +221,7 @@ serve(async (req) => {
       if (pagesData.error) {
         console.error("Pages fetch error:", pagesData.error);
         return new Response(generateErrorPage(pagesData.error.message), {
-          headers: { "Content-Type": "text/html" },
+          headers: { "Content-Type": "text/html; charset=utf-8" },
         });
       }
 
@@ -224,14 +234,14 @@ serve(async (req) => {
       console.log(`Found ${pages.length} pages, sending to opener...`);
 
       return new Response(generateSuccessPage(pages, longLivedData.access_token), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=utf-8" },
       });
       
     } catch (error: unknown) {
       console.error("OAuth callback error:", error);
       const message = error instanceof Error ? error.message : "Erro desconhecido";
       return new Response(generateErrorPage(message), {
-        headers: { "Content-Type": "text/html" },
+        headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
   }
