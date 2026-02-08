@@ -87,9 +87,11 @@ export function useCreateQueueAdvanced() {
       
       if (rrError) throw rrError;
       
-      // Create rules from conditions
-      if (input.conditions.length > 0) {
-        const rulesToInsert = input.conditions.map((condition, index) => {
+      // Create rules from conditions - FILTER OUT EMPTY CONDITIONS
+      const validConditions = input.conditions.filter(c => c.values.length > 0);
+      
+      if (validConditions.length > 0) {
+        const rulesToInsert = validConditions.map((condition, index) => {
           // Build match JSONB based on condition type
           let matchValue: Record<string, any> = {};
           
@@ -131,7 +133,7 @@ export function useCreateQueueAdvanced() {
             match_type: condition.type,
             match_value: condition.values.join(','),
             match: matchValue,
-            priority: input.conditions.length - index,
+            priority: validConditions.length - index,
             is_active: true,
           };
         });
@@ -238,8 +240,11 @@ export function useUpdateQueueAdvanced() {
         .delete()
         .eq('round_robin_id', id);
       
-      if (input.conditions.length > 0) {
-        const rulesToInsert = input.conditions.map((condition, index) => {
+      // FILTER OUT EMPTY CONDITIONS before saving
+      const validConditions = input.conditions.filter(c => c.values.length > 0);
+      
+      if (validConditions.length > 0) {
+        const rulesToInsert = validConditions.map((condition, index) => {
           let matchValue: Record<string, any> = {};
           
           switch (condition.type) {
@@ -280,7 +285,7 @@ export function useUpdateQueueAdvanced() {
             match_type: condition.type,
             match_value: condition.values.join(','),
             match: matchValue,
-            priority: input.conditions.length - index,
+            priority: validConditions.length - index,
             is_active: true,
           };
         });
