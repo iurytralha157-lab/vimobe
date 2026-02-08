@@ -1,43 +1,62 @@
 
-# Correção do Meta Webhook - Campos Inválidos
+# Correção: Imóvel de Interesse e Valor Automático no Meta Webhook
 
-## Problema Identificado
+## Problemas Identificados
 
-O lead do Andre (+5522974063927) chegou às 15:11:53 mas **não foi criado** porque a edge function tenta inserir campos que não existem na tabela `leads`:
+### 1. Campo Errado para Imóvel
+| Situação Atual | Esperado |
+|----------------|----------|
+| `property_id: 3bdc4ceb...` | `interest_property_id: 3bdc4ceb...` |
+| `interest_property_id: null` | ← Deveria ter o imóvel aqui |
 
-```
-PGRST204: Could not find the 'bairro' column of 'leads' in the schema cache
-```
+O lead do Andre está com o imóvel no campo `property_id` (campo legado), mas o CRM usa `interest_property_id` para exibir o imóvel de interesse.
 
-## Campos Problemáticos
+### 2. Valor de Interesse Não Preenchido
+| Campo | Valor Atual | Esperado |
+|-------|-------------|----------|
+| `valor_interesse` | 0 | R$ 2.250.000 |
 
-| Campo | Existe em `leads`? | Solução |
-|-------|-------------------|---------|
-| `cargo` | ❌ Não | Mover para `lead_meta.contact_notes` |
-| `empresa` | ❌ Não | Mover para `lead_meta.contact_notes` |
-| `cidade` | ❌ Não | Mover para `lead_meta.contact_notes` |
-| `bairro` | ❌ Não | Mover para `lead_meta.contact_notes` |
-| `custom_fields` | ❌ Não | Já está no `raw_payload` |
-| `source_detail` | ❌ Não | Já temos `ad_name` no `lead_meta` |
-| `campaign_name` | ❌ Não | Já temos `campaign_name` no `lead_meta` |
-
-## Código Morto
-
-Linhas 322-334 ainda referenciam `assignedUserId` que foi removido na refatoração anterior.
+O imóvel configurado (Casa alto padrão) tem `preco = 2.250.000`, mas o webhook não busca esse valor.
 
 ---
 
-## Modificações no Arquivo
+## Solução
 
 **Arquivo:** `supabase/functions/meta-webhook/index.ts`
 
-### 1. Simplificar o INSERT do lead (linhas 212-236)
+### Mudança 1: Usar `interest_property_id` em vez de `property_id`
 
-**Remover campos inexistentes:**
-- `cargo`, `empresa`, `cidade`, `bairro`
-- `custom_fields`, `source_detail`, `campaign_name`
+```typescript
+// ANTES (linha 223):
+property_id: propertyId,
 
-**INSERT corrigido:**
+// DEPOIS:
+interest_property_id: propertyId,
+```
+
+### Mudança 2: Buscar preço do imóvel automaticamente
+
+Adicionar antes do INSERT do lead:
+
+```typescript
+// Se tem imóvel configurado, buscar o preço
+let valorInteresse: number | null = null;
+if (propertyId) {
+  const { data: property } = await supabase
+    .from("properties")
+    .select("preco")
+    .eq("id", propertyId)
+    .single();
+  
+  if (property?.preco) {
+    valorInteresse = property.preco;
+    console.log(`Property price fetched: R$ ${valorInteresse}`);
+  }
+}
+```
+
+### Mudança 3: Incluir `valor_interesse` no INSERT
+
 ```typescript
 const { data: newLead, error: leadError } = await supabase
   .from("leads")
@@ -48,86 +67,46 @@ const { data: newLead, error: leadError } = await supabase
     phone,
     message: message || `Lead gerado via Facebook Lead Ads`,
     source: "meta",
-    pipeline_id: null,       
-    stage_id: null,          
-    property_id: propertyId,
-    assigned_user_id: null,  
+    pipeline_id: null,
+    stage_id: null,
+    interest_property_id: propertyId,  // ← CORRIGIDO
+    valor_interesse: valorInteresse,   // ← NOVO
+    assigned_user_id: null,
     meta_lead_id: leadgenId,
     meta_form_id: formId,
   })
-  .select("id")
-  .single();
 ```
-
-### 2. Adicionar dados extras no lead_meta (linhas 259-273)
-
-Formatar os campos extras como `contact_notes`:
-
-```typescript
-// Preparar contact_notes com dados extras
-const contactNotesLines = [];
-if (cargo) contactNotesLines.push(`Cargo: ${cargo}`);
-if (empresa) contactNotesLines.push(`Empresa: ${empresa}`);
-if (cidade) contactNotesLines.push(`Cidade: ${cidade}`);
-if (bairro) contactNotesLines.push(`Bairro: ${bairro}`);
-if (Object.keys(customFields).length > 0) {
-  for (const [key, val] of Object.entries(customFields)) {
-    contactNotesLines.push(`${key}: ${val}`);
-  }
-}
-const contactNotes = contactNotesLines.length > 0 
-  ? contactNotesLines.join('\n') 
-  : null;
-
-await supabase
-  .from("lead_meta")
-  .insert({
-    lead_id: newLead.id,
-    page_id: pageId,
-    form_id: formId,
-    ad_id: leadData.ad_id,
-    adset_id: leadData.adset_id,
-    campaign_id: leadData.campaign_id,
-    ad_name: leadData.ad_name || null,
-    adset_name: leadData.adset_name || null,
-    campaign_name: leadData.campaign_name || null,
-    platform: leadData.platform || null,
-    contact_notes: contactNotes,  // ← NOVO
-    raw_payload: leadData
-  });
-```
-
-### 3. Remover código morto (linhas 322-334)
-
-Deletar completamente o bloco que tenta notificar `assignedUserId`:
-
-```typescript
-// REMOVER ESTE BLOCO:
-if (assignedUserId && !admins?.find(a => a.id === assignedUserId)) {
-  await supabase
-    .from("notifications")
-    .insert({...});
-}
-```
-
----
-
-## Onde Ficam os Dados
-
-| Dado | Destino Final |
-|------|---------------|
-| Nome, Email, Phone, Message | `leads` (campos principais) |
-| Cargo, Empresa, Cidade, Bairro | `lead_meta.contact_notes` |
-| Campos customizados | `lead_meta.raw_payload` |
-| Campaign, Ad, Adset | `lead_meta` (campos dedicados) |
 
 ---
 
 ## Resultado Esperado
 
-Após a correção:
-1. ✅ Leads do Meta serão criados com sucesso
-2. ✅ Trigger `handle_lead_intake` será acionado
-3. ✅ Round Robin fará a distribuição automaticamente
-4. ✅ Dados extras ficam em `lead_meta.contact_notes`
-5. ✅ Notificações funcionam para admins
+Após a correção, leads do Meta virão com:
+
+| Campo | Valor |
+|-------|-------|
+| `interest_property_id` | ID do imóvel configurado no formulário |
+| `valor_interesse` | Preço do imóvel buscado automaticamente |
+| `property_id` | `null` (não usado) |
+
+O painel de rastreamento exibirá corretamente o imóvel de interesse com seu valor.
+
+---
+
+## Sobre a Distribuição Automática
+
+O lead foi distribuído porque existe um **fallback** na função `handle_lead_intake`:
+
+```sql
+-- Linha 39-52 do trigger
+SELECT id INTO v_queue_id
+FROM distribution_queues
+WHERE organization_id = NEW.organization_id
+  AND is_active = true
+ORDER BY created_at ASC  -- Pega a fila mais antiga
+LIMIT 1;
+```
+
+Como não existe regra específica para `source = 'meta'`, o sistema usou a fila **"Webhooks"** (mais antiga ativa) como fallback.
+
+**Opção:** Se quiser que leads do Meta aguardem no pool sem distribuição automática, posso criar uma regra específica ou desativar o fallback.
