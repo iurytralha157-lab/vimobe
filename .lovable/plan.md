@@ -1,40 +1,74 @@
 
-# Correção Urgente: Coluna `actor_id` não existe
+# Correção Urgente: Colunas Obrigatórias Faltando
 
-## Problema
-A migração que acabamos de aplicar tem um erro na linha 57:
+## Problema Identificado
 
-```sql
--- ERRADO (atual)
-INSERT INTO lead_timeline_events (lead_id, event_type, actor_id, metadata)
+A migração anterior corrigiu `actor_id → user_id`, mas a tabela `lead_timeline_events` tem duas colunas obrigatórias que não estão sendo preenchidas:
 
--- CORRETO (deveria ser)
-INSERT INTO lead_timeline_events (lead_id, event_type, user_id, metadata)
+| Coluna | Obrigatória | Status Atual |
+|--------|-------------|--------------|
+| `organization_id` | ✅ NOT NULL | ❌ Faltando |
+| `title` | ✅ NOT NULL | ❌ Faltando |
+
+**Erro no log:**
+```
+null value in column "organization_id" of relation "lead_timeline_events" violates not-null constraint
 ```
 
-A coluna correta é `user_id`, não `actor_id`. Por isso os leads do Meta estão falhando ao serem criados.
-
-## Evidência do Erro
-Log da Edge Function `meta-webhook`:
-```
-ERROR Error creating lead: {
-  code: "42703",
-  message: 'column "actor_id" of relation "lead_timeline_events" does not exist'
-}
-```
+---
 
 ## Solução
-Criar uma nova migração SQL para corrigir a função `handle_lead_intake`, trocando `actor_id` por `user_id`.
 
-## Mudança
-Apenas 1 linha precisa ser corrigida:
+Atualizar a função `handle_lead_intake` para incluir as colunas obrigatórias nos INSERT de `lead_timeline_events`:
 
-| Linha | Antes | Depois |
-|-------|-------|--------|
-| 57 | `actor_id` | `user_id` |
+### Linha 45-59 (evento lead_created):
+```sql
+-- ANTES (incompleto)
+INSERT INTO lead_timeline_events (lead_id, event_type, user_id, metadata)
+
+-- DEPOIS (completo)
+INSERT INTO lead_timeline_events (
+  organization_id, lead_id, event_type, user_id, title, metadata
+)
+VALUES (
+  v_lead.organization_id,
+  p_lead_id, 
+  'lead_created', 
+  NULL,
+  'Lead criado via ' || v_source_label,
+  jsonb_build_object(...)
+);
+```
+
+### Linha 170-181 (evento assignee_changed):
+```sql
+-- ANTES (incompleto)
+INSERT INTO lead_timeline_events (lead_id, event_type, user_id, metadata)
+
+-- DEPOIS (completo)
+INSERT INTO lead_timeline_events (
+  organization_id, lead_id, event_type, user_id, title, metadata
+)
+VALUES (
+  v_lead.organization_id,
+  p_lead_id,
+  'assignee_changed',
+  NULL,
+  'Distribuído via Round Robin',
+  jsonb_build_object(...)
+);
+```
+
+---
 
 ## Arquivos Afetados
-- Nova migração SQL para recriar `handle_lead_intake` com a correção
+
+| Arquivo | Mudança |
+|---------|---------|
+| Nova migração SQL | Atualizar `handle_lead_intake` adicionando `organization_id` e `title` |
+
+---
 
 ## Resultado Esperado
-Leads do Meta (e outras fontes) voltarão a ser criados normalmente com o histórico registrado corretamente.
+
+Leads do Meta (e outras fontes) voltarão a ser criados com o histórico completo registrado corretamente.
