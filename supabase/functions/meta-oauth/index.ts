@@ -11,77 +11,43 @@ const META_APP_SECRET = Deno.env.get("META_APP_SECRET") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-// Generate HTML page that sends data to opener and closes
-function generateSuccessPage(pages: any[], userToken: string): string {
-  const pagesJson = JSON.stringify(pages).replace(/</g, '\\u003c');
-  const tokenJson = JSON.stringify(userToken).replace(/</g, '\\u003c');
+// Redirect to frontend with success data
+function redirectWithSuccess(pages: any[], userToken: string, returnUrl: string): Response {
+  const data = {
+    success: true,
+    pages: pages,
+    userToken: userToken
+  };
+  const encodedData = encodeURIComponent(btoa(JSON.stringify(data)));
+  const redirectUrl = `${returnUrl}?meta_oauth_data=${encodedData}`;
   
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conexao realizada</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    .container {
-      text-align: center;
-      padding: 2rem;
-    }
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 3px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    h2 { margin-bottom: 0.5rem; }
-    p { opacity: 0.9; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="spinner"></div>
-    <h2>Conexao realizada!</h2>
-    <p id="status">Fechando esta janela...</p>
-  </div>
-  <script>
-    (function() {
-      var data = {
-        type: 'META_OAUTH_SUCCESS',
-        pages: ${pagesJson},
-        userToken: ${tokenJson}
-      };
-      
-      if (window.opener && !window.opener.closed) {
-        try {
-          window.opener.postMessage(data, '*');
-          document.getElementById('status').textContent = 'Fechando...';
-          setTimeout(function() { window.close(); }, 800);
-        } catch(e) {
-          document.getElementById('status').textContent = 'Voce pode fechar esta janela e voltar ao aplicativo.';
-        }
-      } else {
-        document.getElementById('status').textContent = 'Voce pode fechar esta janela e voltar ao aplicativo.';
-      }
-    })();
-  </script>
-</body>
-</html>`;
+  console.log("Redirecting to:", returnUrl);
+  
+  return new Response(null, {
+    status: 302,
+    headers: {
+      "Location": redirectUrl,
+    },
+  });
+}
+
+// Redirect to frontend with error
+function redirectWithError(error: string, returnUrl: string): Response {
+  const data = {
+    success: false,
+    error: error
+  };
+  const encodedData = encodeURIComponent(btoa(JSON.stringify(data)));
+  const redirectUrl = `${returnUrl}?meta_oauth_data=${encodedData}`;
+  
+  console.log("Redirecting with error to:", returnUrl);
+  
+  return new Response(null, {
+    status: 302,
+    headers: {
+      "Location": redirectUrl,
+    },
+  });
 }
 
 // Generate HTML page for errors
@@ -149,22 +115,32 @@ serve(async (req) => {
   // Handle OAuth callback (GET request from Facebook)
   if (req.method === "GET") {
     const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
     const error = url.searchParams.get("error");
     const errorDescription = url.searchParams.get("error_description");
     
-    console.log("OAuth callback received", { hasCode: !!code, error, errorDescription });
+    // Parse state to get return URL
+    let returnUrl = "https://vimob.vettercompany.com.br/settings/integrations/meta";
+    try {
+      if (state) {
+        const stateData = JSON.parse(atob(state));
+        if (stateData.returnUrl) {
+          returnUrl = stateData.returnUrl;
+        }
+      }
+    } catch (e) {
+      console.log("Could not parse state, using default return URL");
+    }
+    
+    console.log("OAuth callback received", { hasCode: !!code, error, errorDescription, returnUrl });
     
     if (error) {
       console.error("OAuth error from Facebook:", error, errorDescription);
-      return new Response(generateErrorPage(errorDescription || error), {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
+      return redirectWithError(errorDescription || error, returnUrl);
     }
     
     if (!code) {
-      return new Response(generateErrorPage("Codigo de autorizacao nao recebido"), {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
+      return redirectWithError("Codigo de autorizacao nao recebido", returnUrl);
     }
     
     try {
@@ -184,9 +160,7 @@ serve(async (req) => {
 
       if (tokenData.error) {
         console.error("Token exchange error:", tokenData.error);
-        return new Response(generateErrorPage(tokenData.error.message), {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
-        });
+        return redirectWithError(tokenData.error.message, returnUrl);
       }
 
       console.log("Token obtained, exchanging for long-lived token...");
@@ -203,9 +177,7 @@ serve(async (req) => {
 
       if (longLivedData.error) {
         console.error("Long-lived token error:", longLivedData.error);
-        return new Response(generateErrorPage(longLivedData.error.message), {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
-        });
+        return redirectWithError(longLivedData.error.message, returnUrl);
       }
 
       console.log("Long-lived token obtained, fetching pages...");
@@ -220,9 +192,7 @@ serve(async (req) => {
 
       if (pagesData.error) {
         console.error("Pages fetch error:", pagesData.error);
-        return new Response(generateErrorPage(pagesData.error.message), {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
-        });
+        return redirectWithError(pagesData.error.message, returnUrl);
       }
 
       const pages = (pagesData.data || []).map((page: any) => ({
@@ -231,18 +201,14 @@ serve(async (req) => {
         access_token: page.access_token,
       }));
       
-      console.log(`Found ${pages.length} pages, sending to opener...`);
+      console.log(`Found ${pages.length} pages, redirecting back...`);
 
-      return new Response(generateSuccessPage(pages, longLivedData.access_token), {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
+      return redirectWithSuccess(pages, longLivedData.access_token, returnUrl);
       
     } catch (error: unknown) {
       console.error("OAuth callback error:", error);
       const message = error instanceof Error ? error.message : "Erro desconhecido";
-      return new Response(generateErrorPage(message), {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
+      return redirectWithError(message, returnUrl);
     }
   }
 
@@ -292,12 +258,19 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, code, redirect_uri, page_id, pipeline_id, stage_id, default_status, access_token, is_active } = body;
+    const { action, code, redirect_uri, page_id, pipeline_id, stage_id, default_status, access_token, is_active, return_url } = body;
 
     switch (action) {
       case "get_auth_url": {
         // Generate OAuth URL for Meta - redirect to this edge function
         const callbackUrl = `${SUPABASE_URL}/functions/v1/meta-oauth`;
+        
+        // Create state with return URL
+        const stateData = {
+          returnUrl: return_url || "https://vimob.vettercompany.com.br/settings/integrations/meta",
+          timestamp: Date.now()
+        };
+        const state = btoa(JSON.stringify(stateData));
         
         const scopes = [
           "pages_show_list",
@@ -312,9 +285,10 @@ serve(async (req) => {
           `client_id=${META_APP_ID}` +
           `&redirect_uri=${encodeURIComponent(callbackUrl)}` +
           `&scope=${encodeURIComponent(scopes)}` +
+          `&state=${encodeURIComponent(state)}` +
           `&response_type=code`;
 
-        console.log("Generated auth URL with callback:", callbackUrl);
+        console.log("Generated auth URL with callback:", callbackUrl, "returnUrl:", stateData.returnUrl);
 
         return new Response(JSON.stringify({ auth_url: authUrl }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
