@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -20,13 +19,12 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Search, X } from "lucide-react";
-import { usePipelines, useStages } from "@/hooks/use-stages";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RefreshCw, Search, X, Info } from "lucide-react";
 import { useProperties } from "@/hooks/use-properties";
-import { useUsers } from "@/hooks/use-users";
 import { useSaveFormConfig, MetaForm, MetaFormConfig } from "@/hooks/use-meta-forms";
 import { InlineTagSelector } from "@/components/ui/tag-selector";
+import { Link } from "react-router-dom";
 
 interface MetaFormConfigDialogProps {
   open: boolean;
@@ -35,13 +33,6 @@ interface MetaFormConfigDialogProps {
   config?: MetaFormConfig;
   integrationId: string;
 }
-
-const STATUS_OPTIONS = [
-  { value: "novo", label: "Novo" },
-  { value: "contatado", label: "Contatado" },
-  { value: "qualificado", label: "Qualificado" },
-  { value: "negociando", label: "Negociando" },
-];
 
 const LEAD_FIELDS = [
   { key: "name", label: "Nome" },
@@ -62,11 +53,7 @@ export function MetaFormConfigDialog({
   config,
   integrationId,
 }: MetaFormConfigDialogProps) {
-  // Form state
-  const [pipelineId, setPipelineId] = useState("");
-  const [stageId, setStageId] = useState("");
-  const [defaultStatus, setDefaultStatus] = useState("novo");
-  const [assignedUserId, setAssignedUserId] = useState("");
+  // Form state - simplified without destination fields
   const [propertyId, setPropertyId] = useState("");
   const [propertySearch, setPropertySearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -74,29 +61,18 @@ export function MetaFormConfigDialog({
   const [customFields, setCustomFields] = useState<string[]>([]);
 
   // Data hooks
-  const { data: pipelines } = usePipelines();
-  const { data: stages } = useStages(pipelineId || undefined);
   const { data: properties } = useProperties();
-  const { data: users } = useUsers();
   const saveConfig = useSaveFormConfig();
 
   // Load existing config when dialog opens
   useEffect(() => {
     if (config) {
-      setPipelineId(config.pipeline_id || "");
-      setStageId(config.stage_id || "");
-      setDefaultStatus(config.default_status || "novo");
-      setAssignedUserId(config.assigned_user_id || "");
       setPropertyId(config.property_id || "");
       setSelectedTags(config.auto_tags || []);
       setFieldMapping(config.field_mapping || {});
       setCustomFields(config.custom_fields_config || []);
     } else {
       // Reset form
-      setPipelineId("");
-      setStageId("");
-      setDefaultStatus("novo");
-      setAssignedUserId("");
       setPropertyId("");
       setPropertySearch("");
       setSelectedTags([]);
@@ -106,18 +82,12 @@ export function MetaFormConfigDialog({
   }, [config, open]);
 
   const handleSave = async () => {
-    if (!form || !pipelineId || !stageId) {
-      return;
-    }
+    if (!form) return;
 
     await saveConfig.mutateAsync({
       integrationId,
       formId: form.id,
       formName: form.name,
-      pipelineId,
-      stageId,
-      defaultStatus,
-      assignedUserId: assignedUserId || undefined,
       propertyId: propertyId || undefined,
       autoTags: selectedTags,
       fieldMapping,
@@ -149,8 +119,6 @@ export function MetaFormConfigDialog({
       setCustomFields(prev => prev.filter(f => f !== metaField));
     }
   };
-
-  const filteredStages = stages?.filter(s => s.pipeline_id === pipelineId) || [];
   
   const filteredProperties = properties?.filter(p => 
     propertySearch === "" || 
@@ -171,80 +139,23 @@ export function MetaFormConfigDialog({
         <DialogHeader>
           <DialogTitle>Configurar Formulário: {form.name}</DialogTitle>
           <DialogDescription>
-            Configure onde os leads deste formulário serão recebidos
+            Configure enriquecimento automático para leads deste formulário
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
           <div className="space-y-6 py-4">
-            {/* Destination Section */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm">Destino do Lead</h4>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Pipeline *</Label>
-                  <Select value={pipelineId} onValueChange={(v) => {
-                    setPipelineId(v);
-                    setStageId("");
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pipelines?.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Etapa Inicial *</Label>
-                  <Select value={stageId} onValueChange={setStageId} disabled={!pipelineId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredStages.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status do Lead</Label>
-                  <Select value={defaultStatus} onValueChange={setDefaultStatus}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Atribuir a</Label>
-                  <Select value={assignedUserId || "_none"} onValueChange={(v) => setAssignedUserId(v === "_none" ? "" : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ninguém (usar round-robin)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">Ninguém</SelectItem>
-                      {users?.filter(u => u.is_active).map((u) => (
-                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
+            {/* Distribution Info Alert */}
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                A distribuição dos leads (pipeline, etapa e responsável) é feita automaticamente pelas{" "}
+                <Link to="/crm-management" className="text-primary underline font-medium">
+                  Filas de Distribuição
+                </Link>
+                {" "}em Gestão CRM.
+              </AlertDescription>
+            </Alert>
 
             {/* Property Section */}
             <div className="space-y-4">
@@ -366,7 +277,7 @@ export function MetaFormConfigDialog({
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={saveConfig.isPending || !pipelineId || !stageId}
+            disabled={saveConfig.isPending}
           >
             {saveConfig.isPending && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
             Salvar Configuração

@@ -114,16 +114,12 @@ serve(async (req) => {
               .eq("is_active", true)
               .single();
 
-            // Use form config if available, otherwise fall back to page integration config
-            const config = formConfig || integration;
-            const pipelineId = formConfig?.pipeline_id || integration.pipeline_id;
-            const stageId = formConfig?.stage_id || integration.stage_id;
+            // Get optional enrichment from form config (NOT routing - Round Robin handles that)
             const propertyId = formConfig?.property_id || null;
-            const assignedUserId = formConfig?.assigned_user_id || integration.assigned_user_id || null;
             const autoTags = formConfig?.auto_tags || [];
             const fieldMapping = formConfig?.field_mapping || {};
 
-            console.log("Using config:", formConfig ? "form-specific" : "page-level", { pipelineId, stageId, propertyId });
+            console.log("Using form config for enrichment:", formConfig ? "yes" : "no", { propertyId, autoTagsCount: autoTags.length });
 
             // Fetch lead data from Graph API
             const leadUrl = `https://graph.facebook.com/v19.0/${leadgenId}?` +
@@ -211,7 +207,8 @@ serve(async (req) => {
               continue;
             }
 
-            // Create the lead - trigger will handle pipeline/stage assignment and timeline events
+            // Create the lead WITHOUT pipeline/stage/assigned_user
+            // The trigger handle_lead_intake will run Round Robin distribution
             const { data: newLead, error: leadError } = await supabase
               .from("leads")
               .insert({
@@ -225,10 +222,10 @@ serve(async (req) => {
                 cidade,
                 bairro,
                 source: "meta",
-                pipeline_id: pipelineId || null,
-                stage_id: stageId || null,
-                property_id: propertyId,
-                assigned_user_id: assignedUserId,
+                pipeline_id: null,       // Round Robin will set this
+                stage_id: null,          // Round Robin will set this
+                property_id: propertyId, // Keep property from form config
+                assigned_user_id: null,  // Round Robin will set this
                 meta_lead_id: leadgenId,
                 meta_form_id: formId,
                 custom_fields: Object.keys(customFields).length > 0 ? customFields : null,
