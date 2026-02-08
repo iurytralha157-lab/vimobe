@@ -121,6 +121,21 @@ serve(async (req) => {
 
             console.log("Using form config for enrichment:", formConfig ? "yes" : "no", { propertyId, autoTagsCount: autoTags.length });
 
+            // Se tem imóvel configurado, buscar o preço
+            let valorInteresse: number | null = null;
+            if (propertyId) {
+              const { data: property } = await supabase
+                .from("properties")
+                .select("preco")
+                .eq("id", propertyId)
+                .single();
+              
+              if (property?.preco) {
+                valorInteresse = property.preco;
+                console.log(`Property price fetched: R$ ${valorInteresse}`);
+              }
+            }
+
             // Fetch lead data from Graph API
             const leadUrl = `https://graph.facebook.com/v19.0/${leadgenId}?` +
               `access_token=${integration.access_token}` +
@@ -220,7 +235,8 @@ serve(async (req) => {
                 source: "meta",
                 pipeline_id: null,       // Round Robin will set this
                 stage_id: null,          // Round Robin will set this
-                property_id: propertyId, // Keep property from form config
+                interest_property_id: propertyId, // Imóvel de interesse do form config
+                valor_interesse: valorInteresse,   // Preço do imóvel buscado automaticamente
                 assigned_user_id: null,  // Round Robin will set this
                 meta_lead_id: leadgenId,
                 meta_form_id: formId,
