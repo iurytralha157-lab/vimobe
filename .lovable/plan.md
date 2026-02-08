@@ -1,112 +1,99 @@
 
-# Correção: Imóvel de Interesse e Valor Automático no Meta Webhook
+# Correção do Sistema de Distribuição e Histórico de Leads
 
 ## Problemas Identificados
 
-### 1. Campo Errado para Imóvel
-| Situação Atual | Esperado |
-|----------------|----------|
-| `property_id: 3bdc4ceb...` | `interest_property_id: 3bdc4ceb...` |
-| `interest_property_id: null` | ← Deveria ter o imóvel aqui |
+### 1. Fallback Problemático
+O lead do Meta foi distribuído pela fila "Webhooks" mesmo que a regra de imóvel não corresponda, pois existe um **fallback** que pega a fila mais antiga quando nenhuma regra casa.
 
-O lead do Andre está com o imóvel no campo `property_id` (campo legado), mas o CRM usa `interest_property_id` para exibir o imóvel de interesse.
+**Código atual em `handle_lead_intake`:**
+```sql
+IF v_round_robin_id IS NULL THEN
+  -- Fallback: find any active queue for the organization
+  SELECT * INTO v_queue
+  FROM round_robins
+  WHERE organization_id = v_lead.organization_id
+    AND is_active = true
+  ORDER BY created_at ASC  -- ← Pega a mais antiga!
+  LIMIT 1;
+```
 
-### 2. Valor de Interesse Não Preenchido
-| Campo | Valor Atual | Esperado |
-|-------|-------------|----------|
-| `valor_interesse` | 0 | R$ 2.250.000 |
+**Regras configuradas:**
+| Fila | Imóvel Exigido | Imóvel do Lead |
+|------|----------------|----------------|
+| Webhooks | `df6d607d...` (sdgsdgd) | `3bdc4ceb...` (Casa alto padrão) ❌ |
+| vendas | `cad5ca46...` (Testes) | `3bdc4ceb...` (Casa alto padrão) ❌ |
 
-O imóvel configurado (Casa alto padrão) tem `preco = 2.250.000`, mas o webhook não busca esse valor.
+Como nenhuma regra casou, o fallback selecionou "Webhooks" (a mais antiga).
+
+### 2. Histórico com Múltiplos Eventos Duplicados
+
+O histórico mostra:
+- "Estágio alterado de Desconhecido para Base"
+- "Atribuído a André Rocha"
+- "Atribuído a usuário de teste"
+- "Distribuído por Webhooks → usuário de teste"
+
+Isso acontece porque:
+1. O lead é criado sem estágio (o meta-webhook não define)
+2. A fila aplica `target_stage_id` → gera evento de "estágio alterado"
+3. A lógica de distribuição está registrando múltiplos eventos no mesmo timestamp
 
 ---
 
-## Solução
+## Soluções Propostas
 
-**Arquivo:** `supabase/functions/meta-webhook/index.ts`
+### Solução 1: Remover Fallback Automático
 
-### Mudança 1: Usar `interest_property_id` em vez de `property_id`
+Se não houver regra que case, o lead NÃO deve ser distribuído automaticamente. Ele deve:
+- Ir para o **pool** (bolsão) aguardando atribuição manual
+- Ou ser atribuído ao administrador da organização
 
-```typescript
-// ANTES (linha 223):
-property_id: propertyId,
-
-// DEPOIS:
-interest_property_id: propertyId,
+**Migração SQL:**
+```sql
+-- Atualizar handle_lead_intake para NÃO ter fallback
+-- Se pick_round_robin_for_lead retornar NULL, o lead fica sem responsável
+-- e vai aparecer no pool/bolsão aguardando distribuição manual
 ```
 
-### Mudança 2: Buscar preço do imóvel automaticamente
+### Solução 2: Consolidar Eventos do Histórico
 
-Adicionar antes do INSERT do lead:
+Evitar duplicação de eventos `assignee_changed` quando a distribuição acontece no mesmo momento da criação.
 
-```typescript
-// Se tem imóvel configurado, buscar o preço
-let valorInteresse: number | null = null;
-if (propertyId) {
-  const { data: property } = await supabase
-    .from("properties")
-    .select("preco")
-    .eq("id", propertyId)
-    .single();
-  
-  if (property?.preco) {
-    valorInteresse = property.preco;
-    console.log(`Property price fetched: R$ ${valorInteresse}`);
-  }
-}
-```
+**Mudanças:**
+1. Verificar se já existe evento recente antes de criar novo
+2. Marcar o evento principal como `is_initial_distribution: true`
+3. Não criar eventos de "atribuição" intermediários durante a cadeia de distribuição
 
-### Mudança 3: Incluir `valor_interesse` no INSERT
+### Solução 3: Corrigir Nomenclatura do Estágio
 
-```typescript
-const { data: newLead, error: leadError } = await supabase
-  .from("leads")
-  .insert({
-    organization_id: integration.organization_id,
-    name,
-    email,
-    phone,
-    message: message || `Lead gerado via Facebook Lead Ads`,
-    source: "meta",
-    pipeline_id: null,
-    stage_id: null,
-    interest_property_id: propertyId,  // ← CORRIGIDO
-    valor_interesse: valorInteresse,   // ← NOVO
-    assigned_user_id: null,
-    meta_lead_id: leadgenId,
-    meta_form_id: formId,
-  })
-```
+O lead está sendo movido para o estágio da fila ("Base"), mas como ele não tinha estágio antes, o histórico mostra "Desconhecido" como origem.
+
+**Mudança:**
+- Se o estágio anterior era `NULL`, exibir "Lead criado no estágio Base" em vez de "Movido de Desconhecido para Base"
+
+---
+
+## Arquivos Afetados
+
+| Arquivo | Mudança |
+|---------|---------|
+| Migração SQL | Atualizar `handle_lead_intake` para remover fallback |
+| `src/hooks/use-lead-full-history.ts` | Melhorar labels para eventos de criação |
+| Migração SQL | Ajustar `pick_round_robin_for_lead` para registrar motivo de não-match |
 
 ---
 
 ## Resultado Esperado
 
-Após a correção, leads do Meta virão com:
+Após as correções:
 
-| Campo | Valor |
-|-------|-------|
-| `interest_property_id` | ID do imóvel configurado no formulário |
-| `valor_interesse` | Preço do imóvel buscado automaticamente |
-| `property_id` | `null` (não usado) |
-
-O painel de rastreamento exibirá corretamente o imóvel de interesse com seu valor.
+1. **Sem Fallback**: Leads do Meta (ou qualquer fonte) sem regra de distribuição configurada **não serão distribuídos automaticamente** - ficarão no pool aguardando atribuição
+2. **Histórico Limpo**: Apenas um evento de "Lead criado via Meta" + opcionalmente "Distribuído por [fila]" se houver regra
+3. **Estágios Corretos**: Se o lead já nasceu no estágio, exibir "Lead criado no estágio X" em vez de "Movido de Desconhecido para X"
 
 ---
 
-## Sobre a Distribuição Automática
+## Quer que eu implemente?
 
-O lead foi distribuído porque existe um **fallback** na função `handle_lead_intake`:
-
-```sql
--- Linha 39-52 do trigger
-SELECT id INTO v_queue_id
-FROM distribution_queues
-WHERE organization_id = NEW.organization_id
-  AND is_active = true
-ORDER BY created_at ASC  -- Pega a fila mais antiga
-LIMIT 1;
-```
-
-Como não existe regra específica para `source = 'meta'`, o sistema usou a fila **"Webhooks"** (mais antiga ativa) como fallback.
-
-**Opção:** Se quiser que leads do Meta aguardem no pool sem distribuição automática, posso criar uma regra específica ou desativar o fallback.
+Posso criar a migração SQL e atualizar os componentes do histórico.
