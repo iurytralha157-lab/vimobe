@@ -54,6 +54,23 @@ const activityLabels: Record<string, string> = {
   automation_tag_added: 'Tag adicionada por automação',
 };
 
+function getTimelineEventLabel(event: LeadTimelineEvent): string {
+  const metadata = event.metadata || {};
+  
+  switch (event.event_type) {
+    case 'stage_changed':
+      const from = metadata.old_stage_name;
+      const to = metadata.new_stage_name;
+      // Se o estágio anterior era NULL/undefined, é criação inicial no estágio
+      if (!from || from === 'Desconhecido' || from === 'Unknown') {
+        return `Iniciado no estágio ${to || 'Base'}`;
+      }
+      return 'Estágio alterado';
+    default:
+      return timelineEventLabels[event.event_type] || event.event_type;
+  }
+}
+
 function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
   const metadata = event.metadata || {};
   
@@ -63,7 +80,11 @@ function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
     case 'stage_changed':
       const from = metadata.old_stage_name;
       const to = metadata.new_stage_name;
-      return from && to ? `${from} → ${to}` : undefined;
+      // Se teve estágio anterior real, mostrar a transição
+      if (from && from !== 'Desconhecido' && from !== 'Unknown' && to) {
+        return `${from} → ${to}`;
+      }
+      return undefined;
     case 'first_response':
       const responseTime = metadata.response_seconds;
       if (responseTime !== undefined) {
@@ -181,7 +202,7 @@ export function useLeadFullHistory(leadId: string) {
     const timelineEvents: UnifiedHistoryEvent[] = timeline.map((e) => ({
       id: `timeline-${e.id}`,
       type: e.event_type,
-      label: timelineEventLabels[e.event_type] || e.event_type,
+      label: getTimelineEventLabel(e),
       content: getTimelineEventDetails(e),
       timestamp: e.event_at,
       actor: e.actor ? {
