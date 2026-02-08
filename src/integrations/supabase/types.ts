@@ -1960,6 +1960,8 @@ export type Database = {
           lost_at: string | null
           lost_reason: string | null
           message: string | null
+          meta_form_id: string | null
+          meta_lead_id: string | null
           name: string
           organization_id: string
           phone: string | null
@@ -1998,6 +2000,8 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
+          meta_form_id?: string | null
+          meta_lead_id?: string | null
           name: string
           organization_id: string
           phone?: string | null
@@ -2036,6 +2040,8 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
+          meta_form_id?: string | null
+          meta_lead_id?: string | null
           name?: string
           organization_id?: string
           phone?: string | null
@@ -2259,58 +2265,203 @@ export type Database = {
           },
         ]
       }
+      meta_form_configs: {
+        Row: {
+          assigned_user_id: string | null
+          auto_tags: Json | null
+          created_at: string
+          custom_fields_config: Json | null
+          default_status: string | null
+          field_mapping: Json | null
+          form_id: string
+          form_name: string | null
+          id: string
+          integration_id: string
+          is_active: boolean | null
+          last_lead_at: string | null
+          leads_received: number | null
+          organization_id: string
+          pipeline_id: string | null
+          property_id: string | null
+          stage_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_user_id?: string | null
+          auto_tags?: Json | null
+          created_at?: string
+          custom_fields_config?: Json | null
+          default_status?: string | null
+          field_mapping?: Json | null
+          form_id: string
+          form_name?: string | null
+          id?: string
+          integration_id: string
+          is_active?: boolean | null
+          last_lead_at?: string | null
+          leads_received?: number | null
+          organization_id: string
+          pipeline_id?: string | null
+          property_id?: string | null
+          stage_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_user_id?: string | null
+          auto_tags?: Json | null
+          created_at?: string
+          custom_fields_config?: Json | null
+          default_status?: string | null
+          field_mapping?: Json | null
+          form_id?: string
+          form_name?: string | null
+          id?: string
+          integration_id?: string
+          is_active?: boolean | null
+          last_lead_at?: string | null
+          leads_received?: number | null
+          organization_id?: string
+          pipeline_id?: string | null
+          property_id?: string | null
+          stage_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_form_configs_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_configs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "meta_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_configs_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_configs_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_configs_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_integrations: {
         Row: {
           access_token: string | null
+          assigned_user_id: string | null
           campaign_property_mapping: Json | null
           created_at: string
+          default_status: string | null
           field_mapping: Json | null
           form_ids: Json | null
           id: string
           is_connected: boolean | null
           last_error: string | null
+          last_lead_at: string | null
           last_sync_at: string | null
+          leads_received: number | null
           organization_id: string
           page_id: string | null
           page_name: string | null
+          pipeline_id: string | null
+          stage_id: string | null
           updated_at: string
         }
         Insert: {
           access_token?: string | null
+          assigned_user_id?: string | null
           campaign_property_mapping?: Json | null
           created_at?: string
+          default_status?: string | null
           field_mapping?: Json | null
           form_ids?: Json | null
           id?: string
           is_connected?: boolean | null
           last_error?: string | null
+          last_lead_at?: string | null
           last_sync_at?: string | null
+          leads_received?: number | null
           organization_id: string
           page_id?: string | null
           page_name?: string | null
+          pipeline_id?: string | null
+          stage_id?: string | null
           updated_at?: string
         }
         Update: {
           access_token?: string | null
+          assigned_user_id?: string | null
           campaign_property_mapping?: Json | null
           created_at?: string
+          default_status?: string | null
           field_mapping?: Json | null
           form_ids?: Json | null
           id?: string
           is_connected?: boolean | null
           last_error?: string | null
+          last_lead_at?: string | null
           last_sync_at?: string | null
+          leads_received?: number | null
           organization_id?: string
           page_id?: string | null
           page_name?: string | null
+          pipeline_id?: string | null
+          stage_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "meta_integrations_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "meta_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_integrations_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_integrations_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
             referencedColumns: ["id"]
           },
         ]
