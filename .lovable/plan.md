@@ -1,75 +1,76 @@
 
-# Correção: Round Robin sem coluna `source_type`
+# Correção: Erro de JSON na Distribuição de Leads
 
 ## Problema Identificado
 
-A função `handle_lead_intake` está tentando filtrar Round Robins por `rr.source_type`, mas essa coluna **não existe** na tabela `round_robins`.
-
-**Erro atual:**
+O erro atual é:
 ```
-column rr.source_type does not exist
+invalid input syntax for type json
 ```
 
-## Estrutura Real do Sistema
+Isso acontece porque o código usa operadores JSONB (`?`, `->`) em campos que podem ser NULL ou ter estrutura diferente do esperado.
 
-O sistema usa a tabela `round_robin_rules` para definir critérios de distribuição:
+## Causa Raiz
 
-| match_type | Descrição | Exemplo de match |
-|------------|-----------|------------------|
-| `source` | Origem do lead | `{"source": ["meta"]}` |
-| `meta_form_id` | Formulário específico | `{"meta_form_id": ["123"]}` |
-| `webhook` | Webhook específico | `{"webhook_id": ["uuid"]}` |
-| `interest_property` | Imóvel de interesse | `{"interest_property_id": "uuid"}` |
+A função `handle_lead_intake` tenta executar:
+```sql
+rrr.match->'meta_form_id' ? v_meta_form_id
+rrr.match->'source' ? v_lead.source
+```
+
+Porém, se `rrr.match` não contém a chave específica (ex: `meta_form_id`), a operação `->` retorna NULL, e usar `?` em NULL causa erro de JSON.
+
+## Dados Reais
+
+Os Round Robins atuais têm regras do tipo:
+| match_type | match (JSONB) |
+|------------|---------------|
+| `interest_property` | `{"interest_property_id": "uuid"}` |
+| `webhook` | `{"webhook_id": ["uuid"]}` |
+
+**Não existe nenhuma regra para `source` ou `meta_form_id`**, então os leads do Meta estão falhando ao tentar fazer match.
 
 ## Solução
 
-Reescrever a lógica de distribuição para:
+Reescrever a função com proteção COALESCE para evitar operações em NULL:
 
-1. **Buscar Round Robins ativos** da organização
-2. **Para cada Round Robin**, verificar se há regras que fazem match com o lead
-3. **Priorizar** Round Robins com regras mais específicas
-4. **Fallback** para Round Robin sem regras (catch-all)
+```sql
+-- ANTES (causa erro)
+rrr.match->'source' ? v_lead.source
 
-## Nova Lógica (Simplificada)
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│  1. Buscar todos Round Robins ativos da organização     │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│  2. Para cada RR, buscar regras ativas                  │
-│     - Se match_type = 'meta_form_id' e lead tem         │
-│       meta_form_id → verificar se está no array         │
-│     - Se match_type = 'source' → verificar source       │
-│     - Se match_type = 'interest_property' → verificar   │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│  3. Usar primeiro RR que fizer match                    │
-│     OU RR sem regras (catch-all) como fallback          │
-└─────────────────────────────────────────────────────────┘
+-- DEPOIS (seguro)
+COALESCE(rrr.match->'source', '[]'::jsonb) ? v_lead.source
 ```
 
-## Correção SQL
-
-A migração vai:
-
-1. Remover referências a `source_type` (coluna inexistente)
-2. Implementar busca por regras usando `round_robin_rules`
-3. Adicionar lógica de fallback para Round Robin sem regras
+Também precisamos usar `jsonb_typeof()` para verificar se é array antes de usar `?`.
 
 ## Mudanças Técnicas
 
-| Antes | Depois |
-|-------|--------|
-| `WHERE rr.source_type = v_lead.source` | Busca em `round_robin_rules` com match JSONB |
-| Fallback: `rr.source_type IS NULL` | Fallback: Round Robin sem regras cadastradas |
+| Local | Correção |
+|-------|----------|
+| Match `meta_form_id` | Usar COALESCE + verificar tipo array ou string |
+| Match `source` | Usar COALESCE + verificar tipo array ou string |
+| Match `interest_property` | Já usa `=` para string, OK |
+
+## Migração SQL
+
+```sql
+-- Proteger operações JSONB com COALESCE
+AND (
+  -- Array check: {"meta_form_id": ["id1", "id2"]}
+  (jsonb_typeof(rrr.match->'meta_form_id') = 'array' 
+   AND rrr.match->'meta_form_id' ? v_meta_form_id)
+  -- String check: {"meta_form_id": "id1"}
+  OR rrr.match->>'meta_form_id' = v_meta_form_id
+  -- Legacy field: match_value
+  OR rrr.match_value = v_meta_form_id
+)
+```
 
 ## Arquivo Afetado
 
-- Nova migração SQL para recriar `handle_lead_intake`
+- Nova migração SQL para corrigir `handle_lead_intake`
 
-## Resultado
+## Resultado Esperado
 
-Leads do Meta (e outras fontes) serão corretamente distribuídos baseados nas regras configuradas na Gestão CRM.
+Leads do Meta voltarão a ser criados e distribuídos corretamente, mesmo quando não houver regra específica (irão para o fallback ou ficarão no Pool).
