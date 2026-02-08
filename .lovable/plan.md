@@ -1,70 +1,46 @@
 
-# Correção: Erro de JSON na Distribuição de Leads
+# Correção: Campo `metadata` inexistente
 
 ## Problema Identificado
 
-O erro atual é:
-```
-invalid input syntax for type json
-```
+O lead chegou corretamente às **16:36:09** mas falhou na inserção:
 
-Isso acontece porque o código usa operadores JSONB (`?`, `->`) em campos que podem ser NULL ou ter estrutura diferente do esperado.
+```
+record "v_lead" has no field "metadata"
+```
 
 ## Causa Raiz
 
-A função `handle_lead_intake` tenta executar:
+Na linha 23 da função `handle_lead_intake`:
 ```sql
-rrr.match->'meta_form_id' ? v_meta_form_id
-rrr.match->'source' ? v_lead.source
+v_meta_form_id := v_lead.metadata->>'form_id';
 ```
 
-Porém, se `rrr.match` não contém a chave específica (ex: `meta_form_id`), a operação `->` retorna NULL, e usar `?` em NULL causa erro de JSON.
+A tabela `leads` não possui coluna `metadata`. O `meta_form_id` já é uma coluna direta:
 
-## Dados Reais
+| Coluna | Tipo |
+|--------|------|
+| `meta_lead_id` | text |
+| `meta_form_id` | text |
 
-Os Round Robins atuais têm regras do tipo:
-| match_type | match (JSONB) |
-|------------|---------------|
-| `interest_property` | `{"interest_property_id": "uuid"}` |
-| `webhook` | `{"webhook_id": ["uuid"]}` |
+## Correção
 
-**Não existe nenhuma regra para `source` ou `meta_form_id`**, então os leads do Meta estão falhando ao tentar fazer match.
-
-## Solução
-
-Reescrever a função com proteção COALESCE para evitar operações em NULL:
-
+Alterar a linha para usar a coluna correta:
 ```sql
--- ANTES (causa erro)
-rrr.match->'source' ? v_lead.source
-
--- DEPOIS (seguro)
-COALESCE(rrr.match->'source', '[]'::jsonb) ? v_lead.source
+v_meta_form_id := v_lead.meta_form_id;
 ```
-
-Também precisamos usar `jsonb_typeof()` para verificar se é array antes de usar `?`.
-
-## Mudanças Técnicas
-
-| Local | Correção |
-|-------|----------|
-| Match `meta_form_id` | Usar COALESCE + verificar tipo array ou string |
-| Match `source` | Usar COALESCE + verificar tipo array ou string |
-| Match `interest_property` | Já usa `=` para string, OK |
 
 ## Migração SQL
 
 ```sql
--- Proteger operações JSONB com COALESCE
-AND (
-  -- Array check: {"meta_form_id": ["id1", "id2"]}
-  (jsonb_typeof(rrr.match->'meta_form_id') = 'array' 
-   AND rrr.match->'meta_form_id' ? v_meta_form_id)
-  -- String check: {"meta_form_id": "id1"}
-  OR rrr.match->>'meta_form_id' = v_meta_form_id
-  -- Legacy field: match_value
-  OR rrr.match_value = v_meta_form_id
-)
+CREATE OR REPLACE FUNCTION handle_lead_intake(p_lead_id uuid)
+RETURNS jsonb
+-- ...
+  -- ANTES (errado):
+  -- v_meta_form_id := v_lead.metadata->>'form_id';
+  
+  -- DEPOIS (correto):
+  v_meta_form_id := v_lead.meta_form_id;
 ```
 
 ## Arquivo Afetado
@@ -73,4 +49,14 @@ AND (
 
 ## Resultado Esperado
 
-Leads do Meta voltarão a ser criados e distribuídos corretamente, mesmo quando não houver regra específica (irão para o fallback ou ficarão no Pool).
+Leads do Meta serão criados e distribuídos corretamente usando o campo `meta_form_id` que já existe na tabela `leads`.
+
+## Confirmação do Lead Recebido
+
+O webhook recebeu o lead com sucesso:
+- **Lead ID**: 2397208057393361
+- **Form ID**: 24938013762565906
+- **Preço do imóvel**: R$ 2.250.000 (buscado automaticamente)
+- **Tags automáticas**: 1 tag configurada
+
+Apenas a distribuição falhou por causa do campo inexistente.
