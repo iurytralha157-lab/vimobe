@@ -1,76 +1,65 @@
 
-# Correção do Sistema de Distribuição e Histórico de Leads
+# Correção: Registrar `lead_created` Antes de Retornar
 
-## Problemas Identificados
+## Problema Identificado
 
-### 1. Fallback Problemático
-O lead do Meta foi distribuído pela fila "Webhooks" mesmo que a regra de imóvel não corresponda, pois existe um **fallback** que pega a fila mais antiga quando nenhuma regra casa.
+A migração recente que removeu o fallback de distribuição também removeu o registro do evento `lead_created`. A função `handle_lead_intake` retorna cedo quando não há regra:
 
-**Código atual em `handle_lead_intake`:**
 ```sql
+-- Linha 47-53 da migração atual
 IF v_round_robin_id IS NULL THEN
-  -- Fallback: find any active queue for the organization
-  SELECT * INTO v_queue
-  FROM round_robins
-  WHERE organization_id = v_lead.organization_id
-    AND is_active = true
-  ORDER BY created_at ASC  -- ← Pega a mais antiga!
-  LIMIT 1;
+  RETURN jsonb_build_object(
+    'success', true, 
+    'message', 'No matching distribution rule - lead will remain in pool'
+  );
+  -- ❌ NÃO registra lead_created antes de sair!
+END IF;
 ```
 
-**Regras configuradas:**
-| Fila | Imóvel Exigido | Imóvel do Lead |
-|------|----------------|----------------|
-| Webhooks | `df6d607d...` (sdgsdgd) | `3bdc4ceb...` (Casa alto padrão) ❌ |
-| vendas | `cad5ca46...` (Testes) | `3bdc4ceb...` (Casa alto padrão) ❌ |
-
-Como nenhuma regra casou, o fallback selecionou "Webhooks" (a mais antiga).
-
-### 2. Histórico com Múltiplos Eventos Duplicados
-
-O histórico mostra:
-- "Estágio alterado de Desconhecido para Base"
-- "Atribuído a André Rocha"
-- "Atribuído a usuário de teste"
-- "Distribuído por Webhooks → usuário de teste"
-
-Isso acontece porque:
-1. O lead é criado sem estágio (o meta-webhook não define)
-2. A fila aplica `target_stage_id` → gera evento de "estágio alterado"
-3. A lógica de distribuição está registrando múltiplos eventos no mesmo timestamp
+Na versão anterior, o evento era registrado **após** toda a lógica de distribuição (linhas 439-464), então sempre era executado. Agora que retornamos cedo, o evento nunca é criado para leads sem regra.
 
 ---
 
-## Soluções Propostas
+## Solução
 
-### Solução 1: Remover Fallback Automático
+Registrar o evento `lead_created` **antes** de verificar se há regra de distribuição. Isso garante que todo lead que entra no sistema tenha seu histórico de origem registrado, independente de ser distribuído ou não.
 
-Se não houver regra que case, o lead NÃO deve ser distribuído automaticamente. Ele deve:
-- Ir para o **pool** (bolsão) aguardando atribuição manual
-- Ou ser atribuído ao administrador da organização
+---
 
-**Migração SQL:**
-```sql
--- Atualizar handle_lead_intake para NÃO ter fallback
--- Se pick_round_robin_for_lead retornar NULL, o lead fica sem responsável
--- e vai aparecer no pool/bolsão aguardando distribuição manual
-```
+## Migração SQL
 
-### Solução 2: Consolidar Eventos do Histórico
+Atualizar `handle_lead_intake` para:
 
-Evitar duplicação de eventos `assignee_changed` quando a distribuição acontece no mesmo momento da criação.
+1. **Mover a lógica de registro `lead_created` para o início** da função (logo após buscar os dados do lead)
+2. **Incluir informações da origem** no metadata (source, meta_form_id, etc.)
+3. **Criar atividade com label dinâmico** ("Lead criado via Meta Ads", "Lead criado via Webhook", etc.)
 
-**Mudanças:**
-1. Verificar se já existe evento recente antes de criar novo
-2. Marcar o evento principal como `is_initial_distribution: true`
-3. Não criar eventos de "atribuição" intermediários durante a cadeia de distribuição
+---
 
-### Solução 3: Corrigir Nomenclatura do Estágio
+## Mudanças no Frontend
 
-O lead está sendo movido para o estágio da fila ("Base"), mas como ele não tinha estágio antes, o histórico mostra "Desconhecido" como origem.
+Atualizar `src/hooks/use-lead-full-history.ts`:
 
-**Mudança:**
-- Se o estágio anterior era `NULL`, exibir "Lead criado no estágio Base" em vez de "Movido de Desconhecido para Base"
+1. **Melhorar label de `lead_created`** para usar o source do metadata
+2. **Consolidar eventos duplicados** - filtrar eventos de "assignee_changed" intermediários que acontecem no mesmo segundo
+
+---
+
+## Resultado Esperado
+
+Histórico do lead mostrará:
+
+| Evento | Descrição |
+|--------|-----------|
+| 🎯 Lead criado via Meta Ads | Primeiro evento, mostra origem |
+| 📋 Iniciado no estágio Base | (se foi para pipeline) |
+| 👤 Distribuído por "Fila X" → Fulano | (se houve distribuição) |
+
+Para leads no pool (sem distribuição):
+
+| Evento | Descrição |
+|--------|-----------|
+| 🎯 Lead criado via Meta Ads | Primeiro evento, mostra origem |
 
 ---
 
@@ -78,22 +67,5 @@ O lead está sendo movido para o estágio da fila ("Base"), mas como ele não ti
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migração SQL | Atualizar `handle_lead_intake` para remover fallback |
-| `src/hooks/use-lead-full-history.ts` | Melhorar labels para eventos de criação |
-| Migração SQL | Ajustar `pick_round_robin_for_lead` para registrar motivo de não-match |
-
----
-
-## Resultado Esperado
-
-Após as correções:
-
-1. **Sem Fallback**: Leads do Meta (ou qualquer fonte) sem regra de distribuição configurada **não serão distribuídos automaticamente** - ficarão no pool aguardando atribuição
-2. **Histórico Limpo**: Apenas um evento de "Lead criado via Meta" + opcionalmente "Distribuído por [fila]" se houver regra
-3. **Estágios Corretos**: Se o lead já nasceu no estágio, exibir "Lead criado no estágio X" em vez de "Movido de Desconhecido para X"
-
----
-
-## Quer que eu implemente?
-
-Posso criar a migração SQL e atualizar os componentes do histórico.
+| Migração SQL | Atualizar `handle_lead_intake` para registrar `lead_created` no início |
+| `src/hooks/use-lead-full-history.ts` | Melhorar label de eventos `lead_created` baseado no source |
