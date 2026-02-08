@@ -1,74 +1,75 @@
 
-# Correção Urgente: Colunas Obrigatórias Faltando
+# Correção: Round Robin sem coluna `source_type`
 
 ## Problema Identificado
 
-A migração anterior corrigiu `actor_id → user_id`, mas a tabela `lead_timeline_events` tem duas colunas obrigatórias que não estão sendo preenchidas:
+A função `handle_lead_intake` está tentando filtrar Round Robins por `rr.source_type`, mas essa coluna **não existe** na tabela `round_robins`.
 
-| Coluna | Obrigatória | Status Atual |
-|--------|-------------|--------------|
-| `organization_id` | ✅ NOT NULL | ❌ Faltando |
-| `title` | ✅ NOT NULL | ❌ Faltando |
-
-**Erro no log:**
+**Erro atual:**
 ```
-null value in column "organization_id" of relation "lead_timeline_events" violates not-null constraint
+column rr.source_type does not exist
 ```
 
----
+## Estrutura Real do Sistema
+
+O sistema usa a tabela `round_robin_rules` para definir critérios de distribuição:
+
+| match_type | Descrição | Exemplo de match |
+|------------|-----------|------------------|
+| `source` | Origem do lead | `{"source": ["meta"]}` |
+| `meta_form_id` | Formulário específico | `{"meta_form_id": ["123"]}` |
+| `webhook` | Webhook específico | `{"webhook_id": ["uuid"]}` |
+| `interest_property` | Imóvel de interesse | `{"interest_property_id": "uuid"}` |
 
 ## Solução
 
-Atualizar a função `handle_lead_intake` para incluir as colunas obrigatórias nos INSERT de `lead_timeline_events`:
+Reescrever a lógica de distribuição para:
 
-### Linha 45-59 (evento lead_created):
-```sql
--- ANTES (incompleto)
-INSERT INTO lead_timeline_events (lead_id, event_type, user_id, metadata)
+1. **Buscar Round Robins ativos** da organização
+2. **Para cada Round Robin**, verificar se há regras que fazem match com o lead
+3. **Priorizar** Round Robins com regras mais específicas
+4. **Fallback** para Round Robin sem regras (catch-all)
 
--- DEPOIS (completo)
-INSERT INTO lead_timeline_events (
-  organization_id, lead_id, event_type, user_id, title, metadata
-)
-VALUES (
-  v_lead.organization_id,
-  p_lead_id, 
-  'lead_created', 
-  NULL,
-  'Lead criado via ' || v_source_label,
-  jsonb_build_object(...)
-);
+## Nova Lógica (Simplificada)
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│  1. Buscar todos Round Robins ativos da organização     │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────┐
+│  2. Para cada RR, buscar regras ativas                  │
+│     - Se match_type = 'meta_form_id' e lead tem         │
+│       meta_form_id → verificar se está no array         │
+│     - Se match_type = 'source' → verificar source       │
+│     - Se match_type = 'interest_property' → verificar   │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────┐
+│  3. Usar primeiro RR que fizer match                    │
+│     OU RR sem regras (catch-all) como fallback          │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Linha 170-181 (evento assignee_changed):
-```sql
--- ANTES (incompleto)
-INSERT INTO lead_timeline_events (lead_id, event_type, user_id, metadata)
+## Correção SQL
 
--- DEPOIS (completo)
-INSERT INTO lead_timeline_events (
-  organization_id, lead_id, event_type, user_id, title, metadata
-)
-VALUES (
-  v_lead.organization_id,
-  p_lead_id,
-  'assignee_changed',
-  NULL,
-  'Distribuído via Round Robin',
-  jsonb_build_object(...)
-);
-```
+A migração vai:
 
----
+1. Remover referências a `source_type` (coluna inexistente)
+2. Implementar busca por regras usando `round_robin_rules`
+3. Adicionar lógica de fallback para Round Robin sem regras
 
-## Arquivos Afetados
+## Mudanças Técnicas
 
-| Arquivo | Mudança |
-|---------|---------|
-| Nova migração SQL | Atualizar `handle_lead_intake` adicionando `organization_id` e `title` |
+| Antes | Depois |
+|-------|--------|
+| `WHERE rr.source_type = v_lead.source` | Busca em `round_robin_rules` com match JSONB |
+| Fallback: `rr.source_type IS NULL` | Fallback: Round Robin sem regras cadastradas |
 
----
+## Arquivo Afetado
 
-## Resultado Esperado
+- Nova migração SQL para recriar `handle_lead_intake`
 
-Leads do Meta (e outras fontes) voltarão a ser criados com o histórico completo registrado corretamente.
+## Resultado
+
+Leads do Meta (e outras fontes) serão corretamente distribuídos baseados nas regras configuradas na Gestão CRM.
