@@ -280,22 +280,26 @@ serve(async (req) => {
               : null;
 
             // Create lead_meta record with tracking info
-            await supabase
+            const { error: metaError } = await supabase
               .from("lead_meta")
               .insert({
                 lead_id: newLead.id,
                 page_id: pageId,
                 form_id: formId,
-                ad_id: leadData.ad_id,
-                adset_id: leadData.adset_id,
-                campaign_id: leadData.campaign_id,
+                ad_id: leadData.ad_id || null,
+                adset_id: leadData.adset_id || null,
+                campaign_id: leadData.campaign_id || null,
                 ad_name: leadData.ad_name || null,
                 adset_name: leadData.adset_name || null,
                 campaign_name: leadData.campaign_name || null,
                 platform: leadData.platform || null,
                 contact_notes: contactNotes,
-                raw_payload: leadData
+                raw_payload: JSON.stringify(leadData)
               });
+            
+            if (metaError) {
+              console.error("Error creating lead_meta:", metaError);
+            }
 
             // Note: lead_created activity and timeline event are now handled by trigger
 
