@@ -314,7 +314,7 @@ export function MetaIntegrationSettings() {
                         <div className="flex items-center gap-4 mt-2">
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <Users className="h-4 w-4" />
-                            <span>{meta.leadsReceived}</span>
+                            <span>{integration.leads_received || 0} {meta.leadsReceived}</span>
                           </div>
                           {integration.last_sync_at && (
                             <span className="text-xs text-muted-foreground">

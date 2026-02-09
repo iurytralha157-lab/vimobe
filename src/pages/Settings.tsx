@@ -39,7 +39,10 @@ export default function Settings() {
 
   // Calcular métricas Meta
   const activeMetaPages = metaIntegrations.filter(i => i.is_connected);
-  const totalMetaLeadsReceived = 0;
+  const totalMetaLeadsReceived = metaIntegrations.reduce(
+    (sum, integration) => sum + (integration.leads_received || 0),
+    0
+  );
   const isMetaConnected = metaIntegrations.length > 0;
   const hasWhatsAppModule = hasModule('whatsapp');
   const hasWebhooksModule = hasModule('webhooks');
