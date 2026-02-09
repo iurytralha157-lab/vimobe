@@ -326,27 +326,7 @@ serve(async (req) => {
                 .eq("id", formConfig.id);
             }
 
-            // Get users to notify (admins of the organization)
-            const { data: admins } = await supabase
-              .from("users")
-              .select("id")
-              .eq("organization_id", integration.organization_id)
-              .eq("role", "admin")
-              .eq("is_active", true);
-
-            // Create notifications for admins
-            for (const admin of admins || []) {
-              await supabase
-                .from("notifications")
-                .insert({
-                  organization_id: integration.organization_id,
-                  user_id: admin.id,
-                  title: "Novo lead do Facebook",
-                  content: `${name} chegou via ${integration.page_name}${formConfig?.form_name ? ` (${formConfig.form_name})` : ''}`,
-                  type: "lead",
-                  lead_id: newLead.id
-                });
-            }
+            // Notificações são criadas automaticamente pelo trigger handle_lead_intake
 
           }
         }
