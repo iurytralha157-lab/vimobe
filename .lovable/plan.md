@@ -1,118 +1,79 @@
 
 
-# Plano: Corrigir Filtro de Data (Timezone) na Página de Contatos
+# Plano: Corrigir Contador de Leads na Configuração do Meta
 
-## Problema Identificado
+## Problema
 
-Os leads do Meta **existem** no banco de dados e estão na Pipeline corretamente, mas **não aparecem** na página de Contatos devido a um problema de **timezone** no filtro de data.
+O contador de leads recebidos está sempre mostrando **0** na página de configuração do Meta, mesmo com leads sendo recebidos corretamente.
 
-### O que está acontecendo:
+## Causa Raiz
 
-```text
-Horário atual no Brasil: 2026-02-08 23:01 (UTC-3)
-Horário atual no servidor: 2026-02-09 02:01 (UTC)
+Há 3 pontos que precisam ser corrigidos:
 
-Filtro enviado: p_created_to = "2026-02-08T23:59:59" (sem timezone)
-Lead criado em: 2026-02-09T01:55:40+00:00 (UTC)
-
-O servidor interpreta "2026-02-08T23:59:59" como UTC
-Como 01:55 UTC > 23:59 UTC → lead NÃO aparece
-```
-
-### Por que isso acontece:
-
-1. O navegador calcula `endOfDay(new Date())` usando o fuso local (Brasil)
-2. Retorna `2026-02-08T23:59:59` (fim do dia 08 no Brasil)
-3. Formata **sem timezone**: `yyyy-MM-dd'T'HH:mm:ss`
-4. Envia para o servidor que interpreta como UTC
-5. Leads criados depois de 23:59 UTC do dia 08 ficam de fora
-
----
+| Local | Problema |
+|-------|----------|
+| Interface TypeScript | Campo `leads_received` não existe |
+| Settings.tsx (linha 42) | Valor fixo: `const totalMetaLeadsReceived = 0` |
+| MetaIntegrationSettings.tsx (linha 317) | Não exibe o valor real do banco |
 
 ## Solução
 
-Modificar a formatação das datas para incluir **offset de timezone** ou usar **ISO 8601 com Z**.
+### 1. Adicionar campo na interface
 
-### Opção escolhida: Formatar com timezone
+**Arquivo**: `src/hooks/use-meta-integration.ts`
 
-Alterar de:
-```javascript
-format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss")
+Adicionar o campo `leads_received` na interface `MetaIntegration`:
+
+```typescript
+export interface MetaIntegration {
+  // ... campos existentes
+  leads_received: number | null;  // Novo campo
+}
+```
+
+### 2. Calcular soma dos leads
+
+**Arquivo**: `src/pages/Settings.tsx`
+
+Alterar linha 42 de:
+```typescript
+const totalMetaLeadsReceived = 0;
 ```
 
 Para:
-```javascript
-dateRange.to.toISOString()
-```
-
-Isso garante que `2026-02-08T23:59:59` no Brasil seja enviado como `2026-02-09T02:59:59.999Z` (UTC correto).
-
----
-
-## Arquivos a Modificar
-
-### 1. `src/pages/Contacts.tsx`
-
-**Linhas 141-142** - Alterar formatação das datas:
-
 ```typescript
-// ANTES
-createdFrom: dateRange ? format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
-createdTo: dateRange ? format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
-
-// DEPOIS
-createdFrom: dateRange ? dateRange.from.toISOString() : undefined,
-createdTo: dateRange ? dateRange.to.toISOString() : undefined,
+const totalMetaLeadsReceived = metaIntegrations.reduce(
+  (sum, integration) => sum + (integration.leads_received || 0),
+  0
+);
 ```
 
-### 2. `src/lib/export-contacts.ts` (se existir a mesma lógica)
+### 3. Exibir contador por página
 
-Verificar e aplicar a mesma correção para a exportação.
+**Arquivo**: `src/components/integrations/MetaIntegrationSettings.tsx`
 
----
+Alterar linha 317 de:
+```jsx
+<span>{meta.leadsReceived}</span>
+```
+
+Para:
+```jsx
+<span>{integration.leads_received || 0} {meta.leadsReceived}</span>
+```
 
 ## Resultado Esperado
 
-Após a correção:
-
-| Antes | Depois |
-|-------|--------|
-| `p_created_to = "2026-02-08T23:59:59"` | `p_created_to = "2026-02-09T02:59:59.999Z"` |
-| Leads de 09/02 UTC não aparecem | Leads de 09/02 UTC aparecem ✅ |
-
-Os 2 leads do Meta ("vetter company" e "test lead") passarão a aparecer na página de Contatos.
-
----
+- **Página de Configurações (tab Meta)**: Mostrará o total de leads recebidos de todas as páginas
+- **Página de Configuração Detalhada**: Mostrará o contador individual por página conectada
 
 ## Seção Técnica
 
-### Mudança no código:
+### Arquivos Modificados
 
-**Arquivo**: `src/pages/Contacts.tsx`
-
-```typescript
-// Linha 141-142 - Mudar de:
-createdFrom: dateRange ? format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
-createdTo: dateRange ? format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
-
-// Para:
-createdFrom: dateRange ? dateRange.from.toISOString() : undefined,
-createdTo: dateRange ? dateRange.to.toISOString() : undefined,
-```
-
-### Por que `toISOString()`:
-
-- Sempre retorna UTC com sufixo `Z`
-- Exemplo: `2026-02-09T02:59:59.999Z`
-- O PostgreSQL interpreta corretamente como UTC
-- Compara corretamente com `timestamptz` do banco
-
-### Verificação necessária:
-
-A função RPC `list_contacts_paginated` já faz:
-```sql
-l.created_at <= p_created_to::timestamptz
-```
-
-Isso funciona corretamente com ISO 8601/UTC.
+| Arquivo | Linha | Mudança |
+|---------|-------|---------|
+| `src/hooks/use-meta-integration.ts` | 19 | Adicionar `leads_received: number \| null;` |
+| `src/pages/Settings.tsx` | 42 | Calcular soma dinâmica |
+| `src/components/integrations/MetaIntegrationSettings.tsx` | 317 | Exibir `integration.leads_received` |
 
