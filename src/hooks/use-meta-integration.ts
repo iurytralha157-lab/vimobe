@@ -17,6 +17,7 @@ export interface MetaIntegration {
   last_sync_at: string | null;
   created_at: string;
   updated_at: string;
+  leads_received: number | null;
 }
 
 export interface MetaPage {
