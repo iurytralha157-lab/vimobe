@@ -1937,22 +1937,19 @@ export function LeadDetailDialog({
                 {isTelecom ? (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Plano de interesse</Label>
-                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
+                    <Select value={lead.interest_plan_id || 'none'} onValueChange={value => {
                       const newValue = value === 'none' ? '' : value;
                       const selectedPlan = servicePlans.find((p: any) => p.id === value);
                       const planPrice = selectedPlan?.price || null;
                       setEditForm({
                         ...editForm,
-                        property_id: newValue,
                         valor_interesse: planPrice ? planPrice.toString() : editForm.valor_interesse
                       });
                       const updateData: any = {
                         id: lead.id,
-                        property_id: newValue || null
+                        interest_plan_id: newValue || null,
+                        valor_interesse: planPrice || lead.valor_interesse
                       };
-                      if (planPrice) {
-                        updateData.valor_interesse = planPrice;
-                      }
                       updateLead.mutateAsync(updateData).then(() => refetchStages());
                     }}>
                       <SelectTrigger className="rounded-xl">
