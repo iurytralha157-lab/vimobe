@@ -210,18 +210,185 @@ serve(async (req) => {
               }
             }
 
-            // Check if lead already exists
-            const { data: existingLead } = await supabase
+            // Check if lead already exists by meta_lead_id
+            const { data: existingByMetaId } = await supabase
               .from("leads")
               .select("id")
               .eq("meta_lead_id", leadgenId)
               .single();
 
-            if (existingLead) {
-              console.log("Lead already exists:", existingLead.id);
+            if (existingByMetaId) {
+              console.log("Lead already exists by meta_lead_id:", existingByMetaId.id);
               continue;
             }
 
+            // ===== DEDUPLICAÇÃO POR TELEFONE =====
+            let existingByPhone = null;
+            if (phone) {
+              const normalizedPhone = phone.replace(/\D/g, '');
+              const phoneWithoutCountry = normalizedPhone.length >= 12 && normalizedPhone.startsWith('55')
+                ? normalizedPhone.substring(2)
+                : normalizedPhone;
+
+              const { data: allLeads } = await supabase
+                .from('leads')
+                .select('id, phone, stage_id, pipeline_id, assigned_user_id, deal_status')
+                .eq('organization_id', integration.organization_id)
+                .not('phone', 'is', null);
+
+              existingByPhone = allLeads?.find((l: { phone: string | null }) => {
+                if (!l.phone) return false;
+                const lp = l.phone.replace(/\D/g, '');
+                const lpClean = lp.length >= 12 && lp.startsWith('55') ? lp.substring(2) : lp;
+                return lpClean === phoneWithoutCountry || lp === normalizedPhone;
+              }) || null;
+            }
+
+            if (existingByPhone) {
+              // ===== REENTRADA: Lead já existe com mesmo telefone =====
+              console.log(`Found existing lead by phone: ${existingByPhone.id}, performing reentry`);
+
+              const oldStageId = existingByPhone.stage_id;
+              const oldPipelineId = existingByPhone.pipeline_id;
+              const oldAssigneeId = existingByPhone.assigned_user_id;
+              const oldDealStatus = existingByPhone.deal_status;
+
+              // Check reentry behavior from distribution queue
+              let queueReentryBehavior = 'redistribute';
+              try {
+                const { data: matchingQueue } = await supabase
+                  .rpc('pick_round_robin_for_lead', { p_lead_id: existingByPhone.id });
+
+                if (matchingQueue) {
+                  const { data: queueData } = await supabase
+                    .from('round_robins')
+                    .select('reentry_behavior')
+                    .eq('id', matchingQueue)
+                    .single();
+                  if (queueData?.reentry_behavior) {
+                    queueReentryBehavior = queueData.reentry_behavior;
+                  }
+                }
+              } catch (e) {
+                console.log('Could not check reentry behavior, using default redistribute');
+              }
+
+              const shouldKeepAssignee = queueReentryBehavior === 'keep_assignee' && oldAssigneeId;
+
+              // Update existing lead
+              const updateData: Record<string, any> = {
+                ...(name !== 'Lead Facebook' && { name }),
+                ...(email && { email }),
+                ...(message && { message }),
+                meta_lead_id: leadgenId,
+                meta_form_id: formId,
+                interest_property_id: propertyId || undefined,
+                valor_interesse: valorInteresse || undefined,
+                assigned_user_id: shouldKeepAssignee ? oldAssigneeId : null,
+                deal_status: 'open',
+                won_at: null,
+                lost_at: null,
+                lost_reason: null,
+                stage_entered_at: new Date().toISOString(),
+              };
+
+              // Remove undefined values
+              Object.keys(updateData).forEach(k => updateData[k] === undefined && delete updateData[k]);
+
+              const { error: updateError } = await supabase
+                .from('leads')
+                .update(updateData)
+                .eq('id', existingByPhone.id);
+
+              if (updateError) {
+                console.error('Error updating existing lead:', updateError);
+                continue;
+              }
+
+              // Record reentry activity
+              await supabase.from('activities').insert({
+                lead_id: existingByPhone.id,
+                type: 'lead_reentry',
+                content: 'Lead reenviado via Meta Ads',
+                user_id: null,
+                metadata: {
+                  source: 'meta',
+                  form_id: formId,
+                  page_id: pageId,
+                  campaign_name: leadData.campaign_name || null,
+                  from_stage_id: oldStageId,
+                  from_pipeline_id: oldPipelineId,
+                  from_status: oldDealStatus,
+                  to_status: 'open',
+                  previous_assignee_id: oldAssigneeId,
+                  keep_assignee: !!shouldKeepAssignee,
+                }
+              });
+
+              // Record timeline event
+              await supabase.from('lead_timeline_events').insert({
+                lead_id: existingByPhone.id,
+                event_type: 'reentry',
+                title: 'Lead reenviado via Meta Ads',
+                description: `Formulário: ${formId}${leadData.campaign_name ? ` | Campanha: ${leadData.campaign_name}` : ''}`,
+              });
+
+              // Handle redistribution if needed
+              if (!shouldKeepAssignee) {
+                console.log('Calling handle_lead_intake for redistribution...');
+                const { data: redistributionResult, error: redistributionError } = await supabase
+                  .rpc('handle_lead_intake', { p_lead_id: existingByPhone.id });
+
+                if (redistributionError) {
+                  console.error('Redistribution error:', redistributionError);
+                }
+
+                if (!redistributionResult?.assigned_user_id && oldAssigneeId) {
+                  console.log('No redistribution available, keeping original assignee');
+                  await supabase
+                    .from('leads')
+                    .update({ assigned_user_id: oldAssigneeId, assigned_at: new Date().toISOString() })
+                    .eq('id', existingByPhone.id);
+                }
+              }
+
+              // Apply auto tags from form config
+              if (autoTags && autoTags.length > 0) {
+                for (const tagId of autoTags) {
+                  await supabase
+                    .from('lead_tags')
+                    .upsert({ lead_id: existingByPhone.id, tag_id: tagId }, { onConflict: 'lead_id,tag_id' });
+                }
+                console.log(`Applied ${autoTags.length} auto tags to existing lead`);
+              }
+
+              // Update counters
+              await supabase
+                .from("meta_integrations")
+                .update({
+                  leads_received: (integration.leads_received || 0) + 1,
+                  last_lead_at: new Date().toISOString(),
+                  last_error: null,
+                  updated_at: new Date().toISOString()
+                })
+                .eq("id", integration.id);
+
+              if (formConfig) {
+                await supabase
+                  .from("meta_form_configs")
+                  .update({
+                    leads_received: (formConfig.leads_received || 0) + 1,
+                    last_lead_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq("id", formConfig.id);
+              }
+
+              console.log('Lead reentry completed:', existingByPhone.id);
+              continue; // Skip new lead creation
+            }
+
+            // ===== LEAD NOVO =====
             // Create the lead WITHOUT pipeline/stage/assigned_user
             // The trigger handle_lead_intake will run Round Robin distribution
             const { data: newLead, error: leadError } = await supabase
@@ -233,11 +400,11 @@ serve(async (req) => {
                 phone,
                 message: message || `Lead gerado via Facebook Lead Ads`,
                 source: "meta",
-                pipeline_id: null,       // Round Robin will set this
-                stage_id: null,          // Round Robin will set this
-                interest_property_id: propertyId, // Imóvel de interesse do form config
-                valor_interesse: valorInteresse,   // Preço do imóvel buscado automaticamente
-                assigned_user_id: null,  // Round Robin will set this
+                pipeline_id: null,
+                stage_id: null,
+                interest_property_id: propertyId,
+                valor_interesse: valorInteresse,
+                assigned_user_id: null,
                 meta_lead_id: leadgenId,
                 meta_form_id: formId,
               })
@@ -300,8 +467,6 @@ serve(async (req) => {
             if (metaError) {
               console.error("Error creating lead_meta:", metaError);
             }
-
-            // Note: lead_created activity and timeline event are now handled by trigger
 
             // Update integration leads counter
             await supabase
