@@ -172,7 +172,15 @@ export function CreateLeadDialog({
         stage_id: formData.stage_id || undefined,
         assigned_user_id: formData.assigned_user_id || undefined,
         tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined,
-        source: 'manual',
+        source: formData.source || 'manual',
+        // Profile fields
+        cargo: formData.cargo || undefined,
+        empresa: formData.empresa || undefined,
+        profissao: formData.profissao || undefined,
+        renda_familiar: formData.renda_familiar || undefined,
+        faixa_valor_imovel: formData.faixa_valor_imovel || undefined,
+        valor_interesse: formData.valor_interesse ? parseFloat(formData.valor_interesse) : undefined,
+        deal_status: formData.deal_status || 'open',
       });
       
       // For Telecom: also create the telecom_customers record with all fields
