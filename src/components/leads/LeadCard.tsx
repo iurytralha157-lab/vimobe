@@ -113,7 +113,13 @@ export function LeadCard({
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.phone) {
-      // Abre no chat flutuante interno em vez de wa.me
+      recordFirstResponse({
+        leadId: lead.id,
+        organizationId: lead.organization_id || profile?.organization_id || '',
+        channel: 'whatsapp',
+        actorUserId: profile?.id || null,
+        firstResponseAt: lead.first_response_at,
+      });
       openNewChat(lead.phone, lead.name);
     }
   };
