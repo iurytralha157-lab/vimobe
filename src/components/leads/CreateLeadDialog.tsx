@@ -212,7 +212,7 @@ export function CreateLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 flex flex-col h-[85vh]">
+      <DialogContent className={`max-w-lg p-0 flex flex-col ${isTelecom ? 'h-[85vh]' : 'max-h-[85vh]'}`}>
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isTelecom && <UserCheck className="h-5 w-5 text-primary" />}
