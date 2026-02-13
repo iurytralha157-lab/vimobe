@@ -401,19 +401,12 @@ export default function Pipelines() {
       
       if (error) throw error;
       
-      const { data: userData } = await supabase.auth.getUser();
-      await supabase.from('activities').insert({
-        lead_id: draggableId,
-        type: 'stage_change',
-        content: `Movido de "${oldStage?.name}" para "${newStage?.name}"`,
-        user_id: userData.user?.id,
-        metadata: {
-          from_stage: oldStage?.name,
-          to_stage: newStage?.name,
-          from_stage_id: oldStageId,
-          to_stage_id: newStageId,
-        },
-      });
+      // Invalidar cache de activities para que o histórico atualize ao abrir o lead
+      queryClient.invalidateQueries({ queryKey: ['activities', draggableId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-timeline', draggableId] });
+      
+      // Nota: O trigger 'log_lead_activity' no banco já insere automaticamente
+      // o registro de stage_change na tabela activities.
       
       // Toast dinâmico baseado nas automações
       if (newDealStatus) {
