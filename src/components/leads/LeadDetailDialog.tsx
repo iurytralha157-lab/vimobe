@@ -341,6 +341,13 @@ export function LeadDetailDialog({
     if (task.type === 'message' && task.recommended_message && lead.phone) {
       // Substituir variáveis na mensagem
       const message = task.recommended_message.replace(/{nome}/gi, lead.name || '').replace(/{empresa}/gi, lead.empresa || '').replace(/{email}/gi, lead.email || '');
+      recordFirstResponse({
+        leadId: lead.id,
+        organizationId: lead.organization_id || profile?.organization_id || '',
+        channel: 'whatsapp',
+        actorUserId: profile?.id || null,
+        firstResponseAt: lead.first_response_at,
+      });
       openNewChatWithMessage(lead.phone, message, lead.id, lead.name);
     }
     
@@ -357,6 +364,13 @@ export function LeadDetailDialog({
     if (!selectedTask) return;
     if (action === 'message' && selectedTask.recommended_message && lead.phone) {
       const message = selectedTask.recommended_message.replace(/{nome}/gi, lead.name || '').replace(/{empresa}/gi, lead.empresa || '').replace(/{email}/gi, lead.email || '');
+      recordFirstResponse({
+        leadId: lead.id,
+        organizationId: lead.organization_id || profile?.organization_id || '',
+        channel: 'whatsapp',
+        actorUserId: profile?.id || null,
+        firstResponseAt: lead.first_response_at,
+      });
       openNewChatWithMessage(lead.phone, message, lead.id, lead.name);
     }
     
@@ -548,7 +562,16 @@ export function LeadDetailDialog({
                 <Phone className="h-4 w-4 mr-1.5" />
                 Ligar
               </Button>
-              <Button size="sm" onClick={() => openNewChat(lead.phone, lead.name)} className="h-9 flex-1 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-md">
+              <Button size="sm" onClick={() => {
+                recordFirstResponse({
+                  leadId: lead.id,
+                  organizationId: lead.organization_id || profile?.organization_id || '',
+                  channel: 'whatsapp',
+                  actorUserId: profile?.id || null,
+                  firstResponseAt: lead.first_response_at,
+                });
+                openNewChat(lead.phone, lead.name);
+              }} className="h-9 flex-1 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-md">
                 <MessageCircle className="h-4 w-4 mr-1.5" />
                 Chat
               </Button>
@@ -1465,7 +1488,16 @@ export function LeadDetailDialog({
                   <Button variant="outline" size="sm" onClick={() => window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank')} className="h-9 w-9 p-0 rounded-full border-2 hover:border-primary/50 hover:bg-primary/5 transition-all hover:scale-105">
                     <Phone className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" onClick={() => openNewChat(lead.phone, lead.name)} className="h-9 px-4 rounded-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all hover:scale-105">
+                  <Button size="sm" onClick={() => {
+                    recordFirstResponse({
+                      leadId: lead.id,
+                      organizationId: lead.organization_id || profile?.organization_id || '',
+                      channel: 'whatsapp',
+                      actorUserId: profile?.id || null,
+                      firstResponseAt: lead.first_response_at,
+                    });
+                    openNewChat(lead.phone, lead.name);
+                  }} className="h-9 px-4 rounded-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all hover:scale-105">
                     <MessageCircle className="h-4 w-4 mr-1.5" />
                     Chat
                   </Button>
