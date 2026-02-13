@@ -393,8 +393,8 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
       // Funil mostra snapshot ATUAL dos leads - não filtra por data de criação
       // Apenas aplica filtros de equipe/usuário/fonte/pipeline
       const { data, error } = await (supabase as any).rpc('get_funnel_data', {
-        p_date_from: null, // Não filtrar por data - funil é estado atual
-        p_date_to: null,
+        p_date_from: filters?.dateRange?.from?.toISOString() || null,
+        p_date_to: filters?.dateRange?.to?.toISOString() || null,
         p_team_id: filters?.teamId || null,
         p_user_id: effectiveUserId || null,
         p_source: filters?.source || null,
@@ -479,7 +479,7 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
 // Top Brokers (ranking de corretores) - com fallback para leads totais
 export function useTopBrokers(filters?: DashboardFilters) {
   return useQuery({
-    queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.teamId],
+    queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
     queryFn: async (): Promise<TopBrokersResult> => {
       // Get current user to check visibility
       const { data: { user } } = await supabase.auth.getUser();
@@ -514,6 +514,13 @@ export function useTopBrokers(filters?: DashboardFilters) {
         query = query
           .gte('created_at', filters.dateRange.from.toISOString())
           .lte('created_at', filters.dateRange.to.toISOString());
+      }
+
+      if (filters?.userId) {
+        query = query.eq('assigned_user_id', filters.userId);
+      }
+      if (filters?.source) {
+        query = query.eq('source', filters.source);
       }
 
       const { data: wonLeads, error } = await query;
@@ -585,6 +592,13 @@ export function useTopBrokers(filters?: DashboardFilters) {
         fallbackQuery = fallbackQuery
           .gte('created_at', filters.dateRange.from.toISOString())
           .lte('created_at', filters.dateRange.to.toISOString());
+      }
+
+      if (filters?.userId) {
+        fallbackQuery = fallbackQuery.eq('assigned_user_id', filters.userId);
+      }
+      if (filters?.source) {
+        fallbackQuery = fallbackQuery.eq('source', filters.source);
       }
 
       const { data: allLeads, error: fallbackError } = await fallbackQuery;
