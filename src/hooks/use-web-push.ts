@@ -78,7 +78,7 @@ export function useWebPush() {
   const checkSubscription = useCallback(async (): Promise<PushSubscription | null> => {
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
       return subscription;
     } catch (error) {
       console.error('[WebPush] Erro ao verificar subscription:', error);
@@ -196,7 +196,7 @@ export function useWebPush() {
       console.log('[WebPush] Criando subscription com PushManager...');
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey,
       });
