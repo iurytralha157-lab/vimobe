@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
         lead_id: lead_id,
         event_type: "first_response",
         user_id: actor_user_id,
-        title: `Primeiro contato via ${channel}`,
+        title: channel === 'stage_move' ? 'Primeiro contato (moveu lead)' : `Primeiro contato via ${channel}`,
         description: `Tempo de resposta: ${diffSeconds} segundos`,
         metadata: {
           channel: channel,

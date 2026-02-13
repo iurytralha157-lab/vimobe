@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2 } from 'lucide-react';
@@ -11,6 +12,8 @@ import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { formatPhoneForDisplay } from '@/lib/phone-utils';
 import { SlaBadge } from './SlaBadge';
 import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
+import { useCreateActivity } from '@/hooks/use-activities';
+import { TaskOutcomeDialog, TaskOutcome } from '@/components/leads/TaskOutcomeDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Deal status labels and colors
@@ -60,6 +63,9 @@ export function LeadCard({
   const { openNewChat } = useFloatingChat();
   const { profile } = useAuth();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
+  const createActivity = useCreateActivity();
+  const [outcomeDialogOpen, setOutcomeDialogOpen] = useState(false);
+  const [outcomeType, setOutcomeType] = useState<'call' | 'email'>('call');
   const stageTime = lead.stage_entered_at ? formatShortTime(new Date(lead.stage_entered_at)) : '-';
   const pendingTasks = lead.tasks_count?.pending || 0;
   const completedTasks = lead.tasks_count?.completed || 0;
@@ -99,7 +105,6 @@ export function LeadCard({
   const handlePhoneClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.phone) {
-      // Registrar first response (não bloqueia a ação)
       recordFirstResponse({
         leadId: lead.id,
         organizationId: lead.organization_id || profile?.organization_id || '',
@@ -108,6 +113,8 @@ export function LeadCard({
         firstResponseAt: lead.first_response_at,
       });
       window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
+      setOutcomeType('call');
+      setOutcomeDialogOpen(true);
     }
   };
   const handleWhatsAppClick = (e: React.MouseEvent) => {
@@ -120,13 +127,21 @@ export function LeadCard({
         actorUserId: profile?.id || null,
         firstResponseAt: lead.first_response_at,
       });
+      // Criar atividade no histórico (só primeira vez é relevante, mas registramos sempre)
+      if (!lead.first_response_at) {
+        createActivity.mutate({
+          lead_id: lead.id,
+          type: 'message',
+          content: 'Chat WhatsApp iniciado',
+          metadata: { channel: 'whatsapp' },
+        });
+      }
       openNewChat(lead.phone, lead.name);
     }
   };
   const handleEmailClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.email) {
-      // Registrar first response (não bloqueia a ação)
       recordFirstResponse({
         leadId: lead.id,
         organizationId: lead.organization_id || profile?.organization_id || '',
@@ -134,10 +149,21 @@ export function LeadCard({
         actorUserId: profile?.id || null,
         firstResponseAt: lead.first_response_at,
       });
-      // Abre Gmail com destinatário preenchido no campo "Para"
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
       window.open(gmailUrl, '_blank');
+      setOutcomeType('email');
+      setOutcomeDialogOpen(true);
     }
+  };
+
+  const handleOutcomeConfirm = (outcome: TaskOutcome, notes: string) => {
+    createActivity.mutate({
+      lead_id: lead.id,
+      type: outcomeType === 'call' ? 'call' : 'email',
+      content: outcomeType === 'call' ? 'Tentativa de ligação' : 'Email enviado',
+      metadata: { outcome, notes, channel: outcomeType },
+    });
+    setOutcomeDialogOpen(false);
   };
   const isLost = lead.deal_status === 'lost';
   const isWon = lead.deal_status === 'won';
@@ -146,7 +172,8 @@ export function LeadCard({
   const isRecentlyCreated = lead.created_at && 
     (Date.now() - new Date(lead.created_at).getTime()) < 3000;
   
-  return <Draggable draggableId={lead.id} index={index} isDragDisabled={isDragDisabled}>
+  return <>
+    <Draggable draggableId={lead.id} index={index} isDragDisabled={isDragDisabled}>
       {(provided, snapshot) => <div ref={provided.innerRef} {...provided.draggableProps} {...(isDragDisabled ? {} : provided.dragHandleProps)} className={cn("bg-card border-border rounded-lg p-3 transition-all duration-200 group hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30 hover:-translate-y-0.5 border-0", isDragDisabled ? "cursor-default" : "cursor-pointer", snapshot.isDragging && "shadow-xl rotate-1 scale-[1.02] border-primary", isLost && "bg-destructive/5 border-destructive/30 hover:bg-destructive/10", isWon && "bg-emerald-500/5 border-emerald-500/30")} onClick={onClick}>
           {/* Deal Status Badge + Tags */}
           <div className="flex items-center gap-1 mb-2 flex-wrap">
@@ -338,5 +365,16 @@ export function LeadCard({
             </div>
           </TooltipProvider>
         </div>}
-    </Draggable>;
+    </Draggable>
+
+    {/* Outcome Dialog for Phone/Email */}
+    <TaskOutcomeDialog
+      open={outcomeDialogOpen}
+      onOpenChange={setOutcomeDialogOpen}
+      taskType={outcomeType}
+      taskTitle={outcomeType === 'call' ? 'Tentativa de ligação' : 'Email enviado'}
+      onConfirm={handleOutcomeConfirm}
+      isLoading={createActivity.isPending}
+    />
+  </>;
 }

@@ -27,6 +27,7 @@ const timelineEventLabels: Record<string, string> = {
   whatsapp_message_sent: 'Mensagem enviada',
   whatsapp_message_received: 'Mensagem recebida',
   call_initiated: 'Ligação iniciada',
+  stage_move_response: 'Primeiro contato (moveu lead)',
   stage_changed: 'Estágio alterado',
   note_created: 'Nota adicionada',
   tag_added: 'Tag adicionada',

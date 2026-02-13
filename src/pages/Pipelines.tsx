@@ -73,6 +73,7 @@ import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 import { useStageVGV } from '@/hooks/use-vgv';
 import { useHasPermission } from '@/hooks/use-organization-roles';
 import { notifyLeadMoved } from '@/hooks/use-lead-notifications';
+import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -167,6 +168,7 @@ export default function Pipelines() {
   // createLead agora é gerenciado pelo CreateLeadDialog
   const assignLeadRoundRobin = useAssignLeadRoundRobin();
   const canEditPipeline = useCanEditCadences();
+  const { recordFirstResponse } = useRecordFirstResponseOnAction();
   
   // Create a map for quick VGV lookup by stage
   const stageVGVMap = useMemo(() => {
@@ -405,8 +407,17 @@ export default function Pipelines() {
       queryClient.invalidateQueries({ queryKey: ['activities', draggableId] });
       queryClient.invalidateQueries({ queryKey: ['lead-timeline', draggableId] });
       
-      // Nota: O trigger 'log_lead_activity' no banco já insere automaticamente
-      // o registro de stage_change na tabela activities.
+      // Registrar first response ao mover lead (stage_move)
+      const movedLeadForResponse = stages.find(s => s.id === oldStageId)?.leads?.find((l: any) => l.id === draggableId);
+      if (movedLeadForResponse) {
+        recordFirstResponse({
+          leadId: draggableId,
+          organizationId: profile?.organization_id || movedLeadForResponse.organization_id || '',
+          channel: 'stage_move',
+          actorUserId: profile?.id || null,
+          firstResponseAt: movedLeadForResponse.first_response_at,
+        });
+      }
       
       // Toast dinâmico baseado nas automações
       if (newDealStatus) {
