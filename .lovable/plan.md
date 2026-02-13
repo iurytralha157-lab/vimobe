@@ -1,117 +1,59 @@
-# Auditoria dos Filtros do Dashboard - Correções Necessárias
 
-## Diagnóstico
+# Correção: Registrar Tempo de Resposta nos Botões de WhatsApp
 
-Analisei cada componente do Dashboard contra os 4 filtros (Data, Usuário, Equipe, Origem). Encontrei **3 problemas**:
+## Problema
+
+Ao clicar nos botões de ação rápida (telefone, WhatsApp, email), o sistema deveria registrar o "tempo de primeira resposta" do lead. Atualmente:
+
+- Telefone: registra corretamente
+- Email: registra corretamente
+- **WhatsApp: NAO registra** (em nenhum lugar)
+
+Isso ocorre em **2 componentes**: o card do lead no pipeline e o dialog de detalhes do lead.
 
 ---
 
-## Problemas Encontrados
+## Correções
 
-### 1. Funil de Vendas -- NAO filtra por DATA (bug principal)
+### Arquivo 1: `src/components/leads/LeadCard.tsx`
 
-No hook `useFunnelData`, as datas sao explicitamente ignoradas:
+No `handleWhatsAppClick` (linha 113-119), adicionar a chamada `recordFirstResponse` antes de abrir o chat:
 
 ```text
-p_date_from: null,  // "Nao filtrar por data - funil eh estado atual"
-p_date_to: null,
+const handleWhatsAppClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lead.phone) {
+      // NOVO: Registrar first response
+      recordFirstResponse({
+        leadId: lead.id,
+        organizationId: lead.organization_id || profile?.organization_id || '',
+        channel: 'whatsapp',
+        actorUserId: profile?.id || null,
+        firstResponseAt: lead.first_response_at,
+      });
+      openNewChat(lead.phone, lead.name);
+    }
+  };
 ```
 
-O funil sempre mostra TODOS os leads do pipeline, independente do filtro de data selecionado. Isso explica o comportamento que voce notou.
+### Arquivo 2: `src/components/leads/LeadDetailDialog.tsx`
 
-**Correcao:** Passar as datas do filtro para a RPC `get_funnel_data`.
+Existem **3 pontos** onde o WhatsApp eh aberto sem registrar tempo de resposta:
+
+1. **Botao "Chat" principal** (linha ~551) - `openNewChat`
+2. **Botao "Chat" secundario** (linha ~1468) - `openNewChat`
+3. **Tarefa com mensagem recomendada** (linhas ~344, ~360) - `openNewChatWithMessage`
+
+Para cada um, adicionar a chamada `recordFirstResponse` com channel `'whatsapp'` antes do `openNewChat`/`openNewChatWithMessage`.
 
 ---
 
-### 2. Top Brokers -- queryKey INCOMPLETA (bug de cache)
+## Resumo
 
-O `useTopBrokers` nao inclui todos os filtros na queryKey:
+| Local | Componente | Acao |
+|---|---|---|
+| LeadCard.tsx | handleWhatsAppClick | Adicionar recordFirstResponse |
+| LeadDetailDialog.tsx | Botao Chat (2 locais) | Adicionar recordFirstResponse |
+| LeadDetailDialog.tsx | Tarefa com mensagem (2 locais) | Adicionar recordFirstResponse |
 
-```text
-// ATUAL (faltam userId, source, dateTo)
-queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.teamId]
-
-// CORRETO
-queryKey: ['top-brokers', from, to, teamId, userId, source]
-```
-
-Alem disso, o hook **nao aplica filtros de userId nem source** na query. Se voce seleciona um usuario ou uma origem, o ranking nao muda.
-
-**Correcao:** Adicionar `userId`, `source` e `dateTo` na queryKey e aplicar esses filtros na query.
-
----
-
-### 3. Top Brokers -- Nao filtra por usuario nem origem (bug de logica)
-
-A funcao `useTopBrokers` aplica apenas `dateRange` e `teamId` (via visibility). Os filtros `userId` e `source` sao completamente ignorados.
-
-**Correcao:** Adicionar `.eq('assigned_user_id', filters.userId)` e `.eq('source', filters.source)` quando presentes.
-
----
-
-## Componentes que JA FUNCIONAM corretamente
-
-
-| Componente                                     | Data | Usuario | Equipe | Origem |
-| ---------------------------------------------- | ---- | ------- | ------ | ------ |
-| KPI Cards (`useEnhancedDashboardStats`)        | OK   | OK      | OK     | OK     |
-| Evolucao de Negocios (`useDealsEvolutionData`) | OK   | OK      | OK     | OK     |
-| Origens de Leads (`useLeadSourcesData`)        | OK   | OK      | OK     | OK     |
-
-
----
-
-## Plano de Implementacao
-
-### Arquivo: `src/hooks/use-dashboard-stats.ts`
-
-**Alteracao 1 - `useFunnelData` (linhas 395-401):**
-Substituir `p_date_from: null` e `p_date_to: null` pelos valores reais do filtro:
-
-```text
-p_date_from: filters?.dateRange?.from?.toISOString() || null,
-p_date_to: filters?.dateRange?.to?.toISOString() || null,
-```
-
-Remover o comentario enganoso sobre "snapshot atual".
-
-**Alteracao 2 - `useTopBrokers` (linha 482):**
-Corrigir a queryKey para incluir todos os filtros:
-
-```text
-queryKey: [
-  'top-brokers',
-  filters?.dateRange?.from?.toISOString(),
-  filters?.dateRange?.to?.toISOString(),
-  filters?.teamId,
-  filters?.userId,
-  filters?.source
-]
-```
-
-**Alteracao 3 - `useTopBrokers` (apos linha 516):**
-Adicionar filtros de usuario e origem na query principal e no fallback:
-
-```text
-// Filtro por usuario especifico
-if (filters?.userId) {
-  query = query.eq('assigned_user_id', filters.userId);
-}
-// Filtro por origem
-if (filters?.source) {
-  query = query.eq('source', filters.source);
-}
-```
-
----
-
-## Resumo das Mudancas
-
-
-| Componente      | O que muda                                |
-| --------------- | ----------------------------------------- |
-| Funil de Vendas | Passa datas reais para a RPC              |
-| Top Brokers     | queryKey completa + filtros userId/source |
-
-
-Apenas 1 arquivo alterado: `src/hooks/use-dashboard-stats.ts`. Sem mudancas no frontend, banco ou edge functions.
+Apenas 2 arquivos alterados. Sem mudancas no banco ou edge functions - a edge function `calculate-first-response` ja suporta o channel `whatsapp` corretamente.
