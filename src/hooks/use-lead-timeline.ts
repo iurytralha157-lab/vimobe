@@ -27,40 +27,23 @@ export function useLeadTimeline(leadId: string | null) {
       
       const { data, error } = await supabase
         .from('lead_timeline_events')
-        .select('*')
+        .select(`
+          *,
+          actor:users!lead_timeline_events_user_id_fkey(id, name, avatar_url)
+        `)
         .eq('lead_id', leadId)
         .order('created_at', { ascending: true });
         
       if (error) throw error;
-      if (!data || data.length === 0) return [];
-      
-      // Fetch actors for events that have user_id
-      const userIds = [...new Set(data.filter((e: any) => e.user_id).map((e: any) => e.user_id))];
-      let usersMap: Record<string, { id: string; name: string; avatar_url: string | null }> = {};
-      
-      if (userIds.length > 0) {
-        const { data: users } = await supabase
-          .from('users')
-          .select('id, name, avatar_url')
-          .in('id', userIds);
-        if (users) {
-          users.forEach((u: any) => { usersMap[u.id] = u; });
-        }
-      }
       
       // Map fields for compatibility
-      return data.map((event: any) => {
-        const meta = event.metadata || {};
-        const actor = event.user_id ? usersMap[event.user_id] || null : null;
-        return {
-          ...event,
-          event_at: event.created_at,
-          actor_user_id: event.user_id,
-          channel: meta.channel || null,
-          is_automation: meta.is_automation || false,
-          actor,
-        };
-      }) as LeadTimelineEvent[];
+      return (data || []).map((event: any) => ({
+        ...event,
+        event_at: event.created_at,
+        actor_user_id: event.user_id,
+        channel: null,
+        is_automation: false,
+      })) as LeadTimelineEvent[];
     },
     enabled: !!leadId
   });
