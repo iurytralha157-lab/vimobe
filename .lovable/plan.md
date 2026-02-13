@@ -1,47 +1,95 @@
 
+# Fallback para Admin: Lead nunca fica sem dono
 
-# Correcao: Plano de interesse nao salva no Lead (versao mobile)
+## Problema atual
+Quando nenhuma fila de distribuicao (round robin) eh encontrada, ou quando a fila nao tem membros ativos, o lead cai no "Pool" sem responsavel. Isso gera leads perdidos que ninguem acompanha.
 
-## Problema Identificado
+## Solucao
+Alterar a funcao `handle_lead_intake` para que, nos dois cenarios de fallback, o lead seja atribuido ao **admin da organizacao** em vez de ficar sem dono.
 
-O dialogo de detalhes do lead (`LeadDetailDialog.tsx`) possui **duas versoes do layout** - uma para desktop e outra para mobile. A versao **mobile** do seletor de plano telecom esta usando o campo errado (`property_id` ao inves de `interest_plan_id`), fazendo com que:
+---
 
-1. O plano selecionado pelo vendedor seja salvo no campo `property_id` (imovel) ao inves de `interest_plan_id` (plano)
-2. O plano nunca apareca como selecionado ao reabrir o lead (le do campo errado)
-3. O valor de interesse pode nao ser atualizado corretamente
+## O que muda
 
-A versao desktop funciona corretamente.
+Hoje existem **2 pontos** onde o lead cai no Pool:
 
-## Alteracoes Necessarias
+1. **Nenhuma fila ativa encontrada** (linha 43-57)
+2. **Fila encontrada, mas sem membros ativos** (linha 69-84)
 
-### Arquivo: `src/components/leads/LeadDetailDialog.tsx`
+Em ambos os casos, vamos:
+- Buscar o admin da organizacao (`role = 'admin'`, mais antigo por `created_at`)
+- Atribuir o lead a esse admin
+- Registrar na timeline que foi um fallback para o admin
+- Se por algum motivo nao existir admin (improvavel), ai sim o lead fica sem dono
 
-**Linhas 1940-1956** - Corrigir o seletor de plano na versao mobile:
+---
 
-- Trocar `editForm.property_id` por `lead.interest_plan_id` no `value` do Select (consistente com versao desktop)
-- Trocar `property_id: newValue` por `interest_plan_id: newValue` no `setEditForm` (embora editForm nao tenha esse campo, o que importa e o update)
-- Trocar `property_id: newValue || null` por `interest_plan_id: newValue || null` no `updateLead.mutateAsync`
-- Manter o comportamento identico a versao desktop (linhas 1209-1221)
+## Detalhes tecnicos
 
-### Detalhes Tecnicos
+### Alteracao na funcao SQL `handle_lead_intake`
 
-Antes (com bug - linhas 1940-1956):
+Adicionar uma variavel `v_admin_id uuid` e, nos dois blocos de fallback, substituir o `RETURN` por:
+
 ```text
-Select value={editForm.property_id || 'none'}
-  -> setEditForm({ property_id: newValue })
-  -> updateLead({ id: lead.id, property_id: newValue || null })
+-- Buscar admin da organizacao (mais antigo)
+SELECT id INTO v_admin_id
+FROM users
+WHERE organization_id = v_org_id
+  AND role = 'admin'
+  AND is_active = true
+ORDER BY created_at ASC
+LIMIT 1;
+
+-- Se encontrou admin, atribuir
+IF v_admin_id IS NOT NULL THEN
+  UPDATE leads SET
+    assigned_user_id = v_admin_id,
+    updated_at = now()
+  WHERE id = p_lead_id;
+END IF;
 ```
 
-Depois (corrigido):
+A timeline registrara `destination = 'admin_fallback'` em vez de `'pool'`, com o motivo especifico (`no_active_queue` ou `no_active_members`).
+
+### Arquivos impactados
+
+| Arquivo | Acao |
+|---------|------|
+| Nova migracao SQL | Recriar `handle_lead_intake` com fallback para admin |
+
+### Sem impacto em
+- Frontend (nenhuma mudanca de interface)
+- Edge Functions (pool-checker continua funcionando normalmente)
+- Triggers existentes (`notify_lead_first_assignment` dispara normalmente pois o lead tera `assigned_user_id`)
+
+---
+
+## Fluxo apos a mudanca
+
 ```text
-Select value={lead.interest_plan_id || 'none'}
-  -> setEditForm({ valor_interesse: planPrice... })
-  -> updateLead({ id: lead.id, interest_plan_id: newValue, valor_interesse: planPrice || lead.valor_interesse })
+Lead entra sem responsavel
+       |
+  pick_round_robin_for_lead()
+       |
+  +----+----+
+  |         |
+Achou     Nao achou fila
+fila         |
+  |      Busca admin org
+  |         |
+Tem       Atribui ao admin
+membros?    (fallback)
+  |
++--+--+
+|     |
+Sim   Nao
+|       |
+Atribui  Busca admin org
+via RR     |
+         Atribui ao admin
+          (fallback)
 ```
 
-## Impacto
-
-- Corrige o salvamento de plano para vendedores que usam o sistema no celular
-- Leads que tiveram plano selecionado via mobile podem ter valores incorretos no campo `property_id` - isso pode ser verificado no banco se necessario
-- Nenhuma alteracao de banco de dados necessaria, apenas correcao no frontend
-
+## Riscos
+- Nenhum risco significativo. O admin ja recebe notificacoes de leads e pode redistribuir manualmente.
+- Caso a organizacao tenha multiplos admins, sera usado o mais antigo (primeiro cadastrado).
