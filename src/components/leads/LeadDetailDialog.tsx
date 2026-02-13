@@ -18,7 +18,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
 import { useLeadTasks, useCompleteCadenceTask } from '@/hooks/use-lead-tasks';
 import { useCadenceTemplates } from '@/hooks/use-cadences';
-import { useActivities } from '@/hooks/use-activities';
+import { useActivities, useCreateActivity } from '@/hooks/use-activities';
 import { useUpdateLead, useAddLeadTag, useRemoveLeadTag } from '@/hooks/use-leads';
 import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
@@ -125,6 +125,8 @@ export function LeadDetailDialog({
   const [roteiroDialogOpen, setRoteiroDialogOpen] = useState(false);
   const [outcomeDialogOpen, setOutcomeDialogOpen] = useState(false);
   const [taskForOutcome, setTaskForOutcome] = useState<any>(null);
+  const [quickActionOutcomeOpen, setQuickActionOutcomeOpen] = useState(false);
+  const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [editForm, setEditForm] = useState({
     name: '',
@@ -244,8 +246,69 @@ export function LeadDetailDialog({
   const dealStatusChange = useDealStatusChange();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
   const { profile, organization } = useAuth();
+  const createActivityMutation = useCreateActivity();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
+  
+  // Quick action handlers for phone/email with outcome dialog
+  const handleQuickPhone = () => {
+    if (!lead.phone) return;
+    recordFirstResponse({
+      leadId: lead.id,
+      organizationId: lead.organization_id || profile?.organization_id || '',
+      channel: 'phone',
+      actorUserId: profile?.id || null,
+      firstResponseAt: lead.first_response_at,
+    });
+    window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
+    setQuickActionOutcomeType('call');
+    setQuickActionOutcomeOpen(true);
+  };
+  
+  const handleQuickWhatsApp = () => {
+    if (!lead.phone) return;
+    recordFirstResponse({
+      leadId: lead.id,
+      organizationId: lead.organization_id || profile?.organization_id || '',
+      channel: 'whatsapp',
+      actorUserId: profile?.id || null,
+      firstResponseAt: lead.first_response_at,
+    });
+    if (!lead.first_response_at) {
+      createActivityMutation.mutate({
+        lead_id: lead.id,
+        type: 'message',
+        content: 'Chat WhatsApp iniciado',
+        metadata: { channel: 'whatsapp' },
+      });
+    }
+    openNewChat(lead.phone, lead.name);
+  };
+  
+  const handleQuickEmail = () => {
+    if (!lead.email) return;
+    recordFirstResponse({
+      leadId: lead.id,
+      organizationId: lead.organization_id || profile?.organization_id || '',
+      channel: 'email',
+      actorUserId: profile?.id || null,
+      firstResponseAt: lead.first_response_at,
+    });
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
+    window.open(gmailUrl, '_blank');
+    setQuickActionOutcomeType('email');
+    setQuickActionOutcomeOpen(true);
+  };
+  
+  const handleQuickActionOutcomeConfirm = (outcome: TaskOutcome, notes: string) => {
+    createActivityMutation.mutate({
+      lead_id: lead.id,
+      type: quickActionOutcomeType === 'call' ? 'call' : 'email',
+      content: quickActionOutcomeType === 'call' ? 'Tentativa de ligação' : 'Email enviado',
+      metadata: { outcome, notes, channel: quickActionOutcomeType },
+    });
+    setQuickActionOutcomeOpen(false);
+  };
   const handleEditScheduleEvent = (event: ScheduleEvent) => {
     setEditingScheduleEvent(event);
     setScheduleFormOpen(true);
@@ -549,44 +612,16 @@ export function LeadDetailDialog({
         {/* Quick Actions Row */}
         <div className="flex items-center gap-2 mb-3">
           {lead.phone && <>
-              <Button variant="outline" size="sm" onClick={() => {
-                recordFirstResponse({
-                  leadId: lead.id,
-                  organizationId: lead.organization_id || profile?.organization_id || '',
-                  channel: 'phone',
-                  actorUserId: profile?.id || null,
-                  firstResponseAt: lead.first_response_at,
-                });
-                window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank');
-              }} className="h-9 flex-1 rounded-full border-2">
+              <Button variant="outline" size="sm" onClick={handleQuickPhone} className="h-9 flex-1 rounded-full border-2">
                 <Phone className="h-4 w-4 mr-1.5" />
                 Ligar
               </Button>
-              <Button size="sm" onClick={() => {
-                recordFirstResponse({
-                  leadId: lead.id,
-                  organizationId: lead.organization_id || profile?.organization_id || '',
-                  channel: 'whatsapp',
-                  actorUserId: profile?.id || null,
-                  firstResponseAt: lead.first_response_at,
-                });
-                openNewChat(lead.phone, lead.name);
-              }} className="h-9 flex-1 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-md">
+              <Button size="sm" onClick={handleQuickWhatsApp} className="h-9 flex-1 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-md">
                 <MessageCircle className="h-4 w-4 mr-1.5" />
                 Chat
               </Button>
             </>}
-          {lead.email && <Button variant="outline" size="sm" onClick={() => {
-            recordFirstResponse({
-              leadId: lead.id,
-              organizationId: lead.organization_id || profile?.organization_id || '',
-              channel: 'email',
-              actorUserId: profile?.id || null,
-              firstResponseAt: lead.first_response_at,
-            });
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
-            window.open(gmailUrl, '_blank');
-          }} className="h-9 w-9 p-0 rounded-full border-2 shrink-0">
+          {lead.email && <Button variant="outline" size="sm" onClick={handleQuickEmail} className="h-9 w-9 p-0 rounded-full border-2 shrink-0">
               <Mail className="h-4 w-4" />
             </Button>}
         </div>
@@ -1485,27 +1520,15 @@ export function LeadDetailDialog({
             {/* Quick Actions - Premium pills */}
             <div className="flex items-center gap-2 shrink-0">
               {lead.phone && <>
-                  <Button variant="outline" size="sm" onClick={() => window.open(`tel:${lead.phone.replace(/\D/g, '')}`, '_blank')} className="h-9 w-9 p-0 rounded-full border-2 hover:border-primary/50 hover:bg-primary/5 transition-all hover:scale-105">
+                  <Button variant="outline" size="sm" onClick={handleQuickPhone} className="h-9 w-9 p-0 rounded-full border-2 hover:border-primary/50 hover:bg-primary/5 transition-all hover:scale-105">
                     <Phone className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" onClick={() => {
-                    recordFirstResponse({
-                      leadId: lead.id,
-                      organizationId: lead.organization_id || profile?.organization_id || '',
-                      channel: 'whatsapp',
-                      actorUserId: profile?.id || null,
-                      firstResponseAt: lead.first_response_at,
-                    });
-                    openNewChat(lead.phone, lead.name);
-                  }} className="h-9 px-4 rounded-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all hover:scale-105">
+                  <Button size="sm" onClick={handleQuickWhatsApp} className="h-9 px-4 rounded-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all hover:scale-105">
                     <MessageCircle className="h-4 w-4 mr-1.5" />
                     Chat
                   </Button>
                 </>}
-              {lead.email && <Button variant="outline" size="sm" onClick={() => {
-              const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(lead.email)}`;
-              window.open(gmailUrl, '_blank');
-            }} className="h-9 w-9 p-0 rounded-full border-2 hover:border-primary/50 hover:bg-primary/5 transition-all hover:scale-105">
+              {lead.email && <Button variant="outline" size="sm" onClick={handleQuickEmail} className="h-9 w-9 p-0 rounded-full border-2 hover:border-primary/50 hover:bg-primary/5 transition-all hover:scale-105">
                   <Mail className="h-4 w-4" />
                 </Button>}
             </div>
@@ -2206,16 +2229,27 @@ export function LeadDetailDialog({
       </DialogContent>
     </Dialog>;
 
-  // Outcome Dialog component
+  // Outcome Dialog component (for cadence tasks)
   const OutcomeDialogComponent = () => (
-    <TaskOutcomeDialog
-      open={outcomeDialogOpen}
-      onOpenChange={setOutcomeDialogOpen}
-      taskType={taskForOutcome?.type || 'call'}
-      taskTitle={taskForOutcome?.title || ''}
-      onConfirm={handleOutcomeConfirm}
-      isLoading={completeCadenceTask.isPending}
-    />
+    <>
+      <TaskOutcomeDialog
+        open={outcomeDialogOpen}
+        onOpenChange={setOutcomeDialogOpen}
+        taskType={taskForOutcome?.type || 'call'}
+        taskTitle={taskForOutcome?.title || ''}
+        onConfirm={handleOutcomeConfirm}
+        isLoading={completeCadenceTask.isPending}
+      />
+      {/* Quick Action Outcome Dialog (for phone/email buttons) */}
+      <TaskOutcomeDialog
+        open={quickActionOutcomeOpen}
+        onOpenChange={setQuickActionOutcomeOpen}
+        taskType={quickActionOutcomeType}
+        taskTitle={quickActionOutcomeType === 'call' ? 'Tentativa de ligação' : 'Email enviado'}
+        onConfirm={handleQuickActionOutcomeConfirm}
+        isLoading={createActivityMutation.isPending}
+      />
+    </>
   );
 
   // Memoize dialog content to avoid re-creating on every render
