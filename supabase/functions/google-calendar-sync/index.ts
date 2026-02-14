@@ -35,7 +35,7 @@ async function refreshAccessToken(supabaseAdmin: any, userId: string, refreshTok
     .from('google_calendar_tokens')
     .update({
       access_token: tokens.access_token,
-      token_expires_at: expiresAt,
+      expires_at: expiresAt,
     })
     .eq('user_id', userId)
 
@@ -54,7 +54,7 @@ async function getValidAccessToken(supabaseAdmin: any, userId: string) {
   }
 
   // Check if token is expired or will expire in next 5 minutes
-  const expiresAt = new Date(tokenData.token_expires_at)
+  const expiresAt = new Date(tokenData.expires_at)
   const now = new Date()
   const fiveMinutes = 5 * 60 * 1000
 
