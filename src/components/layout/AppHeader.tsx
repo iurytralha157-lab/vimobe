@@ -47,6 +47,10 @@ export function AppHeader({
   const markAllRead = useMarkAllNotificationsRead();
   const handleNotificationClick = (notification: any) => {
     markRead.mutate(notification.id);
+    if (notification.title?.includes('Atualize seu telefone')) {
+      navigate('/settings');
+      return;
+    }
     if (notification.lead_id) {
       navigate(`/crm/pipelines?lead_id=${notification.lead_id}`);
     }

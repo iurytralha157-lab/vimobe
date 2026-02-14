@@ -10,6 +10,7 @@ import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
 import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { usePhoneReminder } from '@/hooks/use-phone-reminder';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -24,6 +25,9 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
   
   // Initialize native push notifications (only in Capacitor)
   usePushNotifications();
+
+  // Daily reminder for users without phone number
+  usePhoneReminder();
 
   return (
     <div className="h-screen flex w-full bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
