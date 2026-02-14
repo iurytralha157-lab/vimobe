@@ -109,6 +109,11 @@ export default function Notifications() {
       await markAsRead.mutateAsync(notification.id);
     }
 
+    if (notification.title?.includes('Atualize seu telefone')) {
+      navigate('/settings');
+      return;
+    }
+
     if (notification.lead_id) {
       navigate(`/crm/contacts?lead=${notification.lead_id}`);
     }
