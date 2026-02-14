@@ -41,6 +41,8 @@ import { useCreateCommissionOnWon } from '@/hooks/use-create-commission';
 import { useUpdateLeadCommission } from '@/hooks/use-update-commission';
 import { useDealStatusChange } from '@/hooks/use-deal-status-change';
 import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
+import { useTelecomCustomerByLead } from '@/hooks/use-telecom-customer-by-lead';
+import { TelecomSummaryCard } from '@/components/leads/TelecomSummaryCard';
 const sourceLabels: Record<string, string> = {
   meta: 'Meta Ads',
   site: 'Site',
@@ -249,6 +251,7 @@ export function LeadDetailDialog({
   const createActivityMutation = useCreateActivity();
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
+  const { data: telecomCustomer } = useTelecomCustomerByLead(isTelecom ? lead?.id : null);
   
   // Quick action handlers for phone/email with outcome dialog
   const handleQuickPhone = () => {
@@ -784,6 +787,10 @@ export function LeadDetailDialog({
         <div className="p-4 pb-8">
           {/* Activities Tab */}
           {activeTab === 'activities' && <div className="space-y-4">
+              {/* Telecom Customer Summary */}
+              {isTelecom && telecomCustomer && (
+                <TelecomSummaryCard customer={telecomCustomer} onEdit={() => setActiveTab('contact')} />
+              )}
               {/* Próximas atividades */}
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -1626,6 +1633,12 @@ export function LeadDetailDialog({
           {/* Atividades Tab */}
           <TabsContent value="activities" className="p-6 mt-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Telecom Customer Summary - Desktop */}
+              {isTelecom && telecomCustomer && (
+                <div className="lg:col-span-2">
+                  <TelecomSummaryCard customer={telecomCustomer} onEdit={() => setActiveTab('contact')} />
+                </div>
+              )}
               {/* Cadência - próximas atividades */}
               <div className="p-5 rounded-xl bg-gradient-to-br from-card to-muted/30 border shadow-sm">
                 <div className="flex items-center justify-between mb-4">
