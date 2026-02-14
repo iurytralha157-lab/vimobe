@@ -779,6 +779,15 @@ export function useWhatsAppRealtimeConversations() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    // Play notification sound for incoming WhatsApp messages
+    const playWhatsAppSound = () => {
+      try {
+        const audio = new Audio('/sounds/notification.mp3');
+        audio.volume = 0.4;
+        audio.play().catch(() => {});
+      } catch {}
+    };
+
     const channel = supabase
       .channel("whatsapp-realtime")
       .on(
@@ -795,12 +804,17 @@ export function useWhatsAppRealtimeConversations() {
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "whatsapp_messages",
         },
-        () => {
+        (payload) => {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+          // Play sound only for incoming messages (not sent by us)
+          const msg = payload.new as any;
+          if (msg && !msg.from_me) {
+            playWhatsAppSound();
+          }
         }
       )
       .subscribe();

@@ -718,34 +718,10 @@ async function handleMessagesUpsert(
             await handleStopFollowUpOnReply(supabase, conversation.id, leadIdForStop);
           }
 
-          // ===== NOTIFY USERS ABOUT NEW WHATSAPP MESSAGE (ONLY FOR LEADS) =====
-          // Only notify if conversation has a lead_id linked (cadastrado na pipeline)
-          if (conversation.lead_id) {
-            try {
-              const { data: leadInfo } = await supabase
-                .from("leads")
-                .select("id, name, assigned_user_id, organization_id")
-                .eq("id", conversation.lead_id)
-                .single();
-
-              if (leadInfo?.assigned_user_id) {
-                // Notify assigned user
-                const messagePreview = content.length > 50 ? content.substring(0, 50) + "..." : content;
-                await supabase.from("notifications").insert({
-                  user_id: leadInfo.assigned_user_id,
-                  organization_id: session.organization_id,
-                  title: "💬 Nova mensagem no WhatsApp",
-                  content: `${contactName}: "${messagePreview}"`,
-                  type: "message",
-                  lead_id: leadInfo.id,
-                  is_read: false,
-                });
-                console.log(`Notification sent to assigned user ${leadInfo.assigned_user_id} for WhatsApp message from lead`);
-              }
-            } catch (notifError) {
-              console.error("Error sending WhatsApp message notification:", notifError);
-            }
-          }
+          // ===== WHATSAPP MESSAGE NOTIFICATIONS =====
+          // Notifications for WhatsApp messages are handled client-side via Realtime
+          // (sound + unread badge on floating chat). No system notification is created
+          // to avoid cluttering the notifications dropdown.
         }
 
         // ===== FIRST RESPONSE TRACKING =====
