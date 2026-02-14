@@ -167,6 +167,19 @@ export function useWhatsAppHealthMonitor() {
             session.organization_id
           );
 
+          // Send WhatsApp notification to session owner via another session
+          try {
+            await supabase.functions.invoke('whatsapp-notifier', {
+              body: {
+                organization_id: session.organization_id,
+                user_id: session.owner_user_id,
+                message: `⚠️ *WhatsApp Desconectado*\nA sessão '${state.displayName}' perdeu a conexão.\nAcesse as configurações para reconectar.`,
+              },
+            });
+          } catch (err) {
+            console.error('WhatsApp disconnect notification failed:', err);
+          }
+
           // Update database status
           await supabase
             .from("whatsapp_sessions")

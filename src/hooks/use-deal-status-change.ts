@@ -134,6 +134,21 @@ export function useDealStatusChange() {
             ? `R$ ${variables.valorInteresse.toLocaleString('pt-BR')}`
             : undefined
         });
+
+        // Send WhatsApp notification for won deal
+        if (variables.userId) {
+          try {
+            await supabase.functions.invoke('whatsapp-notifier', {
+              body: {
+                organization_id: variables.organizationId,
+                user_id: variables.userId,
+                message: `🎉 *Lead Ganho!*\nNome: ${variables.leadName}\nParabéns pela venda!`,
+              },
+            });
+          } catch (err) {
+            console.error('WhatsApp won notification failed:', err);
+          }
+        }
       } else if (newStatus === 'lost') {
         toast.info('Lead marcado como perdido');
       } else {

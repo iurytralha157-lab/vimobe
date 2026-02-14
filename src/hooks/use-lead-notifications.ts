@@ -127,6 +127,21 @@ export async function notifyLeadCreated({
       console.error('Erro ao criar notificações:', error);
     }
   }
+
+  // Send WhatsApp notification to assigned user
+  if (assignedUserId) {
+    try {
+      await supabase.functions.invoke('whatsapp-notifier', {
+        body: {
+          organization_id: organizationId,
+          user_id: assignedUserId,
+          message: `🆕 *Novo Lead Recebido!*\nNome: ${leadName}\nOrigem: ${getSourceLabel(source)}\nAcesse o CRM para mais detalhes.`,
+        },
+      });
+    } catch (err) {
+      console.error('WhatsApp notification failed:', err);
+    }
+  }
 }
 
 function getSourceLabel(source: string): string {

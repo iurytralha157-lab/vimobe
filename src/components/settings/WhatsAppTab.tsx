@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Plus, 
   Smartphone, 
@@ -18,7 +20,8 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Bell
 } from "lucide-react";
 import { 
   useWhatsAppSessions, 
@@ -30,6 +33,7 @@ import {
   useSessionAccess,
   useGrantSessionAccess,
   useRevokeSessionAccess,
+  useToggleNotificationSession,
   WhatsAppSession
 } from "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
@@ -48,7 +52,8 @@ export function WhatsAppTab() {
   const getQRCode = useGetQRCode();
   const getConnectionStatus = useGetConnectionStatus();
   const logoutSession = useLogoutSession();
-
+  const toggleNotification = useToggleNotificationSession();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
@@ -292,10 +297,39 @@ export function WhatsAppTab() {
                     </div>
                     {getStatusBadge(session.status)}
                   </div>
+                  {(session as any).is_notification_session && (
+                    <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
+                      <Bell className="w-3 h-3 mr-1" />
+                      Notificações
+                    </Badge>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="text-sm text-muted-foreground">
-                    Responsável: {session.owner?.name || "—"}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Responsável: {session.owner?.name || "—"}
+                    </div>
+                    {isAdmin && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2">
+                              <Bell className="w-4 h-4 text-muted-foreground" />
+                              <Switch
+                                checked={(session as any).is_notification_session || false}
+                                onCheckedChange={(checked) => 
+                                  toggleNotification.mutate({ sessionId: session.id, enabled: checked })
+                                }
+                                disabled={toggleNotification.isPending}
+                              />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Usar para enviar notificações via WhatsApp</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {session.status !== "connected" && (

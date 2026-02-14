@@ -4971,6 +4971,7 @@ export type Database = {
           instance_id: string | null
           instance_name: string
           is_active: boolean | null
+          is_notification_session: boolean | null
           last_connected_at: string | null
           organization_id: string
           owner_user_id: string
@@ -4987,6 +4988,7 @@ export type Database = {
           instance_id?: string | null
           instance_name: string
           is_active?: boolean | null
+          is_notification_session?: boolean | null
           last_connected_at?: string | null
           organization_id: string
           owner_user_id: string
@@ -5003,6 +5005,7 @@ export type Database = {
           instance_id?: string | null
           instance_name?: string
           is_active?: boolean | null
+          is_notification_session?: boolean | null
           last_connected_at?: string | null
           organization_id?: string
           owner_user_id?: string
