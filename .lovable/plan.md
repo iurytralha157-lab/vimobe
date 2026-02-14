@@ -1,38 +1,44 @@
 
-# Correcao da Sincronizacao com Google Calendar
 
-## Problema Identificado
+# Navegacao da notificacao de telefone para Configuracoes
 
-A edge function `google-calendar-sync` tem um bug critico: ela tenta ler a coluna `token_expires_at` da tabela `google_calendar_tokens`, mas a coluna real no banco de dados se chama `expires_at`. Isso faz com que a verificacao de token expirado sempre falhe, e a sincronizacao nunca funciona.
+## Resumo
 
-Alem disso, nao ha nenhum log registrado para essa funcao, confirmando que ela falha silenciosamente (o frontend captura o erro com try/catch e nao mostra nada ao usuario).
+Quando o usuario clicar na notificacao de lembrete de telefone, ele sera redirecionado para a pagina de Configuracoes na aba de perfil (Conta). Hoje, o sistema so redireciona notificacoes que tem um `lead_id` associado. Vamos adicionar uma logica para identificar notificacoes do tipo "atualizar telefone" e navegar para `/settings`.
 
-## O que sera corrigido
+## Implementacao
 
-### 1. Corrigir nome da coluna na edge function
+### 1. Novo hook `use-phone-reminder.ts`
 
-No arquivo `supabase/functions/google-calendar-sync/index.ts`:
-- Linha 57: trocar `tokenData.token_expires_at` por `tokenData.expires_at`
-- Linha 39: trocar `token_expires_at: expiresAt` por `expires_at: expiresAt`
+Criar o hook conforme ja aprovado, com um detalhe adicional: o conteudo da notificacao incluira um marcador identificavel para que os handlers de clique saibam redirecionar corretamente. Usaremos o titulo exato "Atualize seu telefone" como identificador.
 
-### 2. Melhorar logs de erro no frontend
+### 2. Atualizar `handleNotificationClick` em 3 arquivos
 
-No arquivo `src/hooks/use-schedule-events.ts`, a funcao `syncWithGoogleCalendar` captura erros silenciosamente com `console.warn`. Vamos adicionar um toast de aviso quando a sincronizacao falhar, para que o usuario saiba que o evento foi salvo localmente mas nao foi enviado ao Google Calendar.
+Adicionar uma condicao nos handlers de clique de notificacao: se o titulo da notificacao contem "Atualize seu telefone", navegar para `/settings` (que ja abre na aba Conta/perfil).
 
-## Detalhes Tecnicos
+Arquivos afetados:
+- `src/components/layout/AppHeader.tsx` (dropdown de notificacoes no header)
+- `src/pages/Notifications.tsx` (pagina completa de notificacoes)
+- `src/components/admin/AdminHeader.tsx` (header do admin)
 
-### Arquivo: `supabase/functions/google-calendar-sync/index.ts`
+A logica adicionada em cada handler sera:
 
-Duas alteracoes pontuais:
+```text
+if (notification.title?.includes('Atualize seu telefone')) {
+  navigate('/settings');
+  return;
+}
+```
 
-1. Na funcao `refreshAccessToken` (linha 39):
-   - De: `token_expires_at: expiresAt`
-   - Para: `expires_at: expiresAt`
+### 3. Integracao no `AppLayout.tsx`
 
-2. Na funcao `getValidAccessToken` (linha 57):
-   - De: `const expiresAt = new Date(tokenData.token_expires_at)`
-   - Para: `const expiresAt = new Date(tokenData.expires_at)`
+Importar e chamar `usePhoneReminder()` no `AppLayoutContent`, junto aos hooks existentes.
 
-### Arquivo: `src/hooks/use-schedule-events.ts`
+## Sequencia de alteracoes
 
-Adicionar `toast.warning()` no catch da funcao `syncWithGoogleCalendar` para informar o usuario quando a sincronizacao falhar, em vez de silenciar completamente o erro.
+1. Criar `src/hooks/use-phone-reminder.ts`
+2. Adicionar chamada do hook em `src/components/layout/AppLayout.tsx`
+3. Atualizar handler de clique em `src/components/layout/AppHeader.tsx`
+4. Atualizar handler de clique em `src/pages/Notifications.tsx`
+5. Atualizar handler de clique em `src/components/admin/AdminHeader.tsx`
+
