@@ -15,13 +15,13 @@ async function syncWithGoogleCalendar(
     
     if (error) {
       console.warn('Google Calendar sync failed:', error);
-      // Don't throw - sync failure shouldn't block local operations
+      toast.warning('Evento salvo localmente, mas não foi possível sincronizar com o Google Calendar.');
     }
     
     return data;
   } catch (err) {
     console.warn('Google Calendar sync error:', err);
-    // Silent failure - sync is optional
+    toast.warning('Evento salvo localmente, mas não foi possível sincronizar com o Google Calendar.');
   }
 }
 
