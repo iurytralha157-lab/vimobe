@@ -1,18 +1,42 @@
 
-# Aplicar SF Pro Display no site publico
+# Compactar stepper de estagios no detalhe do lead
 
-## Situacao atual
+## O que muda
 
-A fonte SF Pro Display ja esta configurada como fonte padrao global (`font-sans` no Tailwind e `html` no CSS). O site publico ja herda essa fonte automaticamente na maioria dos elementos.
+Na barra de estagios (pipeline timeline) dentro do detalhe do lead, tanto no desktop quanto no mobile:
 
-Porem, existem 3 lugares no `PublicSiteLayout.tsx` que usam `font-serif` (fallback quando nao tem logo), que nao usam a SF Pro Display. Vou trocar esses para `font-sans` para garantir consistencia total.
+- **Estagio ativo (onde o lead esta)**: mostra o nome completo como hoje (ex: "Contato Inicial")
+- **Todos os outros estagios**: mostra apenas o numero da posicao (1, 2, 3, 4...)
+- Ao clicar em um numero, o lead e movido para aquele estagio e o novo estagio passa a mostrar o nome, enquanto o anterior vira numero
 
-## Mudanca
+Isso resolve o problema de a barra quebrar o layout quando ha muitos estagios.
 
-### Arquivo: `src/pages/public/PublicSiteLayout.tsx`
+## Arquivo afetado
 
-Trocar as 3 ocorrencias de `font-serif` por `font-semibold tracking-wider` para usar SF Pro Display em todos os textos do site, mesmo nos fallbacks sem logo:
+`src/components/leads/LeadDetailDialog.tsx`
 
-- Linha 117: Header desktop - `font-serif` para `font-semibold`
-- Linha 193: Header mobile - `font-serif` para `font-semibold`
-- Linha 308: Footer - `font-serif` para `font-semibold`
+## Detalhes tecnicos
+
+### Desktop stepper (linha ~1594-1607)
+
+Trocar `{stage.name}` por logica condicional:
+- Se `isActive`: mostra `stage.name`
+- Senao: mostra `idx + 1` (numero da posicao)
+
+Tambem adicionar `title={stage.name}` no botao para que o usuario veja o nome no tooltip ao passar o mouse.
+
+### Mobile popover (linha ~645-654)
+
+O mobile usa um popover com lista completa, entao os nomes podem continuar aparecendo la normalmente (tem scroll). Nao precisa mudar.
+
+### Resultado visual esperado
+
+```text
+Antes:  [Contato Inicial] — [Qualificação] — [Interagindo] — [Documentação enviada] — [Fechamento] — ...
+Depois: [●Contato Inicial] — [2] — [3] — [4] — [5] — ...
+```
+
+Ao clicar no "5" (Fechamento), fica:
+```text
+[1] — [2] — [3] — [4] — [●Fechamento] — ...
+```
