@@ -1255,6 +1255,7 @@ export type Database = {
           lead_id: string | null
           notes: string | null
           organization_id: string
+          paid_amount: number | null
           paid_date: string | null
           paid_value: number | null
           parent_entry_id: string | null
@@ -1280,6 +1281,7 @@ export type Database = {
           lead_id?: string | null
           notes?: string | null
           organization_id: string
+          paid_amount?: number | null
           paid_date?: string | null
           paid_value?: number | null
           parent_entry_id?: string | null
@@ -1305,6 +1307,7 @@ export type Database = {
           lead_id?: string | null
           notes?: string | null
           organization_id?: string
+          paid_amount?: number | null
           paid_date?: string | null
           paid_value?: number | null
           parent_entry_id?: string | null
