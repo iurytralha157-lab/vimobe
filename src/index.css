@@ -230,6 +230,15 @@
   .nav-active {
     @apply bg-accent text-accent-foreground font-medium;
   }
+
+  /* Public site - prevent Leaflet CSS artifacts from leaking */
+  .public-site-wrapper *:not(.leaflet-container):not(.leaflet-container *) {
+    outline: none !important;
+  }
+  
+  .public-site-wrapper .leaflet-tile {
+    border: none !important;
+  }
 }
 
 @layer utilities {
