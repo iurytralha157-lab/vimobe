@@ -14,16 +14,16 @@ export default {
   	},
   	extend: {
   		fontFamily: {
-  			sans: [
-  				'Poppins',
-  				'ui-sans-serif',
-  				'system-ui',
-  				'sans-serif',
-  				'Apple Color Emoji',
-  				'Segoe UI Emoji',
-  				'Segoe UI Symbol',
-  				'Noto Color Emoji'
-  			],
+		sans: [
+				'SF Pro Display',
+				'ui-sans-serif',
+				'system-ui',
+				'sans-serif',
+				'Apple Color Emoji',
+				'Segoe UI Emoji',
+				'Segoe UI Symbol',
+				'Noto Color Emoji'
+			],
   			serif: [
   				'ui-serif',
   				'Georgia',
