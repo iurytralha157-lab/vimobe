@@ -114,7 +114,7 @@ export default function PublicSiteLayout() {
                     className="w-auto object-contain lg:max-w-none lg:max-h-none"
                   />
                 ) : (
-                  <span className="text-lg md:text-xl font-serif text-white tracking-wider">
+                  <span className="text-lg md:text-xl font-semibold text-white tracking-wider">
                     {siteConfig.site_title}
                   </span>
                 )}
@@ -190,7 +190,7 @@ export default function PublicSiteLayout() {
                         className="w-auto object-contain"
                       />
                     ) : (
-                      <span className="text-lg font-serif text-white">
+                      <span className="text-lg font-semibold text-white tracking-wider">
                         {siteConfig.site_title}
                       </span>
                     )}
@@ -305,7 +305,7 @@ export default function PublicSiteLayout() {
                     className="w-auto object-contain mb-4"
                   />
                 ) : (
-                  <h3 className="text-xl font-serif mb-4">{siteConfig.site_title}</h3>
+                  <h3 className="text-xl font-semibold tracking-wider mb-4">{siteConfig.site_title}</h3>
                 )}
               </div>
               <p className="text-white/60 text-sm leading-relaxed mb-4 md:mb-6">
