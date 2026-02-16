@@ -95,7 +95,7 @@ export default function PublicSiteLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0D0D0D]">
+    <div className="min-h-screen flex flex-col bg-[#0D0D0D] public-site-wrapper">
       {/* Header - Floating Glassmorphism */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="max-w-[1200px] mx-auto px-4 pt-4">

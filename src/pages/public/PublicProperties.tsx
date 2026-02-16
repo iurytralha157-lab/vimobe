@@ -172,7 +172,7 @@ export default function PublicProperties() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#F9FAFB', backgroundImage: 'none' }}>
       {/* Header */}
       <div 
         className="py-16 md:py-20 relative overflow-hidden"
