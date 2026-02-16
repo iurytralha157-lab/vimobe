@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useFeaturedProperties, usePropertyTypes, usePublicProperties } from "@/hooks/use-public-site";
-import { Search, Building, MapPin, ArrowRight, Bed, Car, Maximize, Heart, MessageCircle } from "lucide-react";
+import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -228,22 +228,33 @@ export default function PublicHome() {
                       
                       {/* Features */}
                       <div className="flex items-center gap-4 text-gray-600 text-sm mb-4 pb-4 border-b">
-                        {property.quartos && (
+                        {(property as any).suites != null && (property as any).suites > 0 ? (
+                          <span className="flex items-center gap-1">
+                            <Bed className="w-4 h-4" /> 
+                            {(property as any).suites} suítes
+                          </span>
+                        ) : property.quartos != null && (
                           <span className="flex items-center gap-1">
                             <Bed className="w-4 h-4" /> 
                             {property.quartos}
                           </span>
                         )}
-                        {property.vagas && (
+                        {property.banheiros != null && (
+                          <span className="flex items-center gap-1">
+                            <Bath className="w-4 h-4" /> 
+                            {property.banheiros}
+                          </span>
+                        )}
+                        {property.vagas != null && (
                           <span className="flex items-center gap-1">
                             <Car className="w-4 h-4" /> 
                             {property.vagas}
                           </span>
                         )}
-                        {property.area_total && (
+                        {((property as any).area_util || property.area_total) && (
                           <span className="flex items-center gap-1">
                             <Maximize className="w-4 h-4" /> 
-                            {property.area_total}m²
+                            {(property as any).area_util || property.area_total}m²
                           </span>
                         )}
                       </div>
@@ -365,22 +376,33 @@ export default function PublicHome() {
                       
                       {/* Features */}
                       <div className="flex items-center gap-4 text-gray-600 text-sm mb-4 pb-4 border-b">
-                        {property.quartos && (
+                        {(property as any).suites != null && (property as any).suites > 0 ? (
+                          <span className="flex items-center gap-1">
+                            <Bed className="w-4 h-4" /> 
+                            {(property as any).suites} suítes
+                          </span>
+                        ) : property.quartos != null && (
                           <span className="flex items-center gap-1">
                             <Bed className="w-4 h-4" /> 
                             {property.quartos}
                           </span>
                         )}
-                        {property.vagas && (
+                        {property.banheiros != null && (
+                          <span className="flex items-center gap-1">
+                            <Bath className="w-4 h-4" /> 
+                            {property.banheiros}
+                          </span>
+                        )}
+                        {property.vagas != null && (
                           <span className="flex items-center gap-1">
                             <Car className="w-4 h-4" /> 
                             {property.vagas}
                           </span>
                         )}
-                        {property.area_total && (
+                        {((property as any).area_util || property.area_total) && (
                           <span className="flex items-center gap-1">
                             <Maximize className="w-4 h-4" /> 
-                            {property.area_total}m²
+                            {(property as any).area_util || property.area_total}m²
                           </span>
                         )}
                       </div>

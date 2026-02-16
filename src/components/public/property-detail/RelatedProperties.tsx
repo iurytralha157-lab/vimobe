@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, Bed, Maximize } from 'lucide-react';
+import { MapPin, Bed, Bath, Car, Maximize } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 interface RelatedProperty {
@@ -11,6 +11,9 @@ interface RelatedProperty {
   preco: number | null;
   tipo_de_imovel: string | null;
   quartos: number | null;
+  suites: number | null;
+  banheiros: number | null;
+  vagas: number | null;
   area_util: number | null;
   bairro: string | null;
   cidade: string | null;
@@ -133,10 +136,27 @@ export default function RelatedProperties({
                 )}
 
                 <div className="flex items-center gap-4 text-gray-600 text-sm">
-                  {property.quartos && (
+                  {property.suites != null && property.suites > 0 ? (
+                    <span className="flex items-center gap-1">
+                      <Bed className="w-4 h-4" />
+                      {property.suites} suítes
+                    </span>
+                  ) : property.quartos != null && (
                     <span className="flex items-center gap-1">
                       <Bed className="w-4 h-4" />
                       {property.quartos}
+                    </span>
+                  )}
+                  {property.banheiros != null && (
+                    <span className="flex items-center gap-1">
+                      <Bath className="w-4 h-4" />
+                      {property.banheiros}
+                    </span>
+                  )}
+                  {property.vagas != null && (
+                    <span className="flex items-center gap-1">
+                      <Car className="w-4 h-4" />
+                      {property.vagas}
                     </span>
                   )}
                   {property.area_util && (

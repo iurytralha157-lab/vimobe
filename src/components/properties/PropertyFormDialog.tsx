@@ -374,12 +374,19 @@ export function PropertyFormDialog({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Quartos</Label>
-                <Input 
-                  type="number" 
-                  placeholder="3"
-                  value={formData.quartos}
-                  onChange={(e) => setFormData({ ...formData, quartos: e.target.value })}
-                />
+                <Select 
+                  value={formData.quartos || undefined} 
+                  onValueChange={(v) => setFormData({ ...formData, quartos: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0,1,2,3,4,5,6,7,8,9,10].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n === 10 ? '10+' : String(n)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Suítes</Label>

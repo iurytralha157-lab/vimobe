@@ -432,28 +432,33 @@ export default function PublicProperties() {
                           </p>
                           
                           <div className="flex items-center gap-4 text-gray-600 text-sm pt-4 border-t">
-                            {property.quartos && (
+                            {(property as any).suites != null && (property as any).suites > 0 ? (
+                              <span className="flex items-center gap-1.5">
+                                <Bed className="w-4 h-4" /> 
+                                <span className="font-medium">{(property as any).suites} suítes</span>
+                              </span>
+                            ) : property.quartos != null && (
                               <span className="flex items-center gap-1.5">
                                 <Bed className="w-4 h-4" /> 
                                 <span className="font-medium">{property.quartos}</span>
                               </span>
                             )}
-                            {property.banheiros && (
+                            {property.banheiros != null && (
                               <span className="flex items-center gap-1.5">
                                 <Bath className="w-4 h-4" /> 
                                 <span className="font-medium">{property.banheiros}</span>
                               </span>
                             )}
-                            {property.vagas && (
+                            {property.vagas != null && (
                               <span className="flex items-center gap-1.5">
                                 <Car className="w-4 h-4" /> 
                                 <span className="font-medium">{property.vagas}</span>
                               </span>
                             )}
-                            {property.area_total && (
+                            {(property.area_util || property.area_total) && (
                               <span className="flex items-center gap-1.5">
                                 <Maximize className="w-4 h-4" /> 
-                                <span className="font-medium">{property.area_total}m²</span>
+                                <span className="font-medium">{property.area_util || property.area_total}m²</span>
                               </span>
                             )}
                           </div>

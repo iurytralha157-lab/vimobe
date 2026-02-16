@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
         // Build query for related properties
         let relatedQuery = supabase
           .from('properties')
-          .select('id, code, title, preco, tipo_de_imovel, quartos, area_util, bairro, cidade, imagem_principal')
+          .select('id, code, title, preco, tipo_de_imovel, quartos, suites, banheiros, vagas, area_util, bairro, cidade, imagem_principal')
           .eq('organization_id', organizationId)
           .eq('status', 'ativo')
           .neq('code', propertyCode) // Exclude current property
