@@ -1,53 +1,77 @@
 
-# Exibir dados Telecom no resumo do Lead
+# Melhorar exibicao de features nos cards e formulario
 
-## Problema
+## Problema atual
 
-Os dados de CPF, RG, endereco e demais campos Telecom estao sendo salvos corretamente na tabela `telecom_customers`. Porem, quando o usuario abre o card do lead, a aba principal (overview/atividades) mostra apenas os dados basicos da tabela `leads` (nome, telefone, email). Os dados Telecom so aparecem se o usuario clicar na aba "Contato", o que nao e intuitivo.
+1. **Cards do site publico**: Nem todos os cards mostram quartos, banheiros, vagas e metros quadrados de forma consistente. Em PublicHome, falta banheiros. Em RelatedProperties, faltam banheiros e vagas.
+2. **Logica de exibicao**: Os cards usam `property.quartos && (...)` que oculta o valor quando e `0`. Se o imovel tem 0 quartos (ex: studio, sala comercial), nada aparece.
+3. **Suites vs Quartos**: Quando o imovel nao tem suites, a referencia pede mostrar quartos normalmente. Quando tem suites, mostrar suites no lugar.
+4. **Formulario**: O campo de quartos e um input livre. Precisa aceitar `0` como valor valido.
 
-## Solucao
+## Mudancas planejadas
 
-Adicionar uma secao de resumo dos dados do cliente Telecom na visao principal do lead detail (overview), para que o usuario veja imediatamente as informacoes mais importantes (CPF, endereco, plano) sem precisar navegar para outra aba.
+### 1. Cards do site publico - Padronizar features
 
-## Implementacao
+Em todos os 3 arquivos de cards (PublicProperties, PublicHome, RelatedProperties), a linha de features vai mostrar:
 
-### 1. Carregar dados do cliente Telecom no LeadDetailDialog
+- **Quartos ou Suites**: Se tiver suites > 0, mostra suites (com icone de cama). Senao, mostra quartos (incluindo 0).
+- **Banheiros**: Sempre que disponivel (incluindo 0).
+- **Vagas**: Sempre que disponivel (incluindo 0).
+- **Metros quadrados**: area_util ou area_total, o que estiver preenchido.
 
-No `LeadDetailDialog.tsx`, ja existe o import e uso do `TelecomCustomerTab` na aba "contact". Vamos adicionar o hook `useTelecomCustomerByLead` diretamente no componente principal para ter acesso aos dados do cliente Telecom na visao geral.
+A logica de exibicao muda de `property.quartos &&` (que esconde 0) para `property.quartos != null` (que mostra 0).
 
-### 2. Criar secao de resumo Telecom na overview
+### 2. Formulario de imoveis - Aceitar 0 quartos
 
-Dentro do LeadDetailDialog, na area de informacoes de contato (que aparece na visao principal antes das abas de atividades), adicionar um bloco que mostra:
-- CPF
-- Endereco completo (endereco, numero, bairro, cidade, UF)
-- Plano contratado e valor
-- Status do cliente
+No `PropertyFormDialog.tsx`, trocar o campo de quartos de `type="number"` livre para um `Select` com opcoes de 0 a 10+, permitindo selecionar explicitamente 0 quartos.
 
-Essa secao so aparece quando `isTelecom` e `true` e quando existem dados no `telecom_customers`.
+### 3. Edge function - RelatedProperties
 
-### 3. Alteracao nos dois layouts (Desktop e Mobile)
+Atualizar a query de imoveis relacionados em `public-site-data` para incluir `banheiros`, `vagas` e `suites` no select.
 
-Conforme documentado na memoria do projeto, o `LeadDetailDialog` tem layouts separados para Desktop e Mobile. A secao de resumo Telecom deve ser adicionada em ambos os layouts.
+## Arquivos afetados
+
+- `src/pages/public/PublicProperties.tsx` - Adicionar Bath import, logica suites vs quartos, exibir 0
+- `src/pages/public/PublicHome.tsx` - Adicionar Bath import nos featured e all, logica suites vs quartos, exibir 0
+- `src/components/public/property-detail/RelatedProperties.tsx` - Adicionar Bath, Car imports, campos na interface, exibir banheiros e vagas
+- `src/components/properties/PropertyFormDialog.tsx` - Trocar input de quartos por Select com opcao 0
+- `supabase/functions/public-site-data/index.ts` - Adicionar banheiros, vagas, suites na query de related
 
 ## Detalhes tecnicos
 
-### Arquivo: `src/components/leads/LeadDetailDialog.tsx`
+### Logica de exibicao (aplicada em todos os cards)
 
-1. Adicionar import:
 ```text
-import { useTelecomCustomerByLead } from '@/hooks/use-telecom-customer-by-lead';
+// Quartos ou Suites
+if suites != null && suites > 0:
+  mostrar icone Bed + suites + "suites"
+else if quartos != null:
+  mostrar icone Bed + quartos
+
+// Banheiros
+if banheiros != null:
+  mostrar icone Bath + banheiros
+
+// Vagas
+if vagas != null:
+  mostrar icone Car + vagas
+
+// Area
+if area_util || area_total:
+  mostrar icone Maximize + valor + "m2"
 ```
 
-2. Adicionar hook no componente:
+### Formulario - Select de quartos
+
+Opcoes: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10+
+
+### Edge function - Query related
+
+Mudar de:
 ```text
-const { data: telecomCustomer } = useTelecomCustomerByLead(isTelecom ? lead?.id : null);
+select('id, code, title, preco, tipo_de_imovel, quartos, area_util, bairro, cidade, imagem_principal')
 ```
-
-3. Criar bloco de resumo (inserido logo abaixo das informacoes de contato basicas, tanto no layout Mobile quanto Desktop):
-- Mostrar CPF, RG, endereco, plano e status em formato compacto (somente leitura)
-- Incluir botao "Editar" que leva o usuario para a aba "Contato" (setActiveTab('contact'))
-- Usar icones e layout consistente com o restante do dialogo
-
-### Arquivos afetados
-
-- `src/components/leads/LeadDetailDialog.tsx` - adicionar secao de resumo Telecom nos dois layouts
+Para:
+```text
+select('id, code, title, preco, tipo_de_imovel, quartos, suites, banheiros, vagas, area_util, bairro, cidade, imagem_principal')
+```
