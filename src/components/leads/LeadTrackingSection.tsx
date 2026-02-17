@@ -128,6 +128,24 @@ export function LeadTrackingSection({ leadMeta, isLoading }: LeadTrackingSection
               />
             )}
           </div>
+
+          {/* Creative Preview */}
+          {leadMeta.creative_url && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <div className="flex items-center gap-2 mb-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Criativo do Anúncio</span>
+              </div>
+              <a href={leadMeta.creative_url} target="_blank" rel="noopener noreferrer" className="block">
+                <img 
+                  src={leadMeta.creative_url} 
+                  alt="Criativo do anúncio" 
+                  className="max-w-[200px] rounded-lg border border-border/50 hover:opacity-80 transition-opacity"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          )}
         </div>
       )}
 

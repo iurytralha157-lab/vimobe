@@ -161,6 +161,25 @@ serve(async (req) => {
 
             console.log("Lead data received:", JSON.stringify(leadData, null, 2));
 
+            // Fetch creative URL if ad_id is available
+            let creativeUrl: string | null = null;
+            if (leadData.ad_id) {
+              try {
+                const creativeApiUrl = `https://graph.facebook.com/v19.0/${leadData.ad_id}?fields=creative{effective_image_url,thumbnail_url}&access_token=${integration.access_token}`;
+                const creativeResponse = await fetch(creativeApiUrl);
+                const creativeData = await creativeResponse.json();
+                
+                if (creativeData?.creative) {
+                  creativeUrl = creativeData.creative.effective_image_url || creativeData.creative.thumbnail_url || null;
+                  console.log("Creative URL fetched:", creativeUrl ? "success" : "no image found");
+                } else if (creativeData?.error) {
+                  console.warn("Could not fetch creative:", creativeData.error.message);
+                }
+              } catch (creativeError) {
+                console.warn("Error fetching creative URL (non-blocking):", creativeError);
+              }
+            }
+
             // Parse field data with mapping support
             const fields: Record<string, string> = {};
             const customFields: Record<string, string> = {};
@@ -461,6 +480,7 @@ serve(async (req) => {
                 campaign_name: leadData.campaign_name || null,
                 platform: leadData.platform || null,
                 contact_notes: contactNotes,
+                creative_url: creativeUrl,
                 raw_payload: JSON.stringify(leadData)
               });
             

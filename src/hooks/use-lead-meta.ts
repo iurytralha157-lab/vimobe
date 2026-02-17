@@ -24,6 +24,7 @@ export interface LeadMeta {
   form_name: string | null;
   source_type: 'meta' | 'webhook' | null;
   contact_notes: string | null;
+  creative_url: string | null;
 }
 
 export function useLeadMeta(leadId: string | null) {
