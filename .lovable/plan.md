@@ -1,108 +1,72 @@
 
-# Corrigir Notificacoes WhatsApp
+# Corrigir Baloes de Mensagem Cortados na Lateral
 
-## Problema Identificado
+## Problema
 
-O `whatsapp-notifier` tem **zero logs** -- nunca foi chamado com sucesso. A causa raiz:
+As mensagens enviadas (laranja, lado direito) estao sendo cortadas na borda direita do chat. O texto aparece parcialmente oculto, como "Ta onde rapaz?" e "Kkkk" aparecendo cortados.
 
-- **Leads do Meta (maioria)**: Chegam via `meta-webhook` -> trigger `handle_lead_intake` no banco de dados. O trigger cria notificacoes na tabela `notifications`, mas **nao tem como chamar a edge function `whatsapp-notifier`** (triggers de banco nao podem chamar edge functions).
+## Causa Raiz
 
-- **Leads manuais (frontend)**: O `notifyLeadCreated()` e chamado e deveria invocar o `whatsapp-notifier`, mas o `handle_lead_intake` ja cria as notificacoes na tabela, gerando **notificacoes duplicadas** no sistema.
+Dois fatores contribuem:
 
-## Solucao Proposta
+1. **`max-w-[65%]`** no balao e muito largo para o container do FloatingChat (420px desktop / mobile drawer). Combinado com `px-4` (16px cada lado), sobra ~388px uteis, e 65% disso e ~252px -- mas o `ScrollArea` pode nao respeitar o padding corretamente no calculo de largura.
 
-Usar o mecanismo de **`pg_net`** (extensao do Supabase) para chamar a edge function `whatsapp-notifier` diretamente de dentro do banco de dados, apos a atribuicao do lead no `handle_lead_intake`.
+2. **Spacer invisivel de 70px** (`<span className="inline-block w-[70px]">`) dentro do texto forca o balao a ser mais largo do que o necessario, podendo ultrapassar o container.
 
-### Etapa 1: Criar funcao de notificacao WhatsApp no banco
+3. O **`ScrollArea`** aplica `overflow-x: hidden` no viewport, mas o conteudo interno pode ultrapassar os limites antes do clipping, causando o corte visual.
 
-Criar uma funcao PL/pgSQL que usa `net.http_post` (extensao `pg_net` do Supabase) para chamar o `whatsapp-notifier`:
+## Solucao
 
-```text
-notify_whatsapp_on_lead(organization_id, user_id, message)
-  -> POST para whatsapp-notifier via pg_net
-```
+### 1. MessageBubble - Ajustar largura maxima e spacer
 
-### Etapa 2: Atualizar `handle_lead_intake`
+No arquivo `src/components/whatsapp/MessageBubble.tsx`:
 
-Apos atribuir o lead a um usuario (round-robin ou admin fallback), chamar `notify_whatsapp_on_lead` passando o `assigned_user_id`, `organization_id` e a mensagem formatada.
+- Reduzir o spacer invisivel de `w-[70px]` para `w-[60px]`
+- Adicionar `overflow-hidden` no container do balao para garantir que nenhum conteudo vaze
 
-### Etapa 3: Remover chamada duplicada do frontend
+### 2. FloatingChat - Garantir que o container de mensagens respeite os limites
 
-Remover a chamada ao `whatsapp-notifier` de dentro do `notifyLeadCreated()` em `use-lead-notifications.ts` (linhas 131-144), pois agora o banco fara isso. Manter a chamada do `use-deal-status-change.ts` (lead ganho) e do `use-whatsapp-health-monitor.ts` (alertas de saude) pois esses fluxos nao passam pelo trigger.
+No arquivo `src/components/chat/FloatingChat.tsx`:
 
-### Etapa 4: Remover criacao duplicada de notificacoes
-
-Avaliar se `notifyLeadCreated()` deve ser removido completamente do frontend para leads manuais, ja que o trigger `handle_lead_intake` ja cria as notificacoes. Para leads manuais que ja vem com `assigned_user_id`, o trigger nao dispara (ele retorna se ja tem responsavel), entao o frontend precisa continuar criando notificacoes para esse caso -- mas sem a parte do WhatsApp que agora esta no banco.
-
----
+- Adicionar `overflow-x-hidden` e `w-full max-w-full` no wrapper das mensagens dentro do `ScrollArea`
+- Garantir que o div com `px-4 py-3` tenha `min-w-0` para evitar que flex items expandam alem do container
 
 ## Detalhes Tecnicos
 
-### Migration SQL
+### Arquivo: `src/components/whatsapp/MessageBubble.tsx`
 
-```sql
--- Habilitar pg_net se nao estiver
-CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
-
--- Funcao auxiliar para notificar via WhatsApp
-CREATE OR REPLACE FUNCTION notify_whatsapp_on_lead(
-  p_org_id uuid,
-  p_user_id uuid,
-  p_lead_name text,
-  p_source text DEFAULT 'desconhecida'
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_supabase_url text;
-  v_service_key text;
-BEGIN
-  v_supabase_url := current_setting('app.settings.supabase_url', true);
-  v_service_key := current_setting('app.settings.service_role_key', true);
-
-  -- Se configs nao disponiveis, usar vault ou hardcode URL
-  IF v_supabase_url IS NULL THEN
-    v_supabase_url := 'https://iemalzlfnbouobyjwlwi.supabase.co';
-  END IF;
-
-  PERFORM net.http_post(
-    url := v_supabase_url || '/functions/v1/whatsapp-notifier',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || v_service_key
-    ),
-    body := jsonb_build_object(
-      'organization_id', p_org_id,
-      'user_id', p_user_id,
-      'message', format(
-        E'\U0001F195 *Novo Lead Recebido!*\nNome: %s\nOrigem: %s\nAcesse o CRM para mais detalhes.',
-        p_lead_name, p_source
-      )
-    )
-  );
-END;
-$$;
+**Linha ~390 (container do balao)**:
+Alterar de:
+```
+max-w-[65%] rounded-lg px-2 py-1.5 relative
+```
+Para:
+```
+max-w-[75%] rounded-lg px-2 py-1.5 relative overflow-hidden
 ```
 
-### Alteracao no `handle_lead_intake`
+Aumentar para 75% pois o container ja e pequeno (420px), e adicionar `overflow-hidden` como seguranca.
 
-Em cada ponto onde o lead e atribuido (round-robin e fallbacks admin), adicionar:
-
-```sql
-PERFORM notify_whatsapp_on_lead(v_org_id, v_next_user_id, v_lead.name, v_lead.source);
+**Linha ~401 (spacer invisivel)**:
+Alterar de:
+```
+<span className="inline-block w-[70px]"></span>
+```
+Para:
+```
+<span className="inline-block w-[60px]"></span>
 ```
 
-### Arquivo: `src/hooks/use-lead-notifications.ts`
+### Arquivo: `src/components/chat/FloatingChat.tsx`
 
-Remover linhas 131-144 (chamada ao `whatsapp-notifier`), mantendo o restante da funcao intacto para notificacoes de sistema (tabela `notifications`).
+**Linha ~671 (wrapper de mensagens no ScrollArea)**:
+Alterar de:
+```
+<div className="px-4 py-3">
+```
+Para:
+```
+<div className="px-3 py-3 w-full max-w-full min-w-0 overflow-hidden">
+```
 
-### Arquivos que mantem chamada ao `whatsapp-notifier` (sem alteracao)
-
-- `src/hooks/use-deal-status-change.ts` -- notificacao de lead ganho
-- `src/hooks/use-whatsapp-health-monitor.ts` -- alerta de sessao desconectada
-
-### Consideracao sobre `pg_net` e `service_role_key`
-
-O `pg_net` precisa do `service_role_key` para autenticar na edge function. No Supabase, esse valor esta disponivel via vault ou pode ser configurado como `app.settings`. Se nao estiver acessivel, a alternativa e configurar o `whatsapp-notifier` com `verify_jwt = false` (ja esta assim no `config.toml`), permitindo a chamada sem Authorization header -- mas usando o `apikey` (anon key) no header.
+Reduzir padding lateral de 16px para 12px para dar mais espaco aos baloes, e adicionar constraints de largura.
