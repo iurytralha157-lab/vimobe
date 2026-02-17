@@ -1944,10 +1944,19 @@ export type Database = {
         Row: {
           assigned_at: string | null
           assigned_user_id: string | null
+          bairro: string | null
+          cargo: string | null
+          cep: string | null
+          cidade: string | null
           commission_percentage: number | null
+          complemento: string | null
           created_at: string
           deal_status: string | null
           email: string | null
+          empresa: string | null
+          endereco: string | null
+          faixa_valor_imovel: string | null
+          finalidade_compra: string | null
           first_response_actor_user_id: string | null
           first_response_at: string | null
           first_response_channel: string | null
@@ -1966,17 +1975,23 @@ export type Database = {
           meta_form_id: string | null
           meta_lead_id: string | null
           name: string
+          numero: string | null
           organization_id: string
           phone: string | null
           pipeline_id: string | null
+          procura_financiamento: boolean | null
+          profissao: string | null
           property_code: string | null
           property_id: string | null
           redistribution_count: number | null
+          renda_familiar: string | null
           source: string | null
           source_session_id: string | null
           source_webhook_id: string | null
           stage_entered_at: string | null
           stage_id: string | null
+          trabalha: boolean | null
+          uf: string | null
           updated_at: string
           valor_interesse: number | null
           won_at: string | null
@@ -1984,10 +1999,19 @@ export type Database = {
         Insert: {
           assigned_at?: string | null
           assigned_user_id?: string | null
+          bairro?: string | null
+          cargo?: string | null
+          cep?: string | null
+          cidade?: string | null
           commission_percentage?: number | null
+          complemento?: string | null
           created_at?: string
           deal_status?: string | null
           email?: string | null
+          empresa?: string | null
+          endereco?: string | null
+          faixa_valor_imovel?: string | null
+          finalidade_compra?: string | null
           first_response_actor_user_id?: string | null
           first_response_at?: string | null
           first_response_channel?: string | null
@@ -2006,17 +2030,23 @@ export type Database = {
           meta_form_id?: string | null
           meta_lead_id?: string | null
           name: string
+          numero?: string | null
           organization_id: string
           phone?: string | null
           pipeline_id?: string | null
+          procura_financiamento?: boolean | null
+          profissao?: string | null
           property_code?: string | null
           property_id?: string | null
           redistribution_count?: number | null
+          renda_familiar?: string | null
           source?: string | null
           source_session_id?: string | null
           source_webhook_id?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
+          trabalha?: boolean | null
+          uf?: string | null
           updated_at?: string
           valor_interesse?: number | null
           won_at?: string | null
@@ -2024,10 +2054,19 @@ export type Database = {
         Update: {
           assigned_at?: string | null
           assigned_user_id?: string | null
+          bairro?: string | null
+          cargo?: string | null
+          cep?: string | null
+          cidade?: string | null
           commission_percentage?: number | null
+          complemento?: string | null
           created_at?: string
           deal_status?: string | null
           email?: string | null
+          empresa?: string | null
+          endereco?: string | null
+          faixa_valor_imovel?: string | null
+          finalidade_compra?: string | null
           first_response_actor_user_id?: string | null
           first_response_at?: string | null
           first_response_channel?: string | null
@@ -2046,17 +2085,23 @@ export type Database = {
           meta_form_id?: string | null
           meta_lead_id?: string | null
           name?: string
+          numero?: string | null
           organization_id?: string
           phone?: string | null
           pipeline_id?: string | null
+          procura_financiamento?: boolean | null
+          profissao?: string | null
           property_code?: string | null
           property_id?: string | null
           redistribution_count?: number | null
+          renda_familiar?: string | null
           source?: string | null
           source_session_id?: string | null
           source_webhook_id?: string | null
           stage_entered_at?: string | null
           stage_id?: string | null
+          trabalha?: boolean | null
+          uf?: string | null
           updated_at?: string
           valor_interesse?: number | null
           won_at?: string | null
