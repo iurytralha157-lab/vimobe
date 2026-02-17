@@ -51,7 +51,7 @@ export default function Settings() {
   const settingsTabs: TabItem[] = useMemo(() => {
     const tabs: TabItem[] = [
       { value: 'account', label: 'Conta', icon: User },
-      { value: 'team', label: 'Equipe', icon: Users },
+      { value: 'team', label: 'Usuários', icon: Users },
     ];
 
     if (hasWebhooksModule) {
