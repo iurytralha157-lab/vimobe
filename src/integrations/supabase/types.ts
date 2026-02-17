@@ -5302,6 +5302,15 @@ export type Database = {
       }
       normalize_phone: { Args: { phone_input: string }; Returns: string }
       notify_financial_entries: { Args: never; Returns: undefined }
+      notify_whatsapp_on_lead: {
+        Args: {
+          p_lead_name: string
+          p_org_id: string
+          p_source?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       pick_round_robin_for_lead: {
         Args: { p_lead_id: string }
         Returns: string

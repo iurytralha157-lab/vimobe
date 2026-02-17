@@ -128,20 +128,7 @@ export async function notifyLeadCreated({
     }
   }
 
-  // Send WhatsApp notification to assigned user
-  if (assignedUserId) {
-    try {
-      await supabase.functions.invoke('whatsapp-notifier', {
-        body: {
-          organization_id: organizationId,
-          user_id: assignedUserId,
-          message: `🆕 *Novo Lead Recebido!*\nNome: ${leadName}\nOrigem: ${getSourceLabel(source)}\nAcesse o CRM para mais detalhes.`,
-        },
-      });
-    } catch (err) {
-      console.error('WhatsApp notification failed:', err);
-    }
-  }
+  // WhatsApp notification is now handled by the database trigger (handle_lead_intake -> notify_whatsapp_on_lead)
 }
 
 function getSourceLabel(source: string): string {
