@@ -86,8 +86,17 @@ const bottomItems: NavItem[] = [
   { icon: Settings, labelKey: 'settings', path: '/settings' },
   { icon: HelpCircle, labelKey: 'help', path: '/help' },
 ];
-export function MobileSidebar() {
-  const [open, setOpen] = useState(false);
+interface MobileSidebarProps {
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+}
+
+export function MobileSidebar({ externalOpen, onExternalOpenChange }: MobileSidebarProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  const isControlled = externalOpen !== undefined;
+  const open = isControlled ? externalOpen : internalOpen;
+  const setOpen = isControlled ? (v: boolean) => onExternalOpenChange?.(v) : setInternalOpen;
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
@@ -168,11 +177,13 @@ export function MobileSidebar() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </SheetTrigger>
+      {!isControlled && (
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="lg:hidden">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+      )}
       <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
         {/* Logo header */}
         <div className="p-4 pr-12 border-b border-border">

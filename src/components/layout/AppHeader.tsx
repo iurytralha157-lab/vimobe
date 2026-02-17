@@ -7,7 +7,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
-import { MobileSidebar } from './MobileSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 const notificationIcons: Record<string, typeof Bell> = {
@@ -59,8 +58,7 @@ export function AppHeader({
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
   return <header className="sticky top-0 z-40 h-12 flex items-center px-2 lg:px-6 mx-3 pt-3 bg-background">
-      {/* Mobile menu */}
-      {isMobile && <MobileSidebar />}
+      
       
       {/* Page title - aligned with content */}
       {title && <h1 className="text-xl font-semibold text-foreground ml-2 lg:ml-0">{title}</h1>}
