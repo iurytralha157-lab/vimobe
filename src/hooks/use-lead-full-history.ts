@@ -22,7 +22,7 @@ export interface UnifiedHistoryEvent {
 // Mapping for timeline event types (base labels - will be enhanced dynamically)
 const timelineEventLabels: Record<string, string> = {
   lead_created: 'Lead criado',
-  lead_assigned: 'Atribuído',
+  lead_assigned: 'Distribuído',
   first_response: 'Primeira resposta',
   whatsapp_message_sent: 'Mensagem enviada',
   whatsapp_message_received: 'Mensagem recebida',
@@ -88,14 +88,35 @@ function getTimelineEventLabel(event: LeadTimelineEvent): string {
   switch (event.event_type) {
     case 'lead_created':
       return getLeadCreatedLabel(metadata, 'timeline');
-    case 'stage_changed':
+    case 'lead_assigned': {
+      // Show distribution queue name explicitly
+      const queueName = metadata.distribution_queue_name || metadata.queue_name;
+      const assignedName = metadata.assigned_user_name;
+      if (queueName && assignedName) {
+        return `📦 Distribuído via "${queueName}" → ${assignedName}`;
+      }
+      if (queueName) {
+        return `📦 Distribuído via "${queueName}"`;
+      }
+      if (metadata.destination === 'admin_fallback') {
+        return `⚠️ Atribuído ao administrador (sem fila ativa)`;
+      }
+      if (metadata.destination === 'pool') {
+        return `📥 Enviado para o Pool`;
+      }
+      if (assignedName) {
+        return `Atribuído a ${assignedName}`;
+      }
+      return 'Distribuído';
+    }
+    case 'stage_changed': {
       const from = metadata.old_stage_name;
       const to = metadata.new_stage_name;
-      // Se o estágio anterior era NULL/undefined, é criação inicial no estágio
       if (!from || from === 'Desconhecido' || from === 'Unknown') {
         return `Iniciado no estágio ${to || 'Base'}`;
       }
       return 'Estágio alterado';
+    }
     default:
       return timelineEventLabels[event.event_type] || event.event_type;
   }
@@ -106,7 +127,10 @@ function getTimelineEventDetails(event: LeadTimelineEvent): string | undefined {
   
   switch (event.event_type) {
     case 'lead_created':
-      return metadata.source ? `Origem: ${metadata.source}` : undefined;
+      return metadata.source_label ? `Origem: ${metadata.source_label}` : (metadata.source ? `Origem: ${metadata.source}` : undefined);
+    case 'lead_assigned':
+      // Description already has the details from DB
+      return undefined;
     case 'stage_changed':
       const from = metadata.old_stage_name;
       const to = metadata.new_stage_name;

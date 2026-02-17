@@ -53,7 +53,7 @@ const eventIcons: Record<string, React.ComponentType<{ className?: string }>> = 
   automation_message: Bot,
   task_completed: CheckCircle,
   contact_updated: UserCircle,
-  assignee_changed: UserCircle,
+  assignee_changed: UserCheck,
   lead_reentry: UserPlus,
 };
 
