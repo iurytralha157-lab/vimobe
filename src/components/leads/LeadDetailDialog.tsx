@@ -12,7 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
@@ -499,7 +500,8 @@ export function LeadDetailDialog({
       refetchStages();
       toast.success('Dados salvos com sucesso!');
     } catch (error) {
-      // Error handled by mutation
+      console.error('Erro ao salvar dados do lead:', error);
+      toast.error('Erro ao salvar dados. Tente novamente.');
     }
   };
   const handleMoveToStage = async (stageId: string) => {
@@ -783,8 +785,8 @@ export function LeadDetailDialog({
       </div>
 
       {/* Mobile Tab Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 pb-8">
+      <div className="flex-1 overflow-y-auto" id="mobile-lead-scroll">
+        <div className={cn("p-4", isEditingContact && activeTab === 'contact' ? "pb-4" : "pb-8")}>
           {/* Activities Tab */}
           {activeTab === 'activities' && <div className="space-y-4">
               {/* Telecom Customer Summary */}
@@ -864,171 +866,161 @@ export function LeadDetailDialog({
                     </div>
                     <h3 className="font-medium text-sm">Dados do contato</h3>
                   </div>
-                  {!isEditingContact ? <Button variant="ghost" size="sm" onClick={() => {
+                {!isEditingContact && <Button variant="ghost" size="sm" onClick={() => {
                     setActiveTab('contact');
                     setIsEditingContact(true);
                   }} className="h-8 px-3 rounded-full">
                     <FileEdit className="h-3.5 w-3.5 mr-1" />
                     Editar
-                  </Button> : <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setIsEditingContact(false)} className="h-8 px-3 rounded-full">
-                      Cancelar
-                    </Button>
-                    <Button size="sm" onClick={handleSaveContact} className="h-8 px-3 rounded-full">
-                      <Save className="h-3.5 w-3.5 mr-1" />
-                      Salvar
-                    </Button>
-                  </div>}
+                  </Button>}
                 </div>
 
               {/* Contact Info */}
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
-                {isEditingContact ? <>
+                {isEditingContact ? (
+                  <Accordion type="multiple" defaultValue={["personal"]} className="space-y-2">
                     {/* Informações Pessoais */}
-                    <div className="space-y-3">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <User className="h-4 w-4 text-primary" />
-                        Informações Pessoais
-                      </Label>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Nome</Label>
-                        <Input value={editForm.name} onChange={e => setEditForm({
-                    ...editForm,
-                    name: e.target.value
-                  })} placeholder="Nome completo" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Telefone</Label>
-                          <PhoneInput value={editForm.phone} onChange={value => setEditForm({
-                      ...editForm,
-                      phone: value
-                    })} />
+                    <AccordionItem value="personal" className="border rounded-xl px-3">
+                      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                        <span className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary" />
+                          Informações Pessoais
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Nome</Label>
+                            <Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="Nome completo" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Telefone</Label>
+                              <PhoneInput value={editForm.phone} onChange={value => setEditForm({ ...editForm, phone: value })} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Email</Label>
+                              <Input value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} placeholder="email@exemplo.com" type="email" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Cargo</Label>
+                              <Input value={editForm.cargo} onChange={e => setEditForm({ ...editForm, cargo: e.target.value })} placeholder="Cargo" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Empresa</Label>
+                              <Input value={editForm.empresa} onChange={e => setEditForm({ ...editForm, empresa: e.target.value })} placeholder="Empresa" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                            </div>
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Email</Label>
-                          <Input value={editForm.email} onChange={e => setEditForm({
-                      ...editForm,
-                      email: e.target.value
-                    })} placeholder="email@exemplo.com" type="email" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Cargo</Label>
-                          <Input value={editForm.cargo} onChange={e => setEditForm({
-                      ...editForm,
-                      cargo: e.target.value
-                    })} placeholder="Cargo" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Empresa</Label>
-                          <Input value={editForm.empresa} onChange={e => setEditForm({
-                      ...editForm,
-                      empresa: e.target.value
-                    })} placeholder="Empresa" />
-                        </div>
-                      </div>
-                    </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                    {/* Perfil Financeiro */}
-                    <div className="space-y-3 pt-3 border-t">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-primary" />
-                        Perfil Financeiro
-                      </Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Renda Familiar</Label>
-                          <Select value={editForm.renda_familiar || 'none'} onValueChange={v => setEditForm({
-                      ...editForm,
-                      renda_familiar: v === 'none' ? '' : v
-                    })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Não informado</SelectItem>
-                              <SelectItem value="ate_3k">Até R$ 3.000</SelectItem>
-                              <SelectItem value="3k_5k">R$ 3.000 - R$ 5.000</SelectItem>
-                              <SelectItem value="5k_10k">R$ 5.000 - R$ 10.000</SelectItem>
-                              <SelectItem value="10k_15k">R$ 10.000 - R$ 15.000</SelectItem>
-                              <SelectItem value="15k_25k">R$ 15.000 - R$ 25.000</SelectItem>
-                              <SelectItem value="acima_25k">Acima de R$ 25.000</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    {/* Endereço */}
+                    <AccordionItem value="address" className="border rounded-xl px-3">
+                      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                        <span className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          Endereço
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3">
+                          <Input value={editForm.endereco} onChange={e => setEditForm({ ...editForm, endereco: e.target.value })} placeholder="Endereço" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input value={editForm.numero} onChange={e => setEditForm({ ...editForm, numero: e.target.value })} placeholder="Nº" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                            <Input value={editForm.complemento} onChange={e => setEditForm({ ...editForm, complemento: e.target.value })} placeholder="Compl." className="col-span-2" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                          </div>
+                          <Input value={editForm.bairro} onChange={e => setEditForm({ ...editForm, bairro: e.target.value })} placeholder="Bairro" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input value={editForm.cidade} onChange={e => setEditForm({ ...editForm, cidade: e.target.value })} placeholder="Cidade" className="col-span-2" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                            <Input value={editForm.uf} onChange={e => setEditForm({ ...editForm, uf: e.target.value })} placeholder="UF" maxLength={2} onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                          </div>
+                          <Input value={editForm.cep} onChange={e => setEditForm({ ...editForm, cep: e.target.value })} placeholder="CEP" onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Trabalha?</Label>
-                          <Select value={editForm.trabalha ? 'sim' : 'nao'} onValueChange={v => setEditForm({
-                      ...editForm,
-                      trabalha: v === 'sim'
-                    })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="nao">Não</SelectItem>
-                              <SelectItem value="sim">Sim</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {/* Perfil do Comprador */}
+                    <AccordionItem value="financial" className="border rounded-xl px-3">
+                      <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                        <span className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          Perfil do Comprador
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Renda Familiar</Label>
+                              <Select value={editForm.renda_familiar || 'none'} onValueChange={v => setEditForm({ ...editForm, renda_familiar: v === 'none' ? '' : v })}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Não informado</SelectItem>
+                                  <SelectItem value="ate_3k">Até R$ 3.000</SelectItem>
+                                  <SelectItem value="3k_5k">R$ 3.000 - R$ 5.000</SelectItem>
+                                  <SelectItem value="5k_10k">R$ 5.000 - R$ 10.000</SelectItem>
+                                  <SelectItem value="10k_15k">R$ 10.000 - R$ 15.000</SelectItem>
+                                  <SelectItem value="15k_25k">R$ 15.000 - R$ 25.000</SelectItem>
+                                  <SelectItem value="acima_25k">Acima de R$ 25.000</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Trabalha?</Label>
+                              <Select value={editForm.trabalha ? 'sim' : 'nao'} onValueChange={v => setEditForm({ ...editForm, trabalha: v === 'sim' })}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="nao">Não</SelectItem>
+                                  <SelectItem value="sim">Sim</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Profissão</Label>
+                              <Input value={editForm.profissao} onChange={e => setEditForm({ ...editForm, profissao: e.target.value })} placeholder="Ex: Engenheiro, Médico..." onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
+                              <Select value={editForm.faixa_valor_imovel || 'none'} onValueChange={v => setEditForm({ ...editForm, faixa_valor_imovel: v === 'none' ? '' : v })}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Não informado</SelectItem>
+                                  <SelectItem value="ate_200k">Até R$ 200.000</SelectItem>
+                                  <SelectItem value="200k_400k">R$ 200.000 - R$ 400.000</SelectItem>
+                                  <SelectItem value="400k_600k">R$ 400.000 - R$ 600.000</SelectItem>
+                                  <SelectItem value="600k_1m">R$ 600.000 - R$ 1.000.000</SelectItem>
+                                  <SelectItem value="1m_2m">R$ 1.000.000 - R$ 2.000.000</SelectItem>
+                                  <SelectItem value="acima_2m">Acima de R$ 2.000.000</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Finalidade da Compra</Label>
+                              <Input value={editForm.finalidade_compra} onChange={e => setEditForm({ ...editForm, finalidade_compra: e.target.value })} placeholder="Ex: Moradia, Investimento..." onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
+                              <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({ ...editForm, procura_financiamento: v === 'sim' })}>
+                                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="nao">Não</SelectItem>
+                                  <SelectItem value="sim">Sim</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Profissão</Label>
-                          <Input value={editForm.profissao} onChange={e => setEditForm({
-                      ...editForm,
-                      profissao: e.target.value
-                    })} placeholder="Ex: Engenheiro, Médico..." />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
-                          <Select value={editForm.faixa_valor_imovel || 'none'} onValueChange={v => setEditForm({
-                      ...editForm,
-                      faixa_valor_imovel: v === 'none' ? '' : v
-                    })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Não informado</SelectItem>
-                              <SelectItem value="ate_200k">Até R$ 200.000</SelectItem>
-                              <SelectItem value="200k_400k">R$ 200.000 - R$ 400.000</SelectItem>
-                              <SelectItem value="400k_600k">R$ 400.000 - R$ 600.000</SelectItem>
-                              <SelectItem value="600k_1m">R$ 600.000 - R$ 1.000.000</SelectItem>
-                              <SelectItem value="1m_2m">R$ 1.000.000 - R$ 2.000.000</SelectItem>
-                              <SelectItem value="acima_2m">Acima de R$ 2.000.000</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Finalidade da Compra</Label>
-                          <Input value={editForm.finalidade_compra} onChange={e => setEditForm({
-                      ...editForm,
-                      finalidade_compra: e.target.value
-                    })} placeholder="Ex: Moradia, Investimento..." />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
-                          <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({
-                      ...editForm,
-                      procura_financiamento: v === 'sim'
-                    })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="nao">Não</SelectItem>
-                              <SelectItem value="sim">Sim</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                  </> : <>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                ) : <>
                     <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
                       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                         <User className="h-4 w-4 text-primary" />
@@ -1070,47 +1062,8 @@ export function LeadDetailDialog({
                   </>}
               </div>
 
-              {/* Address */}
-              {isEditingContact ? <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-3">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    Endereço
-                  </Label>
-                  <div className="space-y-3">
-                    <Input value={editForm.endereco} onChange={e => setEditForm({
-                ...editForm,
-                endereco: e.target.value
-              })} placeholder="Endereço" />
-                    <div className="grid grid-cols-3 gap-2">
-                      <Input value={editForm.numero} onChange={e => setEditForm({
-                  ...editForm,
-                  numero: e.target.value
-                })} placeholder="Nº" />
-                      <Input value={editForm.complemento} onChange={e => setEditForm({
-                  ...editForm,
-                  complemento: e.target.value
-                })} placeholder="Compl." className="col-span-2" />
-                    </div>
-                    <Input value={editForm.bairro} onChange={e => setEditForm({
-                ...editForm,
-                bairro: e.target.value
-              })} placeholder="Bairro" />
-                    <div className="grid grid-cols-3 gap-2">
-                      <Input value={editForm.cidade} onChange={e => setEditForm({
-                  ...editForm,
-                  cidade: e.target.value
-                })} placeholder="Cidade" className="col-span-2" />
-                      <Input value={editForm.uf} onChange={e => setEditForm({
-                  ...editForm,
-                  uf: e.target.value
-                })} placeholder="UF" maxLength={2} />
-                    </div>
-                    <Input value={editForm.cep} onChange={e => setEditForm({
-                ...editForm,
-                cep: e.target.value
-              })} placeholder="CEP" />
-                  </div>
-                </div> : lead.endereco || lead.bairro || lead.cidade ? <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
+              {/* Address - Read only */}
+              {!isEditingContact && (lead.endereco || lead.bairro || lead.cidade) && <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
                   <Label className="text-sm font-medium flex items-center gap-2 mb-3">
                     <MapPin className="h-4 w-4 text-primary" />
                     Endereço
@@ -1129,7 +1082,7 @@ export function LeadDetailDialog({
                       </p>
                     </div>
                   </div>
-                </div> : null}
+                </div>}
 
               {/* Responsável */}
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
@@ -1389,6 +1342,19 @@ export function LeadDetailDialog({
           {activeTab === 'history' && <LeadHistory leadId={lead.id} />}
         </div>
       </div>
+
+      {/* Sticky Footer - Save/Cancel buttons */}
+      {isEditingContact && activeTab === 'contact' && (
+        <div className="border-t bg-background p-3 flex gap-2 shrink-0">
+          <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsEditingContact(false)}>
+            Cancelar
+          </Button>
+          <Button className="flex-1 rounded-xl" onClick={handleSaveContact}>
+            <Save className="h-4 w-4 mr-1.5" />
+            Salvar
+          </Button>
+        </div>
+      )}
     </div>);
 
   // Desktop content - defined as JSX variable (NOT a component function) to prevent re-mounting
@@ -2314,8 +2280,8 @@ export function LeadDetailDialog({
   if (isMobile) {
     return (
       <>
-        <Drawer open={!!lead} onOpenChange={() => onClose()}>
-          <DrawerContent className="h-[95vh] max-h-[95vh]">
+        <Drawer open={!!lead} onOpenChange={() => onClose()} dismissible={!isEditingContact}>
+          <DrawerContent className="h-[95vh] max-h-[95vh]" showHandle={!isEditingContact}>
             {/* Inline JSX instead of <MobileContent /> to prevent re-mounting */}
             {MobileContent()}
           </DrawerContent>
