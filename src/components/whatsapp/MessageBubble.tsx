@@ -659,7 +659,7 @@ export function MessageBubble({
       )}
     >
       <div className={cn(
-        "max-w-[65%] rounded-lg px-2 py-1.5 relative",
+        "max-w-[75%] rounded-lg px-2 py-1.5 relative overflow-hidden",
         fromMe 
           ? "bg-primary text-primary-foreground rounded-br-[4px]" 
           : "bg-chatBubble text-chatBubble-foreground rounded-bl-[4px]"
@@ -677,7 +677,7 @@ export function MessageBubble({
           <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">
             {content}
             {/* Invisible spacer for timestamp */}
-            <span className="inline-block w-[70px]"></span>
+            <span className="inline-block w-[60px]"></span>
           </p>
         )}
 

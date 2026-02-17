@@ -668,7 +668,7 @@ export function FloatingChat() {
     </div>;
   const MessagesView = () => <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
       <ScrollArea className="flex-1" onScrollCapture={handleScrollArea}>
-        <div className="px-4 py-3">
+        <div className="px-3 py-3 w-full max-w-full min-w-0 overflow-hidden">
           {loadingMessages ? <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">
