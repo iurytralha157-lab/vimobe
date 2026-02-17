@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
+import { MobileBottomNav } from './MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FloatingChatProvider } from '@/contexts/FloatingChatContext';
 import { FloatingChat } from '@/components/chat/FloatingChat';
@@ -44,10 +45,13 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
         <AppHeader title={title} />
         
         {/* Conteúdo da página */}
-        <main className="flex-1 overflow-auto px-4 md:px-6 py-3 md:py-4">
+        <main className={`flex-1 overflow-auto px-4 md:px-6 py-3 md:py-4 ${isMobile ? 'pb-20' : ''}`}>
           {children}
         </main>
       </div>
+      
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <MobileBottomNav />}
       
       {/* Floating WhatsApp Chat */}
       <FloatingChatButton />
