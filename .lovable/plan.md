@@ -1,46 +1,63 @@
 
-# Adicionar Animacoes fade-in, scale-in e slide-in ao Tailwind Config
+# Buscar Link do Criativo do Meta Ads
 
-## O que sera feito
+## Resumo
+Adicionar busca automatica do link do criativo (imagem/video do anuncio) via Graph API usando o `ad_id` que ja e capturado no webhook, salvar na tabela `lead_meta` e exibir na secao de rastreamento do lead.
 
-Adicionar 6 novos keyframes e 8 novas animacoes ao `tailwind.config.ts` existente, sem alterar nenhuma cor, variavel ou configuracao atual.
+## Viabilidade
+- O OAuth ja solicita o escopo `ads_management`, que permite ler dados de anuncios
+- O `ad_id` ja e salvo no `lead_meta`
+- A Graph API expoe o endpoint `GET /{ad_id}?fields=creative{effective_image_url,effective_object_story_id,thumbnail_url}` para obter a URL do criativo
 
-## Keyframes a adicionar
+## Etapas
 
-| Keyframe | Descricao |
-|---|---|
-| `fade-in` | Aparece com translateY(10px) para cima |
-| `fade-out` | Desaparece com translateY para baixo |
-| `scale-in` | Aparece com scale(0.95) para 1 |
-| `scale-out` | Desaparece com scale(1) para 0.95 |
-| `slide-in-right` | Entra da direita (translateX 100% para 0) |
-| `slide-out-right` | Sai para a direita (translateX 0 para 100%) |
+### 1. Migration: Adicionar coluna `creative_url` na tabela `lead_meta`
 
-## Animacoes a adicionar
+```sql
+ALTER TABLE public.lead_meta
+ADD COLUMN IF NOT EXISTS creative_url TEXT;
+```
 
-| Classe | Valor |
-|---|---|
-| `animate-fade-in` | `fade-in 0.3s ease-out` |
-| `animate-fade-out` | `fade-out 0.3s ease-out` |
-| `animate-scale-in` | `scale-in 0.2s ease-out` |
-| `animate-scale-out` | `scale-out 0.2s ease-out` |
-| `animate-slide-in-right` | `slide-in-right 0.3s ease-out` |
-| `animate-slide-out-right` | `slide-out-right 0.3s ease-out` |
-| `animate-enter` | `fade-in 0.3s ease-out, scale-in 0.2s ease-out` (combinada) |
-| `animate-exit` | `fade-out 0.3s ease-out, scale-out 0.2s ease-out` (combinada) |
+### 2. Edge Function `meta-webhook`: Buscar criativo apos obter dados do lead
+
+Apos a chamada que ja busca os dados do lead (linha 140-146), adicionar uma segunda chamada a Graph API para buscar o criativo quando `ad_id` existir:
+
+```
+GET /{ad_id}?fields=creative{effective_image_url,thumbnail_url}&access_token=...
+```
+
+- Usar `effective_image_url` como valor principal (URL da imagem em tamanho real)
+- Fallback para `thumbnail_url` se `effective_image_url` nao estiver disponivel
+- Em caso de erro na busca do criativo, apenas logar o erro e continuar (nao bloquear a criacao do lead)
+- Salvar o resultado no campo `creative_url` do `lead_meta`
+
+### 3. Componente `LeadTrackingSection`: Exibir o criativo
+
+Na secao "Dados da Campanha", adicionar uma linha com preview do criativo:
+- Se `creative_url` existir, mostrar uma miniatura clicavel (abre em nova aba)
+- Usar um icone de imagem com label "Criativo"
+- A imagem tera tamanho compacto (max 200px de largura) com bordas arredondadas
+
+### 4. Hook `use-lead-meta.ts`: Atualizar interface
+
+Adicionar `creative_url: string | null` na interface `LeadMeta`.
+
+---
 
 ## Detalhes Tecnicos
 
-### Arquivo modificado
-- `tailwind.config.ts`
+### Arquivo: `supabase/functions/meta-webhook/index.ts`
+- Local: apos linha 146 (apos `const leadData = ...`)
+- Logica: se `leadData.ad_id` existir, fazer fetch do criativo
+- A URL sera passada na insercao do `lead_meta` (linha 450-465)
 
-### Local exato
-- Bloco `keyframes` (linhas 125-164): adicionar os 6 novos keyframes apos `drawer-slide-up`
-- Bloco `animation` (linhas 166-172): adicionar as 8 novas animacoes apos `drawer-slide-up`
+### Arquivo: `src/hooks/use-lead-meta.ts`
+- Adicionar campo `creative_url` na interface
 
-### O que permanece inalterado
-- Todas as cores (primary, kanban, chart, chatBubble, etc.)
-- Todas as variaveis CSS
-- Keyframes existentes (accordion-down, accordion-up, shimmer, pulse, drawer-slide-up)
-- Animacoes existentes
-- Fonts, borderRadius, boxShadow, plugins
+### Arquivo: `src/components/leads/LeadTrackingSection.tsx`
+- Na secao de campanha, apos os campos existentes (Campanha, Conjunto, Anuncio, Formulario), adicionar bloco condicional com preview da imagem
+
+### Tratamento de erros
+- A busca do criativo e opcional - se falhar, o lead continua sendo criado normalmente
+- Alguns anuncios podem nao ter criativo (ex: Dynamic Ads) - nesses casos o campo fica null
+- O token de pagina (`page_access_token`) deve funcionar para buscar criativos de anuncios vinculados a pagina
