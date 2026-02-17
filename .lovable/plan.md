@@ -1,63 +1,108 @@
 
-# Buscar Link do Criativo do Meta Ads
+# Corrigir Notificacoes WhatsApp
 
-## Resumo
-Adicionar busca automatica do link do criativo (imagem/video do anuncio) via Graph API usando o `ad_id` que ja e capturado no webhook, salvar na tabela `lead_meta` e exibir na secao de rastreamento do lead.
+## Problema Identificado
 
-## Viabilidade
-- O OAuth ja solicita o escopo `ads_management`, que permite ler dados de anuncios
-- O `ad_id` ja e salvo no `lead_meta`
-- A Graph API expoe o endpoint `GET /{ad_id}?fields=creative{effective_image_url,effective_object_story_id,thumbnail_url}` para obter a URL do criativo
+O `whatsapp-notifier` tem **zero logs** -- nunca foi chamado com sucesso. A causa raiz:
 
-## Etapas
+- **Leads do Meta (maioria)**: Chegam via `meta-webhook` -> trigger `handle_lead_intake` no banco de dados. O trigger cria notificacoes na tabela `notifications`, mas **nao tem como chamar a edge function `whatsapp-notifier`** (triggers de banco nao podem chamar edge functions).
 
-### 1. Migration: Adicionar coluna `creative_url` na tabela `lead_meta`
+- **Leads manuais (frontend)**: O `notifyLeadCreated()` e chamado e deveria invocar o `whatsapp-notifier`, mas o `handle_lead_intake` ja cria as notificacoes na tabela, gerando **notificacoes duplicadas** no sistema.
 
-```sql
-ALTER TABLE public.lead_meta
-ADD COLUMN IF NOT EXISTS creative_url TEXT;
+## Solucao Proposta
+
+Usar o mecanismo de **`pg_net`** (extensao do Supabase) para chamar a edge function `whatsapp-notifier` diretamente de dentro do banco de dados, apos a atribuicao do lead no `handle_lead_intake`.
+
+### Etapa 1: Criar funcao de notificacao WhatsApp no banco
+
+Criar uma funcao PL/pgSQL que usa `net.http_post` (extensao `pg_net` do Supabase) para chamar o `whatsapp-notifier`:
+
+```text
+notify_whatsapp_on_lead(organization_id, user_id, message)
+  -> POST para whatsapp-notifier via pg_net
 ```
 
-### 2. Edge Function `meta-webhook`: Buscar criativo apos obter dados do lead
+### Etapa 2: Atualizar `handle_lead_intake`
 
-Apos a chamada que ja busca os dados do lead (linha 140-146), adicionar uma segunda chamada a Graph API para buscar o criativo quando `ad_id` existir:
+Apos atribuir o lead a um usuario (round-robin ou admin fallback), chamar `notify_whatsapp_on_lead` passando o `assigned_user_id`, `organization_id` e a mensagem formatada.
 
-```
-GET /{ad_id}?fields=creative{effective_image_url,thumbnail_url}&access_token=...
-```
+### Etapa 3: Remover chamada duplicada do frontend
 
-- Usar `effective_image_url` como valor principal (URL da imagem em tamanho real)
-- Fallback para `thumbnail_url` se `effective_image_url` nao estiver disponivel
-- Em caso de erro na busca do criativo, apenas logar o erro e continuar (nao bloquear a criacao do lead)
-- Salvar o resultado no campo `creative_url` do `lead_meta`
+Remover a chamada ao `whatsapp-notifier` de dentro do `notifyLeadCreated()` em `use-lead-notifications.ts` (linhas 131-144), pois agora o banco fara isso. Manter a chamada do `use-deal-status-change.ts` (lead ganho) e do `use-whatsapp-health-monitor.ts` (alertas de saude) pois esses fluxos nao passam pelo trigger.
 
-### 3. Componente `LeadTrackingSection`: Exibir o criativo
+### Etapa 4: Remover criacao duplicada de notificacoes
 
-Na secao "Dados da Campanha", adicionar uma linha com preview do criativo:
-- Se `creative_url` existir, mostrar uma miniatura clicavel (abre em nova aba)
-- Usar um icone de imagem com label "Criativo"
-- A imagem tera tamanho compacto (max 200px de largura) com bordas arredondadas
-
-### 4. Hook `use-lead-meta.ts`: Atualizar interface
-
-Adicionar `creative_url: string | null` na interface `LeadMeta`.
+Avaliar se `notifyLeadCreated()` deve ser removido completamente do frontend para leads manuais, ja que o trigger `handle_lead_intake` ja cria as notificacoes. Para leads manuais que ja vem com `assigned_user_id`, o trigger nao dispara (ele retorna se ja tem responsavel), entao o frontend precisa continuar criando notificacoes para esse caso -- mas sem a parte do WhatsApp que agora esta no banco.
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivo: `supabase/functions/meta-webhook/index.ts`
-- Local: apos linha 146 (apos `const leadData = ...`)
-- Logica: se `leadData.ad_id` existir, fazer fetch do criativo
-- A URL sera passada na insercao do `lead_meta` (linha 450-465)
+### Migration SQL
 
-### Arquivo: `src/hooks/use-lead-meta.ts`
-- Adicionar campo `creative_url` na interface
+```sql
+-- Habilitar pg_net se nao estiver
+CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 
-### Arquivo: `src/components/leads/LeadTrackingSection.tsx`
-- Na secao de campanha, apos os campos existentes (Campanha, Conjunto, Anuncio, Formulario), adicionar bloco condicional com preview da imagem
+-- Funcao auxiliar para notificar via WhatsApp
+CREATE OR REPLACE FUNCTION notify_whatsapp_on_lead(
+  p_org_id uuid,
+  p_user_id uuid,
+  p_lead_name text,
+  p_source text DEFAULT 'desconhecida'
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_supabase_url text;
+  v_service_key text;
+BEGIN
+  v_supabase_url := current_setting('app.settings.supabase_url', true);
+  v_service_key := current_setting('app.settings.service_role_key', true);
 
-### Tratamento de erros
-- A busca do criativo e opcional - se falhar, o lead continua sendo criado normalmente
-- Alguns anuncios podem nao ter criativo (ex: Dynamic Ads) - nesses casos o campo fica null
-- O token de pagina (`page_access_token`) deve funcionar para buscar criativos de anuncios vinculados a pagina
+  -- Se configs nao disponiveis, usar vault ou hardcode URL
+  IF v_supabase_url IS NULL THEN
+    v_supabase_url := 'https://iemalzlfnbouobyjwlwi.supabase.co';
+  END IF;
+
+  PERFORM net.http_post(
+    url := v_supabase_url || '/functions/v1/whatsapp-notifier',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || v_service_key
+    ),
+    body := jsonb_build_object(
+      'organization_id', p_org_id,
+      'user_id', p_user_id,
+      'message', format(
+        E'\U0001F195 *Novo Lead Recebido!*\nNome: %s\nOrigem: %s\nAcesse o CRM para mais detalhes.',
+        p_lead_name, p_source
+      )
+    )
+  );
+END;
+$$;
+```
+
+### Alteracao no `handle_lead_intake`
+
+Em cada ponto onde o lead e atribuido (round-robin e fallbacks admin), adicionar:
+
+```sql
+PERFORM notify_whatsapp_on_lead(v_org_id, v_next_user_id, v_lead.name, v_lead.source);
+```
+
+### Arquivo: `src/hooks/use-lead-notifications.ts`
+
+Remover linhas 131-144 (chamada ao `whatsapp-notifier`), mantendo o restante da funcao intacto para notificacoes de sistema (tabela `notifications`).
+
+### Arquivos que mantem chamada ao `whatsapp-notifier` (sem alteracao)
+
+- `src/hooks/use-deal-status-change.ts` -- notificacao de lead ganho
+- `src/hooks/use-whatsapp-health-monitor.ts` -- alerta de sessao desconectada
+
+### Consideracao sobre `pg_net` e `service_role_key`
+
+O `pg_net` precisa do `service_role_key` para autenticar na edge function. No Supabase, esse valor esta disponivel via vault ou pode ser configurado como `app.settings`. Se nao estiver acessivel, a alternativa e configurar o `whatsapp-notifier` com `verify_jwt = false` (ja esta assim no `config.toml`), permitindo a chamada sem Authorization header -- mas usando o `apikey` (anon key) no header.
