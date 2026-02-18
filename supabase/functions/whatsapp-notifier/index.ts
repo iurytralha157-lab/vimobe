@@ -69,20 +69,20 @@ Deno.serve(async (req) => {
 
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("phone, name")
+      .select("whatsapp, name")
       .eq("id", user_id)
       .single();
 
-    if (userError || !user?.phone) {
-      console.log("User not found or no phone:", user_id);
+    if (userError || !user?.whatsapp) {
+      console.log("User not found or no WhatsApp:", user_id);
       return new Response(
-        JSON.stringify({ success: false, error: "User has no phone number" }),
+        JSON.stringify({ success: false, error: "User has no WhatsApp number" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // 3. Send the message via Evolution API
-    const formattedPhone = user.phone.replace(/\D/g, "");
+    const formattedPhone = user.whatsapp.replace(/\D/g, "");
     
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${session.instance_name}`, {
       method: "POST",
