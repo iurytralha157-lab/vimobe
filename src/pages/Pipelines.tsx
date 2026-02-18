@@ -225,15 +225,6 @@ export default function Pipelines() {
         },
         debouncedRefetch
       )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'lead_tags',
-        },
-        debouncedRefetch
-      )
       .subscribe();
 
     return () => {
@@ -335,20 +326,7 @@ export default function Pipelines() {
     const oldStage = stages.find(s => s.id === oldStageId);
     const newStage = stages.find(s => s.id === newStageId);
     
-    // Buscar automações ANTES do update otimista para saber se deal_status mudará
-    const { data: stageAutomations } = await supabase
-      .from('stage_automations')
-      .select('automation_type, action_config')
-      .eq('stage_id', newStageId)
-      .eq('is_active', true);
-    
-    const statusAutomation = stageAutomations?.find(
-      (a: any) => a.automation_type === 'change_deal_status_on_enter'
-    );
-    const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null;
-    const newDealStatus = actionConfig?.deal_status as string | undefined;
-    
-    // Optimistic update - agora inclui deal_status se houver automação
+    // IMMEDIATE optimistic update - move card visually first
     const queryKey = ['stages-with-leads', selectedPipelineId];
     const previousData = queryClient.getQueryData(queryKey);
     
@@ -372,18 +350,12 @@ export default function Pipelines() {
       
       const [movedLead] = newStages[sourceStageIndex].leads.splice(leadIndex, 1);
       
-      // Atualiza o stage_id do lead e deal_status se houver automação
+      // Atualiza o stage_id do lead (deal_status será aplicado depois se houver automação)
       const updatedLead = {
         ...movedLead,
         stage_id: newStageId,
         stage_entered_at: new Date().toISOString(),
         stage: newStages[destStageIndex],
-        // Aplicar deal_status otimisticamente se houver automação configurada
-        ...(newDealStatus && {
-          deal_status: newDealStatus,
-          won_at: newDealStatus === 'won' ? new Date().toISOString() : movedLead.won_at,
-          lost_at: newDealStatus === 'lost' ? new Date().toISOString() : movedLead.lost_at,
-        }),
       };
       
       // Insere na posição correta na coluna de destino
@@ -393,17 +365,49 @@ export default function Pipelines() {
     });
     
     try {
-      const { error } = await supabase
-        .from('leads')
-        .update({ 
-          stage_id: newStageId,
-          stage_entered_at: new Date().toISOString(),
-        })
-        .eq('id', draggableId);
+      // Fetch automations in parallel with DB update for responsiveness
+      const [updateResult, automationsResult] = await Promise.all([
+        supabase
+          .from('leads')
+          .update({ 
+            stage_id: newStageId,
+            stage_entered_at: new Date().toISOString(),
+          })
+          .eq('id', draggableId),
+        supabase
+          .from('stage_automations')
+          .select('automation_type, action_config')
+          .eq('stage_id', newStageId)
+          .eq('is_active', true),
+      ]);
       
-      if (error) throw error;
+      if (updateResult.error) throw updateResult.error;
       
-      // Invalidar cache de activities para que o histórico atualize ao abrir o lead
+      // Apply deal_status from automation as a SECOND optimistic update
+      const statusAutomation = automationsResult.data?.find(
+        (a: any) => a.automation_type === 'change_deal_status_on_enter'
+      );
+      const actionConfig = statusAutomation?.action_config as Record<string, unknown> | null;
+      const newDealStatus = actionConfig?.deal_status as string | undefined;
+      
+      if (newDealStatus) {
+        queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
+          if (!old) return old;
+          return old.map(stage => ({
+            ...stage,
+            leads: (stage.leads || []).map((l: any) => 
+              l.id === draggableId ? {
+                ...l,
+                deal_status: newDealStatus,
+                won_at: newDealStatus === 'won' ? new Date().toISOString() : l.won_at,
+                lost_at: newDealStatus === 'lost' ? new Date().toISOString() : l.lost_at,
+              } : l
+            ),
+          }));
+        });
+      }
+      
+      // Invalidar cache de activities
       queryClient.invalidateQueries({ queryKey: ['activities', draggableId] });
       queryClient.invalidateQueries({ queryKey: ['lead-timeline', draggableId] });
       
@@ -953,6 +957,13 @@ export default function Pipelines() {
                             />
                           ))}
                           {provided.placeholder}
+                          
+                          {/* Filter warning when has_more and filters active */}
+                          {stage.has_more && (filterUser && filterUser !== 'all' || filterTag !== 'all' || filterDealStatus !== 'all' || deferredSearch) && (
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-2 py-1.5 mt-1 text-center">
+                              ⚠️ Filtro ativo — alguns resultados podem não estar visíveis. Carregue mais para ver todos.
+                            </div>
+                          )}
                           
                           {/* Botão Carregar Mais */}
                           {stage.has_more && (
