@@ -1,112 +1,51 @@
 
-# Corrigir Distribuicao Round Robin - Leads indo so para Jessica
 
-## Problema Identificado
+# URGENTE: Remover Dados Pessoais Reais do Repositorio (LGPD)
 
-**Causa raiz**: Dois problemas graves na funcao `handle_lead_intake`:
+## Problema Critico
 
-1. **Contador `leads_count` nao incrementa**: Jessica recebeu 6 leads consecutivos, mas seu `leads_count` permanece em `6`. O incremento na linha `UPDATE round_robin_members SET leads_count = leads_count + 1` nao esta persistindo, provavelmente porque a funcao e chamada via trigger BEFORE INSERT e as alteracoes em outras tabelas dentro da mesma transacao sofrem conflito.
+O arquivo `temp/customers-cristiano.csv` contem **2.352+ registros de clientes reais** com dados pessoais sensiveis (nomes, enderecos, historico financeiro). Isso esta commitado no repositorio e acessivel publicamente.
 
-2. **Algoritmo nao e round-robin verdadeiro**: `ORDER BY leads_count ASC` faz com que TODOS os leads futuros sejam atribuidos ao membro com menor contagem ate ele empatar com o proximo. Jessica (6) vai receber ~19 leads seguidos ate empatar com Fernando Matos (25). Isso nao e uma distribuicao justa -- o correto e alternar entre membros sequencialmente.
+**Dados expostos:**
+- Nomes completos
+- Enderecos residenciais completos (rua, bairro, cidade, UF)
+- Vendedor responsavel
+- Planos contratados com valores
+- Historico de cobranca (pago, vencido, renegociado)
+- Status do cliente
 
-## Solucao
+## Acao Imediata
 
-Reescrever a selecao do proximo usuario para usar um **round-robin sequencial verdadeiro** baseado no `last_assigned_index` + `position`, e corrigir o contador.
+### 1. Deletar o arquivo do projeto
 
-### Mudancas na funcao `handle_lead_intake`
+Remover o arquivo `temp/customers-cristiano.csv` do repositorio imediatamente.
 
-**Substituir** o bloco de selecao de usuario (linhas 106-112) de:
+### 2. Adicionar ao .gitignore
 
-```sql
-SELECT rrm.user_id INTO v_next_user_id
-FROM round_robin_members rrm
-JOIN users u ON u.id = rrm.user_id
-WHERE rrm.round_robin_id = v_queue.id
-  AND u.is_active = true
-ORDER BY rrm.leads_count ASC NULLS FIRST, rrm.position ASC
-LIMIT 1;
+Adicionar as seguintes entradas ao `.gitignore` para prevenir que arquivos de dados sejam commitados novamente:
+
+```
+temp/
+*.csv
 ```
 
-**Para um algoritmo round-robin sequencial:**
+### 3. Remover a pagina de importacao relacionada
 
-```sql
--- Contar total de membros ativos
-SELECT COUNT(*) INTO v_total_members
-FROM round_robin_members rrm
-JOIN users u ON u.id = rrm.user_id
-WHERE rrm.round_robin_id = v_queue.id
-  AND u.is_active = true;
+O arquivo `src/pages/admin/ImportCristiano.tsx` foi criado especificamente para importar esse CSV. Com o arquivo removido, essa pagina perde o proposito e deve ser avaliada -- se nao for mais necessaria, pode ser removida tambem.
 
--- Calcular proxima posicao: (last_assigned_index + 1) % total
-v_next_position := (COALESCE(v_queue.last_assigned_index, -1) + 1) % v_total_members;
+## Limitacao Importante
 
--- Selecionar membro nessa posicao (usando row_number para posicao relativa entre ativos)
-SELECT user_id INTO v_next_user_id
-FROM (
-  SELECT rrm.user_id, ROW_NUMBER() OVER (ORDER BY rrm.position) - 1 as rn
-  FROM round_robin_members rrm
-  JOIN users u ON u.id = rrm.user_id
-  WHERE rrm.round_robin_id = v_queue.id
-    AND u.is_active = true
-) sub
-WHERE sub.rn = v_next_position;
-```
+**Mesmo deletando o arquivo agora, ele permanece no historico do Git.** Para remocao completa, sera necessario:
 
-### Atualizar `last_assigned_index` apos atribuicao
+1. Acessar o repositorio no GitHub
+2. Usar `git filter-branch` ou `BFG Repo Cleaner` para purgar o arquivo do historico
+3. Forcar o push (`git push --force`)
 
-Adicionar apos a atribuicao do lead:
-
-```sql
-UPDATE round_robins
-SET last_assigned_index = v_next_position
-WHERE id = v_queue.id;
-```
-
-### Manter o incremento de `leads_count` para historico
-
-O `UPDATE round_robin_members SET leads_count = leads_count + 1` sera mantido, mas agora nao sera usado para decisao de roteamento -- apenas para estatisticas.
-
-### Correcao imediata dos dados
-
-Sincronizar o `leads_count` de Jessica com a contagem real do `assignments_log`:
-
-```sql
-UPDATE round_robin_members rrm
-SET leads_count = sub.real_count
-FROM (
-  SELECT assigned_user_id, COUNT(*) as real_count
-  FROM assignments_log
-  WHERE round_robin_id = '44532c92-1b84-41d5-b17b-c30ad7f0822e'
-  GROUP BY assigned_user_id
-) sub
-WHERE rrm.round_robin_id = '44532c92-1b84-41d5-b17b-c30ad7f0822e'
-  AND rrm.user_id = sub.assigned_user_id;
-```
+Isso esta fora do escopo do Lovable e precisa ser feito diretamente no GitHub/terminal. Recomendo fortemente fazer isso o mais rapido possivel.
 
 ## Detalhes Tecnicos
 
-### Variaveis novas necessarias na funcao
+- Arquivo a deletar: `temp/customers-cristiano.csv`
+- Editar: `.gitignore` (adicionar `temp/` e `*.csv`)
+- Avaliar remocao: `src/pages/admin/ImportCristiano.tsx` e sua rota no `App.tsx`
 
-```sql
-v_total_members integer;
-v_next_position integer;
-```
-
-### Logica completa do novo bloco
-
-A funcao `handle_lead_intake` sera alterada via migracao SQL para:
-
-1. Contar membros ativos da fila
-2. Calcular proxima posicao usando modulo (`%`) sobre `last_assigned_index`
-3. Selecionar o usuario na posicao calculada (usando `ROW_NUMBER` para lidar com gaps de posicao quando membros inativos existem)
-4. Atribuir o lead
-5. Atualizar `last_assigned_index` na tabela `round_robins`
-6. Incrementar `leads_count` para estatisticas
-7. Registrar no `assignments_log`
-
-### Impacto
-
-- Nenhuma mudanca na interface (frontend)
-- Apenas a funcao SQL `handle_lead_intake` sera atualizada
-- Dados existentes serao corrigidos via UPDATE
-- Funciona para qualquer organizacao que configure round-robin no futuro
