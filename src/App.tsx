@@ -57,7 +57,7 @@ import AdminPlans from "./pages/admin/AdminPlans";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminHelpEditor from "./pages/admin/AdminHelpEditor";
 import AdminDatabase from "./pages/admin/AdminDatabase";
-import ImportCristiano from "./pages/admin/ImportCristiano";
+
 import { TrialExpiredModal } from "./components/admin/TrialExpiredModal";
 import Notifications from "./pages/Notifications";
 
@@ -214,7 +214,7 @@ function AppRoutes() {
           <Route path="/admin/settings" element={<SuperAdminRoute><AdminSettings /></SuperAdminRoute>} />
           <Route path="/admin/requests" element={<SuperAdminRoute><AdminRequests /></SuperAdminRoute>} />
           <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
-          <Route path="/admin/import-cristiano" element={<SuperAdminRoute><ImportCristiano /></SuperAdminRoute>} />
+          
           
           {/* Regular Routes */}
           <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
