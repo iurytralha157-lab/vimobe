@@ -1,33 +1,27 @@
 
-# Corrigir Scroll do Formulario de Criacao de Lead no Mobile
+# Usar campo WhatsApp ao inves de Telefone para notificacoes
 
 ## Problema
 
-O dialogo de criacao de lead usa `max-h-[85vh]` mas no mobile o conteudo fica cortado sem possibilidade de scroll. A aba "Perfil" tem muitos campos (Cargo, Empresa, Profissao, Renda Familiar, Faixa de Imovel, Valor de Interesse, etc.) que ficam inacessiveis.
+1. A Edge Function `whatsapp-notifier` busca `users.phone` para enviar notificacoes, mas o campo correto e `users.whatsapp` (configurado em Configuracoes > Conta)
+2. O lembrete de cadastro (`usePhoneReminder`) pede para atualizar o telefone, mas deveria pedir para atualizar o WhatsApp
 
-## Causa Raiz
+## Mudancas
 
-O `ScrollArea` do Radix precisa de uma altura explicita para funcionar. Atualmente ele tem `className="flex-1"` que depende do flex container, mas o `DialogContent` no mobile pode nao estar respeitando o `max-h-[85vh]` corretamente porque o componente base do dialog usa posicionamento `fixed` com `translate` que pode interferir com o calculo de altura.
+### 1. `supabase/functions/whatsapp-notifier/index.ts`
 
-## Solucao
+- Linha 72: Trocar `.select("phone, name")` por `.select("whatsapp, name")`
+- Linha 76: Trocar `!user?.phone` por `!user?.whatsapp`
+- Linha 79: Trocar mensagem de erro para `"User has no WhatsApp number"`
+- Linha 85: Trocar `user.phone` por `user.whatsapp` na formatacao do numero
 
-Duas alteracoes simples no `CreateLeadDialog.tsx` (linha 223 e 232):
+### 2. `src/hooks/use-phone-reminder.ts`
 
-1. **DialogContent**: Forcar altura maxima consistente no mobile adicionando `h-[85vh] sm:h-auto sm:max-h-[85vh]` e garantindo `overflow-hidden`
-2. **ScrollArea**: Adicionar `overflow-y-auto` como fallback e garantir que o container flex funcione com `min-h-0`
+- Linha 10: Trocar `profile.phone` por `profile.whatsapp`
+- Linha 20: Trocar titulo para `"📱 Atualize seu WhatsApp"`
+- Linha 21: Trocar conteudo para `"Cadastre seu numero de WhatsApp em Configuracoes > Conta para receber notificacoes importantes."`
+- Linha 31: Trocar dependencia para `profile?.whatsapp`
 
-### Mudanca concreta
+### 3. `supabase/functions/whatsapp-notifier/index.ts` - log
 
-```
-// Linha 223 - DialogContent
-className={`max-w-lg p-0 flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden`}
-
-// Linha 232 - ScrollArea  
-<ScrollArea className="flex-1 min-h-0">
-```
-
-Isso forca o dialogo a ter altura fixa no mobile (85vh), permitindo que o ScrollArea ocupe o espaco restante e habilite o scroll interno. O footer com os botoes permanece fixo na parte inferior.
-
-## Arquivo afetado
-
-- `src/components/leads/CreateLeadDialog.tsx` (2 linhas)
+- Linha 90: Trocar `phone: formattedPhone` para manter consistencia no log
