@@ -7,7 +7,7 @@ export function usePhoneReminder() {
 
   useEffect(() => {
     if (!profile?.id || !profile?.organization_id) return;
-    if (profile.phone && profile.phone.trim() !== '') return;
+    if (profile.whatsapp && profile.whatsapp.trim() !== '') return;
 
     const storageKey = `phone_reminder_shown_${profile.id}_${new Date().toDateString()}`;
     if (localStorage.getItem(storageKey)) return;
@@ -17,8 +17,8 @@ export function usePhoneReminder() {
         await supabase.from('notifications').insert({
           user_id: profile.id,
           type: 'system',
-          title: '📱 Atualize seu telefone',
-          content: 'Cadastre seu número de telefone em Configurações > Conta para receber notificações importantes via WhatsApp.',
+          title: '📱 Atualize seu WhatsApp',
+          content: 'Cadastre seu número de WhatsApp em Configurações > Conta para receber notificações importantes.',
           organization_id: profile.organization_id,
         });
         localStorage.setItem(storageKey, 'true');
@@ -28,5 +28,5 @@ export function usePhoneReminder() {
     };
 
     createReminder();
-  }, [profile?.id, profile?.organization_id, profile?.phone]);
+  }, [profile?.id, profile?.organization_id, profile?.whatsapp]);
 }
