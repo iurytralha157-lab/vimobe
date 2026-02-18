@@ -168,9 +168,10 @@ export function LeadCard({
   const isLost = lead.deal_status === 'lost';
   const isWon = lead.deal_status === 'won';
   
-  // Verificar se o lead foi criado há menos de 3 segundos (aguardando atribuição)
+  // Verificar se o lead foi criado há menos de 10 segundos (aguardando atribuição via round-robin)
   const isRecentlyCreated = lead.created_at && 
-    (Date.now() - new Date(lead.created_at).getTime()) < 3000;
+    !lead.assigned_user_id &&
+    (Date.now() - new Date(lead.created_at).getTime()) < 10000;
   
   return <>
     <Draggable draggableId={lead.id} index={index} isDragDisabled={isDragDisabled}>

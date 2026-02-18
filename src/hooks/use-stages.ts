@@ -149,9 +149,18 @@ export function useStagesWithLeads(pipelineId?: string) {
       let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
       
       if (leadsWithPhone.length > 0) {
-        const { data: conversations } = await supabase
-          .from('whatsapp_conversations')
-          .select('contact_phone, contact_picture, unread_count');
+        // Collect normalized phone numbers to filter server-side
+        const phoneNumbers = leadsWithPhone
+          .map((l: any) => normalizePhone(l.phone))
+          .filter(Boolean);
+        
+        // Filter by phone numbers to avoid fetching all conversations
+        const { data: conversations } = phoneNumbers.length > 0
+          ? await supabase
+              .from('whatsapp_conversations')
+              .select('contact_phone, contact_picture, unread_count')
+              .in('contact_phone', phoneNumbers)
+          : { data: [] };
         
         // Criar mapa telefone normalizado → { foto, unread_count }
         (conversations || []).forEach(c => {
@@ -174,6 +183,24 @@ export function useStagesWithLeads(pipelineId?: string) {
         return acc;
       }, {} as Record<string, any>);
       
+      // Buscar tasks_count para todos os leads
+      let tasksByLead: Record<string, { pending: number; completed: number }> = {};
+      if (leadIds.length > 0) {
+        const { data: taskCounts } = await supabase
+          .from('lead_tasks')
+          .select('lead_id, is_done')
+          .in('lead_id', leadIds);
+        
+        (taskCounts || []).forEach((t: any) => {
+          if (!tasksByLead[t.lead_id]) tasksByLead[t.lead_id] = { pending: 0, completed: 0 };
+          if (t.is_done) {
+            tasksByLead[t.lead_id].completed++;
+          } else {
+            tasksByLead[t.lead_id].pending++;
+          }
+        });
+      }
+      
       // Enriquecer leads por estágio
       const enrichedLeadsByStage: Record<string, any[]> = {};
       
@@ -191,6 +218,7 @@ export function useStagesWithLeads(pipelineId?: string) {
           return {
             ...lead,
             tags: tagsByLead[lead.id] || [],
+            tasks_count: tasksByLead[lead.id] || { pending: 0, completed: 0 },
             stage: stagesById[stageId] || null,
             whatsapp_picture,
             unread_count,
@@ -302,8 +330,24 @@ export function useDeletePipeline() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from('stages').delete().eq('pipeline_id', id);
+      // Check if any stages have leads before deleting
+      const { data: stageIds } = await supabase
+        .from('stages')
+        .select('id')
+        .eq('pipeline_id', id);
       
+      if (stageIds && stageIds.length > 0) {
+        const { count } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .in('stage_id', stageIds.map(s => s.id));
+        
+        if (count && count > 0) {
+          throw new Error(`Esta pipeline possui ${count} lead(s). Mova ou exclua os leads antes de deletar a pipeline.`);
+        }
+      }
+      
+      // CASCADE will handle deleting stages automatically
       const { error } = await supabase
         .from('pipelines')
         .delete()
@@ -402,9 +446,16 @@ export function useLoadMoreLeads() {
       let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
       
       if (leadsWithPhone.length > 0) {
-        const { data: conversations } = await supabase
-          .from('whatsapp_conversations')
-          .select('contact_phone, contact_picture, unread_count');
+        const phoneNumbers = leadsWithPhone
+          .map((l: any) => normalizePhone(l.phone))
+          .filter(Boolean);
+        
+        const { data: conversations } = phoneNumbers.length > 0
+          ? await supabase
+              .from('whatsapp_conversations')
+              .select('contact_phone, contact_picture, unread_count')
+              .in('contact_phone', phoneNumbers)
+          : { data: [] };
         
         (conversations || []).forEach(c => {
           if (c.contact_phone) {
@@ -416,6 +467,24 @@ export function useLoadMoreLeads() {
                 unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
               });
             }
+          }
+        });
+      }
+      
+      // Buscar tasks_count para os novos leads
+      let tasksByLead2: Record<string, { pending: number; completed: number }> = {};
+      if (leadIds.length > 0) {
+        const { data: taskCounts } = await supabase
+          .from('lead_tasks')
+          .select('lead_id, is_done')
+          .in('lead_id', leadIds);
+        
+        (taskCounts || []).forEach((t: any) => {
+          if (!tasksByLead2[t.lead_id]) tasksByLead2[t.lead_id] = { pending: 0, completed: 0 };
+          if (t.is_done) {
+            tasksByLead2[t.lead_id].completed++;
+          } else {
+            tasksByLead2[t.lead_id].pending++;
           }
         });
       }
@@ -434,6 +503,7 @@ export function useLoadMoreLeads() {
         return {
           ...lead,
           tags: tagsByLead[lead.id] || [],
+          tasks_count: tasksByLead2[lead.id] || { pending: 0, completed: 0 },
           whatsapp_picture,
           unread_count,
         };

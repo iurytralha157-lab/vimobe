@@ -90,15 +90,19 @@ export function StagesEditorDialog({
 
     setIsSaving(true);
     try {
-      // Update all stages positions in batch
-      const updates = stages.map((stage, index) =>
-        supabase
-          .from('stages')
-          .update({ position: index, name: stage.name, color: stage.color })
-          .eq('id', stage.id)
-      );
+      // Use RPC for single round-trip batch update
+      const payload = stages.map((stage, index) => ({
+        id: stage.id,
+        position: index,
+        name: stage.name,
+        color: stage.color,
+      }));
 
-      await Promise.all(updates);
+      const { error } = await (supabase as any).rpc('reorder_stages', {
+        p_stages: payload,
+      });
+
+      if (error) throw error;
 
       toast.success('Colunas atualizadas com sucesso!');
       onStagesUpdated();

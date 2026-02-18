@@ -5319,6 +5319,7 @@ export type Database = {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: Json
       }
+      reorder_stages: { Args: { p_stages: Json }; Returns: undefined }
       resolve_site_domain: {
         Args: { p_domain: string }
         Returns: {
