@@ -48,7 +48,10 @@ import {
   UsersRound,
   MessageSquare,
   Globe,
-  Webhook
+  Webhook,
+  Phone,
+  Mail,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePipelines, useStages } from '@/hooks/use-stages';
@@ -65,6 +68,8 @@ import { cn } from '@/lib/utils';
 
 interface QueueSettings {
   enable_redistribution?: boolean;
+  redistribution_timeout_minutes?: number;
+  redistribution_max_attempts?: number;
   preserve_position?: boolean;
   require_checkin?: boolean;
   reentry_behavior?: 'redistribute' | 'keep_assignee';
@@ -1029,16 +1034,94 @@ export function DistributionQueueEditor({
                     checked={formData.settings.enable_redistribution || false}
                     onCheckedChange={checked => setFormData(prev => ({
                       ...prev,
-                      settings: { ...prev.settings, enable_redistribution: checked },
+                      settings: { 
+                        ...prev.settings, 
+                        enable_redistribution: checked,
+                        redistribution_timeout_minutes: checked ? (prev.settings.redistribution_timeout_minutes || 10) : undefined,
+                        redistribution_max_attempts: checked ? (prev.settings.redistribution_max_attempts || 3) : undefined,
+                      },
                     }))}
                   />
                   <div>
                     <Label>Ativar redistribuição?</Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Leads não atendidos serão redistribuídos automaticamente após o tempo configurado no pipeline.
+                      Se não houver contato dentro do tempo estipulado, o lead é redistribuído automaticamente para outro corretor.
                     </p>
                   </div>
                 </div>
+
+                {/* Redistribution settings — shown when enabled */}
+                {formData.settings.enable_redistribution && (
+                  <div className="ml-10 space-y-4 p-4 rounded-lg border bg-muted/30">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Tempo para 1º contato (minutos)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={120}
+                          value={formData.settings.redistribution_timeout_minutes ?? 10}
+                          onChange={e => setFormData(prev => ({
+                            ...prev,
+                            settings: {
+                              ...prev.settings,
+                              redistribution_timeout_minutes: Math.min(120, Math.max(1, parseInt(e.target.value) || 1)),
+                            },
+                          }))}
+                          placeholder="10"
+                        />
+                        <p className="text-xs text-muted-foreground">Entre 1 e 120 minutos</p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Tentativas máximas de redistribuição</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={10}
+                          value={formData.settings.redistribution_max_attempts ?? 3}
+                          onChange={e => setFormData(prev => ({
+                            ...prev,
+                            settings: {
+                              ...prev.settings,
+                              redistribution_max_attempts: Math.min(10, Math.max(1, parseInt(e.target.value) || 1)),
+                            },
+                          }))}
+                          placeholder="3"
+                        />
+                        <p className="text-xs text-muted-foreground">Entre 1 e 10 tentativas</p>
+                      </div>
+                    </div>
+
+                    {/* What counts as contact */}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">O que conta como "contato":</p>
+                      <div className="flex flex-wrap gap-3">
+                        <div className="flex items-center gap-1.5 text-xs text-foreground">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <span>WhatsApp</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-foreground">
+                          <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center">
+                            <Phone className="h-3.5 w-3.5 text-secondary-foreground" />
+                          </div>
+                          <span>Telefone</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-foreground">
+                          <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                          <span>E-mail</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        O tempo de resposta é registrado quando o corretor faz qualquer um desses contatos. Se o tempo expirar sem registro, o lead é redistribuído.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-start gap-3">
                   <Switch
