@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,6 +18,7 @@ import {
 } from "recharts";
 import { useMyPerformance, useUpsertMyGoal } from "@/hooks/use-my-performance";
 import { useTeamRanking } from "@/hooks/use-team-ranking";
+import { formatSlaTime } from "@/hooks/use-sla-reports";
 
 import {
   DatePreset,
@@ -33,6 +35,8 @@ import {
   Pencil,
   Check,
   Loader2,
+  Users,
+  Clock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -207,7 +211,7 @@ export default function BrokerPerformance() {
           </div>
 
           {/* KPI Cards */}
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-4">
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-4">
             <Card className="border shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
                 <CardTitle className="text-xs font-medium text-muted-foreground">Total Vendido</CardTitle>
@@ -279,6 +283,48 @@ export default function BrokerPerformance() {
                       {perf?.activeContracts ?? 0}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">em andamento</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Link to="/pipelines" className="block">
+              <Card className="border shadow-sm hover:border-primary/40 transition-colors cursor-pointer h-full">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">Leads em Andamento</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  {loadingPerf ? (
+                    <div className="h-7 w-12 bg-muted animate-pulse rounded" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-foreground">
+                        {perf?.activeLeads ?? 0}
+                      </div>
+                      <p className="text-xs text-primary mt-0.5">Ver no funil →</p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Card className="border shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">Tempo de Resposta</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                {loadingPerf ? (
+                  <div className="h-7 w-16 bg-muted animate-pulse rounded" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-foreground">
+                      {perf?.avgResponseSeconds != null
+                        ? formatSlaTime(Math.round(perf.avgResponseSeconds))
+                        : "—"}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">tempo médio 1ª resposta</p>
                   </>
                 )}
               </CardContent>
