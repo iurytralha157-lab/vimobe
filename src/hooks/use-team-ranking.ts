@@ -17,21 +17,21 @@ export interface TeamRankingData {
   myPosition: number | null;
 }
 
-export function useTeamRanking() {
+export function useTeamRanking(dateRange?: { from: Date; to: Date }) {
   const { user, profile } = useAuth();
   const userId = user?.id;
   const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ["team-ranking", organizationId, userId],
+    queryKey: ["team-ranking", organizationId, userId, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async (): Promise<TeamRankingData> => {
       if (!organizationId || !userId) {
         return { ranking: [], myPosition: null };
       }
 
       const now = new Date();
-      const monthStart = startOfMonth(now).toISOString();
-      const monthEnd = endOfMonth(now).toISOString();
+      const monthStart = dateRange ? dateRange.from.toISOString() : startOfMonth(now).toISOString();
+      const monthEnd = dateRange ? dateRange.to.toISOString() : endOfMonth(now).toISOString();
 
       // Fetch active users in org
       const { data: users, error: usersError } = await supabase

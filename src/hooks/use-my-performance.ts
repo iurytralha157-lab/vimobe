@@ -23,13 +23,13 @@ export interface MyPerformanceData {
   last6Months: MonthlyPerformance[];
 }
 
-export function useMyPerformance() {
+export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
   const { user, profile } = useAuth();
   const userId = user?.id;
   const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ["my-performance", userId],
+    queryKey: ["my-performance", userId, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async (): Promise<MyPerformanceData> => {
       if (!userId || !organizationId) {
         return {
@@ -48,9 +48,9 @@ export function useMyPerformance() {
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth() + 1; // 1-12
 
-      // Fetch leads won in current month
-      const monthStart = startOfMonth(now).toISOString();
-      const monthEnd = endOfMonth(now).toISOString();
+      // Fetch leads won in selected date range (or current month as fallback)
+      const monthStart = dateRange ? dateRange.from.toISOString() : startOfMonth(now).toISOString();
+      const monthEnd = dateRange ? dateRange.to.toISOString() : endOfMonth(now).toISOString();
 
       const [leadsResult, contractsResult, goalsResult] = await Promise.all([
         supabase
