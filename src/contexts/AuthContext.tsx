@@ -104,8 +104,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setProfile(profileData as UserProfile);
 
-        // If impersonating, fetch that org instead
-        const orgIdToFetch = impersonating?.orgId || profileData.organization_id;
+        // Ler do localStorage para garantir que o valor está atualizado,
+        // mesmo durante o startup onde o estado React ainda pode ser null (stale closure)
+        const storedImpersonating = localStorage.getItem('impersonating');
+        const activeImpersonation: ImpersonateSession | null = storedImpersonating
+          ? JSON.parse(storedImpersonating)
+          : null;
+
+        const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
 
         if (orgIdToFetch) {
           const { data: orgData } = await supabase
@@ -128,52 +134,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const startImpersonate = async (orgId: string, orgName: string) => {
-    // Update the super admin's organization_id in the users table
-    if (user) {
-      await supabase
-        .from('users')
-        .update({ organization_id: orgId })
-        .eq('id', user.id);
-      
-      // Log impersonation start
-      logAuditAction('impersonate_start', 'organization', orgId, undefined, {
-        org_name: orgName,
-        started_at: new Date().toISOString()
-      }).catch(console.error);
-    }
-    
+    if (!user) return;
+
+    // Log auditoria (sem alterar o banco)
+    logAuditAction('impersonate_start', 'organization', orgId, undefined, {
+      org_name: orgName,
+      started_at: new Date().toISOString()
+    }).catch(console.error);
+
     const impersonateSession: ImpersonateSession = { orgId, orgName };
-    setImpersonating(impersonateSession);
+
+    // Persistir no localStorage ANTES de setar o estado para que fetchProfile já leia corretamente
     localStorage.setItem('impersonating', JSON.stringify(impersonateSession));
-    
-    // Refresh to load the impersonated org with updated organization_id
-    if (user) {
-      await fetchProfile(user.id);
-    }
+    setImpersonating(impersonateSession);
+
+    // Buscar e setar a org impersonada em memória (sem tocar o banco)
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .single();
+
+    if (orgData) setOrganization(orgData as Organization);
   };
 
   const stopImpersonate = async () => {
-    // Log impersonation stop before clearing state
+    // Log auditoria antes de limpar o estado
     if (user && impersonating) {
       logAuditAction('impersonate_stop', 'organization', impersonating.orgId, undefined, {
         org_name: impersonating.orgName,
         stopped_at: new Date().toISOString()
       }).catch(console.error);
     }
-    
-    // Restore the super admin's organization_id to null
-    if (user) {
-      await supabase
-        .from('users')
-        .update({ organization_id: null })
-        .eq('id', user.id);
-    }
-    
+
     setImpersonating(null);
     localStorage.removeItem('impersonating');
-    setOrganization(null); // Clear org immediately to prevent onboarding redirect
-    
-    // Refresh to load original profile without organization
+    setOrganization(null); // Limpa org impersonada imediatamente
+
+    // Recarregar org original do super admin (usando organization_id real do banco)
     if (user) {
       await fetchProfile(user.id);
     }
