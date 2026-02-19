@@ -1,54 +1,79 @@
 
-# Refatorar Histórico do Lead — Nova Versão Aprimorada
+# Correções no Hook use-lead-history — Deduplicação e Labels Faltantes
 
-## O que os arquivos propõem
+## Problemas encontrados na análise
 
-Você recebeu dois arquivos com uma versão melhorada do histórico do lead. Vou aplicar essas melhorias substituindo os arquivos existentes.
+### 1. Duplicata: `assignee_changed` (activity) + `lead_assigned` (timeline)
+O banco confirma que esses eventos ocorrem no mesmo timestamp (diff < 5s) para os mesmos leads. O hook atual deduplica `lead_assigned` via `TIMELINE_AUTHORITY_TYPES`, mas o par activity `assignee_changed` **não é mapeado** — só `lead_assigned` é listado no set. Resultado: ambos aparecem na timeline.
 
-## Comparação: Atual vs. Proposto
+**Correção**: Adicionar `assignee_changed` ao `TIMELINE_AUTHORITY_TYPES` para que quando `lead_assigned` existir na timeline, o `assignee_changed` da activity seja descartado.
 
-### Hook: `use-lead-full-history.ts` → `use-lead-history.ts`
+### 2. Tipo `status_change` sem label
+Activities com `type = 'status_change'` existem no banco (73 registros) representando mudanças de status (open/won/lost), mas o `buildLabel` não tem case para ele e retorna o tipo cru `"status change"`. 
 
-| Aspecto | Atual | Proposto |
+**Correção**: Adicionar case `status_change` em `buildLabel` com label `"Status alterado: {from} → {to}"`.
+
+### 3. Tipo `whatsapp` sem label
+31 registros de activities com `type = 'whatsapp'` que não têm label definido — apareceria como `"whatsapp"` na tela.
+
+**Correção**: Adicionar case `whatsapp` em `buildLabel` e no ícone/cor do componente.
+
+### 4. Tipo `assignment` sem label
+18 registros de activities com `type = 'assignment'` — aparece como `"assignment"`.
+
+**Correção**: Adicionar case `assignment` mapeando para label de atribuição.
+
+## Arquivo afetado: `src/hooks/use-lead-history.ts`
+
+### Mudança 1 — TIMELINE_AUTHORITY_TYPES
+Adicionar `assignee_changed` ao set:
+```ts
+const TIMELINE_AUTHORITY_TYPES = new Set([
+  ...
+  'assignee_changed',  // ← ADD: deduplica com lead_assigned da timeline
+]);
+```
+
+### Mudança 2 — buildLabel: novos cases
+```ts
+case 'status_change': {
+  const from = metadata?.from_status;
+  const to = metadata?.to_status;
+  const statusMap: Record<string, string> = { open: 'Aberto', won: 'Ganho', lost: 'Perdido' };
+  if (from && to) return `Status: ${statusMap[from] || from} → ${statusMap[to] || to}`;
+  return 'Status alterado';
+}
+case 'whatsapp':
+  return 'Mensagem WhatsApp';
+case 'assignment':
+  return metadata?.to_user_name ? `Atribuído a ${metadata.to_user_name}` : 'Lead atribuído';
+```
+
+## Arquivo afetado: `src/components/leads/LeadHistory.tsx`
+
+### Mudança 1 — getEventIcon: novos tipos
+```ts
+status_change:  ArrowRight,
+whatsapp:       MessageSquare,
+assignment:     UserCheck,
+```
+
+### Mudança 2 — getEventColors: novos tipos
+```ts
+status_change: { text: 'text-muted-foreground', bg: 'bg-muted' },
+whatsapp:      { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/15' },
+assignment:    { text: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-500/15' },
+```
+
+## Resumo das mudanças
+
+| Problema | Impacto | Correção |
 |---|---|---|
-| Arquitetura | Usa dois hooks separados (`useLeadTimeline` + `useActivities`) com `useMemo` | Uma única query direta ao Supabase via `useQuery` — mais eficiente |
-| Deduplicação | Nenhuma — duplicatas aparecem | Define `ACTIVITY_ONLY_TYPES` e `TIMELINE_AUTHORITY_TYPES` para evitar eventos duplicados |
-| Enriquecimento | Labels com emojis no texto | Labels limpos em texto puro, ícones tratados na UI |
-| Resolução de atores | Depende do hook de timeline | Resolve IDs de usuários em metadata dinamicamente via query extra |
-| Enriquecimento de webhook | Não busca nome do webhook | Busca `webhooks_integrations` para mostrar o nome real do webhook |
-| Tempo de resposta | Calcula manualmente (minutos/segundos) | Usa `formatResponseTime` já exportado de `use-lead-timeline` |
-| Ordem | Mais recentes primeiro (descending) | Mais antigos primeiro (ascending) — ordem cronológica natural |
+| `assignee_changed` duplica `lead_assigned` | 2 linhas p/ mesma ação | Adicionar ao `TIMELINE_AUTHORITY_TYPES` |
+| `status_change` sem label | Aparece como texto cru | Novo case em `buildLabel` |
+| `whatsapp` sem label/ícone | Aparece como `"whatsapp"` | Novo case + ícone + cor |
+| `assignment` sem label/ícone | Aparece como `"assignment"` | Novo case + ícone + cor |
 
-### Componente: `LeadHistory.tsx` → `LeadHistory-2.tsx`
-
-| Aspecto | Atual | Proposto |
-|---|---|---|
-| Ícones por origem | Um único ícone para `lead_created` | Ícones diferentes para Meta Ads, WhatsApp, Site, Manual, Webhook |
-| Outcomes | Usa `getOutcomeLabel`/`getOutcomeVariant` de `TaskOutcomeDialog` | Define `OUTCOME_CONFIG` inline com mais tipos (voicemail, busy, bounced, etc.) |
-| Banner de primeira resposta | Banner amarelo simples | Banner mais polido com tempo formatado via `formatResponseTime` |
-| Linha de conexão | Linha fixa do topo ao fundo | Linha dinâmica entre eventos (não aparece após o último) |
-| Badge "Sistema" | Aparece em todos eventos de timeline | Só aparece para eventos sem ator humano E sem automação |
-| Estilo dos ícones | Cores sólidas `bg-*-100` | Fundo translúcido `bg-*/15` — visual mais moderno |
-
-## Mudanças a implementar
-
-### 1. Criar `src/hooks/use-lead-history.ts`
-Novo hook com a arquitetura melhorada (query única, deduplicação, enriquecimento de webhook, resolução de atores).
-
-### 2. Atualizar `src/components/leads/LeadHistory.tsx`
-Substituir pelo componente melhorado que importa do novo hook `use-lead-history` e aplica os estilos aprimorados.
-
-### 3. Manter `src/hooks/use-lead-full-history.ts`
-Deixar o arquivo antigo intacto por enquanto — ele pode ter outras dependências. O componente `LeadHistory.tsx` passará a usar o novo hook.
-
-## Technical Details
-
-- O novo hook usa `queryKey: ['lead-history-v2', leadId]` — não conflita com cache existente
-- `ACTIVITY_ONLY_TYPES` filtra apenas: `call`, `email`, `note`, `message`, `task_completed`, `contact_updated`, `automation_message` — evitando duplicação de eventos de sistema
-- A query de `lead_timeline_events` busca pelo campo `created_at` (não `event_at` do hook antigo)
-- O componente novo importa `formatResponseTime` de `use-lead-timeline` — exportação já existe
-
-## Arquivos afetados
-
-- `src/hooks/use-lead-history.ts` — criar (novo arquivo)
-- `src/components/leads/LeadHistory.tsx` — substituir pelo conteúdo de `LeadHistory-2.tsx`
+## Arquivos a editar
+- `src/hooks/use-lead-history.ts` — 2 seções (TIMELINE_AUTHORITY_TYPES + buildLabel)
+- `src/components/leads/LeadHistory.tsx` — 2 seções (iconMap + colorMap)
