@@ -2,14 +2,13 @@ import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, Users, Timer, Tags, GitBranch, ListChecks, LucideIcon } from 'lucide-react';
+import { Shuffle, Users, Tags, GitBranch, ListChecks, LucideIcon } from 'lucide-react';
 import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Tab components
 import { DistributionTab } from '@/components/crm-management/DistributionTab';
 import { TeamsTab } from '@/components/crm-management/TeamsTab';
-import { PoolTab } from '@/components/crm-management/PoolTab';
 import { TagsTab } from '@/components/crm-management/TagsTab';
 import { CadencesTab } from '@/components/crm-management/CadencesTab';
 import { TabIntroCard } from '@/components/crm-management/TabIntroCard';
@@ -44,14 +43,7 @@ const tabIntros: Record<string, { title: string; description: string; tips?: str
     tips: [
       'Leads são distribuídos com base em disponibilidade e regras',
       'Você pode criar filas por origem, cidade ou outros critérios',
-    ],
-  },
-  pool: {
-    title: 'Redistribuição por tempo de resposta',
-    description: 'Quando um corretor não faz contato dentro do tempo limite, o lead é passado para o próximo da fila.',
-    tips: [
-      'Defina o tempo máximo para primeiro contato',
-      'O sistema verifica automaticamente a cada minuto',
+      'Ative a redistribuição nas configurações avançadas de cada fila para reatribuir leads sem contato',
     ],
   },
   cadences: {
@@ -80,7 +72,6 @@ export default function CRMManagement() {
     { value: 'teams', label: 'Equipes', icon: Users },
     { value: 'pipelines', label: 'Pipelines', icon: GitBranch },
     { value: 'distribution', label: 'Distribuição', icon: Shuffle },
-    { value: 'pool', label: 'Redistribuição', icon: Timer },
     { value: 'cadences', label: 'Cadências', icon: ListChecks },
     { value: 'tags', label: 'Tags', icon: Tags },
   ], []);
@@ -150,10 +141,6 @@ export default function CRMManagement() {
 
           <TabsContent value="distribution" className="mt-0">
             <DistributionTab />
-          </TabsContent>
-
-          <TabsContent value="pool" className="mt-0">
-            <PoolTab />
           </TabsContent>
 
           <TabsContent value="cadences" className="mt-0">

@@ -25,6 +25,8 @@ interface QueueMember {
 
 interface QueueSettings {
   enable_redistribution?: boolean;
+  redistribution_timeout_minutes?: number;
+  redistribution_max_attempts?: number;
   preserve_position?: boolean;
   require_checkin?: boolean;
   reentry_behavior?: 'redistribute' | 'keep_assignee';
@@ -87,7 +89,24 @@ export function useCreateQueueAdvanced() {
       
       if (rrError) throw rrError;
       
-      // Create rules from conditions - FILTER OUT EMPTY CONDITIONS
+      // Sync redistribution settings to pipeline
+      if (input.target_pipeline_id) {
+        if (input.settings.enable_redistribution) {
+          await supabase
+            .from('pipelines')
+            .update({
+              pool_enabled: true,
+              pool_timeout_minutes: input.settings.redistribution_timeout_minutes ?? 10,
+              pool_max_redistributions: input.settings.redistribution_max_attempts ?? 3,
+            })
+            .eq('id', input.target_pipeline_id);
+        } else {
+          await supabase
+            .from('pipelines')
+            .update({ pool_enabled: false })
+            .eq('id', input.target_pipeline_id);
+        }
+      }
       const validConditions = input.conditions.filter(c => c.values.length > 0);
       
       if (validConditions.length > 0) {
@@ -233,6 +252,25 @@ export function useUpdateQueueAdvanced() {
         .eq('id', id);
       
       if (rrError) throw rrError;
+      
+      // Sync redistribution settings to pipeline
+      if (input.target_pipeline_id) {
+        if (input.settings.enable_redistribution) {
+          await supabase
+            .from('pipelines')
+            .update({
+              pool_enabled: true,
+              pool_timeout_minutes: input.settings.redistribution_timeout_minutes ?? 10,
+              pool_max_redistributions: input.settings.redistribution_max_attempts ?? 3,
+            })
+            .eq('id', input.target_pipeline_id);
+        } else {
+          await supabase
+            .from('pipelines')
+            .update({ pool_enabled: false })
+            .eq('id', input.target_pipeline_id);
+        }
+      }
       
       // Delete existing rules and recreate
       await supabase
