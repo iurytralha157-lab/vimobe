@@ -1,119 +1,185 @@
 
-# Feature Flags e Modo Manutenção no Painel Super Admin
+# Correção de Segurança: Impersonação sem Alterar o Banco de Dados
 
-## Estratégia: Reutilizar `system_settings.value` (sem migration)
+## Diagnóstico do problema atual
 
-A tabela `system_settings` já tem um campo `value` do tipo `jsonb` com o registro `key = 'global'`. Basta adicionar novos campos nesse JSON:
-- `maintenance_mode: boolean` — ativa o banner de manutenção
-- `maintenance_message: string` — mensagem personalizada do banner
-- `feature_flags: { [key: string]: boolean }` — objeto com flags globais
+### Fluxo atual (inseguro)
+```text
+startImpersonate(orgId)
+  → supabase.from('users').update({ organization_id: orgId })   ← gravado no banco!
+  → localStorage.setItem('impersonating', ...)
+  → fetchProfile() → lê organization_id do banco
 
-Isso evita uma nova tabela e mantém o padrão já estabelecido no código.
+stopImpersonate()
+  → supabase.from('users').update({ organization_id: null })    ← restaura no banco
+  → localStorage.removeItem('impersonating')
+```
+
+**Cenários de falha:**
+- Aba fechada sem clicar "Voltar" → `organization_id` fica errado no banco para sempre
+- `localStorage` limpo manualmente → banner some, mas banco ainda tem `organization_id` errada
+- Crash do browser durante impersonação → super admin "preso" em outra org
+- RLS bypassa pela `organization_id` da tabela `users` → escritas acidentais na org errada
+
+### Fluxo proposto (seguro — só localStorage)
+```text
+startImpersonate(orgId)
+  → NÃO toca o banco
+  → localStorage.setItem('impersonating', ...)
+  → fetchProfile() → lê organization_id DO BANCO (original do super admin)
+                   → sobrepõe organization com a org impersonada (só em memória)
+
+stopImpersonate()
+  → NÃO toca o banco
+  → localStorage.removeItem('impersonating')
+  → recarrega profile normalmente → usa organization_id original do banco
+
+Recovery no startup
+  → se há 'impersonating' no localStorage → carrega org impersonada na memória
+  → se NÃO há 'impersonating' no localStorage mas super admin tem organization_id ≠ null no banco:
+      → não faz nada (era o comportamento antigo, agora não acontece mais)
+```
 
 ---
 
 ## Arquivos a modificar
 
-### 1. `src/pages/admin/AdminSettings.tsx`
+### `src/contexts/AuthContext.tsx` — mudança principal
 
-Adicionar **dois novos Cards** ao final da página (antes do Card de "Forçar Atualização"):
+#### 1. Remover a escrita no banco de `startImpersonate`
 
-**Card A: Modo Manutenção**
-- Switch para ativar/desativar
-- Campo de texto para mensagem personalizada
-- Preview do banner em tempo real
-- Botão salvar que grava `maintenance_mode` e `maintenance_message` no campo `value` via `updateSettingsValue`
-
-**Card B: Feature Flags**
-- Lista de flags com Switch por linha
-- Flags iniciais:
-  - `multi_pipeline` — Múltiplos Pipelines (experimental)
-  - `telecom_module` — Módulo Telecom
-  - `ai_assistant` — Assistente de IA (beta)
-  - `advanced_reports` — Relatórios Avançados
-- Botão "Salvar Flags" que grava o objeto `feature_flags` no campo `value`
-
-Novos states necessários:
-```tsx
-const [maintenanceMode, setMaintenanceMode] = useState(false);
-const [maintenanceMessage, setMaintenanceMessage] = useState('');
-const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
-const [savingMaintenance, setSavingMaintenance] = useState(false);
-const [savingFlags, setSavingFlags] = useState(false);
-```
-
-Atualizar `fetchSettings` e `SystemSettingsValue` para incluir os novos campos.
-
-### 2. `src/hooks/use-system-settings.ts`
-
-Adicionar os novos campos ao parse do `value`:
+**Antes (linhas 130-153):**
 ```ts
-maintenance_mode: value.maintenance_mode || false,
-maintenance_message: value.maintenance_message || '',
-feature_flags: value.feature_flags || {},
+const startImpersonate = async (orgId: string, orgName: string) => {
+  if (user) {
+    await supabase
+      .from('users')
+      .update({ organization_id: orgId })   // ← REMOVER
+      .eq('id', user.id);
+    logAuditAction('impersonate_start', ...).catch(console.error);
+  }
+  const impersonateSession = { orgId, orgName };
+  setImpersonating(impersonateSession);
+  localStorage.setItem('impersonating', JSON.stringify(impersonateSession));
+  if (user) await fetchProfile(user.id);
+};
 ```
 
-### 3. `src/components/layout/AppLayout.tsx`
-
-Adicionar o componente `MaintenanceBanner` que:
-- Usa `useSystemSettings()` para ler `maintenance_mode` e `maintenance_message`
-- Só exibe se `maintenance_mode === true` **E** o usuário não for `super_admin` ou `admin`
-- Mostra um banner vermelho/amarelo fixo no topo com a mensagem configurada
-- Não pode ser dispensado (diferente do `AnnouncementBanner`)
-
-### 4. `src/hooks/use-feature-flags.ts` (novo arquivo)
-
-Hook auxiliar que retorna as feature flags globais:
+**Depois:**
 ```ts
-export function useFeatureFlags() {
-  const { data: settings } = useSystemSettings();
-  return settings?.feature_flags || {};
-}
+const startImpersonate = async (orgId: string, orgName: string) => {
+  if (!user) return;
+
+  // Log auditoria
+  logAuditAction('impersonate_start', 'organization', orgId, undefined, {
+    org_name: orgName,
+    started_at: new Date().toISOString()
+  }).catch(console.error);
+
+  const impersonateSession: ImpersonateSession = { orgId, orgName };
+
+  // Persist no localStorage ANTES de setar o estado
+  // para que fetchProfile() já leia o impersonating correto
+  localStorage.setItem('impersonating', JSON.stringify(impersonateSession));
+  setImpersonating(impersonateSession);
+
+  // Buscar e setar a org impersonada em memória (sem tocar o banco)
+  const { data: orgData } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', orgId)
+    .single();
+
+  if (orgData) setOrganization(orgData as Organization);
+};
 ```
 
----
+#### 2. Remover a escrita no banco de `stopImpersonate`
 
-## Comportamento do Banner de Manutenção
-
-| Usuário | Vê o banner? |
-|---|---|
-| `super_admin` | ❌ Nunca (pode continuar usando) |
-| `admin` | ❌ Nunca (admin da org continua operando) |
-| `user` (role comum) | ✅ Sempre que manutenção ativa |
-
-O banner será **laranja/amarelo**, aparece no topo da tela (abaixo do header), com a mensagem configurada e um ícone de ferramenta. Não tem botão de fechar.
-
----
-
-## Fluxo de dados
-
-```
-AdminSettings → system_settings.value.maintenance_mode = true
-                system_settings.value.feature_flags = { multi_pipeline: true, ... }
-
-AppLayout → useSystemSettings() → lê maintenance_mode
-         → se true + user não-admin → exibe MaintenanceBanner
-
-useFeatureFlags() → lê feature_flags do system_settings
-                 → qualquer componente pode usar para condicional de feature
+**Antes (linhas 155-179):**
+```ts
+const stopImpersonate = async () => {
+  if (user && impersonating) {
+    logAuditAction('impersonate_stop', ...).catch(console.error);
+  }
+  if (user) {
+    await supabase
+      .from('users')
+      .update({ organization_id: null })   // ← REMOVER
+      .eq('id', user.id);
+  }
+  setImpersonating(null);
+  localStorage.removeItem('impersonating');
+  setOrganization(null);
+  if (user) await fetchProfile(user.id);
+};
 ```
 
+**Depois:**
+```ts
+const stopImpersonate = async () => {
+  if (user && impersonating) {
+    logAuditAction('impersonate_stop', 'organization', impersonating.orgId, undefined, {
+      org_name: impersonating.orgName,
+      stopped_at: new Date().toISOString()
+    }).catch(console.error);
+  }
+
+  setImpersonating(null);
+  localStorage.removeItem('impersonating');
+  setOrganization(null); // limpa org impersonada imediatamente
+
+  // Recarregar org original do super admin (usando organization_id real do banco)
+  if (user) await fetchProfile(user.id);
+};
+```
+
+#### 3. Ajuste no `fetchProfile` — ler impersonating do localStorage diretamente
+
+O `fetchProfile` usa `impersonating?.orgId` para decidir qual org buscar. Como o state React e o localStorage podem estar em momentos diferentes durante a inicialização, a leitura precisa ser explícita do localStorage:
+
+**Antes (linha 108):**
+```ts
+const orgIdToFetch = impersonating?.orgId || profileData.organization_id;
+```
+
+**Depois (lê diretamente do localStorage para evitar stale closure):**
+```ts
+// Ler do localStorage para garantir que o valor está atualizado,
+// mesmo durante o startup onde o estado React ainda pode ser null
+const storedImpersonating = localStorage.getItem('impersonating');
+const activeImpersonation: ImpersonateSession | null = storedImpersonating
+  ? JSON.parse(storedImpersonating)
+  : null;
+
+const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
+```
+
+#### 4. Recovery automático no startup
+
+O código de startup (`getSession().then(...)`) já chama `fetchProfile`, que com a mudança acima já vai ler o `localStorage` e carregar a org impersonada corretamente. O recovery é automático — sem código extra necessário.
+
+**Comportamento de recovery:**
+- App abre com `impersonating` no localStorage → `fetchProfile` detecta, carrega org impersonada em memória → banner aparece → tudo funciona
+- App abre sem `impersonating` no localStorage → carrega org real do banco → sem impersonação → comportamento normal
+
 ---
 
-## Detalhes técnicos
+## Impacto nas páginas que chamam `startImpersonate`
 
-- Os campos novos são adicionados ao JSON `value` via a função `updateSettingsValue` já existente — zero mudança de schema
-- `useSystemSettings` tem `staleTime: 5min` — o banner de manutenção aparece em até 5 minutos para usuários que já estão na tela. Para ativação imediata, o admin pode usar o "Forçar Atualização Global" já existente
-- O hook `useFeatureFlags` é leve e pode ser importado em qualquer componente no futuro
-- Nenhum migration SQL necessário
+`AdminOrganizations.tsx` e `AdminOrganizationDetail.tsx` não precisam de mudanças — a assinatura de `startImpersonate(orgId, orgName)` permanece idêntica. Apenas o que acontece internamente muda.
 
 ---
 
-## Resumo dos arquivos
+## Resumo das mudanças
 
-| Arquivo | Ação |
-|---|---|
-| `src/pages/admin/AdminSettings.tsx` | Adicionar 2 Cards: Modo Manutenção + Feature Flags |
-| `src/hooks/use-system-settings.ts` | Adicionar 3 campos ao parse do value |
-| `src/components/layout/AppLayout.tsx` | Adicionar `MaintenanceBanner` inline |
-| `src/hooks/use-feature-flags.ts` | Criar hook auxiliar |
+| Ponto | Antes | Depois |
+|---|---|---|
+| `startImpersonate` | Escreve `organization_id` no banco | Só salva no localStorage e busca org em memória |
+| `stopImpersonate` | Restaura `organization_id = null` no banco | Só remove do localStorage e recarrega perfil |
+| `fetchProfile` | Usa state `impersonating` (pode estar desatualizado) | Lê diretamente do `localStorage` (sempre atualizado) |
+| Crash/fechamento de aba | Super admin fica com `organization_id` errado no banco | Sem efeito — banco nunca foi alterado |
+| Recovery no startup | Nenhum | Automático via `localStorage` + `fetchProfile` |
+| RLS no banco | Chamadas com `organization_id` errada possível | Sem risco — `organization_id` do super admin nunca muda |
+
+**Arquivo modificado:** apenas `src/contexts/AuthContext.tsx` (3 funções internas).
