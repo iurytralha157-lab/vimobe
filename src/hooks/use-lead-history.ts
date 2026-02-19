@@ -253,6 +253,20 @@ export function useLeadHistory(leadId: string | null) {
         (usersData || []).forEach((u: any) => userMap.set(u.id, u));
       }
 
+      // ── Deduplication fingerprint for activities (handles backend double-writes) ──
+      function getActivityFingerprint(a: any): string {
+        const meta = a.metadata || {};
+        const ts = Math.floor(new Date(a.created_at).getTime() / 2000); // 2-second window
+        return `${a.type}-${meta.to_stage || meta.to_user_id || meta.new_stage_name || ''}-${ts}`;
+      }
+      const seenActivities = new Set<string>();
+      const dedupedActivityEvents = activityEvents.filter((a: any) => {
+        const fp = getActivityFingerprint(a);
+        if (seenActivities.has(fp)) return false;
+        seenActivities.add(fp);
+        return true;
+      });
+
       // Build unified events from timeline
       const timelineMapped: UnifiedHistoryEvent[] = timelineEvents.map((e: any) => {
         const meta = (e.metadata as Record<string, any>) || {};
@@ -279,8 +293,22 @@ export function useLeadHistory(leadId: string | null) {
       // Track which timeline types exist for deduplication
       const timelineTypesPresent = new Set(timelineEvents.map((e: any) => e.event_type));
 
+      // Enrich timeline lead_created with webhook_name from activity if missing
+      const activityLeadCreated = dedupedActivityEvents.find((a: any) => a.type === 'lead_created');
+      timelineMapped.forEach((e) => {
+        if (e.type === 'lead_created' && !e.webhookName && activityLeadCreated) {
+          const actMeta = (activityLeadCreated.metadata as Record<string, any>) || {};
+          const wn = actMeta.webhook_name || actMeta.form_name || null;
+          if (wn) {
+            e.webhookName = wn;
+            // Re-build label with enriched metadata
+            e.label = buildLabel('lead_created', { ...((e.metadata as Record<string, any>) || {}), webhook_name: wn }, 'timeline');
+          }
+        }
+      });
+
       // Build unified events from activities (with deduplication)
-      const activityMapped: UnifiedHistoryEvent[] = activityEvents
+      const activityMapped: UnifiedHistoryEvent[] = dedupedActivityEvents
         .filter((a: any) => {
           // Always include activity-only types
           if (ACTIVITY_ONLY_TYPES.has(a.type)) return true;
