@@ -342,18 +342,6 @@ export function LeadCard({
                   
                 </> : null}
 
-              {/* Progresso da cadência */}
-              {totalTasks > 0 && <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
-                      <CheckCircle className="h-3 w-3" />
-                      <span className="font-medium">{completedTasks}/{totalTasks}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    {completedTasks} de {totalTasks} atividades concluídas
-                  </TooltipContent>
-                </Tooltip>}
 
               {/* Tempo no estágio */}
               <Tooltip>
