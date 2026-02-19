@@ -153,7 +153,7 @@ export default function BrokerPerformance() {
 
   return (
     <AppLayout title="Performance">
-      <div className="space-y-8 w-full pb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 w-full pb-10 items-start">
 
         {/* ── ÁREA 1: MINHA PERFORMANCE ─────────────────────────────────── */}
         <section>
@@ -349,7 +349,7 @@ export default function BrokerPerformance() {
         </section>
 
         {/* ── ÁREA 2: RANKING DA EQUIPE ─────────────────────────────────── */}
-        <section>
+        <section className="lg:sticky lg:top-0">
           <div className="flex items-center gap-2 mb-4">
             <div className="h-8 w-1 rounded-full bg-secondary-foreground" />
             <div>
