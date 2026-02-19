@@ -380,6 +380,20 @@ export function LeadDetailDialog({
       outcome,
       outcomeNotes
     });
+
+    // Registrar first response ao concluir tarefa de cadência (se ainda não foi registrado)
+    const channel = task.type === 'call' ? 'phone'
+      : task.type === 'email' ? 'email'
+      : task.type === 'message' ? 'whatsapp'
+      : 'stage_move';
+
+    await recordFirstResponse({
+      leadId: lead.id,
+      organizationId: lead.organization_id || profile?.organization_id || '',
+      channel,
+      actorUserId: profile?.id || null,
+      firstResponseAt: lead.first_response_at,
+    });
   };
   
   // Handle outcome dialog confirmation
