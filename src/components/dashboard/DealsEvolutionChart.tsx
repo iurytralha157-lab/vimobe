@@ -155,7 +155,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 stroke="hsl(var(--border))" 
-                opacity={0.3}
+                opacity={0.6}
                 vertical={false}
               />
               <XAxis 
