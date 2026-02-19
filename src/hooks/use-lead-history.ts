@@ -282,7 +282,7 @@ export function useLeadHistory(leadId: string | null) {
           actor: actor ? { id: actor.id, name: actor.name, avatar_url: actor.avatar_url } : null,
           source: 'timeline' as const,
           metadata: meta,
-          channel: e.channel || null,
+          channel: e.channel || meta.channel || null,
           isAutomation: e.is_automation || false,
           sourceOrigin: meta.source || meta.source_label || null,
           webhookName: meta.webhook_name || meta.form_name || null,
