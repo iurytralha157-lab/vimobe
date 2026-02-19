@@ -1,10 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { DateFilterPopover } from "@/components/ui/date-filter-popover";
 import {
   AreaChart,
   Area,
@@ -16,7 +17,11 @@ import {
 } from "recharts";
 import { useMyPerformance, useUpsertMyGoal } from "@/hooks/use-my-performance";
 import { useTeamRanking } from "@/hooks/use-team-ranking";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
+
+import {
+  DatePreset,
+  getDateRangeFromPreset,
+} from "@/hooks/use-dashboard-filters";
 import {
   TrendingUp,
   Target,
@@ -137,11 +142,18 @@ function GoalEditor({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function BrokerPerformance() {
-  const { data: perf, isLoading: loadingPerf } = useMyPerformance();
-  const { data: teamData, isLoading: loadingTeam } = useTeamRanking();
+  const [datePreset, setDatePreset] = useState<DatePreset>("thisMonth");
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
+
+  const dateRange = useMemo(() => {
+    if (datePreset === "custom" && customDateRange) return customDateRange;
+    return getDateRangeFromPreset(datePreset);
+  }, [datePreset, customDateRange]);
+
+  const { data: perf, isLoading: loadingPerf } = useMyPerformance(dateRange);
+  const { data: teamData, isLoading: loadingTeam } = useTeamRanking(dateRange);
   const upsertGoal = useUpsertMyGoal();
 
-  const currentMonthLabel = format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
   const topClosedCount = teamData?.ranking[0]?.closedCount || 1;
 
   const handleSaveGoal = useCallback(
@@ -153,6 +165,22 @@ export default function BrokerPerformance() {
 
   return (
     <AppLayout title="Performance">
+      {/* ── FILTRO GLOBAL ───────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Performance</h1>
+          <p className="text-xs text-muted-foreground">Acompanhe seus resultados e o ranking da equipe</p>
+        </div>
+        <DateFilterPopover
+          datePreset={datePreset}
+          onDatePresetChange={setDatePreset}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+          defaultPreset="thisMonth"
+          align="end"
+        />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 w-full pb-10 items-start">
 
         {/* ── ÁREA 1: MINHA PERFORMANCE ─────────────────────────────────── */}
@@ -161,7 +189,6 @@ export default function BrokerPerformance() {
             <div className="h-8 w-1 rounded-full bg-primary" />
             <div>
               <h2 className="text-lg font-semibold text-foreground">Minha Performance</h2>
-              <p className="text-xs text-muted-foreground capitalize">{currentMonthLabel}</p>
             </div>
             {(perf?.streak ?? 0) > 0 && (
               <Badge variant="secondary" className="ml-auto flex items-center gap-1 text-xs">
@@ -357,7 +384,7 @@ export default function BrokerPerformance() {
                 <Trophy className="h-5 w-5 text-secondary-foreground" />
                 Ranking da Equipe
               </h2>
-              <p className="text-xs text-muted-foreground capitalize">{currentMonthLabel}</p>
+              <p className="text-xs text-muted-foreground capitalize">{format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}</p>
             </div>
           </div>
 
