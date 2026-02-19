@@ -1,4 +1,6 @@
+import React from 'react';
 import { useLeadHistory, UnifiedHistoryEvent } from '@/hooks/use-lead-history';
+import { DateSeparator, shouldShowDateSeparator } from '@/components/whatsapp/DateSeparator';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -202,6 +204,8 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
         {(() => {
           const filteredEvents = events.filter(e => e.type !== 'first_response');
           return filteredEvents.map((event, index) => {
+          const prevEvent = index > 0 ? filteredEvents[index - 1] : null;
+          const showSeparator = shouldShowDateSeparator(event.timestamp, prevEvent?.timestamp ?? null);
           const Icon = getEventIcon(event);
           const colors = getEventColors(event);
           const isLastEvent = index === filteredEvents.length - 1;
@@ -213,7 +217,11 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
           const outcomeConfig = outcome ? OUTCOME_CONFIG[outcome] : null;
 
           return (
-            <div key={event.id} className="relative flex gap-3 pl-9">
+            <React.Fragment key={event.id}>
+              {showSeparator && (
+                <DateSeparator date={new Date(event.timestamp)} className="py-2" />
+              )}
+            <div className="relative flex gap-3 pl-9">
               {/* Connector line (not on last event) */}
               {!isLastEvent && (
                 <div className="absolute left-3.5 top-7 bottom-0 w-px bg-border" />
@@ -338,6 +346,7 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
                 )}
               </div>
             </div>
+            </React.Fragment>
           );
         });
         })()}
