@@ -663,6 +663,39 @@ export type Database = {
         }
         Relationships: []
       }
+      broker_monthly_goals: {
+        Row: {
+          created_at: string | null
+          goal_amount: number
+          id: string
+          month: number
+          organization_id: string
+          updated_at: string | null
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          goal_amount?: number
+          id?: string
+          month: number
+          organization_id: string
+          updated_at?: string | null
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          goal_amount?: number
+          id?: string
+          month?: number
+          organization_id?: string
+          updated_at?: string | null
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       cadence_tasks_template: {
         Row: {
           cadence_template_id: string
