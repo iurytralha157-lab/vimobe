@@ -199,7 +199,7 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
 
       {/* Timeline */}
       <div className="space-y-0">
-        {events.map((event, index) => {
+        {events.filter(e => e.type !== 'first_response').map((event, index) => {
           const Icon = getEventIcon(event);
           const colors = getEventColors(event);
           const isLastEvent = index === events.length - 1;
