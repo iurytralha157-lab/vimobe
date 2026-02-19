@@ -153,7 +153,7 @@ export default function BrokerPerformance() {
 
   return (
     <AppLayout title="Performance">
-      <div className="space-y-8 max-w-5xl mx-auto pb-10">
+      <div className="space-y-8 w-full pb-10">
 
         {/* ── ÁREA 1: MINHA PERFORMANCE ─────────────────────────────────── */}
         <section>
