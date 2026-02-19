@@ -27,7 +27,6 @@ import {
 } from "@/hooks/use-dashboard-filters";
 import {
   TrendingUp,
-  Target,
   DollarSign,
   FileText,
   Flame,
@@ -252,8 +251,8 @@ export default function BrokerPerformance() {
 
             <Card className="border shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Ticket Médio</CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-xs font-medium text-muted-foreground">Comissão (período)</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 {loadingPerf ? (
@@ -261,9 +260,9 @@ export default function BrokerPerformance() {
                 ) : (
                   <>
                     <div className="text-2xl font-bold text-foreground">
-                      {formatCurrency(perf?.ticketMedio ?? 0)}
+                      {formatCurrency(perf?.totalCommission ?? 0)}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">por negócio</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">do sistema financeiro</p>
                   </>
                 )}
               </CardContent>

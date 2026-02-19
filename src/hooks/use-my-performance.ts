@@ -15,7 +15,7 @@ export interface MonthlyPerformance {
 export interface MyPerformanceData {
   totalSales: number;
   closedCount: number;
-  ticketMedio: number;
+  totalCommission: number;
   activeContracts: number;
   activeLeads: number;
   avgResponseSeconds: number | null;
@@ -37,7 +37,7 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
         return {
           totalSales: 0,
           closedCount: 0,
-          ticketMedio: 0,
+          totalCommission: 0,
           activeContracts: 0,
           activeLeads: 0,
           avgResponseSeconds: null,
@@ -95,7 +95,6 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
         0
       );
       const closedCount = wonLeads.length;
-      const ticketMedio = closedCount > 0 ? totalSales / closedCount : 0;
       const activeContracts = contractsResult.data?.length || 0;
       const activeLeads = activeLeadsResult.data?.length || 0;
 
@@ -123,16 +122,31 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
       const goalProgress =
         currentGoal > 0 ? Math.min((totalSales / currentGoal) * 100, 100) : 0;
 
-      // Build last 6 months — single query instead of 6 sequential queries
+      // Build last 6 months — ALL org sales (no user filter) + commissions in parallel
       const sixMonthsAgo = startOfMonth(subMonths(now, 5));
-      const { data: chartLeads } = await supabase
-        .from("leads")
-        .select("won_at, valor_interesse")
-        .eq("organization_id", organizationId)
-        .eq("assigned_user_id", userId)
-        .eq("deal_status", "won")
-        .gte("won_at", sixMonthsAgo.toISOString())
-        .lte("won_at", endOfMonth(now).toISOString());
+      const [chartLeadsResult, commissionsResult] = await Promise.all([
+        supabase
+          .from("leads")
+          .select("won_at, valor_interesse")
+          .eq("organization_id", organizationId)
+          .eq("deal_status", "won")
+          .gte("won_at", sixMonthsAgo.toISOString())
+          .lte("won_at", endOfMonth(now).toISOString()),
+
+        supabase
+          .from("commissions")
+          .select("amount")
+          .eq("organization_id", organizationId)
+          .eq("user_id", userId)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd),
+      ]);
+
+      const chartLeads = chartLeadsResult.data;
+      const totalCommission = (commissionsResult.data || []).reduce(
+        (sum, c) => sum + (c.amount || 0),
+        0
+      );
 
       const last6Months: MonthlyPerformance[] = [];
       for (let i = 5; i >= 0; i--) {
@@ -174,7 +188,7 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
       return {
         totalSales,
         closedCount,
-        ticketMedio,
+        totalCommission,
         activeContracts,
         activeLeads,
         avgResponseSeconds,
