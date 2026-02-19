@@ -1,67 +1,80 @@
 
-## Adicionar Filtro de Período na Página de Performance
+## Diagnóstico: Por que o gráfico está vazio
 
-### Diagnóstico
+### Causa raiz identificada
 
-A página `BrokerPerformance.tsx` usa dois hooks fixos no mês atual:
+Consultando o banco de dados, existem 5 leads com `deal_status = 'won'` e todos têm `won_at` preenchido. Os `assigned_user_id` desses leads são:
+- `9853f99b` — 1 lead (fev/2026)
+- `3b27bc23` — 2 leads (jan e fev/2026)
+- `b72ba88d` — 1 lead (fev/2026)
+- `3df10ff2` — 1 lead (fev/2026)
 
-- `useMyPerformance()` — hardcoded com `startOfMonth(now)` / `endOfMonth(now)`
-- `useTeamRanking()` — hardcoded com `startOfMonth(now)` / `endOfMonth(now)`
+O hook `useMyPerformance` filtra **estritamente por `assigned_user_id = userId` (usuário logado)**. Se o usuário logado não for nenhum desses 4 IDs, o gráfico retorna zero dados.
 
-O componente `DateFilterPopover` já existe em `src/components/ui/date-filter-popover.tsx` e é exatamente igual ao da imagem enviada (presets + calendário customizado + botão Aplicar). Só precisamos conectá-lo à página e aos hooks.
+Mas além desse problema de dados, há **dois bugs técnicos reais** que precisam ser corrigidos:
 
-### Mudanças necessárias
+---
 
-**1. `src/hooks/use-my-performance.ts`**
+### Bug 1 — Invalidação de cache quebrada após salvar meta
 
-Adicionar parâmetro `dateRange: { from: Date; to: Date }` na função `useMyPerformance`:
-
-- O `queryKey` passa a incluir `dateRange` para reagir a mudanças de filtro
-- As queries de `leads` usam `gte("won_at", from)` / `lte("won_at", to)` do `dateRange` recebido
-- O gráfico de 6 meses permanece fixo (sempre mostra os últimos 6 meses como histórico independente do filtro)
-- O `goalProgress` e `currentGoal` continuam baseados no mês atual (a meta é sempre mensal)
-
-**2. `src/hooks/use-team-ranking.ts`**
-
-Adicionar parâmetro `dateRange: { from: Date; to: Date }`:
-
-- O `queryKey` inclui `dateRange`
-- A query de `leads` usa o `dateRange` recebido
-
-**3. `src/pages/BrokerPerformance.tsx`**
-
-- Importar `useState` (já existe), `DateFilterPopover` e `getDateRangeFromPreset`/`DatePreset` do hook de filtros
-- Criar estado local: `datePreset`, `customDateRange`
-- Calcular `dateRange` a partir do preset ou do range customizado
-- Passar `dateRange` para `useMyPerformance(dateRange)` e `useTeamRanking(dateRange)`
-- Renderizar o `DateFilterPopover` no header de cada seção (ou um único filtro global no topo)
-- O label do período muda de "MMMM de yyyy" para o label do preset selecionado
-
-### Layout do filtro na UI
-
-Um filtro único no topo da página (antes das duas colunas), alinhado à direita:
-
-```text
-┌──────────────────────────────────────────────────────────┐
-│  [Minha Performance] [fevereiro de 2026]  [📅 Este mês ▼]│
-└──────────────────────────────────────────────────────────┘
-┌────────────────────────┐  ┌────────────────────────────┐
-│  KPI Cards             │  │  Ranking da Equipe         │
-│  Barra de meta         │  │  (mesma seleção de período) │
-│  Gráfico 6 meses       │  │                            │
-└────────────────────────┘  └────────────────────────────┘
+Em `use-my-performance.ts` linha 188, o `onSuccess` do `useUpsertMyGoal` invalida:
+```ts
+queryKey: ["my-performance", user?.id]
 ```
 
-O filtro ficará no header da página (dentro do `AppLayout`), exatamente igual ao da Dashboard — um botão compacto com o ícone de calendário que abre o popover com presets e calendário customizado.
+Mas o `queryKey` real da query tem **4 elementos**: `["my-performance", userId, dateRange.from.toISOString(), dateRange.to.toISOString()]`
 
-### Default do filtro
+A invalidação com apenas 2 elementos **nunca bate**, então a query não é re-executada após salvar a meta. Isso é um bug real.
 
-O preset padrão será `thisMonth` (mês atual), que é o comportamento atual da página — sem quebrar a experiência existente.
+**Correção**: usar `{ queryKey: ["my-performance"] }` com apenas o prefixo, que invalida qualquer query cujo key começa com "my-performance".
+
+---
+
+### Bug 2 — Gráfico de 6 meses sempre vazio quando `dateRange` muda
+
+O gráfico usa `perf?.last6Months`. Esses dados vêm do mesmo `queryFn` do hook — que faz **6 queries individuais adicionais** em loop para buscar cada mês.
+
+O problema: o `queryKey` inclui o `dateRange`, então quando o filtro muda, o React Query **cria um novo cache entry** em vez de reusar o anterior. Na primeira vez que a página carrega com um `dateRange` específico, todos os dados são buscados corretamente — mas se a query falhar silenciosamente (ex: timeout, erro de RLS), o gráfico fica vazio sem nenhum feedback visual.
+
+Além disso, o loop `for (let i = 5; i >= 0; i--)` faz **6 queries sequenciais** (await dentro de for), tornando o carregamento lento e propenso a falhas parciais.
+
+**Correção**: Consolidar as 6 queries individuais em **uma única query** com filtro de data cobrindo os últimos 6 meses, agrupando os resultados em JavaScript. Isso é mais rápido e confiável.
+
+---
+
+### Bug 3 — Texto fixo "no mês atual" nos KPI cards
+
+Nos cards de KPI (linha 217 e 235 de BrokerPerformance.tsx), o subtexto está hardcoded como "no mês atual" independente do filtro selecionado. Se o usuário seleciona "Últimos 30 dias" ou "Este ano", o texto continua errado.
+
+**Correção**: Usar o label do preset selecionado no subtexto dos cards.
+
+---
+
+### Mudanças planejadas
+
+**Arquivo: `src/hooks/use-my-performance.ts`**
+
+1. **Consolidar as 6 queries do gráfico em 1 única query**: ao invés de fazer um `await supabase` dentro de um loop de 6 iterações, fazer uma única query com `.gte("won_at", sixMonthsAgo).lte("won_at", now)` e agrupar os resultados por mês em JavaScript. Isso elimina 5 roundtrips ao banco.
+
+2. **Corrigir a invalidação de cache**: mudar `queryKey: ["my-performance", user?.id]` para `queryKey: ["my-performance"]` no `onSuccess` do `useUpsertMyGoal`.
+
+**Arquivo: `src/pages/BrokerPerformance.tsx`**
+
+3. **Corrigir subtexto dos KPI cards**: substituir "no mês atual" e "vendas no mês" por um label dinâmico baseado no `datePreset` selecionado (ex: "no período selecionado").
+
+---
+
+### Comportamento após a correção
+
+| Situação | Antes | Depois |
+|---|---|---|
+| Salvar meta | Cache não atualiza, dados velhos permanecem | Cache invalidado corretamente, progresso atualiza |
+| Carregar gráfico | 6 queries sequenciais, propensas a falha | 1 query consolidada, mais rápida e confiável |
+| Subtexto KPI | Sempre "no mês atual" | Reflete o período selecionado |
 
 ### Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/hooks/use-my-performance.ts` | Aceitar `dateRange` como parâmetro; usar nas queries de leads |
-| `src/hooks/use-team-ranking.ts` | Aceitar `dateRange` como parâmetro; usar na query de leads |
-| `src/pages/BrokerPerformance.tsx` | Estado do filtro, `DateFilterPopover` no topo, passar `dateRange` para os hooks |
+| `src/hooks/use-my-performance.ts` | Consolidar 6 queries do gráfico em 1; corrigir invalidação de cache |
+| `src/pages/BrokerPerformance.tsx` | Subtexto dinâmico nos KPI cards |
