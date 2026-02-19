@@ -1,83 +1,67 @@
 
-## Verificação e Correção do Layout da Página de Performance
+## Adicionar Filtro de Período na Página de Performance
 
 ### Diagnóstico
 
-Analisando o código atual de `src/pages/BrokerPerformance.tsx`:
+A página `BrokerPerformance.tsx` usa dois hooks fixos no mês atual:
 
-- Linha 156: `<div className="space-y-8 w-full pb-10">` — as duas áreas ficam **empilhadas em coluna única** tanto no desktop quanto no mobile
-- As duas `<section>` (Minha Performance e Ranking da Equipe) são filhos diretos desse div e não têm nenhuma estrutura de grid
+- `useMyPerformance()` — hardcoded com `startOfMonth(now)` / `endOfMonth(now)`
+- `useTeamRanking()` — hardcoded com `startOfMonth(now)` / `endOfMonth(now)`
 
-O `AppLayout` já aplica `px-4 md:px-6 py-3 md:py-4` no `<main>`, então o padding lateral já está correto — apenas o grid interno precisa ser ajustado.
+O componente `DateFilterPopover` já existe em `src/components/ui/date-filter-popover.tsx` e é exatamente igual ao da imagem enviada (presets + calendário customizado + botão Aplicar). Só precisamos conectá-lo à página e aos hooks.
 
-### Layout proposto
+### Mudanças necessárias
+
+**1. `src/hooks/use-my-performance.ts`**
+
+Adicionar parâmetro `dateRange: { from: Date; to: Date }` na função `useMyPerformance`:
+
+- O `queryKey` passa a incluir `dateRange` para reagir a mudanças de filtro
+- As queries de `leads` usam `gte("won_at", from)` / `lte("won_at", to)` do `dateRange` recebido
+- O gráfico de 6 meses permanece fixo (sempre mostra os últimos 6 meses como histórico independente do filtro)
+- O `goalProgress` e `currentGoal` continuam baseados no mês atual (a meta é sempre mensal)
+
+**2. `src/hooks/use-team-ranking.ts`**
+
+Adicionar parâmetro `dateRange: { from: Date; to: Date }`:
+
+- O `queryKey` inclui `dateRange`
+- A query de `leads` usa o `dateRange` recebido
+
+**3. `src/pages/BrokerPerformance.tsx`**
+
+- Importar `useState` (já existe), `DateFilterPopover` e `getDateRangeFromPreset`/`DatePreset` do hook de filtros
+- Criar estado local: `datePreset`, `customDateRange`
+- Calcular `dateRange` a partir do preset ou do range customizado
+- Passar `dateRange` para `useMyPerformance(dateRange)` e `useTeamRanking(dateRange)`
+- Renderizar o `DateFilterPopover` no header de cada seção (ou um único filtro global no topo)
+- O label do período muda de "MMMM de yyyy" para o label do preset selecionado
+
+### Layout do filtro na UI
+
+Um filtro único no topo da página (antes das duas colunas), alinhado à direita:
 
 ```text
-DESKTOP (lg+):
-┌──────────────────────────────────────────────────────────────┐
-│  ┌────────────────────────────┐  ┌──────────────────────────┐│
-│  │  ÁREA 1 — Minha Performance│  │  ÁREA 2 — Ranking         ││
-│  │  (flex-1, coluna esquerda) │  │  (w-[380px] ou 40%,      ││
-│  │  KPI Cards (4 colunas)     │  │  sticky, max-h com scroll)││
-│  │  Barra de meta             │  │  🥇 🥈 🥉 lista...       ││
-│  │  Gráfico 6 meses           │  │                          ││
-│  └────────────────────────────┘  └──────────────────────────┘│
-└──────────────────────────────────────────────────────────────┘
-
-MOBILE (< lg):
-┌──────────────────────┐
-│  ÁREA 1              │
-│  (coluna única)      │
-│  KPI Cards (2 cols)  │
-│  Barra de meta       │
-│  Gráfico             │
-├──────────────────────┤
-│  ÁREA 2              │
-│  Ranking lista       │
-└──────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  [Minha Performance] [fevereiro de 2026]  [📅 Este mês ▼]│
+└──────────────────────────────────────────────────────────┘
+┌────────────────────────┐  ┌────────────────────────────┐
+│  KPI Cards             │  │  Ranking da Equipe         │
+│  Barra de meta         │  │  (mesma seleção de período) │
+│  Gráfico 6 meses       │  │                            │
+└────────────────────────┘  └────────────────────────────┘
 ```
 
-### Mudança técnica
+O filtro ficará no header da página (dentro do `AppLayout`), exatamente igual ao da Dashboard — um botão compacto com o ícone de calendário que abre o popover com presets e calendário customizado.
 
-**Arquivo:** `src/pages/BrokerPerformance.tsx`
+### Default do filtro
 
-**Substituir** o container de linha 156:
-
-```tsx
-// ANTES
-<div className="space-y-8 w-full pb-10">
-  <section>...Área 1...</section>
-  <section>...Área 2...</section>
-</div>
-
-// DEPOIS
-<div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 w-full pb-10 items-start">
-  <section>...Área 1...</section>
-  <section className="lg:sticky lg:top-0">...Área 2...</section>
-</div>
-```
-
-Detalhes:
-- `grid-cols-1` → coluna única no mobile (empilhado)
-- `lg:grid-cols-[1fr_380px]` → no desktop: coluna esquerda ocupa espaço restante, coluna direita tem 380px fixos
-- `items-start` → as duas colunas alinham pelo topo, sem esticar a altura
-- `lg:sticky lg:top-0` na seção do ranking → o ranking "gruda" ao topo ao rolar, enquanto a coluna da esquerda continua rolando
-- `gap-6` → espaçamento de 24px entre as duas colunas
-- Remover `space-y-8` (não faz sentido em grid horizontal)
-
-Também ajustar os KPI cards da Área 1 para 4 colunas mesmo em telas menores quando há espaço (no desktop a coluna já é mais estreita por dividir com o ranking):
-- Manter `grid-cols-2 lg:grid-cols-4` nos KPI cards — já funciona corretamente
-
-### Comportamento em cada breakpoint
-
-| Breakpoint | Layout |
-|---|---|
-| Mobile (`< 768px`) | Coluna única: Área 1 acima, Área 2 abaixo |
-| Tablet (`768px–1023px`) | Coluna única: Área 1 acima, Área 2 abaixo |
-| Desktop (`≥ 1024px`) | Duas colunas lado a lado: Performance (esquerda) + Ranking (direita, sticky) |
+O preset padrão será `thisMonth` (mês atual), que é o comportamento atual da página — sem quebrar a experiência existente.
 
 ### Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/BrokerPerformance.tsx` | Trocar `div.space-y-8` por `div.grid` e adicionar `sticky` na seção de ranking |
+| `src/hooks/use-my-performance.ts` | Aceitar `dateRange` como parâmetro; usar nas queries de leads |
+| `src/hooks/use-team-ranking.ts` | Aceitar `dateRange` como parâmetro; usar na query de leads |
+| `src/pages/BrokerPerformance.tsx` | Estado do filtro, `DateFilterPopover` no topo, passar `dateRange` para os hooks |
