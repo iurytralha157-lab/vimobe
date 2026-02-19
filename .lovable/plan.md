@@ -1,80 +1,67 @@
 
-## Diagnóstico: Por que o gráfico está vazio
+## Correções Finais na Página de Performance
 
-### Causa raiz identificada
+### O que está funcionando corretamente
 
-Consultando o banco de dados, existem 5 leads com `deal_status = 'won'` e todos têm `won_at` preenchido. Os `assigned_user_id` desses leads são:
-- `9853f99b` — 1 lead (fev/2026)
-- `3b27bc23` — 2 leads (jan e fev/2026)
-- `b72ba88d` — 1 lead (fev/2026)
-- `3df10ff2` — 1 lead (fev/2026)
+O fluxo do filtro de período está tecnicamente correto:
 
-O hook `useMyPerformance` filtra **estritamente por `assigned_user_id = userId` (usuário logado)**. Se o usuário logado não for nenhum desses 4 IDs, o gráfico retorna zero dados.
+- O estado `datePreset` e `customDateRange` são gerenciados no componente
+- O `dateRange` é calculado via `useMemo` e reage imediatamente a mudanças
+- Os dois hooks (`useMyPerformance` e `useTeamRanking`) recebem o `dateRange` e incluem no `queryKey` — o React Query refaz as queries automaticamente
+- A consolidação das 6 queries do gráfico em 1 única query está correta
+- A invalidação de cache do `useUpsertMyGoal` foi corrigida
 
-Mas além desse problema de dados, há **dois bugs técnicos reais** que precisam ser corrigidos:
+### Problemas restantes identificados na revisão
 
----
+**1. Subtítulo do Ranking sempre mostra o mês atual**
 
-### Bug 1 — Invalidação de cache quebrada após salvar meta
+Linha 387 de `BrokerPerformance.tsx`:
 
-Em `use-my-performance.ts` linha 188, o `onSuccess` do `useUpsertMyGoal` invalida:
-```ts
-queryKey: ["my-performance", user?.id]
+```tsx
+// ATUAL — sempre exibe "fevereiro de 2026" independente do filtro
+{format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
 ```
 
-Mas o `queryKey` real da query tem **4 elementos**: `["my-performance", userId, dateRange.from.toISOString(), dateRange.to.toISOString()]`
+Quando o usuário seleciona "Este ano" ou "Últimos 30 dias", o subtítulo continua dizendo "fevereiro de 2026" — contradizendo o filtro ativo visualmente e confundindo o usuário.
 
-A invalidação com apenas 2 elementos **nunca bate**, então a query não é re-executada após salvar a meta. Isso é um bug real.
+**2. Mensagem de lista vazia do Ranking hardcoded**
 
-**Correção**: usar `{ queryKey: ["my-performance"] }` com apenas o prefixo, que invalida qualquer query cujo key começa com "my-performance".
+Linha 401:
+```tsx
+"Nenhum dado encontrado para o mês atual"
+```
+Se o filtro for "Hoje" ou "Esta semana", a mensagem fica inconsistente.
 
----
+**3. Import não utilizado — `parseISO`**
 
-### Bug 2 — Gráfico de 6 meses sempre vazio quando `dateRange` muda
+Em `use-my-performance.ts` linha 4, `parseISO` está importado mas nunca usado após a refatoração.
 
-O gráfico usa `perf?.last6Months`. Esses dados vêm do mesmo `queryFn` do hook — que faz **6 queries individuais adicionais** em loop para buscar cada mês.
-
-O problema: o `queryKey` inclui o `dateRange`, então quando o filtro muda, o React Query **cria um novo cache entry** em vez de reusar o anterior. Na primeira vez que a página carrega com um `dateRange` específico, todos os dados são buscados corretamente — mas se a query falhar silenciosamente (ex: timeout, erro de RLS), o gráfico fica vazio sem nenhum feedback visual.
-
-Além disso, o loop `for (let i = 5; i >= 0; i--)` faz **6 queries sequenciais** (await dentro de for), tornando o carregamento lento e propenso a falhas parciais.
-
-**Correção**: Consolidar as 6 queries individuais em **uma única query** com filtro de data cobrindo os últimos 6 meses, agrupando os resultados em JavaScript. Isso é mais rápido e confiável.
-
----
-
-### Bug 3 — Texto fixo "no mês atual" nos KPI cards
-
-Nos cards de KPI (linha 217 e 235 de BrokerPerformance.tsx), o subtexto está hardcoded como "no mês atual" independente do filtro selecionado. Se o usuário seleciona "Últimos 30 dias" ou "Este ano", o texto continua errado.
-
-**Correção**: Usar o label do preset selecionado no subtexto dos cards.
-
----
-
-### Mudanças planejadas
-
-**Arquivo: `src/hooks/use-my-performance.ts`**
-
-1. **Consolidar as 6 queries do gráfico em 1 única query**: ao invés de fazer um `await supabase` dentro de um loop de 6 iterações, fazer uma única query com `.gte("won_at", sixMonthsAgo).lte("won_at", now)` e agrupar os resultados por mês em JavaScript. Isso elimina 5 roundtrips ao banco.
-
-2. **Corrigir a invalidação de cache**: mudar `queryKey: ["my-performance", user?.id]` para `queryKey: ["my-performance"]` no `onSuccess` do `useUpsertMyGoal`.
+### Correções a aplicar
 
 **Arquivo: `src/pages/BrokerPerformance.tsx`**
 
-3. **Corrigir subtexto dos KPI cards**: substituir "no mês atual" e "vendas no mês" por um label dinâmico baseado no `datePreset` selecionado (ex: "no período selecionado").
+Substituir o subtítulo fixo do Ranking por um label dinâmico baseado no `datePreset`:
 
----
+```tsx
+// Label do período selecionado
+const periodLabel = useMemo(() => {
+  if (datePreset === 'custom' && customDateRange) {
+    return `${format(customDateRange.from, 'dd/MM', { locale: ptBR })} – ${format(customDateRange.to, 'dd/MM', { locale: ptBR })}`;
+  }
+  const option = datePresetOptions.find(o => o.value === datePreset);
+  return option?.label || 'Período';
+}, [datePreset, customDateRange]);
+```
 
-### Comportamento após a correção
+E usar `periodLabel` no subtítulo e na mensagem de empty state do ranking.
 
-| Situação | Antes | Depois |
-|---|---|---|
-| Salvar meta | Cache não atualiza, dados velhos permanecem | Cache invalidado corretamente, progresso atualiza |
-| Carregar gráfico | 6 queries sequenciais, propensas a falha | 1 query consolidada, mais rápida e confiável |
-| Subtexto KPI | Sempre "no mês atual" | Reflete o período selecionado |
+**Arquivo: `src/hooks/use-my-performance.ts`**
+
+Remover `parseISO` do import (não utilizado).
 
 ### Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/hooks/use-my-performance.ts` | Consolidar 6 queries do gráfico em 1; corrigir invalidação de cache |
-| `src/pages/BrokerPerformance.tsx` | Subtexto dinâmico nos KPI cards |
+| `src/pages/BrokerPerformance.tsx` | Subtítulo e empty state do Ranking dinâmicos conforme o filtro |
+| `src/hooks/use-my-performance.ts` | Remover import `parseISO` não utilizado |
