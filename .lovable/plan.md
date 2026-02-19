@@ -1,79 +1,39 @@
 
-# Correções no Hook use-lead-history — Deduplicação e Labels Faltantes
+# Corrigir Duplicação do Tempo de Resposta no Histórico
 
-## Problemas encontrados na análise
+## Problema identificado
 
-### 1. Duplicata: `assignee_changed` (activity) + `lead_assigned` (timeline)
-O banco confirma que esses eventos ocorrem no mesmo timestamp (diff < 5s) para os mesmos leads. O hook atual deduplica `lead_assigned` via `TIMELINE_AUTHORITY_TYPES`, mas o par activity `assignee_changed` **não é mapeado** — só `lead_assigned` é listado no set. Resultado: ambos aparecem na timeline.
+No `LeadHistory.tsx`, o evento `first_response` está sendo exibido em dois lugares ao mesmo tempo:
 
-**Correção**: Adicionar `assignee_changed` ao `TIMELINE_AUTHORITY_TYPES` para que quando `lead_assigned` existir na timeline, o `assignee_changed` da activity seja descartado.
+1. **Banner amarelo no topo** (linha 177-198) — exibe o tempo de resposta de forma destacada
+2. **Item na timeline** (linha 202-340) — o mesmo evento aparece como item normal na lista
 
-### 2. Tipo `status_change` sem label
-Activities com `type = 'status_change'` existem no banco (73 registros) representando mudanças de status (open/won/lost), mas o `buildLabel` não tem case para ele e retorna o tipo cru `"status change"`. 
+O usuário disse "só pode ter um tempo de resposta", o que confirma que está vendo os dois.
 
-**Correção**: Adicionar case `status_change` em `buildLabel` com label `"Status alterado: {from} → {to}"`.
+## Solução
 
-### 3. Tipo `whatsapp` sem label
-31 registros de activities com `type = 'whatsapp'` que não têm label definido — apareceria como `"whatsapp"` na tela.
+No loop `events.map(...)`, pular (retornar `null`) quando `event.type === 'first_response'`, já que ele já é representado pelo banner. Só uma linha de mudança.
 
-**Correção**: Adicionar case `whatsapp` em `buildLabel` e no ícone/cor do componente.
+### `src/components/leads/LeadHistory.tsx` — linha 207
 
-### 4. Tipo `assignment` sem label
-18 registros de activities com `type = 'assignment'` — aparece como `"assignment"`.
+```tsx
+// ANTES: a variável isFirstResponse existe mas não é usada para filtrar
+const isFirstResponse = event.type === 'first_response';
 
-**Correção**: Adicionar case `assignment` mapeando para label de atribuição.
-
-## Arquivo afetado: `src/hooks/use-lead-history.ts`
-
-### Mudança 1 — TIMELINE_AUTHORITY_TYPES
-Adicionar `assignee_changed` ao set:
-```ts
-const TIMELINE_AUTHORITY_TYPES = new Set([
-  ...
-  'assignee_changed',  // ← ADD: deduplica com lead_assigned da timeline
-]);
+// ADICIONAR logo após:
+if (isFirstResponse) return null;
 ```
 
-### Mudança 2 — buildLabel: novos cases
-```ts
-case 'status_change': {
-  const from = metadata?.from_status;
-  const to = metadata?.to_status;
-  const statusMap: Record<string, string> = { open: 'Aberto', won: 'Ganho', lost: 'Perdido' };
-  if (from && to) return `Status: ${statusMap[from] || from} → ${statusMap[to] || to}`;
-  return 'Status alterado';
-}
-case 'whatsapp':
-  return 'Mensagem WhatsApp';
-case 'assignment':
-  return metadata?.to_user_name ? `Atribuído a ${metadata.to_user_name}` : 'Lead atribuído';
+Ou alternativamente, filtrar antes do map:
+
+```tsx
+{events
+  .filter(e => e.type !== 'first_response')   // ← ADD: já exibido no banner
+  .map((event, index) => {
 ```
 
-## Arquivo afetado: `src/components/leads/LeadHistory.tsx`
+Vou usar o `.filter()` antes do `.map()` pois é mais limpo — evita retornar `null` dentro do map e também corrige o cálculo do `isLastEvent` (que ficaria errado se houvesse `null` no array).
 
-### Mudança 1 — getEventIcon: novos tipos
-```ts
-status_change:  ArrowRight,
-whatsapp:       MessageSquare,
-assignment:     UserCheck,
-```
+## Arquivo afetado
 
-### Mudança 2 — getEventColors: novos tipos
-```ts
-status_change: { text: 'text-muted-foreground', bg: 'bg-muted' },
-whatsapp:      { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/15' },
-assignment:    { text: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-500/15' },
-```
-
-## Resumo das mudanças
-
-| Problema | Impacto | Correção |
-|---|---|---|
-| `assignee_changed` duplica `lead_assigned` | 2 linhas p/ mesma ação | Adicionar ao `TIMELINE_AUTHORITY_TYPES` |
-| `status_change` sem label | Aparece como texto cru | Novo case em `buildLabel` |
-| `whatsapp` sem label/ícone | Aparece como `"whatsapp"` | Novo case + ícone + cor |
-| `assignment` sem label/ícone | Aparece como `"assignment"` | Novo case + ícone + cor |
-
-## Arquivos a editar
-- `src/hooks/use-lead-history.ts` — 2 seções (TIMELINE_AUTHORITY_TYPES + buildLabel)
-- `src/components/leads/LeadHistory.tsx` — 2 seções (iconMap + colorMap)
+- `src/components/leads/LeadHistory.tsx` — 1 linha: adicionar `.filter(e => e.type !== 'first_response')` antes do `.map()`
