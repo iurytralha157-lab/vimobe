@@ -199,10 +199,12 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
 
       {/* Timeline */}
       <div className="space-y-0">
-        {events.filter(e => e.type !== 'first_response').map((event, index) => {
+        {(() => {
+          const filteredEvents = events.filter(e => e.type !== 'first_response');
+          return filteredEvents.map((event, index) => {
           const Icon = getEventIcon(event);
           const colors = getEventColors(event);
-          const isLastEvent = index === events.length - 1;
+          const isLastEvent = index === filteredEvents.length - 1;
           const isFirst = index === 0;
           const isFirstResponse = event.type === 'first_response';
           const metadata = event.metadata || {};
@@ -337,7 +339,8 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
               </div>
             </div>
           );
-        })}
+        });
+        })()}
       </div>
     </div>
   );
