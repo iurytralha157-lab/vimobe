@@ -70,21 +70,25 @@ import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
 import { useAssignLeadRoundRobin } from '@/hooks/use-assign-lead-roundrobin';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
-import { useStageVGV } from '@/hooks/use-vgv';
+
 import { useHasPermission } from '@/hooks/use-organization-roles';
 import { notifyLeadMoved } from '@/hooks/use-lead-notifications';
 import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Helper to format currency compactly
+// Helper to format currency compactly (pt-BR locale)
 const formatCompactCurrency = (value: number): string => {
-  if (value >= 1000000) {
-    return `R$${(value / 1000000).toFixed(1)}M`;
-  } else if (value >= 1000) {
-    return `R$${(value / 1000).toFixed(0)}K`;
+  if (value >= 1_000_000) {
+    const v = value / 1_000_000;
+    const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: v % 1 === 0 ? 0 : 1 });
+    return `R$${formatted}M`;
+  } else if (value >= 1_000) {
+    const v = value / 1_000;
+    const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+    return `R$${formatted}K`;
   }
-  return `R$${value.toFixed(0)}`;
+  return `R$${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
 };
 
 export default function Pipelines() {
@@ -164,20 +168,13 @@ export default function Pipelines() {
   const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined);
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
-  const { data: stageVGVData = [] } = useStageVGV(selectedPipelineId || undefined);
   // createLead agora é gerenciado pelo CreateLeadDialog
   const assignLeadRoundRobin = useAssignLeadRoundRobin();
   const canEditPipeline = useCanEditCadences();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
   
-  // Create a map for quick VGV lookup by stage
-  const stageVGVMap = useMemo(() => {
-    const map = new Map<string, { totalVGV: number; openVGV: number }>();
-    for (const item of stageVGVData) {
-      map.set(item.stageId, { totalVGV: item.totalVGV, openVGV: item.openVGV });
-    }
-    return map;
-  }, [stageVGVData]);
+  // Compute VGV directly from filteredStages so the badge always matches visible leads
+  // (This must be defined after filteredStages — see below)
   
   const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
   const isLoading = pipelinesLoading || stagesLoading;
@@ -552,6 +549,21 @@ export default function Pipelines() {
       }),
     }));
   }, [stages, filterUser, filterTag, filterDealStatus, deferredSearch, dateRange]);
+
+  // Compute VGV from filteredStages so badge always matches visible leads
+  const stageVGVMap = useMemo(() => {
+    const map = new Map<string, { openVGV: number }>();
+    for (const stage of filteredStages) {
+      let openVGV = 0;
+      for (const lead of stage.leads || []) {
+        if (lead.deal_status !== 'won' && lead.deal_status !== 'lost') {
+          openVGV += lead.valor_interesse || lead.interest_property?.preco || lead.interest_plan?.price || 0;
+        }
+      }
+      if (openVGV > 0) map.set(stage.id, { openVGV });
+    }
+    return map;
+  }, [filteredStages]);
 
   if (isLoading) {
     return (
