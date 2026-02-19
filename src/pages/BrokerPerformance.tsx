@@ -213,7 +213,7 @@ export default function BrokerPerformance() {
                     <div className="text-2xl font-bold text-foreground">
                       {formatCurrency(perf?.totalSales ?? 0)}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">no mês atual</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">no período selecionado</p>
                   </>
                 )}
               </CardContent>
@@ -232,7 +232,7 @@ export default function BrokerPerformance() {
                     <div className="text-2xl font-bold text-foreground">
                       {perf?.closedCount ?? 0}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">vendas no mês</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">no período selecionado</p>
                   </>
                 )}
               </CardContent>
