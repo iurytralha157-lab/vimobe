@@ -37,6 +37,14 @@ interface LeadHistoryProps {
   leadId: string;
 }
 
+// ─── Channel labels ───────────────────────────────────────────────────────────
+const CHANNEL_LABELS: Record<string, string> = {
+  whatsapp: 'WhatsApp',
+  phone: 'Telefone',
+  email: 'E-mail',
+  stage_move: 'Movimentação',
+};
+
 // ─── Outcome config ───────────────────────────────────────────────────────────
 const OUTCOME_CONFIG: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'default'; Icon: React.ComponentType<{ className?: string }> }> = {
   contacted:       { label: 'Contatado',        variant: 'success', Icon: CheckCircle2 },
@@ -193,7 +201,7 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
           )}
           {firstResponseEvent.channel && (
             <Badge variant="secondary" className="text-xs">
-              {firstResponseEvent.channel === 'whatsapp' ? 'WhatsApp' : firstResponseEvent.channel}
+              {CHANNEL_LABELS[firstResponseEvent.channel] || firstResponseEvent.channel}
             </Badge>
           )}
         </div>
@@ -280,7 +288,7 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
 
                       {event.channel && event.type !== 'first_response' && (
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                          {event.channel === 'whatsapp' ? 'WhatsApp' : event.channel}
+                          {CHANNEL_LABELS[event.channel] || event.channel}
                         </Badge>
                       )}
 
