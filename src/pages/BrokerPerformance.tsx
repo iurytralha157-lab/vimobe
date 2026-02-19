@@ -287,7 +287,7 @@ export default function BrokerPerformance() {
               </CardContent>
             </Card>
 
-            <Link to="/pipelines" className="block">
+            <Link to="/crm/pipelines" className="block">
               <Card className="border shadow-sm hover:border-primary/40 transition-colors cursor-pointer h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
                   <CardTitle className="text-xs font-medium text-muted-foreground">Leads em Andamento</CardTitle>
