@@ -1,114 +1,99 @@
 
-# Fix: VGV Column Sum and Decimal Formatting
+# Separadores de Data no Histórico do Lead
 
-## Problems identified
+## O que será feito
 
-### Problem 1 — Column VGV badge may not show sum of all leads
-
-The column header badge uses `stageVGVMap` from `useStageVGV`, which queries **all leads in the pipeline** (no date filter). However, the image shows R$40.4M in the column header even though there are two leads of R$40.4M each — the expected value would be R$80.8M.
-
-Looking at `useStageVGV` in `src/hooks/use-vgv.ts` (line 178), the query fetches `valor_interesse` and sums it per stage correctly. The real bug here is that the column header VGV uses `openVGV` (which excludes `won` and `lost` leads), but the **filteredStages** (visible cards) may include leads with `deal_status = 'won'`. If those leads count as "won", their VGV is excluded from `openVGV`.
-
-Actually, re-reading the code: the column VGV badge shows `openVGV` (leads that are not won/lost). If both tete002 and tete003 have `deal_status = 'open'`, they should both count and the total should be 80.8M.
-
-The more likely cause: the column header VGV comes from `useStageVGV` which queries the **database directly** (all leads), but `filteredStages` applies a **date filter**. The column header VGV uses the **unfiltered DB query**, and if only one lead is within the date filter but both exist in DB, only one would appear in the cards but the VGV would show the full database sum.
-
-Wait, looking again at the screenshot: column shows R$40.4M and there are 2 cards (tete002 and tete003) both showing R$40.4M each. The sum should be R$80.8M.
-
-The real issue: `useStageVGV` does NOT filter by the date preset selected in the pipeline. It queries ALL leads in the pipeline. But filteredStages applies date filtering client-side. So the VGV badge and visible cards can be out of sync.
-
-**Best fix**: Calculate the VGV directly from `filteredStages` leads instead of from the separate `useStageVGV` hook. This ensures the badge reflects exactly what's visible, summing only the filtered leads' `valor_interesse`.
-
-### Problem 2 — Decimal separator uses dot instead of comma (pt-BR)
-
-Both `formatCompactCurrency` (column badge) and `formatCurrency` (lead card badge) use JavaScript's `.toFixed()` which always outputs a dot as decimal separator regardless of locale. In pt-BR, `40.4M` should be `40,4M`.
-
-**Fix**: Replace `.toFixed(1)` with locale-aware formatting using `toLocaleString('pt-BR', { maximumFractionDigits: 1 })`.
-
-Also, for thousands: currently shows `R$80K` (no decimals). Better to show `R$80,8K` when there's a meaningful decimal.
+O componente `DateSeparator` (com as labels "Hoje", "Ontem", nome do dia da semana ou "dd/MM/yyyy") **já existe** em `src/components/whatsapp/DateSeparator.tsx` e também a função auxiliar `shouldShowDateSeparator`. Basta importá-los e integrá-los no loop de renderização do `LeadHistory`.
 
 ---
 
-## Solution
+## Lógica de inserção dos separadores
 
-### Fix 1 — Compute VGV from `filteredStages` (not from separate hook)
+Dentro do `.map()` de `filteredEvents`, antes de renderizar cada card de evento, verificar se a data do evento atual é diferente da data do evento anterior. Se sim, renderizar o `<DateSeparator>` imediatamente antes do card:
 
-Instead of using `useStageVGV` (which ignores date/user filters), compute the VGV badge value directly from the already-filtered `filteredStages`:
-
-```ts
-// In Pipelines.tsx, replace stageVGVMap with a computed map from filteredStages
-const stageVGVMap = useMemo(() => {
-  const map = new Map<string, { openVGV: number }>();
-  for (const stage of filteredStages) {
-    let openVGV = 0;
-    for (const lead of stage.leads || []) {
-      if (lead.deal_status !== 'won' && lead.deal_status !== 'lost') {
-        openVGV += lead.valor_interesse || 
-                   lead.interest_property?.preco || 
-                   lead.interest_plan?.price || 0;
-      }
-    }
-    if (openVGV > 0) map.set(stage.id, { openVGV });
-  }
-  return map;
-}, [filteredStages]);
 ```
-
-This removes the dependency on `useStageVGV` from the pipeline view and makes the badge always consistent with what's visible.
-
-### Fix 2 — Fix decimal separator to use comma (pt-BR)
-
-Replace `formatCompactCurrency` in `Pipelines.tsx` (line 81-88):
-
-```ts
-const formatCompactCurrency = (value: number): string => {
-  if (value >= 1_000_000) {
-    const v = value / 1_000_000;
-    const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: v % 1 === 0 ? 0 : 1 });
-    return `R$${formatted}M`;
-  } else if (value >= 1_000) {
-    const v = value / 1_000;
-    const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
-    return `R$${formatted}K`;
-  }
-  return `R$${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
-};
-```
-
-And `formatCurrency` in `LeadCard.tsx` (line 97-104):
-
-```ts
-const formatCurrency = (value: number) => {
-  if (value >= 1_000_000) {
-    const v = value / 1_000_000;
-    const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: v % 1 === 0 ? 0 : 1 });
-    return `R$${formatted}M`;
-  } else if (value >= 1_000) {
-    const v = value / 1_000;
-    const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
-    return `R$${formatted}K`;
-  }
-  return `R$${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
-};
+[ Hoje ]
+  ↳ Lead criado via Webhook
+  ↳ Atribuído para Raquel
+[ Ontem ]
+  ↳ Mensagem WhatsApp enviada
+  ↳ Mudança de etapa: Qualificados → Proposta
+[ Segunda-feira ]
+  ↳ Ligação realizada
+[ 10/01/2026 ]
+  ↳ Lead criado
 ```
 
 ---
 
-## Files to modify
+## Regras de exibição (já implementadas no componente existente)
 
-| File | Change |
+| Situação | Label exibida |
 |---|---|
-| `src/pages/Pipelines.tsx` | Replace `stageVGVMap` computation to use `filteredStages` instead of `useStageVGV`; fix `formatCompactCurrency` decimal separator |
-| `src/components/leads/LeadCard.tsx` | Fix `formatCurrency` decimal separator |
-
-### Cleanup
-Since `useStageVGV` will no longer be needed in `Pipelines.tsx`, remove its import and usage from that file.
+| Data de hoje | "Hoje" |
+| Data de ontem | "Ontem" |
+| Menos de 7 dias atrás | Nome do dia (ex: "Segunda-feira") |
+| 7 dias ou mais | "dd/MM/yyyy" (ex: "10/01/2026") |
 
 ---
 
-## Expected results after fix
+## Ajuste no cálculo de `isLastEvent`
 
-- Column "Qualificados" with 2 leads of R$40,4M each → badge shows **R$80,8M**
-- Individual lead card shows **R$40,4M** (comma instead of dot)
-- Thousands: R$500K, R$1,5K etc. using comma as decimal separator
-- VGV badge is always in sync with visible filtered leads
+O separador de data é um nó extra entre os cards, mas **não deve afetar** o cálculo de `isLastEvent` (que controla a linha de conexão vertical). A lógica permanece baseada no índice de `filteredEvents`.
+
+---
+
+## Arquivo afetado
+
+### `src/components/leads/LeadHistory.tsx`
+
+**1. Adicionar import no topo:**
+```ts
+import { DateSeparator, shouldShowDateSeparator } from '@/components/whatsapp/DateSeparator';
+```
+
+**2. No loop `.map()`, adicionar separador antes de cada card:**
+```tsx
+return filteredEvents.map((event, index) => {
+  const prevEvent = index > 0 ? filteredEvents[index - 1] : null;
+  const showSeparator = shouldShowDateSeparator(
+    event.timestamp,
+    prevEvent?.timestamp ?? null
+  );
+
+  return (
+    <React.Fragment key={event.id}>
+      {showSeparator && (
+        <DateSeparator date={new Date(event.timestamp)} />
+      )}
+      <div className="relative flex gap-3 pl-9">
+        {/* ... conteúdo existente do card ... */}
+      </div>
+    </React.Fragment>
+  );
+});
+```
+
+> O `React.Fragment` com `key={event.id}` agrupa o separador + o card sem adicionar nós extras no DOM, mantendo a estrutura existente intacta.
+
+---
+
+## Detalhe visual
+
+O separador herda o estilo já definido:
+- Bolinha cinza suave com borda arredondada (`rounded-full bg-muted/80`)
+- Texto `text-xs text-muted-foreground font-medium`
+- Linhas horizontais implícitas por flexbox
+
+Exatamente o mesmo visual já usado no chat do WhatsApp, garantindo consistência.
+
+---
+
+## Resumo da mudança
+
+| | Antes | Depois |
+|---|---|---|
+| Separação por data | Nenhuma | "Hoje", "Ontem", dia da semana, dd/MM/yyyy |
+| Arquivo modificado | — | `src/components/leads/LeadHistory.tsx` |
+| Novo componente criado | — | Nenhum (reutiliza existente) |
+| Risco | Nenhum | Nenhum (apenas inserção visual) |
