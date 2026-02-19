@@ -95,12 +95,16 @@ export function LeadCard({
     email: "bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-400"
   };
   const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `R$${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `R$${(value / 1000).toFixed(0)}K`;
+    if (value >= 1_000_000) {
+      const v = value / 1_000_000;
+      const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: v % 1 === 0 ? 0 : 1 });
+      return `R$${formatted}M`;
+    } else if (value >= 1_000) {
+      const v = value / 1_000;
+      const formatted = v.toLocaleString('pt-BR', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+      return `R$${formatted}K`;
     }
-    return `R$${value}`;
+    return `R$${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
   };
   const handlePhoneClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
