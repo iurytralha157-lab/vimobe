@@ -93,6 +93,9 @@ function getEventIcon(event: UnifiedHistoryEvent): React.ComponentType<{ classNa
     task_completed:          CheckCircle,
     contact_updated:         UserCircle,
     assignee_changed:        UserCheck,
+    status_change:           ArrowRight,
+    whatsapp:                MessageSquare,
+    assignment:              UserCheck,
     lead_reentry:            UserPlus,
     automation_stage_move:   Bot,
     automation_tag_added:    Bot,
@@ -137,6 +140,9 @@ function getEventColors(event: UnifiedHistoryEvent): { text: string; bg: string 
     automation_tag_added:      { text: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/15' },
     task_completed:            { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/15' },
     contact_updated:           { text: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-500/15' },
+    status_change:             { text: 'text-muted-foreground',              bg: 'bg-muted' },
+    whatsapp:                  { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/15' },
+    assignment:                { text: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-500/15' },
     lead_reentry:              { text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/15' },
   };
 

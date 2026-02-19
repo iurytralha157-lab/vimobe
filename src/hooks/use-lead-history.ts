@@ -38,6 +38,7 @@ const ACTIVITY_ONLY_TYPES = new Set([
 const TIMELINE_AUTHORITY_TYPES = new Set([
   'lead_created',
   'lead_assigned',
+  'assignee_changed', // deduplica com lead_assigned da timeline
   'stage_changed',
   'stage_change',
   'first_response',
@@ -134,6 +135,17 @@ function buildLabel(type: string, metadata: Record<string, any>, source: 'timeli
       if (metadata?.source === 'whatsapp') return 'Lead reentrou via WhatsApp';
       return `Lead reentrou via ${metadata?.source || 'sistema'}`;
     }
+    case 'status_change': {
+      const from = metadata?.from_status;
+      const to = metadata?.to_status;
+      const statusMap: Record<string, string> = { open: 'Aberto', won: 'Ganho', lost: 'Perdido' };
+      if (from && to) return `Status: ${statusMap[from] || from} → ${statusMap[to] || to}`;
+      return 'Status alterado';
+    }
+    case 'whatsapp':
+      return 'Mensagem WhatsApp';
+    case 'assignment':
+      return metadata?.to_user_name ? `Atribuído a ${metadata.to_user_name}` : 'Lead atribuído';
     case 'automation_stage_move':
       return 'Movido por automação';
     case 'automation_tag_added':
