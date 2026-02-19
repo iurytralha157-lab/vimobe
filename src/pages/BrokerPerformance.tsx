@@ -21,6 +21,7 @@ import { useTeamRanking } from "@/hooks/use-team-ranking";
 import {
   DatePreset,
   getDateRangeFromPreset,
+  datePresetOptions,
 } from "@/hooks/use-dashboard-filters";
 import {
   TrendingUp,
@@ -155,6 +156,13 @@ export default function BrokerPerformance() {
   const upsertGoal = useUpsertMyGoal();
 
   const topClosedCount = teamData?.ranking[0]?.closedCount || 1;
+
+  const periodLabel = useMemo(() => {
+    if (datePreset === "custom" && customDateRange) {
+      return `${format(customDateRange.from, "dd/MM", { locale: ptBR })} – ${format(customDateRange.to, "dd/MM", { locale: ptBR })}`;
+    }
+    return datePresetOptions.find((o) => o.value === datePreset)?.label || "Período";
+  }, [datePreset, customDateRange]);
 
   const handleSaveGoal = useCallback(
     (amount: number) => {
@@ -384,7 +392,7 @@ export default function BrokerPerformance() {
                 <Trophy className="h-5 w-5 text-secondary-foreground" />
                 Ranking da Equipe
               </h2>
-              <p className="text-xs text-muted-foreground capitalize">{format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}</p>
+              <p className="text-xs text-muted-foreground capitalize">{periodLabel}</p>
             </div>
           </div>
 
@@ -398,7 +406,7 @@ export default function BrokerPerformance() {
                 </div>
               ) : teamData?.ranking.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground text-sm">
-                  Nenhum dado encontrado para o mês atual
+                  Nenhum dado encontrado para {periodLabel.toLowerCase()}
                 </div>
               ) : (
                 <div className="divide-y divide-border">
