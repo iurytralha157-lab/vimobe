@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Save, Upload, Loader2, Sun, Moon, Maximize2, RefreshCw, Megaphone } from 'lucide-react';
+import { Save, Upload, Loader2, Sun, Moon, Maximize2, RefreshCw, Megaphone, Wrench, Flag } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
@@ -22,6 +22,9 @@ interface SystemSettingsValue {
   default_whatsapp?: string | null;
   logo_width?: number | null;
   logo_height?: number | null;
+  maintenance_mode?: boolean | null;
+  maintenance_message?: string | null;
+  feature_flags?: Record<string, boolean> | null;
 }
 
 interface SystemSettingsRow {
@@ -47,6 +50,15 @@ export default function AdminSettings() {
   const [logoHeight, setLogoHeight] = useState(40);
   const [broadcastingRefresh, setBroadcastingRefresh] = useState(false);
   
+  // Maintenance mode state
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [savingMaintenance, setSavingMaintenance] = useState(false);
+
+  // Feature flags state
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
+  const [savingFlags, setSavingFlags] = useState(false);
+
   // Announcements state
   const [announcementMessage, setAnnouncementMessage] = useState('');
   const [buttonText, setButtonText] = useState('');
@@ -107,10 +119,16 @@ export default function AdminSettings() {
         default_whatsapp: value.default_whatsapp || null,
         logo_width: value.logo_width || null,
         logo_height: value.logo_height || null,
+        maintenance_mode: value.maintenance_mode || false,
+        maintenance_message: value.maintenance_message || '',
+        feature_flags: value.feature_flags || {},
       });
       setWhatsapp(value.default_whatsapp || '');
       setLogoWidth(value.logo_width || 140);
       setLogoHeight(value.logo_height || 40);
+      setMaintenanceMode(value.maintenance_mode || false);
+      setMaintenanceMessage(value.maintenance_message || '');
+      setFeatureFlags(value.feature_flags || {});
     }
     setLoading(false);
   };
@@ -118,7 +136,7 @@ export default function AdminSettings() {
   const updateSettingsValue = async (updates: Partial<SystemSettingsValue>) => {
     if (!settings) return;
 
-    const currentValue = {
+    const currentValue: SystemSettingsValue = {
       logo_url_light: settings.logo_url_light,
       logo_url_dark: settings.logo_url_dark,
       favicon_url_light: settings.favicon_url_light,
@@ -126,6 +144,9 @@ export default function AdminSettings() {
       default_whatsapp: settings.default_whatsapp,
       logo_width: settings.logo_width,
       logo_height: settings.logo_height,
+      maintenance_mode: settings.maintenance_mode,
+      maintenance_message: settings.maintenance_message,
+      feature_flags: settings.feature_flags,
     };
 
     const newValue = { ...currentValue, ...updates };
@@ -138,6 +159,32 @@ export default function AdminSettings() {
     if (error) throw error;
 
     setSettings(prev => prev ? { ...prev, ...updates } : null);
+  };
+
+  const handleSaveMaintenance = async () => {
+    if (!settings) return;
+    setSavingMaintenance(true);
+    try {
+      await updateSettingsValue({ maintenance_mode: maintenanceMode, maintenance_message: maintenanceMessage });
+      toast.success('Configurações de manutenção salvas!');
+    } catch (error: any) {
+      toast.error('Erro ao salvar: ' + error.message);
+    } finally {
+      setSavingMaintenance(false);
+    }
+  };
+
+  const handleSaveFlags = async () => {
+    if (!settings) return;
+    setSavingFlags(true);
+    try {
+      await updateSettingsValue({ feature_flags: featureFlags });
+      toast.success('Feature flags salvas!');
+    } catch (error: any) {
+      toast.error('Erro ao salvar: ' + error.message);
+    } finally {
+      setSavingFlags(false);
+    }
   };
 
   const handleUploadLogo = async (file: File, type: 'light' | 'dark') => {
@@ -632,6 +679,102 @@ export default function AdminSettings() {
                 </Button>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Maintenance Mode Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-amber-500" />
+              Modo Manutenção
+            </CardTitle>
+            <CardDescription>
+              Exibe um banner de aviso para todos os usuários não-administradores enquanto o sistema está em manutenção.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base">Ativar modo manutenção</Label>
+                <p className="text-sm text-muted-foreground">
+                  Usuários comuns verão um banner fixo no topo da tela
+                </p>
+              </div>
+              <Switch
+                checked={maintenanceMode}
+                onCheckedChange={setMaintenanceMode}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Mensagem de manutenção</Label>
+              <Textarea
+                placeholder="O sistema está em manutenção programada. Voltaremos em breve!"
+                value={maintenanceMessage}
+                onChange={(e) => setMaintenanceMessage(e.target.value)}
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco para usar a mensagem padrão.
+              </p>
+            </div>
+
+            {/* Live preview */}
+            {maintenanceMode && (
+              <div className="rounded-lg bg-amber-500 text-white py-2.5 px-4 flex items-center justify-center gap-3">
+                <Wrench className="h-4 w-4 shrink-0" />
+                <span className="text-sm font-medium text-center">
+                  {maintenanceMessage || 'O sistema está em manutenção. Por favor, aguarde.'}
+                </span>
+              </div>
+            )}
+
+            <Button onClick={handleSaveMaintenance} disabled={savingMaintenance}>
+              {savingMaintenance && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Configurações de Manutenção
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Feature Flags Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-primary" />
+              Feature Flags
+            </CardTitle>
+            <CardDescription>
+              Habilite ou desabilite funcionalidades globalmente para todas as organizações.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              { key: 'multi_pipeline', label: 'Múltiplos Pipelines', description: 'Permite criar e gerenciar vários pipelines por organização (experimental)' },
+              { key: 'telecom_module', label: 'Módulo Telecom', description: 'Ativa o módulo de clientes e faturamento de telecomunicações' },
+              { key: 'ai_assistant', label: 'Assistente de IA', description: 'Habilita o assistente de IA para sugestões e automações (beta)' },
+              { key: 'advanced_reports', label: 'Relatórios Avançados', description: 'Relatórios detalhados com exportação e filtros avançados' },
+            ].map(({ key, label, description }) => (
+              <div key={key} className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base">{label}</Label>
+                  <p className="text-sm text-muted-foreground">{description}</p>
+                </div>
+                <Switch
+                  checked={featureFlags[key] ?? false}
+                  onCheckedChange={(checked) =>
+                    setFeatureFlags(prev => ({ ...prev, [key]: checked }))
+                  }
+                />
+              </div>
+            ))}
+
+            <Button onClick={handleSaveFlags} disabled={savingFlags}>
+              {savingFlags && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Feature Flags
+            </Button>
           </CardContent>
         </Card>
 

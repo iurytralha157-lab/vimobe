@@ -11,6 +11,9 @@ interface SystemSettingsValue {
   contact_whatsapp?: string | null;
   logo_width?: number | null;
   logo_height?: number | null;
+  maintenance_mode?: boolean | null;
+  maintenance_message?: string | null;
+  feature_flags?: Record<string, boolean> | null;
 }
 
 interface SystemSettings {
@@ -29,6 +32,9 @@ interface SystemSettings {
   contact_whatsapp?: string | null;
   logo_width?: number | null;
   logo_height?: number | null;
+  maintenance_mode?: boolean;
+  maintenance_message?: string;
+  feature_flags?: Record<string, boolean>;
 }
 
 export function useSystemSettings() {
@@ -56,6 +62,9 @@ export function useSystemSettings() {
         contact_whatsapp: value.contact_whatsapp || value.default_whatsapp || null,
         logo_width: value.logo_width || null,
         logo_height: value.logo_height || null,
+        maintenance_mode: value.maintenance_mode || false,
+        maintenance_message: value.maintenance_message || '',
+        feature_flags: (value.feature_flags as Record<string, boolean>) || {},
       } as SystemSettings;
     },
     staleTime: 1000 * 60 * 5,
