@@ -97,34 +97,37 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
       const goalProgress =
         currentGoal > 0 ? Math.min((totalSales / currentGoal) * 100, 100) : 0;
 
-      // Build last 6 months (including current)
+      // Build last 6 months — single query instead of 6 sequential queries
+      const sixMonthsAgo = startOfMonth(subMonths(now, 5));
+      const { data: chartLeads } = await supabase
+        .from("leads")
+        .select("won_at, valor_interesse")
+        .eq("organization_id", organizationId)
+        .eq("assigned_user_id", userId)
+        .eq("deal_status", "won")
+        .gte("won_at", sixMonthsAgo.toISOString())
+        .lte("won_at", endOfMonth(now).toISOString());
+
       const last6Months: MonthlyPerformance[] = [];
       for (let i = 5; i >= 0; i--) {
         const d = subMonths(now, i);
-        const mStart = startOfMonth(d).toISOString();
-        const mEnd = endOfMonth(d).toISOString();
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
+        const monthKey = format(d, "yyyy-MM");
 
-        const { data: mLeads } = await supabase
-          .from("leads")
-          .select("valor_interesse")
-          .eq("organization_id", organizationId)
-          .eq("assigned_user_id", userId)
-          .eq("deal_status", "won")
-          .gte("won_at", mStart)
-          .lte("won_at", mEnd);
+        const monthLeads = (chartLeads || []).filter((l) => {
+          if (!l.won_at) return false;
+          const wonDate = new Date(l.won_at);
+          return wonDate.getFullYear() === year && wonDate.getMonth() + 1 === month;
+        });
 
-        const mTotal = (mLeads || []).reduce(
-          (sum, l) => sum + (l.valor_interesse || 0),
-          0
-        );
-        const mCount = (mLeads || []).length;
+        const mTotal = monthLeads.reduce((sum, l) => sum + (l.valor_interesse || 0), 0);
+        const mCount = monthLeads.length;
         const mGoal = goalsMap.get(`${year}-${month}`) || 0;
 
         last6Months.push({
           month: format(d, "MMM", { locale: ptBR }),
-          monthKey: format(d, "yyyy-MM"),
+          monthKey,
           totalSales: mTotal,
           closedCount: mCount,
           goal: mGoal,
@@ -185,7 +188,7 @@ export function useUpsertMyGoal() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-performance", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["my-performance"] });
     },
   });
 }
