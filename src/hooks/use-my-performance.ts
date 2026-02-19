@@ -17,6 +17,8 @@ export interface MyPerformanceData {
   closedCount: number;
   ticketMedio: number;
   activeContracts: number;
+  activeLeads: number;
+  avgResponseSeconds: number | null;
   currentGoal: number;
   goalProgress: number; // 0-100
   streak: number;
@@ -37,6 +39,8 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
           closedCount: 0,
           ticketMedio: 0,
           activeContracts: 0,
+          activeLeads: 0,
+          avgResponseSeconds: null,
           currentGoal: 0,
           goalProgress: 0,
           streak: 0,
@@ -52,10 +56,10 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
       const monthStart = dateRange ? dateRange.from.toISOString() : startOfMonth(now).toISOString();
       const monthEnd = dateRange ? dateRange.to.toISOString() : endOfMonth(now).toISOString();
 
-      const [leadsResult, contractsResult, goalsResult] = await Promise.all([
+      const [leadsResult, contractsResult, goalsResult, activeLeadsResult] = await Promise.all([
         supabase
           .from("leads")
-          .select("id, valor_interesse, won_at")
+          .select("id, valor_interesse, won_at, assigned_at, first_response_at")
           .eq("organization_id", organizationId)
           .eq("assigned_user_id", userId)
           .eq("deal_status", "won")
@@ -76,6 +80,13 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
           .gte("year", currentYear - 1)
           .order("year", { ascending: false })
           .order("month", { ascending: false }),
+
+        supabase
+          .from("leads")
+          .select("id")
+          .eq("organization_id", organizationId)
+          .eq("assigned_user_id", userId)
+          .eq("deal_status", "open"),
       ]);
 
       const wonLeads = leadsResult.data || [];
@@ -86,6 +97,21 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
       const closedCount = wonLeads.length;
       const ticketMedio = closedCount > 0 ? totalSales / closedCount : 0;
       const activeContracts = contractsResult.data?.length || 0;
+      const activeLeads = activeLeadsResult.data?.length || 0;
+
+      // Average response time: mean of (first_response_at - assigned_at) for won leads
+      const responseLeads = wonLeads.filter(
+        (l) => l.first_response_at && l.assigned_at
+      );
+      const avgResponseSeconds =
+        responseLeads.length > 0
+          ? responseLeads.reduce((sum, l) => {
+              const diff =
+                new Date(l.first_response_at!).getTime() -
+                new Date(l.assigned_at!).getTime();
+              return sum + diff / 1000;
+            }, 0) / responseLeads.length
+          : null;
 
       // Build goals map
       const goalsMap = new Map<string, number>();
@@ -150,6 +176,8 @@ export function useMyPerformance(dateRange?: { from: Date; to: Date }) {
         closedCount,
         ticketMedio,
         activeContracts,
+        activeLeads,
+        avgResponseSeconds,
         currentGoal,
         goalProgress,
         streak,
