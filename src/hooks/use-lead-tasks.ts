@@ -62,9 +62,12 @@ export function useToggleLeadTask() {
       
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['lead-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      if (data?.lead_id) {
+        queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.lead_id] });
+      }
     },
     onError: (error) => {
       toast.error('Erro ao atualizar tarefa: ' + error.message);
@@ -216,9 +219,12 @@ export function useCompleteCadenceTask() {
       
       return taskData;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['lead-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      if (data?.lead_id) {
+        queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.lead_id] });
+      }
     },
     onError: (error) => {
       toast.error('Erro ao completar tarefa: ' + error.message);

@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 
@@ -180,6 +181,32 @@ function buildContent(type: string, metadata: Record<string, any>): string | und
 }
 
 export function useLeadHistory(leadId: string | null) {
+  const queryClient = useQueryClient();
+
+  // Realtime: refresca o histórico quando activities ou lead_timeline_events mudam
+  useEffect(() => {
+    if (!leadId) return;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['lead-history-v2', leadId] });
+    };
+
+    const activitiesChannel = supabase
+      .channel(`lead-history-activities-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activities', filter: `lead_id=eq.${leadId}` }, invalidate)
+      .subscribe();
+
+    const timelineChannel = supabase
+      .channel(`lead-history-timeline-${leadId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_timeline_events', filter: `lead_id=eq.${leadId}` }, invalidate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(activitiesChannel);
+      supabase.removeChannel(timelineChannel);
+    };
+  }, [leadId, queryClient]);
+
   return useQuery({
     queryKey: ['lead-history-v2', leadId],
     queryFn: async (): Promise<UnifiedHistoryEvent[]> => {

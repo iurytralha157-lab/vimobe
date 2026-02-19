@@ -438,12 +438,15 @@ export function useUpdateLead() {
       
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead'] });
       queryClient.invalidateQueries({ queryKey: ['stages'] });
       queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.id] });
+      }
     },
     onError: (error) => {
       toast.error('Erro ao atualizar lead: ' + error.message);
@@ -545,12 +548,13 @@ export function useAddLeadTag() {
         });
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead'] });
       queryClient.invalidateQueries({ queryKey: ['stages'] });
       queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['lead-history-v2', variables.leadId] });
       toast.success('Tag adicionada!');
     },
     onError: (error: any) => {
@@ -596,12 +600,13 @@ export function useRemoveLeadTag() {
         });
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['lead'] });
       queryClient.invalidateQueries({ queryKey: ['stages'] });
       queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['lead-history-v2', variables.leadId] });
       toast.success('Tag removida!');
     },
     onError: (error) => {
