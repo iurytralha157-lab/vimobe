@@ -108,9 +108,12 @@ export function useCreateActivity() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       queryClient.invalidateQueries({ queryKey: ['recent-activities'] });
+      if (data?.lead_id) {
+        queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.lead_id] });
+      }
     },
   });
 }
