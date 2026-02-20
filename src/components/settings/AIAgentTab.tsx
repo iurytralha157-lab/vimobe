@@ -38,7 +38,7 @@ function AgentForm({ agent, onCancel }: { agent?: AIAgent; onCancel: () => void 
 
   const [name, setName] = useState(agent?.name || "Assistente");
   const [isActive, setIsActive] = useState(agent?.is_active ?? true);
-  const [sessionId, setSessionId] = useState(agent?.session_id || "");
+  const [sessionId, setSessionId] = useState(agent?.session_id || "all");
   const [provider, setProvider] = useState(agent?.ai_provider || "openai");
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || "");
   const [maxMessages, setMaxMessages] = useState(agent?.max_messages_before_handoff || 20);
@@ -61,7 +61,7 @@ function AgentForm({ agent, onCancel }: { agent?: AIAgent; onCancel: () => void 
     const payload = {
       name,
       is_active: isActive,
-      session_id: sessionId || null,
+      session_id: sessionId === "all" ? null : sessionId || null,
       ai_provider: provider,
       system_prompt: systemPrompt || null,
       handoff_keywords: keywords.length > 0 ? keywords : null,
@@ -97,7 +97,7 @@ function AgentForm({ agent, onCancel }: { agent?: AIAgent; onCancel: () => void 
             <SelectValue placeholder="Qualquer sessão da organização" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Qualquer sessão</SelectItem>
+            <SelectItem value="all">Qualquer sessão</SelectItem>
             {sessions.map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.display_name || s.instance_name}
