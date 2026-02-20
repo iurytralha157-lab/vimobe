@@ -1,83 +1,66 @@
 
-## Redesign das Páginas Meta — Padrão WhatsApp
+## Correção do Espaçamento Interno dos Cards de Conta
 
 ### Problema identificado
 
-As duas páginas Meta estão com um layout vertical e desorganizado para mobile:
+O `CardContent` no projeto tem um override global em `card.tsx` que zera o padding horizontal (`px-0`). Isso faz com que os campos do formulário fiquem **colados nas bordas** dos cards de "Meu Perfil" e "Dados da Empresa".
 
-**`MetaIntegrationSettings`** (lista de páginas conectadas):
-- Header card com título e botão "Adicionar Página" sem alinhamento compacto
-- Cards de integração com avatar + nome + badge empilhados verticalmente
-- 4 ações separadas (Formulários, Switch, Settings, Unlink) sem organização em grid como o WhatsApp
+O `AppLayout` já fornece `px-4 md:px-6 py-3 md:py-4` para o conteúdo da página — então o problema não é externo, é interno ao Card.
 
-**`MetaFormManager`** (formulários dentro de cada integração):
-- Cards de formulário com layout interno desbalanceado
-- Switch + botão "Editar/Configurar" sem proporção definida
+### Causa raiz
 
-### Padrão do WhatsApp a seguir
-
-O card do WhatsApp ficou com 3 linhas bem definidas em `p-3 space-y-2.5`:
-```
-Row 1: [Avatar] [Nome] [Status badge]
-Row 2: [Responsável]  [Bell] [Toggle]  ← border-y separador
-Row 3: [Botão flex-1] [Botão flex-1] [W-8] [W-8]
+Em `src/components/ui/card.tsx`:
+```tsx
+// CardContent tem px-0 no projeto
+const CardContent = ... className={cn("p-6 pt-0 px-0", className)}
 ```
 
-### O que será alterado
-
-**Arquivo 1: `src/components/integrations/MetaIntegrationSettings.tsx`**
-
-**Header Card** — consolidar em linha única:
-```
-[ƒ] Integração Meta          [+ Adicionar Página]
-    Conecte sua conta...
-    ✓ 2 página(s) conectada(s)
+E em `AccountTab.tsx`, o `CardContent` usa:
+```tsx
+<CardContent className="space-y-6">
 ```
 
-**Cards de integração** — aplicar o mesmo padrão de 3 rows:
-```
-Row 1: [ƒ] [Nome da Página]           [Ativo/Inativo]
-             [95 leads recebidos]
-Row 2: [Pipeline configurado]         [Switch ativo]   ← border-y
-Row 3: [📄 Formulários flex-1] [⚙️ w-8] [🔗 w-8]
+Sem passar `px-4` ou `px-5`, o conteúdo herda o `px-0` global e fica colado nas bordas.
+
+### Correção
+
+**Arquivo: `src/components/settings/AccountTab.tsx`**
+
+Nos dois `CardContent` (Perfil e Organização), adicionar `px-4 md:px-5` para dar o respiro interno correto:
+
+```tsx
+// Card de Perfil
+<CardContent className="space-y-6 px-4 md:px-5">
+
+// Card de Organização  
+<CardContent className="space-y-6 px-4 md:px-5">
 ```
 
-Em vez de usar `Collapsible` com `ChevronDown` separado, o botão "Formulários" vira o trigger do collapsible diretamente, mais limpo.
+Também o `CardHeader` dos dois cards precisa de `px-4 md:px-5` pra alinhar com o conteúdo:
 
-**Arquivo 2: `src/components/integrations/MetaFormManager.tsx`** — subseção de formulários
-
-O header da subseção fica alinhado:
-```
-Formulários da Página    [↺ Atualizar]
+```tsx
+<CardHeader className="px-4 md:px-5 pt-4 pb-2">
 ```
 
-Cada `FormCard` segue o mesmo padrão compacto:
+### Resultado esperado
+
 ```
-Row 1: [📄] [Nome do Formulário]        [Ativo/Não config.]
-Row 2: [X leads] [Imóvel] [Tags]        [Switch]  ← border-y
-Row 3: [Configurar/Editar flex-1]
+┌──────────────────────────────────────┐
+│  Meu Perfil                          │  ← título com padding
+│  Gerencie suas informações pessoais  │
+│                                      │
+│  [Avatar]  Fernando Silva            │  ← conteúdo com respiro
+│            email@...                 │
+│                                      │
+│  ⊙ Português (Brasil)            ▾  │  ← inputs alinhados
+│                                      │
+│  Nome          CPF                   │
+│  [__________] [__________]           │
+└──────────────────────────────────────┘
 ```
 
-### Mudanças técnicas
+### Arquivo alterado
 
 | Arquivo | Mudança |
 |---|---|
-| `MetaIntegrationSettings.tsx` | Refatorar `CardHeader` para linha única; refatorar cards de integração com 3 rows padrão WhatsApp; `p-3 space-y-2.5`; botões proporcionais `flex-1 h-8` + `h-8 w-8` |
-| `MetaFormManager.tsx` | Refatorar `FormCard` com 3 rows; mover Switch para row separada com `border-y`; botão ação em `flex-1` |
-
-### Resultado visual esperado
-
-```
-┌──────────────────────────────────────┐
-│ [ƒ] Integração Meta  [+ Add. Página] │  ← Header compacto
-│     ✓ 2 página(s) conectada(s)       │
-└──────────────────────────────────────┘
-
-┌──────────────────────────────────────┐
-│ [ƒ] Fernando - Corretor  [● Ativo]   │  ← Row 1
-├──────────────────────────────────────┤
-│ 95 leads recebidos       [● Toggle]  │  ← Row 2 (border-y)
-├──────────────────────────────────────┤
-│ [📄 Formulários  flex-1] [⚙][🔗]    │  ← Row 3
-└──────────────────────────────────────┘
-```
+| `src/components/settings/AccountTab.tsx` | Adicionar `px-4 md:px-5` nos `CardContent` e `CardHeader` dos cards de Perfil e Organização |
