@@ -1,33 +1,63 @@
 
-## Remover Completamente a Página de Performance
+## Adicionar Filtro de Pipeline nas Cadências
 
-### Arquivos a DELETAR
+### Problema atual
+A aba de Cadências exibe templates baseados em `stage_key`, mas o mesmo `stage_key` (ex: "base", "novo") pode existir em múltiplas pipelines. Sem um filtro, o usuário não sabe quais cadências estão configuradas para qual pipeline — e tudo fica misturado.
 
-| Arquivo | Motivo |
+### Solução
+Adicionar um **Select de Pipeline** no topo da aba de Cadências. Ao selecionar uma pipeline, a lista de templates exibidos será filtrada para mostrar apenas os estágios pertencentes àquela pipeline.
+
+### Como funciona tecnicamente
+
+Os templates de cadência existem por `stage_key` (ex: "base", "novo"). Para filtrar por pipeline, o fluxo será:
+
+1. Buscar todas as pipelines disponíveis (hook `usePipelines` já existe em `use-stages.ts`)
+2. Ao selecionar uma pipeline, buscar os `stage_key`s dos estágios dela
+3. Filtrar os templates para exibir apenas os que têm `stage_key` correspondente a essa pipeline
+
+### Mudanças
+
+**`src/components/crm-management/CadencesTab.tsx`** — único arquivo a editar:
+
+- Importar `usePipelines` de `@/hooks/use-stages`
+- Adicionar estado `selectedPipelineId` (padrão: `'all'` = todas)
+- Adicionar um `Select` no header com as opções "Todas as pipelines" + lista de pipelines
+- Ao filtrar: buscar os `stage_key`s dos estágios da pipeline selecionada e filtrar `templates` para exibir apenas os que coincidem
+- Quando `'all'` estiver selecionado, exibir todos os templates (comportamento atual)
+
+### UI resultante
+
+```
+Configure as tarefas automáticas para cada estágio do pipeline
+
+[Pipeline: Todas as pipelines ▼]          [🔒 Somente visualização]
+
+┌─ Base ─────┐  ┌─ Novo ──────┐  ┌─ Qualificação ─┐
+│ D+0 Ligação │  │ D+0 Mensagem│  │ Nenhuma tarefa  │
+│ D+1 Email   │  │             │  │                 │
+└─────────────┘  └─────────────┘  └─────────────────┘
+```
+
+Quando uma pipeline específica é selecionada, apenas os estágios daquela pipeline aparecem.
+
+### Detalhamento técnico da filtragem
+
+```
+usePipelines() → lista de pipelines para o Select
+
+useStages(pipelineId) → retorna estágios da pipeline selecionada
+  → extrai os stage_keys desses estágios
+  → filtra templates onde template.stage_key está na lista
+
+Quando selectedPipelineId === 'all': mostrar todos os templates
+```
+
+Para evitar uma nova query, o hook `useStages` existente (sem pipelineId) já retorna os estágios de todas as pipelines com seu `pipeline_id`. Podemos fazer a filtragem no front-end cruzando os dados.
+
+### Arquivos modificados
+
+| Arquivo | O que muda |
 |---|---|
-| `src/pages/BrokerPerformance.tsx` | A própria página |
-| `src/hooks/use-broker-performance.ts` | Hook exclusivo da página |
-| `src/hooks/use-my-performance.ts` | Hook exclusivo da página |
+| `src/components/crm-management/CadencesTab.tsx` | Adicionar Select de pipeline + lógica de filtragem |
 
-### Arquivos a EDITAR (remover referências)
-
-**1. `src/App.tsx`**
-- Remover o import: `import BrokerPerformancePage from "./pages/BrokerPerformance";`
-- Remover a rota: `<Route path="/reports/performance" ... />`
-
-**2. `src/components/layout/AppSidebar.tsx`**
-- Remover o item de menu com `path: '/reports/performance'` e `labelKey: 'performance'`
-- Remover o filtro de visibilidade que referencia `/reports/performance`
-
-**3. `src/components/layout/MobileSidebar.tsx`**
-- Remover o item de menu com `path: '/reports/performance'` e `labelKey: 'performance'`
-- Remover o filtro de visibilidade que referencia `/reports/performance`
-
-### O que NÃO será tocado
-
-- Nenhum outro hook, componente ou página será alterado
-- As traduções com a chave `performance` nos arquivos `src/i18n/translations/` serão mantidas (são strings simples que não causam erro)
-
-### Resultado
-
-A rota `/reports/performance` deixará de existir, o menu lateral não terá mais o item "Performance", e os 3 arquivos exclusivos da feature serão removidos do projeto.
+Nenhum hook novo, nenhuma query nova — apenas usa hooks já existentes (`usePipelines`, `useStages`).
