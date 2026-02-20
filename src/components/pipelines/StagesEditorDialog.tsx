@@ -174,22 +174,22 @@ export function StagesEditorDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md w-[95vw] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Gerenciar Colunas</DialogTitle>
-            <DialogDescription>
-              Arraste para reordenar as colunas da pipeline "{pipelineName}"
+            <DialogTitle className="text-base sm:text-lg">Gerenciar Colunas</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm truncate">
+              Reordene as colunas de "{pipelineName}"
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[400px] pr-4">
+          <ScrollArea className="max-h-[55vh] pr-2 sm:pr-4">
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="stages-list">
                 {(provided) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-2"
+                    className="space-y-1.5 sm:space-y-2"
                   >
                     {stages.map((stage, index) => (
                       <Draggable key={stage.id} draggableId={stage.id} index={index}>
@@ -206,29 +206,27 @@ export function StagesEditorDialog({
                               }),
                             }}
                             className={cn(
-                              "flex items-center gap-2 p-3 bg-card border rounded-lg transition-shadow",
+                              "flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-card border rounded-lg transition-shadow",
                               snapshot.isDragging && "shadow-lg ring-2 ring-primary"
                             )}
                           >
-                            <div
-                              className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-                            >
-                              <GripVertical className="h-5 w-5" />
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+                              <GripVertical className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
 
                             {editingId === stage.id ? (
                               // Edit mode
-                              <div className="flex-1 flex items-center gap-2">
+                              <div className="flex-1 flex items-center gap-1.5 sm:gap-2">
                                 <input
                                   type="color"
                                   value={editingColor}
                                   onChange={(e) => setEditingColor(e.target.value)}
-                                  className="w-8 h-8 rounded cursor-pointer border-0"
+                                  className="w-7 h-7 sm:w-8 sm:h-8 rounded cursor-pointer border-0"
                                 />
                                 <Input
                                   value={editingName}
                                   onChange={(e) => setEditingName(e.target.value)}
-                                  className="h-8 flex-1"
+                                  className="h-7 sm:h-8 flex-1 text-sm"
                                   autoFocus
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleSaveEdit();
@@ -238,39 +236,39 @@ export function StagesEditorDialog({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
                                   onClick={handleSaveEdit}
                                 >
-                                  <Check className="h-4 w-4 text-emerald-600" />
+                                  <Check className="h-3.5 w-3.5 text-primary" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
                                   onClick={handleCancelEdit}
                                 >
-                                  <X className="h-4 w-4" />
+                                  <X className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
                             ) : (
                               // View mode
                               <>
                                 <div
-                                  className="h-4 w-4 rounded-full shrink-0"
+                                  className="h-3 w-3 sm:h-4 sm:w-4 rounded-full shrink-0"
                                   style={{ backgroundColor: stage.color }}
                                 />
-                                <span className="flex-1 font-medium truncate">
+                                <span className="flex-1 text-sm sm:text-base font-medium truncate">
                                   {stage.name}
                                 </span>
                                 {stage.lead_count !== undefined && stage.lead_count > 0 && (
-                                  <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded-full">
+                                  <span className="text-xs text-muted-foreground px-1.5 py-0.5 sm:px-2 bg-muted rounded-full shrink-0">
                                     {stage.lead_count}
                                   </span>
                                 )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
                                   onClick={() => handleStartEdit(stage)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
@@ -278,7 +276,7 @@ export function StagesEditorDialog({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 text-destructive hover:text-destructive"
                                   onClick={() => setDeleteStage(stage)}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -296,13 +294,13 @@ export function StagesEditorDialog({
             </DragDropContext>
           </ScrollArea>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end gap-2 pt-3 sm:pt-4 border-t">
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {hasChanges ? 'Salvar Alterações' : 'Fechar'}
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+              {hasChanges ? 'Salvar' : 'Fechar'}
             </Button>
           </div>
         </DialogContent>
