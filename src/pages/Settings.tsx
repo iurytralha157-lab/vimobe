@@ -10,9 +10,9 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Users, Building2, Check, Facebook, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, Bot, LucideIcon } from 'lucide-react';
+  SelectValue } from
+'@/components/ui/select';
+import { Users, Building2, Check, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, Bot, LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useMetaIntegrations } from '@/hooks/use-meta-integration';
@@ -39,7 +39,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('account');
 
   // Calcular métricas Meta
-  const activeMetaPages = metaIntegrations.filter(i => i.is_connected);
+  const activeMetaPages = metaIntegrations.filter((i) => i.is_connected);
   const totalMetaLeadsReceived = metaIntegrations.reduce(
     (sum, integration) => sum + (integration.leads_received || 0),
     0
@@ -52,9 +52,9 @@ export default function Settings() {
   // Build tabs list dynamically based on permissions and modules
   const settingsTabs: TabItem[] = useMemo(() => {
     const tabs: TabItem[] = [
-      { value: 'account', label: 'Conta', icon: User },
-      { value: 'team', label: 'Usuários', icon: Users },
-    ];
+    { value: 'account', label: 'Conta', icon: User },
+    { value: 'team', label: 'Usuários', icon: Users }];
+
 
     if (hasWebhooksModule) {
       tabs.push({ value: 'webhooks', label: 'Webhooks', icon: Webhook });
@@ -73,15 +73,15 @@ export default function Settings() {
     return tabs;
   }, [t, hasWebhooksModule, hasWhatsAppModule, hasAIAgentModule]);
 
-  const currentTab = settingsTabs.find(tab => tab.value === activeTab);
+  const currentTab = settingsTabs.find((tab) => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
 
   return (
     <AppLayout title={t.settings.title}>
       <div className="animate-in">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {isMobile ? (
-            <Select value={activeTab} onValueChange={setActiveTab}>
+          {isMobile ?
+          <Select value={activeTab} onValueChange={setActiveTab}>
               <SelectTrigger className="w-full">
                 <SelectValue>
                   <div className="flex items-center gap-2">
@@ -91,26 +91,26 @@ export default function Settings() {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {settingsTabs.map(tab => (
-                  <SelectItem key={tab.value} value={tab.value}>
+                {settingsTabs.map((tab) =>
+              <SelectItem key={tab.value} value={tab.value}>
                     <div className="flex items-center gap-2">
                       <tab.icon className="h-4 w-4" />
                       <span>{tab.label}</span>
                     </div>
                   </SelectItem>
-                ))}
+              )}
               </SelectContent>
-            </Select>
-          ) : (
-            <TabsList className="flex-wrap h-auto gap-1">
-              {settingsTabs.map(tab => (
-                <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
+            </Select> :
+
+          <TabsList className="flex-wrap h-auto gap-1">
+              {settingsTabs.map((tab) =>
+            <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
                   <tab.icon className="h-4 w-4" />
                   <span>{tab.label}</span>
                 </TabsTrigger>
-              ))}
+            )}
             </TabsList>
-          )}
+          }
 
           {/* Account Tab (Profile + Organization) */}
           <TabsContent value="account">
@@ -132,7 +132,7 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Facebook className="h-5 w-5" />
+                  
                   {t.settings.integrations.meta.title}
                 </CardTitle>
                 <CardDescription>
@@ -140,12 +140,12 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {metaLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                {metaLoading ?
+                <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <>
+                  </div> :
+
+                <>
                     {/* Status da Conexão */}
                     <div className={`p-4 rounded-lg border ${isMetaConnected ? 'border-success bg-success/5' : 'border-warning bg-warning/5'}`}>
                       <div className="flex items-center gap-3">
@@ -155,17 +155,17 @@ export default function Settings() {
                             {isMetaConnected ? t.settings.integrations.meta.connected : t.settings.integrations.meta.notConnected}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {isMetaConnected 
-                              ? `${activeMetaPages.length} ${t.settings.integrations.meta.activePage} ${metaIntegrations.length} ${t.settings.integrations.meta.pagesConnected}` 
-                              : t.settings.integrations.meta.description}
+                            {isMetaConnected ?
+                          `${activeMetaPages.length} ${t.settings.integrations.meta.activePage} ${metaIntegrations.length} ${t.settings.integrations.meta.pagesConnected}` :
+                          t.settings.integrations.meta.description}
                           </p>
                         </div>
                       </div>
                     </div>
 
                     {/* Resumo quando conectado */}
-                    {isMetaConnected && (
-                      <div className="grid grid-cols-2 gap-4">
+                    {isMetaConnected &&
+                  <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 rounded-lg border bg-muted/50">
                           <p className="text-2xl font-bold">{metaIntegrations.length}</p>
                           <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.pagesConnected}</p>
@@ -175,7 +175,7 @@ export default function Settings() {
                           <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.leadsReceived}</p>
                         </div>
                       </div>
-                    )}
+                  }
 
                     {/* Botão para página de configuração */}
                     <Button asChild className="w-full gap-2">
@@ -186,25 +186,25 @@ export default function Settings() {
                       </Link>
                     </Button>
                   </>
-                )}
+                }
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* WhatsApp Tab */}
-          {hasWhatsAppModule && (
-            <TabsContent value="whatsapp">
+          {hasWhatsAppModule &&
+          <TabsContent value="whatsapp">
               <WhatsAppTab />
             </TabsContent>
-          )}
+          }
 
-          {hasWhatsAppModule && hasAIAgentModule && (
-            <TabsContent value="ai-agent">
+          {hasWhatsAppModule && hasAIAgentModule &&
+          <TabsContent value="ai-agent">
               <AIAgentTab />
             </TabsContent>
-          )}
+          }
         </Tabs>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>);
+
 }
