@@ -43,12 +43,10 @@ import {
 import { useTags } from '@/hooks/use-tags';
 import { useWebhooks } from '@/hooks/use-webhooks';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
-import { useMetaIntegrations } from '@/hooks/use-meta-integration';
 import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 // Static label maps
 const SOURCE_LABELS: Record<string, string> = {
@@ -69,21 +67,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   lancamento: 'Lançamento',
 };
 
-// Hook to fetch ALL meta form configs for the org (without filtering by integrationId)
+// Hook to fetch ALL meta form configs (RLS handles org filtering)
 function useAllMetaFormConfigs() {
-  const { profile } = useAuth();
   return useQuery({
-    queryKey: ['meta-form-configs-all', profile?.organization_id],
+    queryKey: ['meta-form-configs-all'],
     queryFn: async () => {
-      if (!profile?.organization_id) return [];
       const { data, error } = await (supabase as any)
         .from('meta_form_configs')
-        .select('form_id, form_name, integration_id')
-        .eq('organization_id', profile.organization_id);
+        .select('form_id, form_name');
       if (error) throw error;
-      return (data || []) as { form_id: string; form_name: string | null; integration_id: string }[];
+      return (data || []) as { form_id: string; form_name: string | null }[];
     },
-    enabled: !!profile?.organization_id,
+    staleTime: 60_000,
   });
 }
 
