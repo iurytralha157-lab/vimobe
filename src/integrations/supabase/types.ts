@@ -3858,6 +3858,7 @@ export type Database = {
       }
       round_robins: {
         Row: {
+          ai_agent_id: string | null
           created_at: string
           id: string
           is_active: boolean | null
@@ -3872,6 +3873,7 @@ export type Database = {
           target_stage_id: string | null
         }
         Insert: {
+          ai_agent_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -3886,6 +3888,7 @@ export type Database = {
           target_stage_id?: string | null
         }
         Update: {
+          ai_agent_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -3900,6 +3903,13 @@ export type Database = {
           target_stage_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "round_robins_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "round_robins_organization_id_fkey"
             columns: ["organization_id"]
