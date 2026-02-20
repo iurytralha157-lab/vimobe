@@ -272,14 +272,14 @@ export function AccountTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LEFT: Profile Card */}
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 md:px-5 pt-5 pb-2">
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
               {t.settings.profile.title}
             </CardTitle>
             <CardDescription>{t.settings.profile.description}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 px-4 md:px-5 pb-5">
             {/* Avatar Upload */}
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -452,14 +452,14 @@ export function AccountTab() {
 
         {/* RIGHT: Organization Card */}
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 md:px-5 pt-5 pb-2">
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
               {t.settings.organization.title}
             </CardTitle>
             <CardDescription>{t.settings.organization.description}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 px-4 md:px-5 pb-5">
             {/* Company Name */}
             <div className="space-y-1.5">
               <Label className="text-xs">{t.settings.organization.companyName}</Label>
