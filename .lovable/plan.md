@@ -1,61 +1,59 @@
 
-## Correção do Espaçamento Interno dos Cards de Conta
+## Correção do Espaçamento Interno dos Cards — AccountTab
 
-### Problema identificado
+### Problema
 
-O `CardContent` no projeto tem um override global em `card.tsx` que zera o padding horizontal (`px-0`). Isso faz com que os campos do formulário fiquem **colados nas bordas** dos cards de "Meu Perfil" e "Dados da Empresa".
+O `CardContent` global em `card.tsx` tem `px-0` como padrão, zerando o padding horizontal. Como os cards de "Meu Perfil" e "Dados da Empresa" no `AccountTab.tsx` não passam padding explícito, o conteúdo fica colado nas bordas laterais dos cards.
 
-O `AppLayout` já fornece `px-4 md:px-6 py-3 md:py-4` para o conteúdo da página — então o problema não é externo, é interno ao Card.
+O `CardHeader` também herda padding inconsistente — o título fica sem alinhamento com o conteúdo interno.
 
 ### Causa raiz
 
-Em `src/components/ui/card.tsx`:
 ```tsx
-// CardContent tem px-0 no projeto
+// card.tsx — padrão global
 const CardContent = ... className={cn("p-6 pt-0 px-0", className)}
-```
+//                                              ^^^^ zera padding horizontal
 
-E em `AccountTab.tsx`, o `CardContent` usa:
-```tsx
-<CardContent className="space-y-6">
+// AccountTab.tsx — não passa px
+<CardContent className="space-y-6">  // herda px-0 → conteúdo colado na borda
 ```
-
-Sem passar `px-4` ou `px-5`, o conteúdo herda o `px-0` global e fica colado nas bordas.
 
 ### Correção
 
 **Arquivo: `src/components/settings/AccountTab.tsx`**
 
-Nos dois `CardContent` (Perfil e Organização), adicionar `px-4 md:px-5` para dar o respiro interno correto:
+Adicionar `px-4 md:px-5` nos dois `CardContent` e `px-4 md:px-5 pt-4 pb-2` nos dois `CardHeader`:
 
+**Card de Perfil (linha ~275):**
 ```tsx
-// Card de Perfil
-<CardContent className="space-y-6 px-4 md:px-5">
-
-// Card de Organização  
-<CardContent className="space-y-6 px-4 md:px-5">
+<CardHeader className="px-4 md:px-5 pt-5 pb-2">
+  ...
+</CardHeader>
+<CardContent className="space-y-6 px-4 md:px-5 pb-5">
 ```
 
-Também o `CardHeader` dos dois cards precisa de `px-4 md:px-5` pra alinhar com o conteúdo:
-
+**Card de Organização (linha ~454):**
 ```tsx
-<CardHeader className="px-4 md:px-5 pt-4 pb-2">
+<CardHeader className="px-4 md:px-5 pt-5 pb-2">
+  ...
+</CardHeader>
+<CardContent className="space-y-6 px-4 md:px-5 pb-5">
 ```
 
 ### Resultado esperado
 
 ```
 ┌──────────────────────────────────────┐
-│  Meu Perfil                          │  ← título com padding
-│  Gerencie suas informações pessoais  │
+│    Meu Perfil                        │  ← título com padding lateral
+│    Gerencie suas informações...      │
 │                                      │
-│  [Avatar]  Fernando Silva            │  ← conteúdo com respiro
-│            email@...                 │
+│    [Avatar]  Fernando Silva          │  ← conteúdo com respiro
+│              email@...               │
 │                                      │
-│  ⊙ Português (Brasil)            ▾  │  ← inputs alinhados
+│    ⊙ Português (Brasil)          ▾  │  ← inputs alinhados
 │                                      │
-│  Nome          CPF                   │
-│  [__________] [__________]           │
+│    Nome          CPF                 │
+│    [__________] [__________]         │
 └──────────────────────────────────────┘
 ```
 
@@ -63,4 +61,4 @@ Também o `CardHeader` dos dois cards precisa de `px-4 md:px-5` pra alinhar com 
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/settings/AccountTab.tsx` | Adicionar `px-4 md:px-5` nos `CardContent` e `CardHeader` dos cards de Perfil e Organização |
+| `src/components/settings/AccountTab.tsx` | `px-4 md:px-5` nos `CardContent` e `CardHeader` dos cards de Perfil e Organização |
