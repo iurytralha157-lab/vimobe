@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +12,7 @@ import {
   Home,
   Tag,
   AlertCircle,
-  CheckCircle2,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
   useMetaFormConfigs,
   useFetchPageForms,
@@ -38,7 +36,6 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
   const fetchForms = useFetchPageForms();
   const toggleForm = useToggleFormConfig();
 
-  // Fetch forms when integration loads
   useEffect(() => {
     if (integration.page_id) {
       loadForms();
@@ -47,18 +44,16 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
 
   const loadForms = async () => {
     if (!integration.page_id) return;
-    
+
     setIsLoadingForms(true);
     try {
-      // We need to get the access token from the edge function
       const result = await fetchForms.mutateAsync({
         pageId: integration.page_id,
-        accessToken: "", // Edge function will use stored token
+        accessToken: "",
       });
       setForms(result.forms || []);
     } catch (error) {
       console.error("Error loading forms:", error);
-      // Don't show error toast if it's just because no forms exist
     } finally {
       setIsLoadingForms(false);
     }
@@ -69,18 +64,18 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
   };
 
   const handleToggleForm = (formId: string, isActive: boolean) => {
-    toggleForm.mutate({ 
-      formId, 
-      isActive, 
-      integrationId: integration.id 
+    toggleForm.mutate({
+      formId,
+      isActive,
+      integrationId: integration.id,
     });
   };
 
   if (loadingConfigs || isLoadingForms) {
     return (
-      <div className="space-y-3">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
+      <div className="space-y-2">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
       </div>
     );
   }
@@ -89,37 +84,34 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
   const unconfiguredForms = forms.filter(f => !getFormConfig(f.id));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h4 className="font-medium">Formulários da Página</h4>
-          <p className="text-sm text-muted-foreground">
-            Configure cada formulário individualmente
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={loadForms} disabled={isLoadingForms}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingForms ? 'animate-spin' : ''}`} />
-          Atualizar
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Formulários da Página
+        </p>
+        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={loadForms} disabled={isLoadingForms}>
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoadingForms ? 'animate-spin' : ''}`} />
+          <span className="ml-1">Atualizar</span>
         </Button>
       </div>
 
       {forms.length === 0 ? (
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-center text-muted-foreground py-8">
-              <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>Nenhum formulário encontrado nesta página</p>
-              <p className="text-sm mt-1">
+          <CardContent className="py-6">
+            <div className="text-center text-muted-foreground">
+              <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-xs">Nenhum formulário encontrado nesta página</p>
+              <p className="text-xs mt-0.5 opacity-70">
                 Crie formulários no Gerenciador de Anúncios do Facebook
               </p>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {/* Configured forms first */}
-          {configuredForms.map((form) => {
-            const config = getFormConfig(form.id)!;
+        <div className="space-y-2">
+          {[...configuredForms, ...unconfiguredForms].map((form) => {
+            const config = getFormConfig(form.id);
             return (
               <FormCard
                 key={form.id}
@@ -130,19 +122,9 @@ export function MetaFormManager({ integration }: MetaFormManagerProps) {
               />
             );
           })}
-
-          {/* Unconfigured forms */}
-          {unconfiguredForms.map((form) => (
-            <FormCard
-              key={form.id}
-              form={form}
-              onEdit={() => setEditingForm({ form })}
-            />
-          ))}
         </div>
       )}
 
-      {/* Form Config Dialog */}
       <MetaFormConfigDialog
         open={!!editingForm}
         onOpenChange={(open) => !open && setEditingForm(null)}
@@ -167,72 +149,70 @@ function FormCard({ form, config, onToggle, onEdit }: FormCardProps) {
 
   return (
     <Card className={!isConfigured ? "border-dashed" : ""}>
-      <CardContent className="pt-4 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg ${isConfigured ? 'bg-primary/10' : 'bg-muted'}`}>
-              <FileText className={`h-4 w-4 ${isConfigured ? 'text-primary' : 'text-muted-foreground'}`} />
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{form.name}</span>
-                {isConfigured ? (
-                  <Badge variant={isActive ? "default" : "secondary"} className="text-xs">
-                    {isActive ? "Ativo" : "Inativo"}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-xs">
-                    Não configurado
-                  </Badge>
-                )}
-              </div>
+      <CardContent className="p-3 space-y-2.5">
+        {/* Row 1: Identity & Status */}
+        <div className="flex items-center gap-2.5">
+          <div className={`p-1.5 rounded-lg shrink-0 ${isConfigured ? 'bg-primary/10' : 'bg-muted'}`}>
+            <FileText className={`h-4 w-4 ${isConfigured ? 'text-primary' : 'text-muted-foreground'}`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate leading-tight">{form.name}</p>
+          </div>
+          {isConfigured ? (
+            <Badge variant={isActive ? "default" : "secondary"} className="text-xs shrink-0">
+              {isActive ? "Ativo" : "Inativo"}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-xs shrink-0">
+              Não config.
+            </Badge>
+          )}
+        </div>
 
-              {isConfigured && config && (
-                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    <span>{config.leads_received || 0} leads</span>
-                  </div>
-                  
-                  {config.property_id && (
-                    <div className="flex items-center gap-1">
-                      <Home className="h-3 w-3" />
-                      <span>Imóvel vinculado</span>
-                    </div>
-                  )}
-                  
-                  {config.auto_tags && config.auto_tags.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Tag className="h-3 w-3" />
-                      <span>{config.auto_tags.length} tag(s)</span>
-                    </div>
-                  )}
+        {/* Row 2: Stats & Toggle */}
+        <div className="flex items-center justify-between gap-2 py-1.5 border-y border-border/50">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {isConfigured && config ? (
+              <>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users className="h-3 w-3 shrink-0" />
+                  <span>{config.leads_received || 0} leads</span>
                 </div>
-              )}
-
-              {!isConfigured && (
-                <p className="text-xs text-muted-foreground">
-                  Configure para receber leads deste formulário
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isConfigured && onToggle && (
-              <Switch
-                checked={isActive}
-                onCheckedChange={onToggle}
-                aria-label="Toggle form"
-              />
+                {config.property_id && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Home className="h-3 w-3 shrink-0" />
+                    <span>Imóvel</span>
+                  </div>
+                )}
+                {config.auto_tags && config.auto_tags.length > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Tag className="h-3 w-3 shrink-0" />
+                    <span>{config.auto_tags.length} tag(s)</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground truncate">
+                Configure para receber leads
+              </p>
             )}
-            
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              <Settings2 className="h-4 w-4 mr-1" />
-              {isConfigured ? "Editar" : "Configurar"}
-            </Button>
           </div>
+          {isConfigured && onToggle && (
+            <Switch
+              checked={isActive}
+              onCheckedChange={onToggle}
+              aria-label="Toggle form"
+              className="shrink-0"
+            />
+          )}
+        </div>
+
+        {/* Row 3: Action Button */}
+        <div className="flex items-center gap-1.5">
+          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2" onClick={onEdit}>
+            <Settings2 className="h-3.5 w-3.5 shrink-0" />
+            <span>{isConfigured ? "Editar" : "Configurar"}</span>
+          </Button>
         </div>
       </CardContent>
     </Card>

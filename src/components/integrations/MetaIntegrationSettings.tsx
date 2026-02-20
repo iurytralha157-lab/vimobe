@@ -233,158 +233,148 @@ export function MetaIntegrationSettings() {
   const hasConnectedPages = integrations && integrations.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header Card */}
       <Card>
-        <CardHeader>
+        <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <Facebook className="h-6 w-6 text-blue-500" />
+            <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
+              <Facebook className="h-5 w-5 text-blue-500" />
             </div>
-            <div>
-              <CardTitle>{meta.title}</CardTitle>
-              <CardDescription>
-                {meta.description}
-              </CardDescription>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight">{meta.title}</p>
+              <p className="text-xs text-muted-foreground truncate">{meta.description}</p>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {hasConnectedPages ? (
-                <>
-                  <CheckCircle2 className="h-5 w-5 text-orange-500" />
-                  <span className="text-sm font-medium text-orange-600">
-                    {integrations.length} {meta.pagesConnected}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {meta.noPageConnected}
-                  </span>
-                </>
-              )}
-            </div>
-            <Button 
-              onClick={handleConnect} 
+            <Button
+              size="sm"
+              className="h-8 text-xs px-2 shrink-0"
+              onClick={handleConnect}
               disabled={isConnecting || getAuthUrl.isPending}
             >
               {isConnecting ? (
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Link className="mr-2 h-4 w-4" />
+                <Link className="h-3.5 w-3.5" />
               )}
-              {hasConnectedPages ? meta.addPage : meta.connect}
+              <span className="hidden sm:inline ml-1">{hasConnectedPages ? meta.addPage : meta.connect}</span>
             </Button>
           </div>
+          {hasConnectedPages ? (
+            <div className="flex items-center gap-1.5 mt-2 pl-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+              <span className="text-xs text-orange-600 font-medium">
+                {integrations.length} {meta.pagesConnected}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 mt-2 pl-1">
+              <AlertCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground">{meta.noPageConnected}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Connected Pages */}
       {hasConnectedPages && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {integrations.map((integration) => (
-            <Collapsible 
+            <Collapsible
               key={integration.id}
               open={expandedIntegrations.has(integration.id)}
               onOpenChange={() => toggleExpanded(integration.id)}
             >
               <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="p-2 rounded-lg bg-blue-500/10">
-                        <Facebook className="h-5 w-5 text-blue-500" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold">{integration.page_name}</h4>
-                          <Badge variant={integration.is_connected ? "default" : "secondary"}>
-                            {integration.is_connected ? t.common.active : t.common.inactive}
-                          </Badge>
-                        </div>
-                        
-                        <p className="text-sm text-muted-foreground">
-                          {meta.pipelineConfigured}
-                        </p>
-                        
-                        <div className="flex items-center gap-4 mt-2">
-                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                            <Users className="h-4 w-4" />
-                            <span>{integration.leads_received || 0} {meta.leadsReceived}</span>
-                          </div>
-                          {integration.last_sync_at && (
-                            <span className="text-xs text-muted-foreground">
-                              {meta.lastLead}: {new Date(integration.last_sync_at).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
-
+                <CardContent className="p-3 space-y-2.5">
+                  {/* Row 1: Identity & Status */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-blue-500/10 shrink-0">
+                      <Facebook className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm leading-tight truncate">{integration.page_name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Users className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="text-xs text-muted-foreground">
+                          {integration.leads_received || 0} {meta.leadsReceived}
+                        </span>
                         {integration.last_error && (
-                          <div className="flex items-center gap-1.5 text-sm text-destructive mt-2">
-                            <AlertCircle className="h-4 w-4" />
-                            <span>{integration.last_error}</span>
-                          </div>
+                          <AlertCircle className="h-3 w-3 text-destructive shrink-0" />
                         )}
                       </div>
                     </div>
+                    <Badge
+                      variant={integration.is_connected ? "default" : "secondary"}
+                      className="text-xs shrink-0"
+                    >
+                      {integration.is_connected ? t.common.active : t.common.inactive}
+                    </Badge>
+                  </div>
 
-                    <div className="flex items-center gap-3">
-                      <CollapsibleTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <FileText className="h-4 w-4 mr-2" />
-                          {meta.forms}
-                          <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${expandedIntegrations.has(integration.id) ? 'rotate-180' : ''}`} />
-                        </Button>
-                      </CollapsibleTrigger>
-                      
-                      <Switch
-                        checked={integration.is_connected}
-                        onCheckedChange={(checked) => 
-                          togglePage.mutate({ pageId: integration.page_id!, isActive: checked })
-                        }
-                      />
-                      
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openEditDialog(integration)}
-                      >
-                        <Settings2 className="h-4 w-4" />
+                  {/* Row 2: Info & Toggle */}
+                  <div className="flex items-center justify-between gap-2 py-1.5 border-y border-border/50">
+                    <span className="text-xs text-muted-foreground truncate flex-1">
+                      {meta.pipelineConfigured}
+                      {integration.last_sync_at && (
+                        <span className="ml-2">· {new Date(integration.last_sync_at).toLocaleDateString()}</span>
+                      )}
+                    </span>
+                    <Switch
+                      checked={integration.is_connected}
+                      onCheckedChange={(checked) =>
+                        togglePage.mutate({ pageId: integration.page_id!, isActive: checked })
+                      }
+                      className="shrink-0"
+                    />
+                  </div>
+
+                  {/* Row 3: Actions */}
+                  <div className="flex items-center gap-1.5">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0">
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{meta.forms}</span>
+                        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${expandedIntegrations.has(integration.id) ? 'rotate-180' : ''}`} />
                       </Button>
+                    </CollapsibleTrigger>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="icon" className="text-destructive">
-                            <Unlink className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>{meta.disconnectPage}</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {meta.disconnectConfirm}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => disconnectPage.mutate(integration.page_id!)}
-                            >
-                              {meta.disconnect}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => openEditDialog(integration)}
+                    >
+                      <Settings2 className="h-3.5 w-3.5" />
+                    </Button>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive">
+                          <Unlink className="h-3.5 w-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{meta.disconnectPage}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {meta.disconnectConfirm}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => disconnectPage.mutate(integration.page_id!)}
+                          >
+                            {meta.disconnect}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </CardContent>
 
                 <CollapsibleContent>
-                  <div className="border-t px-6 py-4 bg-muted/30">
+                  <div className="border-t px-3 py-3 bg-muted/30">
                     <MetaFormManager integration={integration} />
                   </div>
                 </CollapsibleContent>
