@@ -52,6 +52,7 @@ import {
   Phone,
   Mail,
   RefreshCw,
+  Bot,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePipelines, useStages } from '@/hooks/use-stages';
@@ -64,6 +65,7 @@ import { useWebhooks } from '@/hooks/use-webhooks';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useMetaFormConfigs } from '@/hooks/use-meta-forms';
 import { useMetaIntegrations } from '@/hooks/use-meta-integration';
+import { useAIAgents } from '@/hooks/use-ai-agents';
 import { cn } from '@/lib/utils';
 
 interface QueueSettings {
@@ -106,6 +108,7 @@ interface QueueFormData {
   schedule: ScheduleDay[];
   conditions: RuleCondition[];
   members: QueueMember[];
+  ai_agent_id?: string | null;
 }
 
 interface DistributionQueueEditorProps {
@@ -177,6 +180,7 @@ export function DistributionQueueEditor({
   const { data: metaIntegrations = [] } = useMetaIntegrations();
   const activeMetaIntegration = metaIntegrations.find(i => i.is_connected);
   const { data: metaFormConfigs = [] } = useMetaFormConfigs(activeMetaIntegration?.id);
+  const { data: aiAgents = [] } = useAIAgents();
   
   const [saving, setSaving] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(['basic', 'rules', 'members']);
@@ -195,6 +199,7 @@ export function DistributionQueueEditor({
     schedule: defaultSchedule,
     conditions: [],
     members: [],
+    ai_agent_id: null,
   });
 
   // Get stages for selected pipeline
@@ -267,6 +272,7 @@ export function DistributionQueueEditor({
         schedule: queue.settings?.schedule || defaultSchedule,
         conditions: existingConditions,
         members: existingMembers,
+        ai_agent_id: queue.ai_agent_id || null,
       });
     } else {
       // Reset for new queue
@@ -280,6 +286,7 @@ export function DistributionQueueEditor({
         schedule: defaultSchedule,
         conditions: [],
         members: [],
+        ai_agent_id: null,
       });
     }
   }, [queue, open, teams]);
@@ -1018,7 +1025,59 @@ export function DistributionQueueEditor({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 5: Advanced Settings */}
+          {/* Section 5: AI Agent */}
+          <Collapsible open={openSections.includes('ai_agent')} onOpenChange={() => toggleSection('ai_agent')}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-primary" />
+                <span className="font-medium">Agente de IA</span>
+                {formData.ai_agent_id && (
+                  <Badge variant="default" className="text-xs">Ativo</Badge>
+                )}
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", openSections.includes('ai_agent') && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 px-1 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Selecione um agente de IA para atender automaticamente os leads distribuídos por esta fila via WhatsApp. O agente responderá até atingir o limite de mensagens ou detectar palavras-chave de transferência.
+              </p>
+              <div className="space-y-1.5">
+                <Label>Agente de IA</Label>
+                <Select
+                  value={formData.ai_agent_id || 'none'}
+                  onValueChange={v => setFormData(prev => ({ ...prev, ai_agent_id: v === 'none' ? null : v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sem agente de IA (atendimento manual)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem agente de IA (atendimento manual)</SelectItem>
+                    {aiAgents.filter(a => a.is_active).map(agent => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        <div className="flex items-center gap-2">
+                          <Bot className="h-4 w-4" />
+                          {agent.name}
+                          <Badge variant="outline" className="text-xs ml-1">
+                            {agent.ai_provider === 'openai' ? 'OpenAI' : 'Gemini'}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                    {aiAgents.filter(a => a.is_active).length === 0 && (
+                      <SelectItem value="no-agents" disabled>
+                        Nenhum agente ativo. Configure em Configurações → Agente IA.
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  O agente só será ativado para leads recebidos via WhatsApp nesta fila. Configure os agentes em <span className="text-primary">Configurações → Agente IA</span>.
+                </p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 6: Advanced Settings */}
           <Collapsible open={openSections.includes('advanced')} onOpenChange={() => toggleSection('advanced')}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
