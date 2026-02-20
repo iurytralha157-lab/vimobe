@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle2, XCircle, Clock, Play, AlertTriangle, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
-import { useAutomationExecutions, useCancelExecution, AutomationExecution } from '@/hooks/use-automations';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, CheckCircle2, XCircle, Clock, Play, AlertTriangle, ChevronDown, ChevronUp, StopCircle, Filter } from 'lucide-react';
+import { useAutomationExecutions, useCancelExecution, useAutomations, AutomationExecution } from '@/hooks/use-automations';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
@@ -23,6 +24,7 @@ import {
 interface ExecutionHistoryProps {
   automationId?: string;
 }
+
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -112,8 +114,11 @@ function translateError(error: string): string {
   return error;
 }
 
-export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
-  const { data: executions, isLoading } = useAutomationExecutions(automationId);
+export function ExecutionHistory({ automationId: initialAutomationId }: ExecutionHistoryProps) {
+  const [selectedAutomationId, setSelectedAutomationId] = useState<string | undefined>(initialAutomationId);
+  const effectiveId = selectedAutomationId || initialAutomationId;
+  const { data: executions, isLoading } = useAutomationExecutions(effectiveId);
+  const { data: automations } = useAutomations();
 
   if (isLoading) {
     return (
@@ -125,15 +130,37 @@ export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
 
   if (!executions || executions.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nenhuma execução ainda</h3>
-          <p className="text-muted-foreground text-sm">
-            As execuções das automações aparecerão aqui quando forem disparadas
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {/* Filter */}
+        {automations && automations.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select
+              value={selectedAutomationId || '__all__'}
+              onValueChange={(v) => setSelectedAutomationId(v === '__all__' ? undefined : v)}
+            >
+              <SelectTrigger className="w-[260px]">
+                <SelectValue placeholder="Todas as automações" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas as automações</SelectItem>
+                {automations.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Nenhuma execução ainda</h3>
+            <p className="text-muted-foreground text-sm">
+              As execuções das automações aparecerão aqui quando forem disparadas
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -150,6 +177,32 @@ export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
 
   return (
     <div className="space-y-6">
+      {/* Filter */}
+      {automations && automations.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select
+            value={selectedAutomationId || '__all__'}
+            onValueChange={(v) => setSelectedAutomationId(v === '__all__' ? undefined : v)}
+          >
+            <SelectTrigger className="w-[260px]">
+              <SelectValue placeholder="Todas as automações" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas as automações</SelectItem>
+              {automations.map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedAutomationId && (
+            <Button variant="ghost" size="sm" onClick={() => setSelectedAutomationId(undefined)}>
+              Limpar filtro
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-accent/50 border-accent">
@@ -191,6 +244,7 @@ export function ExecutionHistory({ automationId }: ExecutionHistoryProps) {
     </div>
   );
 }
+
 
 function ExecutionRow({ execution }: { execution: AutomationExecution }) {
   const [isOpen, setIsOpen] = useState(false);
