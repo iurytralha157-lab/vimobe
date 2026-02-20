@@ -649,6 +649,34 @@ async function handleMessagesUpsert(
           } catch (triggerError) {
             console.error("Error calling automation trigger:", triggerError);
           }
+          // ===== AI AGENT: Auto-respond to incoming text messages =====
+          if (messageType === 'text' && content) {
+            try {
+              // Fire-and-forget: don't await so webhook responds fast
+              const aiAgentCall = fetch(`${supabaseUrl}/functions/v1/ai-agent-responder`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({
+                  conversation_id: conversation.id,
+                  session_id: session.id,
+                  organization_id: session.organization_id,
+                  message: content,
+                  contact_name: contactName,
+                }),
+              });
+              EdgeRuntime.waitUntil(aiAgentCall.then(r => {
+                console.log(`AI agent responded: ${r.status}`);
+              }).catch(e => {
+                console.error("AI agent error:", e);
+              }));
+            } catch (aiError) {
+              console.error("AI agent setup error:", aiError);
+            }
+          }
+
           // ===== STOP FOLLOW-UP ON REPLY =====
           // Cancel running/waiting automation executions when lead replies
           // Even if conversation has no lead_id, try to find lead by phone
