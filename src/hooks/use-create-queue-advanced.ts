@@ -42,6 +42,7 @@ interface CreateQueueInput {
   schedule: ScheduleDay[];
   conditions: RuleCondition[];
   members: QueueMember[];
+  ai_agent_id?: string | null;
 }
 
 export function useCreateQueueAdvanced() {
@@ -83,6 +84,7 @@ export function useCreateQueueAdvanced() {
           target_stage_id: input.target_stage_id || null,
           settings: fullSettings as any,
           reentry_behavior: input.settings.reentry_behavior || 'redistribute',
+          ai_agent_id: input.ai_agent_id || null,
         })
         .select()
         .single();
@@ -248,6 +250,7 @@ export function useUpdateQueueAdvanced() {
           target_stage_id: input.target_stage_id || null,
           settings: fullSettings as any,
           reentry_behavior: input.settings.reentry_behavior || 'redistribute',
+          ai_agent_id: input.ai_agent_id || null,
         })
         .eq('id', id);
       
