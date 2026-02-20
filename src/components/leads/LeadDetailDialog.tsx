@@ -600,93 +600,130 @@ export function LeadDetailDialog({
 
   // Mobile content - defined as JSX variable (NOT a component function) to prevent re-mounting
   const MobileContent = () => (<div className="flex flex-col h-full">
-      {/* Mobile Header - Compact & Premium */}
-      <div className="relative px-4 pt-4 pb-3 border-b bg-gradient-to-br from-card via-card to-primary/5">
+      {/* Mobile Header - Compact */}
+      <div className="relative px-4 pt-4 pb-3 border-b bg-card">
         {/* Close button */}
         <button onClick={onClose} className="absolute right-3 top-3 h-8 w-8 rounded-full bg-muted/80 flex items-center justify-center z-10">
           <X className="h-4 w-4" />
         </button>
 
-        {/* Lead Info */}
-        <div className="flex items-center gap-3 mb-3 pr-10">
-          <div className="relative shrink-0">
-            <div className="absolute -inset-0.5 bg-gradient-to-br from-primary/40 to-primary/10 rounded-full blur-sm" />
-            <Avatar className="relative h-12 w-12 border-2 border-primary/20 shadow-lg">
-              <AvatarImage src={lead.whatsapp_picture} alt={lead.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-                {lead.name?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          
+        {/* Row 1 — Avatar + Nome + Tags */}
+        <div className="flex items-center gap-2.5 mb-3 pr-10">
+          <Avatar className="h-11 w-11 shrink-0 border-2 border-primary/20">
+            <AvatarImage src={lead.whatsapp_picture} alt={lead.name} />
+            <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-base">
+              {lead.name?.[0]?.toUpperCase() || <User className="h-5 w-5" />}
+            </AvatarFallback>
+          </Avatar>
+
           <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-lg truncate">{lead.name}</h2>
-            {lead.empresa && <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
-                <Building2 className="h-3 w-3 shrink-0" />
-                <span className="truncate">{lead.empresa}</span>
-              </p>}
+            <h2 className="font-semibold text-base truncate leading-tight">{lead.name}</h2>
+            {/* Tags inline */}
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {lead.tags?.slice(0, 3).map((tag: any) => (
+                <Badge
+                  key={tag.id}
+                  className="flex items-center gap-1 pr-1 py-0 text-[10px] rounded-full h-5 leading-none"
+                  style={{
+                    backgroundColor: `${tag.color}18`,
+                    color: tag.color,
+                    borderColor: `${tag.color}30`
+                  }}
+                >
+                  <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
+                  {tag.name}
+                  <button onClick={() => handleRemoveTag(tag.id)} className="ml-0.5 p-0.5 hover:bg-black/10 rounded-full">
+                    <X className="h-2 w-2" />
+                  </button>
+                </Badge>
+              ))}
+              {lead.tags?.length > 3 && (
+                <Badge variant="secondary" className="text-[10px] py-0 h-5">
+                  +{lead.tags.length - 3}
+                </Badge>
+              )}
+              <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-5 w-5 p-0 rounded-full border border-dashed shrink-0">
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-0" align="start">
+                  <TagSelectorPopoverContent
+                    availableTags={availableTags}
+                    onAddTag={handleAddTag}
+                    onClose={() => setTagPopoverOpen(false)}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
 
-        {/* Quick Actions Row */}
+        {/* Row 2 — Ações rápidas */}
         <div className="flex items-center gap-2 mb-3">
-          {lead.phone && <>
+          {lead.phone && (
+            <>
               <Button variant="outline" size="sm" onClick={handleQuickPhone} className="h-9 flex-1 rounded-full border-2">
                 <Phone className="h-4 w-4 mr-1.5" />
                 Ligar
               </Button>
-              <Button size="sm" onClick={handleQuickWhatsApp} className="h-9 flex-1 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-md">
+              <Button size="sm" onClick={handleQuickWhatsApp} className="h-9 flex-1 rounded-full">
                 <MessageCircle className="h-4 w-4 mr-1.5" />
                 Chat
               </Button>
-            </>}
-          {lead.email && <Button variant="outline" size="sm" onClick={handleQuickEmail} className="h-9 w-9 p-0 rounded-full border-2 shrink-0">
+            </>
+          )}
+          {lead.email && (
+            <Button variant="outline" size="sm" onClick={handleQuickEmail} className="h-9 w-9 p-0 rounded-full border-2 shrink-0">
               <Mail className="h-4 w-4" />
-            </Button>}
+            </Button>
+          )}
         </div>
 
-        {/* Stage Selector - Mobile */}
-        <Popover open={stagePopoverOpen} onOpenChange={setStagePopoverOpen}>
-          <PopoverTrigger asChild>
-            <button className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-primary to-primary/90 text-primary-foreground text-sm font-medium shadow-lg">
-              <span className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary-foreground/80 animate-pulse" />
-                {lead.stage?.name || 'Sem estágio'}
-              </span>
-              <ChevronDown className="h-4 w-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[calc(100vw-2rem)] p-2" align="start">
-            <div className="space-y-1 max-h-60 overflow-y-auto">
-              {stages.map((stage, idx) => {
-              const isActive = stage.id === lead.stage_id;
-              const isPast = idx < currentStageIndex;
-              return <button key={stage.id} onClick={() => handleMoveToStage(stage.id)} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all", isActive ? "bg-primary text-primary-foreground" : isPast ? "bg-primary/10 text-primary hover:bg-primary/20" : "hover:bg-accent")}>
-                    {isPast && <Check className="h-4 w-4 shrink-0" />}
-                    {isActive && <div className="h-2 w-2 rounded-full bg-primary-foreground animate-pulse" />}
-                    {!isPast && !isActive && <div className="h-2 w-2 rounded-full bg-muted" />}
-                    <span className="font-medium">{stage.name}</span>
-                  </button>;
-            })}
-            </div>
-          </PopoverContent>
-        </Popover>
+        {/* Row 3 — Estágio + Deal Status lado a lado */}
+        <div className="flex items-center gap-2">
+          {/* Stage pill */}
+          <Popover open={stagePopoverOpen} onOpenChange={setStagePopoverOpen}>
+            <PopoverTrigger asChild>
+              <button className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium min-w-0 overflow-hidden">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                <span className="truncate">{lead.stage?.name || 'Sem estágio'}</span>
+                <ChevronDown className="h-3 w-3 shrink-0 ml-auto" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[calc(100vw-2rem)] p-2" align="start">
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {stages.map((stage, idx) => {
+                  const isActive = stage.id === lead.stage_id;
+                  const isPast = idx < currentStageIndex;
+                  return (
+                    <button key={stage.id} onClick={() => handleMoveToStage(stage.id)} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all", isActive ? "bg-primary text-primary-foreground" : isPast ? "bg-primary/10 text-primary hover:bg-primary/20" : "hover:bg-accent")}>
+                      {isPast && <Check className="h-4 w-4 shrink-0" />}
+                      {isActive && <div className="h-2 w-2 rounded-full bg-primary-foreground animate-pulse" />}
+                      {!isPast && !isActive && <div className="h-2 w-2 rounded-full bg-muted" />}
+                      <span className="font-medium">{stage.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
 
-        {/* Deal Status Selector - Prominent */}
-        <div className="mt-3">
-          <Select 
-            value={lead.deal_status || 'open'} 
-            onValueChange={handleDealStatusChange}
-          >
-            <SelectTrigger 
+          {/* Deal Status pill */}
+          <Select value={lead.deal_status || 'open'} onValueChange={handleDealStatusChange}>
+            <SelectTrigger
               className={cn(
-                "w-full rounded-xl font-medium text-sm border-2",
-                lead.deal_status === 'won' && "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-700 dark:text-emerald-300",
-                lead.deal_status === 'lost' && "bg-red-50 border-red-300 text-red-700 dark:bg-red-950/30 dark:border-red-700 dark:text-red-300",
-                (!lead.deal_status || lead.deal_status === 'open') && "bg-muted/50 border-muted-foreground/20"
+                "h-auto w-auto rounded-full px-3 py-1.5 text-xs font-medium border-0 shrink-0 gap-1.5",
+                lead.deal_status === 'won' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+                lead.deal_status === 'lost' && "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300",
+                (!lead.deal_status || lead.deal_status === 'open') && "bg-muted text-muted-foreground"
               )}
             >
-              <SelectValue placeholder="Status do Negócio" />
+              {lead.deal_status === 'won' && <Trophy className="h-3 w-3 shrink-0" />}
+              {lead.deal_status === 'lost' && <XCircle className="h-3 w-3 shrink-0" />}
+              {(!lead.deal_status || lead.deal_status === 'open') && <CircleDot className="h-3 w-3 shrink-0" />}
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="open">
@@ -709,74 +746,23 @@ export function LeadDetailDialog({
               </SelectItem>
             </SelectContent>
           </Select>
-          
-          {/* Lost reason inline input */}
-          {lead.deal_status === 'lost' && (
-            <Input 
-              value={lostReasonLocal} 
-              onChange={(e) => setLostReasonLocal(e.target.value)}
-              onBlur={async (e) => {
-                if (e.target.value !== (lead.lost_reason || '')) {
-                  await updateLead.mutateAsync({
-                    id: lead.id,
-                    lost_reason: e.target.value
-                  } as any);
-                  refetchStages();
-                }
-              }}
-              placeholder="Motivo da perda..."
-              className="mt-2 rounded-xl text-sm border-red-200 dark:border-red-800"
-            />
-          )}
         </div>
 
-        {/* Tags Row - Using TagSelector for inline creation */}
-        <div className="flex flex-wrap items-center gap-1.5 mt-3">
-          {lead.tags?.slice(0, 3).map((tag: any) => <Badge key={tag.id} className="flex items-center gap-1 pr-1 py-0.5 text-xs rounded-full" style={{
-            backgroundColor: `${tag.color}15`,
-            color: tag.color,
-            borderColor: `${tag.color}30`
-          }}>
-            <div className="h-1.5 w-1.5 rounded-full" style={{
-              backgroundColor: tag.color
-            }} />
-            {tag.name}
-            <button onClick={() => handleRemoveTag(tag.id)} className="ml-0.5 p-0.5 hover:bg-black/10 rounded-full">
-              <X className="h-2.5 w-2.5" />
-            </button>
-          </Badge>)}
-          {lead.tags?.length > 3 && <Badge variant="secondary" className="text-xs py-0.5">
-            +{lead.tags.length - 3}
-          </Badge>}
-          <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 px-2 rounded-full text-xs border border-dashed">
-                <Plus className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="start">
-              <TagSelectorPopoverContent
-                availableTags={availableTags}
-                onAddTag={handleAddTag}
-                onClose={() => setTagPopoverOpen(false)}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* First Response Badge - Compact */}
-        {lead.first_response_seconds !== null && lead.first_response_seconds !== undefined && <div className="flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-yellow-500/20 w-fit">
-            <div className="h-5 w-5 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
-              <Zap className="h-3 w-3 text-white" />
-            </div>
-            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-              1ª resposta: {formatResponseTime(lead.first_response_seconds)}
-            </span>
-            {lead.first_response_is_automation && <Badge variant="secondary" className="h-4 text-[9px] px-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-0">
-                <Bot className="h-2.5 w-2.5 mr-0.5" />
-                Auto
-              </Badge>}
-          </div>}
+        {/* Lost reason input (when status = lost) */}
+        {lead.deal_status === 'lost' && (
+          <Input
+            value={lostReasonLocal}
+            onChange={(e) => setLostReasonLocal(e.target.value)}
+            onBlur={async (e) => {
+              if (e.target.value !== (lead.lost_reason || '')) {
+                await updateLead.mutateAsync({ id: lead.id, lost_reason: e.target.value } as any);
+                refetchStages();
+              }
+            }}
+            placeholder="Motivo da perda..."
+            className="mt-2 rounded-xl text-sm border-red-200 dark:border-red-800"
+          />
+        )}
       </div>
 
       {/* Mobile Tabs - Scrollable */}
