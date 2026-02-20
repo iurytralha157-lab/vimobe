@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Users, Building2, Check, Facebook, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, LucideIcon } from 'lucide-react';
+import { Users, Building2, Check, Facebook, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, Bot, LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useMetaIntegrations } from '@/hooks/use-meta-integration';
@@ -20,6 +20,7 @@ import { AccountTab } from '@/components/settings/AccountTab';
 import { TeamTab } from '@/components/settings/TeamTab';
 import { WebhooksTab } from '@/components/settings/WebhooksTab';
 import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
+import { AIAgentTab } from '@/components/settings/AIAgentTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -62,6 +63,7 @@ export default function Settings() {
 
     if (hasWhatsAppModule) {
       tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: Smartphone });
+      tabs.push({ value: 'ai-agent', label: 'Agente IA', icon: Bot });
     }
 
     return tabs;
@@ -189,6 +191,12 @@ export default function Settings() {
           {hasWhatsAppModule && (
             <TabsContent value="whatsapp">
               <WhatsAppTab />
+            </TabsContent>
+          )}
+
+          {hasWhatsAppModule && (
+            <TabsContent value="ai-agent">
+              <AIAgentTab />
             </TabsContent>
           )}
         </Tabs>

@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.whatsapp-notifier]
 verify_jwt = false
+
+[functions.ai-agent-responder]
+verify_jwt = false
