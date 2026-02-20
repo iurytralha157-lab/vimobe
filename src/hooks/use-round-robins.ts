@@ -33,6 +33,7 @@ export interface RoundRobin {
   // Advanced distribution columns
   target_pipeline_id: string | null;
   target_stage_id: string | null;
+  ai_agent_id: string | null;
   settings: {
     enable_redistribution?: boolean;
     preserve_position?: boolean;
@@ -128,6 +129,7 @@ export function useRoundRobins() {
         leads_distributed: countsByRR[rr.id] || (rr as any).leads_distributed || 0,
         target_pipeline_id: (rr as any).target_pipeline_id || null,
         target_stage_id: (rr as any).target_stage_id || null,
+        ai_agent_id: (rr as any).ai_agent_id || null,
         settings: (rr as any).settings || null,
         target_pipeline: (rr as any).target_pipeline || null,
         target_stage: (rr as any).target_stage || null,
