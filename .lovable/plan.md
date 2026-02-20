@@ -1,63 +1,58 @@
 
-## Adicionar Filtro de Pipeline nas Cadências
+## Problema Identificado
 
-### Problema atual
-A aba de Cadências exibe templates baseados em `stage_key`, mas o mesmo `stage_key` (ex: "base", "novo") pode existir em múltiplas pipelines. Sem um filtro, o usuário não sabe quais cadências estão configuradas para qual pipeline — e tudo fica misturado.
+A tabela `cadence_templates` no banco de dados **não possui o campo `pipeline_id`** — ela só tem `stage_key` (ex: `"base"`, `"contactados"`). Como o mesmo `stage_key` existe em múltiplas pipelines, o filtro atual retorna cadências de pipelines erradas.
+
+Exemplo real no banco:
+- Template `"Base"` (stage_key: `base`) → aparece para as pipelines "Vendas", "follow up", "Tráfego", "TIME ELITE", "Fernando", etc.
+- O filtro por `stage_key` não distingue qual pipeline é cada um
 
 ### Solução
-Adicionar um **Select de Pipeline** no topo da aba de Cadências. Ao selecionar uma pipeline, a lista de templates exibidos será filtrada para mostrar apenas os estágios pertencentes àquela pipeline.
 
-### Como funciona tecnicamente
+Adicionar o campo `pipeline_id` na tabela `cadence_templates` e vincular cada template ao estágio correto de cada pipeline.
 
-Os templates de cadência existem por `stage_key` (ex: "base", "novo"). Para filtrar por pipeline, o fluxo será:
+### Passo 1 — Migração no Banco
 
-1. Buscar todas as pipelines disponíveis (hook `usePipelines` já existe em `use-stages.ts`)
-2. Ao selecionar uma pipeline, buscar os `stage_key`s dos estágios dela
-3. Filtrar os templates para exibir apenas os que têm `stage_key` correspondente a essa pipeline
+Criar uma migration que:
+1. Adiciona a coluna `pipeline_id` (nullable UUID) na tabela `cadence_templates`
+2. Preenche o `pipeline_id` cruzando `cadence_templates.stage_key` com `stages.stage_key` (usando o estágio mais recente com aquele key por organização)
+3. Cria um índice na nova coluna para performance
 
-### Mudanças
+### Passo 2 — Atualizar o Hook `useCadenceTemplates`
 
-**`src/components/crm-management/CadencesTab.tsx`** — único arquivo a editar:
+Modificar o `queryFn` em `src/hooks/use-cadences.ts`:
 
-- Importar `usePipelines` de `@/hooks/use-stages`
-- Adicionar estado `selectedPipelineId` (padrão: `'all'` = todas)
-- Adicionar um `Select` no header com as opções "Todas as pipelines" + lista de pipelines
-- Ao filtrar: buscar os `stage_key`s dos estágios da pipeline selecionada e filtrar `templates` para exibir apenas os que coincidem
-- Quando `'all'` estiver selecionado, exibir todos os templates (comportamento atual)
+- Ao buscar estágios para criar templates faltantes, incluir `pipeline_id` no select
+- Ao inserir templates faltantes, incluir `pipeline_id` no objeto inserido
+- Ao buscar todos os templates, filtrar por `pipeline_id` dos estágios da organização atual (evitar trazer templates de outras organizações com mesmo stage_key)
 
-### UI resultante
+### Passo 3 — Atualizar o Filtro no `CadencesTab`
 
-```
-Configure as tarefas automáticas para cada estágio do pipeline
+Modificar `src/components/crm-management/CadencesTab.tsx`:
 
-[Pipeline: Todas as pipelines ▼]          [🔒 Somente visualização]
+- Em vez de filtrar por `stage_key` (que é ambíguo), filtrar diretamente por `template.pipeline_id === selectedPipelineId`
+- Isso torna o filtro determinístico e correto
 
-┌─ Base ─────┐  ┌─ Novo ──────┐  ┌─ Qualificação ─┐
-│ D+0 Ligação │  │ D+0 Mensagem│  │ Nenhuma tarefa  │
-│ D+1 Email   │  │             │  │                 │
-└─────────────┘  └─────────────┘  └─────────────────┘
-```
-
-Quando uma pipeline específica é selecionada, apenas os estágios daquela pipeline aparecem.
-
-### Detalhamento técnico da filtragem
+### Lógica de filtragem corrigida
 
 ```
-usePipelines() → lista de pipelines para o Select
+ANTES (errado):
+  stage_key "base" → 1 template, mas JOIN retorna N linhas (uma por pipeline)
+  Filtro por stage_key traz o mesmo template para múltiplas pipelines
 
-useStages(pipelineId) → retorna estágios da pipeline selecionada
-  → extrai os stage_keys desses estágios
-  → filtra templates onde template.stage_key está na lista
-
-Quando selectedPipelineId === 'all': mostrar todos os templates
+DEPOIS (correto):
+  cadence_templates.pipeline_id = "id-da-pipeline-selecionada"
+  Cada template pertence a exatamente 1 pipeline → filtro funciona perfeitamente
 ```
-
-Para evitar uma nova query, o hook `useStages` existente (sem pipelineId) já retorna os estágios de todas as pipelines com seu `pipeline_id`. Podemos fazer a filtragem no front-end cruzando os dados.
 
 ### Arquivos modificados
 
 | Arquivo | O que muda |
 |---|---|
-| `src/components/crm-management/CadencesTab.tsx` | Adicionar Select de pipeline + lógica de filtragem |
+| `supabase/migrations/YYYYMMDD_add_pipeline_id_to_cadence_templates.sql` | Migration: adiciona `pipeline_id`, preenche dados existentes |
+| `src/hooks/use-cadences.ts` | Inclui `pipeline_id` ao criar/buscar templates |
+| `src/components/crm-management/CadencesTab.tsx` | Filtro usa `template.pipeline_id` em vez de `stage_key` |
 
-Nenhum hook novo, nenhuma query nova — apenas usa hooks já existentes (`usePipelines`, `useStages`).
+### Resultado esperado
+
+Ao selecionar "Vendas" no filtro, aparecem **apenas** os estágios/cadências da pipeline Vendas. Ao selecionar "Fernando", aparecem apenas os da pipeline Fernando. Sem repetições, sem cadências de outras pipelines aparecendo.
