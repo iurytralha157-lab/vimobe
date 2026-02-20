@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -240,65 +239,74 @@ interface FollowUpTemplatesProps {
 export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) {
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Templates Prontos
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Comece rapidamente com sequências pré-configuradas para o mercado imobiliário
-          </p>
+      {/* Hero CTA - Criar do Zero */}
+      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Criar do Zero
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-md">
+              Monte seu fluxo completamente personalizado com o editor visual de arrastar e soltar
+            </p>
+          </div>
+          <Button onClick={() => onSelectTemplate(null)} size="lg" className="shrink-0">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova automação
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => onSelectTemplate(null)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Criar do Zero
-        </Button>
       </div>
 
-      {/* Templates Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {FOLLOW_UP_TEMPLATES.map((template) => (
-          <Card 
-            key={template.id} 
-            className="cursor-pointer hover:border-primary/50 transition-colors group"
-            onClick={() => onSelectTemplate(template)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                  <MessageSquare className="h-5 w-5 text-primary" />
+      {/* Templates Section */}
+      <div>
+        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+          Ou comece com um modelo pronto
+        </h4>
+
+        {/* Templates Grid */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {FOLLOW_UP_TEMPLATES.map((template) => (
+            <Card
+              key={template.id}
+              className="cursor-pointer hover:border-primary/50 transition-colors group"
+              onClick={() => onSelectTemplate(template)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    <Building2 className="h-3 w-3 mr-1" />
+                    Imobiliário
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="text-xs">
-                  <Building2 className="h-3 w-3 mr-1" />
-                  Imobiliário
-                </Badge>
-              </div>
-              <CardTitle className="text-base mt-3">{template.name}</CardTitle>
-              <CardDescription className="text-sm">{template.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{template.days} dias</span>
+                <CardTitle className="text-base mt-3">{template.name}</CardTitle>
+                <CardDescription className="text-sm">{template.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>{template.days} dias</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{template.messages.length} mensagens</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{template.messages.length} mensagens</span>
-                </div>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="w-full mt-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-              >
-                Usar template
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full mt-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                >
+                  Usar template
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

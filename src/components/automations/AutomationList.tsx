@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  History,
+  MapPin,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -35,12 +37,16 @@ import {
   useAutomationExecutions,
   TRIGGER_TYPE_LABELS,
   TriggerType,
+  Automation,
 } from '@/hooks/use-automations';
+import { usePipelines, useStages } from '@/hooks/use-stages';
+import { useTags } from '@/hooks/use-tags';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface AutomationListProps {
   onEdit: (automationId: string) => void;
+  onViewHistory?: (automationId: string) => void;
 }
 
 const getTriggerIcon = (triggerType: TriggerType) => {
@@ -64,7 +70,60 @@ const getTriggerIcon = (triggerType: TriggerType) => {
   }
 };
 
-export function AutomationList({ onEdit }: AutomationListProps) {
+// Sub-component to show trigger context (pipeline/stage/tag name)
+function TriggerContext({ automation }: { automation: Automation }) {
+  const config = automation.trigger_config as Record<string, unknown> || {};
+  const triggerType = automation.trigger_type as TriggerType;
+
+  const pipelineId = config.pipeline_id as string | undefined;
+  const stageId = config.to_stage_id as string | undefined;
+  const tagId = config.tag_id as string | undefined;
+
+  const { data: pipelines } = usePipelines();
+  const { data: stages } = useStages(pipelineId);
+  const { data: tags } = useTags();
+
+  if (triggerType === 'lead_stage_changed' && pipelineId) {
+    const pipeline = pipelines?.find(p => p.id === pipelineId);
+    const stage = stageId ? stages?.find(s => s.id === stageId) : null;
+
+    if (!pipeline && !stage) return null;
+
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+        <MapPin className="h-3 w-3 shrink-0" />
+        <span>
+          {pipeline?.name || '—'}
+          {stage ? ` → ${stage.name}` : ''}
+        </span>
+      </div>
+    );
+  }
+
+  if (triggerType === 'tag_added' && tagId) {
+    const tag = tags?.find(t => t.id === tagId);
+    if (!tag) return null;
+
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+        <Tag className="h-3 w-3 shrink-0" />
+        <span
+          className="px-1.5 py-0.5 rounded-full text-xs font-medium"
+          style={{
+            backgroundColor: tag.color ? `${tag.color}22` : undefined,
+            color: tag.color || undefined,
+          }}
+        >
+          {tag.name}
+        </span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
   const { data: automations, isLoading } = useAutomations();
   const { data: executions } = useAutomationExecutions();
   const deleteAutomation = useDeleteAutomation();
@@ -142,21 +201,19 @@ export function AutomationList({ onEdit }: AutomationListProps) {
                   <div className="flex flex-col gap-3">
                     {/* Trigger info and stats */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
+                      <div className="flex flex-col gap-1 text-xs md:text-sm text-muted-foreground">
                         <span className="truncate">
                           <span className="hidden sm:inline">Gatilho: </span>
                           {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
                         </span>
+                        <TriggerContext automation={automation} />
                         {stats.lastRun && (
-                          <>
-                            <span className="hidden sm:inline">•</span>
-                            <span className="text-xs">
-                              Último run: {formatDistanceToNow(stats.lastRun, { 
-                                addSuffix: true, 
-                                locale: ptBR 
-                              })}
-                            </span>
-                          </>
+                          <span className="text-xs">
+                            Último run: {formatDistanceToNow(stats.lastRun, { 
+                              addSuffix: true, 
+                              locale: ptBR 
+                            })}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -187,6 +244,17 @@ export function AutomationList({ onEdit }: AutomationListProps) {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      {onViewHistory && (stats.running > 0 || stats.completed > 0 || stats.failed > 0) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onViewHistory(automation.id)}
+                          className="flex-1 sm:flex-none text-muted-foreground"
+                        >
+                          <History className="h-4 w-4 mr-1" />
+                          Histórico
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => onEdit(automation.id)} className="flex-1 sm:flex-none">
                         <Edit2 className="h-4 w-4 mr-1" />
                         Editar

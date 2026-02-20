@@ -191,7 +191,7 @@ export function useCreateAutomation() {
           trigger_type: data.trigger_type,
           trigger_config: (data.trigger_config || {}) as Json,
           created_by: profile.id,
-          is_active: false,
+          is_active: true,
         }])
         .select()
         .single();

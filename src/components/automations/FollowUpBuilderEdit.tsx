@@ -54,7 +54,7 @@ const nodeTypes = {
 interface FollowUpBuilderEditProps {
   automationId: string;
   onBack: () => void;
-  onComplete: (automationId: string) => void;
+  onComplete: (automationId?: string) => void;
 }
 
 const NODE_PALETTE = [
@@ -136,7 +136,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             id: node.id,
             type: 'message',
             position: { x: node.position_x || 250, y: node.position_y || 180 },
-            data: { message: nodeConfig.message || '' },
+            data: { message: nodeConfig.message || '', day: nodeConfig.day || 1 },
           });
           // Get session_id from action node
           if (nodeConfig.session_id && !sessionId) {

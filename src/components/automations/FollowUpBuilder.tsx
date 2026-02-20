@@ -55,7 +55,7 @@ const nodeTypes = {
 
 interface FollowUpBuilderProps {
   onBack: () => void;
-  onComplete: (automationId: string) => void;
+  onComplete: (automationId?: string) => void;
   initialTemplate?: {
     name: string;
     messages: { day: number; content: string }[];
