@@ -1,65 +1,83 @@
 
-## Correção do Alinhamento do Card WhatsApp
+## Redesign das Páginas Meta — Padrão WhatsApp
 
-### Problema Identificado
+### Problema identificado
 
-Observando o print enviado, os cards de sessão têm dois problemas de alinhamento:
+As duas páginas Meta estão com um layout vertical e desorganizado para mobile:
 
-1. **Padding inconsistente**: O `p-4` do `CardContent` cria um espaçamento uniforme, mas o Avatar e o badge de status ficam desalinhados visualmente — parece que o lado esquerdo "empurra" mais que o direito.
+**`MetaIntegrationSettings`** (lista de páginas conectadas):
+- Header card com título e botão "Adicionar Página" sem alinhamento compacto
+- Cards de integração com avatar + nome + badge empilhados verticalmente
+- 4 ações separadas (Formulários, Switch, Settings, Unlink) sem organização em grid como o WhatsApp
 
-2. **Row 2 (Responsável + toggle)**: O nome do responsável (`Raquel Fernandes`, `Jessica`, `Maykon`) e o ícone de sino + switch estão em alturas diferentes, sem um alinhamento vertical claro.
+**`MetaFormManager`** (formulários dentro de cada integração):
+- Cards de formulário com layout interno desbalanceado
+- Switch + botão "Editar/Configurar" sem proporção definida
 
-3. **Row 3 (Botões)**: Os botões "Desconectar" e "Verificar" têm `flex-1` mas os ícones de Users e Trash são `w-8`. Isso cria uma distribuição desproporcional — os botões de texto são muito largos e os ícones ficam pequenos sem relação com os outros.
+### Padrão do WhatsApp a seguir
 
-### O que o print de referência mostra
-
+O card do WhatsApp ficou com 3 linhas bem definidas em `p-3 space-y-2.5`:
 ```
-┌──────────────────────────────────────┐
-│ [🟠] Vendas            [✓ Conectado] │
-│      Conectado                       │
-│ Raquel Fernandes              🔔 ⬤  │
-│ [→ Desconectar] [↺ Verificar] [👥][🗑]│
-└──────────────────────────────────────┘
-```
-
-O layout do print está bem alinhado — avatar à esquerda rente à borda, badge à direita rente à borda, e os botões distribuídos uniformemente.
-
-### Correções
-
-**Arquivo: `src/components/settings/WhatsAppTab.tsx`**
-
-**1. Remover `p-4` e usar `p-3` com padding lateral consistente:**
-```tsx
-<CardContent className="p-3 space-y-2.5">
+Row 1: [Avatar] [Nome] [Status badge]
+Row 2: [Responsável]  [Bell] [Toggle]  ← border-y separador
+Row 3: [Botão flex-1] [Botão flex-1] [W-8] [W-8]
 ```
 
-**2. Row 1 — Alinhar Avatar + nome + badge:**
-- Usar `items-center` e `gap-2.5` para alinhamento perfeito
-- O badge de status com `shrink-0` fica sempre à direita sem quebrar
+### O que será alterado
 
-**3. Row 2 — Responsável + toggle:**
-- Alinhar verticalmente com `items-center` e garantir que o nome use `flex-1` para empurrar o toggle para a direita
-- Reduzir gap para `gap-1` no lado esquerdo
+**Arquivo 1: `src/components/integrations/MetaIntegrationSettings.tsx`**
 
-**4. Row 3 — Botões:**
-- Trocar os dois botões com texto de `flex-1` para tamanhos fixos mais proporcionais: ambos com `flex-1 h-8 text-xs px-2`
-- Os dois ícones (Users e Trash) mantêm `h-8 w-8 p-0` — fixos
-- Isso cria uma distribuição: `[— flex —][— flex —][32px][32px]`
-
-**Resultado esperado:**
+**Header Card** — consolidar em linha única:
 ```
-┌──────────────────────────────────────┐
-│ [🟠] Vendas            [✓ Conectado] │  ← alinhado nas bordas
-│      Conectado                       │
-├──────────────────────────────────────┤
-│ Raquel Fernandes         🔔 [toggle]  │  ← owner à esq, toggle à dir
-├──────────────────────────────────────┤
-│ [→ Desconectar] [↺ Verificar] [👥][🗑]│  ← proporcionais
-└──────────────────────────────────────┘
+[ƒ] Integração Meta          [+ Adicionar Página]
+    Conecte sua conta...
+    ✓ 2 página(s) conectada(s)
 ```
 
-### Arquivo alterado
+**Cards de integração** — aplicar o mesmo padrão de 3 rows:
+```
+Row 1: [ƒ] [Nome da Página]           [Ativo/Inativo]
+             [95 leads recebidos]
+Row 2: [Pipeline configurado]         [Switch ativo]   ← border-y
+Row 3: [📄 Formulários flex-1] [⚙️ w-8] [🔗 w-8]
+```
+
+Em vez de usar `Collapsible` com `ChevronDown` separado, o botão "Formulários" vira o trigger do collapsible diretamente, mais limpo.
+
+**Arquivo 2: `src/components/integrations/MetaFormManager.tsx`** — subseção de formulários
+
+O header da subseção fica alinhado:
+```
+Formulários da Página    [↺ Atualizar]
+```
+
+Cada `FormCard` segue o mesmo padrão compacto:
+```
+Row 1: [📄] [Nome do Formulário]        [Ativo/Não config.]
+Row 2: [X leads] [Imóvel] [Tags]        [Switch]  ← border-y
+Row 3: [Configurar/Editar flex-1]
+```
+
+### Mudanças técnicas
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/settings/WhatsAppTab.tsx` | Ajustar `CardContent` padding para `p-3`, corrigir `gap` e `items-center` nas 3 rows, balancear botões de ação |
+| `MetaIntegrationSettings.tsx` | Refatorar `CardHeader` para linha única; refatorar cards de integração com 3 rows padrão WhatsApp; `p-3 space-y-2.5`; botões proporcionais `flex-1 h-8` + `h-8 w-8` |
+| `MetaFormManager.tsx` | Refatorar `FormCard` com 3 rows; mover Switch para row separada com `border-y`; botão ação em `flex-1` |
+
+### Resultado visual esperado
+
+```
+┌──────────────────────────────────────┐
+│ [ƒ] Integração Meta  [+ Add. Página] │  ← Header compacto
+│     ✓ 2 página(s) conectada(s)       │
+└──────────────────────────────────────┘
+
+┌──────────────────────────────────────┐
+│ [ƒ] Fernando - Corretor  [● Ativo]   │  ← Row 1
+├──────────────────────────────────────┤
+│ 95 leads recebidos       [● Toggle]  │  ← Row 2 (border-y)
+├──────────────────────────────────────┤
+│ [📄 Formulários  flex-1] [⚙][🔗]    │  ← Row 3
+└──────────────────────────────────────┘
+```
