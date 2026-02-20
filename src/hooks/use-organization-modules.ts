@@ -18,7 +18,8 @@ export type ModuleName =
   | 'automations'  // Automações
   | 'performance'  // Performance de Corretores
   | 'webhooks'     // Webhooks
-  | 'site';        // Site Integrado
+  | 'site'         // Site Integrado
+  | 'ai_agent';    // Agente de IA
 
 // Default modules that are enabled if no explicit record exists
 // Note: 'automations' is disabled by default and must be explicitly enabled by super admin
