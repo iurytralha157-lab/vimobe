@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useCadenceTemplates, useCreateCadenceTask, useDeleteCadenceTask } from '@/hooks/use-cadences';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
+import { usePipelines, useStages } from '@/hooks/use-stages';
 
 const taskTypeIcons = {
   call: Phone,
@@ -53,7 +54,22 @@ export function CadencesTab() {
   const createTask = useCreateCadenceTask();
   const deleteTask = useDeleteCadenceTask();
   const canEdit = useCanEditCadences();
+  const { data: pipelines = [] } = usePipelines();
+  const { data: allStages = [] } = useStages();
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>('all');
   
+  // Filter templates by selected pipeline
+  const filteredTemplates = selectedPipelineId === 'all'
+    ? templates
+    : (() => {
+        const stageKeysInPipeline = new Set(
+          allStages
+            .filter(s => s.pipeline_id === selectedPipelineId)
+            .map(s => s.stage_key)
+        );
+        return templates.filter(t => stageKeysInPipeline.has(t.stage_key));
+      })();
+
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [newTask, setNewTask] = useState({ 
@@ -101,20 +117,33 @@ export function CadencesTab() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
         <p className="text-muted-foreground text-sm">
           Configure as tarefas automáticas para cada estágio do pipeline
         </p>
-        {!canEdit && (
-          <Badge variant="secondary" className="gap-1">
-            <Lock className="h-3 w-3" />
-            Somente visualização
-          </Badge>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          <Select value={selectedPipelineId} onValueChange={setSelectedPipelineId}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Pipeline" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as pipelines</SelectItem>
+              {pipelines.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!canEdit && (
+            <Badge variant="secondary" className="gap-1">
+              <Lock className="h-3 w-3" />
+              Somente visualização
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Empty State */}
-      {templates.length === 0 && (
+      {filteredTemplates.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <h3 className="font-medium mb-2">Nenhum template de cadência</h3>
@@ -127,7 +156,7 @@ export function CadencesTab() {
 
       {/* Stages Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-        {templates.map((template) => (
+        {filteredTemplates.map((template) => (
           <Card key={template.id}>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base font-medium">{template.name}</CardTitle>
