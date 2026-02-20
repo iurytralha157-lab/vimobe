@@ -241,20 +241,22 @@ export function WhatsAppTab() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
-            Conexões WhatsApp
-          </CardTitle>
-          <CardDescription>
-            Gerencie suas conexões de WhatsApp via Evolution API
-          </CardDescription>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              Conexões WhatsApp
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm mt-0.5">
+              Gerencie suas conexões via Evolution API
+            </CardDescription>
+          </div>
+          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="shrink-0">
+            <Plus className="w-4 h-4 mr-1.5" />
+            Nova
+          </Button>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Conexão
-        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -274,50 +276,51 @@ export function WhatsAppTab() {
             </Button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sessions?.map((session) => (
               <Card key={session.id} className="border">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={session.profile_picture || undefined} />
-                        <AvatarFallback>
-                          <Smartphone className="w-4 h-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-base">{session.display_name || session.instance_name}</CardTitle>
-                        <CardDescription>
-                          {session.status === "connected" 
-                            ? (session.phone_number || session.profile_name || "Conectado") 
-                            : "Não conectado"}
-                        </CardDescription>
-                      </div>
+                <CardContent className="p-4 space-y-3">
+                  {/* Row 1: Avatar + name + status badge */}
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={session.profile_picture || undefined} />
+                      <AvatarFallback>
+                        <Smartphone className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{session.display_name || session.instance_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {session.status === "connected"
+                          ? (session.phone_number || session.profile_name || "Conectado")
+                          : "Não conectado"}
+                      </p>
                     </div>
                     {getStatusBadge(session.status)}
                   </div>
-                  {(session as any).is_notification_session && (
-                    <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
-                      <Bell className="w-3 h-3 mr-1" />
-                      Notificações
-                    </Badge>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Responsável: {session.owner?.name || "—"}
+
+                  {/* Row 2: Responsável + notificação toggle */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {(session as any).is_notification_session && (
+                        <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-[10px] px-1.5 py-0">
+                          <Bell className="w-2.5 h-2.5 mr-0.5" />
+                          Notif.
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground truncate">
+                        {session.owner?.name || "—"}
+                      </span>
                     </div>
                     {isAdmin && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex items-center gap-2">
-                              <Bell className="w-4 h-4 text-muted-foreground" />
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Bell className="w-3.5 h-3.5 text-muted-foreground" />
                               <Switch
                                 checked={(session as any).is_notification_session || false}
-                                onCheckedChange={(checked) => 
+                                onCheckedChange={(checked) =>
                                   toggleNotification.mutate({ sessionId: session.id, enabled: checked })
                                 }
                                 disabled={toggleNotification.isPending}
@@ -331,54 +334,29 @@ export function WhatsAppTab() {
                       </TooltipProvider>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {session.status !== "connected" && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleOpenQRDialog(session)}
-                      >
-                        <QrCode className="w-4 h-4 mr-1" />
+
+                  {/* Row 3: Action buttons */}
+                  <div className="flex items-center gap-2">
+                    {session.status !== "connected" ? (
+                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => handleOpenQRDialog(session)}>
+                        <QrCode className="w-3.5 h-3.5 mr-1" />
                         QR Code
                       </Button>
-                    )}
-                    {session.status === "connected" && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleLogout(session)}
-                      >
-                        <LogOut className="w-4 h-4 mr-1" />
+                    ) : (
+                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => handleLogout(session)}>
+                        <LogOut className="w-3.5 h-3.5 mr-1" />
                         Desconectar
                       </Button>
                     )}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleVerifyConnection(session)}
-                      disabled={verifyingSessionId === session.id}
-                    >
-                      <RefreshCw className={`w-4 h-4 mr-1 ${verifyingSessionId === session.id ? "animate-spin" : ""}`} />
+                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => handleVerifyConnection(session)} disabled={verifyingSessionId === session.id}>
+                      <RefreshCw className={`w-3.5 h-3.5 mr-1 ${verifyingSessionId === session.id ? "animate-spin" : ""}`} />
                       Verificar
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleOpenAccessDialog(session)}
-                    >
-                      <Users className="w-4 h-4 mr-1" />
-                      Acessos
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleOpenAccessDialog(session)}>
+                      <Users className="w-3.5 h-3.5" />
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSession(session);
-                        setDeleteDialogOpen(true);
-                      }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => { setSelectedSession(session); setDeleteDialogOpen(true); }}>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </CardContent>
