@@ -1,116 +1,65 @@
-## Redesign do Card Mobile de Lead
 
-### O que precisa mudar
+## Correção do Alinhamento do Card WhatsApp
 
-Comparando o print de referência com o código atual em `LeadDetailDialog.tsx` (MobileContent), identifiquei que o header mobile está muito vertical e pesado. O print mostra um layout muito mais compacto e elegante.
+### Problema Identificado
 
-### Diferenças Detalhadas
+Observando o print enviado, os cards de sessão têm dois problemas de alinhamento:
 
-**Atual (MobileContent - linhas 602-780):**
+1. **Padding inconsistente**: O `p-4` do `CardContent` cria um espaçamento uniforme, mas o Avatar e o badge de status ficam desalinhados visualmente — parece que o lado esquerdo "empurra" mais que o direito.
 
-1. Avatar + Nome (linha)
-2. Botões Ligar/Chat/Email (linha)
-3. Seletor de Estágio — ocupa linha inteira como botão largo com gradiente
-4. Select de Deal Status — ocupa outra linha inteira com borda
-5. Tags — mais uma linha
-6. Badge de primeira resposta — mais uma linha
+2. **Row 2 (Responsável + toggle)**: O nome do responsável (`Raquel Fernandes`, `Jessica`, `Maykon`) e o ícone de sino + switch estão em alturas diferentes, sem um alinhamento vertical claro.
 
-**Referência (print):**
+3. **Row 3 (Botões)**: Os botões "Desconectar" e "Verificar" têm `flex-1` mas os ícones de Users e Trash são `w-8`. Isso cria uma distribuição desproporcional — os botões de texto são muito largos e os ícones ficam pequenos sem relação com os outros.
 
-1. Avatar + Nome + Tags + botão "+" — tudo na mesma linha com X fechar
-2. Botões Ligar / Chat / Email — linha com larguras balanceadas
-3. **Estágio (pill compacto)** + **Deal Status (pill compacto)** — mesma linha, lado a lado
-4. Tabs de navegação compactas
+### O que o print de referência mostra
 
-Isso reduz o header de ~6 elementos empilhados para apenas 3 linhas, ganhando muito espaço para o conteúdo.
-
-### Mudanças no Código
-
-**Arquivo: `src/components/leads/LeadDetailDialog.tsx**`
-Apenas a seção `MobileContent` será alterada (linhas ~602–780):
-
-**Linha 1 — Header compactado:**
-
-```jsx
-{/* Lead Info — Avatar + Nome + Tags na mesma linha */}
-<div className="flex items-center gap-2.5 mb-3 pr-10">
-  <Avatar h-11 w-11 /> 
-  <div className="flex-1 min-w-0">
-    <h2 className="font-semibold text-base truncate">{lead.name}</h2>
-    {/* Tags inline com o nome + botão + */}
-    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-      {lead.tags?.slice(0, 3).map(tag => <Badge ... />)}
-      <Popover><Button +></Button></Popover>
-    </div>
-  </div>
-</div>
+```
+┌──────────────────────────────────────┐
+│ [🟠] Vendas            [✓ Conectado] │
+│      Conectado                       │
+│ Raquel Fernandes              🔔 ⬤  │
+│ [→ Desconectar] [↺ Verificar] [👥][🗑]│
+└──────────────────────────────────────┘
 ```
 
-**Linha 2 — Ações rápidas (igual, sem mudança):**
+O layout do print está bem alinhado — avatar à esquerda rente à borda, badge à direita rente à borda, e os botões distribuídos uniformemente.
 
-```jsx
-{/* Quick Actions — Ligar / Chat / Email */}
-<div className="flex items-center gap-2 mb-3">
-  <Button variant="outline" flex-1>Ligar</Button>
-  <Button primary flex-1>Chat</Button>
-  <Button variant="outline" w-9>Email icon</Button>
-</div>
+### Correções
+
+**Arquivo: `src/components/settings/WhatsAppTab.tsx`**
+
+**1. Remover `p-4` e usar `p-3` com padding lateral consistente:**
+```tsx
+<CardContent className="p-3 space-y-2.5">
 ```
 
-**Linha 3 — Estágio + Deal Status na mesma linha (NOVO):**
+**2. Row 1 — Alinhar Avatar + nome + badge:**
+- Usar `items-center` e `gap-2.5` para alinhamento perfeito
+- O badge de status com `shrink-0` fica sempre à direita sem quebrar
 
-```jsx
-{/* Stage + Deal Status — mesma linha, compactos */}
-<div className="flex items-center gap-2">
-  {/* Estágio como Popover com pill */}
-  <Popover>
-    <PopoverTrigger>
-      <button className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full 
-                          bg-primary/10 text-primary text-sm font-medium">
-        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-        {lead.stage?.name || 'Sem estágio'}
-        <ChevronDown h-3 w-3 />
-      </button>
-    </PopoverTrigger>
-    <PopoverContent>... lista de estágios ...</PopoverContent>
-  </Popover>
-  
-  {/* Deal Status como Select pill */}
-  <Select value={lead.deal_status || 'open'}>
-    <SelectTrigger className="w-auto rounded-full px-3 py-1.5 h-auto text-sm border-0 bg-muted">
-      <CircleDot/Trophy/XCircle icon />
-      <span>Aberto/Ganho/Perdido</span>
-    </SelectTrigger>
-    ...
-  </Select>
-</div>
+**3. Row 2 — Responsável + toggle:**
+- Alinhar verticalmente com `items-center` e garantir que o nome use `flex-1` para empurrar o toggle para a direita
+- Reduzir gap para `gap-1` no lado esquerdo
+
+**4. Row 3 — Botões:**
+- Trocar os dois botões com texto de `flex-1` para tamanhos fixos mais proporcionais: ambos com `flex-1 h-8 text-xs px-2`
+- Os dois ícones (Users e Trash) mantêm `h-8 w-8 p-0` — fixos
+- Isso cria uma distribuição: `[— flex —][— flex —][32px][32px]`
+
+**Resultado esperado:**
+```
+┌──────────────────────────────────────┐
+│ [🟠] Vendas            [✓ Conectado] │  ← alinhado nas bordas
+│      Conectado                       │
+├──────────────────────────────────────┤
+│ Raquel Fernandes         🔔 [toggle]  │  ← owner à esq, toggle à dir
+├──────────────────────────────────────┤
+│ [→ Desconectar] [↺ Verificar] [👥][🗑]│  ← proporcionais
+└──────────────────────────────────────┘
 ```
 
-**Tags saem do header** (movidas para linha do avatar).
+### Arquivo alterado
 
-**First Response badge** fica removido do header (informação disponível nas abas).
-
-### Resultado Visual Esperado
-
-```text
-┌─────────────────────────────────────┐
-│ [M]  Márcia • MCMV  • Meta [+]  [X] │
-│                                     │
-├─────────────────────────────────────┤
-│  [Ligar]   [● Chat]            [✉] │
-├─────────────────────────────────────┤
-│  [● Contato inicial ▾] [ ○ Aberto ] │
-├─────────────────────────────────────┤
-│ Atividades  Agenda  Contato  Mais   │
-└─────────────────────────────────────┘
-```
-
-### Resumo dos arquivos
-
-
-| Arquivo                                     | Mudança                                                                                                                              |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/components/leads/LeadDetailDialog.tsx` | Refatorar `MobileContent` (linhas 602-780): mover tags para junto do nome, compactar estágio + deal status na mesma linha horizontal |
-
-
-Apenas a seção `MobileContent` é alterada. O layout Desktop não é tocado.
+| Arquivo | Mudança |
+|---|---|
+| `src/components/settings/WhatsAppTab.tsx` | Ajustar `CardContent` padding para `p-3`, corrigir `gap` e `items-center` nas 3 rows, balancear botões de ação |
