@@ -75,7 +75,6 @@ const allNavItems: NavItem[] = [
   { icon: MapPin, labelKey: 'coverage', path: '/coverage', module: 'coverage' },
   { icon: UserCheck, labelKey: 'telecomCustomers', path: '/telecom/customers', module: 'telecom' },
   // Admin modules
-  { icon: BarChart3, labelKey: 'performance', path: '/reports/performance', module: 'performance' },
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
   { icon: Calendar, labelKey: 'schedule', path: '/agenda', module: 'agenda' },
   { icon: Zap, labelKey: 'automations', path: '/automations', module: 'automations', adminOnly: true },
@@ -130,8 +129,6 @@ export function MobileSidebar({ externalOpen, onExternalOpenChange }: MobileSide
       if (item.permission && !hasPermission(item.permission)) return false;
       // Hide Contacts menu for telecom segment
       if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
-      // Hide Performance for non-admins in imobiliário segment (keep visible for telecom)
-      if (item.path === '/reports/performance' && organization?.segment !== 'telecom' && profile?.role !== 'admin' && !isSuperAdmin) return false;
       return true;
     });
   }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment, modulesLoading]);

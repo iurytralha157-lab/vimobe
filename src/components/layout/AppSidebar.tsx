@@ -115,11 +115,6 @@ const allNavItems: NavItem[] = [{
 },
 // Admin modules
 {
-  icon: BarChart3,
-  labelKey: 'performance',
-  path: '/reports/performance',
-  module: 'performance'
-}, {
   icon: Shuffle,
   labelKey: 'crmManagement',
   path: '/crm/management',
@@ -205,8 +200,6 @@ export function AppSidebar() {
       if (item.permission && !hasPermission(item.permission)) return false;
       // Hide Contacts menu for telecom segment
       if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
-      // Hide Performance for non-admins in imobiliário segment (keep visible for telecom)
-      if (item.path === '/reports/performance' && organization?.segment !== 'telecom' && profile?.role !== 'admin' && !isSuperAdmin) return false;
       return true;
     });
   }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment, modulesLoading]);
