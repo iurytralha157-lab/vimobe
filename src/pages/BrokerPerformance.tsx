@@ -1,475 +1,365 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useBrokerPerformance, useTeamAverages } from "@/hooks/use-broker-performance";
+import { useBrokerPerformance } from "@/hooks/use-broker-performance";
 import { useMyPerformance, useUpsertMyGoal } from "@/hooks/use-my-performance";
+import { useAuth } from "@/contexts/AuthContext";
 import { SimplePeriodFilter } from "@/components/ui/date-filter-popover";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  Download, TrendingUp, Clock, Target, DollarSign, Users, Medal,
-  Flame, Trophy, Briefcase, ArrowRight, Edit2, Check, X
+  DollarSign, TrendingUp, Clock, FileText, Users, Edit2, Check, X, Medal,
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import ExcelJS from "exceljs";
+import {
+  startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear,
+} from "date-fns";
 
-type PeriodType = 'month' | 'quarter' | 'year';
+type PeriodType = "month" | "quarter" | "year";
 
 const periodOptions = [
-  { value: 'month', label: 'Este mês' },
-  { value: 'quarter', label: 'Este trimestre' },
-  { value: 'year', label: 'Este ano' },
+  { value: "month", label: "Este mês" },
+  { value: "quarter", label: "Este trimestre" },
+  { value: "year", label: "Este ano" },
 ];
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+const fmt = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-const formatSeconds = (s: number | null) => {
-  if (s === null) return '-';
+const fmtCompact = (value: number) => {
+  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)}k`;
+  return fmt(value);
+};
+
+const fmtSeconds = (s: number | null) => {
+  if (s === null) return "—";
   if (s < 60) return `${Math.round(s)}s`;
   if (s < 3600) return `${Math.floor(s / 60)}min`;
   return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}min`;
 };
 
-const formatMinutes = (minutes: number | null) => {
-  if (minutes === null) return '-';
-  if (minutes < 60) return `${Math.round(minutes)}min`;
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.round(minutes % 60);
-  return `${hours}h ${mins}min`;
-};
-
-const getMedalIcon = (position: number) => {
-  switch (position) {
-    case 1: return <Medal className="h-5 w-5 text-yellow-500" />;
-    case 2: return <Medal className="h-5 w-5 text-gray-400" />;
-    case 3: return <Medal className="h-5 w-5 text-amber-700" />;
-    default: return <span className="text-muted-foreground">{position}º</span>;
-  }
-};
-
 const getInitials = (name: string) =>
-  name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+const medalColors = ["text-yellow-500", "text-slate-400", "text-amber-700"];
 
 export default function BrokerPerformance() {
-  const [period, setPeriod] = useState<PeriodType>('month');
+  const { user } = useAuth();
+  const [period, setPeriod] = useState<PeriodType>("month");
   const [editingGoal, setEditingGoal] = useState(false);
-  const [goalInput, setGoalInput] = useState('');
+  const [goalInput, setGoalInput] = useState("");
 
-  const getDateRange = (periodType: PeriodType) => {
+  const getDateRange = (p: PeriodType) => {
     const now = new Date();
-    switch (periodType) {
-      case 'month': return { from: startOfMonth(now), to: endOfMonth(now) };
-      case 'quarter': return { from: startOfQuarter(now), to: endOfQuarter(now) };
-      case 'year': return { from: startOfYear(now), to: endOfYear(now) };
+    switch (p) {
+      case "month": return { from: startOfMonth(now), to: endOfMonth(now) };
+      case "quarter": return { from: startOfQuarter(now), to: endOfQuarter(now) };
+      case "year": return { from: startOfYear(now), to: endOfYear(now) };
     }
   };
 
   const dateRange = getDateRange(period);
-  const { data: brokers, isLoading } = useBrokerPerformance(dateRange);
-  const teamAverages = useTeamAverages(dateRange);
+  const { data: brokers = [], isLoading: brokersLoading } = useBrokerPerformance(dateRange);
   const { data: myPerf, isLoading: myPerfLoading } = useMyPerformance(dateRange);
   const upsertGoal = useUpsertMyGoal();
 
   const handleSaveGoal = async () => {
-    const amount = parseFloat(goalInput.replace(/[^\d,]/g, '').replace(',', '.'));
-    if (!isNaN(amount) && amount >= 0) {
-      await upsertGoal.mutateAsync(amount);
-    }
+    const amount = parseFloat(goalInput.replace(/[^\d,]/g, "").replace(",", "."));
+    if (!isNaN(amount) && amount >= 0) await upsertGoal.mutateAsync(amount);
     setEditingGoal(false);
   };
 
-  const handleExport = async () => {
-    if (!brokers) return;
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Performance');
-    worksheet.columns = [
-      { header: 'Posição', key: 'posicao', width: 10 },
-      { header: 'Corretor', key: 'corretor', width: 25 },
-      { header: 'Leads Atribuídos', key: 'leads_atribuidos', width: 18 },
-      { header: 'Leads Fechados', key: 'leads_fechados', width: 16 },
-      { header: 'Taxa de Conversão (%)', key: 'conversao', width: 20 },
-      { header: 'Tempo Médio Atendimento (min)', key: 'tempo_medio', width: 28 },
-      { header: 'Vendas (R$)', key: 'vendas', width: 18 },
-      { header: 'Comissões (R$)', key: 'comissoes', width: 18 },
-      { header: 'Leads Ativos', key: 'leads_ativos', width: 14 },
-    ];
-    brokers.forEach((broker, index) => {
-      worksheet.addRow({
-        posicao: index + 1,
-        corretor: broker.userName,
-        leads_atribuidos: broker.totalLeads,
-        leads_fechados: broker.closedLeads,
-        conversao: broker.conversionRate.toFixed(1),
-        tempo_medio: broker.avgResponseTimeMinutes?.toFixed(0) || '-',
-        vendas: broker.totalSales,
-        comissoes: broker.totalCommissions,
-        leads_ativos: broker.activeLeads,
-      });
-    });
-    worksheet.getRow(1).font = { bold: true };
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `performance-corretores-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-
-  const chartData = myPerf?.last6Months?.map((m) => ({
+  // Chart data from last 6 months
+  const chartData = (myPerf?.last6Months || []).map((m) => ({
     month: m.month,
     vendas: m.totalSales,
     meta: m.goal,
-  })) || [];
+  }));
+
+  // Max sales for ranking bar widths
+  const maxSales = Math.max(...brokers.map((b) => b.totalSales), 1);
+
+  const periodLabel = periodOptions.find((o) => o.value === period)?.label || "Este mês";
 
   return (
-    <AppLayout title="Performance de Corretores">
-      <div className="space-y-8">
-        {/* ─── Header ─── */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <p className="text-muted-foreground">Acompanhe o desempenho da sua equipe de vendas</p>
-          <div className="flex items-center gap-2">
-            <SimplePeriodFilter
-              value={period}
-              onChange={(v) => setPeriod(v as PeriodType)}
-              options={periodOptions}
-            />
-            <Button variant="outline" onClick={handleExport} disabled={!brokers?.length}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-          </div>
-        </div>
+    <AppLayout title="Performance">
+      <div className="flex flex-col gap-1 mb-6">
+        <h1 className="text-xl font-bold">Performance</h1>
+        <p className="text-sm text-muted-foreground">Acompanhe seus resultados e o ranking da equipe</p>
+      </div>
 
-        {/* ═══════════════════════════════════════════════
-            SEÇÃO 1 — MINHA PERFORMANCE (área privada)
-        ════════════════════════════════════════════════ */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Minha Performance</h2>
+      {/* Period filter */}
+      <div className="flex justify-end mb-6">
+        <SimplePeriodFilter
+          value={period}
+          onChange={(v) => setPeriod(v as PeriodType)}
+          options={periodOptions}
+        />
+      </div>
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+
+        {/* ── LEFT: Minha Performance ── */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 border-l-4 border-primary pl-3">
+            <h2 className="text-base font-semibold">Minha Performance</h2>
           </div>
 
-          {/* KPI Cards */}
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Vendido</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {myPerfLoading ? '...' : formatCurrency(myPerf?.totalSales || 0)}
+          {/* KPI Grid 3 cols */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Total Vendido */}
+            <Card className="bg-card/60">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Total Vendido</span>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-xs text-muted-foreground">{myPerf?.closedCount || 0} negócios fechados</p>
+                <div className="text-2xl font-bold">
+                  {myPerfLoading ? "..." : fmt(myPerf?.totalSales || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">no período selecionado</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Comissão</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {myPerfLoading ? '...' : formatCurrency(myPerf?.totalCommission || 0)}
+            {/* Negócios Fechados */}
+            <Card className="bg-card/60">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Negócios Fechados</span>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-xs text-muted-foreground">No período</p>
+                <div className="text-2xl font-bold">
+                  {myPerfLoading ? "..." : (myPerf?.closedCount || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">no período selecionado</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Contratos Ativos</CardTitle>
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {myPerfLoading ? '...' : (myPerf?.activeContracts || 0)}
+            {/* Comissão */}
+            <Card className="bg-card/60">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Comissão (período)</span>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-xs text-muted-foreground">Em andamento</p>
+                <div className="text-2xl font-bold">
+                  {myPerfLoading ? "..." : fmt(myPerf?.totalCommission || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">do sistema financeiro</p>
               </CardContent>
             </Card>
 
-            <Card className="cursor-pointer hover:bg-muted/30 transition-colors">
-              <Link to="/crm/pipelines">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Leads em Andamento</CardTitle>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {myPerfLoading ? '...' : (myPerf?.activeLeads || 0)}
+            {/* Contratos Ativos */}
+            <Card className="bg-card/60">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Contratos Ativos</span>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="text-2xl font-bold">
+                  {myPerfLoading ? "..." : (myPerf?.activeContracts || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">em andamento</p>
+              </CardContent>
+            </Card>
+
+            {/* Leads em Andamento */}
+            <Card className="bg-card/60 cursor-pointer hover:bg-card/80 transition-colors">
+              <Link to="/crm/pipelines" className="block">
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">Leads em Andamento</span>
+                    <Users className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <p className="text-xs text-muted-foreground">Ver no pipeline →</p>
+                  <div className="text-2xl font-bold">
+                    {myPerfLoading ? "..." : (myPerf?.activeLeads || 0)}
+                  </div>
+                  <p className="text-xs text-primary mt-1">Ver no funil →</p>
                 </CardContent>
               </Link>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tempo de Resposta</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {myPerfLoading ? '...' : formatSeconds(myPerf?.avgResponseSeconds ?? null)}
+            {/* Tempo de Resposta */}
+            <Card className="bg-card/60">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Tempo de Resposta</span>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <p className="text-xs text-muted-foreground">Médio no período</p>
+                <div className="text-2xl font-bold">
+                  {myPerfLoading ? "..." : fmtSeconds(myPerf?.avgResponseSeconds ?? null)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">tempo médio 1ª resposta</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Meta Mensal + Gráfico */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Meta Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Meta Mensal
-                  </CardTitle>
-                  {myPerf?.streak != null && myPerf.streak > 0 && (
-                    <div className="flex items-center gap-1 text-orange-500">
-                      <Flame className="h-4 w-4" />
-                      <span className="text-sm font-semibold">{myPerf.streak} {myPerf.streak === 1 ? 'mês' : 'meses'} consecutivos</span>
+          {/* Meta bar */}
+          <Card className="bg-card/60">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Meta:</span>
+                  {editingGoal ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        autoFocus
+                        className="h-7 w-32 text-sm"
+                        value={goalInput}
+                        onChange={(e) => setGoalInput(e.target.value)}
+                        placeholder="Ex: 500000"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveGoal();
+                          if (e.key === "Escape") setEditingGoal(false);
+                        }}
+                      />
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleSaveGoal}>
+                        <Check className="h-3.5 w-3.5 text-green-500" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingGoal(false)}>
+                        <X className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-bold">{fmt(myPerf?.currentGoal || 0)}</span>
+                      <Button
+                        size="icon" variant="ghost" className="h-6 w-6"
+                        onClick={() => { setGoalInput(String(myPerf?.currentGoal || "")); setEditingGoal(true); }}
+                      >
+                        <Edit2 className="h-3 w-3 text-muted-foreground" />
+                      </Button>
                     </div>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Meta atual</p>
-                    {editingGoal ? (
-                      <div className="flex items-center gap-2 mt-1">
-                        <Input
-                          autoFocus
-                          className="h-8 w-40 text-sm"
-                          value={goalInput}
-                          onChange={(e) => setGoalInput(e.target.value)}
-                          placeholder="Ex: 500000"
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveGoal(); if (e.key === 'Escape') setEditingGoal(false); }}
-                        />
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveGoal}>
-                          <Check className="h-4 w-4 text-green-500" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingGoal(false)}>
-                          <X className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl font-bold">{formatCurrency(myPerf?.currentGoal || 0)}</span>
-                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setGoalInput(String(myPerf?.currentGoal || '')); setEditingGoal(true); }}>
-                          <Edit2 className="h-3 w-3 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Progresso</p>
-                    <p className="text-xl font-bold text-primary">{(myPerf?.goalProgress || 0).toFixed(0)}%</p>
-                  </div>
-                </div>
-                <Progress value={myPerf?.goalProgress || 0} className="h-3" />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{formatCurrency(myPerf?.totalSales || 0)} vendido</span>
-                  <span>{formatCurrency(Math.max(0, (myPerf?.currentGoal || 0) - (myPerf?.totalSales || 0)))} restante</span>
-                </div>
-              </CardContent>
-            </Card>
+                <span className="text-sm text-muted-foreground">
+                  {(myPerf?.goalProgress || 0).toFixed(0)}%{" "}
+                  {!myPerf?.currentGoal && <span className="text-xs">(clique no lápis para definir uma meta)</span>}
+                </span>
+              </div>
+              <Progress value={myPerf?.goalProgress || 0} className="h-2 mb-3" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{fmt(myPerf?.totalSales || 0)} alcançado</span>
+                <span>Meta: {fmt(myPerf?.currentGoal || 0)}</span>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Evolution Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Evolução — Últimos 6 Meses</CardTitle>
-                <CardDescription>Vendas da equipe vs sua meta mensal</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
-                      formatter={(value: number, name: string) => [
-                        formatCurrency(value),
-                        name === 'vendas' ? 'Vendas' : 'Meta',
-                      ]}
-                    />
-                    <Bar dataKey="vendas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
-                      {chartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.meta > 0 && entry.vendas >= entry.meta
-                            ? 'hsl(var(--primary))'
-                            : 'hsl(var(--muted-foreground) / 0.5)'}
-                        />
-                      ))}
-                    </Bar>
-                    {chartData.some((d) => d.meta > 0) && (
-                      <ReferenceLine
-                        y={chartData.find((d) => d.meta > 0)?.meta}
-                        stroke="hsl(var(--destructive))"
-                        strokeDasharray="4 4"
-                        label={{ value: 'Meta', position: 'right', fontSize: 11, fill: 'hsl(var(--destructive))' }}
-                      />
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Evolution chart */}
+          <Card className="bg-card/60">
+            <CardContent className="pt-5 pb-2">
+              <p className="text-sm font-semibold mb-1">📈 Evolução dos últimos 6 meses</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(v) => fmtCompact(v)}
+                    axisLine={false}
+                    tickLine={false}
+                    width={55}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [fmtCompact(value), "Vendas"]}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="vendas"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill="url(#grad)"
+                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* ═══════════════════════════════════════════════
-            SEÇÃO 2 — RANKING DA EQUIPE (área pública)
-        ════════════════════════════════════════════════ */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Medal className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Ranking da Equipe</h2>
+        {/* ── RIGHT: Ranking da Equipe ── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 border-l-4 border-primary pl-3">
+            <Medal className="h-4 w-4 text-primary" />
+            <div>
+              <h2 className="text-base font-semibold">Ranking da Equipe</h2>
+              <p className="text-xs text-muted-foreground">{periodLabel}</p>
+            </div>
           </div>
 
-          {/* Team Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teamAverages.totalLeads}</div>
-                <p className="text-xs text-muted-foreground">No período selecionado</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Conversão Média</CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teamAverages.avgConversionRate.toFixed(1)}%</div>
-                <p className="text-xs text-muted-foreground">Média da equipe</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatMinutes(teamAverages.avgResponseTime)}</div>
-                <p className="text-xs text-muted-foreground">Primeiro atendimento</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Vendas</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(teamAverages.totalSales)}</div>
-                <p className="text-xs text-muted-foreground">Valor total fechado</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Comissões</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(teamAverages.totalCommissions)}</div>
-                <p className="text-xs text-muted-foreground">Total em comissões</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Ranking Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Medal className="h-5 w-5" />
-                Ranking de Corretores
-              </CardTitle>
-              <CardDescription>
-                {format(dateRange.from, "dd 'de' MMMM", { locale: ptBR })} -{' '}
-                {format(dateRange.to, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Carregando dados...</div>
-              ) : brokers && brokers.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[60px]">Pos.</TableHead>
-                      <TableHead>Corretor</TableHead>
-                      <TableHead className="text-center">Conversão</TableHead>
-                      <TableHead className="text-center">Tempo Médio</TableHead>
-                      <TableHead className="text-right">Vendas</TableHead>
-                      <TableHead className="text-right">Comissões</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {brokers.map((broker, index) => (
-                      <TableRow key={broker.userId}>
-                        <TableCell className="font-medium">{getMedalIcon(index + 1)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={broker.avatarUrl || undefined} />
-                              <AvatarFallback>{getInitials(broker.userName)}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{broker.userName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={
-                              broker.conversionRate >= 30
-                                ? 'default'
-                                : broker.conversionRate >= 15
-                                ? 'secondary'
-                                : 'outline'
-                            }
-                          >
-                            {broker.conversionRate.toFixed(1)}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center text-muted-foreground">
-                          {formatMinutes(broker.avgResponseTimeMinutes)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(broker.totalSales)}
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {formatCurrency(broker.totalCommissions)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          <Card className="bg-card/60">
+            <CardContent className="pt-4 pb-4 space-y-3">
+              {brokersLoading ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>
+              ) : brokers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum dado no período</p>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhum dado encontrado para o período selecionado
-                </div>
+                brokers.map((broker, index) => {
+                  const isMe = broker.userId === user?.id;
+                  const barWidth = maxSales > 0 ? (broker.totalSales / maxSales) * 100 : 0;
+
+                  return (
+                    <div key={broker.userId} className="flex items-center gap-3">
+                      {/* Position */}
+                      <div className="w-6 flex items-center justify-center shrink-0">
+                        {index < 3 ? (
+                          <Medal className={`h-4 w-4 ${medalColors[index]}`} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{index + 1}º</span>
+                        )}
+                      </div>
+
+                      {/* Avatar */}
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={broker.avatarUrl || undefined} />
+                        <AvatarFallback className="text-xs">{getInitials(broker.userName)}</AvatarFallback>
+                      </Avatar>
+
+                      {/* Name + bar */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className={`text-sm font-medium truncate ${isMe ? "text-primary" : ""}`}>
+                            {broker.userName}
+                          </span>
+                          {isMe && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 border-primary text-primary">
+                              Você
+                            </Badge>
+                          )}
+                        </div>
+                        {/* Progress bar */}
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${isMe ? "bg-primary" : "bg-muted-foreground/50"}`}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sales count */}
+                      <div className="text-right shrink-0">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {broker.closedLeads} {broker.closedLeads === 1 ? "venda" : "vendas"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </CardContent>
           </Card>
