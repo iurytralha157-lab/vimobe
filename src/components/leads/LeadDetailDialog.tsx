@@ -720,9 +720,6 @@ export function LeadDetailDialog({
                 (!lead.deal_status || lead.deal_status === 'open') && "bg-muted text-muted-foreground"
               )}
             >
-              {lead.deal_status === 'won' && <Trophy className="h-3 w-3 shrink-0" />}
-              {lead.deal_status === 'lost' && <XCircle className="h-3 w-3 shrink-0" />}
-              {(!lead.deal_status || lead.deal_status === 'open') && <CircleDot className="h-3 w-3 shrink-0" />}
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
