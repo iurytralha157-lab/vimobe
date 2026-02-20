@@ -104,6 +104,118 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_agent_conversations: {
+        Row: {
+          agent_id: string
+          conversation_id: string
+          handed_off_at: string | null
+          id: string
+          lead_id: string | null
+          message_count: number | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          agent_id: string
+          conversation_id: string
+          handed_off_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_count?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          agent_id?: string
+          conversation_id?: string
+          handed_off_at?: string | null
+          id?: string
+          lead_id?: string | null
+          message_count?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_conversations_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_conversations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agents: {
+        Row: {
+          ai_provider: string | null
+          created_at: string | null
+          handoff_keywords: string[] | null
+          id: string
+          is_active: boolean | null
+          max_messages_before_handoff: number | null
+          name: string
+          organization_id: string
+          session_id: string | null
+          system_prompt: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_provider?: string | null
+          created_at?: string | null
+          handoff_keywords?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          max_messages_before_handoff?: number | null
+          name?: string
+          organization_id: string
+          session_id?: string | null
+          system_prompt?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_provider?: string | null
+          created_at?: string | null
+          handoff_keywords?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          max_messages_before_handoff?: number | null
+          name?: string
+          organization_id?: string
+          session_id?: string | null
+          system_prompt?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agents_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           button_text: string | null
