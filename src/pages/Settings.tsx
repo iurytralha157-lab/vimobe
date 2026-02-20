@@ -47,6 +47,7 @@ export default function Settings() {
   const isMetaConnected = metaIntegrations.length > 0;
   const hasWhatsAppModule = hasModule('whatsapp');
   const hasWebhooksModule = hasModule('webhooks');
+  const hasAIAgentModule = hasModule('ai_agent');
 
   // Build tabs list dynamically based on permissions and modules
   const settingsTabs: TabItem[] = useMemo(() => {
@@ -63,11 +64,14 @@ export default function Settings() {
 
     if (hasWhatsAppModule) {
       tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: Smartphone });
+    }
+
+    if (hasWhatsAppModule && hasAIAgentModule) {
       tabs.push({ value: 'ai-agent', label: 'Agente IA', icon: Bot });
     }
 
     return tabs;
-  }, [t, hasWebhooksModule, hasWhatsAppModule]);
+  }, [t, hasWebhooksModule, hasWhatsAppModule, hasAIAgentModule]);
 
   const currentTab = settingsTabs.find(tab => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
@@ -194,7 +198,7 @@ export default function Settings() {
             </TabsContent>
           )}
 
-          {hasWhatsAppModule && (
+          {hasWhatsAppModule && hasAIAgentModule && (
             <TabsContent value="ai-agent">
               <AIAgentTab />
             </TabsContent>
