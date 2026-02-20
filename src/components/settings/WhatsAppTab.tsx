@@ -279,31 +279,31 @@ export function WhatsAppTab() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sessions?.map((session) => (
               <Card key={session.id} className="border">
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-3 space-y-2.5">
                   {/* Row 1: Avatar + name + status badge */}
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar className="h-9 w-9 shrink-0">
                       <AvatarImage src={session.profile_picture || undefined} />
                       <AvatarFallback>
                         <Smartphone className="w-4 h-4" />
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{session.display_name || session.instance_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="font-medium text-sm truncate leading-tight">{session.display_name || session.instance_name}</p>
+                      <p className="text-xs text-muted-foreground truncate leading-tight">
                         {session.status === "connected"
                           ? (session.phone_number || session.profile_name || "Conectado")
                           : "Não conectado"}
                       </p>
                     </div>
-                    {getStatusBadge(session.status)}
+                    <div className="shrink-0">{getStatusBadge(session.status)}</div>
                   </div>
 
                   {/* Row 2: Responsável + notificação toggle */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex items-center justify-between gap-2 py-1.5 border-y border-border/50">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       {(session as any).is_notification_session && (
-                        <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-[10px] px-1.5 py-0">
+                        <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-[10px] px-1.5 py-0 shrink-0">
                           <Bell className="w-2.5 h-2.5 mr-0.5" />
                           Notif.
                         </Badge>
@@ -336,26 +336,26 @@ export function WhatsAppTab() {
                   </div>
 
                   {/* Row 3: Action buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {session.status !== "connected" ? (
-                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => handleOpenQRDialog(session)}>
-                        <QrCode className="w-3.5 h-3.5 mr-1" />
+                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0" onClick={() => handleOpenQRDialog(session)}>
+                        <QrCode className="w-3.5 h-3.5 mr-1 shrink-0" />
                         QR Code
                       </Button>
                     ) : (
-                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => handleLogout(session)}>
-                        <LogOut className="w-3.5 h-3.5 mr-1" />
+                      <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0" onClick={() => handleLogout(session)}>
+                        <LogOut className="w-3.5 h-3.5 mr-1 shrink-0" />
                         Desconectar
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => handleVerifyConnection(session)} disabled={verifyingSessionId === session.id}>
-                      <RefreshCw className={`w-3.5 h-3.5 mr-1 ${verifyingSessionId === session.id ? "animate-spin" : ""}`} />
+                    <Button variant="outline" size="sm" className="flex-1 h-8 text-xs px-2 min-w-0" onClick={() => handleVerifyConnection(session)} disabled={verifyingSessionId === session.id}>
+                      <RefreshCw className={`w-3.5 h-3.5 mr-1 shrink-0 ${verifyingSessionId === session.id ? "animate-spin" : ""}`} />
                       Verificar
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleOpenAccessDialog(session)}>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => handleOpenAccessDialog(session)}>
                       <Users className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => { setSelectedSession(session); setDeleteDialogOpen(true); }}>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 shrink-0 text-destructive hover:text-destructive" onClick={() => { setSelectedSession(session); setDeleteDialogOpen(true); }}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
