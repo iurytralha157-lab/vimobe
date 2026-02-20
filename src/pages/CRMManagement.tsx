@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, Users, Tags, GitBranch, ListChecks, LucideIcon } from 'lucide-react';
+import { Shuffle, Users, Tags, GitBranch, LucideIcon } from 'lucide-react';
 import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -10,7 +10,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { DistributionTab } from '@/components/crm-management/DistributionTab';
 import { TeamsTab } from '@/components/crm-management/TeamsTab';
 import { TagsTab } from '@/components/crm-management/TagsTab';
-import { CadencesTab } from '@/components/crm-management/CadencesTab';
 import { TabIntroCard } from '@/components/crm-management/TabIntroCard';
 
 interface TabItem {
@@ -46,14 +45,6 @@ const tabIntros: Record<string, { title: string; description: string; tips?: str
       'Ative a redistribuição nas configurações avançadas de cada fila para reatribuir leads sem contato',
     ],
   },
-  cadences: {
-    title: 'Cadências de tarefas',
-    description: 'Crie tarefas automáticas que aparecem para os corretores conforme o lead avança no funil.',
-    tips: [
-      'Tarefas são criadas automaticamente ao mover o lead de estágio',
-      'Você pode incluir mensagens prontas para envio',
-    ],
-  },
   tags: {
     title: 'Organize leads com tags',
     description: 'Crie etiquetas coloridas para categorizar e filtrar leads de forma rápida.',
@@ -72,7 +63,6 @@ export default function CRMManagement() {
     { value: 'teams', label: 'Equipes', icon: Users },
     { value: 'pipelines', label: 'Pipelines', icon: GitBranch },
     { value: 'distribution', label: 'Distribuição', icon: Shuffle },
-    { value: 'cadences', label: 'Cadências', icon: ListChecks },
     { value: 'tags', label: 'Tags', icon: Tags },
   ], []);
 
@@ -141,10 +131,6 @@ export default function CRMManagement() {
 
           <TabsContent value="distribution" className="mt-0">
             <DistributionTab />
-          </TabsContent>
-
-          <TabsContent value="cadences" className="mt-0">
-            <CadencesTab />
           </TabsContent>
 
           <TabsContent value="tags" className="mt-0">
