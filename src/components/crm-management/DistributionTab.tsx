@@ -23,7 +23,6 @@ import {
   Pencil,
   Trash2,
   Loader2,
-  Play,
   Filter,
   Zap,
   Target,
@@ -42,7 +41,6 @@ import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useCreateQueueAdvanced, useUpdateQueueAdvanced } from '@/hooks/use-create-queue-advanced';
 import { DistributionQueueEditor } from '@/components/round-robin/DistributionQueueEditor';
 import { RulesManager } from '@/components/round-robin/RulesManager';
-import { TestRuleDialog } from '@/components/round-robin/TestRuleDialog';
 
 const matchTypeLabels: Record<string, string> = {
   campaign: 'Campanha',
@@ -78,7 +76,7 @@ export function DistributionTab() {
   
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingQueue, setEditingQueue] = useState<RoundRobinType | null>(null);
-  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  
   const [rulesQueue, setRulesQueue] = useState<RoundRobinType | null>(null);
 
   const toggleActive = async (id: string, currentValue: boolean) => {
@@ -127,10 +125,6 @@ export function DistributionTab() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setTestDialogOpen(true)} className="gap-2">
-            <Play className="h-4 w-4" />
-            Testar
-          </Button>
           <Button onClick={() => openEditor()} className="gap-2">
             <Plus className="h-4 w-4" />
             Nova Fila
@@ -383,11 +377,6 @@ export function DistributionTab() {
         </div>
       )}
 
-      {/* Test Rules Dialog */}
-      <TestRuleDialog 
-        open={testDialogOpen} 
-        onOpenChange={setTestDialogOpen} 
-      />
 
       {/* Distribution Queue Editor */}
       <DistributionQueueEditor
