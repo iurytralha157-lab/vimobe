@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Users, Building2, Check, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, Bot, LucideIcon } from 'lucide-react';
+import { Users, Building2, Check, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, Bot, LucideIcon, Facebook } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useMetaIntegrations } from '@/hooks/use-meta-integration';

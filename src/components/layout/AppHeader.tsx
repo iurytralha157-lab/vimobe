@@ -57,7 +57,7 @@ export function AppHeader({
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
-  return <header className="sticky top-0 z-40 h-12 flex items-center px-2 lg:px-6 mx-3 pt-3 bg-background">
+  return <header className="sticky top-0 z-40 h-12 flex items-center px-4 md:px-6 bg-background">
       
       
       {/* Page title - aligned with content */}
