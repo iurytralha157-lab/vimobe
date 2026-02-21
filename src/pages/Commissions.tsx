@@ -414,22 +414,20 @@ export default function Commissions() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <ScrollArea className="w-full pb-2">
-            <TabsList className="w-full sm:w-auto inline-flex">
-              <TabsTrigger value="pending" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
-                Pendentes
-              </TabsTrigger>
-              <TabsTrigger value="history" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
-                Histórico
-              </TabsTrigger>
-              <TabsTrigger value="forecast" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
-                Previsão
-              </TabsTrigger>
-              <TabsTrigger value="rules" className="text-[10px] sm:text-xs md:text-sm px-2 sm:px-3">
-                Regras
-              </TabsTrigger>
-            </TabsList>
-          </ScrollArea>
+          <TabsList className="w-full grid grid-cols-4">
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              Pendentes
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm">
+              Histórico
+            </TabsTrigger>
+            <TabsTrigger value="forecast" className="text-xs sm:text-sm">
+              Previsão
+            </TabsTrigger>
+            <TabsTrigger value="rules" className="text-xs sm:text-sm">
+              Regras
+            </TabsTrigger>
+          </TabsList>
 
           {/* Commissions Tabs */}
           {['pending', 'history', 'forecast'].map((tab) => (
