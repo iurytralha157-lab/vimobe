@@ -673,7 +673,7 @@ export function AccountTab() {
 
       {/* Password Change Card - Full Width */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 md:px-5 pt-5 pb-2">
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5" />
             Alterar Senha
@@ -682,7 +682,7 @@ export function AccountTab() {
             Atualize sua senha de acesso ao sistema
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 md:px-5 pb-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nova senha</Label>
