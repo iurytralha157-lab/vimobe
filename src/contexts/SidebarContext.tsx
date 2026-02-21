@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface SidebarContextType {
   collapsed: boolean;
@@ -8,8 +8,30 @@ interface SidebarContextType {
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
+const TABLET_MAX = 1024;
+
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < TABLET_MAX;
+    }
+    return false;
+  });
+
+  // Collapse automatically when resizing into tablet range
+  useEffect(() => {
+    const handleResize = () => {
+      const isTabletOrSmaller = window.innerWidth < TABLET_MAX;
+      setCollapsed(prev => {
+        // Only auto-collapse when entering tablet; don't force expand on desktop
+        if (isTabletOrSmaller && !prev) return true;
+        return prev;
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleCollapsed = () => setCollapsed(prev => !prev);
 
