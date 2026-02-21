@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Bell, Check, CheckCheck, Loader2, UserPlus, CheckSquare, FileText, DollarSign, Info, MessageCircle, Settings, AlertTriangle, Zap } from 'lucide-react';
+import { Bell, Check, CheckCheck, Loader2, UserPlus, CheckSquare, FileText, DollarSign, Info, MessageCircle, Settings, AlertTriangle, Zap, SlidersHorizontal } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,8 @@ import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead,
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 const typeIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
@@ -159,63 +161,116 @@ export default function Notifications() {
           </div>
         )}
 
-        {/* Mobile: botão compacto de marcar todas */}
-        {isMobile && unreadCount > 0 && (
-          <div className="flex justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              disabled={markAllAsRead.isPending}
-            >
-              {markAllAsRead.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              Marcar todas como lidas
-            </Button>
+        {/* Mobile: actions row with filter popover + mark all */}
+        {isMobile && (
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filtros
+                  {categoryFilter !== 'all' && (
+                    <Badge variant="default" className="h-4 w-4 p-0 flex items-center justify-center text-[10px] rounded-full">
+                      •
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-56 p-2">
+                <div className="space-y-1">
+                  {(Object.keys(notificationCategories) as CategoryKey[]).map((key) => {
+                    const category = notificationCategories[key];
+                    const CategoryIcon = category.icon;
+                    const count = categoryCounts[key];
+                    const isActive = categoryFilter === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setCategoryFilter(key)}
+                        className={cn(
+                          "flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm transition-colors",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        <CategoryIcon className="h-4 w-4" />
+                        <span className="flex-1 text-left">{category.label}</span>
+                        {count > 0 && (
+                          <span className={cn(
+                            "text-xs rounded-full px-1.5 min-w-[20px] text-center",
+                            isActive
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-primary/10 text-primary"
+                          )}>
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                disabled={markAllAsRead.isPending}
+              >
+                {markAllAsRead.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Marcar lidas
+              </Button>
+            )}
           </div>
         )}
 
-        {/* Category Filter */}
-        <ScrollArea className="w-full whitespace-nowrap pb-2">
-          <div className="flex gap-2">
-            {(Object.keys(notificationCategories) as CategoryKey[]).map((key) => {
-              const category = notificationCategories[key];
-              const CategoryIcon = category.icon;
-              const count = categoryCounts[key];
-              const isActive = categoryFilter === key;
-              
-              return (
-                <button
-                  key={key}
-                  onClick={() => setCategoryFilter(key)}
-                  className={cn(
-                    "flex items-center gap-2 px-4 py-2 rounded-lg border transition-all shrink-0",
-                    isActive
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card hover:bg-muted border-border"
-                  )}
-                >
-                  <CategoryIcon className="h-4 w-4" />
-                  <span className="text-sm font-medium">{category.label}</span>
-                  {count > 0 && (
-                    <span className={cn(
-                      "text-xs rounded-full px-1.5 min-w-[20px] text-center",
+        {/* Desktop: Category Filter inline */}
+        {!isMobile && (
+          <ScrollArea className="w-full whitespace-nowrap pb-2">
+            <div className="flex gap-2">
+              {(Object.keys(notificationCategories) as CategoryKey[]).map((key) => {
+                const category = notificationCategories[key];
+                const CategoryIcon = category.icon;
+                const count = categoryCounts[key];
+                const isActive = categoryFilter === key;
+                
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setCategoryFilter(key)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg border transition-all shrink-0",
                       isActive
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-primary/10 text-primary"
-                    )}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card hover:bg-muted border-border"
+                    )}
+                  >
+                    <CategoryIcon className="h-4 w-4" />
+                    <span className="text-sm font-medium">{category.label}</span>
+                    {count > 0 && (
+                      <span className={cn(
+                        "text-xs rounded-full px-1.5 min-w-[20px] text-center",
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-primary/10 text-primary"
+                      )}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
 
         <Card>
           <CardHeader>
