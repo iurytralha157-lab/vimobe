@@ -145,7 +145,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-hidden">
           <div className="space-y-2">
             <Label htmlFor="name">Nome da Equipe</Label>
             <Input
@@ -156,7 +156,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 overflow-hidden">
             <Label>Membros</Label>
             <ScrollArea className="h-64 border rounded-lg">
               <div className="space-y-2 p-2">
@@ -167,27 +167,28 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
                   return (
                     <div
                       key={user.id}
-                      className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
+                      className={`flex items-center justify-between p-2 rounded-lg transition-colors min-w-0 ${
                         isSelected ? 'bg-primary/10' : 'hover:bg-muted'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={() => toggleMember(user.id)}
+                          className="shrink-0"
                         />
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-8 w-8 shrink-0">
                           <AvatarImage src={user.avatar_url || undefined} />
                           <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">{user.name}</p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        <div className="min-w-0 overflow-hidden">
+                          <p className="text-sm font-medium truncate">{user.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         </div>
                       </div>
 
                       {isSelected && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 shrink-0 ml-1">
                           <Crown
                             className={`h-4 w-4 transition-colors ${
                               memberData?.isLeader ? 'text-yellow-500' : 'text-muted-foreground/40'
