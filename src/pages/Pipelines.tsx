@@ -1195,11 +1195,11 @@ export default function Pipelines() {
                   autoFocus
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setNewPipelineDialogOpen(false)}>
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" className="w-[40%]" onClick={() => setNewPipelineDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createPipeline.isPending}>
+                <Button type="submit" className="w-[60%]" disabled={createPipeline.isPending}>
                   {createPipeline.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Criar Pipeline
                 </Button>
