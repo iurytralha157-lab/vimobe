@@ -290,7 +290,7 @@ export default function AdminHelpEditor() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingArticle ? 'Editar Artigo' : 'Novo Artigo'}
@@ -386,17 +386,18 @@ Use **negrito**, *itálico*, e listas:
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button 
+                className="w-[60%] rounded-xl"
                 onClick={handleSave}
                 disabled={!formData.title || !formData.content || createArticle.isPending || updateArticle.isPending}
               >
                 {createArticle.isPending || updateArticle.isPending ? 'Salvando...' : 'Salvar'}
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
 

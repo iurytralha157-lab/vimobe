@@ -627,7 +627,7 @@ export function DistributionQueueEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {queue ? 'Editar Fila de Distribuição' : 'Nova Fila de Distribuição'}
@@ -1226,11 +1226,12 @@ export function DistributionQueueEditor({
           </Collapsible>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pt-4 border-t">
+            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button 
+              className="w-[60%] rounded-xl"
               onClick={handleSave} 
               disabled={!formData.name.trim() || saving}
             >

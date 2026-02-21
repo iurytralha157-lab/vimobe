@@ -239,7 +239,7 @@ export default function AdminAudit() {
 
       {/* Dialog de Detalhes */}
       <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg">
           <DialogHeader>
             <DialogTitle>Detalhes do Log</DialogTitle>
             <DialogDescription>

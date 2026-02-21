@@ -1210,7 +1210,7 @@ export default function Pipelines() {
 
         {/* New Stage Dialog */}
         <Dialog open={newStageDialogOpen} onOpenChange={setNewStageDialogOpen}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="w-[90%] sm:max-w-sm sm:w-full rounded-lg">
             <DialogHeader>
               <DialogTitle>Nova Coluna</DialogTitle>
             </DialogHeader>
@@ -1259,11 +1259,11 @@ export default function Pipelines() {
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setNewStageDialogOpen(false)}>
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" className="w-[40%] rounded-xl" onClick={() => setNewStageDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createStage.isPending}>
+                <Button type="submit" className="w-[60%] rounded-xl" disabled={createStage.isPending}>
                   {createStage.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Criar Coluna
                 </Button>

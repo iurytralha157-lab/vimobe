@@ -401,7 +401,7 @@ export function WhatsAppTab() {
 
         {/* QR Code Dialog */}
         <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
             <DialogHeader>
               <DialogTitle>Escanear QR Code</DialogTitle>
               <DialogDescription>

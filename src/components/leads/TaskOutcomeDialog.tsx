@@ -120,7 +120,7 @@ export function TaskOutcomeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -178,11 +178,12 @@ export function TaskOutcomeDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        <div className="flex gap-2 pt-4">
+          <Button variant="outline" className="w-[40%] rounded-xl" onClick={handleClose} disabled={isLoading}>
             Cancelar
           </Button>
           <Button
+            className="w-[60%] rounded-xl"
             onClick={handleConfirm}
             disabled={!selectedOutcome || isLoading}
           >
@@ -195,7 +196,7 @@ export function TaskOutcomeDialog({
               'Registrar'
             )}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

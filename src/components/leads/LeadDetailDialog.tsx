@@ -2168,7 +2168,7 @@ export function LeadDetailDialog({
 
   // Roteiro Dialog
   const RoteiroDialog = () => <Dialog open={roteiroDialogOpen} onOpenChange={setRoteiroDialogOpen}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">

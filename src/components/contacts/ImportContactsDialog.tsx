@@ -288,7 +288,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5 text-orange-600" />
