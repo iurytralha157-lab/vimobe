@@ -101,7 +101,7 @@ export function MobileFilters({
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-xl">
+        <SheetContent side="bottom" className="h-auto max-h-[70vh] rounded-t-xl">
           <SheetHeader>
             <SheetTitle className="flex items-center justify-between">
               Filtros
