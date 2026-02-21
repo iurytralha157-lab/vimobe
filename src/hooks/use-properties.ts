@@ -25,7 +25,7 @@ export function useProperties(search?: string) {
         .limit(200);
       
       if (search) {
-        query = query.or(`code.ilike.%${search}%,title.ilike.%${search}%,bairro.ilike.%${search}%,cidade.ilike.%${search}%`);
+        query = query.or(`code.ilike.%${search}%,title.ilike.%${search}%,bairro.ilike.%${search}%,cidade.ilike.%${search}%,uf.ilike.%${search}%,tipo_de_imovel.ilike.%${search}%,tipo_de_negocio.ilike.%${search}%`);
       }
       
       const { data, error } = await query;
