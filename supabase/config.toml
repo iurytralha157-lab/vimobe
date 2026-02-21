@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.ai-agent-responder]
 verify_jwt = false
+
+[functions.cleanup-notifications]
+verify_jwt = false
