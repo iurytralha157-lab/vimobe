@@ -160,7 +160,7 @@ export function DistributionTab() {
                   : 'opacity-60 bg-muted/20'
               }`}
             >
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
@@ -225,7 +225,7 @@ export function DistributionTab() {
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
                 {/* Rules */}
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-2">Critérios</p>
@@ -315,7 +315,7 @@ export function DistributionTab() {
                 </div>
 
                 {/* Members */}
-                <div className="pt-3 border-t">
+                <div className="pt-4 border-t">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {rr.members.length > 0 ? (
