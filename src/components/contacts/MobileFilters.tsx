@@ -103,108 +103,108 @@ export function MobileFilters({
             <DialogTitle>Filtros</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3 overflow-y-auto max-h-[50vh] pr-1">
-            {/* Pipeline */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Pipeline</label>
-              <Select value={selectedPipeline} onValueChange={(v) => {
-                setSelectedPipeline(v);
-                setSelectedStage('all');
-              }}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todas pipelines" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas pipelines</SelectItem>
-                  {pipelines.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-3">
+            {/* Pipeline + Estágio */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Pipeline</label>
+                <Select value={selectedPipeline} onValueChange={(v) => {
+                  setSelectedPipeline(v);
+                  setSelectedStage('all');
+                }}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas pipelines</SelectItem>
+                    {pipelines.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Estágio</label>
+                <Select value={selectedStage} onValueChange={setSelectedStage} disabled={selectedPipeline === 'all'}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos estágios</SelectItem>
+                    {stages.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Stage */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Estágio</label>
-              <Select value={selectedStage} onValueChange={setSelectedStage} disabled={selectedPipeline === 'all'}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todos estágios" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos estágios</SelectItem>
-                  {stages.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Responsável + Tag */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Responsável</label>
+                <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="unassigned">Sem responsável</SelectItem>
+                    {users.map(u => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Tag</label>
+                <Select value={selectedTag} onValueChange={setSelectedTag}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas tags</SelectItem>
+                    {tags.map(t => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Assignee */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Responsável</label>
-              <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="unassigned">Sem responsável</SelectItem>
-                  {users.map(u => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Tag */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Tag</label>
-              <Select value={selectedTag} onValueChange={setSelectedTag}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todas tags" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas tags</SelectItem>
-                  {tags.map(t => (
-                    <SelectItem key={t.id} value={t.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
-                        {t.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Source */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Fonte</label>
-              <Select value={selectedSource} onValueChange={setSelectedSource}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todas fontes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas fontes</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                  <SelectItem value="meta">Meta Ads</SelectItem>
-                  <SelectItem value="site">Site</SelectItem>
-                  <SelectItem value="wordpress">WordPress</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date Range */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Período</label>
-              <DateFilterPopover
-                datePreset={datePreset}
-                onDatePresetChange={onDatePresetChange}
-                customDateRange={customDateRange}
-                onCustomDateRangeChange={onCustomDateRangeChange}
-                triggerClassName="w-full justify-start h-9"
-                defaultPreset="last30days"
-              />
+            {/* Fonte + Período */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Fonte</label>
+                <Select value={selectedSource} onValueChange={setSelectedSource}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas fontes</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="meta">Meta Ads</SelectItem>
+                    <SelectItem value="site">Site</SelectItem>
+                    <SelectItem value="wordpress">WordPress</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Período</label>
+                <DateFilterPopover
+                  datePreset={datePreset}
+                  onDatePresetChange={onDatePresetChange}
+                  customDateRange={customDateRange}
+                  onCustomDateRangeChange={onCustomDateRangeChange}
+                  triggerClassName="w-full justify-start h-9"
+                  defaultPreset="last30days"
+                />
+              </div>
             </div>
           </div>
 
