@@ -177,10 +177,6 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
                           onCheckedChange={() => toggleMember(user.id)}
                           className="shrink-0"
                         />
-                        <Avatar className="h-8 w-8 shrink-0">
-                          <AvatarImage src={user.avatar_url || undefined} />
-                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                        </Avatar>
                         <div className="min-w-0 overflow-hidden">
                           <p className="text-sm font-medium truncate">{user.name}</p>
                           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
