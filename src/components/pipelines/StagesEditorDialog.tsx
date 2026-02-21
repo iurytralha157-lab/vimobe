@@ -174,7 +174,7 @@ export function StagesEditorDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md w-[95vw] p-4 sm:p-6">
+        <DialogContent className="sm:max-w-md w-[90%] sm:w-full p-4 sm:p-6 rounded-lg">
           <DialogHeader>
             <DialogTitle className="text-base sm:text-lg">Gerenciar Colunas</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm truncate">
@@ -294,11 +294,11 @@ export function StagesEditorDialog({
             </DragDropContext>
           </ScrollArea>
 
-          <div className="flex justify-end gap-2 pt-3 sm:pt-4 border-t">
-            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pt-3 sm:pt-4 border-t">
+            <Button variant="outline" size="sm" className="w-[40%]" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+            <Button size="sm" className="w-[60%]" onClick={handleSave} disabled={isSaving}>
               {isSaving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
               {hasChanges ? 'Salvar' : 'Fechar'}
             </Button>
