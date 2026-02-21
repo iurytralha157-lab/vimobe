@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,14 +38,20 @@ export function ContactFormDialog({
       : '',
   });
 
+  const submittingRef = useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent double submissions
+    if (submittingRef.current || isSubmitting) return;
     
     if (!formData.name.trim() || !formData.phone.trim()) {
       toast.error('Por favor, preencha nome e telefone');
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -80,6 +86,7 @@ export function ContactFormDialog({
       toast.error('Erro ao enviar mensagem. Tente novamente.');
     } finally {
       setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
