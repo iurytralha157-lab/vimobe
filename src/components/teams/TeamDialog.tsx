@@ -57,6 +57,13 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
       .slice(0, 2);
   };
 
+  const abbreviateEmail = (email: string) => {
+    const [user, domain] = email.split('@');
+    if (!domain) return email;
+    const short = user.length > 6 ? user.slice(0, 6) + '…' : user;
+    return `${short}@${domain}`;
+  };
+
   const toggleMember = (userId: string) => {
     setSelectedMembers(prev => {
       const exists = prev.find(m => m.userId === userId);
@@ -179,7 +186,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
                         />
                         <div className="min-w-0 overflow-hidden">
                           <p className="text-sm font-medium truncate">{user.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{abbreviateEmail(user.email)}</p>
                         </div>
                       </div>
 
