@@ -1,16 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Kanban, 
-  MessageSquare, 
-  MoreHorizontal, 
+import {
+  LayoutDashboard,
+  Kanban,
+  MessageSquare,
+  MoreHorizontal,
   Plus,
   Users,
   Calendar,
   Building2,
-  DollarSign,
-} from 'lucide-react';
+  DollarSign } from
+'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -60,7 +60,7 @@ export function MobileBottomNav() {
       result.push({ icon: MessageSquare, labelKey: 'conversations', path: '/crm/conversas' });
     } else if (hasModule('crm') && organization?.segment !== 'telecom') {
       result.push({ icon: Users, labelKey: 'contacts', path: '/crm/contacts' });
-    } else if (hasModule('agenda') && !result.some(r => typeof r !== 'string' && r.path === '/agenda')) {
+    } else if (hasModule('agenda') && !result.some((r) => typeof r !== 'string' && r.path === '/agenda')) {
       result.push({ icon: Calendar, labelKey: 'schedule', path: '/agenda' });
     }
 
@@ -83,30 +83,30 @@ export function MobileBottomNav() {
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-end justify-around px-1 h-16">
+        <div className="flex items-end justify-around px-1 h-16 py-[4px]">
           {tabs.map((tab, index) => {
             if (tab === 'fab') {
               return (
                 <div key="fab" className="flex flex-col items-center justify-center -mt-4">
-                  {showFab ? (
-                    <button
-                      onClick={() => setCreateLeadOpen(true)}
-                      className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-                      aria-label="Criar lead"
-                    >
+                  {showFab ?
+                  <button
+                    onClick={() => setCreateLeadOpen(true)}
+                    className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                    aria-label="Criar lead">
+
                       <Plus className="h-6 w-6" />
-                    </button>
-                  ) : (
-                    <div className="h-12 w-12" /> // spacer when CRM disabled
-                  )}
-                </div>
-              );
+                    </button> :
+
+                  <div className="h-12 w-12" /> // spacer when CRM disabled
+                  }
+                </div>);
+
             }
 
             if (tab === 'more') {
               return (
-                <MobileSidebarTab key="more" label={(t.nav as any).more || 'Mais'} />
-              );
+                <MobileSidebarTab key="more" label={(t.nav as any).more || 'Mais'} />);
+
             }
 
             const active = isActive(tab.path);
@@ -117,46 +117,46 @@ export function MobileBottomNav() {
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-w-[56px] transition-colors duration-200 active:scale-95",
                   active ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                {active && (
-                  <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />
-                )}
+                )}>
+
+                {active &&
+                <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />
+                }
                 <tab.icon className="h-5 w-5" />
                 <span className="text-[10px] font-medium leading-tight truncate max-w-[56px]">
                   {getLabel(tab.labelKey)}
                 </span>
-              </button>
-            );
+              </button>);
+
           })}
         </div>
       </nav>
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
-    </>
-  );
+    </>);
+
 }
 
 // Wrapper that renders the More tab button and triggers MobileSidebar sheet
-function MobileSidebarTab({ label }: { label: string }) {
+function MobileSidebarTab({ label }: {label: string;}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-w-[56px] text-muted-foreground transition-colors duration-200 active:scale-95"
-      >
+        className="flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-w-[56px] text-muted-foreground transition-colors duration-200 active:scale-95">
+
         <MoreHorizontal className="h-5 w-5" />
         <span className="text-[10px] font-medium leading-tight">{label}</span>
       </button>
       <MobileSidebarSheet open={open} onOpenChange={setOpen} />
-    </>
-  );
+    </>);
+
 }
 
 // Extracted sheet from MobileSidebar, controlled externally
-function MobileSidebarSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+function MobileSidebarSheet({ open, onOpenChange }: {open: boolean;onOpenChange: (v: boolean) => void;}) {
   // We import and render MobileSidebar's Sheet content by controlling it externally
   // Since MobileSidebar manages its own Sheet, we'll use a simpler approach:
   // render MobileSidebar with controlled open state
