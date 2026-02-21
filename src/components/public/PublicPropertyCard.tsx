@@ -151,7 +151,6 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
         {/* Price */}
         {price && (
           <div className="pt-3 border-t border-gray-100">
-            <p className="text-[11px] text-gray-400 mb-0.5">Preço:</p>
             <p 
               className="text-lg font-bold leading-tight"
               style={{ color: primaryColor }}
