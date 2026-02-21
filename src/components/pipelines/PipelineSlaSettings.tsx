@@ -61,7 +61,7 @@ export function PipelineSlaSettings({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] w-[90%] sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
@@ -126,15 +126,15 @@ export function PipelineSlaSettings({
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex gap-2 pt-4 border-t">
+          <Button variant="outline" className="w-[40%]" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={upsertMutation.isPending}>
+          <Button className="w-[60%]" onClick={handleSave} disabled={upsertMutation.isPending}>
             {upsertMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Salvar
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
