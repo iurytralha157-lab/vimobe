@@ -101,7 +101,7 @@ export function PropertyCard({
         </div>
         
         {/* Commission badge bottom right */}
-        {(property as any).commission_percentage && (
+        {(property as any).commission_percentage != null && (property as any).commission_percentage > 0 && (
           <div className="absolute bottom-2 right-2">
             <Badge variant="outline" className="bg-background/90 backdrop-blur-sm">
               <Percent className="h-3 w-3 mr-1" />
