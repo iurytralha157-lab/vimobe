@@ -10,7 +10,7 @@ import PublicProperties from './PublicProperties';
 import PublicPropertyDetail from './PublicPropertyDetail';
 import PublicAbout from './PublicAbout';
 import PublicContact from './PublicContact';
-import PublicMap from './PublicMap';
+
 
 function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: string }) {
   const [siteConfig, setSiteConfig] = useState<PublicSiteConfig | null>(null);
@@ -150,7 +150,7 @@ function PublishedSiteRoutes({ slug }: { slug: string }) {
           <Route path="imovel/:code" element={<PublicPropertyDetail />} />
           <Route path="sobre" element={<PublicAbout />} />
           <Route path="contato" element={<PublicContact />} />
-          <Route path="mapa" element={<PublicMap />} />
+          
         </Route>
         <Route path="*" element={<Navigate to={`/sites/${slug}`} replace />} />
       </Routes>
