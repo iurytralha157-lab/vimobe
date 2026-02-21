@@ -43,10 +43,10 @@ export function FinancialCard({
       <CardContent className="p-3 sm:p-4 md:p-6">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0 space-y-1 sm:space-y-2">
-            <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
-            <p className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight truncate">{value}</p>
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">{title}</p>
+            <p className="text-base sm:text-xl md:text-2xl font-bold tracking-tight break-all">{value}</p>
             {description && (
-              <p className="text-xs text-muted-foreground truncate">{description}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">{description}</p>
             )}
             {trend && (
               <p className={cn(
