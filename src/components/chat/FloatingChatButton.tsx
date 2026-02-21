@@ -75,7 +75,7 @@ export function FloatingChatButton() {
 
   return (
     <div
-      className={`fixed bottom-20 z-50 ${side === 'right' ? 'right-4' : 'left-4'}`}
+      className={`fixed bottom-20 md:bottom-4 z-50 ${side === 'right' ? 'right-4' : 'left-4'}`}
       style={{
         touchAction: 'none',
         transform: isDragging ? `translateX(${offsetX}px)` : undefined,
