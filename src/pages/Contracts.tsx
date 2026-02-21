@@ -460,54 +460,28 @@ export default function Contracts() {
           </Card>
         )}
 
-        {/* Form Dialog/Sheet */}
-        {isMobile ? (
-          <Sheet open={isFormOpen} onOpenChange={(open: boolean) => {
-            setIsFormOpen(open);
-            if (!open) setEditingContract(null);
-          }}>
-            <SheetContent side="bottom" className="w-full h-[90vh]">
-              <SheetHeader>
-                <SheetTitle>{editingContract ? 'Editar Contrato' : 'Novo Contrato'}</SheetTitle>
-                <SheetDescription>
-                  {editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
-                </SheetDescription>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(100%-80px)] mt-4 pr-4">
-                <ContractForm 
-                  contract={editingContract} 
-                  onSuccess={handleFormSuccess}
-                  onCancel={() => {
-                    setIsFormOpen(false);
-                    setEditingContract(null);
-                  }}
-                />
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-        ) : (
-          <Dialog open={isFormOpen} onOpenChange={(open: boolean) => {
-            setIsFormOpen(open);
-            if (!open) setEditingContract(null);
-          }}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingContract ? 'Editar Contrato' : 'Novo Contrato'}</DialogTitle>
-                <DialogDescription>
-                  {editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
-                </DialogDescription>
-              </DialogHeader>
-              <ContractForm 
-                contract={editingContract} 
-                onSuccess={handleFormSuccess}
-                onCancel={() => {
-                  setIsFormOpen(false);
-                  setEditingContract(null);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        {/* Form Dialog */}
+        <Dialog open={isFormOpen} onOpenChange={(open: boolean) => {
+          setIsFormOpen(open);
+          if (!open) setEditingContract(null);
+        }}>
+          <DialogContent className="w-[90%] sm:max-w-3xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingContract ? 'Editar Contrato' : 'Novo Contrato'}</DialogTitle>
+              <DialogDescription>
+                {editingContract ? 'Altere os dados do contrato' : 'Preencha os dados do novo contrato'}
+              </DialogDescription>
+            </DialogHeader>
+            <ContractForm 
+              contract={editingContract} 
+              onSuccess={handleFormSuccess}
+              onCancel={() => {
+                setIsFormOpen(false);
+                setEditingContract(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
 
         {/* No Brokers Warning Dialog */}
         <AlertDialog open={!!noBrokersDialogId} onOpenChange={() => setNoBrokersDialogId(null)}>

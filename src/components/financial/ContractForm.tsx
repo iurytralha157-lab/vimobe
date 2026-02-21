@@ -484,11 +484,11 @@ export function ContractForm({ contract, onSuccess, onCancel }: ContractFormProp
           </TabsContent>
         </Tabs>
 
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+        <div className="flex gap-2 pt-4 border-t">
+          <Button type="button" variant="outline" onClick={onCancel} className="w-[40%] rounded-xl">
             Cancelar
           </Button>
-          <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+          <Button type="submit" disabled={isLoading} className="w-[60%] rounded-xl">
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {contract ? 'Salvar Alterações' : 'Criar Contrato'}
           </Button>
