@@ -506,13 +506,9 @@ export default function FinancialReports() {
   const selectedReportConfig = reports.find(r => r.id === selectedReport);
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Relatórios Financeiros</h1>
-          <p className="text-sm text-muted-foreground">Análises e exportações de dados financeiros</p>
-        </div>
+    <AppLayout title="Relatórios Financeiros">
+      <div className="space-y-4 md:space-y-6">
+        <p className="text-sm text-muted-foreground">Análises e exportações de dados financeiros</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Report Selection */}

@@ -401,14 +401,11 @@ export default function Commissions() {
   );
 
   return (
-    <AppLayout>
-      <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+    <AppLayout title="Comissões">
+      <div className="space-y-3 sm:space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
-          <div>
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Comissões</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Gerencie comissões e repasses</p>
-          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground">Gerencie comissões e repasses</p>
           <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={handleExport} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-1.5" />
             Exportar

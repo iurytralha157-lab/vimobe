@@ -82,16 +82,13 @@ export default function FinancialDRE() {
   const hasNoGroups = !groupsLoading && (!groups || groups.length === 0);
 
   return (
-    <AppLayout>
+    <AppLayout title="DRE - Demonstrativo de Resultado">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">DRE - Demonstrativo de Resultado</h1>
-            <p className="text-muted-foreground">
-              Análise do resultado financeiro do exercício
-            </p>
-          </div>
+          <p className="text-muted-foreground">
+            Análise do resultado financeiro do exercício
+          </p>
           
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleExportExcel}>
