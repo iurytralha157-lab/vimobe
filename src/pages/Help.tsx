@@ -377,7 +377,7 @@ export default function Help() {
               Ações Rápidas
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6 pb-4">
             <QuickActions />
           </CardContent>
         </Card>
@@ -407,7 +407,7 @@ export default function Help() {
                   {section.title}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="px-4 md:px-6 pb-4 pt-0">
                 <Accordion type="single" collapsible className="w-full">
                   {section.items.map((item, index) => (
                     <AccordionItem key={index} value={`item-${index}`}>
