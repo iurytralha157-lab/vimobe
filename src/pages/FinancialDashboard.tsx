@@ -194,9 +194,9 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
             <CardTitle className="text-sm sm:text-base md:text-lg">Fluxo de Caixa Mensal</CardTitle>
             <CardDescription className="text-xs sm:text-sm">Receitas vs Despesas (últimos 6 meses)</CardDescription>
           </CardHeader>
-          <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0 overflow-hidden">
             {data?.monthlyData && data.monthlyData.length > 0 ? (
-              <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px]">
+              <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px] w-full">
                 <ComposedChart data={data.monthlyData}>
                   <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
                   <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 9 }} width={35} />
@@ -225,9 +225,9 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
               <CardTitle className="text-sm sm:text-base md:text-lg">Distribuição de Clientes</CardTitle>
               <CardDescription className="text-xs sm:text-sm">Por status atual</CardDescription>
             </CardHeader>
-            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0 overflow-hidden">
               {customerStatusData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px]">
+                <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px] w-full">
                   <PieChart>
                     <Pie
                       data={customerStatusData}
@@ -261,8 +261,8 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
               <CardTitle className="text-sm sm:text-base md:text-lg">Resumo Financeiro</CardTitle>
               <CardDescription className="text-xs sm:text-sm">Valores pendentes e projeções</CardDescription>
             </CardHeader>
-            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
-              <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px]">
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0 overflow-hidden">
+              <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px] w-full">
                 <BarChart data={[
                   { name: 'MRR', value: data?.mrr || 0, fill: 'hsl(var(--primary))' },
                   { name: 'A Pagar', value: data?.totalPayable || 0, fill: 'hsl(var(--warning))' },
@@ -469,9 +469,9 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
               <CardTitle className="text-sm sm:text-base md:text-lg">Fluxo de Caixa Mensal</CardTitle>
               <CardDescription className="text-xs sm:text-sm">Receitas vs Despesas (últimos 6 meses)</CardDescription>
             </CardHeader>
-            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0 overflow-hidden">
               {data?.monthlyData && data.monthlyData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px]">
+                <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px] w-full">
                   <BarChart data={data.monthlyData}>
                     <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
                     <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} tick={{ fontSize: 9 }} width={35} />
@@ -498,9 +498,9 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
               <CardTitle className="text-sm sm:text-base md:text-lg">Distribuição de Comissões</CardTitle>
               <CardDescription className="text-xs sm:text-sm">Por status de pagamento</CardDescription>
             </CardHeader>
-            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0 overflow-hidden">
               {commissionPieData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px]">
+                <ChartContainer config={chartConfig} className="h-[200px] sm:h-[280px] md:h-[350px] w-full">
                   <PieChart>
                     <Pie
                       data={commissionPieData}
@@ -539,8 +539,8 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
               <CardTitle className="text-sm sm:text-base md:text-lg">Resumo Atual</CardTitle>
               <CardDescription className="text-xs sm:text-sm">Valores pendentes</CardDescription>
             </CardHeader>
-            <CardContent className="p-2 sm:p-4 md:p-6 pt-0">
-              <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px]">
+            <CardContent className="p-2 sm:p-4 md:p-6 pt-0 overflow-hidden">
+              <ChartContainer config={chartConfig} className="h-[180px] sm:h-[250px] md:h-[300px] w-full">
                 <BarChart data={[
                   { name: 'Receber', value: data?.receivable30 || 0, fill: 'hsl(var(--success))' },
                   { name: 'Pagar', value: data?.totalPayable || 0, fill: 'hsl(var(--destructive))' },
