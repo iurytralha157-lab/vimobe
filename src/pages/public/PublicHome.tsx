@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useFeaturedProperties, usePropertyTypes, usePublicProperties } from "@/hooks/use-public-site";
 import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle } from "lucide-react";
+import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -172,105 +173,18 @@ export default function PublicHome() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredProperties.map((property) => (
-                <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="group">
-                  <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
-                    <div className="relative h-72 overflow-hidden">
-                      <img
-                        src={property.imagem_principal || '/placeholder.svg'}
-                        alt={property.titulo}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      
-                      {/* Watermark Overlay */}
-                      {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
-                        <div 
-                          className={`absolute pointer-events-none select-none ${getPositionClasses((siteConfig?.watermark_position as WatermarkPosition) || 'bottom-right')}`}
-                          style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
-                        >
-                          <img 
-                            src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
-                            alt=""
-                            style={{ 
-                              maxHeight: `${Math.max(20, (siteConfig?.watermark_size || 80) * 0.3)}px`,
-                              maxWidth: `${Math.max(40, (siteConfig?.watermark_size || 80) * 0.7)}px`
-                            }}
-                            className="object-contain drop-shadow-lg"
-                            draggable={false}
-                          />
-                        </div>
-                      )}
-                      
-                      {/* Badge */}
-                      <div className="absolute top-4 left-4">
-                        <span 
-                          className="px-3 py-1.5 text-xs font-semibold text-white rounded"
-                          style={{ backgroundColor: `${primaryColor}E6` }}
-                        >
-                          {property.valor_venda ? 'VENDA' : 'ALUGUEL'}
-                        </span>
-                      </div>
-                      
-                      {/* Favorite */}
-                      <button className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                        <Heart className="w-5 h-5 text-gray-600" />
-                      </button>
-                    </div>
-                    
-                    <div className="p-5">
-                      <p className="text-gray-500 text-sm flex items-center gap-1 mb-2">
-                        <MapPin className="w-4 h-4" />
-                        {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
-                      </p>
-                      
-                      <h3 className="font-semibold text-lg text-gray-900 mb-4 line-clamp-1">
-                        {property.titulo}
-                      </h3>
-                      
-                      {/* Features */}
-                      <div className="flex items-center gap-4 text-gray-600 text-sm mb-4 pb-4 border-b">
-                        {(property as any).suites != null && (property as any).suites > 0 ? (
-                          <span className="flex items-center gap-1">
-                            <Bed className="w-4 h-4" /> 
-                            {(property as any).suites} suítes
-                          </span>
-                        ) : property.quartos != null && (
-                          <span className="flex items-center gap-1">
-                            <Bed className="w-4 h-4" /> 
-                            {property.quartos}
-                          </span>
-                        )}
-                        {property.banheiros != null && (
-                          <span className="flex items-center gap-1">
-                            <Bath className="w-4 h-4" /> 
-                            {property.banheiros}
-                          </span>
-                        )}
-                        {property.vagas != null && (
-                          <span className="flex items-center gap-1">
-                            <Car className="w-4 h-4" /> 
-                            {property.vagas}
-                          </span>
-                        )}
-                        {((property as any).area_util || property.area_total) && (
-                          <span className="flex items-center gap-1">
-                            <Maximize className="w-4 h-4" /> 
-                            {(property as any).area_util || property.area_total}m²
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Price */}
-                      <div 
-                        className="font-bold text-xl"
-                        style={{ color: primaryColor }}
-                      >
-                        {property.valor_venda && formatPrice(property.valor_venda)}
-                        {property.valor_aluguel && !property.valor_venda && (
-                          <>{formatPrice(property.valor_aluguel)}<span className="text-sm font-normal">/mês</span></>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
+                  <PublicPropertyCard
+                    property={property}
+                    primaryColor={primaryColor}
+                    watermarkConfig={siteConfig?.watermark_enabled ? {
+                      enabled: true,
+                      logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,
+                      position: siteConfig?.watermark_position,
+                      opacity: siteConfig?.watermark_opacity,
+                      size: siteConfig?.watermark_size,
+                    } : null}
+                  />
                 </Link>
               ))}
             </div>
@@ -320,105 +234,18 @@ export default function PublicHome() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {allProperties.map((property) => (
-                <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="group">
-                  <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
-                    <div className="relative h-72 overflow-hidden">
-                      <img
-                        src={property.imagem_principal || '/placeholder.svg'}
-                        alt={property.titulo}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      
-                      {/* Watermark Overlay */}
-                      {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
-                        <div 
-                          className={`absolute pointer-events-none select-none ${getPositionClasses((siteConfig?.watermark_position as WatermarkPosition) || 'bottom-right')}`}
-                          style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
-                        >
-                          <img 
-                            src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
-                            alt=""
-                            style={{ 
-                              maxHeight: `${Math.max(20, (siteConfig?.watermark_size || 80) * 0.3)}px`,
-                              maxWidth: `${Math.max(40, (siteConfig?.watermark_size || 80) * 0.7)}px`
-                            }}
-                            className="object-contain drop-shadow-lg"
-                            draggable={false}
-                          />
-                        </div>
-                      )}
-                      
-                      {/* Badge */}
-                      <div className="absolute top-4 left-4">
-                        <span 
-                          className="px-3 py-1.5 text-xs font-semibold text-white rounded"
-                          style={{ backgroundColor: `${primaryColor}E6` }}
-                        >
-                          {property.valor_venda ? 'VENDA' : 'ALUGUEL'}
-                        </span>
-                      </div>
-                      
-                      {/* Favorite */}
-                      <button className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                        <Heart className="w-5 h-5 text-gray-600" />
-                      </button>
-                    </div>
-                    
-                    <div className="p-5">
-                      <p className="text-gray-500 text-sm flex items-center gap-1 mb-2">
-                        <MapPin className="w-4 h-4" />
-                        {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
-                      </p>
-                      
-                      <h3 className="font-semibold text-lg text-gray-900 mb-4 line-clamp-1">
-                        {property.titulo}
-                      </h3>
-                      
-                      {/* Features */}
-                      <div className="flex items-center gap-4 text-gray-600 text-sm mb-4 pb-4 border-b">
-                        {(property as any).suites != null && (property as any).suites > 0 ? (
-                          <span className="flex items-center gap-1">
-                            <Bed className="w-4 h-4" /> 
-                            {(property as any).suites} suítes
-                          </span>
-                        ) : property.quartos != null && (
-                          <span className="flex items-center gap-1">
-                            <Bed className="w-4 h-4" /> 
-                            {property.quartos}
-                          </span>
-                        )}
-                        {property.banheiros != null && (
-                          <span className="flex items-center gap-1">
-                            <Bath className="w-4 h-4" /> 
-                            {property.banheiros}
-                          </span>
-                        )}
-                        {property.vagas != null && (
-                          <span className="flex items-center gap-1">
-                            <Car className="w-4 h-4" /> 
-                            {property.vagas}
-                          </span>
-                        )}
-                        {((property as any).area_util || property.area_total) && (
-                          <span className="flex items-center gap-1">
-                            <Maximize className="w-4 h-4" /> 
-                            {(property as any).area_util || property.area_total}m²
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Price */}
-                      <div 
-                        className="font-bold text-xl"
-                        style={{ color: primaryColor }}
-                      >
-                        {property.valor_venda && formatPrice(property.valor_venda)}
-                        {property.valor_aluguel && !property.valor_venda && (
-                          <>{formatPrice(property.valor_aluguel)}<span className="text-sm font-normal">/mês</span></>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
+                  <PublicPropertyCard
+                    property={property}
+                    primaryColor={primaryColor}
+                    watermarkConfig={siteConfig?.watermark_enabled ? {
+                      enabled: true,
+                      logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,
+                      position: siteConfig?.watermark_position,
+                      opacity: siteConfig?.watermark_opacity,
+                      size: siteConfig?.watermark_size,
+                    } : null}
+                  />
                 </Link>
               ))}
             </div>
