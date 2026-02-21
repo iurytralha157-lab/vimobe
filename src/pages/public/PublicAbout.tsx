@@ -233,7 +233,7 @@ export default function PublicAbout() {
               <Button 
                 size="lg"
                 variant="outline"
-                className="border-2 border-white text-white hover:bg-white/10 w-full sm:w-auto rounded-full px-8"
+                className="border-2 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white w-full sm:w-auto rounded-full px-8"
               >
                 Ver Imóveis
               </Button>
