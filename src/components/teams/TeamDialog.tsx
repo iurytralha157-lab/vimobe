@@ -158,8 +158,8 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
 
           <div className="space-y-2">
             <Label>Membros</Label>
-            <ScrollArea className="h-64 border rounded-lg p-2">
-              <div className="space-y-2">
+            <ScrollArea className="h-64 border rounded-lg">
+              <div className="space-y-2 p-2">
                 {users.map((user) => {
                   const isSelected = isMemberSelected(user.id);
                   const memberData = getMemberSelection(user.id);
