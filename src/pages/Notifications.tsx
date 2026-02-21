@@ -163,7 +163,7 @@ export default function Notifications() {
 
         {/* Mobile: actions row with filter popover + mark all */}
         {isMobile && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5">
@@ -273,13 +273,15 @@ export default function Notifications() {
         )}
 
         <Card>
-          <CardHeader>
+          <CardHeader className={cn(isMobile && "px-3 py-3")}>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Suas Notificações</CardTitle>
-                <CardDescription>
-                  {filteredNotifications.length} notificações
-                </CardDescription>
+                <CardTitle className={cn(isMobile && "text-base")}>{isMobile ? 'Notificações' : 'Suas Notificações'}</CardTitle>
+                {!isMobile && (
+                  <CardDescription>
+                    {filteredNotifications.length} notificações
+                  </CardDescription>
+                )}
               </div>
               <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'unread')}>
                 <TabsList>
@@ -296,7 +298,7 @@ export default function Notifications() {
               </Tabs>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className={cn(isMobile && "px-3")}>
             {isLoading ? (
               <div className="space-y-3">
                 {[...Array(5)].map((_, i) => (
@@ -322,18 +324,20 @@ export default function Notifications() {
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
                       className={cn(
-                        "flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-colors",
+                        "flex items-start rounded-lg cursor-pointer transition-colors",
+                        isMobile ? "gap-3 p-3" : "gap-4 p-4",
                         notification.is_read
                           ? "bg-muted/50 hover:bg-muted"
                           : "bg-primary/5 hover:bg-primary/10 border-l-4 border-primary"
                       )}
                     >
                       <div className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                        "rounded-full flex items-center justify-center shrink-0",
+                        isMobile ? "h-8 w-8" : "h-10 w-10",
                         notification.is_read ? "bg-muted" : "bg-primary/10"
                       )}>
                         <NotificationIcon className={cn(
-                          "h-5 w-5",
+                          isMobile ? "h-4 w-4" : "h-5 w-5",
                           notification.is_read ? "text-muted-foreground" : "text-primary"
                         )} />
                       </div>
@@ -346,7 +350,9 @@ export default function Notifications() {
                             {notification.title}
                           </h4>
                           {!notification.is_read && (
-                            <span className="h-2 w-2 rounded-full bg-primary" />
+                            <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
+                              NEW
+                            </Badge>
                           )}
                         </div>
                         {notification.content && (
@@ -354,7 +360,7 @@ export default function Notifications() {
                             {notification.content}
                           </p>
                         )}
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-1.5">
                           <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(notification.created_at), {
                               addSuffix: true,
@@ -366,7 +372,7 @@ export default function Notifications() {
                           </span>
                         </div>
                       </div>
-                      {!notification.is_read && (
+                      {!isMobile && !notification.is_read && (
                         <Button
                           variant="ghost"
                           size="sm"
