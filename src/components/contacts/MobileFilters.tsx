@@ -101,28 +101,20 @@ export function MobileFilters({
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="bottom" className="h-auto max-h-[70vh] rounded-t-xl">
+        <SheetContent side="bottom" className="h-auto max-h-[60vh] rounded-t-xl">
           <SheetHeader>
-            <SheetTitle className="flex items-center justify-between">
-              Filtros
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="h-4 w-4 mr-1" />
-                  Limpar
-                </Button>
-              )}
-            </SheetTitle>
+            <SheetTitle>Filtros</SheetTitle>
           </SheetHeader>
 
-          <div className="space-y-4 py-4 overflow-y-auto max-h-[calc(85vh-120px)]">
+          <div className="space-y-3 py-3 overflow-y-auto max-h-[calc(60vh-130px)]">
             {/* Pipeline */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Pipeline</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Pipeline</label>
               <Select value={selectedPipeline} onValueChange={(v) => {
                 setSelectedPipeline(v);
                 setSelectedStage('all');
               }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todas pipelines" />
                 </SelectTrigger>
                 <SelectContent>
@@ -135,10 +127,10 @@ export function MobileFilters({
             </div>
 
             {/* Stage */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Estágio</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Estágio</label>
               <Select value={selectedStage} onValueChange={setSelectedStage} disabled={selectedPipeline === 'all'}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todos estágios" />
                 </SelectTrigger>
                 <SelectContent>
@@ -151,10 +143,10 @@ export function MobileFilters({
             </div>
 
             {/* Assignee */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Responsável</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Responsável</label>
               <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -168,10 +160,10 @@ export function MobileFilters({
             </div>
 
             {/* Tag */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tag</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Tag</label>
               <Select value={selectedTag} onValueChange={setSelectedTag}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todas tags" />
                 </SelectTrigger>
                 <SelectContent>
@@ -189,10 +181,10 @@ export function MobileFilters({
             </div>
 
             {/* Source */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Fonte</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Fonte</label>
               <Select value={selectedSource} onValueChange={setSelectedSource}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todas fontes" />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,25 +197,34 @@ export function MobileFilters({
               </Select>
             </div>
 
-            {/* Date Range - Using nice DateFilterPopover */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Período</label>
+            {/* Date Range */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Período</label>
               <DateFilterPopover
                 datePreset={datePreset}
                 onDatePresetChange={onDatePresetChange}
                 customDateRange={customDateRange}
                 onCustomDateRangeChange={onCustomDateRangeChange}
-                triggerClassName="w-full justify-start"
+                triggerClassName="w-full justify-start h-9"
                 defaultPreset="last30days"
               />
             </div>
           </div>
 
-          <SheetFooter className="pt-4 border-t">
-            <Button className="w-full" onClick={() => setOpen(false)}>
+          <div className="flex gap-2 pt-3 border-t">
+            <Button
+              variant="outline"
+              className="w-[40%]"
+              onClick={() => { clearFilters(); setOpen(false); }}
+              disabled={!hasActiveFilters}
+            >
+              <X className="h-4 w-4 mr-1" />
+              Limpar
+            </Button>
+            <Button className="w-[60%]" onClick={() => setOpen(false)}>
               Aplicar filtros
             </Button>
-          </SheetFooter>
+          </div>
         </SheetContent>
       </Sheet>
     </div>
