@@ -431,6 +431,34 @@ async function handleMessagesUpsert(
         } else if (!isGroup && !fromMe) {
           console.log(`Conversation without Facebook Ads - not creating lead for: ${contactPhone}`);
         }
+
+        // ===== AUTO-LINK: Link new conversation to existing lead by phone =====
+        if (!isGroup && !conversation.lead_id) {
+          try {
+            const normalizedPhone = normalizePhoneNumber(contactPhone);
+            const { data: matchingLeads } = await supabase
+              .from("leads")
+              .select("id, phone")
+              .eq("organization_id", session.organization_id)
+              .not("phone", "is", null);
+
+            const matchingLead = matchingLeads?.find((l: any) => {
+              if (!l.phone) return false;
+              return normalizePhoneNumber(l.phone) === normalizedPhone;
+            });
+
+            if (matchingLead) {
+              await supabase
+                .from("whatsapp_conversations")
+                .update({ lead_id: matchingLead.id })
+                .eq("id", conversation.id);
+              conversation.lead_id = matchingLead.id;
+              console.log(`✅ Auto-linked new conversation to lead ${matchingLead.id} by phone ${contactPhone}`);
+            }
+          } catch (linkError) {
+            console.error("Error auto-linking conversation to lead:", linkError);
+          }
+        }
       } else {
         // Update existing conversation
         const unreadIncrement = fromMe ? 0 : 1;
@@ -475,6 +503,34 @@ async function handleMessagesUpsert(
             // Fallback: run without waiting
             fetchAndSaveProfilePicture(supabase, session, conversation.id, contactPhone)
               .catch(err => console.log('Background profile picture fetch failed:', err));
+          }
+        }
+
+        // ===== AUTO-LINK: Link existing conversation to lead if not yet linked =====
+        if (!isGroup && !conversation.lead_id) {
+          try {
+            const normalizedPhone = normalizePhoneNumber(contactPhone);
+            const { data: matchingLeads } = await supabase
+              .from("leads")
+              .select("id, phone")
+              .eq("organization_id", session.organization_id)
+              .not("phone", "is", null);
+
+            const matchingLead = matchingLeads?.find((l: any) => {
+              if (!l.phone) return false;
+              return normalizePhoneNumber(l.phone) === normalizedPhone;
+            });
+
+            if (matchingLead) {
+              await supabase
+                .from("whatsapp_conversations")
+                .update({ lead_id: matchingLead.id })
+                .eq("id", conversation.id);
+              conversation.lead_id = matchingLead.id;
+              console.log(`✅ Auto-linked existing conversation to lead ${matchingLead.id} by phone ${contactPhone}`);
+            }
+          } catch (linkError) {
+            console.error("Error auto-linking conversation to lead:", linkError);
           }
         }
       }
