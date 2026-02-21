@@ -1,28 +1,28 @@
 
 
-## Ocultar Conversas Vazias do WhatsApp
+## Corrigir Conversas Fantasma (com last_message_at mas sem mensagens)
 
 ### Problema
-Conversas sem nenhuma mensagem aparecem na lista, dando a impressao de que existe historico salvo quando na verdade estao vazias.
+312 conversas possuem `last_message_at` preenchido (porque tiveram mensagens no passado), mas todas as mensagens foram removidas na limpeza do banco. O filtro `.not("last_message_at", "is", null)` nao as oculta porque o campo ainda tem valor.
 
 ### Solucao
-Filtrar conversas onde `last_message_at` e `NULL` diretamente na query do Supabase. Conversas sem mensagens nunca tiveram `last_message_at` preenchido, entao basta adicionar `.not("last_message_at", "is", null)` na query.
+Executar um UPDATE para resetar `last_message_at` para NULL em todas as conversas que nao possuem nenhuma mensagem. Com isso, o filtro ja implementado no frontend passa a funcionar corretamente.
 
-### Alteracoes
+### Alteracao
 
-**Arquivo: `src/hooks/use-whatsapp-conversations.ts`**
-- Na funcao `useWhatsAppConversations`, adicionar filtro `.not("last_message_at", "is", null)` na query principal (logo apos o `.is("deleted_at", null)`)
-- Isso remove conversas vazias tanto na pagina de Conversas quanto no FloatingChat
-
-**Arquivo: `src/components/chat/FloatingChat.tsx`** (nenhuma alteracao necessaria - usa o mesmo hook)
-
-### Impacto
-- Conversas que ja possuem mensagens continuam aparecendo normalmente
-- Conversas criadas manualmente so aparecerao apos a primeira mensagem ser enviada/recebida
-- Nenhum dado e deletado do banco, apenas ocultado da listagem
-
-### Tecnico
-Uma unica linha adicionada na query:
-```typescript
-.not("last_message_at", "is", null)
+**SQL (one-time, executar no Supabase SQL Editor):**
+```sql
+UPDATE whatsapp_conversations wc
+SET last_message_at = NULL
+WHERE wc.deleted_at IS NULL
+  AND wc.last_message_at IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM whatsapp_messages wm 
+    WHERE wm.conversation_id = wc.id
+  );
 ```
+
+Isso afeta 312 conversas. O filtro no frontend (`use-whatsapp-conversations.ts`) ja implementado na mudanca anterior fara o resto - essas conversas serao ocultadas automaticamente.
+
+### Nenhuma alteracao de codigo necessaria
+O filtro `.not("last_message_at", "is", null)` ja esta ativo. Basta corrigir os dados inconsistentes no banco.
