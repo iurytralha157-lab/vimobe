@@ -109,7 +109,7 @@ export function MemberAvailabilityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
@@ -130,7 +130,7 @@ export function MemberAvailabilityDialog({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto overflow-x-hidden max-h-[55vh]">
             {/* Global 24h toggle */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border">
               <div className="flex items-center gap-2">
@@ -156,33 +156,31 @@ export function MemberAvailabilityDialog({
                 {schedules.map((schedule) => (
                   <div 
                     key={schedule.day_of_week}
-                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                    className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-0 ${
                       schedule.is_active 
                         ? 'bg-primary/5 border-primary/20' 
                         : 'bg-muted/30 border-transparent opacity-60'
                     }`}
                   >
-                    {/* Day toggle */}
                     <Switch
                       checked={schedule.is_active}
                       onCheckedChange={() => toggleDay(schedule.day_of_week)}
+                      className="shrink-0"
                     />
                     
-                    {/* Day name */}
-                    <span className={`w-16 text-sm font-medium ${
+                    <span className={`w-10 shrink-0 text-sm font-medium ${
                       schedule.is_active ? '' : 'text-muted-foreground'
                     }`}>
                       {getDayName(schedule.day_of_week, true)}
                     </span>
 
-                    {/* Time selectors */}
                     {schedule.is_active && !globalAllDay && (
-                      <div className="flex items-center gap-2 flex-1">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
                         <Select
                           value={schedule.start_time}
                           onValueChange={(v) => updateDayTime(schedule.day_of_week, 'start_time', v)}
                         >
-                          <SelectTrigger className="h-8 text-xs w-20">
+                          <SelectTrigger className="h-7 text-xs flex-1 min-w-0 px-2">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -193,12 +191,12 @@ export function MemberAvailabilityDialog({
                             ))}
                           </SelectContent>
                         </Select>
-                        <span className="text-xs text-muted-foreground">até</span>
+                        <span className="text-xs text-muted-foreground shrink-0">–</span>
                         <Select
                           value={schedule.end_time}
                           onValueChange={(v) => updateDayTime(schedule.day_of_week, 'end_time', v)}
                         >
-                          <SelectTrigger className="h-8 text-xs w-20">
+                          <SelectTrigger className="h-7 text-xs flex-1 min-w-0 px-2">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -214,7 +212,7 @@ export function MemberAvailabilityDialog({
 
                     {schedule.is_active && globalAllDay && (
                       <Badge variant="secondary" className="text-xs">
-                        24 horas
+                        24h
                       </Badge>
                     )}
 
