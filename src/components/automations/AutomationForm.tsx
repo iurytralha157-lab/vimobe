@@ -229,13 +229,13 @@ export function AutomationForm({ stageId, pipelineId, automation, onSuccess, onC
         </div>
       )}
 
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex gap-2 pt-4">
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" className="w-[40%] rounded-xl" onClick={onCancel}>
             Cancelar
           </Button>
         )}
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className={`rounded-xl ${onCancel ? 'w-[60%]' : 'w-full'}`}>
           {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {isEditing ? 'Salvar' : 'Criar Automação'}
         </Button>
