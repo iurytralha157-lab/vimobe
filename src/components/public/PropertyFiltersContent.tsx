@@ -11,6 +11,7 @@ interface FilterState {
   finalidade: string;
   cidade: string;
   quartos: string;
+  suites: string;
   minPrice: string;
   maxPrice: string;
   banheiros: string;
@@ -150,6 +151,22 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
                 <SelectItem value="2">2+ quartos</SelectItem>
                 <SelectItem value="3">3+ quartos</SelectItem>
                 <SelectItem value="4">4+ quartos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-gray-700 mb-2 block">Suítes</label>
+            <Select value={filters.suites} onValueChange={(v) => updateFilter('suites', v === 'any' ? '' : v)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Qualquer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Qualquer</SelectItem>
+                <SelectItem value="1">1+ suíte</SelectItem>
+                <SelectItem value="2">2+ suítes</SelectItem>
+                <SelectItem value="3">3+ suítes</SelectItem>
+                <SelectItem value="4">4+ suítes</SelectItem>
               </SelectContent>
             </Select>
           </div>
