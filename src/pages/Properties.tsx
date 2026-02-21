@@ -254,10 +254,10 @@ export default function Properties() {
     resetForm();
   };
 
-  const openEdit = (property: Property) => {
-    // Invalidar cache para garantir dados frescos
-    queryClient.invalidateQueries({ queryKey: ['property', property.id] });
-    // Buscar dados completos do imóvel (incluindo fotos)
+  const openEdit = async (property: Property) => {
+    // Invalidar cache e aguardar refetch completo antes de abrir o formulário
+    await queryClient.invalidateQueries({ queryKey: ['property', property.id] });
+    // Buscar dados completos do imóvel (incluindo fotos, extras, proximidades)
     setLoadingPropertyId(property.id);
   };
 
