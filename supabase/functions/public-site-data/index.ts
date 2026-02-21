@@ -75,9 +75,9 @@ Deno.serve(async (req) => {
           .eq('status', 'ativo')
           .order('created_at', { ascending: false });
 
-        // Search filter
+        // Search filter - busca em todos os campos relevantes
         if (search) {
-          query = query.or(`title.ilike.%${search}%,descricao.ilike.%${search}%,bairro.ilike.%${search}%,code.ilike.%${search}%`);
+          query = query.or(`title.ilike.%${search}%,descricao.ilike.%${search}%,bairro.ilike.%${search}%,cidade.ilike.%${search}%,code.ilike.%${search}%,endereco.ilike.%${search}%,uf.ilike.%${search}%,tipo_de_imovel.ilike.%${search}%,tipo_de_negocio.ilike.%${search}%`);
         }
         
         // Type filter (Apartamento, Casa, etc)
