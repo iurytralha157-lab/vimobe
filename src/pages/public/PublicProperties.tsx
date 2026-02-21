@@ -1,6 +1,7 @@
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { usePublicProperties, usePropertyTypes, usePublicCities } from "@/hooks/use-public-site";
 import { Search, MapPin, Bed, Bath, Car, Maximize, X, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -372,98 +373,18 @@ export default function PublicProperties() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {data?.properties?.map((property) => (
-                    <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)}>
-                      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-white rounded-2xl h-full">
-                        <div className="relative h-56 overflow-hidden">
-                          <img
-                            src={property.imagem_principal || '/placeholder.svg'}
-                            alt={property.titulo}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                          <span className="absolute top-4 right-4 px-3 py-1 text-xs font-semibold bg-white/95 text-gray-800 rounded-full shadow">
-                            {property.tipo_imovel}
-                          </span>
-                          
-                          {/* Watermark Overlay */}
-                          {siteConfig?.watermark_enabled && (siteConfig?.watermark_logo_url || siteConfig?.logo_url) && (
-                            <div 
-                              className={`absolute pointer-events-none select-none ${getPositionClasses((siteConfig?.watermark_position as WatermarkPosition) || 'bottom-right')}`}
-                              style={{ opacity: (siteConfig?.watermark_opacity || 20) / 100 }}
-                            >
-                              <img 
-                                src={siteConfig?.watermark_logo_url || siteConfig?.logo_url || ''} 
-                                alt=""
-                                style={{ 
-                                  maxHeight: `${Math.max(16, (siteConfig?.watermark_size || 80) * 0.25)}px`,
-                                  maxWidth: `${Math.max(32, (siteConfig?.watermark_size || 80) * 0.5)}px`
-                                }}
-                                className="object-contain drop-shadow-lg"
-                                draggable={false}
-                              />
-                            </div>
-                          )}
-                          
-                          <div className="absolute bottom-4 left-4">
-                            {property.valor_venda && (
-                              <span className="text-2xl font-bold text-white drop-shadow-lg">
-                                {formatPrice(property.valor_venda)}
-                              </span>
-                            )}
-                            {property.valor_aluguel && !property.valor_venda && (
-                              <span className="text-2xl font-bold text-white drop-shadow-lg">
-                                {formatPrice(property.valor_aluguel)}/mês
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <CardContent className="p-5">
-                          <h3 
-                            className="font-bold text-lg text-gray-900 line-clamp-1 mb-2 transition-colors"
-                            style={{ '--hover-color': primaryColor } as React.CSSProperties}
-                          >
-                            {property.titulo}
-                          </h3>
-                          <p className="text-gray-500 text-sm flex items-center gap-1 mb-4">
-                            <MapPin className="w-4 h-4 flex-shrink-0" />
-                            <span className="truncate">
-                              {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
-                            </span>
-                          </p>
-                          
-                          <div className="flex items-center gap-4 text-gray-600 text-sm pt-4 border-t">
-                            {(property as any).suites != null && (property as any).suites > 0 ? (
-                              <span className="flex items-center gap-1.5">
-                                <Bed className="w-4 h-4" /> 
-                                <span className="font-medium">{(property as any).suites} suítes</span>
-                              </span>
-                            ) : property.quartos != null && (
-                              <span className="flex items-center gap-1.5">
-                                <Bed className="w-4 h-4" /> 
-                                <span className="font-medium">{property.quartos}</span>
-                              </span>
-                            )}
-                            {property.banheiros != null && (
-                              <span className="flex items-center gap-1.5">
-                                <Bath className="w-4 h-4" /> 
-                                <span className="font-medium">{property.banheiros}</span>
-                              </span>
-                            )}
-                            {property.vagas != null && (
-                              <span className="flex items-center gap-1.5">
-                                <Car className="w-4 h-4" /> 
-                                <span className="font-medium">{property.vagas}</span>
-                              </span>
-                            )}
-                            {(property.area_util || property.area_total) && (
-                              <span className="flex items-center gap-1.5">
-                                <Maximize className="w-4 h-4" /> 
-                                <span className="font-medium">{property.area_util || property.area_total}m²</span>
-                              </span>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
+                    <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
+                      <PublicPropertyCard
+                        property={property}
+                        primaryColor={primaryColor}
+                        watermarkConfig={siteConfig?.watermark_enabled ? {
+                          enabled: true,
+                          logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,
+                          position: siteConfig?.watermark_position,
+                          opacity: siteConfig?.watermark_opacity,
+                          size: siteConfig?.watermark_size,
+                        } : null}
+                      />
                     </Link>
                   ))}
                 </div>
