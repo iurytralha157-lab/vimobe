@@ -52,7 +52,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
   return (
     <div className="bg-white rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border border-gray-100">
       {/* Image Section */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[3/4] overflow-hidden">
         <img
           src={property.imagem_principal || '/placeholder.svg'}
           alt={title}
@@ -99,6 +99,13 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
 
       {/* Content Section */}
       <div className="p-4 flex flex-col flex-1">
+        {/* Code */}
+        {(property.codigo || property.code) && (
+          <p className="text-[11px] text-gray-400 font-medium mb-1">
+            Cód: {property.codigo || property.code}
+          </p>
+        )}
+
         {/* Title */}
         <h3 className="font-semibold text-sm text-gray-900 leading-snug mb-1.5 line-clamp-2">
           {title}
