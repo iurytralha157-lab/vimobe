@@ -142,16 +142,16 @@ export function StageSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle>Configurações da Coluna</DialogTitle>
         </DialogHeader>
         
         <Tabs defaultValue="general" className="mt-4">
           <TabsList className="w-full grid grid-cols-3 mb-4">
-            <TabsTrigger value="general" className="text-xs">Configurações Gerais</TabsTrigger>
-            <TabsTrigger value="cadence" className="text-xs">Cadência de tarefas</TabsTrigger>
-            <TabsTrigger value="automations" className="text-xs">Automações</TabsTrigger>
+            <TabsTrigger value="general" className="text-xs"><span className="sm:hidden">Conf. Gerais</span><span className="hidden sm:inline">Configurações Gerais</span></TabsTrigger>
+            <TabsTrigger value="cadence" className="text-xs"><span className="sm:hidden">Cadência</span><span className="hidden sm:inline">Cadência de tarefas</span></TabsTrigger>
+            <TabsTrigger value="automations" className="text-xs"><span className="sm:hidden">Automações</span><span className="hidden sm:inline">Automações</span></TabsTrigger>
           </TabsList>
           
           {/* General Settings Tab */}
