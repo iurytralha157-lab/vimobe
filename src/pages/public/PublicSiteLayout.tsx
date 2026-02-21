@@ -83,7 +83,6 @@ export default function PublicSiteLayout() {
   // Dynamic nav links with property types and pre-applied filters
   const mainNavLinks = [
     { href: "", label: "HOME" },
-    { href: "mapa", label: "BUSCAR MAPA" },
     { href: "imoveis", label: "IMÓVEIS" },
   ];
 
