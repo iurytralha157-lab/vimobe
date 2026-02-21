@@ -99,6 +99,7 @@ export function usePublicProperties(organizationId: string | null, filters?: {
   minPrice?: number;
   maxPrice?: number;
   quartos?: number;
+  suites?: number;
   banheiros?: number;
   vagas?: number;
   cidade?: string;
@@ -121,6 +122,7 @@ export function usePublicProperties(organizationId: string | null, filters?: {
       if (filters?.minPrice) params.append('min_price', String(filters.minPrice));
       if (filters?.maxPrice) params.append('max_price', String(filters.maxPrice));
       if (filters?.quartos) params.append('quartos', String(filters.quartos));
+      if (filters?.suites) params.append('suites', String(filters.suites));
       if (filters?.banheiros) params.append('banheiros', String(filters.banheiros));
       if (filters?.vagas) params.append('vagas', String(filters.vagas));
       if (filters?.cidade) params.append('cidade', filters.cidade);

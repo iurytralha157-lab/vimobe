@@ -31,6 +31,7 @@ export default function PublicProperties() {
     finalidade: searchParams.get('finalidade') || '',
     cidade: searchParams.get('cidade') || '',
     quartos: searchParams.get('quartos') || '',
+    suites: searchParams.get('suites') || '',
     minPrice: searchParams.get('min_price') || '',
     maxPrice: searchParams.get('max_price') || '',
     banheiros: searchParams.get('banheiros') || '',
@@ -52,6 +53,7 @@ export default function PublicProperties() {
         finalidade: newParams.get('finalidade') || '',
         cidade: newParams.get('cidade') || '',
         quartos: newParams.get('quartos') || '',
+        suites: newParams.get('suites') || '',
         minPrice: newParams.get('min_price') || '',
         maxPrice: newParams.get('max_price') || '',
         banheiros: newParams.get('banheiros') || '',
@@ -86,6 +88,7 @@ export default function PublicProperties() {
     finalidade: filters.finalidade || undefined,
     cidade: filters.cidade,
     quartos: filters.quartos ? parseInt(filters.quartos) : undefined,
+    suites: filters.suites ? parseInt(filters.suites) : undefined,
     banheiros: filters.banheiros ? parseInt(filters.banheiros) : undefined,
     vagas: filters.vagas ? parseInt(filters.vagas) : undefined,
     minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
@@ -120,6 +123,7 @@ export default function PublicProperties() {
     if (filters.finalidade) params.set('finalidade', filters.finalidade);
     if (filters.cidade) params.set('cidade', filters.cidade);
     if (filters.quartos) params.set('quartos', filters.quartos);
+    if (filters.suites) params.set('suites', filters.suites);
     if (filters.minPrice) params.set('min_price', filters.minPrice);
     if (filters.maxPrice) params.set('max_price', filters.maxPrice);
     if (filters.banheiros) params.set('banheiros', filters.banheiros);
@@ -133,7 +137,7 @@ export default function PublicProperties() {
     lastLocationSearch.current = newSearch;
     
     setSearchParams(params, { replace: true });
-  }, [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.page]);
+  }, [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.page]);
 
   const updateFilter = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -146,6 +150,7 @@ export default function PublicProperties() {
       finalidade: '',
       cidade: '',
       quartos: '',
+      suites: '',
       minPrice: '',
       maxPrice: '',
       banheiros: '',
@@ -154,8 +159,8 @@ export default function PublicProperties() {
     });
   };
 
-  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.quartos || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
-  const activeFilterCount = [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas].filter(Boolean).length;
+  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.quartos || filters.suites || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
+  const activeFilterCount = [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas].filter(Boolean).length;
 
   const formatPrice = (value: number | null) => {
     if (!value) return null;
@@ -315,6 +320,15 @@ export default function PublicProperties() {
                   >
                     {filters.quartos}+ quartos
                     <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('quartos', '')} />
+                  </Badge>
+                )}
+                {filters.suites && (
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {filters.suites}+ suítes
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('suites', '')} />
                   </Badge>
                 )}
                 {filters.banheiros && (
