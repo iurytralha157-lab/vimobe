@@ -109,7 +109,7 @@ export function MemberAvailabilityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
@@ -230,15 +230,15 @@ export function MemberAvailabilityDialog({
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex gap-2 pt-2">
+          <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={bulkUpdate.isPending}>
+          <Button className="w-[60%] rounded-xl" onClick={handleSave} disabled={bulkUpdate.isPending}>
             {bulkUpdate.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Salvar
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
