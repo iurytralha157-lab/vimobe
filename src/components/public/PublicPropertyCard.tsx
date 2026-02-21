@@ -4,7 +4,8 @@ import { getPositionClasses, WatermarkPosition } from '@/lib/watermark-utils';
 interface PublicPropertyCardProps {
   property: {
     id: string;
-    titulo: string;
+    titulo?: string;
+    title?: string;
     imagem_principal?: string | null;
     bairro?: string | null;
     cidade?: string | null;
@@ -15,8 +16,11 @@ interface PublicPropertyCardProps {
     area_total?: number | null;
     valor_venda?: number | null;
     valor_aluguel?: number | null;
+    preco?: number | null;
     tipo_imovel?: string | null;
+    tipo_de_negocio?: string | null;
     codigo?: string | null;
+    code?: string | null;
     suites?: number | null;
     [key: string]: any;
   };
@@ -36,12 +40,14 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   };
 
-  const isRent = !property.valor_venda && !!property.valor_aluguel;
-  const price = property.valor_venda || property.valor_aluguel;
-  const badgeLabel = property.valor_venda ? 'Venda' : 'Aluguel';
+  // Support both field naming conventions (DB fields vs mapped fields)
+  const title = property.titulo || property.title || '';
+  const price = property.valor_venda || property.valor_aluguel || property.preco || null;
+  const tipoNegocio = property.tipo_de_negocio || '';
+  const isRent = tipoNegocio.toLowerCase().includes('aluguel') || (!property.valor_venda && !!property.valor_aluguel);
+  const badgeLabel = isRent ? 'Aluguel' : 'Venda';
   const location = [property.bairro, property.cidade].filter(Boolean).join(', ');
-
-  const suites = (property as any).suites;
+  const suites = property.suites;
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border border-gray-100">
@@ -49,7 +55,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
           src={property.imagem_principal || '/placeholder.svg'}
-          alt={property.titulo}
+          alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
         />
 
@@ -63,7 +69,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
           </span>
         </div>
 
-        {/* Favorite - smaller */}
+        {/* Favorite */}
         <button 
           className="absolute top-3 right-3 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all group/heart"
           onClick={(e) => e.preventDefault()}
@@ -95,7 +101,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
       <div className="p-4 flex flex-col flex-1">
         {/* Title */}
         <h3 className="font-semibold text-sm text-gray-900 leading-snug mb-1.5 line-clamp-2">
-          {property.titulo}
+          {title}
         </h3>
 
         {/* Location */}
