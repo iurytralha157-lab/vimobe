@@ -235,14 +235,11 @@ export default function Contracts() {
   const activeFilterCount = (typeFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <AppLayout title="Contratos">
+      <div className="space-y-4 md:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold">Contratos</h1>
-            <p className="text-sm text-muted-foreground">Gerencie seus contratos de venda e locação</p>
-          </div>
+          <p className="text-sm text-muted-foreground">Gerencie seus contratos de venda e locação</p>
           <div className="flex gap-2">
             <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={handleExport}>
               <Download className="h-4 w-4 mr-1 md:mr-2" />

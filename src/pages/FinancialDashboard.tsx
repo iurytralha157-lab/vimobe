@@ -42,9 +42,8 @@ export default function FinancialDashboard() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-          <Skeleton className="h-8 w-48 md:w-64" />
+      <AppLayout title="Dashboard Financeiro">
+        <div className="space-y-4 md:space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 md:h-32" />)}
           </div>
@@ -81,13 +80,9 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
   ].filter(d => d.value > 0);
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Dashboard Financeiro</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças - Telecom</p>
-        </div>
+    <AppLayout title="Dashboard Financeiro">
+      <div className="space-y-4 md:space-y-6">
+        <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças - Telecom</p>
 
         {/* MRR Highlight */}
         <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
@@ -375,13 +370,9 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
   ].filter(d => d.value > 0);
 
   return (
-    <AppLayout>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Dashboard Financeiro</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças</p>
-        </div>
+    <AppLayout title="Dashboard Financeiro">
+      <div className="space-y-4 md:space-y-6">
+        <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças</p>
 
         {/* Summary Cards - Leads and Contracts */}
        {/* Summary Cards - Leads, Contracts, Commissions, Balance */}
