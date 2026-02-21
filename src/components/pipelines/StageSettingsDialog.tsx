@@ -142,7 +142,7 @@ export function StageSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
+      <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Configurações da Coluna</DialogTitle>
         </DialogHeader>
