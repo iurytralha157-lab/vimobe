@@ -4,7 +4,7 @@ import { Search, MapPin, Bed, Bath, Car, Maximize, X, ChevronLeft, ChevronRight,
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePublicContext } from "./usePublicContext";
@@ -234,8 +234,8 @@ export default function PublicProperties() {
           <div className="flex-1">
             {/* Mobile Filters */}
             <div className="lg:hidden mb-6">
-              <Sheet>
-                <SheetTrigger asChild>
+              <Dialog>
+                <DialogTrigger asChild>
                   <Button variant="outline" className="w-full rounded-xl justify-between h-12">
                     <span className="flex items-center gap-2">
                       <SlidersHorizontal className="w-4 h-4" />
@@ -250,28 +250,26 @@ export default function PublicProperties() {
                       </Badge>
                     )}
                   </Button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl flex flex-col">
-                  <SheetHeader className="pb-4 border-b flex-shrink-0">
-                    <SheetTitle className="text-left">Filtrar Imóveis</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex-1 mt-6 pb-20 overflow-y-auto overscroll-contain">
-                    <PropertyFiltersContent
-                      localSearch={localSearch}
-                      setLocalSearch={handleSetLocalSearch}
-                      searchInputRef={searchInputRef}
-                      filters={filters}
-                      updateFilter={updateFilter}
-                      clearFilters={clearFilters}
-                      hasActiveFilters={!!hasActiveFilters}
-                      cities={cities}
-                      propertyTypes={propertyTypes}
-                      showMoreFilters={showMoreFilters}
-                      setShowMoreFilters={handleSetShowMoreFilters}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
+                </DialogTrigger>
+                <DialogContent className="w-[90%] rounded-lg max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Filtrar Imóveis</DialogTitle>
+                  </DialogHeader>
+                  <PropertyFiltersContent
+                    localSearch={localSearch}
+                    setLocalSearch={handleSetLocalSearch}
+                    searchInputRef={searchInputRef}
+                    filters={filters}
+                    updateFilter={updateFilter}
+                    clearFilters={clearFilters}
+                    hasActiveFilters={!!hasActiveFilters}
+                    cities={cities}
+                    propertyTypes={propertyTypes}
+                    showMoreFilters={showMoreFilters}
+                    setShowMoreFilters={handleSetShowMoreFilters}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
 
             {/* Active Filters Pills */}
