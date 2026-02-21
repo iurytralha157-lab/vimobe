@@ -1,46 +1,38 @@
 
-## Remover limitações horizontais redundantes da página "Meu Site"
+# Ajustes na Pagina de Notificacoes (Mobile)
 
-### Problema
+## Mudancas planejadas no arquivo `src/pages/Notifications.tsx`:
 
-A página `SiteSettings.tsx` tem um wrapper `<div className="p-6 max-w-5xl mx-auto">` na linha 196 que adiciona:
-- `max-w-5xl mx-auto` — limita e centraliza o conteúdo manualmente
-- `p-6` — padding extra que duplica o já fornecido pelo `AppLayout`
+### 1. Filtro alinhado a esquerda
+- O botao "Filtros" ja esta a esquerda, mas o botao "Marcar lidas" sera mantido a direita com `justify-between` ou `ml-auto` para melhor distribuicao.
 
-O `AppLayout` já fornece `px-4 md:px-6 py-3 md:py-4` para todas as páginas, tornando essas classes redundantes.
+### 2. Card header - reduzir titulo e espaçamento (mobile)
+- Trocar "Suas Notificacoes" por um titulo menor no mobile (ex: "Notificacoes" ou remover completamente, ja que o titulo ja aparece no AppHeader).
+- Reduzir o `CardTitle` de `text-2xl` para `text-base` no mobile.
+- Adicionar padding horizontal ao `CardContent` no mobile (`px-3`) para melhor espaçamento lateral.
+- Reduzir o padding do `CardHeader` no mobile.
 
-### Correção
+### 3. Reorganizar o card de notificacao individual (conforme segundo print)
+- Layout mais limpo: icone a esquerda, badge "NEW" ao lado do titulo, conteudo abaixo, e na ultima linha o tempo + tipo.
+- Reduzir gap entre icone e texto de `gap-4` para `gap-3`.
+- Remover o botao de "check" individual no mobile para simplificar.
+- Manter o `border-l-4` para nao lidas.
 
-**Arquivo: `src/pages/SiteSettings.tsx`**
+---
 
-Linha 196 — trocar:
-```tsx
-<div className="p-6 max-w-5xl mx-auto">
-```
-Por:
-```tsx
-<div className="space-y-6">
-```
+## Detalhes tecnicos
 
-Também passar o título para o `AppLayout` (linha 195) e remover o header manual (linhas 197-232):
-```tsx
-<AppLayout title="Configurações do Site">
-  <div className="space-y-6">
-    {/* Botões de ação (Preview, Copiar Link, Visitar Site) */}
-    <div className="flex items-center justify-end gap-2">
-      ...botões existentes...
-    </div>
-    {/* Restante do conteúdo sem mudanças */}
-  </div>
-</AppLayout>
-```
+**Arquivo**: `src/pages/Notifications.tsx`
 
-### Resultado
+**Alteracoes especificas**:
 
-A página seguirá o mesmo padrão de largura e espaçamento de todas as outras páginas do sistema, sem limitação horizontal própria.
+1. **Linha 166** - Adicionar `justify-between` na div de filtros mobile para empurrar "Marcar lidas" para a direita, mantendo "Filtros" na esquerda.
 
-### Arquivo alterado
+2. **Linhas 275-298** - Card header mobile:
+   - Condicional para mobile: titulo menor (`text-base font-semibold` em vez de `text-2xl`), esconder descricao de contagem.
+   - Reduzir padding do CardHeader no mobile.
 
-| Arquivo | Mudança |
-|---|---|
-| `src/pages/SiteSettings.tsx` | Remover `p-6 max-w-5xl mx-auto`; usar `AppLayout title`; remover header manual |
+3. **Linhas 299-387** - CardContent mobile:
+   - Adicionar `px-3` no mobile para respiro lateral.
+   - Nos cards individuais: reduzir padding de `p-4` para `p-3`, gap de `gap-4` para `gap-3`.
+   - Icone menor no mobile (`h-8 w-8` em vez de `h-10 w-10`).
