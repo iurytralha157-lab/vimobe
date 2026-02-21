@@ -87,7 +87,7 @@ export function TeamPipelinesManager() {
     <div className="space-y-6">
       {/* Info Card */}
       <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
-        <CardContent className="flex items-start gap-3 py-4">
+        <CardContent className="flex items-start gap-3 py-4 px-4 md:px-6">
           <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-amber-800 dark:text-amber-400">Hierarquia de Acesso</p>
@@ -111,7 +111,7 @@ export function TeamPipelinesManager() {
               Clique em uma equipe para gerenciar suas pipelines
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 px-4 md:px-6">
             {teams.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 Nenhuma equipe criada. Crie equipes na aba "Equipes".
@@ -211,7 +211,7 @@ export function TeamPipelinesManager() {
               Visão geral das pipelines e suas equipes vinculadas
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 px-4 md:px-6">
             {pipelines.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 Nenhuma pipeline criada.
