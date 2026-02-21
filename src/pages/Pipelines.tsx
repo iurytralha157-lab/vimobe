@@ -1180,7 +1180,7 @@ export default function Pipelines() {
 
         {/* New Pipeline Dialog */}
         <Dialog open={newPipelineDialogOpen} onOpenChange={setNewPipelineDialogOpen}>
-          <DialogContent className="max-w-sm">
+            <DialogContent className="max-w-sm w-[90%] sm:w-full rounded-lg">
             <DialogHeader>
               <DialogTitle>Nova Pipeline</DialogTitle>
             </DialogHeader>
