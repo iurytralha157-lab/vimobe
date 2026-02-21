@@ -139,7 +139,7 @@ export default function Settings() {
                   {t.settings.integrations.meta.description}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="px-4 md:px-6 pb-5 space-y-6">
                 {metaLoading ?
                 <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
