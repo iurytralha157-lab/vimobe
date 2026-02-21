@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, Notification } from '@/hooks/use-notifications';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const typeIcons: Record<string, typeof Bell> = {
   lead: UserPlus,
@@ -52,6 +53,7 @@ const notificationCategories = {
 type CategoryKey = keyof typeof notificationCategories;
 
 export default function Notifications() {
+  const isMobile = useIsMobile();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryKey>('all');
   const navigate = useNavigate();
@@ -124,35 +126,57 @@ export default function Notifications() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout title={isMobile ? 'Notificações' : undefined}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Bell className="h-8 w-8" />
-              Notificações
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {unreadCount > 0
-                ? `Você tem ${unreadCount} notificação${unreadCount > 1 ? 'ões' : ''} não lida${unreadCount > 1 ? 's' : ''}`
-                : 'Todas as notificações lidas'}
-            </p>
+        {/* Desktop: título inline como antes */}
+        {!isMobile && (
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <Bell className="h-8 w-8" />
+                Notificações
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                {unreadCount > 0
+                  ? `Você tem ${unreadCount} notificação${unreadCount > 1 ? 'ões' : ''} não lida${unreadCount > 1 ? 's' : ''}`
+                  : 'Todas as notificações lidas'}
+              </p>
+            </div>
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleMarkAllAsRead}
+                disabled={markAllAsRead.isPending}
+              >
+                {markAllAsRead.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                )}
+                Marcar todas como lidas
+              </Button>
+            )}
           </div>
-          {unreadCount > 0 && (
+        )}
+
+        {/* Mobile: botão compacto de marcar todas */}
+        {isMobile && unreadCount > 0 && (
+          <div className="flex justify-end">
             <Button
               variant="outline"
+              size="sm"
               onClick={handleMarkAllAsRead}
               disabled={markAllAsRead.isPending}
             >
               {markAllAsRead.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
               ) : (
-                <CheckCheck className="h-4 w-4 mr-2" />
+                <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
               )}
               Marcar todas como lidas
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Category Filter */}
         <ScrollArea className="w-full whitespace-nowrap pb-2">
