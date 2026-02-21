@@ -118,31 +118,24 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {automations.map((automation) => (
         <Card key={automation.id} className={!automation.is_active ? 'opacity-60' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <div className="p-2 rounded-md bg-primary/10 text-primary">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0">
                   {getAutomationIcon(automation.automation_type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-sm">
-                      {AUTOMATION_TYPE_LABELS[automation.automation_type as keyof typeof AUTOMATION_TYPE_LABELS]}
-                    </h4>
-                    {!automation.is_active && (
-                      <Badge variant="secondary" className="text-xs">
-                        Inativa
-                      </Badge>
-                    )}
-                  </div>
-                  {getAutomationDescription(automation)}
+                  <h4 className="font-medium text-xs leading-tight truncate">
+                    {AUTOMATION_TYPE_LABELS[automation.automation_type as keyof typeof AUTOMATION_TYPE_LABELS]}
+                  </h4>
+                  <div className="truncate">{getAutomationDescription(automation)}</div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 shrink-0">
                 <Switch
                   checked={automation.is_active ?? true}
                   onCheckedChange={(checked) => 
@@ -153,15 +146,16 @@ export function AutomationsList({ stageId, pipelineId, onEdit }: AutomationsList
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-7 w-7"
                   onClick={() => onEdit?.(automation)}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-3.5 w-3.5" />
                 </Button>
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
