@@ -2,14 +2,13 @@ import { Link, useLocation } from "react-router-dom";
 import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { usePublicContext } from "./usePublicContext";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Heart } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function PublicFavorites() {
   const { organizationId, siteConfig } = usePublicContext();
-  const { favorites, count } = usePublicFavorites();
+  const { favorites, count, toggleFavorite, isFavorite } = usePublicFavorites();
   const location = useLocation();
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
@@ -25,17 +24,21 @@ export default function PublicFavorites() {
     return `/${path}`;
   };
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://iemalzlfnbouobyjwlwi.supabase.co';
+
   const { data: properties = [], isLoading } = useQuery({
     queryKey: ['public-favorites', organizationId, favorites],
     queryFn: async () => {
       if (!organizationId || favorites.length === 0) return [];
-      const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .in('id', favorites);
-      if (error) throw error;
-      return data || [];
+      const params = new URLSearchParams({
+        organization_id: organizationId,
+        endpoint: 'favorites',
+        ids: favorites.join(','),
+      });
+      const response = await fetch(`${supabaseUrl}/functions/v1/public-site-data?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch favorites');
+      const data = await response.json();
+      return data.properties || [];
     },
     enabled: !!organizationId && favorites.length > 0,
   });
@@ -106,8 +109,8 @@ export default function PublicFavorites() {
                 <PublicPropertyCard
                   property={property}
                   primaryColor={primaryColor}
-                  isFavorited={true}
-                  onToggleFavorite={() => {}}
+                  isFavorited={isFavorite(property.id)}
+                  onToggleFavorite={toggleFavorite}
                   watermarkConfig={siteConfig?.watermark_enabled ? {
                     enabled: true,
                     logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,
