@@ -251,7 +251,7 @@ export function RolesTab() {
               Nova Função
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>
                 {editingRole ? 'Editar Função' : 'Nova Função'}
@@ -441,15 +441,15 @@ export function RolesTab() {
               </div>
             </div>
 
-            <DialogFooter className="pt-4 border-t">
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isLoading}>
+            <div className="flex gap-2 pt-4 border-t">
+              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setCreateDialogOpen(false)} disabled={isLoading}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave} disabled={!formName.trim() || isLoading}>
+              <Button className="w-[60%] rounded-xl" onClick={handleSave} disabled={!formName.trim() || isLoading}>
                 {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {editingRole ? 'Salvar Alterações' : 'Criar Função'}
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </CardHeader>

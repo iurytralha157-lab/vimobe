@@ -190,7 +190,7 @@ export function QuickMessageTemplates({
       
       {/* Create Template Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
           <DialogHeader>
             <DialogTitle>Novo Template de Mensagem</DialogTitle>
           </DialogHeader>
@@ -236,17 +236,18 @@ export function QuickMessageTemplates({
             </div>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setCreateDialogOpen(false)}>
               Cancelar
             </Button>
             <Button 
+              className="w-[60%] rounded-xl"
               onClick={handleCreateTemplate}
               disabled={createTemplate.isPending}
             >
               {createTemplate.isPending ? 'Criando...' : 'Criar Template'}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </>

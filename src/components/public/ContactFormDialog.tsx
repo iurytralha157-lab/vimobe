@@ -130,7 +130,7 @@ export function ContactFormDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {isSuccess ? 'Mensagem Enviada!' : 'Fale Conosco'}

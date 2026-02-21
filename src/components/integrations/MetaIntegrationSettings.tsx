@@ -386,7 +386,7 @@ export function MetaIntegrationSettings() {
 
       {/* Page Selector Dialog */}
       <Dialog open={showPageSelector} onOpenChange={setShowPageSelector}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
           <DialogHeader>
             <DialogTitle>{meta.connectPage}</DialogTitle>
             <DialogDescription>
@@ -470,11 +470,12 @@ export function MetaIntegrationSettings() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPageSelector(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setShowPageSelector(false)}>
               {t.common.cancel}
             </Button>
             <Button 
+              className="w-[60%] rounded-xl"
               onClick={handleConnectPage}
               disabled={connectPage.isPending || !selectedPageId || !selectedPipelineId || !selectedStageId}
             >
@@ -483,13 +484,13 @@ export function MetaIntegrationSettings() {
               ) : null}
               {meta.connectButton}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
           <DialogHeader>
             <DialogTitle>{meta.editPage}</DialogTitle>
             <DialogDescription>
@@ -554,11 +555,12 @@ export function MetaIntegrationSettings() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setShowEditDialog(false)}>
               {t.common.cancel}
             </Button>
             <Button 
+              className="w-[60%] rounded-xl"
               onClick={handleUpdatePage}
               disabled={updatePage.isPending || !selectedPipelineId || !selectedStageId}
             >
@@ -567,7 +569,7 @@ export function MetaIntegrationSettings() {
               ) : null}
               {t.common.save}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

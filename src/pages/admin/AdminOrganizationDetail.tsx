@@ -469,7 +469,7 @@ export default function AdminOrganizationDetail() {
                       Novo Convite
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-[95vw] sm:max-w-md">
+                  <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
                     <DialogHeader>
                       <DialogTitle>Convidar Usuário</DialogTitle>
                       <DialogDescription>
@@ -503,17 +503,18 @@ export default function AdminOrganizationDetail() {
                         </Select>
                       </div>
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                    <div className="flex gap-2 pt-4">
+                      <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setInviteDialogOpen(false)}>
                         Cancelar
                       </Button>
                       <Button
+                        className="w-[60%] rounded-xl"
                         onClick={handleCreateInvite}
                         disabled={!newInvite.email || createInvitation.isPending}
                       >
                         {createInvitation.isPending ? 'Enviando...' : 'Criar Convite'}
                       </Button>
-                    </DialogFooter>
+                    </div>
                   </DialogContent>
                 </Dialog>
               </CardHeader>

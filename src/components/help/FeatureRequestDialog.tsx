@@ -82,7 +82,7 @@ export function FeatureRequestDialog({ open, onOpenChange }: FeatureRequestDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-primary" />
@@ -145,17 +145,18 @@ export function FeatureRequestDialog({ open, onOpenChange }: FeatureRequestDialo
           </Alert>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex gap-2 pt-4">
+          <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
           <Button 
+            className="w-[60%] rounded-xl"
             onClick={handleSubmit} 
             disabled={!isValid || createRequest.isPending}
           >
             {createRequest.isPending ? 'Enviando...' : 'Enviar Sugestão'}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

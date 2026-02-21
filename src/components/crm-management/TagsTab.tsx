@@ -189,7 +189,7 @@ export function TagsTab() {
               Nova Tag
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTag ? 'Editar Tag' : 'Nova Tag'}</DialogTitle>
             </DialogHeader>
@@ -239,11 +239,11 @@ export function TagsTab() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" className="w-[40%] rounded-xl" onClick={() => setDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createTag.isPending || updateTag.isPending}>
+                <Button type="submit" className="w-[60%] rounded-xl" disabled={createTag.isPending || updateTag.isPending}>
                   {(createTag.isPending || updateTag.isPending) && (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   )}

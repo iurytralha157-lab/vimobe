@@ -145,7 +145,7 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[90%] sm:max-w-[500px] sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {event ? 'Editar atividade' : 'Nova atividade'}
@@ -331,11 +331,11 @@ export function EventForm({ open, onOpenChange, event, leadId, leadName, default
             ) : (
               <div />
             )}
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+            <div className="flex gap-2">
+              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)} disabled={isLoading}>
                 Cancelar
               </Button>
-              <Button onClick={handleSubmit} disabled={isLoading || !title.trim() || !selectedUserId}>
+              <Button className="w-[60%] rounded-xl" onClick={handleSubmit} disabled={isLoading || !title.trim() || !selectedUserId}>
                 {isLoading ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>

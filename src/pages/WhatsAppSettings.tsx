@@ -478,7 +478,7 @@ export default function WhatsAppSettings() {
 
         {/* QR Code Dialog */}
         <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
             <DialogHeader>
               <DialogTitle>Escanear QR Code</DialogTitle>
               <DialogDescription>
@@ -612,7 +612,7 @@ function AccessControlDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle>Gerenciar Acessos</DialogTitle>
           <DialogDescription>
@@ -648,9 +648,9 @@ function AccessControlDialog({
               })}
           </div>
         </ScrollArea>
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Fechar</Button>
-        </DialogFooter>
+        <div className="flex gap-2 pt-4">
+          <Button className="w-full rounded-xl" onClick={() => onOpenChange(false)}>Fechar</Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

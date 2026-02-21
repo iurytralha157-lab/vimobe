@@ -71,7 +71,7 @@ export function InstallPrompt() {
 
       {/* iOS Instructions Dialog */}
       <Dialog open={showIOSInstructions} onOpenChange={setShowIOSInstructions}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-primary" />
@@ -120,8 +120,8 @@ export function InstallPrompt() {
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <Button onClick={() => {
+          <div className="flex gap-2 pt-4">
+            <Button className="w-full rounded-xl" onClick={() => {
               setShowIOSInstructions(false);
               dismiss();
             }}>

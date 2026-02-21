@@ -133,7 +133,7 @@ export function CreateLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[90%] sm:max-w-[500px] sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />
@@ -264,15 +264,16 @@ export function CreateLeadDialog({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex gap-2 pt-4">
             <Button
               type="button"
               variant="outline"
+              className="w-[40%] rounded-xl"
               onClick={() => onOpenChange(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={createLead.isPending}>
+            <Button type="submit" className="w-[60%] rounded-xl" disabled={createLead.isPending}>
               {createLead.isPending && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}

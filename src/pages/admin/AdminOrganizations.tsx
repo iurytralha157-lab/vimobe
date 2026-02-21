@@ -142,7 +142,7 @@ export default function AdminOrganizations() {
                 Nova Organização
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Criar Nova Organização</DialogTitle>
                 <DialogDescription>
@@ -220,20 +220,21 @@ export default function AdminOrganizations() {
                   )}
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => {
+              <div className="flex gap-2 pt-4">
+                <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => {
                   setCreateDialogOpen(false);
                   setShowPassword(false);
                 }}>
                   Cancelar
                 </Button>
                 <Button 
+                  className="w-[60%] rounded-xl"
                   onClick={handleCreateOrg}
                   disabled={!newOrg.name || !newOrg.adminEmail || !newOrg.adminName || !newOrg.adminPassword || newOrg.adminPassword.length < 6 || createOrganization.isPending}
                 >
                   {createOrganization.isPending ? 'Criando...' : 'Criar Organização'}
                 </Button>
-              </DialogFooter>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

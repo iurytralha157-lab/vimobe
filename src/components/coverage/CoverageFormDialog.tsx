@@ -117,7 +117,7 @@ export function CoverageFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[90%] sm:max-w-[500px] sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle>
             {area ? 'Editar Localidade' : 'Nova Localidade'}
@@ -288,17 +288,18 @@ export function CoverageFormDialog({
             </Label>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button type="button" variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button 
               type="submit" 
+              className="w-[60%] rounded-xl"
               disabled={isLoading || (mode === 'batch' && batchNeighborhoods.length === 0)}
             >
               {isLoading ? 'Salvando...' : area ? 'Salvar' : 'Adicionar'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

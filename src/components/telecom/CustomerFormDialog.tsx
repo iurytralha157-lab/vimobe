@@ -176,7 +176,7 @@ export function CustomerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] h-[90vh] max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="w-[90%] sm:max-w-[650px] sm:w-full rounded-lg h-[90vh] max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{customer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
           <DialogDescription>
@@ -626,14 +626,14 @@ export function CustomerFormDialog({
           </form>
         </ScrollArea>
 
-        <DialogFooter className="flex-shrink-0 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex gap-2 pt-4 flex-shrink-0 border-t">
+          <Button type="button" variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button type="submit" form="customer-form" disabled={isLoading}>
+          <Button type="submit" form="customer-form" className="w-[60%] rounded-xl" disabled={isLoading}>
             {isLoading ? 'Salvando...' : customer ? 'Salvar' : 'Cadastrar'}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

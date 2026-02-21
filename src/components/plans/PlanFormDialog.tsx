@@ -95,7 +95,7 @@ export function PlanFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[90%] sm:max-w-[500px] sm:w-full rounded-lg">
         <DialogHeader>
           <DialogTitle>{plan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
           <DialogDescription>
@@ -247,14 +247,14 @@ export function PlanFormDialog({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button type="button" variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" className="w-[60%] rounded-xl" disabled={isLoading}>
               {isLoading ? 'Salvando...' : plan ? 'Salvar' : 'Criar'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
