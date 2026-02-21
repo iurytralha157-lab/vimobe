@@ -61,6 +61,8 @@ export function CreateLeadDialog({
   const submitLabel = isTelecom ? 'Criar Cliente' : 'Criar Lead';
 
   // Form state
+  const [activeTab, setActiveTab] = useState('basic');
+
   const [formData, setFormData] = useState({
     // Basic
     name: '',
@@ -115,6 +117,7 @@ export function CreateLeadDialog({
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
+      setActiveTab('basic');
       const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
       setFormData({
         name: '',
@@ -220,7 +223,7 @@ export function CreateLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-w-lg p-0 flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden mx-[5%] sm:mx-auto rounded-lg`}>
+      <DialogContent className={`max-w-lg p-0 flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden w-[90%] sm:w-full rounded-lg`}>
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isTelecom && <UserCheck className="h-5 w-5 text-primary" />}
@@ -231,7 +234,7 @@ export function CreateLeadDialog({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <ScrollArea className="flex-1 min-h-0">
             <div className="px-6 pb-4">
-              <Tabs defaultValue="basic" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-4">
                   <TabsTrigger value="basic" className="text-xs">Básico</TabsTrigger>
                   <TabsTrigger value="profile" className="text-xs">
@@ -830,14 +833,27 @@ export function CreateLeadDialog({
             </div>
           </ScrollArea>
 
-          <div className="flex justify-end gap-2 px-6 py-4 border-t bg-background flex-shrink-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 px-6 py-4 border-t bg-background flex-shrink-0">
+            <Button type="button" variant="outline" className="w-[40%]" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createLead.isPending || upsertTelecomCustomer.isPending || !formData.name.trim()}>
-              {(createLead.isPending || upsertTelecomCustomer.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {submitLabel}
-            </Button>
+            {activeTab !== 'management' ? (
+              <Button
+                type="button"
+                className="w-[60%]"
+                onClick={() => {
+                  if (activeTab === 'basic') setActiveTab('profile');
+                  else if (activeTab === 'profile') setActiveTab('management');
+                }}
+              >
+                Avançar
+              </Button>
+            ) : (
+              <Button type="submit" className="w-[60%]" disabled={createLead.isPending || upsertTelecomCustomer.isPending || !formData.name.trim()}>
+                {(createLead.isPending || upsertTelecomCustomer.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {submitLabel}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
