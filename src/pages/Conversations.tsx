@@ -249,10 +249,10 @@ export default function Conversations() {
   // Mobile: Show either conversation list OR chat (not both)
   if (isMobile) {
     return <AppLayout title="Conversas">
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
+        <div className="flex flex-col h-[calc(100vh-8rem)] -mb-20 bg-background overflow-hidden">
           {selectedConversation ?
         // Mobile Chat View
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-hidden">
               {/* Mobile Chat Header */}
               <header className="h-14 px-3 border-b flex items-center justify-between bg-card shrink-0">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
