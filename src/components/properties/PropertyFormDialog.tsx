@@ -68,7 +68,7 @@ interface PropertyFormDialogProps {
   onOpenChange: (open: boolean) => void;
   editingProperty: Property | null;
   formData: FormData;
-  setFormData: (data: FormData) => void;
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
   onSubmit: (e: React.FormEvent) => void;
   propertyTypes: string[];
   features: { id: string; name: string }[];
@@ -488,7 +488,7 @@ export function PropertyFormDialog({
               title="Detalhes Extras do Imóvel"
               options={features.length > 0 ? features.map(f => f.name) : defaultFeatures}
               selected={formData.detalhes_extras}
-              onChange={(selected) => setFormData({ ...formData, detalhes_extras: selected })}
+              onChange={(selected) => setFormData(prev => ({ ...prev, detalhes_extras: selected }))}
               allowAdd
               onAddNew={onAddFeature}
               isLoading={loadingFeatures}
@@ -500,7 +500,7 @@ export function PropertyFormDialog({
               title="Proximidades"
               options={proximities.length > 0 ? proximities.map(p => p.name) : defaultProximities}
               selected={formData.proximidades}
-              onChange={(selected) => setFormData({ ...formData, proximidades: selected })}
+              onChange={(selected) => setFormData(prev => ({ ...prev, proximidades: selected }))}
               allowAdd
               onAddNew={onAddProximity}
               isLoading={loadingProximities}
