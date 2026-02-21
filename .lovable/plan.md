@@ -1,64 +1,46 @@
 
-## Correção do Espaçamento Interno dos Cards — AccountTab
+## Remover limitações horizontais redundantes da página "Meu Site"
 
 ### Problema
 
-O `CardContent` global em `card.tsx` tem `px-0` como padrão, zerando o padding horizontal. Como os cards de "Meu Perfil" e "Dados da Empresa" no `AccountTab.tsx` não passam padding explícito, o conteúdo fica colado nas bordas laterais dos cards.
+A página `SiteSettings.tsx` tem um wrapper `<div className="p-6 max-w-5xl mx-auto">` na linha 196 que adiciona:
+- `max-w-5xl mx-auto` — limita e centraliza o conteúdo manualmente
+- `p-6` — padding extra que duplica o já fornecido pelo `AppLayout`
 
-O `CardHeader` também herda padding inconsistente — o título fica sem alinhamento com o conteúdo interno.
-
-### Causa raiz
-
-```tsx
-// card.tsx — padrão global
-const CardContent = ... className={cn("p-6 pt-0 px-0", className)}
-//                                              ^^^^ zera padding horizontal
-
-// AccountTab.tsx — não passa px
-<CardContent className="space-y-6">  // herda px-0 → conteúdo colado na borda
-```
+O `AppLayout` já fornece `px-4 md:px-6 py-3 md:py-4` para todas as páginas, tornando essas classes redundantes.
 
 ### Correção
 
-**Arquivo: `src/components/settings/AccountTab.tsx`**
+**Arquivo: `src/pages/SiteSettings.tsx`**
 
-Adicionar `px-4 md:px-5` nos dois `CardContent` e `px-4 md:px-5 pt-4 pb-2` nos dois `CardHeader`:
-
-**Card de Perfil (linha ~275):**
+Linha 196 — trocar:
 ```tsx
-<CardHeader className="px-4 md:px-5 pt-5 pb-2">
-  ...
-</CardHeader>
-<CardContent className="space-y-6 px-4 md:px-5 pb-5">
+<div className="p-6 max-w-5xl mx-auto">
 ```
-
-**Card de Organização (linha ~454):**
+Por:
 ```tsx
-<CardHeader className="px-4 md:px-5 pt-5 pb-2">
-  ...
-</CardHeader>
-<CardContent className="space-y-6 px-4 md:px-5 pb-5">
+<div className="space-y-6">
 ```
 
-### Resultado esperado
+Também passar o título para o `AppLayout` (linha 195) e remover o header manual (linhas 197-232):
+```tsx
+<AppLayout title="Configurações do Site">
+  <div className="space-y-6">
+    {/* Botões de ação (Preview, Copiar Link, Visitar Site) */}
+    <div className="flex items-center justify-end gap-2">
+      ...botões existentes...
+    </div>
+    {/* Restante do conteúdo sem mudanças */}
+  </div>
+</AppLayout>
+```
 
-```
-┌──────────────────────────────────────┐
-│    Meu Perfil                        │  ← título com padding lateral
-│    Gerencie suas informações...      │
-│                                      │
-│    [Avatar]  Fernando Silva          │  ← conteúdo com respiro
-│              email@...               │
-│                                      │
-│    ⊙ Português (Brasil)          ▾  │  ← inputs alinhados
-│                                      │
-│    Nome          CPF                 │
-│    [__________] [__________]         │
-└──────────────────────────────────────┘
-```
+### Resultado
+
+A página seguirá o mesmo padrão de largura e espaçamento de todas as outras páginas do sistema, sem limitação horizontal própria.
 
 ### Arquivo alterado
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/settings/AccountTab.tsx` | `px-4 md:px-5` nos `CardContent` e `CardHeader` dos cards de Perfil e Organização |
+| `src/pages/SiteSettings.tsx` | Remover `p-6 max-w-5xl mx-auto`; usar `AppLayout title`; remover header manual |
