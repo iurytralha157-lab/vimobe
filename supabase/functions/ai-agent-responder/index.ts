@@ -13,8 +13,7 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -223,23 +222,18 @@ Seja conciso nas respostas. Se o cliente quiser falar com um humano, informe que
       .filter(Boolean)
       .join("\n\n");
 
-    // 9. Call AI provider
+    // 9. Call Lovable AI Gateway
     let aiResponse = "";
-    const provider = agent.ai_provider || "openai";
 
-    if (provider === "gemini" && GEMINI_API_KEY) {
-      aiResponse = await callGemini(GEMINI_API_KEY, fullSystemPrompt, chatHistory, message);
-    } else if (OPENAI_API_KEY) {
-      aiResponse = await callOpenAI(OPENAI_API_KEY, fullSystemPrompt, chatHistory, message);
-    } else if (GEMINI_API_KEY) {
-      aiResponse = await callGemini(GEMINI_API_KEY, fullSystemPrompt, chatHistory, message);
-    } else {
-      console.error("[ai-agent-responder] No AI API key configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("[ai-agent-responder] LOVABLE_API_KEY not configured");
       return new Response(
-        JSON.stringify({ success: false, error: "No AI API key configured" }),
+        JSON.stringify({ success: false, error: "LOVABLE_API_KEY not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    aiResponse = await callLovableAI(LOVABLE_API_KEY, fullSystemPrompt, chatHistory, message);
 
     if (!aiResponse) {
       console.error("[ai-agent-responder] Empty AI response");
@@ -286,7 +280,7 @@ Seja conciso nas respostas. Se o cliente quiser falar com um humano, informe que
   }
 });
 
-async function callOpenAI(
+async function callLovableAI(
   apiKey: string,
   systemPrompt: string,
   history: { role: string; content: string }[],
@@ -298,63 +292,33 @@ async function callOpenAI(
     { role: "user", content: userMessage },
   ];
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "google/gemini-3-flash-preview",
       messages,
       max_tokens: 500,
       temperature: 0.7,
     }),
   });
 
+  if (response.status === 429) {
+    throw new Error("Rate limit exceeded - too many requests");
+  }
+  if (response.status === 402) {
+    throw new Error("Payment required - AI credits exhausted");
+  }
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} - ${err}`);
+    throw new Error(`Lovable AI error: ${response.status} - ${err}`);
   }
 
   const data = await response.json();
   return data.choices?.[0]?.message?.content || "";
-}
-
-async function callGemini(
-  apiKey: string,
-  systemPrompt: string,
-  history: { role: string; content: string }[],
-  userMessage: string
-): Promise<string> {
-  const contents = [
-    ...history.map((msg) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }],
-    })),
-    { role: "user", parts: [{ text: userMessage }] },
-  ];
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${err}`);
-  }
-
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
 async function insertOutboxMessage(
