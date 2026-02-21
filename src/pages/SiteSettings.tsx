@@ -192,16 +192,9 @@ Registro A (www):
   const isAdmin = profile?.role === 'admin';
 
   return (
-    <AppLayout>
-      <div className="p-6 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Configurações do Site</h1>
-            <p className="text-muted-foreground">
-              Configure seu site imobiliário público
-            </p>
-          </div>
-          <div className="flex gap-2">
+    <AppLayout title="Configurações do Site">
+      <div className="space-y-6">
+        <div className="flex items-center justify-end gap-2">
             {site && (
               <a 
                 href={`/site/preview?org=${profile?.organization_id}`} 
@@ -228,7 +221,6 @@ Registro A (www):
                 </a>
               </>
             )}
-          </div>
         </div>
 
         {!site && (
