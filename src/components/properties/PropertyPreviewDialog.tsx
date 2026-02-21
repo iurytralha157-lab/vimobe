@@ -438,6 +438,40 @@ export function PropertyPreviewDialog({
               </div>
             )}
 
+            {/* Detalhes Extras */}
+            {(property as any).detalhes_extras && (property as any).detalhes_extras.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Detalhes Extras
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {((property as any).detalhes_extras as string[]).map((item, index) => (
+                    <div key={index} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-sm">
+                      <Check className="h-3 w-3 text-primary" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Proximidades */}
+            {(property as any).proximidades && (property as any).proximidades.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Proximidades
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {((property as any).proximidades as string[]).map((item, index) => (
+                    <div key={index} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Video Link */}
             {property.video_imovel && (
               <div className="space-y-3">
