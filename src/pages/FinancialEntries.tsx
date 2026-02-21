@@ -432,7 +432,7 @@ export default function FinancialEntries() {
                 </SheetDescription>
               </SheetHeader>
               <ScrollArea className="h-[calc(85vh-100px)]">
-                <div className="px-1">
+                <div className="px-4">
                   <FinancialEntryForm
                     entry={editingEntry}
                     onSuccess={handleFormSuccess}
