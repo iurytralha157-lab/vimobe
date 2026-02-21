@@ -1,129 +1,95 @@
 
 
-## Padronizar Dialogs do Projeto
+## Migrar ai-agent-responder para Lovable AI Gateway
 
-Aplicar o padrao visual consistente em todos os dialogs que ainda nao foram atualizados: `w-[90%] sm:w-full rounded-lg` no DialogContent e botoes com `rounded-xl` e proporcao 40/60 (Cancelar/Acao).
+Substituir as chamadas diretas a OpenAI e Gemini por uma unica chamada ao Lovable AI Gateway, usando a `LOVABLE_API_KEY` ja configurada.
 
----
+### O que muda
 
-### Arquivos a alterar (21 dialogs em 17 arquivos)
+- **Remove**: funcoes `callOpenAI()` e `callGemini()` (cerca de 70 linhas)
+- **Remove**: leitura de `OPENAI_API_KEY` e `GEMINI_API_KEY`
+- **Remove**: logica de selecao de provider (`agent.ai_provider`)
+- **Adiciona**: funcao unica `callLovableAI()` que chama `https://ai.gateway.lovable.dev/v1/chat/completions`
+- **Modelo**: `google/gemini-3-flash-preview` (rapido e economico)
+- **Tratamento de erros**: captura erros 429 (rate limit) e 402 (creditos esgotados) com logs claros
 
-**Grupo 1 - Dialogs de formulario com 2 botoes (Cancelar + Acao) - padrao 40/60:**
+### Logica preservada (sem alteracao)
 
-1. **`src/components/schedule/EventForm.tsx`** (linha 148)
-   - DialogContent: `sm:max-w-[500px]` -> `w-[90%] sm:max-w-[500px] sm:w-full rounded-lg`
-   - Botoes Cancelar/Salvar (linhas 334-341): aplicar `w-[40%] rounded-xl` / `w-[60%] rounded-xl`
+- Busca do agente ativo por sessao/organizacao
+- Verificacao de handoff (palavras-chave + limite de mensagens)
+- Historico de mensagens (ultimas 20)
+- Contexto do lead (nome, telefone, cidade, etc.)
+- Catalogo de imoveis e planos de servico
+- System prompt customizavel por agente
+- Insercao na outbox + disparo do message-sender
+- Rastreamento em ai_agent_conversations
 
-2. **`src/components/plans/PlanFormDialog.tsx`** (linha 98)
-   - DialogContent: `sm:max-w-[500px]` -> `w-[90%] sm:max-w-[500px] sm:w-full rounded-lg`
-   - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
+### Detalhes tecnicos
 
-3. **`src/components/coverage/CoverageFormDialog.tsx`** (linha 120)
-   - DialogContent: `sm:max-w-[500px]` -> `w-[90%] sm:max-w-[500px] sm:w-full rounded-lg`
-   - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
+**Arquivo:** `supabase/functions/ai-agent-responder/index.ts`
 
-4. **`src/components/telecom/CustomerFormDialog.tsx`** (linha 179)
-   - DialogContent: adicionar `w-[90%] sm:w-full rounded-lg`
-   - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
+1. **Linhas 16-17** - Remover leitura de `OPENAI_API_KEY` e `GEMINI_API_KEY`, adicionar `LOVABLE_API_KEY`
 
-5. **`src/components/leads/TaskOutcomeDialog.tsx`** (linha 123)
-   - DialogContent: `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-   - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
+2. **Linhas 226-242** - Substituir bloco de selecao de provider por chamada unica:
+```typescript
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+if (!LOVABLE_API_KEY) {
+  return new Response(
+    JSON.stringify({ success: false, error: "LOVABLE_API_KEY not configured" }),
+    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+aiResponse = await callLovableAI(LOVABLE_API_KEY, fullSystemPrompt, chatHistory, message);
+```
 
-6. **`src/components/conversations/CreateLeadDialog.tsx`** (linha 136)
-   - DialogContent: `sm:max-w-[500px]` -> `w-[90%] sm:max-w-[500px] sm:w-full rounded-lg`
-   - Botoes (linhas 267-281): aplicar `w-[40%] rounded-xl` / `w-[60%] rounded-xl`
+3. **Linhas 289-358** - Remover `callOpenAI()` e `callGemini()`, adicionar:
+```typescript
+async function callLovableAI(
+  apiKey: string,
+  systemPrompt: string,
+  history: { role: string; content: string }[],
+  userMessage: string
+): Promise<string> {
+  const messages = [
+    { role: "system", content: systemPrompt },
+    ...history,
+    { role: "user", content: userMessage },
+  ];
 
-7. **`src/components/integrations/MetaIntegrationSettings.tsx`** - 2 dialogs
-   - Dialog PageSelector (linha 389): `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-   - Dialog Edit (linha 492): `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-   - Ambos DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages,
+      max_tokens: 500,
+      temperature: 0.7,
+    }),
+  });
 
-8. **`src/components/integrations/MetaFormConfigDialog.tsx`** (linha 138)
-   - DialogContent: `max-w-2xl max-h-[90vh]` -> `w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh]`
-   - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
+  if (response.status === 429) {
+    throw new Error("Rate limit exceeded - too many requests");
+  }
+  if (response.status === 402) {
+    throw new Error("Payment required - AI credits exhausted");
+  }
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Lovable AI error: ${response.status} - ${err}`);
+  }
 
-9. **`src/components/whatsapp/QuickMessageTemplates.tsx`** (linha ~192)
-   - DialogContent: adicionar `w-[90%] sm:w-full rounded-lg`
-   - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+```
 
-10. **`src/components/crm-management/TagsTab.tsx`** (linha 192)
-    - DialogContent: `max-h-[90vh] overflow-y-auto` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg max-h-[90vh] overflow-y-auto`
-    - Botoes (linhas 242-252): aplicar `w-[40%] rounded-xl` / `w-[60%] rounded-xl`
+### Resultado
 
-11. **`src/components/help/FeatureRequestDialog.tsx`** (linha 85)
-    - DialogContent: `max-w-lg` -> `w-[90%] sm:max-w-lg sm:w-full rounded-lg`
-    - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
-
-12. **`src/components/round-robin/RuleEditor.tsx`** (linha 186)
-    - DialogContent: `max-w-2xl max-h-[90vh] overflow-y-auto` -> `w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-y-auto`
-    - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
-
-13. **`src/components/round-robin/DistributionQueueEditor.tsx`** (linha 630)
-    - DialogContent: `max-w-2xl max-h-[90vh] overflow-y-auto` -> `w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-y-auto`
-    - Botoes Cancelar/Salvar: aplicar `w-[40%] rounded-xl` / `w-[60%] rounded-xl`
-
-14. **`src/components/settings/RolesTab.tsx`** (linha 254)
-    - DialogContent: `max-w-2xl max-h-[90vh] overflow-hidden flex flex-col` -> `w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-hidden flex flex-col`
-    - DialogFooter -> `div flex gap-2 pt-4 border-t`, botoes 40/60 com `rounded-xl`
-
-15. **`src/pages/Pipelines.tsx`** - New Stage Dialog (linha 1213)
-    - DialogContent: `max-w-sm` -> `w-[90%] sm:max-w-sm sm:w-full rounded-lg`
-    - Botoes (linhas 1262-1270): aplicar `w-[40%] rounded-xl` / `w-[60%] rounded-xl`
-
-16. **`src/pages/admin/AdminOrganizations.tsx`** (linha 145)
-    - DialogContent: `max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto` -> `w-[90%] sm:max-w-lg sm:w-full rounded-lg max-h-[90vh] overflow-y-auto`
-    - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
-
-17. **`src/pages/admin/AdminOrganizationDetail.tsx`** (linha 472)
-    - DialogContent: `max-w-[95vw] sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-    - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
-
-18. **`src/pages/admin/AdminHelpEditor.tsx`** (linha 293)
-    - DialogContent: `max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto` -> `w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-y-auto`
-    - DialogFooter -> `div flex gap-2 pt-4`, botoes 40/60 com `rounded-xl`
-
-**Grupo 2 - Dialogs com botao unico (Fechar/Entendi):**
-
-19. **`src/pages/WhatsAppSettings.tsx`**
-    - QR Dialog (linha 481): `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-    - Access Dialog (linha 615): `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`, botao Fechar `w-full rounded-xl`
-
-20. **`src/components/settings/WhatsAppTab.tsx`** (linha 404)
-    - DialogContent: `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-
-21. **`src/components/pwa/InstallPrompt.tsx`** (linha 74)
-    - DialogContent: `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-    - Botao Entendi: `w-full rounded-xl`
-
-**Grupo 3 - Dialogs com botao unico ou layout especial (Fechar/visualizacao):**
-
-22. **`src/components/contacts/ImportContactsDialog.tsx`** (linha 291)
-    - DialogContent: `sm:max-w-lg` -> `w-[90%] sm:max-w-lg sm:w-full rounded-lg`
-
-23. **`src/components/public/ContactFormDialog.tsx`** (linha 133)
-    - DialogContent: `sm:max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-
-24. **`src/pages/admin/AdminAudit.tsx`** (linha 242)
-    - DialogContent: `max-w-2xl` -> `w-[90%] sm:max-w-2xl sm:w-full rounded-lg`
-
-25. **`src/components/leads/LeadDetailDialog.tsx`** - Roteiro Dialog (linha 2171)
-    - DialogContent: `max-w-md` -> `w-[90%] sm:max-w-md sm:w-full rounded-lg`
-
-**Nao alterar (layouts especiais que ja funcionam bem):**
-- `LeadDetailDialog` principal (max-w-6xl w-[95vw]) - layout complexo de detalhe
-- `PropertyGallery` lightbox (95vw/95vh) - galeria fullscreen
-- `MediaViewer` (95vw/95vh) - viewer fullscreen
-- `PropertyPreviewDialog` (max-w-5xl) - preview grande
-- `PropertyFormDialog` - ja atualizado
-- Dialogs ja atualizados com w-[90%] rounded-lg
-
----
-
-### Resumo da padronizacao
-
-Para cada dialog:
-- **DialogContent**: adicionar `w-[90%] sm:w-full rounded-lg`
-- **DialogFooter com 2 botoes**: trocar por `<div className="flex gap-2 pt-4">` com botoes `w-[40%] rounded-xl` (Cancelar) e `w-[60%] rounded-xl` (Acao)
-- **DialogFooter com 1 botao**: trocar por `<div className="flex gap-2 pt-4">` com botao `w-full rounded-xl`
+- **1 unica API** em vez de 2 (OpenAI + Gemini)
+- **0 chaves externas** necessarias (usa LOVABLE_API_KEY ja existente)
+- **Codigo ~40 linhas menor**
+- Campo `ai_provider` na tabela `ai_agents` deixa de ser usado (pode ser ignorado, sem necessidade de migracao)
 
