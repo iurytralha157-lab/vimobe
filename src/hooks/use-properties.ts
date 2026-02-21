@@ -52,6 +52,7 @@ export function useProperty(id: string | null) {
       return data as Property;
     },
     enabled: !!id,
+    staleTime: 0,
   });
 }
 
