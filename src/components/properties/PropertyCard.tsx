@@ -194,7 +194,7 @@ export function PropertyCard({
               <span>{property.vagas}</span>
             </div>
           )}
-          {property.area_util && (
+          {property.area_util != null && property.area_util > 0 && (
             <div className="flex items-center gap-1">
               <Ruler className="h-3 w-3" />
               <span>{property.area_util}m²</span>
