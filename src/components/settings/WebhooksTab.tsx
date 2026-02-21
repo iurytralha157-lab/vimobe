@@ -206,7 +206,7 @@ export function WebhooksTab() {
             Novo Webhook
           </Button>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="px-4 md:px-6 pb-4 space-y-4">
           {webhooks.length === 0 ? (
             <div className="text-center py-12">
               <Webhook className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
@@ -391,7 +391,7 @@ export function WebhooksTab() {
             Documentação
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="px-4 md:px-6 pb-5 space-y-4">
           <div className="space-y-2">
             <h4 className="font-medium">Como usar webhooks</h4>
             <p className="text-sm text-muted-foreground">
