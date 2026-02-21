@@ -95,9 +95,12 @@ export function usePublicProperties(organizationId: string | null, filters?: {
   limit?: number;
   search?: string;
   tipo?: string;
+  finalidade?: string;
   minPrice?: number;
   maxPrice?: number;
   quartos?: number;
+  banheiros?: number;
+  vagas?: number;
   cidade?: string;
 }) {
   return useQuery({
@@ -114,9 +117,12 @@ export function usePublicProperties(organizationId: string | null, filters?: {
 
       if (filters?.search) params.append('search', filters.search);
       if (filters?.tipo) params.append('tipo', filters.tipo);
+      if (filters?.finalidade) params.append('finalidade', filters.finalidade);
       if (filters?.minPrice) params.append('min_price', String(filters.minPrice));
       if (filters?.maxPrice) params.append('max_price', String(filters.maxPrice));
       if (filters?.quartos) params.append('quartos', String(filters.quartos));
+      if (filters?.banheiros) params.append('banheiros', String(filters.banheiros));
+      if (filters?.vagas) params.append('vagas', String(filters.vagas));
       if (filters?.cidade) params.append('cidade', filters.cidade);
 
       const { data, error } = await supabase.functions.invoke('public-site-data', {

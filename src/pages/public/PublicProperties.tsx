@@ -83,8 +83,11 @@ export default function PublicProperties() {
     limit: 12,
     search: filters.search,
     tipo: filters.tipo,
+    finalidade: filters.finalidade || undefined,
     cidade: filters.cidade,
     quartos: filters.quartos ? parseInt(filters.quartos) : undefined,
+    banheiros: filters.banheiros ? parseInt(filters.banheiros) : undefined,
+    vagas: filters.vagas ? parseInt(filters.vagas) : undefined,
     minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
     maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
   });
