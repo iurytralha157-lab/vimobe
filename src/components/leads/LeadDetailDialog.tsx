@@ -2278,7 +2278,7 @@ export function LeadDetailDialog({
     return (
       <>
         <Drawer open={!!lead} onOpenChange={() => onClose()} dismissible={!isEditingContact}>
-          <DrawerContent className="h-[95vh] max-h-[95vh]" showHandle={!isEditingContact}>
+          <DrawerContent className="h-[95vh] max-h-[95vh] w-[95%] mx-auto rounded-t-xl" showHandle={!isEditingContact}>
             {/* Inline JSX instead of <MobileContent /> to prevent re-mounting */}
             {MobileContent()}
           </DrawerContent>
