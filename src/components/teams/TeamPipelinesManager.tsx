@@ -272,7 +272,7 @@ export function TeamPipelinesManager() {
 
       {/* Pipeline Assignment Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -327,11 +327,11 @@ export function TeamPipelinesManager() {
             </div>
           </ScrollArea>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" className="w-full rounded-xl" onClick={() => setDialogOpen(false)}>
               Fechar
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
