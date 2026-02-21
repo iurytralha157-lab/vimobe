@@ -25,6 +25,8 @@ interface PublicPropertyCardProps {
     [key: string]: any;
   };
   primaryColor?: string;
+  isFavorited?: boolean;
+  onToggleFavorite?: (id: string) => void;
   watermarkConfig?: {
     enabled: boolean;
     logoUrl?: string;
@@ -34,7 +36,7 @@ interface PublicPropertyCardProps {
   } | null;
 }
 
-export function PublicPropertyCard({ property, primaryColor = '#C4A052', watermarkConfig }: PublicPropertyCardProps) {
+export function PublicPropertyCard({ property, primaryColor = '#C4A052', isFavorited = false, onToggleFavorite, watermarkConfig }: PublicPropertyCardProps) {
   const formatPrice = (value: number | null | undefined) => {
     if (!value) return null;
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -72,9 +74,15 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
         {/* Favorite */}
         <button 
           className="absolute top-3 right-3 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all group/heart"
-          onClick={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleFavorite?.(property.id);
+          }}
         >
-          <Heart className="w-3.5 h-3.5 text-gray-500 group-hover/heart:text-red-400 transition-colors" />
+          <Heart 
+            className={`w-3.5 h-3.5 transition-colors ${isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-500 group-hover/heart:text-red-400'}`}
+          />
         </button>
 
         {/* Watermark */}

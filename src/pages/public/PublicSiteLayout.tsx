@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, MessageCircle, Heart } from "lucide-react";
+import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -11,6 +12,7 @@ export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { count: favCount } = usePublicFavorites();
   const location = useLocation();
 
   // Get colors from config with fallbacks
@@ -156,9 +158,17 @@ export default function PublicSiteLayout() {
 
               {/* Desktop CTA */}
               <div className="hidden lg:flex items-center gap-4">
-                <button className="text-white/80 hover:text-white transition-colors">
+                <Link to={getHref("favoritos")} className="relative text-white/80 hover:text-white transition-colors">
                   <Heart className="w-5 h-5" />
-                </button>
+                  {favCount > 0 && (
+                    <span 
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      {favCount}
+                    </span>
+                  )}
+                </Link>
                 <Link 
                   to={getHref("contato")}
                   className="px-6 py-2.5 rounded-full text-sm font-light tracking-wide transition-colors hover:opacity-90"

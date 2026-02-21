@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { usePublicContext } from "./usePublicContext";
+import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { cn } from "@/lib/utils";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
+  const { isFavorite, toggleFavorite } = usePublicFavorites();
   const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
   const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
   const allProperties = allPropertiesData?.properties || [];
@@ -177,6 +179,8 @@ export default function PublicHome() {
                   <PublicPropertyCard
                     property={property}
                     primaryColor={primaryColor}
+                    isFavorited={isFavorite(property.id)}
+                    onToggleFavorite={toggleFavorite}
                     watermarkConfig={siteConfig?.watermark_enabled ? {
                       enabled: true,
                       logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,
@@ -238,6 +242,8 @@ export default function PublicHome() {
                   <PublicPropertyCard
                     property={property}
                     primaryColor={primaryColor}
+                    isFavorited={isFavorite(property.id)}
+                    onToggleFavorite={toggleFavorite}
                     watermarkConfig={siteConfig?.watermark_enabled ? {
                       enabled: true,
                       logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,

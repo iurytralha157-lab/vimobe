@@ -10,6 +10,7 @@ import PublicProperties from './PublicProperties';
 import PublicPropertyDetail from './PublicPropertyDetail';
 import PublicAbout from './PublicAbout';
 import PublicContact from './PublicContact';
+import PublicFavorites from './PublicFavorites';
 
 
 function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: string }) {
@@ -150,6 +151,7 @@ function PublishedSiteRoutes({ slug }: { slug: string }) {
           <Route path="imovel/:code" element={<PublicPropertyDetail />} />
           <Route path="sobre" element={<PublicAbout />} />
           <Route path="contato" element={<PublicContact />} />
+          <Route path="favoritos" element={<PublicFavorites />} />
           
         </Route>
         <Route path="*" element={<Navigate to={`/sites/${slug}`} replace />} />
