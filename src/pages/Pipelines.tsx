@@ -42,6 +42,12 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { SlidersHorizontal } from 'lucide-react';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -69,6 +75,7 @@ import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { useTags } from '@/hooks/use-tags';
 import { useAssignLeadRoundRobin } from '@/hooks/use-assign-lead-roundrobin';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 
 import { useHasPermission } from '@/hooks/use-organization-roles';
@@ -172,7 +179,7 @@ export default function Pipelines() {
   const assignLeadRoundRobin = useAssignLeadRoundRobin();
   const canEditPipeline = useCanEditCadences();
   const { recordFirstResponse } = useRecordFirstResponseOnAction();
-  
+  const isMobile = useIsMobile();
   // Compute VGV directly from filteredStages so the badge always matches visible leads
   // (This must be defined after filteredStages — see below)
   
@@ -717,18 +724,18 @@ export default function Pipelines() {
           
           {/* Filters Row */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            {/* Search */}
-            <div className="relative flex-shrink-0">
+            {/* Search - hidden on mobile, inside popover */}
+            <div className="relative flex-shrink-0 hidden sm:block">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Buscar..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 w-28 sm:w-40 pl-8 text-xs"
+                className="h-8 w-40 pl-8 text-xs"
               />
             </div>
 
-            {/* Date Filter */}
+            {/* Date Filter - always visible */}
             <DateFilterPopover
               datePreset={datePreset}
               onDatePresetChange={setDatePreset}
@@ -737,85 +744,209 @@ export default function Pipelines() {
               triggerClassName="h-8 w-auto min-w-[100px] sm:min-w-[130px] text-xs justify-start flex-shrink-0"
             />
 
-            {/* Responsible Filter */}
-            {(isAdmin || hasLeadViewAll) ? (
-              <Select value={filterUser} onValueChange={setFilterUser}>
-                <SelectTrigger className={cn(
-                  "h-8 w-auto min-w-[90px] sm:min-w-[110px] text-xs flex-shrink-0",
-                  filterUser && filterUser !== 'all' && "border-primary text-primary"
-                )}>
-                  <Filter className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                  <SelectValue placeholder="Resp." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8 flex-shrink-0">
-                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs truncate max-w-[60px]">{profile?.name}</span>
-              </div>
+            {/* Mobile: Filters Popover */}
+            {isMobile && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 px-2.5 text-xs gap-1.5 flex-shrink-0",
+                      ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && "border-primary text-primary"
+                    )}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filtros
+                    {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && (
+                      <Badge variant="default" className="h-4 w-4 p-0 flex items-center justify-center text-[10px] ml-0.5">
+                        •
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-64 p-3">
+                  <div className="space-y-3">
+                    {/* Search */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Buscar</label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="h-9 w-full pl-8 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Responsible */}
+                    {(isAdmin || hasLeadViewAll) && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Responsável</label>
+                        <Select value={filterUser} onValueChange={setFilterUser}>
+                          <SelectTrigger className={cn(
+                            "h-9 w-full text-xs",
+                            filterUser && filterUser !== 'all' && "border-primary text-primary"
+                          )}>
+                            <Filter className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                            <SelectValue placeholder="Resp." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {users.map(user => (
+                              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Tags</label>
+                      <Select value={filterTag} onValueChange={setFilterTag}>
+                        <SelectTrigger className={cn(
+                          "h-9 w-full text-xs",
+                          filterTag && filterTag !== 'all' && "border-primary text-primary"
+                        )}>
+                          <Tags className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                          <SelectValue placeholder="Tags" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {allTags.map(tag => (
+                            <SelectItem key={tag.id} value={tag.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                                {tag.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Deal Status */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Status</label>
+                      <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                        <SelectTrigger className={cn(
+                          "h-9 w-full text-xs",
+                          filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
+                        )}>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="open">
+                            <span className="flex items-center gap-2">
+                              <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
+                              Aberto
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="won">
+                            <span className="flex items-center gap-2">
+                              <Trophy className="h-3.5 w-3.5 text-emerald-600" />
+                              Ganho
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="lost">
+                            <span className="flex items-center gap-2">
+                              <XCircle className="h-3.5 w-3.5 text-red-600" />
+                              Perdido
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
 
-            {/* Tag Filter */}
-            <Select value={filterTag} onValueChange={setFilterTag}>
-              <SelectTrigger className={cn(
-                "h-8 w-auto min-w-[80px] sm:min-w-[100px] text-xs flex-shrink-0",
-                filterTag && filterTag !== 'all' && "border-primary text-primary"
-              )}>
-                <Tags className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                <SelectValue placeholder="Tags" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {allTags.map(tag => (
-                  <SelectItem key={tag.id} value={tag.id}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-2.5 h-2.5 rounded-full" 
-                        style={{ backgroundColor: tag.color }} 
-                      />
-                      {tag.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Desktop: inline filters */}
+            {!isMobile && (
+              <>
+                {/* Responsible Filter */}
+                {(isAdmin || hasLeadViewAll) ? (
+                  <Select value={filterUser} onValueChange={setFilterUser}>
+                    <SelectTrigger className={cn(
+                      "h-8 w-auto min-w-[110px] text-xs flex-shrink-0",
+                      filterUser && filterUser !== 'all' && "border-primary text-primary"
+                    )}>
+                      <Filter className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                      <SelectValue placeholder="Resp." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8 flex-shrink-0">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs truncate max-w-[60px]">{profile?.name}</span>
+                  </div>
+                )}
 
-            {/* Deal Status Filter - Hidden on small mobile */}
-            <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-              <SelectTrigger className={cn(
-                "h-8 w-auto min-w-[80px] sm:min-w-[100px] text-xs flex-shrink-0 hidden xs:flex",
-                filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
-              )}>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="open">
-                  <span className="flex items-center gap-2">
-                    <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
-                    Aberto
-                  </span>
-                </SelectItem>
-                <SelectItem value="won">
-                  <span className="flex items-center gap-2">
-                    <Trophy className="h-3.5 w-3.5 text-emerald-600" />
-                    Ganho
-                  </span>
-                </SelectItem>
-                <SelectItem value="lost">
-                  <span className="flex items-center gap-2">
-                    <XCircle className="h-3.5 w-3.5 text-red-600" />
-                    Perdido
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                {/* Tag Filter */}
+                <Select value={filterTag} onValueChange={setFilterTag}>
+                  <SelectTrigger className={cn(
+                    "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                    filterTag && filterTag !== 'all' && "border-primary text-primary"
+                  )}>
+                    <Tags className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                    <SelectValue placeholder="Tags" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {allTags.map(tag => (
+                      <SelectItem key={tag.id} value={tag.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                          {tag.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Deal Status Filter */}
+                <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                  <SelectTrigger className={cn(
+                    "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                    filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
+                  )}>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="open">
+                      <span className="flex items-center gap-2">
+                        <CircleDot className="h-3.5 w-3.5 text-muted-foreground" />
+                        Aberto
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="won">
+                      <span className="flex items-center gap-2">
+                        <Trophy className="h-3.5 w-3.5 text-emerald-600" />
+                        Ganho
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="lost">
+                      <span className="flex items-center gap-2">
+                        <XCircle className="h-3.5 w-3.5 text-red-600" />
+                        Perdido
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            )}
             
             {/* Refresh Button */}
             <TooltipProvider>
