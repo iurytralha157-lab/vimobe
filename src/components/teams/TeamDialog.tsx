@@ -135,7 +135,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>{team ? 'Editar Equipe' : 'Nova Equipe'}</DialogTitle>
           <DialogDescription>
