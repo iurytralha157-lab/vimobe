@@ -2,18 +2,18 @@ import { Link, useLocation } from "react-router-dom";
 import { usePublicProperties } from "@/hooks/use-public-site";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { usePublicContext } from "./usePublicContext";
 
 export default function PublicMap() {
   const { organizationId, siteConfig } = usePublicContext();
   const { data } = usePublicProperties(organizationId, { limit: 100 });
   const location = useLocation();
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [leafletComponents, setLeafletComponents] = useState<any>(null);
-  const [L, setL] = useState<any>(null);
+  const [mapError, setMapError] = useState(false);
 
-  // Get primary color from config
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
 
@@ -30,66 +30,11 @@ export default function PublicMap() {
     return `/${path}`;
   };
 
-  // Load Leaflet CSS and JS dynamically
-  useEffect(() => {
-    let mounted = true;
-    
-    // First load CSS
-    const linkId = 'leaflet-css';
-    let link = document.getElementById(linkId) as HTMLLinkElement | null;
-    
-    const loadJS = () => {
-      Promise.all([
-        import('react-leaflet'),
-        import('leaflet')
-      ]).then(([reactLeaflet, leaflet]) => {
-        if (!mounted) return;
-        
-        // Fix for default marker icons
-        delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
-        leaflet.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-        });
-        
-        setLeafletComponents({
-          MapContainer: reactLeaflet.MapContainer,
-          TileLayer: reactLeaflet.TileLayer,
-          Marker: reactLeaflet.Marker,
-          Popup: reactLeaflet.Popup,
-        });
-        setL(leaflet);
-        setMapReady(true);
-      }).catch(err => {
-        console.error('Error loading Leaflet:', err);
-      });
-    };
-    
-    if (!link) {
-      link = document.createElement('link');
-      link.id = linkId;
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      link.onload = loadJS;
-      document.head.appendChild(link);
-    } else {
-      loadJS();
-    }
-    
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Get random position for demo purposes
   const getRandomPosition = (index: number): [number, number] => {
     const baseLat = -23.5505;
     const baseLng = -46.6333;
     const offset = 0.05;
-    const seedLat = Math.sin(index * 12345) * offset;
-    const seedLng = Math.cos(index * 67890) * offset;
-    return [baseLat + seedLat, baseLng + seedLng];
+    return [baseLat + Math.sin(index * 12345) * offset, baseLng + Math.cos(index * 67890) * offset];
   };
 
   const formatPrice = (value: number | null) => {
@@ -97,37 +42,140 @@ export default function PublicMap() {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   };
 
-  // Custom marker with dynamic color
-  const customIcon = useMemo(() => {
-    if (!L) return null;
-    return new L.Icon({
-      iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${primaryColor}" width="32" height="32">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-        </svg>
-      `),
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32],
-    });
-  }, [L, primaryColor]);
+  // Initialize map using Leaflet API directly (no react-leaflet)
+  useEffect(() => {
+    if (!siteConfig || !mapContainerRef.current) return;
+    
+    let mounted = true;
+    
+    const linkId = 'leaflet-css';
+    let link = document.getElementById(linkId) as HTMLLinkElement | null;
+    
+    const initMap = async () => {
+      try {
+        const L = (await import('leaflet')).default;
+        if (!mounted || !mapContainerRef.current) return;
 
-  if (!siteConfig) {
-    return null;
-  }
+        // Fix default marker icons
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
 
-  const properties = data?.properties || [];
-  const mapCenter: [number, number] = [-23.5505, -46.6333];
+        // Create map
+        const map = L.map(mapContainerRef.current).setView([-23.5505, -46.6333], 12);
+        mapInstanceRef.current = map;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        setMapReady(true);
+        
+        // Fix tile rendering issue
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+      } catch (err) {
+        console.error('Error loading Leaflet:', err);
+        if (mounted) setMapError(true);
+      }
+    };
+
+    if (!link) {
+      link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.onload = () => initMap();
+      document.head.appendChild(link);
+    } else {
+      initMap();
+    }
+
+    return () => {
+      mounted = false;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [siteConfig]);
+
+  // Add markers when properties load
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !data?.properties?.length) return;
+
+    let mounted = true;
+
+    const addMarkers = async () => {
+      try {
+        const L = (await import('leaflet')).default;
+        if (!mounted || !mapInstanceRef.current) return;
+
+        const customIcon = new L.Icon({
+          iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${primaryColor}" width="32" height="32">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+          `),
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+          popupAnchor: [0, -32],
+        });
+
+        const properties = data.properties;
+        properties.forEach((property: any, index: number) => {
+          const [lat, lng] = getRandomPosition(index);
+          const marker = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstanceRef.current!);
+          
+          const price = formatPrice(property.valor_venda || property.valor_aluguel);
+          const detailHref = getHref(`imovel/${property.codigo || property.code}`);
+          
+          marker.bindPopup(`
+            <div style="width: 240px;">
+              <img 
+                src="${property.imagem_principal || '/placeholder.svg'}" 
+                alt="${property.titulo}"
+                style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px 4px 0 0;"
+              />
+              <div style="padding: 12px;">
+                <h3 style="font-weight: 600; font-size: 14px; margin: 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${property.titulo}</h3>
+                <p style="font-size: 12px; color: #666; margin: 0 0 8px;">
+                  📍 ${property.bairro || ''}${property.cidade ? `, ${property.cidade}` : ''}
+                </p>
+                <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                  ${property.quartos ? `🛏️ ${property.quartos} ` : ''}
+                  ${property.area_total ? `📐 ${property.area_total}m²` : ''}
+                </div>
+                ${price ? `<div style="font-weight: 700; color: ${primaryColor}; margin-bottom: 8px;">${price}</div>` : ''}
+                <a href="${detailHref}" style="display: block; text-align: center; background: ${primaryColor}; color: white; padding: 8px; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                  Ver Detalhes
+                </a>
+              </div>
+            </div>
+          `);
+        });
+      } catch (err) {
+        console.error('Error adding markers:', err);
+      }
+    };
+
+    addMarkers();
+
+    return () => { mounted = false; };
+  }, [mapReady, data?.properties, primaryColor]);
+
+  if (!siteConfig) return null;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: secondaryColor }}>
-      {/* Header with banner */}
       <div 
         className="py-16 md:py-20 relative overflow-hidden"
         style={{
-          backgroundImage: siteConfig.page_banner_url 
-            ? `url(${siteConfig.page_banner_url})` 
-            : undefined,
+          backgroundImage: siteConfig.page_banner_url ? `url(${siteConfig.page_banner_url})` : undefined,
           backgroundColor: !siteConfig.page_banner_url ? secondaryColor : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -139,7 +187,6 @@ export default function PublicMap() {
         </div>
       </div>
 
-      {/* Back button */}
       <div className="max-w-7xl mx-auto px-4 py-4">
         <Link to={getHref("imoveis")}>
           <Button variant="ghost" className="text-white hover:bg-white/10">
@@ -149,78 +196,25 @@ export default function PublicMap() {
         </Link>
       </div>
 
-      {/* Map */}
       <div className="max-w-7xl mx-auto px-4 pb-10">
         <div className="h-[600px] rounded-lg overflow-hidden shadow-2xl bg-gray-800">
-          {!mapReady || !leafletComponents || !customIcon ? (
+          {mapError ? (
+            <div className="h-full w-full flex items-center justify-center">
+              <p className="text-white">Erro ao carregar o mapa. Tente recarregar a página.</p>
+            </div>
+          ) : !mapReady ? (
             <div className="h-full w-full flex items-center justify-center">
               <div className="text-white text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
                 <p>Carregando mapa...</p>
               </div>
             </div>
-          ) : (
-            <leafletComponents.MapContainer 
-              center={mapCenter} 
-              zoom={12} 
-              className="h-full w-full"
-              style={{ background: '#1a1a1a' }}
-            >
-              <leafletComponents.TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {properties.map((property: any, index: number) => (
-                <leafletComponents.Marker
-                  key={property.id} 
-                  position={getRandomPosition(index)}
-                  icon={customIcon}
-                >
-                  <leafletComponents.Popup>
-                    <div className="w-64">
-                      <img 
-                        src={property.imagem_principal || '/placeholder.svg'} 
-                        alt={property.titulo}
-                        className="w-full h-32 object-cover rounded-t"
-                      />
-                      <div className="p-3">
-                        <h3 className="font-semibold text-sm mb-1 line-clamp-1">{property.titulo}</h3>
-                        <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
-                          📍 {property.bairro}{property.cidade ? `, ${property.cidade}` : ''}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
-                          {property.quartos && (
-                            <span className="flex items-center gap-1">
-                              🛏️ {property.quartos}
-                            </span>
-                          )}
-                          {property.area_total && (
-                            <span className="flex items-center gap-1">
-                              📐 {property.area_total}m²
-                            </span>
-                          )}
-                        </div>
-                        <div 
-                          className="font-bold"
-                          style={{ color: primaryColor }}
-                        >
-                          {formatPrice(property.valor_venda || property.valor_aluguel)}
-                        </div>
-                        <a href={getHref(`imovel/${property.codigo || (property as any).code}`)}>
-                          <button 
-                            className="w-full mt-2 text-white text-xs py-2 px-3 rounded"
-                            style={{ backgroundColor: primaryColor }}
-                          >
-                            Ver Detalhes
-                          </button>
-                        </a>
-                      </div>
-                    </div>
-                  </leafletComponents.Popup>
-                </leafletComponents.Marker>
-              ))}
-            </leafletComponents.MapContainer>
-          )}
+          ) : null}
+          <div 
+            ref={mapContainerRef} 
+            className="h-full w-full" 
+            style={{ display: mapReady && !mapError ? 'block' : 'none' }}
+          />
         </div>
       </div>
     </div>
