@@ -188,8 +188,11 @@ export function StageSettingsDialog({
             </div>
             
             {canEdit && (
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleSaveGeneral} disabled={isSaving}>
+              <div className="flex gap-2 pt-4">
+                <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button className="w-[60%] rounded-xl" onClick={handleSaveGeneral} disabled={isSaving}>
                   {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Salvar
                 </Button>
