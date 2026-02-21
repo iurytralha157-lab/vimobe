@@ -154,7 +154,7 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
     <div className="space-y-4">
       {automations?.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center px-4">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center px-4 md:px-6">
             <Zap className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhuma automação criada</h3>
             <p className="text-muted-foreground mb-4 text-sm">
@@ -197,7 +197,7 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
                     />
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4 md:px-6 pb-4">
                   <div className="flex flex-col gap-3">
                     {/* Trigger info and stats */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
