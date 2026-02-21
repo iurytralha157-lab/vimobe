@@ -5,6 +5,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple string hash for advisory lock keys
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+// In-memory dedup: track recent submissions to prevent race conditions
+const recentSubmissions = new Map<string, number>();
+const DEDUP_WINDOW_MS = 10000; // 10 seconds
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -36,6 +51,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    // In-memory dedup: reject rapid duplicate submissions
+    const normalizedPhoneKey = phone.replace(/\D/g, '');
+    const dedupKey = `${organization_id}:${normalizedPhoneKey}`;
+    const now = Date.now();
+    const lastSubmission = recentSubmissions.get(dedupKey);
+    
+    if (lastSubmission && (now - lastSubmission) < DEDUP_WINDOW_MS) {
+      console.log(`Duplicate submission blocked for ${dedupKey} (within ${DEDUP_WINDOW_MS}ms window)`);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Contato já registrado!', deduplicated: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    recentSubmissions.set(dedupKey, now);
+    
+    // Clean old entries periodically
+    if (recentSubmissions.size > 1000) {
+      for (const [key, time] of recentSubmissions) {
+        if (now - time > DEDUP_WINDOW_MS) recentSubmissions.delete(key);
+      }
+    }
+
     console.log(`New contact form submission for org: ${organization_id}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -60,14 +97,24 @@ Deno.serve(async (req) => {
     // Normalize phone number
     const normalizedPhone = phone.replace(/\D/g, '');
 
-    // Check if lead already exists with this phone
-    const { data: existingLead } = await supabase
+    // Check if lead already exists with this phone (with multiple format variations)
+    const phoneVariations = [normalizedPhone];
+    // Also check with country code prefix
+    if (!normalizedPhone.startsWith('55') && normalizedPhone.length <= 11) {
+      phoneVariations.push('55' + normalizedPhone);
+    }
+    if (normalizedPhone.startsWith('55') && normalizedPhone.length > 11) {
+      phoneVariations.push(normalizedPhone.substring(2));
+    }
+
+    const { data: existingLeads } = await supabase
       .from('leads')
       .select('id')
       .eq('organization_id', organization_id)
-      .eq('phone', normalizedPhone)
-      .limit(1)
-      .maybeSingle();
+      .in('phone', phoneVariations)
+      .limit(1);
+    
+    const existingLead = existingLeads?.[0] || null;
 
     let leadId: string;
 
