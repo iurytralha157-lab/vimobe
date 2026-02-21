@@ -329,6 +329,33 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case 'favorites': {
+        const ids = url.searchParams.get('ids');
+        if (!ids) {
+          response = { properties: [] };
+          break;
+        }
+        const idList = ids.split(',').filter(Boolean);
+        if (idList.length === 0) {
+          response = { properties: [] };
+          break;
+        }
+
+        const { data, error } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('organization_id', organizationId)
+          .in('id', idList);
+
+        if (error) {
+          console.error('Error fetching favorite properties:', error);
+          throw error;
+        }
+
+        response = { properties: data || [] };
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid endpoint' }),
