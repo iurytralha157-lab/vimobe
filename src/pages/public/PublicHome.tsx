@@ -344,7 +344,7 @@ export default function PublicHome() {
                   <Button 
                     size="lg"
                     variant="outline"
-                    className="border-white text-white hover:bg-white/10 px-8 py-6 text-base tracking-wide rounded-full gap-2"
+                    className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white px-8 py-6 text-base tracking-wide rounded-full gap-2"
                   >
                     <MessageCircle className="w-5 h-5" />
                     WhatsApp
