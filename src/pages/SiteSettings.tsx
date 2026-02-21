@@ -269,7 +269,7 @@ Registro A (www):
                   <CardTitle>Status do Site</CardTitle>
                   <CardDescription>Ative ou desative seu site público</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4 md:px-6 pb-5">
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Site Ativo</Label>
@@ -291,7 +291,7 @@ Registro A (www):
                   <CardTitle>Domínio</CardTitle>
                   <CardDescription>Configure o endereço do seu site</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-6">
                   {/* Link do Site Publicado */}
                   {formData.subdomain && site?.is_active && (
                     <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
@@ -394,7 +394,7 @@ Registro A (www):
                 <CardHeader>
                   <CardTitle>Informações Básicas</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="space-y-2">
                     <Label>Título do Site</Label>
                     <Input
@@ -423,7 +423,7 @@ Registro A (www):
                 <CardHeader>
                   <CardTitle>Logo e Favicon</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-6">
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-3">
                       <Label>Logo</Label>
@@ -501,7 +501,7 @@ Registro A (www):
                     Ajuste as dimensões da logo exibida no site público (em pixels)
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -561,7 +561,7 @@ Registro A (www):
                   <CardTitle>Cores</CardTitle>
                   <CardDescription>Personalize as cores do seu site</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4 md:px-6 pb-5">
                   <div className="grid sm:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label>Cor Principal</Label>
@@ -651,7 +651,7 @@ Registro A (www):
                   <CardTitle>Hero (Banner Principal)</CardTitle>
                   <CardDescription>Configure a imagem e textos da página inicial</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="space-y-3">
                     <Label>Imagem do Hero (Tela Inicial)</Label>
                     {site?.hero_image_url ? (
@@ -739,7 +739,7 @@ Registro A (www):
                 <CardHeader>
                   <CardTitle>Página Sobre</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="space-y-2">
                     <Label>Título da Seção</Label>
                     <Input
@@ -799,7 +799,7 @@ Registro A (www):
                     Adicione uma marca d'água sutil nas fotos dos imóveis para proteger seu conteúdo
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Ativar marca d'água</Label>
@@ -968,7 +968,7 @@ Registro A (www):
                   <CardTitle>Informações de Contato</CardTitle>
                   <CardDescription>Esses dados aparecerão no site e nos formulários</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>WhatsApp</Label>
@@ -1038,7 +1038,7 @@ Registro A (www):
                   <CardTitle>Redes Sociais</CardTitle>
                   <CardDescription>Links para suas redes sociais</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="space-y-2">
                     <Label>Instagram</Label>
                     <Input
@@ -1085,7 +1085,7 @@ Registro A (www):
                   <CardTitle>SEO e Metatags</CardTitle>
                   <CardDescription>Otimize seu site para mecanismos de busca</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
                   <div className="space-y-2">
                     <Label>Título SEO</Label>
                     <Input
