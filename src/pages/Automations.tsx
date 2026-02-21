@@ -64,12 +64,12 @@ export default function Automations() {
             onComplete={handleComplete}
             initialTemplate={selectedTemplate ? {
               name: selectedTemplate.name,
-              messages: selectedTemplate.messages.map(m => ({ day: m.day, content: m.content })),
-            } : null}
-          />
+              messages: selectedTemplate.messages.map((m) => ({ day: m.day, content: m.content }))
+            } : null} />
+
         </div>
-      </AppLayout>
-    );
+      </AppLayout>);
+
   }
 
   // Follow-up Builder Edit (full screen) - Editing existing
@@ -80,20 +80,20 @@ export default function Automations() {
           <FollowUpBuilderEdit
             automationId={editingAutomationId}
             onBack={handleBack}
-            onComplete={handleComplete}
-          />
+            onComplete={handleComplete} />
+
         </div>
-      </AppLayout>
-    );
+      </AppLayout>);
+
   }
 
   // List view
   return (
     <AppLayout title="Automações">
       <div className="space-y-6 animate-in">
-        <p className="text-muted-foreground">
-          Crie fluxos de automação para enviar mensagens, mover leads e muito mais
-        </p>
+        
+
+
         
         <Tabs
           value={activeTab}
@@ -101,8 +101,8 @@ export default function Automations() {
             setActiveTab(v);
             if (v !== 'history') setHistoryAutomationId(undefined);
           }}
-          className="w-full"
-        >
+          className="w-full">
+
           <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
             <TabsTrigger value="templates" className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4" />
@@ -111,11 +111,11 @@ export default function Automations() {
             <TabsTrigger value="automations" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               <span className="hidden sm:inline">Minhas Automações</span>
-              {automations && automations.length > 0 && (
-                <span className="hidden sm:inline bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
+              {automations && automations.length > 0 &&
+              <span className="hidden sm:inline bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
                   {automations.length}
                 </span>
-              )}
+              }
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
@@ -136,6 +136,6 @@ export default function Automations() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>);
+
 }
