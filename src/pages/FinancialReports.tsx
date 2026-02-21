@@ -65,11 +65,11 @@ const reports: ReportConfig[] = [
 // Mobile Entry Card
 function EntryCardMobile({ entry }: { entry: any }) {
   return (
-    <div className="p-3 border-b last:border-b-0">
-      <div className="flex items-start justify-between gap-2">
+    <div className="px-4 py-4 border-b last:border-b-0">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm truncate">{entry.description}</p>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1.5">
             <Badge variant={entry.type === 'receivable' ? 'default' : 'secondary'} className="text-xs">
               {entry.type === 'receivable' ? 'Receita' : 'Despesa'}
             </Badge>
@@ -80,7 +80,7 @@ function EntryCardMobile({ entry }: { entry: any }) {
         </div>
         <div className="text-right shrink-0">
           <p className="font-bold text-sm">{formatCurrency(entry.value)}</p>
-          <p className="text-xs text-muted-foreground">{formatDate(entry.due_date)}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entry.due_date)}</p>
         </div>
       </div>
     </div>
@@ -252,24 +252,24 @@ export default function FinancialReports() {
     switch (selectedReport) {
       case 'monthly':
         return (
-          <div className="space-y-4 md:space-y-6">
-            <div className="grid grid-cols-3 gap-2 md:gap-4">
+          <div className="space-y-5 md:space-y-6">
+            <div className="grid grid-cols-3 gap-3 md:gap-4">
               <Card>
-                <CardContent className="p-3 md:p-4">
-                  <p className="text-xs md:text-sm text-muted-foreground">Total a Receber</p>
-                  <p className="text-lg md:text-2xl font-bold text-success">{formatCurrency(totalReceivables)}</p>
+                <CardContent className="p-4 md:p-5">
+                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Total a Receber</p>
+                  <p className="text-base md:text-2xl font-bold text-success">{formatCurrency(totalReceivables)}</p>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-3 md:p-4">
-                  <p className="text-xs md:text-sm text-muted-foreground">Total a Pagar</p>
-                  <p className="text-lg md:text-2xl font-bold text-destructive">{formatCurrency(totalPayables)}</p>
+                <CardContent className="p-4 md:p-5">
+                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Total a Pagar</p>
+                  <p className="text-base md:text-2xl font-bold text-destructive">{formatCurrency(totalPayables)}</p>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-3 md:p-4">
-                  <p className="text-xs md:text-sm text-muted-foreground">Saldo</p>
-                  <p className={`text-lg md:text-2xl font-bold ${totalReceivables - totalPayables >= 0 ? 'text-success' : 'text-destructive'}`}>
+                <CardContent className="p-4 md:p-5">
+                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Saldo</p>
+                  <p className={`text-base md:text-2xl font-bold ${totalReceivables - totalPayables >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatCurrency(totalReceivables - totalPayables)}
                   </p>
                 </CardContent>
