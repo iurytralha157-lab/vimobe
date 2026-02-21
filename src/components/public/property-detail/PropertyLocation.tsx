@@ -269,13 +269,8 @@ export default function PropertyLocation({
 
   const hasExistingCoordinates = latitude !== null && longitude !== null && latitude !== undefined && longitude !== undefined;
 
-  // Fetch POIs when we have a location
-  const { pois } = usePOIs({
-    lat: location?.lat ?? null,
-    lon: location?.lon ?? null,
-    enabled: !!location,
-    radius: 1000
-  });
+  // POIs disabled
+  const pois: import('./map-utils').POI[] = [];
 
   // Geocode address with structured search and precision-based fallback
   useEffect(() => {
@@ -500,8 +495,7 @@ export default function PropertyLocation({
           )}
         </div>
 
-        {/* POI Legend */}
-        {pois.length > 0 && <POILegend pois={pois} primaryColor={primaryColor} />}
+        {/* POI Legend removed */}
 
         {/* Address */}
         {fullAddress && (
