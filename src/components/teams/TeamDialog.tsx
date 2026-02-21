@@ -135,7 +135,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{team ? 'Editar Equipe' : 'Nova Equipe'}</DialogTitle>
           <DialogDescription>
@@ -210,15 +210,15 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex gap-2 pt-2">
+          <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button className="w-[60%] rounded-xl" onClick={handleSubmit} disabled={isSubmitting || !name.trim()}>
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {team ? 'Salvar' : 'Criar Equipe'}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
