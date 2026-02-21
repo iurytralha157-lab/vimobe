@@ -83,7 +83,7 @@ export function MobileBottomNav() {
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-end justify-around px-1 h-16 py-[4px]">
+        <div className="flex items-end justify-around px-1 h-16 py-[4px] pb-[10px]">
           {tabs.map((tab, index) => {
             if (tab === 'fab') {
               return (
