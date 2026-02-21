@@ -5,7 +5,7 @@ import { useWhatsAppConversations, useWhatsAppRealtimeConversations } from "@/ho
 import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
 import { useLocation } from "react-router-dom";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 export function FloatingChatButton() {
   const { state, toggleChat } = useFloatingChat();
@@ -16,14 +16,14 @@ export function FloatingChatButton() {
   
   useWhatsAppRealtimeConversations();
 
-  // Draggable state
   const [side, setSide] = useState<'right' | 'left'>('right');
+  const [offsetX, setOffsetX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<{ startX: number; startY: number; moved: boolean }>({ startX: 0, startY: 0, moved: false });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dragState = useRef({ startX: 0, startY: 0, moved: false, pointerId: -1 });
 
   const hasConnectedSession = sessions?.some((s) => s.status === "connected");
   
-  // Contar mensagens não lidas APENAS de conversas vinculadas a leads
   const leadUnreadCount = conversations?.reduce((acc, c) => {
     if (c.lead_id) {
       return acc + (c.unread_count || 0);
@@ -33,50 +33,69 @@ export function FloatingChatButton() {
 
   const isOnConversationsPage = location.pathname === "/crm/conversas";
 
-  // Touch/mouse handlers for drag
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    dragRef.current = { startX: e.clientX, startY: e.clientY, moved: false };
-    setIsDragging(false);
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragState.current = { startX: e.clientX, startY: e.clientY, moved: false, pointerId: e.pointerId };
+    setOffsetX(0);
   }, []);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    const dx = Math.abs(e.clientX - dragRef.current.startX);
-    const dy = Math.abs(e.clientY - dragRef.current.startY);
-    if (dx > 15 || dy > 15) {
-      dragRef.current.moved = true;
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (dragState.current.pointerId === -1) return;
+    const dx = e.clientX - dragState.current.startX;
+    const dy = Math.abs(e.clientY - dragState.current.startY);
+    if (Math.abs(dx) > 10 || dy > 10) {
+      dragState.current.moved = true;
       setIsDragging(true);
+      setOffsetX(dx);
     }
   }, []);
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (dragRef.current.moved) {
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    if (dragState.current.moved) {
       const screenMid = window.innerWidth / 2;
       setSide(e.clientX < screenMid ? 'left' : 'right');
     }
+    dragState.current.pointerId = -1;
+    setOffsetX(0);
     setIsDragging(false);
   }, []);
 
-  const handleClick = useCallback(() => {
-    if (!dragRef.current.moved) {
-      toggleChat();
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (dragState.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      dragState.current.moved = false;
+      return;
     }
-    dragRef.current.moved = false;
+    toggleChat();
   }, [toggleChat]);
 
   if (state.isOpen || !hasConnectedSession || isOnConversationsPage || (!loadingWhatsAppAccess && !hasWhatsAppAccess)) return null;
 
   return (
     <div
-      className={`fixed bottom-4 z-50 transition-all duration-300 ${side === 'right' ? 'right-4' : 'left-4'}`}
-      style={{ touchAction: 'none' }}
+      className={`fixed bottom-20 z-50 ${side === 'right' ? 'right-4' : 'left-4'}`}
+      style={{
+        touchAction: 'none',
+        transform: isDragging ? `translateX(${offsetX}px)` : undefined,
+        transition: isDragging ? 'none' : 'transform 0.3s ease',
+      }}
     >
       <Button
+        ref={btnRef}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={(e) => {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+          dragState.current.pointerId = -1;
+          setOffsetX(0);
+          setIsDragging(false);
+        }}
         onClick={handleClick}
         size="lg"
-        className={`h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 select-none ${isDragging ? 'scale-95 opacity-80' : ''}`}
+        className={`h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200 hover:scale-105 select-none ${isDragging ? 'scale-95 opacity-80 cursor-grabbing' : 'cursor-grab'}`}
       >
         <MessageCircle className="h-6 w-6" />
         {leadUnreadCount > 0 && (
