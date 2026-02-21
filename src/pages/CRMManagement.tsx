@@ -121,19 +121,19 @@ export default function CRMManagement() {
             />
           )}
 
-          <TabsContent value="teams" className="mt-0">
+          <TabsContent value="teams" className="mt-4">
             <TeamsTab />
           </TabsContent>
 
-          <TabsContent value="pipelines" className="mt-0">
+          <TabsContent value="pipelines" className="mt-4">
             <TeamPipelinesManager />
           </TabsContent>
 
-          <TabsContent value="distribution" className="mt-0">
+          <TabsContent value="distribution" className="mt-4">
             <DistributionTab />
           </TabsContent>
 
-          <TabsContent value="tags" className="mt-0">
+          <TabsContent value="tags" className="mt-4">
             <TagsTab />
           </TabsContent>
         </Tabs>
