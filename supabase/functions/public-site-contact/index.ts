@@ -133,30 +133,18 @@ Deno.serve(async (req) => {
 
       console.log(`Updated existing lead: ${leadId}`);
     } else {
-      // Get the first admin of the organization as default assignee
-      const { data: admin } = await supabase
-        .from('users')
-        .select('id')
-        .eq('organization_id', organization_id)
-        .eq('role', 'admin')
-        .eq('is_active', true)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      console.log(`Admin found for org ${organization_id}:`, admin?.id || 'none');
-
-      // Create lead WITHOUT pipeline/stage initially (goes to Contacts only)
+      // Create lead WITHOUT assigned_user_id so that the DB trigger
+      // `trigger_handle_lead_intake` fires and respects distribution rules.
+      // The trigger `ensure_lead_has_pipeline` will assign default pipeline/stage.
       const leadData: Record<string, unknown> = {
         organization_id: organization_id,
-        pipeline_id: null,          // No pipeline initially
-        stage_id: null,             // No stage initially
-        assigned_user_id: admin?.id || null,  // Admin as default responsible
-        assigned_at: admin ? new Date().toISOString() : null,
+        pipeline_id: null,          // Will be set by ensure_lead_has_pipeline trigger or handle_lead_intake
+        stage_id: null,             // Will be set by ensure_lead_has_pipeline trigger or handle_lead_intake
+        assigned_user_id: null,     // NULL so handle_lead_intake runs distribution
         name: name,
         email: email || null,
-        phone: normalizedPhone,     // Fixed: was 'telefone'
-        message: message || null,   // Fixed: was 'notes'
+        phone: normalizedPhone,
+        message: message || null,
         source: 'website',
         deal_status: 'open',
         interest_property_id: property_id || null,
@@ -187,26 +175,11 @@ Deno.serve(async (req) => {
           content: `Lead criado via site${property_code ? ` (Imóvel: ${property_code})` : ''}`
         });
 
-      console.log(`Created new lead: ${leadId} (without pipeline, assigned to admin: ${admin?.id || 'none'})`);
+      console.log(`Created new lead: ${leadId}. Distribution will be handled by DB trigger (trigger_handle_lead_intake).`);
 
-      // Try to run round-robin distribution
-      // If successful, this will move the lead to a pipeline/stage and reassign
-      try {
-        const { data: distributionResult, error: distributionError } = await supabase
-          .rpc('handle_lead_intake', { p_lead_id: leadId });
-        
-        if (distributionError) {
-          console.log('Distribution skipped (no active queue or error):', distributionError.message);
-          // Lead stays in Contacts with admin as responsible - this is fine
-        } else if (distributionResult?.success && distributionResult?.assigned_user_id) {
-          console.log(`Lead distributed to user: ${distributionResult.assigned_user_id}, pipeline: ${distributionResult.pipeline_id}`);
-        } else {
-          console.log('No distribution queue matched, lead stays in Contacts with admin');
-        }
-      } catch (distError) {
-        console.log('Distribution attempt failed:', distError);
-        // Continue without distribution - lead stays in Contacts with admin
-      }
+      // The DB trigger `trigger_handle_lead_intake` fires on INSERT when assigned_user_id IS NULL.
+      // It calls handle_lead_intake() which handles round-robin distribution automatically.
+      // If no distribution queue matches, handle_lead_intake assigns to the first admin as fallback.
     }
 
     // Create notification for the assigned user (admin or distributed user)
