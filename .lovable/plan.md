@@ -1,36 +1,42 @@
 
-# Ajuste do Dialog de Configuracoes de SLA
+# Ajuste do Formulario de Imoveis
 
-Aplicar o mesmo padrao visual dos outros dialogs ao popup de "Configuracoes de SLA".
+## O que sera feito
 
-## O que muda
+### 1. Converter para Dialog centralizado (padrao estabelecido)
+- Remover o `Sheet` (bottom sheet) do mobile e usar apenas `Dialog` centralizado
+- Aplicar `w-[90%] sm:max-w-3xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto` no `DialogContent`
 
-Apenas 1 arquivo: `src/components/pipelines/PipelineSlaSettings.tsx`
+### 2. Botoes no padrao 40/60
+- Reorganizar o footer com `flex gap-2`
+- Cancelar: `w-[40%] rounded-xl`
+- Cadastrar/Salvar: `w-[60%] rounded-xl`
+- O botao de submit so fica habilitado quando os campos obrigatorios estiverem preenchidos
 
-1. **Dialog centralizado no mobile**: Adicionar `w-[90%] sm:w-full rounded-lg` ao `DialogContent` para manter 5% de espaco em cada lado no celular
-2. **Botoes 60/40**: Reorganizar o `DialogFooter` para usar layout `flex gap-2` com:
-   - Cancelar: `w-[40%]` (esquerda)
-   - Salvar: `w-[60%]` (direita)
+### 3. Campos obrigatorios
+Os seguintes campos serao obrigatorios para habilitar o botao de cadastro:
+- **Foto principal** (`imagem_principal`)
+- **Galeria de imagens** (`fotos` - pelo menos 1 foto)
+- **Titulo** (`formData.title`)
+- **Valor/Preco** (`formData.preco`)
+- **Quartos** (`formData.quartos`)
+
+Uma variavel `isFormValid` sera calculada verificando esses 5 campos. O botao de submit ficara com `disabled` quando invalido, com opacidade reduzida para indicar visualmente.
 
 ## Detalhes tecnicos
 
-**Linha ~68 - DialogContent:**
-```
-Antes:  <DialogContent className="sm:max-w-[500px]">
-Depois: <DialogContent className="sm:max-w-[500px] w-[90%] sm:w-full rounded-lg">
-```
+**Arquivo modificado**: `src/components/properties/PropertyFormDialog.tsx`
 
-**Linhas ~116-125 - DialogFooter:**
+- Remover imports de `Sheet`, `SheetContent`, `SheetHeader`, `SheetTitle`
+- Remover o bloco condicional `if (isMobile)` que renderiza o Sheet (linhas 626-638)
+- Unificar para um unico `Dialog` com as classes de centralizacao padrao
+- Adicionar validacao:
+```tsx
+const isFormValid = 
+  formData.title.trim() !== '' &&
+  formData.preco.trim() !== '' &&
+  formData.quartos.trim() !== '' &&
+  formData.imagem_principal.trim() !== '' &&
+  formData.fotos.length > 0;
 ```
-Antes:
-<DialogFooter>
-  <Button variant="outline" ...>Cancelar</Button>
-  <Button ...>Salvar</Button>
-</DialogFooter>
-
-Depois:
-<div className="flex gap-2 pt-4 border-t">
-  <Button variant="outline" className="w-[40%]" ...>Cancelar</Button>
-  <Button className="w-[60%]" ...>Salvar</Button>
-</div>
-```
+- Atualizar o footer (linhas 612-622) para o layout 40/60 com disabled condicional
