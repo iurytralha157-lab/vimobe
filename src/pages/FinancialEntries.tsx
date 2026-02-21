@@ -418,56 +418,28 @@ export default function FinancialEntries() {
           </Card>
         )}
 
-        {/* Form Dialog/Sheet */}
-        {isMobile ? (
-          <Sheet open={isFormOpen} onOpenChange={(open: boolean) => {
-            setIsFormOpen(open);
-            if (!open) setEditingEntry(null);
-          }}>
-            <SheetContent side="bottom" className="w-full h-[85vh]">
-              <SheetHeader>
-                <SheetTitle>{editingEntry ? 'Editar Lançamento' : 'Novo Lançamento'}</SheetTitle>
-                <SheetDescription>
-                  {editingEntry ? 'Altere os dados do lançamento' : 'Preencha os dados do novo lançamento'}
-                </SheetDescription>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(85vh-100px)]">
-                <div className="px-4">
-                  <FinancialEntryForm
-                    entry={editingEntry}
-                    onSuccess={handleFormSuccess}
-                    onCancel={() => {
-                      setIsFormOpen(false);
-                      setEditingEntry(null);
-                    }}
-                  />
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-        ) : (
-          <Dialog open={isFormOpen} onOpenChange={(open: boolean) => {
-            setIsFormOpen(open);
-            if (!open) setEditingEntry(null);
-          }}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingEntry ? 'Editar Lançamento' : 'Novo Lançamento'}</DialogTitle>
-                <DialogDescription>
-                  {editingEntry ? 'Altere os dados do lançamento' : 'Preencha os dados do novo lançamento'}
-                </DialogDescription>
-              </DialogHeader>
-              <FinancialEntryForm
-                entry={editingEntry}
-                onSuccess={handleFormSuccess}
-                onCancel={() => {
-                  setIsFormOpen(false);
-                  setEditingEntry(null);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        {/* Form Dialog */}
+        <Dialog open={isFormOpen} onOpenChange={(open: boolean) => {
+          setIsFormOpen(open);
+          if (!open) setEditingEntry(null);
+        }}>
+          <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingEntry ? 'Editar Lançamento' : 'Novo Lançamento'}</DialogTitle>
+              <DialogDescription>
+                {editingEntry ? 'Altere os dados do lançamento' : 'Preencha os dados do novo lançamento'}
+              </DialogDescription>
+            </DialogHeader>
+            <FinancialEntryForm
+              entry={editingEntry}
+              onSuccess={handleFormSuccess}
+              onCancel={() => {
+                setIsFormOpen(false);
+                setEditingEntry(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
 
         {/* Pay Dialog */}
         <Dialog open={payDialog.open} onOpenChange={(open) => setPayDialog({ open, entry: null })}>
