@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetFooter,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -87,26 +85,25 @@ export function MobileFilters({
         />
       </div>
 
-      {/* Filter Sheet Trigger */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0 relative">
-            <Filter className="h-4 w-4" />
-            {activeFilterCount > 0 && (
-              <Badge 
-                className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
-              >
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-auto max-h-[60vh] rounded-t-xl">
-          <SheetHeader>
-            <SheetTitle>Filtros</SheetTitle>
-          </SheetHeader>
+      {/* Filter Dialog Trigger */}
+      <Button variant="outline" size="icon" className="shrink-0 relative" onClick={() => setOpen(true)}>
+        <Filter className="h-4 w-4" />
+        {activeFilterCount > 0 && (
+          <Badge 
+            className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+          >
+            {activeFilterCount}
+          </Badge>
+        )}
+      </Button>
 
-          <div className="space-y-3 py-3 overflow-y-auto max-h-[calc(60vh-130px)]">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-[90%] sm:max-w-[400px] rounded-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Filtros</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 overflow-y-auto max-h-[50vh] pr-1">
             {/* Pipeline */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Pipeline</label>
@@ -225,8 +222,8 @@ export function MobileFilters({
               Aplicar filtros
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
