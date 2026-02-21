@@ -395,25 +395,21 @@ export default function PublicSiteLayout() {
                     </li>
                   )}
                 </ul>
+                {siteConfig.address && (
+                  <div className="flex items-start justify-center md:justify-start gap-2 text-white/60 text-sm mt-3">
+                    <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      {siteConfig.address}
+                      {siteConfig.city && <><br />{siteConfig.city}</>}
+                      {siteConfig.state && ` - ${siteConfig.state}`}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             
-            {/* Address - full width on mobile */}
-            {siteConfig.address && (
-              <div className="text-center md:text-left col-span-1">
-                <div className="flex items-start justify-center md:justify-start gap-2 text-white/60 text-sm">
-                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <span>
-                    {siteConfig.address}
-                    {siteConfig.city && <><br />{siteConfig.city}</>}
-                    {siteConfig.state && ` - ${siteConfig.state}`}
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* Social */}
-            <div className="text-center md:text-left">
+            <div className="text-center md:text-left col-span-1">
               <h4 
                 className="text-sm font-semibold uppercase tracking-wider mb-3 md:mb-4"
                 style={{ color: primaryColor }}
