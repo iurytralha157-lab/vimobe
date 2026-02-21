@@ -10,6 +10,7 @@ import PublicProperties from './PublicProperties';
 import PublicPropertyDetail from './PublicPropertyDetail';
 import PublicAbout from './PublicAbout';
 import PublicContact from './PublicContact';
+import PublicFavorites from './PublicFavorites';
 
 
 function PreviewSiteProvider({ children, organizationId }: { children: ReactNode; organizationId: string }) {
@@ -153,6 +154,7 @@ function PreviewSiteRoutes() {
         <Route path="imovel/:code" element={<PublicPropertyDetail />} />
         <Route path="sobre" element={<PublicAbout />} />
         <Route path="contato" element={<PublicContact />} />
+        <Route path="favoritos" element={<PublicFavorites />} />
         
       </Route>
         <Route path="*" element={<Navigate to={`/site/preview?org=${orgId}`} replace />} />

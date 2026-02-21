@@ -10,9 +10,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { usePublicContext } from "./usePublicContext";
 import PropertyFiltersContent from "@/components/public/PropertyFiltersContent";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
+import { usePublicFavorites } from "@/hooks/use-public-favorites";
 
 export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicContext();
+  const { isFavorite, toggleFavorite } = usePublicFavorites();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [showMoreFilters, setShowMoreFilters] = useState(false);
@@ -392,6 +394,8 @@ export default function PublicProperties() {
                       <PublicPropertyCard
                         property={property}
                         primaryColor={primaryColor}
+                        isFavorited={isFavorite(property.id)}
+                        onToggleFavorite={toggleFavorite}
                         watermarkConfig={siteConfig?.watermark_enabled ? {
                           enabled: true,
                           logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,
