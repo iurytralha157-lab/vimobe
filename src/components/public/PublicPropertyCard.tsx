@@ -52,7 +52,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', waterma
   return (
     <div className="bg-white rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border border-gray-100">
       {/* Image Section */}
-      <div className="relative aspect-[3/4] overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden">
         <img
           src={property.imagem_principal || '/placeholder.svg'}
           alt={title}
