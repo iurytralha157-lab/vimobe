@@ -584,14 +584,14 @@ export default function Commissions() {
 
         {/* Pay Dialog */}
         <Dialog open={payDialog.open} onOpenChange={(open) => setPayDialog({ open, commission: null })}>
-          <DialogContent className="w-[95vw] max-w-md">
+          <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
             <DialogHeader>
               <DialogTitle>Registrar Pagamento</DialogTitle>
               <DialogDescription>
                 Confirme o pagamento da comissão de {payDialog.commission?.user?.name}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div>
                 <Label>Valor</Label>
                 <p className="text-2xl font-bold">{formatCurrency(payDialog.commission?.calculated_value)}</p>
@@ -605,11 +605,11 @@ export default function Commissions() {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setPayDialog({ open: false, commission: null })}>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setPayDialog({ open: false, commission: null })}>
                 Cancelar
               </Button>
-              <Button onClick={handlePay} disabled={payCommission.isPending}>
+              <Button className="w-[60%] rounded-xl" onClick={handlePay} disabled={payCommission.isPending}>
                 Confirmar Pagamento
               </Button>
             </div>
@@ -618,14 +618,14 @@ export default function Commissions() {
 
         {/* Cancel Dialog */}
         <Dialog open={cancelDialog.open} onOpenChange={(open) => setCancelDialog({ open, commission: null })}>
-          <DialogContent className="w-[95vw] max-w-md">
+          <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
             <DialogHeader>
               <DialogTitle>Cancelar Comissão</DialogTitle>
               <DialogDescription>
                 Informe o motivo do cancelamento
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div>
                 <Label>Motivo</Label>
                 <Input 
@@ -635,11 +635,11 @@ export default function Commissions() {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setCancelDialog({ open: false, commission: null })}>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => setCancelDialog({ open: false, commission: null })}>
                 Voltar
               </Button>
-              <Button variant="destructive" onClick={handleCancel} disabled={cancelCommission.isPending}>
+              <Button variant="destructive" className="w-[60%] rounded-xl" onClick={handleCancel} disabled={cancelCommission.isPending}>
                 Confirmar Cancelamento
               </Button>
             </div>
@@ -651,14 +651,14 @@ export default function Commissions() {
           setRuleDialog({ open, rule: null });
           if (!open) resetRuleForm();
         }}>
-          <DialogContent className="w-[95vw] max-w-md">
+          <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
             <DialogHeader>
               <DialogTitle>{ruleDialog.rule ? 'Editar Regra' : 'Nova Regra'}</DialogTitle>
               <DialogDescription>
                 Configure a regra de comissão
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4">
               <div>
                 <Label>Nome da Regra</Label>
                 <Input 
@@ -667,7 +667,7 @@ export default function Commissions() {
                   onChange={(e) => setRuleName(e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Tipo de Negócio</Label>
                   <Select value={ruleBusinessType} onValueChange={setRuleBusinessType}>
@@ -712,14 +712,14 @@ export default function Commissions() {
                 <Label>Regra ativa</Label>
               </div>
             </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => {
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => {
                 setRuleDialog({ open: false, rule: null });
                 resetRuleForm();
               }}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveRule} disabled={createRule.isPending || updateRule.isPending}>
+              <Button className="w-[60%] rounded-xl" onClick={handleSaveRule} disabled={createRule.isPending || updateRule.isPending}>
                 {ruleDialog.rule ? 'Salvar' : 'Criar Regra'}
               </Button>
             </div>
