@@ -12,12 +12,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -122,6 +116,13 @@ export function PropertyFormDialog({
 }: PropertyFormDialogProps) {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('overview');
+
+  const isFormValid = 
+    formData.title.trim() !== '' &&
+    formData.preco.trim() !== '' &&
+    formData.quartos.trim() !== '' &&
+    formData.imagem_principal.trim() !== '' &&
+    formData.fotos.length > 0;
 
   // Funções de formatação de moeda
   const formatCurrencyDisplay = (value: string): string => {
@@ -609,11 +610,15 @@ export function PropertyFormDialog({
         </div>
       </Tabs>
 
-      <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+      <div className="flex gap-2 pt-4 border-t mt-4">
+        <Button type="button" variant="outline" className="w-[40%] rounded-xl" onClick={() => onOpenChange(false)}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isCreating || isUpdating}>
+        <Button 
+          type="submit" 
+          className="w-[60%] rounded-xl" 
+          disabled={isCreating || isUpdating || !isFormValid}
+        >
           {(isCreating || isUpdating) && (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           )}
@@ -623,24 +628,9 @@ export function PropertyFormDialog({
     </form>
   );
 
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[95vh] flex flex-col p-0">
-          <SheetHeader className="p-4 border-b">
-            <SheetTitle>{editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto p-4">
-            {formContent}
-          </div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[90%] sm:max-w-3xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}</DialogTitle>
         </DialogHeader>
