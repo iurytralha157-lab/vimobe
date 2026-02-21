@@ -106,6 +106,7 @@ export function useWhatsAppConversations(
           )
         `)
         .is("deleted_at", null)
+        .not("last_message_at", "is", null)
         .order("last_message_at", { ascending: false, nullsFirst: false });
 
       if (sessionId) {
