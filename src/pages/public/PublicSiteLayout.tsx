@@ -84,6 +84,7 @@ export default function PublicSiteLayout() {
   const mainNavLinks = [
     { href: "", label: "HOME" },
     { href: "imoveis", label: "IMÓVEIS" },
+    { href: "sobre", label: "SOBRE" },
   ];
 
   // Add pre-filtered links
