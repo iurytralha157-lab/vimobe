@@ -419,13 +419,13 @@ export function FinancialEntryForm({ entry, onSuccess, onCancel }: FinancialEntr
           )}
         />
 
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+        <div className="flex flex-col gap-2 pt-4">
+          <Button type="submit" disabled={isLoading} className="w-full rounded-xl">
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {entry ? 'Salvar' : 'Criar Lançamento'}
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel} className="w-full rounded-xl">
+            Cancelar
           </Button>
         </div>
       </form>
