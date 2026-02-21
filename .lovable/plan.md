@@ -1,38 +1,41 @@
 
-# Ajustes na Pagina de Notificacoes (Mobile)
 
-## Mudancas planejadas no arquivo `src/pages/Notifications.tsx`:
+# Ajustes no Dialog de Criar Lead (Mobile)
 
-### 1. Filtro alinhado a esquerda
-- O botao "Filtros" ja esta a esquerda, mas o botao "Marcar lidas" sera mantido a direita com `justify-between` ou `ml-auto` para melhor distribuicao.
+## 1. Centralizar o dialog com espaçamento igual nas bordas
+Corrigir o `mx-[5%]` que esta deslocando o dialog. A abordagem correta e reduzir o `w-full` para algo como `w-[90%]` mantendo o `translate-x-[-50%]` do dialog centrado.
 
-### 2. Card header - reduzir titulo e espaçamento (mobile)
-- Trocar "Suas Notificacoes" por um titulo menor no mobile (ex: "Notificacoes" ou remover completamente, ja que o titulo ja aparece no AppHeader).
-- Reduzir o `CardTitle` de `text-2xl` para `text-base` no mobile.
-- Adicionar padding horizontal ao `CardContent` no mobile (`px-3`) para melhor espaçamento lateral.
-- Reduzir o padding do `CardHeader` no mobile.
+## 2. Botoes 60/40
+Trocar o layout dos botoes no footer para que "Criar Lead" ocupe 60% e "Cancelar" ocupe 40%, invertendo a ordem visual (Cancelar a esquerda, acao principal a direita).
 
-### 3. Reorganizar o card de notificacao individual (conforme segundo print)
-- Layout mais limpo: icone a esquerda, badge "NEW" ao lado do titulo, conteudo abaixo, e na ultima linha o tempo + tipo.
-- Reduzir gap entre icone e texto de `gap-4` para `gap-3`.
-- Remover o botao de "check" individual no mobile para simplificar.
-- Manter o `border-l-4` para nao lidas.
+## 3. Botao dinamico por aba
+- Nas abas "Basico" e "Perfil/Contrato": o botao mostra **"Avancar"** e ao clicar avanca para a proxima aba (sem submit).
+- Na aba "Gestao": o botao mostra **"Criar Lead"** (ou "Criar Cliente" para telecom) e faz o submit real do formulario.
+
+Isso requer controlar o estado da aba ativa com `useState` em vez de `defaultValue`.
 
 ---
 
 ## Detalhes tecnicos
 
-**Arquivo**: `src/pages/Notifications.tsx`
+**Arquivo**: `src/components/leads/CreateLeadDialog.tsx`
 
-**Alteracoes especificas**:
+### Alteracao 1 - Dialog centralizado (linha 223)
+Remover `mx-[5%] sm:mx-auto` e adicionar `w-[90%] sm:w-full` para manter o dialog centrado com 5% de respiro em cada lado.
 
-1. **Linha 166** - Adicionar `justify-between` na div de filtros mobile para empurrar "Marcar lidas" para a direita, mantendo "Filtros" na esquerda.
+### Alteracao 2 - Estado de aba controlada
+Adicionar `const [activeTab, setActiveTab] = useState('basic')` e trocar `<Tabs defaultValue="basic">` por `<Tabs value={activeTab} onValueChange={setActiveTab}>`. Resetar para `'basic'` quando o dialog abre (no useEffect existente).
 
-2. **Linhas 275-298** - Card header mobile:
-   - Condicional para mobile: titulo menor (`text-base font-semibold` em vez de `text-2xl`), esconder descricao de contagem.
-   - Reduzir padding do CardHeader no mobile.
+### Alteracao 3 - Footer com botoes dinamicos (linhas 833-841)
+```
+const isLastTab = activeTab === 'management';
+const handleNext = () => {
+  if (activeTab === 'basic') setActiveTab('profile');
+  else if (activeTab === 'profile') setActiveTab('management');
+};
+```
 
-3. **Linhas 299-387** - CardContent mobile:
-   - Adicionar `px-3` no mobile para respiro lateral.
-   - Nos cards individuais: reduzir padding de `p-4` para `p-3`, gap de `gap-4` para `gap-3`.
-   - Icone menor no mobile (`h-8 w-8` em vez de `h-10 w-10`).
+No footer:
+- Cancelar com `w-[40%]`
+- Botao principal com `w-[60%]`: se `isLastTab` faz submit, senao chama `handleNext()` com tipo `button`.
+
