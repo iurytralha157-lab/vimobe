@@ -1,51 +1,40 @@
 
 
-# Correcao: Site Publico em Dominio Customizado
+# Correcao Completa: Dominio Customizado com Tela Branca
 
-## Problema raiz
+## Diagnostico
 
-O Worker do Cloudflare faz proxy corretamente no servidor -- ele busca `vimobe.lovable.app/sites/vimob` e retorna o HTML. Porem, como o Vimobe e uma SPA (Single Page Application), o HTML retornado e sempre o mesmo `index.html`. Quando o navegador do usuario carrega esse HTML, o React Router olha a URL **do navegador** (que e `royal-river-fa01.companyvetter.workers.dev/`) e ve a rota `/` -- que no App.tsx redireciona para `/dashboard` ou `/auth`. Por isso aparece a tela de login.
+Analisei todo o fluxo e encontrei **3 problemas**:
 
-O problema NAO esta no Worker. O Worker esta correto. O problema esta no App.tsx que nao sabe que o dominio customizado deve mostrar o site publico.
+### Problema 1: Codigo nao publicado
+As alteracoes feitas no `App.tsx` (deteccao de dominio customizado via `isCustomDomain()`) existem apenas no ambiente de teste. O site publicado em `vimobe.lovable.app` ainda roda o codigo antigo, que redireciona para login/CRM. **E preciso publicar o projeto.**
+
+### Problema 2: Edge Function `resolve-site-domain` retorna campos incompletos
+A funcao que resolve o dominio customizado faz um SELECT que **nao inclui** campos obrigatorios:
+- `logo_width`, `logo_height` -- tamanho do logo
+- `watermark_enabled`, `watermark_size` -- configuracao de marca d'agua  
+- `organization_name` -- nome da organizacao (usado no rodape e textos)
+
+Sem esses campos, o site pode carregar com dados incompletos ou erros.
+
+### Problema 3: Worker do Cloudflare ainda tem logica antiga
+O Worker atual faz reescrita de path (`/sites/vimob/...`), mas como o frontend agora detecta o dominio customizado e renderiza as rotas publicas diretamente, o Worker deve ser simplificado para apenas fazer proxy.
 
 ## Solucao
 
-### 1. Detectar dominio customizado no App.tsx
+### 1. Atualizar `resolve-site-domain` Edge Function
+Adicionar os campos faltantes no SELECT e incluir o `organization_name` via join com a tabela `organizations`.
 
-Adicionar uma funcao `isCustomDomain()` que verifica se o hostname atual e um dominio customizado (nao e localhost, nem lovable.app, nem lovable.dev, nem lovableproject.com).
+**Arquivo**: `supabase/functions/resolve-site-domain/index.ts`
+- Adicionar ao SELECT: `logo_width, logo_height, watermark_enabled, watermark_size`
+- Adicionar join: `organizations(name)` para obter o `organization_name`
+- Mapear `organization_name` no `site_config` retornado
 
-Quando for dominio customizado, renderizar APENAS as rotas do site publico usando o `PublicSiteContext` para resolver qual organizacao pertence ao dominio.
+### 2. Publicar o projeto
+As alteracoes no `App.tsx` (funcao `isCustomDomain()` e componente `CustomDomainRoutes`) ja estao no codigo. Basta publicar para que o dominio publicado (`vimobe.lovable.app`) passe a usar essa logica.
 
-**Arquivo**: `src/App.tsx`
-
-```text
-function isCustomDomain(): boolean {
-  const hostname = window.location.hostname;
-  return (
-    hostname !== 'localhost' &&
-    !hostname.includes('lovable.app') &&
-    !hostname.includes('lovable.dev') &&
-    !hostname.includes('lovableproject.com')
-  );
-}
-```
-
-No componente `App`, antes de renderizar as rotas do CRM, verificar:
-- Se `isCustomDomain()` retorna true, renderizar o `PublicSiteProvider` + rotas publicas (Home, Imoveis, Sobre, Contato, Favoritos)
-- Se nao, renderizar as rotas normais do CRM (comportamento atual)
-
-### 2. Criar componente de rotas para dominio customizado
-
-Dentro do `App.tsx`, adicionar um componente `CustomDomainRoutes` que:
-- Usa o `PublicSiteProvider` (de `src/contexts/PublicSiteContext.tsx`) para resolver o dominio e carregar a configuracao do site
-- Renderiza o `PublicSiteLayout` com as sub-rotas: Home, Imoveis, Sobre, Contato, Favoritos
-- Reutiliza os mesmos componentes que ja existem em `PublishedSiteWrapper`
-
-### 3. Simplificar o codigo do Worker no SiteSettings
-
-**Arquivo**: `src/pages/SiteSettings.tsx`
-
-O Worker nao precisa mais de logica de slug nem de assets. Ele vira um proxy simples:
+### 3. Atualizar o Worker do Cloudflare
+Apos publicar, substituir o Worker por:
 
 ```text
 export default {
@@ -70,25 +59,28 @@ export default {
 };
 ```
 
-Sem slug, sem isAsset, sem logica complexa. O Worker so repassa a requisicao e o App detecta o dominio.
+## Fluxo esperado apos as correcoes
 
-### 4. Ajustar PublicSiteContext
+1. Usuario acessa `virandoachaveometodo.com.br`
+2. Worker faz proxy para `vimobe.lovable.app/` (sem reescrita)
+3. App carrega, `isCustomDomain()` detecta dominio customizado
+4. `CustomDomainRoutes` renderiza com `PublicSiteProvider`
+5. `PublicSiteContext` chama `resolve-site-domain` com `virandoachaveometodo.com.br`
+6. Edge Function encontra no banco (`custom_domain = virandoachaveometodo.com.br`, `subdomain = vimob`)
+7. Retorna configuracao completa do site
+8. Site publico aparece -- identico ao link temporario `vimob.vettercompany.com.br/sites/vimob`
 
-**Arquivo**: `src/contexts/PublicSiteContext.tsx`
+## Arquivos a modificar
 
-O contexto ja resolve dominios customizados chamando `resolve-site-domain`. Apenas garantir que o hostname do Worker (via `X-Forwarded-Host` ou direto) e corretamente usado na resolucao.
+1. **`supabase/functions/resolve-site-domain/index.ts`** -- Adicionar campos faltantes e join com organizations
+2. **Publicar o projeto** -- Para que as alteracoes do App.tsx entrem em producao
+3. **Worker do Cloudflare** -- Simplificar (acao manual do usuario)
 
-## Arquivos modificados
+## Ordem de execucao
 
-1. **`src/App.tsx`** -- Adicionar deteccao de dominio customizado e renderizacao condicional das rotas publicas
-2. **`src/pages/SiteSettings.tsx`** -- Simplificar o template do Worker (remover logica de slug e assets)
-3. **`src/contexts/PublicSiteContext.tsx`** -- Pequeno ajuste para garantir compatibilidade
-
-## Resultado esperado
-
-- Usuario acessa `virandoachaveometodo.com.br` --> Worker faz proxy para `vimobe.lovable.app`
-- App detecta que o hostname nao e lovable --> renderiza site publico
-- `PublicSiteContext` resolve o dominio e carrega a configuracao da organizacao correta
-- Navegacao interna (imoveis, sobre, contato) funciona normalmente
-- Sem redirecionamento para login/CRM
+1. Corrigir a Edge Function (campos faltantes)
+2. Deploy da Edge Function
+3. Publicar o projeto
+4. Atualizar o Worker no Cloudflare (manual)
+5. Testar acessando `virandoachaveometodo.com.br`
 
