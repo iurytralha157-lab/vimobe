@@ -1,89 +1,58 @@
 
-# Dominios Proprios via Cloudflare Workers
 
-## Resumo
+# Correcao: Site Publico em Dominio Customizado
 
-Substituir as instrucoes atuais de DNS (que apontam para IP do Lovable, que so funciona para 1 dominio) por instrucoes completas de Cloudflare Workers, permitindo que cada organizacao tenha seu proprio dominio apontando para o site publico.
+## Problema raiz
 
-## Alteracoes
+O Worker do Cloudflare faz proxy corretamente no servidor -- ele busca `vimobe.lovable.app/sites/vimob` e retorna o HTML. Porem, como o Vimobe e uma SPA (Single Page Application), o HTML retornado e sempre o mesmo `index.html`. Quando o navegador do usuario carrega esse HTML, o React Router olha a URL **do navegador** (que e `royal-river-fa01.companyvetter.workers.dev/`) e ve a rota `/` -- que no App.tsx redireciona para `/dashboard` ou `/auth`. Por isso aparece a tela de login.
 
-### 1. Nova edge function: `get-worker-config`
+O problema NAO esta no Worker. O Worker esta correto. O problema esta no App.tsx que nao sabe que o dominio customizado deve mostrar o site publico.
 
-**Arquivo novo**: `supabase/functions/get-worker-config/index.ts`
+## Solucao
 
-Endpoint publico que o Cloudflare Worker consulta para descobrir o slug de um dominio:
-- Recebe `{ domain: "imobiliariaxyz.com.br" }`
-- Busca na tabela `organization_sites` pelo `custom_domain`
-- Retorna `{ slug: "imobiliaria-xyz", target: "vimobe.lovable.app" }`
-- Sem autenticacao (precisa ser acessivel pelo Worker)
+### 1. Detectar dominio customizado no App.tsx
 
-### 2. Registrar no config.toml
+Adicionar uma funcao `isCustomDomain()` que verifica se o hostname atual e um dominio customizado (nao e localhost, nem lovable.app, nem lovable.dev, nem lovableproject.com).
 
-**Arquivo**: `supabase/config.toml`
+Quando for dominio customizado, renderizar APENAS as rotas do site publico usando o `PublicSiteContext` para resolver qual organizacao pertence ao dominio.
 
-Adicionar entrada `[functions.get-worker-config]` com `verify_jwt = false`.
+**Arquivo**: `src/App.tsx`
 
-### 3. Atualizar `resolve-site-domain`
+```text
+function isCustomDomain(): boolean {
+  const hostname = window.location.hostname;
+  return (
+    hostname !== 'localhost' &&
+    !hostname.includes('lovable.app') &&
+    !hostname.includes('lovable.dev') &&
+    !hostname.includes('lovableproject.com')
+  );
+}
+```
 
-**Arquivo**: `supabase/functions/resolve-site-domain/index.ts`
+No componente `App`, antes de renderizar as rotas do CRM, verificar:
+- Se `isCustomDomain()` retorna true, renderizar o `PublicSiteProvider` + rotas publicas (Home, Imoveis, Sobre, Contato, Favoritos)
+- Se nao, renderizar as rotas normais do CRM (comportamento atual)
 
-Adicionar busca direta na tabela `organization_sites` pelo campo `custom_domain` (alem do RPC existente), e incluir o `subdomain` (slug) na resposta.
+### 2. Criar componente de rotas para dominio customizado
 
-### 4. Atualizar `verify-domain-dns`
+Dentro do `App.tsx`, adicionar um componente `CustomDomainRoutes` que:
+- Usa o `PublicSiteProvider` (de `src/contexts/PublicSiteContext.tsx`) para resolver o dominio e carregar a configuracao do site
+- Renderiza o `PublicSiteLayout` com as sub-rotas: Home, Imoveis, Sobre, Contato, Favoritos
+- Reutiliza os mesmos componentes que ja existem em `PublishedSiteWrapper`
 
-**Arquivo**: `supabase/functions/verify-domain-dns/index.ts`
-
-Adicionar verificacao alternativa: alem de checar se o DNS aponta para `185.158.133.1`, tambem verificar se o dominio responde via Cloudflare Worker chamando `get-worker-config`. Se qualquer um dos metodos confirmar, marca como verificado.
-
-### 5. Reformular secao de Dominio no SiteSettings
+### 3. Simplificar o codigo do Worker no SiteSettings
 
 **Arquivo**: `src/pages/SiteSettings.tsx`
 
-Substituir o card atual de "Configuracao DNS" (que mostra registros A para 185.158.133.1) por instrucoes completas de Cloudflare Workers:
-
-- **Passo a passo numerado** com 5 etapas:
-  1. Criar conta gratuita no Cloudflare
-  2. Adicionar dominio no Cloudflare e mudar nameservers
-  3. Ir em Workers and Routes e criar um novo Worker
-  4. Colar o codigo do Worker (gerado automaticamente com o slug da organizacao)
-  5. Configurar rota do Worker para o dominio
-
-- **Codigo do Worker** gerado dinamicamente com o slug correto, com botao "Copiar Codigo"
-- **Informacoes uteis**: SSL automatico, plano gratuito do Cloudflare, tempo de propagacao
-- Link para dnschecker.org
-
-Tambem atualizar a funcao `copyDnsInstructions` para copiar as novas instrucoes do Cloudflare.
-
-### 6. Atualizar DnsVerificationStatus
-
-**Arquivo**: `src/components/site/DnsVerificationStatus.tsx`
-
-Melhorar mensagens quando a verificacao falha:
-- Remover referencia ao IP `185.158.133.1` (ja que agora usa Cloudflare)
-- Adicionar link para dnschecker.org
-- Mensagem mais clara orientando a verificar o Cloudflare Worker
-
-### 7. Atualizar PublicSiteContext
-
-**Arquivo**: `src/contexts/PublicSiteContext.tsx`
-
-Adicionar `vimobe.lovable.app` na lista de dominios ignorados para que o contexto funcione corretamente quando acessado via slug no dominio publicado.
-
-## Detalhes tecnicos
-
-### Codigo do Cloudflare Worker (template gerado para cada organizacao)
-
-O sistema gera automaticamente o script com o slug correto:
+O Worker nao precisa mais de logica de slug nem de assets. Ele vira um proxy simples:
 
 ```text
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const slug = 'SLUG-DA-ORGANIZACAO';
     const target = 'vimobe.lovable.app';
-
-    const targetUrl = `https://${target}/sites/${slug}${url.pathname}${url.search}`;
-
+    const targetUrl = 'https://' + target + url.pathname + url.search;
     const response = await fetch(targetUrl, {
       method: request.method,
       headers: {
@@ -93,7 +62,6 @@ export default {
       },
       body: ['GET','HEAD'].includes(request.method) ? undefined : request.body,
     });
-
     return new Response(response.body, {
       status: response.status,
       headers: response.headers,
@@ -102,32 +70,25 @@ export default {
 };
 ```
 
-### Fluxo completo
+Sem slug, sem isAsset, sem logica complexa. O Worker so repassa a requisicao e o App detecta o dominio.
 
-1. Usuario acessa `www.imobiliariaxyz.com.br`
-2. Cloudflare intercepta (nameservers apontam para Cloudflare)
-3. Worker faz proxy para `vimobe.lovable.app/sites/imobiliaria-xyz`
-4. App renderiza o site publico da organizacao correta
-5. URL na barra do navegador mostra `www.imobiliariaxyz.com.br/imoveis`
-6. SSL automatico pelo Cloudflare
+### 4. Ajustar PublicSiteContext
 
-### Escalabilidade
+**Arquivo**: `src/contexts/PublicSiteContext.tsx`
 
-- Plano gratuito Cloudflare: 100.000 requests/dia
-- Cada Worker pode servir multiplos dominios
-- Sem custo adicional de infraestrutura
-- 50+ sites sem problema
+O contexto ja resolve dominios customizados chamando `resolve-site-domain`. Apenas garantir que o hostname do Worker (via `X-Forwarded-Host` ou direto) e corretamente usado na resolucao.
 
-### Arquivos novos
-- `supabase/functions/get-worker-config/index.ts`
+## Arquivos modificados
 
-### Arquivos modificados
-- `supabase/config.toml`
-- `supabase/functions/resolve-site-domain/index.ts`
-- `supabase/functions/verify-domain-dns/index.ts`
-- `src/pages/SiteSettings.tsx`
-- `src/components/site/DnsVerificationStatus.tsx`
-- `src/contexts/PublicSiteContext.tsx`
+1. **`src/App.tsx`** -- Adicionar deteccao de dominio customizado e renderizacao condicional das rotas publicas
+2. **`src/pages/SiteSettings.tsx`** -- Simplificar o template do Worker (remover logica de slug e assets)
+3. **`src/contexts/PublicSiteContext.tsx`** -- Pequeno ajuste para garantir compatibilidade
 
-### Sem alteracoes no banco de dados
-A tabela `organization_sites` ja possui os campos `custom_domain`, `subdomain`, `domain_verified` e `domain_verified_at`.
+## Resultado esperado
+
+- Usuario acessa `virandoachaveometodo.com.br` --> Worker faz proxy para `vimobe.lovable.app`
+- App detecta que o hostname nao e lovable --> renderiza site publico
+- `PublicSiteContext` resolve o dominio e carrega a configuracao da organizacao correta
+- Navegacao interna (imoveis, sobre, contato) funciona normalmente
+- Sem redirecionamento para login/CRM
+
