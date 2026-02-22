@@ -17,6 +17,10 @@ export default function PublicAbout() {
     if (isPreviewMode && orgParam) {
       return `/site/preview/${path}?org=${orgParam}`;
     }
+    const siteMatch = location.pathname.match(/^\/sites\/([^/]+)/);
+    if (siteMatch) {
+      return `/sites/${siteMatch[1]}/${path}`;
+    }
     return `/${path}`;
   };
 
