@@ -187,9 +187,9 @@ export default function SiteSettings() {
 
     const path = isAsset
       ? url.pathname + url.search
-      : \\\`/sites/\\\${slug}\\\${url.pathname}\\\${url.search}\\\`;
+      : '/sites/' + slug + url.pathname + url.search;
 
-    const targetUrl = \\\`https://\\\${target}\\\${path}\\\`;
+    const targetUrl = 'https://' + target + path;
 
     const response = await fetch(targetUrl, {
       method: request.method,
