@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.cleanup-notifications]
 verify_jwt = false
+
+[functions.get-worker-config]
+verify_jwt = false

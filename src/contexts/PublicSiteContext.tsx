@@ -16,6 +16,7 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
         // Skip for localhost and main app domains
         if (
           hostname === 'localhost' ||
+          hostname === 'vimobe.lovable.app' ||
           hostname.includes('lovable.app') ||
           hostname.includes('lovable.dev') ||
           hostname.includes('lovableproject.com')

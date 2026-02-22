@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Check, X, Loader2, RefreshCw, Clock, AlertCircle } from "lucide-react";
+import { Check, Loader2, RefreshCw, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { useVerifyDomain } from "@/hooks/use-verify-domain";
 
 interface DnsVerificationStatusProps {
@@ -21,7 +20,6 @@ export function DnsVerificationStatus({
   const verifyDomain = useVerifyDomain();
   const [lastCheck, setLastCheck] = useState<{
     verified: boolean;
-    records: Array<{ type: string; data: string }>;
     error?: string;
   } | null>(null);
 
@@ -29,7 +27,6 @@ export function DnsVerificationStatus({
     const result = await verifyDomain.mutateAsync(domain);
     setLastCheck({
       verified: result.verified,
-      records: result.records,
       error: result.error
     });
     if (result.verified && onVerified) {
@@ -79,35 +76,21 @@ export function DnsVerificationStatus({
         <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium text-destructive">
             <AlertCircle className="w-4 h-4" />
-            DNS não configurado corretamente
+            Domínio ainda não configurado
           </div>
-          {lastCheck.records.length > 0 ? (
-            <div className="text-xs space-y-1">
-              <p className="text-muted-foreground">Registros encontrados:</p>
-              {lastCheck.records.map((record, i) => (
-                <div key={i} className="font-mono bg-muted px-2 py-1 rounded flex items-center gap-2">
-                  <span className="text-muted-foreground">{record.type}:</span>
-                  <span className={cn(
-                    record.data === '185.158.133.1' ? 'text-green-600' : 'text-red-600'
-                  )}>
-                    {record.data}
-                  </span>
-                  {record.data === '185.158.133.1' ? (
-                    <Check className="w-3 h-3 text-green-600" />
-                  ) : (
-                    <X className="w-3 h-3 text-red-600" />
-                  )}
-                </div>
-              ))}
-              <p className="text-muted-foreground mt-2">
-                Esperado: <span className="font-mono">185.158.133.1</span>
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Nenhum registro A encontrado. Configure o DNS conforme as instruções acima.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            Verifique se o Cloudflare Worker está ativo e a rota está configurada corretamente para o domínio.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Teste em{' '}
+            <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              {domain}
+            </a>
+            {' '}ou verifique DNS em{' '}
+            <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              dnschecker.org
+            </a>
+          </p>
           {lastCheck.error && (
             <p className="text-xs text-destructive">Erro: {lastCheck.error}</p>
           )}
@@ -118,7 +101,7 @@ export function DnsVerificationStatus({
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
           <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400">
             <Check className="w-4 h-4" />
-            DNS verificado com sucesso!
+            Domínio verificado com sucesso!
           </div>
         </div>
       )}

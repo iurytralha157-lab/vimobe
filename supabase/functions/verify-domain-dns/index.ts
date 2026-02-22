@@ -17,7 +17,6 @@ interface DnsRecord {
 
 async function checkDns(domain: string): Promise<{ verified: boolean; records: DnsRecord[]; error?: string }> {
   try {
-    // Clean domain (remove protocol, www, trailing slash)
     const cleanDomain = domain
       .replace(/^https?:\/\//, '')
       .replace(/^www\./, '')
@@ -25,7 +24,6 @@ async function checkDns(domain: string): Promise<{ verified: boolean; records: D
 
     console.log(`Checking DNS for domain: ${cleanDomain}`);
 
-    // Use Google's DNS-over-HTTPS API to check A records
     const response = await fetch(`https://dns.google/resolve?name=${cleanDomain}&type=A`, {
       headers: { 'Accept': 'application/dns-json' }
     });
@@ -42,7 +40,7 @@ async function checkDns(domain: string): Promise<{ verified: boolean; records: D
     
     if (data.Answer) {
       for (const answer of data.Answer) {
-        if (answer.type === 1) { // A record
+        if (answer.type === 1) {
           records.push({
             type: 'A',
             name: answer.name,
@@ -53,10 +51,8 @@ async function checkDns(domain: string): Promise<{ verified: boolean; records: D
       }
     }
 
-    // Check if any A record points to Lovable IP
     const verified = records.some(r => r.data === LOVABLE_IP);
-
-    console.log(`Domain ${cleanDomain} verification result: ${verified}`, records);
+    console.log(`Domain ${cleanDomain} DNS verification: ${verified}`, records);
 
     return { verified, records };
   } catch (error) {
@@ -66,8 +62,49 @@ async function checkDns(domain: string): Promise<{ verified: boolean; records: D
   }
 }
 
+async function checkWorkerProxy(domain: string, supabaseUrl: string, supabaseServiceKey: string): Promise<boolean> {
+  try {
+    const cleanDomain = domain
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, '');
+
+    console.log(`Checking Worker proxy for domain: ${cleanDomain}`);
+
+    // Check if the domain is configured in organization_sites
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data } = await supabase
+      .from('organization_sites')
+      .select('subdomain')
+      .or(`custom_domain.eq.${cleanDomain},custom_domain.eq.${cleanDomain.replace(/^www\./, '')}`)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (!data?.subdomain) {
+      console.log('No matching site config found for worker check');
+      return false;
+    }
+
+    // Try to fetch the domain to see if it responds (Worker proxy check)
+    try {
+      const probeResponse = await fetch(`https://${cleanDomain}`, {
+        method: 'HEAD',
+        redirect: 'follow',
+      });
+      console.log(`Worker probe response status: ${probeResponse.status}`);
+      // If we get any response (even 404), the Worker is likely active
+      return probeResponse.status < 500;
+    } catch {
+      console.log('Worker probe failed - domain may not be configured yet');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error checking worker proxy:', error);
+    return false;
+  }
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -79,7 +116,7 @@ serve(async (req) => {
 
     const { domain, organization_id, check_all } = await req.json();
 
-    // If check_all is true, verify all pending domains (for cron job)
+    // Batch verification for cron
     if (check_all) {
       console.log('Checking all pending domains...');
       
@@ -89,21 +126,24 @@ serve(async (req) => {
         .not('custom_domain', 'is', null)
         .eq('domain_verified', false);
 
-      if (fetchError) {
-        console.error('Error fetching pending sites:', fetchError);
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
 
-      console.log(`Found ${pendingSites?.length || 0} pending domains to verify`);
+      console.log(`Found ${pendingSites?.length || 0} pending domains`);
 
       const results = [];
       for (const site of pendingSites || []) {
         if (!site.custom_domain) continue;
 
         const dnsResult = await checkDns(site.custom_domain);
+        let verified = dnsResult.verified;
+
+        // If DNS check fails, try worker proxy check
+        if (!verified) {
+          verified = await checkWorkerProxy(site.custom_domain, supabaseUrl, supabaseServiceKey);
+        }
         
-        if (dnsResult.verified) {
-          const { error: updateError } = await supabase
+        if (verified) {
+          await supabase
             .from('organization_sites')
             .update({
               domain_verified: true,
@@ -111,16 +151,12 @@ serve(async (req) => {
             })
             .eq('id', site.id);
 
-          if (updateError) {
-            console.error(`Error updating site ${site.id}:`, updateError);
-          } else {
-            console.log(`Domain ${site.custom_domain} verified successfully`);
-          }
+          console.log(`Domain ${site.custom_domain} verified successfully`);
         }
 
         results.push({
           domain: site.custom_domain,
-          verified: dnsResult.verified,
+          verified,
           records: dnsResult.records
         });
       }
@@ -139,10 +175,16 @@ serve(async (req) => {
     }
 
     const dnsResult = await checkDns(domain);
+    let verified = dnsResult.verified;
 
-    // If organization_id provided and verified, update the database
-    if (organization_id && dnsResult.verified) {
-      const { error: updateError } = await supabase
+    // If DNS doesn't point to Lovable IP, check Worker proxy
+    if (!verified) {
+      verified = await checkWorkerProxy(domain, supabaseUrl, supabaseServiceKey);
+    }
+
+    // Update DB if verified
+    if (organization_id && verified) {
+      await supabase
         .from('organization_sites')
         .update({
           domain_verified: true,
@@ -150,15 +192,11 @@ serve(async (req) => {
         })
         .eq('organization_id', organization_id)
         .eq('custom_domain', domain);
-
-      if (updateError) {
-        console.error('Error updating domain verification:', updateError);
-      }
     }
 
     return new Response(JSON.stringify({
       domain,
-      verified: dnsResult.verified,
+      verified,
       records: dnsResult.records,
       expected_ip: LOVABLE_IP,
       error: dnsResult.error

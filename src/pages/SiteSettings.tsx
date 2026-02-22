@@ -54,6 +54,7 @@ export default function SiteSettings() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedWorker, setCopiedWorker] = useState(false);
 
   useEffect(() => {
     if (site) {
@@ -132,9 +133,11 @@ export default function SiteSettings() {
   };
 
   const getPublishedSiteUrl = () => {
+    if (formData.custom_domain && site?.domain_verified) {
+      return `https://${formData.custom_domain}`;
+    }
     if (formData.subdomain) {
-      // URL do site publicado via slug
-      return `${window.location.origin}/sites/${formData.subdomain}`;
+      return `https://vimobe.lovable.app/sites/${formData.subdomain}`;
     }
     return null;
   };
@@ -144,7 +147,7 @@ export default function SiteSettings() {
       return `https://${formData.custom_domain}`;
     }
     if (formData.subdomain) {
-      return `https://${formData.subdomain}.vimob.com.br`;
+      return `https://vimobe.lovable.app/sites/${formData.subdomain}`;
     }
     return null;
   };
@@ -157,20 +160,53 @@ export default function SiteSettings() {
     }
   };
 
+  const getWorkerCode = () => {
+    const slug = formData.subdomain || 'SEU-SLUG-AQUI';
+    return `export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const target = 'vimobe.lovable.app';
+    const slug = '${slug}';
+
+    const targetUrl = \`https://\${target}/sites/\${slug}\${url.pathname}\${url.search}\`;
+
+    const response = await fetch(targetUrl, {
+      method: request.method,
+      headers: {
+        ...Object.fromEntries(request.headers),
+        'Host': target,
+        'X-Forwarded-Host': url.hostname,
+      },
+      body: ['GET','HEAD'].includes(request.method) ? undefined : request.body,
+    });
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: response.headers,
+    });
+  }
+};`;
+  };
+
+  const copyWorkerCode = () => {
+    navigator.clipboard.writeText(getWorkerCode());
+    setCopiedWorker(true);
+    setTimeout(() => setCopiedWorker(false), 2000);
+    toast.success('Código do Worker copiado!');
+  };
+
   const copyDnsInstructions = () => {
-    const instructions = `Configuração DNS para ${formData.custom_domain}:
+    const instructions = `Configuração de Domínio Próprio via Cloudflare Workers para ${formData.custom_domain}:
 
-Adicione os seguintes registros no seu provedor de domínio:
+1. Crie uma conta gratuita em https://cloudflare.com
+2. Adicione seu domínio (${formData.custom_domain}) no Cloudflare
+3. Altere os nameservers no seu registrador para os fornecidos pelo Cloudflare
+4. No Cloudflare, vá em Workers and Routes > Create Worker
+5. Cole o código do Worker gerado pelo sistema
+6. Configure a rota: ${formData.custom_domain}/* → seu Worker
 
-Registro A (domínio raiz):
-- Tipo: A
-- Nome: @
-- Valor: 185.158.133.1
-
-Registro A (www):
-- Tipo: A  
-- Nome: www
-- Valor: 185.158.133.1`;
+Código do Worker:
+${getWorkerCode()}`;
 
     navigator.clipboard.writeText(instructions);
     setCopied(true);
@@ -361,27 +397,60 @@ Registro A (www):
 
                     {formData.custom_domain && !site?.domain_verified && (
                       <Card className="bg-muted">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <h4 className="font-medium">Configuração DNS</h4>
+                        <CardContent className="p-4 space-y-4">
+                          <div className="flex items-start justify-between">
+                            <h4 className="font-medium">Configurar via Cloudflare Workers</h4>
                             <Button variant="outline" size="sm" onClick={copyDnsInstructions}>
                               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             </Button>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Adicione os seguintes registros no seu provedor de domínio:
-                          </p>
-                          <div className="space-y-2 font-mono text-sm">
-                            <div className="bg-background p-2 rounded">
-                              <span className="text-muted-foreground">Tipo:</span> A | 
-                              <span className="text-muted-foreground"> Nome:</span> @ | 
-                              <span className="text-muted-foreground"> Valor:</span> 185.158.133.1
+
+                          <div className="space-y-3 text-sm">
+                            <div className="flex gap-3">
+                              <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                              <p>Crie uma conta gratuita em <a href="https://cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">cloudflare.com</a></p>
                             </div>
-                            <div className="bg-background p-2 rounded">
-                              <span className="text-muted-foreground">Tipo:</span> A | 
-                              <span className="text-muted-foreground"> Nome:</span> www | 
-                              <span className="text-muted-foreground"> Valor:</span> 185.158.133.1
+                            <div className="flex gap-3">
+                              <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                              <p>Adicione seu domínio (<strong>{formData.custom_domain}</strong>) e altere os nameservers no seu registrador para os fornecidos pelo Cloudflare</p>
                             </div>
+                            <div className="flex gap-3">
+                              <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                              <p>No painel do Cloudflare, vá em <strong>Workers and Routes</strong> → <strong>Create Worker</strong></p>
+                            </div>
+                            <div className="flex gap-3">
+                              <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">4</span>
+                              <div className="flex-1">
+                                <p className="mb-2">Cole o código abaixo no editor do Worker:</p>
+                                <div className="relative">
+                                  <pre className="bg-background p-3 rounded text-xs overflow-x-auto max-h-48 border">{getWorkerCode()}</pre>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={copyWorkerCode} 
+                                    className="absolute top-2 right-2"
+                                  >
+                                    {copiedWorker ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-3">
+                              <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">5</span>
+                              <p>Configure a rota do Worker: <code className="bg-background px-1 py-0.5 rounded text-xs">{formData.custom_domain}/*</code> → seu Worker</p>
+                            </div>
+                          </div>
+
+                          <div className="bg-background rounded p-3 text-xs text-muted-foreground space-y-1">
+                            <p>✅ SSL automático e gratuito pelo Cloudflare</p>
+                            <p>✅ Plano gratuito: 100.000 requests/dia</p>
+                            <p>✅ Propagação de DNS pode levar até 72h</p>
+                            <p>
+                              🔗 Verifique em{' '}
+                              <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                                dnschecker.org
+                              </a>
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
