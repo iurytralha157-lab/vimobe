@@ -1,86 +1,54 @@
 
+# Correcao: Navegacao do Site Publicado via Link Temporario
 
-# Correcao Completa: Dominio Customizado com Tela Branca
+## Problema
 
-## Diagnostico
+Quando o site e acessado pelo link temporario (`/sites/vimob`), os links internos de navegacao (Sobre, Imoveis, Contato, etc.) apontam para `/sobre`, `/imoveis`, etc. -- perdendo o prefixo `/sites/vimob`. Isso faz com que a navegacao quebre.
 
-Analisei todo o fluxo e encontrei **3 problemas**:
+O problema esta na funcao `getHref` que existe em 6 arquivos. Ela so trata dois casos:
+- Modo preview: `/site/preview/...`
+- Outros: `/{path}`
 
-### Problema 1: Codigo nao publicado
-As alteracoes feitas no `App.tsx` (deteccao de dominio customizado via `isCustomDomain()`) existem apenas no ambiente de teste. O site publicado em `vimobe.lovable.app` ainda roda o codigo antigo, que redireciona para login/CRM. **E preciso publicar o projeto.**
-
-### Problema 2: Edge Function `resolve-site-domain` retorna campos incompletos
-A funcao que resolve o dominio customizado faz um SELECT que **nao inclui** campos obrigatorios:
-- `logo_width`, `logo_height` -- tamanho do logo
-- `watermark_enabled`, `watermark_size` -- configuracao de marca d'agua  
-- `organization_name` -- nome da organizacao (usado no rodape e textos)
-
-Sem esses campos, o site pode carregar com dados incompletos ou erros.
-
-### Problema 3: Worker do Cloudflare ainda tem logica antiga
-O Worker atual faz reescrita de path (`/sites/vimob/...`), mas como o frontend agora detecta o dominio customizado e renderiza as rotas publicas diretamente, o Worker deve ser simplificado para apenas fazer proxy.
+Falta o caso `/sites/:slug/...`.
 
 ## Solucao
 
-### 1. Atualizar `resolve-site-domain` Edge Function
-Adicionar os campos faltantes no SELECT e incluir o `organization_name` via join com a tabela `organizations`.
+Atualizar a funcao `getHref` em todos os 6 arquivos para detectar quando a URL contem `/sites/:slug` e adicionar o prefixo correto.
 
-**Arquivo**: `supabase/functions/resolve-site-domain/index.ts`
-- Adicionar ao SELECT: `logo_width, logo_height, watermark_enabled, watermark_size`
-- Adicionar join: `organizations(name)` para obter o `organization_name`
-- Mapear `organization_name` no `site_config` retornado
-
-### 2. Publicar o projeto
-As alteracoes no `App.tsx` (funcao `isCustomDomain()` e componente `CustomDomainRoutes`) ja estao no codigo. Basta publicar para que o dominio publicado (`vimobe.lovable.app`) passe a usar essa logica.
-
-### 3. Atualizar o Worker do Cloudflare
-Apos publicar, substituir o Worker por:
-
-```text
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    const target = 'vimobe.lovable.app';
-    const targetUrl = 'https://' + target + url.pathname + url.search;
-    const response = await fetch(targetUrl, {
-      method: request.method,
-      headers: {
-        ...Object.fromEntries(request.headers),
-        'Host': target,
-        'X-Forwarded-Host': url.hostname,
-      },
-      body: ['GET','HEAD'].includes(request.method) ? undefined : request.body,
-    });
-    return new Response(response.body, {
-      status: response.status,
-      headers: response.headers,
-    });
-  }
-};
-```
-
-## Fluxo esperado apos as correcoes
-
-1. Usuario acessa `virandoachaveometodo.com.br`
-2. Worker faz proxy para `vimobe.lovable.app/` (sem reescrita)
-3. App carrega, `isCustomDomain()` detecta dominio customizado
-4. `CustomDomainRoutes` renderiza com `PublicSiteProvider`
-5. `PublicSiteContext` chama `resolve-site-domain` com `virandoachaveometodo.com.br`
-6. Edge Function encontra no banco (`custom_domain = virandoachaveometodo.com.br`, `subdomain = vimob`)
-7. Retorna configuracao completa do site
-8. Site publico aparece -- identico ao link temporario `vimob.vettercompany.com.br/sites/vimob`
+A logica sera:
+1. Se esta em modo preview --> `/site/preview/{path}?org=...`
+2. Se a URL contem `/sites/{slug}` --> `/sites/{slug}/{path}`
+3. Senao (dominio customizado ou outro) --> `/{path}`
 
 ## Arquivos a modificar
 
-1. **`supabase/functions/resolve-site-domain/index.ts`** -- Adicionar campos faltantes e join com organizations
-2. **Publicar o projeto** -- Para que as alteracoes do App.tsx entrem em producao
-3. **Worker do Cloudflare** -- Simplificar (acao manual do usuario)
+1. **`src/pages/public/PublicSiteLayout.tsx`** (linhas 75-83)
+2. **`src/pages/public/PublicProperties.tsx`** (funcao getHref)
+3. **`src/pages/public/PublicFavorites.tsx`** (funcao getHref)
+4. **`src/pages/public/PublicAbout.tsx`** (funcao getHref)
+5. **`src/pages/public/PublicHome.tsx`** (funcao getHref)
+6. **`src/pages/public/PublicPropertyDetail.tsx`** (funcao getHref)
 
-## Ordem de execucao
+## Detalhe tecnico
 
-1. Corrigir a Edge Function (campos faltantes)
-2. Deploy da Edge Function
-3. Publicar o projeto
-4. Atualizar o Worker no Cloudflare (manual)
-5. Testar acessando `virandoachaveometodo.com.br`
+Em cada arquivo, a funcao `getHref` sera atualizada para:
 
+```text
+const getHref = (path: string) => {
+  if (isPreviewMode && orgParam) {
+    if (path.includes('?')) {
+      return `/site/preview/${path}&org=${orgParam}`;
+    }
+    return `/site/preview/${path}?org=${orgParam}`;
+  }
+  // Detectar /sites/:slug na URL atual
+  const siteMatch = location.pathname.match(/^\/sites\/([^/]+)/);
+  if (siteMatch) {
+    const slug = siteMatch[1];
+    return `/sites/${slug}/${path}`;
+  }
+  return `/${path}`;
+};
+```
+
+Isso garante que todos os links internos mantenham o prefixo `/sites/vimob/` quando o site e acessado pelo link temporario.
