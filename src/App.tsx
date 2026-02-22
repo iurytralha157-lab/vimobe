@@ -71,6 +71,18 @@ import PublicContact from "./pages/public/PublicContact";
 import PreviewSiteWrapper from "./pages/public/PreviewSiteWrapper";
 import PublishedSiteWrapper from "./pages/public/PublishedSiteWrapper";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
+import PublicFavorites from "./pages/public/PublicFavorites";
+
+function isCustomDomain(): boolean {
+  const hostname = window.location.hostname;
+  return (
+    hostname !== 'localhost' &&
+    !hostname.includes('lovable.app') &&
+    !hostname.includes('lovable.dev') &&
+    !hostname.includes('lovableproject.com')
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -267,7 +279,29 @@ function AppRoutes() {
   );
 }
 
+function CustomDomainRoutes() {
+  return (
+    <PublicSiteProvider>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/" element={<PublicSiteLayout />}>
+          <Route index element={<PublicHome />} />
+          <Route path="imoveis" element={<PublicProperties />} />
+          <Route path="imoveis/:codigo" element={<PublicPropertyDetail />} />
+          <Route path="imovel/:code" element={<PublicPropertyDetail />} />
+          <Route path="sobre" element={<PublicAbout />} />
+          <Route path="contato" element={<PublicContact />} />
+          <Route path="favoritos" element={<PublicFavorites />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </PublicSiteProvider>
+  );
+}
+
 const App = () => {
+  const customDomain = isCustomDomain();
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -275,11 +309,17 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AuthProvider>
+            {customDomain ? (
               <LanguageProvider>
-                <AppRoutes />
+                <CustomDomainRoutes />
               </LanguageProvider>
-            </AuthProvider>
+            ) : (
+              <AuthProvider>
+                <LanguageProvider>
+                  <AppRoutes />
+                </LanguageProvider>
+              </AuthProvider>
+            )}
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
