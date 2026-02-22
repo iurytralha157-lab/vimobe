@@ -1,54 +1,41 @@
 
-# Correcao: Navegacao do Site Publicado via Link Temporario
+
+# Correcao: Edge Function `resolve-site-domain` com colunas inexistentes
 
 ## Problema
 
-Quando o site e acessado pelo link temporario (`/sites/vimob`), os links internos de navegacao (Sobre, Imoveis, Contato, etc.) apontam para `/sobre`, `/imoveis`, etc. -- perdendo o prefixo `/sites/vimob`. Isso faz com que a navegacao quebre.
+A Edge Function `resolve-site-domain` esta retornando **erro 500** ao tentar resolver o dominio `virandoachaveometodo.com.br`. O motivo e que o SELECT referencia duas colunas que nao existem na tabela `organization_sites`:
+- `watermark_size`
+- `watermark_position`
 
-O problema esta na funcao `getHref` que existe em 6 arquivos. Ela so trata dois casos:
-- Modo preview: `/site/preview/...`
-- Outros: `/{path}`
+O erro nos logs: `record "v_site" has no field "watermark_size"` (codigo SQL 42703).
 
-Falta o caso `/sites/:slug/...`.
+As colunas que **existem** na tabela sao: `logo_width`, `logo_height`, `watermark_enabled`, `watermark_logo_url`, `watermark_opacity`. As colunas `watermark_size` e `watermark_position` nunca foram criadas no banco.
 
 ## Solucao
 
-Atualizar a funcao `getHref` em todos os 6 arquivos para detectar quando a URL contem `/sites/:slug` e adicionar o prefixo correto.
+### Opcao escolhida: Remover as colunas inexistentes do SELECT
 
-A logica sera:
-1. Se esta em modo preview --> `/site/preview/{path}?org=...`
-2. Se a URL contem `/sites/{slug}` --> `/sites/{slug}/{path}`
-3. Senao (dominio customizado ou outro) --> `/{path}`
+Editar `supabase/functions/resolve-site-domain/index.ts` e remover `watermark_size` e `watermark_position` do SELECT na linha 34.
 
-## Arquivos a modificar
-
-1. **`src/pages/public/PublicSiteLayout.tsx`** (linhas 75-83)
-2. **`src/pages/public/PublicProperties.tsx`** (funcao getHref)
-3. **`src/pages/public/PublicFavorites.tsx`** (funcao getHref)
-4. **`src/pages/public/PublicAbout.tsx`** (funcao getHref)
-5. **`src/pages/public/PublicHome.tsx`** (funcao getHref)
-6. **`src/pages/public/PublicPropertyDetail.tsx`** (funcao getHref)
-
-## Detalhe tecnico
-
-Em cada arquivo, a funcao `getHref` sera atualizada para:
-
-```text
-const getHref = (path: string) => {
-  if (isPreviewMode && orgParam) {
-    if (path.includes('?')) {
-      return `/site/preview/${path}&org=${orgParam}`;
-    }
-    return `/site/preview/${path}?org=${orgParam}`;
-  }
-  // Detectar /sites/:slug na URL atual
-  const siteMatch = location.pathname.match(/^\/sites\/([^/]+)/);
-  if (siteMatch) {
-    const slug = siteMatch[1];
-    return `/sites/${slug}/${path}`;
-  }
-  return `/${path}`;
-};
+O frontend (`PublishedSiteWrapper.tsx` e `PreviewSiteWrapper.tsx`) ja trata esses campos com fallback:
+```
+watermark_size: (data as any).watermark_size ?? 80,
+watermark_position: (data as any).watermark_position ?? 'bottom-right',
 ```
 
-Isso garante que todos os links internos mantenham o prefixo `/sites/vimob/` quando o site e acessado pelo link temporario.
+Portanto, mesmo sem esses campos no retorno, o site usara os valores padrao (80 e 'bottom-right').
+
+### Arquivo a modificar
+
+**`supabase/functions/resolve-site-domain/index.ts`** (linha 34)
+- Remover `watermark_size` do SELECT
+- Remover `watermark_position` do SELECT
+- Manter todos os demais campos
+
+### Apos a correcao
+
+1. Deploy da Edge Function
+2. Testar chamando `resolve-site-domain` com `virandoachaveometodo.com.br`
+3. Verificar que o dominio customizado carrega o site corretamente
+
