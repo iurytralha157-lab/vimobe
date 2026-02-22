@@ -28,10 +28,10 @@ Deno.serve(async (req) => {
 
     const cleanDomain = domain.toLowerCase().trim();
 
-    // First try direct lookup by custom_domain
+    // Direct lookup by custom_domain with all needed fields
     const { data: directMatch, error: directError } = await supabase
       .from('organization_sites')
-      .select('organization_id, subdomain, custom_domain, site_title, site_description, primary_color, secondary_color, accent_color, logo_url, favicon_url, whatsapp, phone, email, address, city, state, instagram, facebook, youtube, linkedin, about_title, about_text, about_image_url, seo_title, seo_description, seo_keywords, google_analytics_id, hero_image_url, hero_title, hero_subtitle, page_banner_url, watermark_logo_url, watermark_opacity, watermark_position')
+      .select('organization_id, subdomain, custom_domain, site_title, site_description, primary_color, secondary_color, accent_color, logo_url, logo_width, logo_height, favicon_url, whatsapp, phone, email, address, city, state, instagram, facebook, youtube, linkedin, about_title, about_text, about_image_url, seo_title, seo_description, seo_keywords, google_analytics_id, hero_image_url, hero_title, hero_subtitle, page_banner_url, watermark_logo_url, watermark_opacity, watermark_position, watermark_enabled, watermark_size, organizations(name)')
       .or(`custom_domain.eq.${cleanDomain},custom_domain.eq.www.${cleanDomain.replace(/^www\./, '')}`)
       .eq('is_active', true)
       .limit(1)
@@ -40,13 +40,18 @@ Deno.serve(async (req) => {
     if (directMatch) {
       console.log(`Domain resolved via direct lookup: ${domain} -> org: ${directMatch.organization_id}`);
       
-      const { organization_id, subdomain, ...siteFields } = directMatch;
+      const { organization_id, subdomain, organizations, ...siteFields } = directMatch;
+      const orgName = (organizations as any)?.name || null;
+      
       return new Response(
         JSON.stringify({
           found: true,
           organization_id,
           subdomain,
-          site_config: siteFields,
+          site_config: {
+            ...siteFields,
+            organization_name: orgName,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
