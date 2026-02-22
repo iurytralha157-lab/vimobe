@@ -76,11 +76,17 @@ import PublicFavorites from "./pages/public/PublicFavorites";
 
 function isCustomDomain(): boolean {
   const hostname = window.location.hostname;
+  const pathname = window.location.pathname;
+  
+  // If accessing /sites/ routes, it's the published site wrapper, not custom domain
+  if (pathname.startsWith('/sites/')) return false;
+  
   return (
     hostname !== 'localhost' &&
     !hostname.includes('lovable.app') &&
     !hostname.includes('lovable.dev') &&
-    !hostname.includes('lovableproject.com')
+    !hostname.includes('lovableproject.com') &&
+    !hostname.includes('vettercompany.com.br')
   );
 }
 
