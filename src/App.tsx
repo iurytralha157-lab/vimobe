@@ -85,8 +85,7 @@ function isCustomDomain(): boolean {
     hostname !== 'localhost' &&
     !hostname.includes('lovable.app') &&
     !hostname.includes('lovable.dev') &&
-    !hostname.includes('lovableproject.com') &&
-    !hostname.includes('vettercompany.com.br')
+    !hostname.includes('lovableproject.com')
   );
 }
 
