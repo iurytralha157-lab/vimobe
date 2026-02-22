@@ -161,35 +161,11 @@ export default function SiteSettings() {
   };
 
   const getWorkerCode = () => {
-    const slug = formData.subdomain || 'SEU-SLUG-AQUI';
     return `export default {
   async fetch(request) {
     const url = new URL(request.url);
     const target = 'vimobe.lovable.app';
-    const slug = '${slug}';
-
-    // Assets e arquivos estáticos vão direto, sem prefixo /sites/slug
-    const isAsset = url.pathname.startsWith('/assets/') ||
-                    url.pathname.startsWith('/fonts/') ||
-                    url.pathname.startsWith('/icons/') ||
-                    url.pathname.startsWith('/sounds/') ||
-                    url.pathname.startsWith('/images/') ||
-                    url.pathname.endsWith('.js') ||
-                    url.pathname.endsWith('.css') ||
-                    url.pathname.endsWith('.png') ||
-                    url.pathname.endsWith('.jpg') ||
-                    url.pathname.endsWith('.svg') ||
-                    url.pathname.endsWith('.ico') ||
-                    url.pathname.endsWith('.woff') ||
-                    url.pathname.endsWith('.woff2') ||
-                    url.pathname.endsWith('.mp3') ||
-                    url.pathname.endsWith('.webmanifest');
-
-    const path = isAsset
-      ? url.pathname + url.search
-      : '/sites/' + slug + url.pathname + url.search;
-
-    const targetUrl = 'https://' + target + path;
+    const targetUrl = 'https://' + target + url.pathname + url.search;
 
     const response = await fetch(targetUrl, {
       method: request.method,
