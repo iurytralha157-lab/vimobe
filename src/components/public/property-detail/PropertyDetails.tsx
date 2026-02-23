@@ -80,12 +80,18 @@ export default function PropertyDetails({
       {/* Tabs for Features and Nearby */}
       {(hasExtras || hasNearby) && (
         <Tabs defaultValue={hasExtras ? 'features' : 'nearby'} className="w-full">
-          <TabsList className="w-full justify-start p-1 rounded-xl" style={{ backgroundColor: textColor ? `${textColor}10` : undefined }}>
+          <style>{`
+            .public-tabs [data-state="active"] {
+              background-color: ${cardColor} !important;
+              color: ${textColor} !important;
+            }
+          `}</style>
+          <TabsList className="public-tabs w-full justify-start p-1 rounded-xl" style={{ backgroundColor: textColor ? `${textColor}10` : undefined }}>
             {hasExtras && (
               <TabsTrigger 
                 value="features" 
-                className="flex-1 data-[state=active]:shadow-sm rounded-lg gap-2"
-                style={{ color: textColor }}
+                className="flex-1 rounded-lg gap-2"
+                style={{ color: textColor ? `${textColor}99` : undefined }}
               >
                 <Sparkles className="w-4 h-4" />
                 Características
@@ -94,8 +100,8 @@ export default function PropertyDetails({
             {hasNearby && (
               <TabsTrigger 
                 value="nearby" 
-                className="flex-1 data-[state=active]:shadow-sm rounded-lg gap-2"
-                style={{ color: textColor }}
+                className="flex-1 rounded-lg gap-2"
+                style={{ color: textColor ? `${textColor}99` : undefined }}
               >
                 <MapPin className="w-4 h-4" />
                 Proximidades
