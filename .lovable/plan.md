@@ -1,40 +1,40 @@
 
+# Adicionar Mascaras de CPF e RG nos Formularios
 
-# Corrigir Scroll, Adicionar Portabilidade e Verificar Rascunho
+## O que sera feito
+Aplicar formatacao automatica nos campos CPF e RG em todos os formularios do sistema, aceitando apenas numeros e formatando automaticamente conforme o usuario digita.
 
-## Problema 1 - Scroll nao funciona
-O formulario usa `ScrollArea` (Radix) dentro de um container flex com `h-[85vh]`. O viewport interno do ScrollArea precisa receber altura explicita para funcionar corretamente. Vou ajustar o CSS para garantir que o scroll funcione tanto no mobile quanto no desktop.
+- **CPF**: formato `000.000.000-00` (11 digitos)
+- **RG**: formato `00.000.000-0` (9 digitos)
 
-## Problema 2 - Trocar "Telefone 2" por "Portabilidade"
-O campo "Telefone 2" (linhas 350-357) sera substituido por um checkbox "Portabilidade" com label "Este numero e portabilidade". O campo ficara logo abaixo do campo WhatsApp, no mesmo estilo visual do checkbox "E Combo?" ja existente no `TelecomCustomerTab.tsx`.
+## Arquivos alterados
 
-## Problema 3 - Rascunho
-O rascunho ESTA funcionando no codigo (linhas 117-177 do CreateLeadDialog). Nenhuma alteracao necessaria - ele salva automaticamente com debounce de 500ms e restaura ao reabrir o formulario.
+### 1. `src/lib/masks.ts` (novo arquivo)
+Criar funcoes utilitarias de mascara reutilizaveis:
+- `maskCPF(value)` - remove tudo que nao e numero, aplica pontos e traco: `123.456.789-00`
+- `maskRG(value)` - remove tudo que nao e numero, aplica pontos e traco: `12.345.678-9`
 
----
+### 2. `src/components/leads/CreateLeadDialog.tsx`
+- Campo CPF (linha 314): trocar `onChange` para aplicar `maskCPF` antes de salvar no state, adicionar `maxLength={14}`
+- Campo RG (linha 325): trocar `onChange` para aplicar `maskRG` antes de salvar no state, adicionar `maxLength={12}`, mudar placeholder para `00.000.000-0`
 
-## Alteracoes tecnicas
+### 3. `src/components/leads/TelecomCustomerTab.tsx`
+- Campo CPF (linha 252): aplicar `maskCPF` no `onChange`, adicionar `maxLength={14}`
+- Campo RG (linha 259): aplicar `maskRG` no `onChange`, mudar placeholder para `00.000.000-0`, adicionar `maxLength={12}`
 
-### CreateLeadDialog.tsx
+### 4. `src/components/telecom/CustomerFormDialog.tsx`
+- Campo CPF (linha 210): aplicar `maskCPF` no `onChange`, adicionar `maxLength={14}`
+- Campo RG: aplicar `maskRG` no `onChange`, adicionar `maxLength={12}`
 
-**Scroll fix:**
-- Adicionar `style={{ maxHeight: 'calc(85vh - 180px)' }}` no ScrollArea ou ajustar o viewport com classe `[&>[data-radix-scroll-area-viewport]]:max-h-full` para garantir que o Radix compute a area de scroll corretamente.
-- Alternativa: trocar o ScrollArea por um `div` com `overflow-y-auto flex-1 min-h-0` que e mais confiavel em containers flex.
+## Detalhes tecnicos
 
-**Portabilidade:**
-1. Adicionar `is_portability: false` no `getEmptyFormData()` (linha 69)
-2. Na aba "Basico" do Telecom, remover o campo "Telefone 2" (linhas 350-357) e substituir por um checkbox:
-   ```
-   <div className="flex items-center gap-2 mt-1">
-     <Checkbox checked={formData.is_portability} onCheckedChange={...} />
-     <Label>Este numero e portabilidade</Label>
-   </div>
-   ```
-3. Mover o campo abaixo do WhatsApp, na mesma grid
-4. No `handleSubmit`, incluir `is_portability` no payload do `upsertTelecomCustomer`
-5. Remover `phone2` do `getEmptyFormData` e do payload
+As funcoes de mascara funcionam assim:
+```
+maskCPF("18510318719") => "185.103.187-19"
+maskRG("123456789") => "12.345.678-9"
+```
 
-### TelecomCustomerTab.tsx
-- Adicionar `is_portability` no `FormData`, `defaultFormData`, `useEffect` de inicializacao e `handleSubmit`
-- Trocar o campo "Telefone 2" pelo checkbox "Portabilidade" na secao "Dados Pessoais"
-
+Cada funcao:
+1. Remove todos os caracteres nao numericos com `replace(/\D/g, '')`
+2. Limita o tamanho maximo (11 para CPF, 9 para RG)
+3. Aplica a formatacao progressivamente conforme o usuario digita
