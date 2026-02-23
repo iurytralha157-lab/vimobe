@@ -1,52 +1,44 @@
 
-# Aplicar Cores Dinamicas na Pagina de Detalhe do Imovel e Filtros
+# Corrigir cores no site publicado com dominio customizado
 
-## Problema
-A pagina de detalhe do imovel e os componentes internos (cards de preco, caracteristicas, detalhes, localizacao) estao com cores fixas (`bg-gray-50`, `bg-white`, `text-gray-900`, `text-gray-500`), ignorando as configuracoes de `card_color`, `background_color` e `text_color` do tema. O filtro lateral na pagina de listagem tambem tem labels com cores fixas.
+## Problema Raiz
+A edge function `resolve-site-domain` nao inclui os campos `site_theme`, `background_color`, `text_color` e `card_color` na query SELECT (linha 34). Quando o site carrega via dominio customizado (ex: virandoachaveometodo.br), esses campos ficam ausentes no `site_config`, e os componentes recebem `undefined` ao inves das cores configuradas.
 
-## Arquivos a Modificar
+Alem disso, no `PublicSiteContext.tsx`, quando o site e carregado via `resolve-site-domain`, o `site_config` e aplicado diretamente sem passar pela funcao `mapSiteDataToConfig` que adicionaria os valores padrao.
 
-### 1. `src/pages/public/PublicPropertyDetail.tsx`
-- Substituir `bg-gray-50` do container principal (linhas 69, 80, 99) por `backgroundColor` dinamico do `siteConfig`
-- Substituir `text-gray-900` e `text-gray-500` dos headings/textos por `textColor` dinamico
-- Passar `cardColor` e `textColor` como props para PropertyFeatures, PropertyDetails, PropertyLocation e PropertyPricing
-- Atualizar badges internas (codigo, tipo negocio) para usar cores dinamicas
+## Correcoes
 
-### 2. `src/components/public/property-detail/PropertyPricing.tsx`
-- Adicionar props `cardColor` e `textColor`
-- Aplicar `cardColor` como background do Card (substituir branco padrao)
-- Substituir `text-gray-900`, `text-gray-500`, `text-gray-600`, `text-gray-400` por `textColor` com opacidades variadas
-- Substituir `border-gray-100` por borda dinamica
+### 1. `supabase/functions/resolve-site-domain/index.ts`
+- Adicionar `site_theme`, `background_color`, `text_color`, `card_color`, `watermark_size`, `watermark_position` na query SELECT (linha 34)
 
-### 3. `src/components/public/property-detail/PropertyFeatures.tsx`
-- Adicionar props `cardColor` e `textColor`
-- Substituir `bg-gray-50` dos feature chips por variacao sutil usando `primaryColor`
-- Substituir `text-gray-900` e `text-gray-500` por `textColor` com opacidades
-
-### 4. `src/components/public/property-detail/PropertyDetails.tsx`
-- Adicionar props `cardColor` e `textColor`
-- Substituir `bg-white` dos containers por `cardColor`
-- Substituir `text-gray-900`, `text-gray-600`, `text-gray-700` por `textColor`
-- Substituir `bg-gray-50`, `bg-gray-100` dos chips e tabs por variacoes dinamicas
-
-### 5. `src/components/public/property-detail/PropertyLocation.tsx`
-- Adicionar props `cardColor` e `textColor`
-- Substituir `bg-white` do container do mapa por `cardColor`
-- Substituir `text-gray-900` do titulo e `text-gray-600` do endereco por `textColor`
-
-### 6. `src/components/public/PropertyFiltersContent.tsx`
-- Adicionar prop `textColor` opcional
-- Substituir `text-gray-700` das labels por `textColor` dinamico (via style)
-
-### 7. `src/pages/public/PublicProperties.tsx`
-- Passar `textColor` do `siteConfig` para o `PropertyFiltersContent`
+### 2. `src/contexts/PublicSiteContext.tsx`
+- Na linha 92, ao receber `data.site_config` do edge function, garantir que os campos de tema tenham valores padrao antes de setar no state. Aplicar defaults para `site_theme`, `background_color`, `text_color` e `card_color`.
 
 ## Detalhes Tecnicos
 
-Estrategia de cores para manter consistencia visual:
-- Textos principais: `style={{ color: textColor }}`
-- Textos secundarios: `style={{ color: textColor, opacity: 0.6 }}`
-- Backgrounds de chips internos: usar `${primaryColor}10` ou `${primaryColor}15`
-- Bordas: `style={{ borderColor: textColor + '15' }}`
+A query atual na edge function:
+```
+.select('organization_id, subdomain, custom_domain, site_title, ..., watermark_enabled, organizations(name)')
+```
 
-Total: 7 arquivos modificados, sem alteracoes no banco de dados.
+Precisa incluir:
+```
+site_theme, background_color, text_color, card_color, watermark_size, watermark_position
+```
+
+No contexto, trocar:
+```typescript
+setSiteConfig(data.site_config);
+```
+Por algo que aplique defaults:
+```typescript
+setSiteConfig({
+  ...data.site_config,
+  site_theme: data.site_config.site_theme || 'dark',
+  background_color: data.site_config.background_color || '#0D0D0D',
+  text_color: data.site_config.text_color || '#FFFFFF',
+  card_color: data.site_config.card_color || '#FFFFFF',
+});
+```
+
+Total: 2 arquivos modificados + deploy da edge function.
