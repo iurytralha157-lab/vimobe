@@ -247,7 +247,7 @@ export default function AdminOrganizations() {
               {filteredOrgs.length} organizações encontradas
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6 pb-4">
             {loadingOrgs ?
             <div className="text-center py-8 text-muted-foreground">
                 Carregando...
@@ -257,7 +257,7 @@ export default function AdminOrganizations() {
                 Nenhuma organização encontrada
               </div> :
 
-            <div className="space-y-2 px-[15px]">
+            <div className="space-y-2">
                 {filteredOrgs.map((org) =>
               <div
                 key={org.id}

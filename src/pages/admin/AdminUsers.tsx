@@ -179,7 +179,7 @@ export default function AdminUsers() {
               )}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6 pb-4">
             {loadingUsers ? (
               <div className="text-center py-8 text-muted-foreground">
                 Carregando...

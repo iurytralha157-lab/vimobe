@@ -225,7 +225,7 @@ export default function AdminOrganizationDetail() {
                   Dados básicos da organização
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="px-4 md:px-6 pb-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome da Organização</Label>
@@ -335,8 +335,8 @@ export default function AdminOrganizationDetail() {
                   Funcionalidades específicas para Imobiliário ou Telecom
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3 px-[10px]">
+              <CardContent className="px-4 md:px-6 pb-4">
+                <div className="space-y-3">
                   {ALL_MODULES.filter((m) => m.category === 'segment').map((module) =>
                   <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                       <div className="flex items-center gap-2">
@@ -378,8 +378,8 @@ export default function AdminOrganizationDetail() {
                   Automações e integrações externas
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3 px-[10px]">
+              <CardContent className="px-4 md:px-6 pb-4">
+                <div className="space-y-3">
                   {ALL_MODULES.filter((m) => m.category === 'advanced').map((module) =>
                   <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                       <div>
@@ -418,7 +418,7 @@ export default function AdminOrganizationDetail() {
                   {orgUsers?.length || 0} usuários cadastrados
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 md:px-6 pb-4">
                 {orgUsers?.length === 0 ?
                 <div className="text-center py-8 text-muted-foreground">
                     Nenhum usuário cadastrado
@@ -518,7 +518,7 @@ export default function AdminOrganizationDetail() {
                   </DialogContent>
                 </Dialog>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 md:px-6 pb-4">
                 {loadingInvitations ?
                 <div className="text-center py-8 text-muted-foreground">
                     Carregando...

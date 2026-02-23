@@ -149,13 +149,13 @@ export default function AdminHelpEditor() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 md:px-6 pt-6">
               <div className="text-2xl font-bold">{articles?.length || 0}</div>
               <p className="text-sm text-muted-foreground">Total de artigos</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 md:px-6 pt-6">
               <div className="text-2xl font-bold">
                 {articles?.filter(a => a.is_active).length || 0}
               </div>
@@ -163,7 +163,7 @@ export default function AdminHelpEditor() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 md:px-6 pt-6">
               <div className="text-2xl font-bold">
                 {articles?.filter(a => a.video_url).length || 0}
               </div>
@@ -171,7 +171,7 @@ export default function AdminHelpEditor() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="px-4 md:px-6 pt-6">
               <div className="text-2xl font-bold">
                 {Object.keys(articlesByCategory || {}).length}
               </div>
@@ -200,7 +200,7 @@ export default function AdminHelpEditor() {
             <CardHeader>
               <CardTitle>Artigos por Categoria</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <Accordion type="multiple" className="space-y-2">
                 {CATEGORIES.map((category) => {
                   const categoryArticles = articlesByCategory?.[category.value] || [];

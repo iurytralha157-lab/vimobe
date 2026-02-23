@@ -74,7 +74,7 @@ export default function AdminAudit() {
               Filtros
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6 pb-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select
                 value={filters.organizationId || 'all'}
@@ -144,7 +144,7 @@ export default function AdminAudit() {
               {logsData?.count || 0} registros encontrados
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6 pb-4">
             {isLoading ? (
               <div className="space-y-3">
                 {[...Array(5)].map((_, i) => (
