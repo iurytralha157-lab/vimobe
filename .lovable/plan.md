@@ -1,23 +1,24 @@
 
-
 # Corrigir Tela Branca em Dominios Customizados
 
 ## Problema
-O `LanguageProvider` chama `useAuth()` que lanca erro quando nao existe `AuthProvider` — exatamente o caso no branch de dominio customizado do `App.tsx`.
+O `LanguageProvider` (linha 15 de `LanguageContext.tsx`) chama `useAuth()` que lanca erro fatal quando nao ha `AuthProvider` acima na arvore -- exatamente o que acontece no branch de dominio customizado do `App.tsx` (linhas 318-321).
 
-## Solucao
+## Alteracoes
 
-### Arquivo 1: `src/contexts/AuthContext.tsx`
-- Exportar o `AuthContext` (linha 58): trocar `const AuthContext` por `export const AuthContext`
+### 1. `src/contexts/AuthContext.tsx` (linha 58)
+Exportar o contexto para uso direto:
+- De: `const AuthContext = createContext<AuthContextType | undefined>(undefined);`
+- Para: `export const AuthContext = createContext<AuthContextType | undefined>(undefined);`
 
-### Arquivo 2: `src/contexts/LanguageContext.tsx`
-- Trocar `import { useAuth } from './AuthContext'` por `import { AuthContext } from './AuthContext'`
-- Na linha 16, trocar `const { profile, user } = useAuth()` por:
-  ```
-  const auth = useContext(AuthContext);
-  const profile = auth?.profile;
-  const user = auth?.user;
-  ```
+### 2. `src/contexts/LanguageContext.tsx` (linhas 3 e 15)
+Substituir `useAuth()` por acesso direto ao contexto (que retorna `undefined` em vez de lancar erro quando fora do provider):
+- Linha 3: trocar `import { useAuth } from './AuthContext'` por `import { AuthContext } from './AuthContext'`
+- Linha 15: trocar `const { profile, user } = useAuth()` por:
+```
+const auth = useContext(AuthContext);
+const profile = auth?.profile ?? null;
+const user = auth?.user ?? null;
+```
 
-Nenhuma outra alteracao necessaria. O optional chaining ja existente no restante do codigo (`profile?.language`, `user?.id`) garante que tudo funciona com valores `undefined`.
-
+O resto do codigo ja usa optional chaining (`profile?.language`, `user?.id`) entao funciona sem alteracoes adicionais.
