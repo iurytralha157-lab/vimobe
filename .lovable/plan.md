@@ -1,56 +1,31 @@
 
-# Corrigir Espacamento Interno em Todas as Paginas do Super Admin
+# Corrigir Tela Branca em Dominios Customizados
 
 ## Problema
-Os blocos (Cards) em todas as paginas do painel Super Admin estao sem espacamento interno horizontal. O componente `CardContent` tem `px-0` como padrao, fazendo o conteudo encostar nas bordas do card.
+Quando o site e acessado via dominio customizado, o app mostra tela branca por causa de um erro:
+**"useAuth must be used within an AuthProvider"**
+
+A causa: no `App.tsx` (linha 318-321), o branch de dominio customizado envolve `CustomDomainRoutes` com `LanguageProvider`, mas **sem** `AuthProvider`. Porem, `LanguageProvider` chama `useAuth()` internamente (linha 15 de `LanguageContext.tsx`), o que causa o crash.
+
+O erro de CORS do `~api/analytics` e do proprio Lovable (plataforma), nao do codigo do app -- nao precisa de correcao no codigo.
 
 ## Solucao
-Adicionar `px-4 md:px-6 pb-4` em todos os `CardContent` que ainda nao possuem esse espacamento, seguindo o padrao ja estabelecido no projeto (como ja feito em `AdminSettings.tsx`).
 
-## Arquivos alterados
+### Opcao escolhida: Tornar LanguageProvider resiliente a ausencia de AuthProvider
 
-### 1. AdminDashboard.tsx
-- 6 cards de KPI (linhas 122, 137, 153, 170, 186, 200): adicionar `px-4 md:px-6 pb-4`
-- Card "Organizacoes Recentes" (linha 237): adicionar `px-4 md:px-6 pb-4`
+Em vez de adicionar AuthProvider inteiro no branch de dominio customizado (que traria overhead desnecessario -- auth nao e usado em sites publicos), vamos fazer o `LanguageProvider` funcionar sem auth.
 
-### 2. AdminUsers.tsx
-- Card "Todos os Usuarios" (linha 182): adicionar `px-4 md:px-6 pb-4`
+### Arquivo: `src/contexts/LanguageContext.tsx`
 
-### 3. AdminOrganizations.tsx
-- Card "Todas as Organizacoes" (linha 250): adicionar `px-4 md:px-6 pb-4` e remover `px-[15px]` da div interna (linha 260)
+Trocar a chamada direta `useAuth()` por uma versao segura que retorna `null` quando nao ha AuthProvider:
 
-### 4. AdminPlans.tsx
-- Cards de planos (linha 178): adicionar `px-4 md:px-6` ao CardContent existente
-- Card vazio (linha 154): adicionar `px-4 md:px-6`
+1. Criar um hook interno `useOptionalAuth()` que usa `useContext(AuthContext)` diretamente e retorna `undefined` quando o provider nao existe (em vez de lancar erro)
+2. Usar `profile?.language` e `user?.id` com optional chaining -- ja funciona porque os valores serao `undefined`
 
-### 5. AdminAudit.tsx
-- Card "Filtros" (linha 77): adicionar `px-4 md:px-6 pb-4`
-- Card "Registros" (linha 147): adicionar `px-4 md:px-6 pb-4`
+Mudanca concreta:
+- Remover `import { useAuth } from './AuthContext'`
+- Importar o `AuthContext` diretamente (o contexto React, nao o hook)
+- Usar `useContext(AuthContext)` que retorna `undefined` quando fora do provider (sem throw)
+- Extrair `profile` e `user` com fallback: `const auth = useContext(AuthContext); const profile = auth?.profile; const user = auth?.user;`
 
-### 6. AdminAnnouncements.tsx
-- Card "Comunicado Ativo" (linha 105): adicionar `px-4 md:px-6 pb-4`
-- Card "Novo Comunicado" (linha 142): adicionar `px-4 md:px-6 pb-4`
-- Card "Historico" (linha 324): adicionar `px-4 md:px-6 pb-4`
-
-### 7. AdminDatabase.tsx
-- Card "Manutencao de Membros" (linha 92): adicionar `px-4 md:px-6 pb-4`
-
-### 8. AdminHelpEditor.tsx
-- Cards de stats (linhas 152-179): adicionar `px-4 md:px-6` nos 4 cards
-- Card "Artigos por Categoria" (linha 203): adicionar `px-4 md:px-6 pb-4`
-
-### 9. AdminRequests.tsx
-- 5 cards de stats (linhas 109-137): adicionar padding nos CardContent com `p-4`
-- Card "Filtros" (linha 142): ja tem `p-4`, ok
-- Card "Solicitacoes" (linha 178): adicionar `px-4 md:px-6 pb-4`
-
-### 10. AdminOrganizationDetail.tsx
-- Card "Informacoes Gerais" (linha 228): adicionar `px-4 md:px-6 pb-4`
-- Card "Modulos Principais" (linha 300): adicionar `px-4 md:px-6 pb-4`
-- Card "Modulos por Segmento" (linha 338): adicionar `px-4 md:px-6 pb-4`
-- Card "Modulos Avancados" (linha 381): adicionar `px-4 md:px-6 pb-4`
-- Card "Usuarios da Organizacao" (linha 421): adicionar `px-4 md:px-6 pb-4`
-- Card "Convites" (aba invites): adicionar `px-4 md:px-6 pb-4`
-
-## Detalhes tecnicos
-O padrao aplicado sera consistente: `className="px-4 md:px-6 pb-4"` adicionado a cada `CardContent`. Onde ja existem classes (como `space-y-4`), sera feito merge. Nenhuma alteracao de logica, apenas CSS.
+Nenhum outro arquivo precisa ser alterado. O `LanguageProvider` continuara funcionando normalmente quando dentro do `AuthProvider` (app principal) e usara apenas localStorage quando fora dele (dominio customizado).
