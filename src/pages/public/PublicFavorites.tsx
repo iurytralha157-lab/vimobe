@@ -114,6 +114,7 @@ export default function PublicFavorites() {
                   property={property}
                   primaryColor={primaryColor}
                   cardColor={siteConfig?.card_color}
+                  textColor={siteConfig?.text_color}
                   isFavorited={isFavorite(property.id)}
                   onToggleFavorite={toggleFavorite}
                   watermarkConfig={siteConfig?.watermark_enabled ? {
