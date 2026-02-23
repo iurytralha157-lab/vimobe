@@ -49,6 +49,7 @@ export interface PublicSiteConfig {
   site_theme: string;
   background_color: string;
   text_color: string;
+  card_color: string;
 }
 
 export interface PublicProperty {

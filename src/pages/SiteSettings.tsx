@@ -34,6 +34,7 @@ export default function SiteSettings() {
     site_theme: 'dark',
     background_color: '#0D0D0D',
     text_color: '#FFFFFF',
+    card_color: '#FFFFFF',
     whatsapp: '',
     phone: '',
     email: '',
@@ -73,6 +74,7 @@ export default function SiteSettings() {
         site_theme: site.site_theme || 'dark',
         background_color: site.background_color || '#0D0D0D',
         text_color: site.text_color || '#FFFFFF',
+        card_color: site.card_color || '#FFFFFF',
         whatsapp: site.whatsapp || '',
         phone: site.phone || '',
         email: site.email || '',
@@ -711,7 +713,25 @@ ${getWorkerCode()}`;
                         />
                       </div>
                     </div>
-                  </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cor dos Cards</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={formData.card_color}
+                          onChange={(e) => setFormData({ ...formData, card_color: e.target.value })}
+                          className="w-12 h-10 rounded border cursor-pointer"
+                          disabled={!isAdmin}
+                        />
+                        <Input
+                          value={formData.card_color}
+                          onChange={(e) => setFormData({ ...formData, card_color: e.target.value })}
+                          className="flex-1"
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                    </div>
 
                   {/* Brand Colors */}
                   <div className="grid sm:grid-cols-3 gap-6">
@@ -780,6 +800,13 @@ ${getWorkerCode()}`;
                     >
                       <p className="text-lg font-semibold mb-2">Texto do site</p>
                       <p className="text-sm opacity-70 mb-4">Subtítulo ou descrição do conteúdo</p>
+                      <div 
+                        className="p-4 rounded-xl mb-4"
+                        style={{ backgroundColor: formData.card_color }}
+                      >
+                        <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Exemplo de Card</p>
+                        <p className="text-xs mt-1" style={{ color: '#6B7280' }}>Conteúdo dentro do card</p>
+                      </div>
                       <div className="flex gap-3 flex-wrap">
                         <div 
                           className="px-4 py-2 rounded-full text-white text-sm font-medium"

@@ -25,6 +25,7 @@ interface PublicPropertyCardProps {
     [key: string]: any;
   };
   primaryColor?: string;
+  cardColor?: string;
   isFavorited?: boolean;
   onToggleFavorite?: (id: string) => void;
   watermarkConfig?: {
@@ -36,7 +37,7 @@ interface PublicPropertyCardProps {
   } | null;
 }
 
-export function PublicPropertyCard({ property, primaryColor = '#C4A052', isFavorited = false, onToggleFavorite, watermarkConfig }: PublicPropertyCardProps) {
+export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardColor, isFavorited = false, onToggleFavorite, watermarkConfig }: PublicPropertyCardProps) {
   const formatPrice = (value: number | null | undefined) => {
     if (!value) return null;
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -52,7 +53,10 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', isFavor
   const suites = property.suites;
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border border-gray-100">
+    <div 
+      className="rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border border-gray-100"
+      style={{ backgroundColor: cardColor || '#FFFFFF' }}
+    >
       {/* Image Section */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
