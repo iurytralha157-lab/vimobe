@@ -1,44 +1,66 @@
 
-# Corrigir cores no site publicado com dominio customizado
+# Auto-preencher dados do imovel quando lead vem do site
 
-## Problema Raiz
-A edge function `resolve-site-domain` nao inclui os campos `site_theme`, `background_color`, `text_color` e `card_color` na query SELECT (linha 34). Quando o site carrega via dominio customizado (ex: virandoachaveometodo.br), esses campos ficam ausentes no `site_config`, e os componentes recebem `undefined` ao inves das cores configuradas.
+## Problema
+Quando um lead entra pelo site publico com interesse em um imovel especifico, o campo `interest_property_id` e salvo corretamente no banco. Porem, o `valor_interesse` e `commission_percentage` nao sao preenchidos automaticamente a partir dos dados do imovel. O usuario precisa manualmente selecionar o imovel de novo na aba "Negocio" para que esses valores sejam populados.
 
-Alem disso, no `PublicSiteContext.tsx`, quando o site e carregado via `resolve-site-domain`, o `site_config` e aplicado diretamente sem passar pela funcao `mapSiteDataToConfig` que adicionaria os valores padrao.
-
-## Correcoes
-
-### 1. `supabase/functions/resolve-site-domain/index.ts`
-- Adicionar `site_theme`, `background_color`, `text_color`, `card_color`, `watermark_size`, `watermark_position` na query SELECT (linha 34)
-
-### 2. `src/contexts/PublicSiteContext.tsx`
-- Na linha 92, ao receber `data.site_config` do edge function, garantir que os campos de tema tenham valores padrao antes de setar no state. Aplicar defaults para `site_theme`, `background_color`, `text_color` e `card_color`.
+## Solucao
+Atualizar a Edge Function `public-site-contact` para buscar os dados do imovel (preco e comissao) quando `property_id` for informado, e ja salvar esses valores no lead na criacao.
 
 ## Detalhes Tecnicos
 
-A query atual na edge function:
-```
-.select('organization_id, subdomain, custom_domain, site_title, ..., watermark_enabled, organizations(name)')
-```
+### 1. Edge Function `supabase/functions/public-site-contact/index.ts`
 
-Precisa incluir:
-```
-site_theme, background_color, text_color, card_color, watermark_size, watermark_position
-```
+Apos validar o `property_id`, buscar os dados do imovel antes de criar o lead:
 
-No contexto, trocar:
 ```typescript
-setSiteConfig(data.site_config);
-```
-Por algo que aplique defaults:
-```typescript
-setSiteConfig({
-  ...data.site_config,
-  site_theme: data.site_config.site_theme || 'dark',
-  background_color: data.site_config.background_color || '#0D0D0D',
-  text_color: data.site_config.text_color || '#FFFFFF',
-  card_color: data.site_config.card_color || '#FFFFFF',
-});
+// Buscar dados do imovel se property_id informado
+let propertyPrice = null;
+let propertyCommission = null;
+
+if (property_id) {
+  const { data: property } = await supabase
+    .from('properties')
+    .select('preco, commission_percentage')
+    .eq('id', property_id)
+    .eq('organization_id', organization_id)
+    .maybeSingle();
+
+  if (property) {
+    propertyPrice = property.preco;
+    propertyCommission = property.commission_percentage;
+  }
+}
 ```
 
-Total: 2 arquivos modificados + deploy da edge function.
+E incluir no `leadData` ao criar o lead:
+
+```typescript
+const leadData = {
+  // ... campos existentes ...
+  interest_property_id: property_id || null,
+  valor_interesse: propertyPrice,          // NOVO
+  commission_percentage: propertyCommission, // NOVO
+};
+```
+
+### 2. Verificacao na atualizacao de lead existente
+
+Quando o lead ja existe (deduplicacao por telefone), tambem atualizar o `interest_property_id`, `valor_interesse` e `commission_percentage` caso o contato venha de um imovel diferente:
+
+```typescript
+if (existingLead && property_id) {
+  await supabase
+    .from('leads')
+    .update({
+      interest_property_id: property_id,
+      valor_interesse: propertyPrice,
+      commission_percentage: propertyCommission,
+    })
+    .eq('id', existingLead.id);
+}
+```
+
+### Resultado esperado
+- Lead entra pelo site com interesse em imovel -> abre o card no CRM -> aba "Negocio" ja mostra o imovel selecionado, valor preenchido e comissao configurada
+- Nenhuma alteracao no frontend necessaria, pois o `LeadDetailDialog` ja le esses campos do lead
