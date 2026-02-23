@@ -244,6 +244,8 @@ export default function PublicPropertyDetail() {
             cidade={property.cidade || (property as any).cidade}
             getHref={getHref}
             primaryColor={primaryColor}
+            cardColor={siteConfig?.card_color}
+            textColor={siteConfig?.text_color}
           />
         </div>
       </div>
