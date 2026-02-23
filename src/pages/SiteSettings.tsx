@@ -31,6 +31,9 @@ export default function SiteSettings() {
     primary_color: '#F97316',
     secondary_color: '#1E293B',
     accent_color: '#3B82F6',
+    site_theme: 'dark',
+    background_color: '#0D0D0D',
+    text_color: '#FFFFFF',
     whatsapp: '',
     phone: '',
     email: '',
@@ -67,6 +70,9 @@ export default function SiteSettings() {
         primary_color: site.primary_color || '#F97316',
         secondary_color: site.secondary_color || '#1E293B',
         accent_color: site.accent_color || '#3B82F6',
+        site_theme: site.site_theme || 'dark',
+        background_color: site.background_color || '#0D0D0D',
+        text_color: site.text_color || '#FFFFFF',
         whatsapp: site.whatsapp || '',
         phone: site.phone || '',
         email: site.email || '',
@@ -624,10 +630,90 @@ ${getWorkerCode()}`;
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Cores</CardTitle>
-                  <CardDescription>Personalize as cores do seu site</CardDescription>
+                  <CardTitle>Tema e Cores</CardTitle>
+                  <CardDescription>Personalize o tema e as cores do seu site</CardDescription>
                 </CardHeader>
-                <CardContent className="px-4 md:px-6 pb-5">
+                <CardContent className="px-4 md:px-6 pb-5 space-y-6">
+                  {/* Theme Selector */}
+                  <div className="space-y-3">
+                    <Label>Tema do Site</Label>
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant={formData.site_theme === 'dark' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            site_theme: 'dark',
+                            background_color: '#0D0D0D',
+                            text_color: '#FFFFFF',
+                          });
+                        }}
+                        disabled={!isAdmin}
+                        className="flex-1"
+                      >
+                        🌙 Escuro
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={formData.site_theme === 'light' ? 'default' : 'outline'}
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            site_theme: 'light',
+                            background_color: '#FFFFFF',
+                            text_color: '#1A1A1A',
+                          });
+                        }}
+                        disabled={!isAdmin}
+                        className="flex-1"
+                      >
+                        ☀️ Claro
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Background & Text Colors */}
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>Cor de Fundo</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={formData.background_color}
+                          onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
+                          className="w-12 h-10 rounded border cursor-pointer"
+                          disabled={!isAdmin}
+                        />
+                        <Input
+                          value={formData.background_color}
+                          onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
+                          className="flex-1"
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cor da Fonte</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={formData.text_color}
+                          onChange={(e) => setFormData({ ...formData, text_color: e.target.value })}
+                          className="w-12 h-10 rounded border cursor-pointer"
+                          disabled={!isAdmin}
+                        />
+                        <Input
+                          value={formData.text_color}
+                          onChange={(e) => setFormData({ ...formData, text_color: e.target.value })}
+                          className="flex-1"
+                          disabled={!isAdmin}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Brand Colors */}
                   <div className="grid sm:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label>Cor Principal</Label>
@@ -686,26 +772,33 @@ ${getWorkerCode()}`;
                   </div>
 
                   {/* Preview */}
-                  <div className="mt-6 p-4 border rounded-lg">
+                  <div className="p-4 border rounded-lg">
                     <p className="text-sm text-muted-foreground mb-3">Pré-visualização:</p>
-                    <div className="flex gap-4">
-                      <div 
-                        className="px-4 py-2 rounded text-white text-sm"
-                        style={{ backgroundColor: formData.primary_color }}
-                      >
-                        Botão Primário
-                      </div>
-                      <div 
-                        className="px-4 py-2 rounded text-white text-sm"
-                        style={{ backgroundColor: formData.secondary_color }}
-                      >
-                        Secundário
-                      </div>
-                      <div 
-                        className="px-4 py-2 rounded text-white text-sm"
-                        style={{ backgroundColor: formData.accent_color }}
-                      >
-                        Destaque
+                    <div 
+                      className="p-6 rounded-lg"
+                      style={{ backgroundColor: formData.background_color, color: formData.text_color }}
+                    >
+                      <p className="text-lg font-semibold mb-2">Texto do site</p>
+                      <p className="text-sm opacity-70 mb-4">Subtítulo ou descrição do conteúdo</p>
+                      <div className="flex gap-3 flex-wrap">
+                        <div 
+                          className="px-4 py-2 rounded-full text-white text-sm font-medium"
+                          style={{ backgroundColor: formData.primary_color }}
+                        >
+                          Botão Principal
+                        </div>
+                        <div 
+                          className="px-4 py-2 rounded-full text-white text-sm font-medium"
+                          style={{ backgroundColor: formData.secondary_color }}
+                        >
+                          Secundário
+                        </div>
+                        <div 
+                          className="px-4 py-2 rounded-full text-white text-sm font-medium"
+                          style={{ backgroundColor: formData.accent_color }}
+                        >
+                          Destaque
+                        </div>
                       </div>
                     </div>
                   </div>

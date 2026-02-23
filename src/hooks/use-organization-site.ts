@@ -49,6 +49,10 @@ export interface OrganizationSite {
   watermark_logo_url: string | null;
   watermark_size: number | null;
   watermark_position: string | null;
+  // Theme fields
+  site_theme: string | null;
+  background_color: string | null;
+  text_color: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -2835,6 +2835,7 @@ export type Database = {
           about_title: string | null
           accent_color: string | null
           address: string | null
+          background_color: string
           city: string | null
           created_at: string
           custom_domain: string | null
@@ -2863,9 +2864,11 @@ export type Database = {
           seo_keywords: string | null
           seo_title: string | null
           site_description: string | null
+          site_theme: string
           site_title: string | null
           state: string | null
           subdomain: string | null
+          text_color: string
           updated_at: string
           watermark_enabled: boolean | null
           watermark_logo_url: string | null
@@ -2879,6 +2882,7 @@ export type Database = {
           about_title?: string | null
           accent_color?: string | null
           address?: string | null
+          background_color?: string
           city?: string | null
           created_at?: string
           custom_domain?: string | null
@@ -2907,9 +2911,11 @@ export type Database = {
           seo_keywords?: string | null
           seo_title?: string | null
           site_description?: string | null
+          site_theme?: string
           site_title?: string | null
           state?: string | null
           subdomain?: string | null
+          text_color?: string
           updated_at?: string
           watermark_enabled?: boolean | null
           watermark_logo_url?: string | null
@@ -2923,6 +2929,7 @@ export type Database = {
           about_title?: string | null
           accent_color?: string | null
           address?: string | null
+          background_color?: string
           city?: string | null
           created_at?: string
           custom_domain?: string | null
@@ -2951,9 +2958,11 @@ export type Database = {
           seo_keywords?: string | null
           seo_title?: string | null
           site_description?: string | null
+          site_theme?: string
           site_title?: string | null
           state?: string | null
           subdomain?: string | null
+          text_color?: string
           updated_at?: string
           watermark_enabled?: boolean | null
           watermark_logo_url?: string | null

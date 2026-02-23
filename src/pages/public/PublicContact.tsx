@@ -105,23 +105,23 @@ export default function PublicContact() {
       </section>
 
       {/* Content */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? siteConfig.background_color : '#F9FAFB' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-5 gap-10">
             {/* Contact Info */}
             <div className="lg:col-span-2 space-y-6">
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
                   Informações de Contato
                 </h2>
-                <p className="text-gray-600">
+                <p style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
                   Escolha a forma de contato que preferir. Responderemos o mais rápido possível!
                 </p>
               </div>
 
               <div className="space-y-4">
                 {contactItems.map((item, index) => (
-                  <Card key={index} className="border-0 rounded-2xl hover:shadow-lg transition-all duration-300 group">
+                  <Card key={index} className="border-0 rounded-2xl hover:shadow-lg transition-all duration-300 group" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }}>
                     <CardContent className="p-5">
                       {item.useContactDialog && organizationId && siteConfig.whatsapp ? (
                         <ContactFormDialog
@@ -140,8 +140,8 @@ export default function PublicContact() {
                                 />
                               </div>
                               <div>
-                                <p className="text-sm text-gray-500 font-medium">{item.label}</p>
-                                <p className="font-semibold text-gray-900 group-hover:underline">
+                              <p className="text-sm font-medium" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}80` : '#6B7280' }}>{item.label}</p>
+                                <p className="font-semibold group-hover:underline" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
                                   {item.value}
                                 </p>
                               </div>
@@ -163,8 +163,8 @@ export default function PublicContact() {
                             />
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 font-medium">{item.label}</p>
-                            <p className="font-semibold text-gray-900 group-hover:underline">
+                            <p className="text-sm font-medium" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}80` : '#6B7280' }}>{item.label}</p>
+                            <p className="font-semibold group-hover:underline" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
                               {item.value}
                             </p>
                           </div>
@@ -181,8 +181,8 @@ export default function PublicContact() {
                             />
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 font-medium">{item.label}</p>
-                            <p className="font-semibold text-gray-900">
+                            <p className="text-sm font-medium" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}80` : '#6B7280' }}>{item.label}</p>
+                            <p className="font-semibold" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
                               {item.value}
                             </p>
                           </div>
@@ -196,7 +196,7 @@ export default function PublicContact() {
               {/* Social Links */}
               {(siteConfig.instagram || siteConfig.facebook || siteConfig.youtube || siteConfig.linkedin) && (
                 <div className="pt-6">
-                  <h3 className="font-bold text-gray-900 mb-4">Siga-nos nas redes</h3>
+                  <h3 className="font-bold mb-4" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>Siga-nos nas redes</h3>
                   <div className="flex gap-3">
                     {siteConfig.instagram && (
                       <a
@@ -245,13 +245,13 @@ export default function PublicContact() {
 
             {/* Contact Form */}
             <div className="lg:col-span-3">
-              <Card className="border-0 rounded-3xl shadow-xl">
+              <Card className="border-0 rounded-3xl shadow-xl" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }}>
                 <CardContent className="p-8 md:p-10">
                   <div className="mb-8">
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
                       Envie sua mensagem
                     </h2>
-                    <p className="text-gray-600">
+                    <p style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
                       Preencha o formulário abaixo e entraremos em contato em breve.
                     </p>
                   </div>
@@ -259,7 +259,7 @@ export default function PublicContact() {
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid sm:grid-cols-2 gap-5">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold mb-2" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}CC` : '#374151' }}>
                           Nome completo *
                         </label>
                         <Input
@@ -271,7 +271,7 @@ export default function PublicContact() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold mb-2" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}CC` : '#374151' }}>
                           Telefone / WhatsApp *
                         </label>
                         <Input
@@ -286,7 +286,7 @@ export default function PublicContact() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold mb-2" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}CC` : '#374151' }}>
                         E-mail
                       </label>
                       <Input
@@ -299,7 +299,7 @@ export default function PublicContact() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold mb-2" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}CC` : '#374151' }}>
                         Mensagem
                       </label>
                       <Textarea
@@ -328,7 +328,7 @@ export default function PublicContact() {
                       )}
                     </Button>
 
-                    <p className="text-sm text-gray-500 text-center">
+                    <p className="text-sm text-center" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}80` : '#6B7280' }}>
                       Ao enviar, você concorda em receber contato da nossa equipe.
                     </p>
                   </form>
