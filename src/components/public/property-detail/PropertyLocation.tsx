@@ -444,7 +444,7 @@ export default function PropertyLocation({
         )}
 
         {/* Map */}
-        <div className="h-[300px] md:h-[400px] w-full bg-gray-100">
+        <div className="h-[300px] md:h-[400px] w-full bg-gray-100 relative z-0">
           {isLoading && (
             <div className="w-full h-full flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: primaryColor }} />
