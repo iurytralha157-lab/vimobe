@@ -53,7 +53,7 @@ export function PlanCard({ plan, onEdit, onDelete }: PlanCardProps) {
         </div>
       )}
       
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <div className={cn("p-2 rounded-lg", category.color)}>
             <CategoryIcon className="h-4 w-4 text-white" />
@@ -69,7 +69,7 @@ export function PlanCard({ plan, onEdit, onDelete }: PlanCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-4 md:px-6 pb-4">
         <div className="flex items-center justify-between">
           <Badge variant="outline" className="text-xs">
             {category.label}
@@ -103,7 +103,7 @@ export function PlanCard({ plan, onEdit, onDelete }: PlanCardProps) {
         )}
 
         {(onEdit || onDelete) && (
-          <div className="flex gap-2 pt-2 border-t">
+          <div className="flex gap-2 pt-3 border-t">
             {onEdit && (
               <Button 
                 variant="outline" 
