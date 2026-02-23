@@ -1,40 +1,56 @@
 
-# Adicionar Mascaras de CPF e RG nos Formularios
+# Corrigir Espacamento Interno em Todas as Paginas do Super Admin
 
-## O que sera feito
-Aplicar formatacao automatica nos campos CPF e RG em todos os formularios do sistema, aceitando apenas numeros e formatando automaticamente conforme o usuario digita.
+## Problema
+Os blocos (Cards) em todas as paginas do painel Super Admin estao sem espacamento interno horizontal. O componente `CardContent` tem `px-0` como padrao, fazendo o conteudo encostar nas bordas do card.
 
-- **CPF**: formato `000.000.000-00` (11 digitos)
-- **RG**: formato `00.000.000-0` (9 digitos)
+## Solucao
+Adicionar `px-4 md:px-6 pb-4` em todos os `CardContent` que ainda nao possuem esse espacamento, seguindo o padrao ja estabelecido no projeto (como ja feito em `AdminSettings.tsx`).
 
 ## Arquivos alterados
 
-### 1. `src/lib/masks.ts` (novo arquivo)
-Criar funcoes utilitarias de mascara reutilizaveis:
-- `maskCPF(value)` - remove tudo que nao e numero, aplica pontos e traco: `123.456.789-00`
-- `maskRG(value)` - remove tudo que nao e numero, aplica pontos e traco: `12.345.678-9`
+### 1. AdminDashboard.tsx
+- 6 cards de KPI (linhas 122, 137, 153, 170, 186, 200): adicionar `px-4 md:px-6 pb-4`
+- Card "Organizacoes Recentes" (linha 237): adicionar `px-4 md:px-6 pb-4`
 
-### 2. `src/components/leads/CreateLeadDialog.tsx`
-- Campo CPF (linha 314): trocar `onChange` para aplicar `maskCPF` antes de salvar no state, adicionar `maxLength={14}`
-- Campo RG (linha 325): trocar `onChange` para aplicar `maskRG` antes de salvar no state, adicionar `maxLength={12}`, mudar placeholder para `00.000.000-0`
+### 2. AdminUsers.tsx
+- Card "Todos os Usuarios" (linha 182): adicionar `px-4 md:px-6 pb-4`
 
-### 3. `src/components/leads/TelecomCustomerTab.tsx`
-- Campo CPF (linha 252): aplicar `maskCPF` no `onChange`, adicionar `maxLength={14}`
-- Campo RG (linha 259): aplicar `maskRG` no `onChange`, mudar placeholder para `00.000.000-0`, adicionar `maxLength={12}`
+### 3. AdminOrganizations.tsx
+- Card "Todas as Organizacoes" (linha 250): adicionar `px-4 md:px-6 pb-4` e remover `px-[15px]` da div interna (linha 260)
 
-### 4. `src/components/telecom/CustomerFormDialog.tsx`
-- Campo CPF (linha 210): aplicar `maskCPF` no `onChange`, adicionar `maxLength={14}`
-- Campo RG: aplicar `maskRG` no `onChange`, adicionar `maxLength={12}`
+### 4. AdminPlans.tsx
+- Cards de planos (linha 178): adicionar `px-4 md:px-6` ao CardContent existente
+- Card vazio (linha 154): adicionar `px-4 md:px-6`
+
+### 5. AdminAudit.tsx
+- Card "Filtros" (linha 77): adicionar `px-4 md:px-6 pb-4`
+- Card "Registros" (linha 147): adicionar `px-4 md:px-6 pb-4`
+
+### 6. AdminAnnouncements.tsx
+- Card "Comunicado Ativo" (linha 105): adicionar `px-4 md:px-6 pb-4`
+- Card "Novo Comunicado" (linha 142): adicionar `px-4 md:px-6 pb-4`
+- Card "Historico" (linha 324): adicionar `px-4 md:px-6 pb-4`
+
+### 7. AdminDatabase.tsx
+- Card "Manutencao de Membros" (linha 92): adicionar `px-4 md:px-6 pb-4`
+
+### 8. AdminHelpEditor.tsx
+- Cards de stats (linhas 152-179): adicionar `px-4 md:px-6` nos 4 cards
+- Card "Artigos por Categoria" (linha 203): adicionar `px-4 md:px-6 pb-4`
+
+### 9. AdminRequests.tsx
+- 5 cards de stats (linhas 109-137): adicionar padding nos CardContent com `p-4`
+- Card "Filtros" (linha 142): ja tem `p-4`, ok
+- Card "Solicitacoes" (linha 178): adicionar `px-4 md:px-6 pb-4`
+
+### 10. AdminOrganizationDetail.tsx
+- Card "Informacoes Gerais" (linha 228): adicionar `px-4 md:px-6 pb-4`
+- Card "Modulos Principais" (linha 300): adicionar `px-4 md:px-6 pb-4`
+- Card "Modulos por Segmento" (linha 338): adicionar `px-4 md:px-6 pb-4`
+- Card "Modulos Avancados" (linha 381): adicionar `px-4 md:px-6 pb-4`
+- Card "Usuarios da Organizacao" (linha 421): adicionar `px-4 md:px-6 pb-4`
+- Card "Convites" (aba invites): adicionar `px-4 md:px-6 pb-4`
 
 ## Detalhes tecnicos
-
-As funcoes de mascara funcionam assim:
-```
-maskCPF("18510318719") => "185.103.187-19"
-maskRG("123456789") => "12.345.678-9"
-```
-
-Cada funcao:
-1. Remove todos os caracteres nao numericos com `replace(/\D/g, '')`
-2. Limita o tamanho maximo (11 para CPF, 9 para RG)
-3. Aplica a formatacao progressivamente conforme o usuario digita
+O padrao aplicado sera consistente: `className="px-4 md:px-6 pb-4"` adicionado a cada `CardContent`. Onde ja existem classes (como `space-y-4`), sera feito merge. Nenhuma alteracao de logica, apenas CSS.
