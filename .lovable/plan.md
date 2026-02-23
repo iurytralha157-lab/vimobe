@@ -1,41 +1,30 @@
 
 
-# Correcao: Edge Function `resolve-site-domain` com colunas inexistentes
+# Correcao de Espaçamentos na Pagina de Planos de Servico
 
 ## Problema
 
-A Edge Function `resolve-site-domain` esta retornando **erro 500** ao tentar resolver o dominio `virandoachaveometodo.com.br`. O motivo e que o SELECT referencia duas colunas que nao existem na tabela `organization_sites`:
-- `watermark_size`
-- `watermark_position`
+Os blocos (cards) na pagina de Planos de Servico possuem espaçamentos internos inconsistentes, nao seguindo o padrao de spacing da plataforma.
 
-O erro nos logs: `record "v_site" has no field "watermark_size"` (codigo SQL 42703).
+## Alteracoes
 
-As colunas que **existem** na tabela sao: `logo_width`, `logo_height`, `watermark_enabled`, `watermark_logo_url`, `watermark_opacity`. As colunas `watermark_size` e `watermark_position` nunca foram criadas no banco.
+### 1. Cards de Estatisticas (ServicePlans.tsx)
 
-## Solucao
+Os 5 cards de estatisticas (Total, PF, PJ, Movel, Adicional) usam apenas `CardHeader` com `pb-2`, sem `CardContent`, deixando o conteudo sem respiro inferior adequado.
 
-### Opcao escolhida: Remover as colunas inexistentes do SELECT
+**Correcao**: Ajustar o padding do `CardHeader` para `pb-3 pt-4` e adicionar padding horizontal consistente, garantindo espaço interno uniforme.
 
-Editar `supabase/functions/resolve-site-domain/index.ts` e remover `watermark_size` e `watermark_position` do SELECT na linha 34.
+### 2. PlanCard (PlanCard.tsx)
 
-O frontend (`PublishedSiteWrapper.tsx` e `PreviewSiteWrapper.tsx`) ja trata esses campos com fallback:
-```
-watermark_size: (data as any).watermark_size ?? 80,
-watermark_position: (data as any).watermark_position ?? 'bottom-right',
-```
+O card de plano tem `CardHeader className="pb-2"` e `CardContent className="space-y-3"` sem padding inferior explicito.
 
-Portanto, mesmo sem esses campos no retorno, o site usara os valores padrao (80 e 'bottom-right').
+**Correcao**: Aplicar o padrao de espaçamento interno da plataforma:
+- `CardHeader`: manter `pb-3` para separar do conteudo
+- `CardContent`: adicionar `px-4 md:px-6 pb-4` seguindo o padrao documentado de spacing interno
+- Botoes de acao: ajustar `pt-3` no separador para dar mais respiro
 
-### Arquivo a modificar
+### Arquivos a modificar
 
-**`supabase/functions/resolve-site-domain/index.ts`** (linha 34)
-- Remover `watermark_size` do SELECT
-- Remover `watermark_position` do SELECT
-- Manter todos os demais campos
-
-### Apos a correcao
-
-1. Deploy da Edge Function
-2. Testar chamando `resolve-site-domain` com `virandoachaveometodo.com.br`
-3. Verificar que o dominio customizado carrega o site corretamente
+1. **`src/pages/ServicePlans.tsx`** -- padding dos stats cards (linhas 119-161)
+2. **`src/components/plans/PlanCard.tsx`** -- padding do CardHeader e CardContent (linhas 56, 72)
 
