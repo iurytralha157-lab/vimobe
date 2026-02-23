@@ -423,7 +423,11 @@ export default function PublicProperties() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="rounded-full"
+                      className="rounded-full border-0"
+                      style={{ 
+                        backgroundColor: `${siteConfig?.text_color || '#FFFFFF'}15`,
+                        color: siteConfig?.text_color || '#FFFFFF',
+                      }}
                       disabled={filters.page <= 1}
                       onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
                     >
@@ -447,8 +451,11 @@ export default function PublicProperties() {
                             key={pageNum}
                             variant={filters.page === pageNum ? "default" : "ghost"}
                             size="icon"
-                            className="rounded-full w-10 h-10 text-white"
-                            style={filters.page === pageNum ? { backgroundColor: primaryColor } : {}}
+                            className="rounded-full w-10 h-10 border-0"
+                            style={filters.page === pageNum 
+                              ? { backgroundColor: primaryColor, color: '#FFFFFF' } 
+                              : { color: siteConfig?.text_color || '#FFFFFF' }
+                            }
                             onClick={() => setFilters(prev => ({ ...prev, page: pageNum }))}
                           >
                             {pageNum}
@@ -460,7 +467,11 @@ export default function PublicProperties() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="rounded-full"
+                      className="rounded-full border-0"
+                      style={{ 
+                        backgroundColor: `${siteConfig?.text_color || '#FFFFFF'}15`,
+                        color: siteConfig?.text_color || '#FFFFFF',
+                      }}
                       disabled={filters.page >= data.totalPages}
                       onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
                     >
