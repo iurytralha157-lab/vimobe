@@ -1,60 +1,53 @@
 
 
-# Gerenciador de Menu Dinamico do Site Publico
+# Menu Padrao Automatico ao Criar Site
 
 ## Resumo
-Criar um sistema completo de gerenciamento de menu para o site publico, permitindo ao admin configurar links para paginas internas, filtros de categoria e URLs externas, com reordenacao via drag-and-drop.
+Quando o site for criado (ou quando a aba Menu for acessada pela primeira vez sem itens), inserir automaticamente os itens de menu padrao: HOME, IMOVEIS, APARTAMENTO, CASA, SOBRE e CONTATO. O admin pode depois excluir, editar ou reordenar qualquer um deles.
 
-## Etapas de Implementacao
+## Abordagem
+Modificar o hook `useCreateOrganizationSite` para que, apos criar o site com sucesso, tambem insira os itens de menu padrao na tabela `site_menu_items`.
 
-### 1. Criar tabela `site_menu_items` (Migration SQL)
+## Itens padrao que serao criados
 
-Nova tabela para armazenar os itens de menu por organizacao, com RLS para acesso publico de leitura e gestao restrita a membros da organizacao.
+| Posicao | Label | Tipo | Href |
+|---------|-------|------|------|
+| 0 | HOME | page | (vazio) |
+| 1 | IMOVEIS | page | imoveis |
+| 2 | APARTAMENTO | filter | imoveis?tipo=Apartamento |
+| 3 | CASA | filter | imoveis?tipo=Casa |
+| 4 | SOBRE | page | sobre |
+| 5 | CONTATO | page | contato |
 
-Campos: `id`, `organization_id`, `label`, `link_type` (page/filter/external), `href`, `position`, `open_in_new_tab`, `is_active`, `created_at`.
+## Detalhes Tecnicos
 
-### 2. Criar hook admin: `src/hooks/use-site-menu.ts`
+### Arquivo modificado: `src/hooks/use-organization-site.ts`
 
-CRUD completo para gerenciar itens de menu:
-- `useSiteMenuItems()` - lista itens ordenados por posicao
-- `useCreateMenuItem()` - cria novo item
-- `useUpdateMenuItem()` - edita item existente
-- `useDeleteMenuItem()` - remove item
-- `useReorderMenuItems()` - atualiza posicoes em batch apos drag-and-drop
+Na funcao `useCreateOrganizationSite`, no callback `onSuccess`, inserir os 6 itens padrao na tabela `site_menu_items` usando o `organization_id` da organizacao. Isso garante que toda vez que um novo site for criado, o menu ja vem pre-populado.
 
-### 3. Criar hook publico: `src/hooks/use-public-site-menu.ts`
+```typescript
+onSuccess: async () => {
+  // Seed default menu items
+  const defaults = [
+    { label: 'HOME', link_type: 'page', href: '', position: 0 },
+    { label: 'IMÓVEIS', link_type: 'page', href: 'imoveis', position: 1 },
+    { label: 'APARTAMENTO', link_type: 'filter', href: 'imoveis?tipo=Apartamento', position: 2 },
+    { label: 'CASA', link_type: 'filter', href: 'imoveis?tipo=Casa', position: 3 },
+    { label: 'SOBRE', link_type: 'page', href: 'sobre', position: 4 },
+    { label: 'CONTATO', link_type: 'page', href: 'contato', position: 5 },
+  ];
+  await supabase.from('site_menu_items').insert(
+    defaults.map(d => ({ ...d, organization_id: organization.id, open_in_new_tab: false, is_active: true }))
+  );
+  queryClient.invalidateQueries({ queryKey: ['site-menu-items'] });
+  // ...existing toast
+}
+```
 
-Hook simples que busca itens ativos do menu para uma organizacao (sem autenticacao), usado pelo site publico.
+### Para sites ja existentes (sem menu configurado)
+Tambem adicionar um botao "Carregar Menu Padrao" no componente `MenuTab.tsx` que aparece apenas quando a lista de itens esta vazia. Ao clicar, insere os mesmos itens padrao. Isso cobre organizacoes que ja criaram o site antes dessa feature existir.
 
-### 4. Adicionar aba "Menu" no SiteSettings
-
-Modificar `src/pages/SiteSettings.tsx`:
-- Alterar grid de 5 para 6 colunas nas tabs
-- Adicionar nova aba "Menu" com icone `Menu` (lucide)
-- Conteudo da aba:
-  - Lista de itens com drag-and-drop (`@hello-pangea/dnd`, ja instalado)
-  - Cada item mostra label, tipo (badge colorido), botoes de editar/remover
-  - Botao "Adicionar Item" abre dialog com formulario:
-    - Select de tipo: Pagina Interna / Filtro de Categoria / Link Externo
-    - Campos dinamicos conforme o tipo selecionado
-    - Para "Pagina Interna": select com Home, Imoveis, Sobre, Contato, Favoritos
-    - Para "Filtro de Categoria": select com tipos de imovel cadastrados + Aluguel
-    - Para "Link Externo": campos Label + URL + checkbox "Abrir em nova aba"
-
-### 5. Atualizar `PublicSiteLayout.tsx` para menu dinamico
-
-Modificar `src/pages/public/PublicSiteLayout.tsx`:
-- Importar `usePublicSiteMenu`
-- Se existirem itens configurados no banco, renderizar esses itens no lugar dos arrays `mainNavLinks` e `filterLinks` hardcoded
-- Manter fallback para o menu atual caso nenhum item esteja configurado
-- Links externos com `open_in_new_tab` usam `<a target="_blank">`
-- Links internos continuam usando `<Link>` do react-router
-
-### Arquivos criados/modificados
-
-1. **Migration SQL** - tabela `site_menu_items` + RLS
-2. **`src/hooks/use-site-menu.ts`** - CRUD admin (novo)
-3. **`src/hooks/use-public-site-menu.ts`** - leitura publica (novo)
-4. **`src/pages/SiteSettings.tsx`** - nova aba "Menu" com drag-and-drop
-5. **`src/pages/public/PublicSiteLayout.tsx`** - renderizacao dinamica do menu
+### Arquivos modificados
+1. `src/hooks/use-organization-site.ts` -- seed de menu padrao no `onSuccess` do create
+2. `src/components/site/MenuTab.tsx` -- botao "Carregar Menu Padrao" quando lista vazia
 
