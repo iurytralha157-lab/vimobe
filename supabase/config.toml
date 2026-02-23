@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.get-worker-config]
 verify_jwt = false
+
+[functions.import-wordpress-properties]
+verify_jwt = false
