@@ -14,6 +14,7 @@ interface SystemSettingsValue {
   maintenance_mode?: boolean | null;
   maintenance_message?: string | null;
   feature_flags?: Record<string, boolean> | null;
+  notification_instance_name?: string | null;
 }
 
 interface SystemSettings {
@@ -35,6 +36,7 @@ interface SystemSettings {
   maintenance_mode?: boolean;
   maintenance_message?: string;
   feature_flags?: Record<string, boolean>;
+  notification_instance_name?: string | null;
 }
 
 export function useSystemSettings() {
@@ -65,6 +67,7 @@ export function useSystemSettings() {
         maintenance_mode: value.maintenance_mode || false,
         maintenance_message: value.maintenance_message || '',
         feature_flags: (value.feature_flags as Record<string, boolean>) || {},
+        notification_instance_name: value.notification_instance_name || null,
       } as SystemSettings;
     },
     staleTime: 1000 * 60 * 5,

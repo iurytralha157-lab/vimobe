@@ -122,3 +122,6 @@ verify_jwt = false
 
 [functions.migrate-wp-images]
 verify_jwt = false
+
+[functions.global-whatsapp-status]
+verify_jwt = false
