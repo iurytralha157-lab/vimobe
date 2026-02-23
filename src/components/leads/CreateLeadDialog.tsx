@@ -176,14 +176,12 @@ export function CreateLeadDialog({
     });
   }, [draftKey, pipelines, defaultPipelineId, defaultStageId, getEmptyFormData]);
 
-  // Prevent accidental close when form has data
-  const handleOpenChange = useCallback((newOpen: boolean) => {
-    if (!newOpen && !isFormEmpty(formData)) {
-      // Don't close on backdrop click — data is saved in localStorage anyway
-      return;
+  // Prevent accidental close on backdrop click when form has data
+  const handleInteractOutside = useCallback((e: Event) => {
+    if (!isFormEmpty(formData)) {
+      e.preventDefault();
     }
-    onOpenChange(newOpen);
-  }, [formData, isFormEmpty, onOpenChange]);
+  }, [formData, isFormEmpty]);
 
   // Update stage when pipeline changes
   useEffect(() => {
@@ -255,8 +253,8 @@ export function CreateLeadDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={`max-w-lg p-0 flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden w-[90%] sm:w-full rounded-lg`}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent onInteractOutside={handleInteractOutside} className={`max-w-lg p-0 flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden w-[90%] sm:w-full rounded-lg`}>
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isTelecom && <UserCheck className="h-5 w-5 text-primary" />}
