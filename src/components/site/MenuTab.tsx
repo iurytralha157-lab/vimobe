@@ -54,6 +54,20 @@ export function MenuTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MenuItemFormData>(defaultForm);
 
+  const handleLoadDefaults = async () => {
+    const defaults = [
+      { label: 'HOME', link_type: 'page' as const, href: '', position: 0, open_in_new_tab: false, is_active: true },
+      { label: 'IMÓVEIS', link_type: 'page' as const, href: 'imoveis', position: 1, open_in_new_tab: false, is_active: true },
+      { label: 'APARTAMENTO', link_type: 'filter' as const, href: 'imoveis?tipo=Apartamento', position: 2, open_in_new_tab: false, is_active: true },
+      { label: 'CASA', link_type: 'filter' as const, href: 'imoveis?tipo=Casa', position: 3, open_in_new_tab: false, is_active: true },
+      { label: 'SOBRE', link_type: 'page' as const, href: 'sobre', position: 4, open_in_new_tab: false, is_active: true },
+      { label: 'CONTATO', link_type: 'page' as const, href: 'contato', position: 5, open_in_new_tab: false, is_active: true },
+    ];
+    for (const item of defaults) {
+      await createItem.mutateAsync(item);
+    }
+  };
+
   const openAdd = () => {
     setEditingId(null);
     setForm(defaultForm);
@@ -159,7 +173,10 @@ export function MenuTab() {
           ) : items.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <p className="mb-2">Nenhum item configurado</p>
-              <p className="text-sm">O menu padrão será exibido enquanto nenhum item for adicionado.</p>
+              <p className="text-sm mb-4">O menu padrão será exibido enquanto nenhum item for adicionado.</p>
+              <Button variant="outline" onClick={handleLoadDefaults} disabled={createItem.isPending}>
+                Carregar Menu Padrão
+              </Button>
             </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>

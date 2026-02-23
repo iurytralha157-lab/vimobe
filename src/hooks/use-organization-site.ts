@@ -99,8 +99,21 @@ export function useCreateOrganizationSite() {
       if (error) throw error;
       return site;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Seed default menu items
+      const defaults = [
+        { label: 'HOME', link_type: 'page', href: '', position: 0 },
+        { label: 'IMÓVEIS', link_type: 'page', href: 'imoveis', position: 1 },
+        { label: 'APARTAMENTO', link_type: 'filter', href: 'imoveis?tipo=Apartamento', position: 2 },
+        { label: 'CASA', link_type: 'filter', href: 'imoveis?tipo=Casa', position: 3 },
+        { label: 'SOBRE', link_type: 'page', href: 'sobre', position: 4 },
+        { label: 'CONTATO', link_type: 'page', href: 'contato', position: 5 },
+      ];
+      await supabase.from('site_menu_items' as any).insert(
+        defaults.map(d => ({ ...d, organization_id: organization!.id, open_in_new_tab: false, is_active: true }))
+      );
       queryClient.invalidateQueries({ queryKey: ['organization-site'] });
+      queryClient.invalidateQueries({ queryKey: ['site-menu-items'] });
       toast.success('Site criado com sucesso!');
     },
     onError: (error) => {
