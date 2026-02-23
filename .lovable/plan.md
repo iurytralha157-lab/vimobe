@@ -1,33 +1,56 @@
 
-# Adicionar Campo de Portabilidade no Cadastro de Lead Telecom
+# Corrigir Plano nos Negocios e Adicionar Comissao ao Plano Telecom
 
-## Problema
-Nao existe opcao para marcar se o numero de telefone do cliente e uma portabilidade. Isso e importante para operadoras de telecom controlarem quais clientes estao trazendo numero de outra operadora.
+## Problemas identificados
 
-## Solucao
-Adicionar um checkbox "Portabilidade" logo abaixo do campo de telefone no formulario de criacao e edicao do lead telecom, e criar a coluna correspondente no banco de dados.
+1. **Plano nao aparece em "Negocios"**: Quando o plano e selecionado na aba "Contrato" do formulario de criacao, ele e salvo apenas no `telecom_customers.plan_id`, mas NAO no campo `interest_plan_id` do lead. Por isso, na aba "Negocios" do card do lead, o plano aparece como "Nenhum".
 
-## Alteracoes
+2. **Valor de interesse nao preenche**: Ao selecionar o plano na criacao, o valor do plano (`price`) nao e copiado para `valor_interesse` do lead.
 
-### 1. Banco de dados - Nova coluna
-Criar uma migration SQL adicionando a coluna `is_portability` (boolean, default false) na tabela `telecom_customers`.
+3. **Comissao do vendedor nao existe no plano**: A tabela `service_plans` nao tem campo de comissao. Precisa de uma coluna `commission_percentage` para configurar a comissao por plano.
 
-### 2. CreateLeadDialog.tsx - Formulario de criacao
-- Adicionar `is_portability: false` no `getEmptyFormData`
-- Adicionar um checkbox "Portabilidade" logo abaixo da grid dos telefones (WhatsApp e Telefone 2), com label "Este numero e portabilidade"
-- Incluir `is_portability` no payload enviado ao `upsertTelecomCustomer`
+## Solucao em 3 partes
 
-### 3. TelecomCustomerTab.tsx - Formulario de edicao (dentro do card do lead)
-- Adicionar `is_portability: boolean` na interface `FormData` e no `defaultFormData`
-- Carregar o valor salvo do customer no `useEffect`
-- Adicionar o checkbox "Portabilidade" abaixo dos campos de telefone, na secao "Dados Pessoais"
-- Incluir `is_portability` no payload do `handleSubmit`
+### Parte 1 - Banco de dados
+Adicionar coluna `commission_percentage` (NUMERIC, default NULL) na tabela `service_plans`.
 
-### 4. Hook use-telecom-customer-by-lead.ts
-- Adicionar `is_portability` no tipo `UpsertTelecomCustomerInput` (ja e passado dinamicamente via spread, entao basta incluir no objeto enviado)
+### Parte 2 - Formulario do Plano (PlanFormDialog.tsx)
+Adicionar campo "Comissao do vendedor (%)" ao lado do campo "Valor (R$)" no formulario de criacao/edicao de plano. Atualizar o tipo `CreateServicePlanInput` e `ServicePlan` no hook `use-service-plans.ts` para incluir `commission_percentage`.
 
-### Detalhes tecnicos
-- Coluna: `is_portability BOOLEAN DEFAULT false` na tabela `telecom_customers`
-- O checkbox aparece apenas para organizacoes com `segment === 'telecom'`
-- Visualmente: checkbox com estilo identico ao "E Combo?" ja existente na secao de equipamentos
-- O campo sera salvo junto com os demais dados do telecom_customers, sem necessidade de endpoint novo
+### Parte 3 - Sincronizar plano com negocios
+
+**CreateLeadDialog.tsx** (formulario de criacao):
+- Quando o usuario selecionar um plano na aba "Contrato", auto-preencher `valor_interesse` com o `price` do plano
+- Ao submeter, salvar o `interest_plan_id` no lead junto com `valor_interesse` e `commission_percentage` do plano
+- Isso garante que ao abrir o card do lead, a aba "Negocios" ja mostra o plano correto
+
+**LeadDetailDialog.tsx** (card do lead - Desktop e Mobile):
+- Quando o usuario selecionar um plano em "Negocios", alem de preencher `valor_interesse`, tambem preencher `commission_percentage` com o valor configurado no plano
+- Isso ja funciona parcialmente (preenche valor) mas falta a comissao
+
+## Detalhes tecnicos
+
+### Migration SQL
+```sql
+ALTER TABLE service_plans ADD COLUMN commission_percentage NUMERIC DEFAULT NULL;
+```
+
+### use-service-plans.ts
+- Adicionar `commission_percentage?: number | null` em `ServicePlan` e `CreateServicePlanInput`
+
+### PlanFormDialog.tsx
+- Adicionar campo `commission_percentage` na grid ao lado de "Velocidade (MB)" ou "Valor (R$)"
+- Input numerico com step 0.1, placeholder "Ex: 10"
+
+### CreateLeadDialog.tsx
+- No `onValueChange` do Select de plano (aba "Contrato", linha ~578), ao selecionar um plano:
+  - Preencher `valor_interesse` com `plan.price`
+  - Armazenar `plan_id` (ja faz isso)
+- No `handleSubmit`, adicionar ao payload do `createLead`:
+  - `interest_plan_id: formData.plan_id || undefined`
+  - `commission_percentage` do plano selecionado
+
+### LeadDetailDialog.tsx (Desktop e Mobile)
+- No `onValueChange` do Select "Plano de interesse" (linhas ~1224 e ~1979):
+  - Adicionar `commission_percentage` do plano ao `updateData`
+  - Preencher `editForm.commission_percentage` com o valor do plano
