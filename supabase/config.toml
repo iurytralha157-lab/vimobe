@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.import-wordpress-properties]
 verify_jwt = false
+
+[functions.migrate-wp-images]
+verify_jwt = false
