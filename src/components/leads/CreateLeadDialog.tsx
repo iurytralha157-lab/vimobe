@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -75,7 +76,7 @@ export function CreateLeadDialog({
     cpf: '',
     rg: '',
     birth_date: '',
-    phone2: '',
+    is_portability: false,
     mother_name: '',
     uf: '',
     cidade: '',
@@ -220,7 +221,7 @@ export function CreateLeadDialog({
           leadId: newLead.id,
           name: formData.name,
           phone: formData.phone || null,
-          phone2: formData.phone2 || null,
+          is_portability: formData.is_portability || false,
           email: formData.email || null,
           cpf_cnpj: formData.cpf || null,
           rg: formData.rg || null,
@@ -281,7 +282,7 @@ export function CreateLeadDialog({
         )}
         
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <ScrollArea className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-6 pb-4">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -339,21 +340,23 @@ export function CreateLeadDialog({
                         </div>
                       </div>
 
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>WhatsApp</Label>
-                          <PhoneInput
-                            value={formData.phone}
-                            onChange={(value) => updateField('phone', value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Telefone 2</Label>
-                          <PhoneInput
-                            value={formData.phone2}
-                            onChange={(value) => updateField('phone2', value)}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label>WhatsApp</Label>
+                        <PhoneInput
+                          value={formData.phone}
+                          onChange={(value) => updateField('phone', value)}
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="is_portability"
+                          checked={formData.is_portability}
+                          onCheckedChange={(checked) => updateField('is_portability', !!checked)}
+                        />
+                        <Label htmlFor="is_portability" className="text-sm cursor-pointer">
+                          Este número é portabilidade
+                        </Label>
                       </div>
 
                       <div className="space-y-2">
@@ -880,7 +883,7 @@ export function CreateLeadDialog({
                 </TabsContent>
               </Tabs>
             </div>
-          </ScrollArea>
+          </div>
 
           <div className="flex gap-2 px-6 py-4 border-t bg-background flex-shrink-0">
             <Button type="button" variant="outline" className="w-[40%]" onClick={() => onOpenChange(false)}>
