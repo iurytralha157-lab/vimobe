@@ -138,7 +138,7 @@ export default function PublicSiteLayout() {
         <div className="max-w-[1200px] mx-auto px-4 pt-4">
           <div 
             className="backdrop-blur-xl rounded-2xl px-8 pl-4"
-            style={{ backgroundColor: isDarkTheme ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.8)', borderBottom: isDarkTheme ? 'none' : '1px solid rgba(0,0,0,0.1)' }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.4)', border: 'none' }}
           >
             <div className="flex justify-between items-center h-[70px]">
               {/* Logo */}
