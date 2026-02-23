@@ -1,66 +1,60 @@
 
-# Auto-preencher dados do imovel quando lead vem do site
 
-## Problema
-Quando um lead entra pelo site publico com interesse em um imovel especifico, o campo `interest_property_id` e salvo corretamente no banco. Porem, o `valor_interesse` e `commission_percentage` nao sao preenchidos automaticamente a partir dos dados do imovel. O usuario precisa manualmente selecionar o imovel de novo na aba "Negocio" para que esses valores sejam populados.
+# Gerenciador de Menu Dinamico do Site Publico
 
-## Solucao
-Atualizar a Edge Function `public-site-contact` para buscar os dados do imovel (preco e comissao) quando `property_id` for informado, e ja salvar esses valores no lead na criacao.
+## Resumo
+Criar um sistema completo de gerenciamento de menu para o site publico, permitindo ao admin configurar links para paginas internas, filtros de categoria e URLs externas, com reordenacao via drag-and-drop.
 
-## Detalhes Tecnicos
+## Etapas de Implementacao
 
-### 1. Edge Function `supabase/functions/public-site-contact/index.ts`
+### 1. Criar tabela `site_menu_items` (Migration SQL)
 
-Apos validar o `property_id`, buscar os dados do imovel antes de criar o lead:
+Nova tabela para armazenar os itens de menu por organizacao, com RLS para acesso publico de leitura e gestao restrita a membros da organizacao.
 
-```typescript
-// Buscar dados do imovel se property_id informado
-let propertyPrice = null;
-let propertyCommission = null;
+Campos: `id`, `organization_id`, `label`, `link_type` (page/filter/external), `href`, `position`, `open_in_new_tab`, `is_active`, `created_at`.
 
-if (property_id) {
-  const { data: property } = await supabase
-    .from('properties')
-    .select('preco, commission_percentage')
-    .eq('id', property_id)
-    .eq('organization_id', organization_id)
-    .maybeSingle();
+### 2. Criar hook admin: `src/hooks/use-site-menu.ts`
 
-  if (property) {
-    propertyPrice = property.preco;
-    propertyCommission = property.commission_percentage;
-  }
-}
-```
+CRUD completo para gerenciar itens de menu:
+- `useSiteMenuItems()` - lista itens ordenados por posicao
+- `useCreateMenuItem()` - cria novo item
+- `useUpdateMenuItem()` - edita item existente
+- `useDeleteMenuItem()` - remove item
+- `useReorderMenuItems()` - atualiza posicoes em batch apos drag-and-drop
 
-E incluir no `leadData` ao criar o lead:
+### 3. Criar hook publico: `src/hooks/use-public-site-menu.ts`
 
-```typescript
-const leadData = {
-  // ... campos existentes ...
-  interest_property_id: property_id || null,
-  valor_interesse: propertyPrice,          // NOVO
-  commission_percentage: propertyCommission, // NOVO
-};
-```
+Hook simples que busca itens ativos do menu para uma organizacao (sem autenticacao), usado pelo site publico.
 
-### 2. Verificacao na atualizacao de lead existente
+### 4. Adicionar aba "Menu" no SiteSettings
 
-Quando o lead ja existe (deduplicacao por telefone), tambem atualizar o `interest_property_id`, `valor_interesse` e `commission_percentage` caso o contato venha de um imovel diferente:
+Modificar `src/pages/SiteSettings.tsx`:
+- Alterar grid de 5 para 6 colunas nas tabs
+- Adicionar nova aba "Menu" com icone `Menu` (lucide)
+- Conteudo da aba:
+  - Lista de itens com drag-and-drop (`@hello-pangea/dnd`, ja instalado)
+  - Cada item mostra label, tipo (badge colorido), botoes de editar/remover
+  - Botao "Adicionar Item" abre dialog com formulario:
+    - Select de tipo: Pagina Interna / Filtro de Categoria / Link Externo
+    - Campos dinamicos conforme o tipo selecionado
+    - Para "Pagina Interna": select com Home, Imoveis, Sobre, Contato, Favoritos
+    - Para "Filtro de Categoria": select com tipos de imovel cadastrados + Aluguel
+    - Para "Link Externo": campos Label + URL + checkbox "Abrir em nova aba"
 
-```typescript
-if (existingLead && property_id) {
-  await supabase
-    .from('leads')
-    .update({
-      interest_property_id: property_id,
-      valor_interesse: propertyPrice,
-      commission_percentage: propertyCommission,
-    })
-    .eq('id', existingLead.id);
-}
-```
+### 5. Atualizar `PublicSiteLayout.tsx` para menu dinamico
 
-### Resultado esperado
-- Lead entra pelo site com interesse em imovel -> abre o card no CRM -> aba "Negocio" ja mostra o imovel selecionado, valor preenchido e comissao configurada
-- Nenhuma alteracao no frontend necessaria, pois o `LeadDetailDialog` ja le esses campos do lead
+Modificar `src/pages/public/PublicSiteLayout.tsx`:
+- Importar `usePublicSiteMenu`
+- Se existirem itens configurados no banco, renderizar esses itens no lugar dos arrays `mainNavLinks` e `filterLinks` hardcoded
+- Manter fallback para o menu atual caso nenhum item esteja configurado
+- Links externos com `open_in_new_tab` usam `<a target="_blank">`
+- Links internos continuam usando `<Link>` do react-router
+
+### Arquivos criados/modificados
+
+1. **Migration SQL** - tabela `site_menu_items` + RLS
+2. **`src/hooks/use-site-menu.ts`** - CRUD admin (novo)
+3. **`src/hooks/use-public-site-menu.ts`** - leitura publica (novo)
+4. **`src/pages/SiteSettings.tsx`** - nova aba "Menu" com drag-and-drop
+5. **`src/pages/public/PublicSiteLayout.tsx`** - renderizacao dinamica do menu
+
