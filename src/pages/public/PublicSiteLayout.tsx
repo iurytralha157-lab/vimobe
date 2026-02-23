@@ -19,6 +19,34 @@ export default function PublicSiteLayout() {
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
 
+  // Dynamic document title & favicon based on site config
+  useEffect(() => {
+    if (!siteConfig) return;
+
+    const originalTitle = document.title;
+    const originalFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href;
+
+    document.title = siteConfig.seo_title || siteConfig.site_title || 'Site Imobiliário';
+
+    if (siteConfig.favicon_url) {
+      let faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'icon';
+        document.head.appendChild(faviconLink);
+      }
+      faviconLink.href = siteConfig.favicon_url;
+    }
+
+    return () => {
+      document.title = originalTitle;
+      if (originalFavicon) {
+        const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+        if (link) link.href = originalFavicon;
+      }
+    };
+  }, [siteConfig]);
+
   // Close mobile menu on route change (scroll handled by ScrollToTop component)
   useEffect(() => {
     setMobileMenuOpen(false);
