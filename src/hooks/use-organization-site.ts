@@ -53,6 +53,7 @@ export interface OrganizationSite {
   site_theme: string | null;
   background_color: string | null;
   text_color: string | null;
+  card_color: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -48,6 +48,7 @@ function mapSiteDataToConfig(data: any, orgName: string): PublicSiteConfig {
     site_theme: data.site_theme || 'dark',
     background_color: data.background_color || '#0D0D0D',
     text_color: data.text_color || '#FFFFFF',
+    card_color: data.card_color || '#FFFFFF',
   };
 }
 

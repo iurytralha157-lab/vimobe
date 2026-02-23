@@ -57,6 +57,7 @@ export default function PublicPropertyDetail() {
 
   const primaryColor = siteConfig?.primary_color || '#F97316';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
+  const cardColor = siteConfig?.card_color || '#FFFFFF';
 
   // Build all images array
   const allImages = property 
@@ -114,7 +115,7 @@ export default function PublicPropertyDetail() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Property Header */}
-            <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100">
+            <div className="rounded-2xl p-6 md:p-8 border border-gray-100" style={{ backgroundColor: cardColor }}>
               {/* Tags */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span 
@@ -152,7 +153,7 @@ export default function PublicPropertyDetail() {
             </div>
 
             {/* Features */}
-            <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100">
+            <div className="rounded-2xl p-6 md:p-8 border border-gray-100" style={{ backgroundColor: cardColor }}>
               <h2 className="text-xl font-bold text-gray-900 mb-6">Características</h2>
               <PropertyFeatures
                 quartos={property.quartos || (property as any).quartos}
@@ -171,7 +172,7 @@ export default function PublicPropertyDetail() {
 
             {/* Description Section */}
             {(property.descricao || (property as any).descricao) && (
-              <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100">
+              <div className="rounded-2xl p-6 md:p-8 border border-gray-100" style={{ backgroundColor: cardColor }}>
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Descrição</h2>
                 <div className="prose prose-gray max-w-none">
                   <p className="text-gray-600 leading-relaxed whitespace-pre-line">

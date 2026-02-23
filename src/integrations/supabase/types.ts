@@ -2836,6 +2836,7 @@ export type Database = {
           accent_color: string | null
           address: string | null
           background_color: string
+          card_color: string
           city: string | null
           created_at: string
           custom_domain: string | null
@@ -2883,6 +2884,7 @@ export type Database = {
           accent_color?: string | null
           address?: string | null
           background_color?: string
+          card_color?: string
           city?: string | null
           created_at?: string
           custom_domain?: string | null
@@ -2930,6 +2932,7 @@ export type Database = {
           accent_color?: string | null
           address?: string | null
           background_color?: string
+          card_color?: string
           city?: string | null
           created_at?: string
           custom_domain?: string | null

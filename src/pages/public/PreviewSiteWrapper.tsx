@@ -86,6 +86,7 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
             site_theme: (data as any).site_theme || 'dark',
             background_color: (data as any).background_color || '#0D0D0D',
             text_color: (data as any).text_color || '#FFFFFF',
+            card_color: (data as any).card_color || '#FFFFFF',
           });
         }
       } catch (err) {
