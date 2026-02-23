@@ -28,6 +28,7 @@ interface FormData {
   name: string;
   phone: string;
   phone2: string;
+  is_portability: boolean;
   email: string;
   cpf_cnpj: string;
   rg: string;
@@ -59,6 +60,7 @@ const defaultFormData: FormData = {
   name: '',
   phone: '',
   phone2: '',
+  is_portability: false,
   email: '',
   cpf_cnpj: '',
   rg: '',
@@ -107,6 +109,7 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
         name: customer.name || lead.name || '',
         phone: customer.phone || lead.phone || '',
         phone2: customer.phone2 || '',
+        is_portability: (customer as any).is_portability || false,
         email: customer.email || lead.email || '',
         cpf_cnpj: customer.cpf_cnpj || '',
         rg: customer.rg || '',
@@ -184,6 +187,7 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
       name: formData.name,
       phone: formData.phone || null,
       phone2: formData.phone2 || null,
+      is_portability: formData.is_portability,
       email: formData.email || null,
       cpf_cnpj: formData.cpf_cnpj || null,
       rg: formData.rg || null,
@@ -284,6 +288,14 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
               onChange={phone2 => setFormData(prev => ({ ...prev, phone2 }))}
               placeholder="Telefone secundário"
             />
+          </div>
+          <div className="sm:col-span-2 flex items-center gap-2 pt-4">
+            <Checkbox
+              id="is_portability_tab"
+              checked={formData.is_portability}
+              onCheckedChange={checked => setFormData(prev => ({ ...prev, is_portability: !!checked }))}
+            />
+            <Label htmlFor="is_portability_tab" className="text-sm cursor-pointer">Este número é portabilidade</Label>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs">Email</Label>
