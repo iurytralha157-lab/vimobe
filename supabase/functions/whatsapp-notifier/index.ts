@@ -35,31 +35,46 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Find the notification session for this organization
-    const { data: session, error: sessionError } = await supabase
+    // 1. Try to find the organization's notification session
+    let instanceName: string | null = null;
+
+    const { data: session } = await supabase
       .from("whatsapp_sessions")
       .select("id, instance_name, status")
       .eq("organization_id", organization_id)
       .eq("is_notification_session", true)
       .single();
 
-    if (sessionError || !session) {
-      console.log("No notification session configured for org:", organization_id);
+    if (session?.status === "connected" && session.instance_name) {
+      instanceName = session.instance_name;
+      console.log("Using org notification session:", instanceName);
+    } else {
+      // 2. Fallback: check global notification instance from system_settings
+      const { data: systemSettings } = await supabase
+        .from("system_settings")
+        .select("value")
+        .limit(1)
+        .maybeSingle();
+
+      if (systemSettings?.value) {
+        const settingsValue = systemSettings.value as Record<string, unknown>;
+        const globalInstance = settingsValue.notification_instance_name as string | undefined;
+        if (globalInstance) {
+          instanceName = globalInstance;
+          console.log("Using global notification instance:", instanceName);
+        }
+      }
+    }
+
+    if (!instanceName) {
+      console.log("No notification instance available for org:", organization_id);
       return new Response(
-        JSON.stringify({ success: false, error: "No notification session configured" }),
+        JSON.stringify({ success: false, error: "No notification instance configured" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (session.status !== "connected") {
-      console.log("Notification session is not connected:", session.instance_name);
-      return new Response(
-        JSON.stringify({ success: false, error: "Notification session is not connected" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 2. Get the target user's phone number
+    // 3. Get the target user's phone number
     if (!user_id) {
       return new Response(
         JSON.stringify({ success: false, error: "user_id is required" }),
@@ -81,10 +96,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Send the message via Evolution API
+    // 4. Send the message via Evolution API
     const formattedPhone = user.whatsapp.replace(/\D/g, "");
     
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${session.instance_name}`, {
+    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -97,7 +112,7 @@ Deno.serve(async (req) => {
     });
 
     const data = await response.json();
-    console.log("WhatsApp notification sent:", { user: user.name, phone: formattedPhone, status: response.status });
+    console.log("WhatsApp notification sent:", { user: user.name, phone: formattedPhone, instance: instanceName, status: response.status });
 
     if (!response.ok) {
       return new Response(
