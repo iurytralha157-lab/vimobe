@@ -94,6 +94,25 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch property data if property_id is provided
+    let propertyPrice = null;
+    let propertyCommission = null;
+
+    if (property_id) {
+      const { data: property } = await supabase
+        .from('properties')
+        .select('preco, commission_percentage')
+        .eq('id', property_id)
+        .eq('organization_id', organization_id)
+        .maybeSingle();
+
+      if (property) {
+        propertyPrice = property.preco;
+        propertyCommission = property.commission_percentage;
+        console.log(`Property data found: price=${propertyPrice}, commission=${propertyCommission}`);
+      }
+    }
+
     // Normalize phone number
     const normalizedPhone = phone.replace(/\D/g, '');
 
@@ -121,6 +140,19 @@ Deno.serve(async (req) => {
     if (existingLead) {
       // Update existing lead with new message
       leadId = existingLead.id;
+
+      // Update property interest data if a new property was specified
+      if (property_id) {
+        await supabase
+          .from('leads')
+          .update({
+            interest_property_id: property_id,
+            valor_interesse: propertyPrice,
+            commission_percentage: propertyCommission,
+          })
+          .eq('id', leadId);
+        console.log(`Updated existing lead ${leadId} with property data`);
+      }
       
       // Add activity for the new contact
       await supabase
@@ -148,6 +180,8 @@ Deno.serve(async (req) => {
         source: 'website',
         deal_status: 'open',
         interest_property_id: property_id || null,
+        valor_interesse: propertyPrice,
+        commission_percentage: propertyCommission,
       };
 
       const { data: newLead, error: leadError } = await supabase
