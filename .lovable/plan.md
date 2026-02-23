@@ -1,53 +1,79 @@
 
-
-# Menu Padrao Automatico ao Criar Site
+# WhatsApp Central de Notificacoes (Super Admin)
 
 ## Resumo
-Quando o site for criado (ou quando a aba Menu for acessada pela primeira vez sem itens), inserir automaticamente os itens de menu padrao: HOME, IMOVEIS, APARTAMENTO, CASA, SOBRE e CONTATO. O admin pode depois excluir, editar ou reordenar qualquer um deles.
+Adicionar no painel Super Admin a configuracao de uma instancia WhatsApp central (Evolution API) que envia notificacoes para usuarios de TODAS as organizacoes que nao possuem sua propria sessao de notificacao configurada. Sem duplicidade de mensagens.
 
-## Abordagem
-Modificar o hook `useCreateOrganizationSite` para que, apos criar o site com sucesso, tambem insira os itens de menu padrao na tabela `site_menu_items`.
+## Logica de prioridade
+1. Se a organizacao tem uma `whatsapp_session` com `is_notification_session = true` e `status = connected` --> usa a sessao da propria organizacao (comportamento atual)
+2. Se NAO tem --> usa a sessao global configurada pelo Super Admin via `system_settings`
 
-## Itens padrao que serao criados
+## Etapas
 
-| Posicao | Label | Tipo | Href |
-|---------|-------|------|------|
-| 0 | HOME | page | (vazio) |
-| 1 | IMOVEIS | page | imoveis |
-| 2 | APARTAMENTO | filter | imoveis?tipo=Apartamento |
-| 3 | CASA | filter | imoveis?tipo=Casa |
-| 4 | SOBRE | page | sobre |
-| 5 | CONTATO | page | contato |
+### 1. Adicionar campos no `system_settings` (sem migration)
+Aproveitar o campo JSON `value` da tabela `system_settings` que ja existe. Adicionar novas chaves:
+- `notification_instance_name`: nome da instancia no Evolution API (ex: "vetor-notifications")
+- `notification_instance_connected`: boolean de status
+
+Nenhuma migration necessaria -- o campo `value` ja e JSONB flexivel.
+
+### 2. Novo Card no AdminSettings (Super Admin)
+Adicionar um card "WhatsApp de Notificacoes" na pagina `src/pages/admin/AdminSettings.tsx` com:
+- Campo para nome da instancia Evolution API
+- Botao "Verificar Conexao" que chama a Evolution API via uma edge function para validar status
+- Botao "Conectar" que gera QR code (similar ao fluxo existente de sessoes)
+- Indicador de status (conectado/desconectado)
+- Explicacao: "Este WhatsApp sera usado para enviar notificacoes para organizacoes que nao possuem WhatsApp proprio configurado."
+
+**Abordagem simplificada**: Como a Evolution API ja esta configurada via secrets (`EVOLUTION_API_URL`, `EVOLUTION_API_KEY`), o admin so precisa informar o `instance_name` da instancia que ja foi criada no Evolution. O card tera:
+- Input para o nome da instancia
+- Botao para salvar
+- Botao para testar conexao (chama Evolution API GET /instance/connectionState/{instance_name})
+
+### 3. Nova Edge Function: `global-whatsapp-status`
+Endpoint simples que recebe `instance_name` e retorna o status da conexao consultando a Evolution API. Usado pelo card do admin para verificar se a instancia esta conectada.
+
+### 4. Modificar Edge Function `whatsapp-notifier`
+Alterar a logica atual:
+1. Tentar encontrar sessao de notificacao da organizacao (comportamento atual)
+2. Se NAO encontrar (ou nao estiver conectada), buscar `system_settings` para pegar o `notification_instance_name` global
+3. Se existir e estiver configurado, enviar via essa instancia global
+4. Se nenhum dos dois existir, retornar erro silencioso (como ja faz)
+
+### 5. Atualizar interfaces TypeScript
+- `SystemSettingsValue` em `use-system-settings.ts` e `AdminSettings.tsx`: adicionar campos `notification_instance_name`
 
 ## Detalhes Tecnicos
 
-### Arquivo modificado: `src/hooks/use-organization-site.ts`
+### Fluxo do `whatsapp-notifier` atualizado:
 
-Na funcao `useCreateOrganizationSite`, no callback `onSuccess`, inserir os 6 itens padrao na tabela `site_menu_items` usando o `organization_id` da organizacao. Isso garante que toda vez que um novo site for criado, o menu ja vem pre-populado.
-
-```typescript
-onSuccess: async () => {
-  // Seed default menu items
-  const defaults = [
-    { label: 'HOME', link_type: 'page', href: '', position: 0 },
-    { label: 'IMÓVEIS', link_type: 'page', href: 'imoveis', position: 1 },
-    { label: 'APARTAMENTO', link_type: 'filter', href: 'imoveis?tipo=Apartamento', position: 2 },
-    { label: 'CASA', link_type: 'filter', href: 'imoveis?tipo=Casa', position: 3 },
-    { label: 'SOBRE', link_type: 'page', href: 'sobre', position: 4 },
-    { label: 'CONTATO', link_type: 'page', href: 'contato', position: 5 },
-  ];
-  await supabase.from('site_menu_items').insert(
-    defaults.map(d => ({ ...d, organization_id: organization.id, open_in_new_tab: false, is_active: true }))
-  );
-  queryClient.invalidateQueries({ queryKey: ['site-menu-items'] });
-  // ...existing toast
-}
+```text
+Recebe: { organization_id, user_id, message }
+        |
+        v
+  Busca sessao de notificacao da org
+  (whatsapp_sessions WHERE is_notification_session = true)
+        |
+    Encontrou e connected?
+      /          \
+    SIM          NAO
+     |             |
+  Envia via      Busca system_settings
+  sessao org     notification_instance_name
+     |             |
+   FIM         Tem instancia global?
+                /          \
+              SIM          NAO
+               |             |
+            Envia via      Retorna
+            instancia      (sem envio)
+            global
+               |
+             FIM
 ```
 
-### Para sites ja existentes (sem menu configurado)
-Tambem adicionar um botao "Carregar Menu Padrao" no componente `MenuTab.tsx` que aparece apenas quando a lista de itens esta vazia. Ao clicar, insere os mesmos itens padrao. Isso cobre organizacoes que ja criaram o site antes dessa feature existir.
-
-### Arquivos modificados
-1. `src/hooks/use-organization-site.ts` -- seed de menu padrao no `onSuccess` do create
-2. `src/components/site/MenuTab.tsx` -- botao "Carregar Menu Padrao" quando lista vazia
-
+### Arquivos criados/modificados:
+1. `src/pages/admin/AdminSettings.tsx` -- novo card WhatsApp Notificacoes
+2. `src/hooks/use-system-settings.ts` -- novos campos na interface
+3. `supabase/functions/whatsapp-notifier/index.ts` -- fallback para instancia global
+4. `supabase/functions/global-whatsapp-status/index.ts` -- novo, verificar conexao da instancia
