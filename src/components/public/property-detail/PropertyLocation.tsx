@@ -24,6 +24,8 @@ interface PropertyLocationProps {
   cep?: string | null;
   title: string;
   primaryColor?: string;
+  cardColor?: string;
+  textColor?: string;
 }
 
 interface LeafletModules {
@@ -246,6 +248,8 @@ export default function PropertyLocation({
   cep,
   title,
   primaryColor = '#F97316',
+  cardColor = '#FFFFFF',
+  textColor,
 }: PropertyLocationProps) {
   const [leafletModules, setLeafletModules] = useState<LeafletModules | null>(null);
   const [leafletError, setLeafletError] = useState(false);
@@ -426,12 +430,12 @@ export default function PropertyLocation({
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+      <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: textColor }}>
         <MapPin className="w-5 h-5" style={{ color: primaryColor }} />
         Localização
       </h2>
 
-      <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+      <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: cardColor, borderColor: textColor ? `${textColor}15` : undefined, borderWidth: 1 }}>
         {/* Precision indicator */}
         {location && location.precision !== 'exact' && (
           <div 
@@ -508,8 +512,8 @@ export default function PropertyLocation({
                 <MapPin className="w-5 h-5" style={{ color: primaryColor }} />
               </div>
               <div>
-                <p className="text-sm text-gray-500 mb-1">Endereço</p>
-                <p className="text-gray-900 font-medium">{fullAddress}</p>
+                <p className="text-sm mb-1" style={{ color: textColor, opacity: 0.5 }}>Endereço</p>
+                <p className="font-medium" style={{ color: textColor }}>{fullAddress}</p>
               </div>
             </div>
           </div>

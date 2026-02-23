@@ -32,6 +32,7 @@ interface PropertyFiltersContentProps {
   showMoreFilters: boolean;
   setShowMoreFilters: (value: boolean) => void;
   onClose?: () => void;
+  textColor?: string;
 }
 
 const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
@@ -47,12 +48,13 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
   showMoreFilters,
   setShowMoreFilters,
   onClose,
+  textColor,
 }: PropertyFiltersContentProps) {
   return (
     <div className="space-y-6">
       {/* Basic Filters - Always visible */}
       <div>
-        <label className="text-sm font-semibold text-gray-700 mb-2 block">Buscar</label>
+        <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Buscar</label>
         <input
           ref={searchInputRef}
           type="text"
@@ -64,7 +66,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
       </div>
 
       <div>
-        <label className="text-sm font-semibold text-gray-700 mb-2 block">Cidade</label>
+        <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Cidade</label>
         <Select value={filters.cidade} onValueChange={(v) => updateFilter('cidade', v === 'all' ? '' : v)}>
           <SelectTrigger className="rounded-xl">
             <SelectValue placeholder="Todas as cidades" />
@@ -79,7 +81,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
       </div>
 
       <div>
-        <label className="text-sm font-semibold text-gray-700 mb-2 block">Faixa de Preço</label>
+        <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Faixa de Preço</label>
         <div className="grid grid-cols-2 gap-3">
           <Input
             type="number"
@@ -105,13 +107,13 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
             variant="ghost" 
             className="w-full justify-between px-0 hover:bg-transparent"
           >
-            <span className="font-semibold text-gray-700">Mais Filtros</span>
+            <span className="font-semibold" style={textColor ? { color: textColor } : undefined}>Mais Filtros</span>
             <ChevronDown className={`w-5 h-5 transition-transform ${showMoreFilters ? 'rotate-180' : ''}`} />
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-6 pt-4">
           <div>
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Tipo de Imóvel</label>
+            <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Tipo de Imóvel</label>
             <Select value={filters.tipo} onValueChange={(v) => updateFilter('tipo', v === 'all' ? '' : v)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Todos os tipos" />
@@ -126,7 +128,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Finalidade</label>
+            <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Finalidade</label>
             <Select value={filters.finalidade} onValueChange={(v) => updateFilter('finalidade', v === 'all' ? '' : v)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Todas" />
@@ -140,7 +142,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Quartos</label>
+            <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Quartos</label>
             <Select value={filters.quartos} onValueChange={(v) => updateFilter('quartos', v === 'any' ? '' : v)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Qualquer" />
@@ -156,7 +158,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Suítes</label>
+            <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Suítes</label>
             <Select value={filters.suites} onValueChange={(v) => updateFilter('suites', v === 'any' ? '' : v)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Qualquer" />
@@ -172,7 +174,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Banheiros</label>
+            <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Banheiros</label>
             <Select value={filters.banheiros} onValueChange={(v) => updateFilter('banheiros', v === 'any' ? '' : v)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Qualquer" />
@@ -187,7 +189,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-700 mb-2 block">Vagas</label>
+            <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Vagas</label>
             <Select value={filters.vagas} onValueChange={(v) => updateFilter('vagas', v === 'any' ? '' : v)}>
               <SelectTrigger className="rounded-xl">
                 <SelectValue placeholder="Qualquer" />
