@@ -299,7 +299,7 @@ export default function AdminSettings() {
               Use uma logo para tema claro e outra para tema escuro.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-6">
             {/* Light Theme Logo */}
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
@@ -413,7 +413,7 @@ export default function AdminSettings() {
               Recomendado: 32x32px ou 40x40px com fundo transparente.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-6">
             {/* Light Theme Favicon */}
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
@@ -521,7 +521,7 @@ export default function AdminSettings() {
               Ajuste as dimensões da logo exibida no sistema (em pixels)
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-6">
             <div className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -587,7 +587,7 @@ export default function AdminSettings() {
               Número de WhatsApp para novos interessados
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="whatsapp">Número do WhatsApp</Label>
               <Input
@@ -620,7 +620,7 @@ export default function AdminSettings() {
               Ao publicar, uma notificação também é enviada para todos.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
             {activeAnnouncement && (
               <div className="bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg border border-orange-200 dark:border-orange-800 mb-4">
                 <p className="text-sm text-orange-800 dark:text-orange-200 font-medium">
@@ -693,7 +693,7 @@ export default function AdminSettings() {
               Exibe um banner de aviso para todos os usuários não-administradores enquanto o sistema está em manutenção.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-0.5">
                 <Label className="text-base">Ativar modo manutenção</Label>
@@ -749,7 +749,7 @@ export default function AdminSettings() {
               Habilite ou desabilite funcionalidades globalmente para todas as organizações.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
             {[
               { key: 'multi_pipeline', label: 'Múltiplos Pipelines', description: 'Permite criar e gerenciar vários pipelines por organização (experimental)' },
               { key: 'telecom_module', label: 'Módulo Telecom', description: 'Ativa o módulo de clientes e faturamento de telecomunicações' },
@@ -790,7 +790,7 @@ export default function AdminSettings() {
               garantindo que vejam as últimas atualizações do sistema.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
             <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
               <p className="text-sm text-orange-800 dark:text-orange-200">
                 ⚠️ <strong>Atenção:</strong> Isso vai desconectar e recarregar a página de todos os usuários 
