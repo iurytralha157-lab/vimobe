@@ -58,6 +58,8 @@ export default function PublicPropertyDetail() {
   const primaryColor = siteConfig?.primary_color || '#F97316';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
   const cardColor = siteConfig?.card_color || '#FFFFFF';
+  const textColor = siteConfig?.text_color || '#FFFFFF';
+  const backgroundColor = siteConfig?.background_color || '#0D0D0D';
 
   // Build all images array
   const allImages = property 
@@ -66,7 +68,7 @@ export default function PublicPropertyDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor }}>
         <div 
           className="animate-spin rounded-full h-12 w-12 border-b-2" 
           style={{ borderColor: primaryColor }}
@@ -77,12 +79,12 @@ export default function PublicPropertyDetail() {
 
   if (!property) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50">
-        <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-6">
-          <Building className="w-12 h-12 text-gray-300" />
+      <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ backgroundColor }}>
+        <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6" style={{ backgroundColor: `${textColor}10` }}>
+          <Building className="w-12 h-12" style={{ color: `${textColor}40` }} />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Imóvel não encontrado</h1>
-        <p className="text-gray-600 mb-6 text-center">O imóvel que você procura não está disponível.</p>
+        <h1 className="text-2xl font-bold mb-2" style={{ color: textColor }}>Imóvel não encontrado</h1>
+        <p className="mb-6 text-center" style={{ color: textColor, opacity: 0.6 }}>O imóvel que você procura não está disponível.</p>
         <Link to={getHref("imoveis")}>
           <Button 
             className="rounded-full text-white"
@@ -96,7 +98,7 @@ export default function PublicPropertyDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor }}>
       {/* Gallery at Top - Full Width */}
       <PropertyGallery 
         images={allImages} 
@@ -115,7 +117,7 @@ export default function PublicPropertyDetail() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Property Header */}
-            <div className="rounded-2xl p-6 md:p-8 border border-gray-100" style={{ backgroundColor: cardColor }}>
+            <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
               {/* Tags */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span 
@@ -124,23 +126,23 @@ export default function PublicPropertyDetail() {
                 >
                   {property.tipo_imovel || (property as any).tipo_de_imovel}
                 </span>
-                <span className="px-4 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 rounded-full">
+                <span className="px-4 py-1.5 text-sm font-medium rounded-full" style={{ backgroundColor: `${textColor}10`, color: textColor }}>
                   Cód: {property.codigo || (property as any).code}
                 </span>
                 {(property as any).tipo_de_negocio && (
-                  <span className="px-4 py-1.5 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
+                  <span className="px-4 py-1.5 text-sm font-medium rounded-full" style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}>
                     {(property as any).tipo_de_negocio}
                   </span>
                 )}
               </div>
 
               {/* Title */}
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+              <h1 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: textColor }}>
                 {property.titulo || (property as any).title}
               </h1>
 
               {/* Address */}
-              <p className="text-gray-500 flex items-center gap-2 text-lg">
+              <p className="flex items-center gap-2 text-lg" style={{ color: textColor, opacity: 0.6 }}>
                 <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
                 {[
                   property.endereco || (property as any).endereco,
@@ -153,8 +155,8 @@ export default function PublicPropertyDetail() {
             </div>
 
             {/* Features */}
-            <div className="rounded-2xl p-6 md:p-8 border border-gray-100" style={{ backgroundColor: cardColor }}>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Características</h2>
+            <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
+              <h2 className="text-xl font-bold mb-6" style={{ color: textColor }}>Características</h2>
               <PropertyFeatures
                 quartos={property.quartos || (property as any).quartos}
                 suites={property.suites || (property as any).suites}
@@ -167,15 +169,16 @@ export default function PublicPropertyDetail() {
                 mobilia={(property as any).mobilia}
                 regraPet={(property as any).regra_pet}
                 primaryColor={primaryColor}
+                textColor={textColor}
               />
             </div>
 
             {/* Description Section */}
             {(property.descricao || (property as any).descricao) && (
-              <div className="rounded-2xl p-6 md:p-8 border border-gray-100" style={{ backgroundColor: cardColor }}>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Descrição</h2>
-                <div className="prose prose-gray max-w-none">
-                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+              <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
+                <h2 className="text-xl font-bold mb-4" style={{ color: textColor }}>Descrição</h2>
+                <div className="prose max-w-none">
+                  <p className="leading-relaxed whitespace-pre-line" style={{ color: textColor, opacity: 0.7 }}>
                     {property.descricao || (property as any).descricao}
                   </p>
                 </div>
@@ -188,6 +191,8 @@ export default function PublicPropertyDetail() {
               detalhesExtras={(property as any).detalhes_extras}
               proximidades={(property as any).proximidades}
               primaryColor={primaryColor}
+              cardColor={cardColor}
+              textColor={textColor}
             />
 
             {/* Location Map */}
@@ -203,6 +208,8 @@ export default function PublicPropertyDetail() {
               cep={property.cep || (property as any).cep}
               title={property.titulo || (property as any).title}
               primaryColor={primaryColor}
+              cardColor={cardColor}
+              textColor={textColor}
             />
           </div>
 
@@ -222,6 +229,8 @@ export default function PublicPropertyDetail() {
               whatsappNumber={siteConfig?.whatsapp}
               phoneNumber={siteConfig?.phone}
               primaryColor={primaryColor}
+              cardColor={cardColor}
+              textColor={textColor}
             />
           </div>
         </div>

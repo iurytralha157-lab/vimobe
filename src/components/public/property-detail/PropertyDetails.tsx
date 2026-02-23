@@ -7,6 +7,8 @@ interface PropertyDetailsProps {
   detalhesExtras?: string[] | null;
   proximidades?: string[] | null;
   primaryColor?: string;
+  cardColor?: string;
+  textColor?: string;
 }
 
 export default function PropertyDetails({
@@ -14,6 +16,8 @@ export default function PropertyDetails({
   detalhesExtras,
   proximidades,
   primaryColor = '#F97316',
+  cardColor = '#FFFFFF',
+  textColor,
 }: PropertyDetailsProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
@@ -52,12 +56,12 @@ export default function PropertyDetails({
       {/* Description */}
       {hasDescription && (
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: textColor }}>
             <Info className="w-5 h-5" style={{ color: primaryColor }} />
             Sobre o Imóvel
           </h2>
-          <div className="bg-white rounded-2xl p-6 border border-gray-100">
-            <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+          <div className="rounded-2xl p-6" style={{ backgroundColor: cardColor, borderColor: textColor ? `${textColor}15` : undefined, borderWidth: 1 }}>
+            <p className="leading-relaxed whitespace-pre-wrap" style={{ color: textColor, opacity: 0.7 }}>
               {displayDescription}
             </p>
             {shouldTruncate && (
@@ -76,11 +80,12 @@ export default function PropertyDetails({
       {/* Tabs for Features and Nearby */}
       {(hasExtras || hasNearby) && (
         <Tabs defaultValue={hasExtras ? 'features' : 'nearby'} className="w-full">
-          <TabsList className="w-full justify-start bg-gray-100 p-1 rounded-xl">
+          <TabsList className="w-full justify-start p-1 rounded-xl" style={{ backgroundColor: textColor ? `${textColor}10` : undefined }}>
             {hasExtras && (
               <TabsTrigger 
                 value="features" 
-                className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg gap-2"
+                className="flex-1 data-[state=active]:shadow-sm rounded-lg gap-2"
+                style={{ color: textColor }}
               >
                 <Sparkles className="w-4 h-4" />
                 Características
@@ -89,7 +94,8 @@ export default function PropertyDetails({
             {hasNearby && (
               <TabsTrigger 
                 value="nearby" 
-                className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg gap-2"
+                className="flex-1 data-[state=active]:shadow-sm rounded-lg gap-2"
+                style={{ color: textColor }}
               >
                 <MapPin className="w-4 h-4" />
                 Proximidades
@@ -99,12 +105,13 @@ export default function PropertyDetails({
 
           {hasExtras && (
             <TabsContent value="features" className="mt-6">
-              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+              <div className="rounded-2xl p-6" style={{ backgroundColor: cardColor, borderColor: textColor ? `${textColor}15` : undefined, borderWidth: 1 }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {extras.map((item, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                      className="flex items-center gap-3 p-3 rounded-xl"
+                      style={{ backgroundColor: `${primaryColor}10` }}
                     >
                       <div 
                         className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -112,7 +119,7 @@ export default function PropertyDetails({
                       >
                         <Check className="w-3.5 h-3.5" style={{ color: primaryColor }} />
                       </div>
-                      <span className="text-gray-700 text-sm">{item}</span>
+                      <span className="text-sm" style={{ color: textColor, opacity: 0.8 }}>{item}</span>
                     </div>
                   ))}
                 </div>
@@ -122,12 +129,13 @@ export default function PropertyDetails({
 
           {hasNearby && (
             <TabsContent value="nearby" className="mt-6">
-              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+              <div className="rounded-2xl p-6" style={{ backgroundColor: cardColor, borderColor: textColor ? `${textColor}15` : undefined, borderWidth: 1 }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {nearby.map((item, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                      className="flex items-center gap-3 p-3 rounded-xl"
+                      style={{ backgroundColor: `${primaryColor}10` }}
                     >
                       <div 
                         className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
@@ -135,7 +143,7 @@ export default function PropertyDetails({
                       >
                         <MapPin className="w-3.5 h-3.5" style={{ color: primaryColor }} />
                       </div>
-                      <span className="text-gray-700 text-sm">{item}</span>
+                      <span className="text-sm" style={{ color: textColor, opacity: 0.8 }}>{item}</span>
                     </div>
                   ))}
                 </div>

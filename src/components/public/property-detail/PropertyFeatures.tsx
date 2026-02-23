@@ -23,6 +23,7 @@ interface PropertyFeaturesProps {
   mobilia?: string | null;
   regraPet?: boolean | null;
   primaryColor?: string;
+  textColor?: string;
 }
 
 export default function PropertyFeatures({
@@ -37,6 +38,7 @@ export default function PropertyFeatures({
   mobilia,
   regraPet,
   primaryColor = '#F97316',
+  textColor,
 }: PropertyFeaturesProps) {
   const features = [
     { icon: Maximize, value: areaUtil || areaTotal, label: 'm²', show: !!(areaUtil || areaTotal) },
@@ -67,7 +69,8 @@ export default function PropertyFeatures({
             return (
               <div 
                 key={index} 
-                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 bg-gray-50 rounded-xl"
+                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-xl"
+                style={{ backgroundColor: `${primaryColor}10` }}
               >
                 <div 
                   className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -75,9 +78,9 @@ export default function PropertyFeatures({
                 >
                   <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: primaryColor }} />
                 </div>
-                <span className="text-sm md:text-base text-gray-900">
+                <span className="text-sm md:text-base" style={{ color: textColor }}>
                   <span className="font-bold">{feature.value}</span>{' '}
-                  <span className="font-normal text-gray-500">{feature.label}</span>
+                  <span className="font-normal" style={{ opacity: 0.6 }}>{feature.label}</span>
                 </span>
               </div>
             );
@@ -93,7 +96,8 @@ export default function PropertyFeatures({
             return (
               <div 
                 key={index} 
-                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 bg-gray-50 rounded-xl"
+                className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-xl"
+                style={{ backgroundColor: `${primaryColor}10` }}
               >
                 <div 
                   className="w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -101,8 +105,8 @@ export default function PropertyFeatures({
                 >
                   <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: primaryColor }} />
                 </div>
-                <span className="text-sm md:text-base text-gray-900">
-                  <span className="font-normal text-gray-500">{feature.label}:</span>{' '}
+                <span className="text-sm md:text-base" style={{ color: textColor }}>
+                  <span className="font-normal" style={{ opacity: 0.6 }}>{feature.label}:</span>{' '}
                   <span className="font-bold">{feature.value}</span>
                 </span>
               </div>

@@ -18,6 +18,8 @@ interface PropertyPricingProps {
   whatsappNumber?: string | null;
   phoneNumber?: string | null;
   primaryColor?: string;
+  cardColor?: string;
+  textColor?: string;
 }
 
 export default function PropertyPricing({
@@ -34,6 +36,8 @@ export default function PropertyPricing({
   whatsappNumber,
   phoneNumber,
   primaryColor = '#F97316',
+  cardColor = '#FFFFFF',
+  textColor,
 }: PropertyPricingProps) {
   const formatPrice = (value: number | null | undefined) => {
     if (!value) return null;
@@ -67,12 +71,12 @@ export default function PropertyPricing({
     : null;
 
   return (
-    <Card className="rounded-2xl border border-gray-100 sticky top-24">
+    <Card className="rounded-2xl sticky top-24" style={{ backgroundColor: cardColor, borderColor: textColor ? `${textColor}15` : undefined }}>
       <CardContent className="p-6 space-y-6">
         {/* Price */}
         {preco && (
           <div>
-            <p className="text-sm text-gray-500 font-medium mb-1">
+            <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
               {isBoth ? 'Valor de Venda' : isRent ? 'Aluguel' : 'Valor'}
             </p>
             <p 
@@ -80,25 +84,25 @@ export default function PropertyPricing({
               style={{ color: primaryColor }}
             >
               {formatPrice(preco)}
-              {isRent && <span className="text-lg font-normal text-gray-500">/mês</span>}
+              {isRent && <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>}
             </p>
           </div>
         )}
 
         {/* Additional Costs */}
         {additionalCosts.length > 0 && (
-          <div className="space-y-3 pt-4 border-t border-gray-100">
+          <div className="space-y-3 pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
             {additionalCosts.map((cost, index) => (
               <div key={index} className="flex justify-between items-center">
-                <span className="text-gray-500 text-sm">{cost.label}</span>
-                <span className="font-medium text-gray-900">{formatPrice(cost.value)}</span>
+                <span className="text-sm" style={{ color: textColor, opacity: 0.6 }}>{cost.label}</span>
+                <span className="font-medium" style={{ color: textColor }}>{formatPrice(cost.value)}</span>
               </div>
             ))}
             
             {/* Total Monthly for Rent */}
             {isRent && totalMonthlyCost && (
-              <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                <span className="font-semibold text-gray-700">Total Mensal</span>
+              <div className="flex justify-between items-center pt-3" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
+                <span className="font-semibold" style={{ color: textColor, opacity: 0.8 }}>Total Mensal</span>
                 <span 
                   className="font-bold text-lg"
                   style={{ color: primaryColor }}
@@ -111,7 +115,7 @@ export default function PropertyPricing({
         )}
 
         {/* Contact Form - OBRIGATÓRIO */}
-        <div className="pt-4 border-t border-gray-100">
+        <div className="pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
           <ContactFormDialog
             organizationId={organizationId}
             propertyId={propertyId}
@@ -129,15 +133,15 @@ export default function PropertyPricing({
               </Button>
             }
           />
-          <p className="text-sm text-gray-500 mt-3 text-center">
+          <p className="text-sm mt-3 text-center" style={{ color: textColor, opacity: 0.5 }}>
             Preencha o formulário para receber mais informações
           </p>
         </div>
 
         {/* Property Code */}
-        <div className="text-center pt-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400">Código do imóvel</p>
-          <p className="font-mono font-semibold text-gray-600">{codigo}</p>
+        <div className="text-center pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
+          <p className="text-xs" style={{ color: textColor, opacity: 0.4 }}>Código do imóvel</p>
+          <p className="font-mono font-semibold" style={{ color: textColor, opacity: 0.7 }}>{codigo}</p>
         </div>
       </CardContent>
     </Card>

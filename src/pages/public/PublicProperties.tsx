@@ -216,7 +216,7 @@ export default function PublicProperties() {
           {/* Desktop Filters */}
           <aside className="hidden lg:block w-72 flex-shrink-0">
             <div className="rounded-2xl p-6 shadow-sm sticky top-24" style={{ backgroundColor: siteConfig?.card_color || '#FFFFFF' }}>
-              <h2 className="font-bold text-lg mb-6 flex items-center gap-2">
+              <h2 className="font-bold text-lg mb-6 flex items-center gap-2" style={{ color: siteConfig?.text_color }}>
                 <SlidersHorizontal className="w-5 h-5" />
                 Filtros
               </h2>
@@ -232,6 +232,7 @@ export default function PublicProperties() {
                 propertyTypes={propertyTypes}
                 showMoreFilters={showMoreFilters}
                 setShowMoreFilters={handleSetShowMoreFilters}
+                textColor={siteConfig?.text_color}
               />
             </div>
           </aside>
@@ -273,6 +274,7 @@ export default function PublicProperties() {
                     propertyTypes={propertyTypes}
                     showMoreFilters={showMoreFilters}
                     setShowMoreFilters={handleSetShowMoreFilters}
+                    textColor={siteConfig?.text_color}
                   />
                 </DialogContent>
               </Dialog>
