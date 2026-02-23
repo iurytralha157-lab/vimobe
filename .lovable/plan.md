@@ -1,52 +1,53 @@
 
+# Adicionar Campos de Tracking: Meta Pixel, Google Tag Manager e Google Ads
 
-# Atualizar Titulo e Favicon da Aba do Navegador Dinamicamente
-
-## Problema
-Quando o site publico e acessado pelo dominio customizado, o titulo da aba do navegador mostra "Vimob - CRM Imobiliario Inteligente" (valor fixo do `index.html`) e o favicon tambem e o da Vimob. O correto e mostrar o titulo e favicon configurados pela organizacao.
-
-## Solucao
-Adicionar um `useEffect` no componente `PublicSiteLayout.tsx` que atualiza dinamicamente o `document.title` e o favicon do navegador com base no `siteConfig` da organizacao.
+## Resumo
+Adicionar 3 novos campos de tracking na tabela `organization_sites` e na pagina de configuracoes do site, alem de injetar os scripts correspondentes no site publico.
 
 ## Alteracoes
 
-### `src/pages/public/PublicSiteLayout.tsx`
-Adicionar um `useEffect` apos os hooks existentes (por volta da linha 26) que:
+### 1. Migration SQL - Novos campos na tabela `organization_sites`
+Adicionar 3 colunas:
+- `meta_pixel_id` (text, nullable) - ID do Meta Pixel (ex: 123456789)
+- `google_tag_manager_id` (text, nullable) - ID do GTM (ex: GTM-XXXXXXX)
+- `google_ads_id` (text, nullable) - ID do Google Ads (ex: AW-XXXXXXXXX)
 
-1. Define `document.title` usando `siteConfig.seo_title` (prioridade) ou `siteConfig.site_title` como fallback
-2. Atualiza o `<link rel="icon">` no `<head>` com o `siteConfig.favicon_url` (se configurado)
-3. Restaura os valores originais quando o componente desmonta (cleanup)
+### 2. `src/hooks/use-organization-site.ts`
+Adicionar os 3 novos campos na interface `OrganizationSite`.
 
-```typescript
-useEffect(() => {
-  if (!siteConfig) return;
+### 3. `src/hooks/use-public-site.ts`
+Adicionar os 3 novos campos na interface `PublicSiteConfig`.
 
-  const originalTitle = document.title;
-  const originalFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href;
+### 4. `src/pages/SiteSettings.tsx`
+Na aba SEO, apos o campo "Google Analytics ID", adicionar 3 novos campos de input:
+- **Meta Pixel ID** - placeholder: `123456789012345`
+- **Google Tag Manager ID** - placeholder: `GTM-XXXXXXX`
+- **Google Ads ID** - placeholder: `AW-XXXXXXXXX`
 
-  // Atualizar titulo
-  document.title = siteConfig.seo_title || siteConfig.site_title || 'Site Imobiliario';
+Incluir os campos no `formData` e no `useEffect` de carregamento.
 
-  // Atualizar favicon
-  if (siteConfig.favicon_url) {
-    let faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (!faviconLink) {
-      faviconLink = document.createElement('link');
-      faviconLink.rel = 'icon';
-      document.head.appendChild(faviconLink);
-    }
-    faviconLink.href = siteConfig.favicon_url;
-  }
+### 5. `src/pages/public/PublicSiteLayout.tsx`
+Adicionar um `useEffect` que injeta dinamicamente os scripts de tracking no `<head>` com base no `siteConfig`:
 
-  return () => {
-    document.title = originalTitle;
-    if (originalFavicon) {
-      const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (link) link.href = originalFavicon;
-    }
-  };
-}, [siteConfig]);
-```
+- **Google Analytics (ja existente no campo, mas sem injecao)**: Injetar `gtag.js` com o ID configurado
+- **Meta Pixel**: Injetar o script `fbevents.js` com o pixel ID
+- **Google Tag Manager**: Injetar o script do GTM + noscript iframe
+- **Google Ads**: Funciona via gtag.js (mesmo script do GA4, basta adicionar `gtag('config', 'AW-XXX')`)
 
-Nenhuma outra alteracao necessaria -- os campos `seo_title`, `site_title` e `favicon_url` ja existem no `siteConfig` e ja podem ser configurados na pagina de configuracoes do site no CRM.
+Cleanup: remover todos os scripts injetados quando o componente desmonta, garantindo que os codigos ficam apenas no site daquela organizacao.
 
+### 6. Mapeadores de dados
+Atualizar `mapSiteDataToConfig` em:
+- `src/contexts/PublicSiteContext.tsx`
+- `src/pages/public/PublishedSiteWrapper.tsx`
+- `src/pages/public/PreviewSiteWrapper.tsx`
+
+### 7. `resolve_site_domain` (funcao SQL)
+Adicionar os 3 novos campos ao `jsonb_build_object` retornado pela funcao.
+
+## Detalhes tecnicos
+
+Cada script e injetado como elemento `<script>` no `document.head` e removido no cleanup do `useEffect`. Isso garante que:
+- Cada site so carrega seus proprios codigos de tracking
+- Nenhum tracking vaza entre organizacoes
+- Ao sair do site publico, os scripts sao removidos
