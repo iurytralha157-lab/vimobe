@@ -33,6 +33,7 @@ interface PropertyFiltersContentProps {
   setShowMoreFilters: (value: boolean) => void;
   onClose?: () => void;
   textColor?: string;
+  cardColor?: string;
 }
 
 const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
@@ -49,7 +50,14 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
   setShowMoreFilters,
   onClose,
   textColor,
+  cardColor,
 }: PropertyFiltersContentProps) {
+  // Build dynamic input styles for dark themes
+  const inputStyle = textColor && cardColor ? {
+    backgroundColor: `${textColor}10`,
+    color: textColor,
+    borderColor: `${textColor}20`,
+  } : undefined;
   return (
     <div className="space-y-6">
       {/* Basic Filters - Always visible */}
@@ -61,14 +69,15 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           placeholder="Localização, bairro..."
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
-          className="flex h-10 w-full rounded-xl border-0 bg-muted px-4 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+          className="flex h-10 w-full rounded-xl border px-4 py-2 text-base ring-offset-background placeholder:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
+          style={inputStyle || { backgroundColor: 'hsl(var(--muted))' }}
         />
       </div>
 
       <div>
         <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Cidade</label>
         <Select value={filters.cidade} onValueChange={(v) => updateFilter('cidade', v === 'all' ? '' : v)}>
-          <SelectTrigger className="rounded-xl">
+          <SelectTrigger className="rounded-xl" style={inputStyle}>
             <SelectValue placeholder="Todas as cidades" />
           </SelectTrigger>
           <SelectContent>
@@ -89,6 +98,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
             value={filters.minPrice}
             onChange={(e) => updateFilter('minPrice', e.target.value)}
             className="rounded-xl"
+            style={inputStyle}
           />
           <Input
             type="number"
@@ -96,6 +106,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
             value={filters.maxPrice}
             onChange={(e) => updateFilter('maxPrice', e.target.value)}
             className="rounded-xl"
+            style={inputStyle}
           />
         </div>
       </div>
@@ -115,7 +126,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           <div>
             <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Tipo de Imóvel</label>
             <Select value={filters.tipo} onValueChange={(v) => updateFilter('tipo', v === 'all' ? '' : v)}>
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger className="rounded-xl" style={inputStyle}>
                 <SelectValue placeholder="Todos os tipos" />
               </SelectTrigger>
               <SelectContent>
@@ -130,7 +141,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           <div>
             <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Finalidade</label>
             <Select value={filters.finalidade} onValueChange={(v) => updateFilter('finalidade', v === 'all' ? '' : v)}>
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger className="rounded-xl" style={inputStyle}>
                 <SelectValue placeholder="Todas" />
               </SelectTrigger>
               <SelectContent>
@@ -144,7 +155,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           <div>
             <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Quartos</label>
             <Select value={filters.quartos} onValueChange={(v) => updateFilter('quartos', v === 'any' ? '' : v)}>
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger className="rounded-xl" style={inputStyle}>
                 <SelectValue placeholder="Qualquer" />
               </SelectTrigger>
               <SelectContent>
@@ -160,7 +171,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           <div>
             <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Suítes</label>
             <Select value={filters.suites} onValueChange={(v) => updateFilter('suites', v === 'any' ? '' : v)}>
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger className="rounded-xl" style={inputStyle}>
                 <SelectValue placeholder="Qualquer" />
               </SelectTrigger>
               <SelectContent>
@@ -176,7 +187,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           <div>
             <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Banheiros</label>
             <Select value={filters.banheiros} onValueChange={(v) => updateFilter('banheiros', v === 'any' ? '' : v)}>
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger className="rounded-xl" style={inputStyle}>
                 <SelectValue placeholder="Qualquer" />
               </SelectTrigger>
               <SelectContent>
@@ -191,7 +202,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
           <div>
             <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Vagas</label>
             <Select value={filters.vagas} onValueChange={(v) => updateFilter('vagas', v === 'any' ? '' : v)}>
-              <SelectTrigger className="rounded-xl">
+              <SelectTrigger className="rounded-xl" style={inputStyle}>
                 <SelectValue placeholder="Qualquer" />
               </SelectTrigger>
               <SelectContent>

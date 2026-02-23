@@ -26,6 +26,7 @@ interface PublicPropertyCardProps {
   };
   primaryColor?: string;
   cardColor?: string;
+  textColor?: string;
   isFavorited?: boolean;
   onToggleFavorite?: (id: string) => void;
   watermarkConfig?: {
@@ -37,7 +38,7 @@ interface PublicPropertyCardProps {
   } | null;
 }
 
-export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardColor, isFavorited = false, onToggleFavorite, watermarkConfig }: PublicPropertyCardProps) {
+export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardColor, textColor, isFavorited = false, onToggleFavorite, watermarkConfig }: PublicPropertyCardProps) {
   const formatPrice = (value: number | null | undefined) => {
     if (!value) return null;
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -54,8 +55,8 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
 
   return (
     <div 
-      className="rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border border-gray-100"
-      style={{ backgroundColor: cardColor || '#FFFFFF' }}
+      className="rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border"
+      style={{ backgroundColor: cardColor || '#FFFFFF', borderColor: textColor ? `${textColor}15` : '#f3f4f6' }}
     >
       {/* Image Section */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -113,26 +114,26 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
       <div className="p-4 flex flex-col flex-1">
         {/* Code */}
         {(property.codigo || property.code) && (
-          <p className="text-[11px] text-gray-400 font-medium mb-1">
+          <p className="text-[11px] font-medium mb-1" style={{ color: textColor ? `${textColor}99` : '#9ca3af' }}>
             Cód: {property.codigo || property.code}
           </p>
         )}
 
         {/* Title */}
-        <h3 className="font-semibold text-sm text-gray-900 leading-snug mb-1.5 line-clamp-2">
+        <h3 className="font-semibold text-sm leading-snug mb-1.5 line-clamp-2" style={{ color: textColor || '#111827' }}>
           {title}
         </h3>
 
         {/* Location */}
         {location && (
-          <p className="text-gray-400 text-xs flex items-center gap-1 mb-3">
+          <p className="text-xs flex items-center gap-1 mb-3" style={{ color: textColor ? `${textColor}99` : '#9ca3af' }}>
             <MapPin className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{location}</span>
           </p>
         )}
 
         {/* Features */}
-        <div className="flex items-center gap-3 text-gray-500 text-xs mb-3 flex-wrap">
+        <div className="flex items-center gap-3 text-xs mb-3 flex-wrap" style={{ color: textColor ? `${textColor}B3` : '#6b7280' }}>
           {suites != null && suites > 0 ? (
             <span className="flex items-center gap-1">
               <Bed className="w-3.5 h-3.5" />
@@ -169,13 +170,13 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
 
         {/* Price */}
         {price && (
-          <div className="pt-3 border-t border-gray-100">
+          <div className="pt-3 border-t" style={{ borderColor: textColor ? `${textColor}15` : '#f3f4f6' }}>
             <p 
               className="text-lg font-bold leading-tight"
               style={{ color: primaryColor }}
             >
               {formatPrice(price)}
-              {isRent && <span className="text-xs font-normal text-gray-400">/mês</span>}
+              {isRent && <span className="text-xs font-normal" style={{ color: textColor ? `${textColor}99` : '#9ca3af' }}>/mês</span>}
             </p>
           </div>
         )}
