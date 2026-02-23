@@ -1,5 +1,5 @@
 import { submitContactForm } from "@/hooks/use-public-site";
-import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle, Send } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle, Send, Youtube, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -194,7 +194,7 @@ export default function PublicContact() {
               </div>
 
               {/* Social Links */}
-              {(siteConfig.instagram || siteConfig.facebook) && (
+              {(siteConfig.instagram || siteConfig.facebook || siteConfig.youtube || siteConfig.linkedin) && (
                 <div className="pt-6">
                   <h3 className="font-bold text-gray-900 mb-4">Siga-nos nas redes</h3>
                   <div className="flex gap-3">
@@ -216,6 +216,26 @@ export default function PublicContact() {
                         className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white hover:scale-110 transition-transform"
                       >
                         <Facebook className="w-6 h-6" />
+                      </a>
+                    )}
+                    {siteConfig.youtube && (
+                      <a
+                        href={siteConfig.youtube}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-12 h-12 rounded-2xl bg-red-600 flex items-center justify-center text-white hover:scale-110 transition-transform"
+                      >
+                        <Youtube className="w-6 h-6" />
+                      </a>
+                    )}
+                    {siteConfig.linkedin && (
+                      <a
+                        href={siteConfig.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-12 h-12 rounded-2xl bg-blue-700 flex items-center justify-center text-white hover:scale-110 transition-transform"
+                      >
+                        <Linkedin className="w-6 h-6" />
                       </a>
                     )}
                   </div>
