@@ -4090,6 +4090,50 @@ export type Database = {
           },
         ]
       }
+      site_menu_items: {
+        Row: {
+          created_at: string | null
+          href: string
+          id: string
+          is_active: boolean | null
+          label: string
+          link_type: string
+          open_in_new_tab: boolean | null
+          organization_id: string
+          position: number
+        }
+        Insert: {
+          created_at?: string | null
+          href: string
+          id?: string
+          is_active?: boolean | null
+          label: string
+          link_type: string
+          open_in_new_tab?: boolean | null
+          organization_id: string
+          position?: number
+        }
+        Update: {
+          created_at?: string | null
+          href?: string
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          link_type?: string
+          open_in_new_tab?: boolean | null
+          organization_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_menu_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_automations: {
         Row: {
           action_config: Json | null

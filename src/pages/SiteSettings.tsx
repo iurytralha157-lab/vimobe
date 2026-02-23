@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets } from "lucide-react";
+import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu } from "lucide-react";
+import { MenuTab } from "@/components/site/MenuTab";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -281,7 +282,7 @@ ${getWorkerCode()}`;
 
         {site && (
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
                 <span className="hidden sm:inline">Geral</span>
@@ -289,6 +290,10 @@ ${getWorkerCode()}`;
               <TabsTrigger value="appearance" className="flex items-center gap-2">
                 <Palette className="w-4 h-4" />
                 <span className="hidden sm:inline">Aparência</span>
+              </TabsTrigger>
+              <TabsTrigger value="menu" className="flex items-center gap-2">
+                <Menu className="w-4 h-4" />
+                <span className="hidden sm:inline">Menu</span>
               </TabsTrigger>
               <TabsTrigger value="contact" className="flex items-center gap-2">
                 <Phone className="w-4 h-4" />
@@ -1317,6 +1322,10 @@ ${getWorkerCode()}`;
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="menu" className="space-y-6">
+              <MenuTab />
             </TabsContent>
 
             {isAdmin && (

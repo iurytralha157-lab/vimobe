@@ -2,11 +2,12 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, MessageCircle, Heart } from "lucide-react";
 import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { usePublicContext } from "./usePublicContext";
 import { usePropertyTypes } from "@/hooks/use-public-site";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
+import { usePublicSiteMenu } from "@/hooks/use-public-site-menu";
 
 export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
@@ -14,6 +15,9 @@ export default function PublicSiteLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { count: favCount } = usePublicFavorites();
   const location = useLocation();
+
+  // Fetch dynamic menu items (must be before early returns)
+  const { data: dynamicMenuItems = [] } = usePublicSiteMenu(organizationId);
 
   // Get colors from config with fallbacks
   const primaryColor = siteConfig?.primary_color || '#C4A052';
@@ -54,6 +58,19 @@ export default function PublicSiteLayout() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Use dynamic menu if configured, otherwise fallback to defaults
+  const hasDynamicMenu = dynamicMenuItems.length > 0;
+  
+  const allNavItems = useMemo(() => {
+    if (!hasDynamicMenu) return null;
+    return dynamicMenuItems.map(item => ({
+      href: item.href,
+      label: item.label,
+      link_type: item.link_type,
+      open_in_new_tab: item.open_in_new_tab,
+    }));
+  }, [dynamicMenuItems, hasDynamicMenu]);
 
   // Helper function for footer link clicks
   const handleFooterClick = () => {
@@ -118,18 +135,22 @@ export default function PublicSiteLayout() {
   };
 
   // Dynamic nav links with property types and pre-applied filters
-  const mainNavLinks = [
+  const defaultMainNavLinks = [
     { href: "", label: "HOME" },
     { href: "imoveis", label: "IMÓVEIS" },
     { href: "sobre", label: "SOBRE" },
   ];
 
   // Add pre-filtered links
-  const filterLinks = [
+  const defaultFilterLinks = [
     { href: "imoveis?tipo=Apartamento", label: "APARTAMENTOS" },
     { href: "imoveis?tipo=Casa", label: "CASAS" },
     { href: "imoveis?finalidade=aluguel", label: "ALUGUEL" },
   ];
+
+  // Fallback arrays
+  const mainNavLinks = hasDynamicMenu ? [] : defaultMainNavLinks;
+  const filterLinks = hasDynamicMenu ? [] : defaultFilterLinks;
 
   return (
     <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }}>
@@ -162,36 +183,71 @@ export default function PublicSiteLayout() {
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1">
-                {mainNavLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    to={getHref(link.href)}
-                    className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
-                    style={{ 
-                      color: isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.color = isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                
-                {/* Pre-filtered Links */}
-                {filterLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    to={getHref(link.href)}
-                    className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
-                    style={{ 
-                      color: isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.color = isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+                {/* Dynamic menu items */}
+                {allNavItems ? allNavItems.map((item) => (
+                  item.link_type === 'external' ? (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target={item.open_in_new_tab ? "_blank" : undefined}
+                      rel={item.open_in_new_tab ? "noopener noreferrer" : undefined}
+                      className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
+                      style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                      onMouseLeave={(e) => e.currentTarget.style.color = isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)'}
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      to={getHref(item.href)}
+                      className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
+                      style={{ 
+                        color: (item.link_type === 'filter' ? isFilterActive(item.href) : isActive(item.href)) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                      onMouseLeave={(e) => {
+                        const active = item.link_type === 'filter' ? isFilterActive(item.href) : isActive(item.href);
+                        e.currentTarget.style.color = active ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)');
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                )) : (
+                  <>
+                    {mainNavLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        to={getHref(link.href)}
+                        className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
+                        style={{ 
+                          color: isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                        onMouseLeave={(e) => e.currentTarget.style.color = isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                    {/* Pre-filtered Links */}
+                    {filterLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        to={getHref(link.href)}
+                        className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
+                        style={{ 
+                          color: isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                        onMouseLeave={(e) => e.currentTarget.style.color = isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </>
+                )}
               </nav>
 
               {/* Desktop CTA */}
@@ -247,45 +303,76 @@ export default function PublicSiteLayout() {
                   {/* Mobile Navigation */}
                   <nav className="flex-1 p-4">
                     <div className="space-y-1">
-                      {mainNavLinks.map((link) => (
-                        <Link
-                          key={link.href}
-                          to={getHref(link.href)}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
-                          style={{ 
-                            color: isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)'),
-                            backgroundColor: isActive(link.href) ? (isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent'
-                          }}
-                        >
-                          {link.label}
-                        </Link>
-                      ))}
-                      
-                      <div className="my-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}></div>
-                      
-                      {filterLinks.map((link) => (
-                        <Link
-                          key={link.href}
-                          to={getHref(link.href)}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
-                          style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}
-                        >
-                          {link.label}
-                        </Link>
-                      ))}
-                      
-                      <div className="my-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}></div>
-                      
-                      <Link
-                        to={getHref("contato")}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
-                        style={{ color: primaryColor }}
-                      >
-                        CONTATO
-                      </Link>
+                      {allNavItems ? allNavItems.map((item) => (
+                        item.link_type === 'external' ? (
+                          <a
+                            key={item.href}
+                            href={item.href}
+                            target={item.open_in_new_tab ? "_blank" : undefined}
+                            rel={item.open_in_new_tab ? "noopener noreferrer" : undefined}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
+                            style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}
+                          >
+                            {item.label}
+                          </a>
+                        ) : (
+                          <Link
+                            key={item.href}
+                            to={getHref(item.href)}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
+                            style={{ 
+                              color: (item.link_type === 'filter' ? isFilterActive(item.href) : isActive(item.href)) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)'),
+                              backgroundColor: isActive(item.href) ? (isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent'
+                            }}
+                          >
+                            {item.label}
+                          </Link>
+                        )
+                      )) : (
+                        <>
+                          {mainNavLinks.map((link) => (
+                            <Link
+                              key={link.href}
+                              to={getHref(link.href)}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
+                              style={{ 
+                                color: isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)'),
+                                backgroundColor: isActive(link.href) ? (isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent'
+                              }}
+                            >
+                              {link.label}
+                            </Link>
+                          ))}
+                          
+                          <div className="my-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}></div>
+                          
+                          {filterLinks.map((link) => (
+                            <Link
+                              key={link.href}
+                              to={getHref(link.href)}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
+                              style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}
+                            >
+                              {link.label}
+                            </Link>
+                          ))}
+                          
+                          <div className="my-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}></div>
+                          
+                          <Link
+                            to={getHref("contato")}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
+                            style={{ color: primaryColor }}
+                          >
+                            CONTATO
+                          </Link>
+                        </>
+                      )}
                     </div>
                   </nav>
 
@@ -371,26 +458,52 @@ export default function PublicSiteLayout() {
                   Menu
                 </h4>
                 <ul className="space-y-2 md:space-y-3">
-                  {mainNavLinks.map((link) => (
-                    <li key={link.href}>
-                      <Link 
-                        to={getHref(link.href)}
-                        onClick={handleFooterClick}
-                        className="text-white/60 hover:text-white transition-colors text-sm"
-                      >
-                        {link.label}
-                      </Link>
+                  {allNavItems ? allNavItems.map((item) => (
+                    <li key={item.href}>
+                      {item.link_type === 'external' ? (
+                        <a 
+                          href={item.href}
+                          target={item.open_in_new_tab ? "_blank" : undefined}
+                          rel={item.open_in_new_tab ? "noopener noreferrer" : undefined}
+                          onClick={handleFooterClick}
+                          className="text-white/60 hover:text-white transition-colors text-sm"
+                        >
+                          {item.label}
+                        </a>
+                      ) : (
+                        <Link 
+                          to={getHref(item.href)}
+                          onClick={handleFooterClick}
+                          className="text-white/60 hover:text-white transition-colors text-sm"
+                        >
+                          {item.label}
+                        </Link>
+                      )}
                     </li>
-                  ))}
-                  <li>
-                    <Link 
-                      to={getHref("contato")}
-                      onClick={handleFooterClick}
-                      className="text-white/60 hover:text-white transition-colors text-sm"
-                    >
-                      CONTATO
-                    </Link>
-                  </li>
+                  )) : (
+                    <>
+                      {mainNavLinks.map((link) => (
+                        <li key={link.href}>
+                          <Link 
+                            to={getHref(link.href)}
+                            onClick={handleFooterClick}
+                            className="text-white/60 hover:text-white transition-colors text-sm"
+                          >
+                            {link.label}
+                          </Link>
+                        </li>
+                      ))}
+                      <li>
+                        <Link 
+                          to={getHref("contato")}
+                          onClick={handleFooterClick}
+                          className="text-white/60 hover:text-white transition-colors text-sm"
+                        >
+                          CONTATO
+                        </Link>
+                      </li>
+                    </>
+                  )}
                 </ul>
               </div>
 
