@@ -27,6 +27,8 @@ interface RelatedPropertiesProps {
   cidade?: string | null;
   getHref: (path: string) => string;
   primaryColor?: string;
+  cardColor?: string;
+  textColor?: string;
 }
 
 export default function RelatedProperties({
@@ -36,6 +38,8 @@ export default function RelatedProperties({
   cidade,
   getHref,
   primaryColor = '#F97316',
+  cardColor,
+  textColor,
 }: RelatedPropertiesProps) {
   const { data: properties = [], isLoading } = useQuery({
     queryKey: ['related-properties', organizationId, tipoImovel, cidade, currentPropertyCode],
@@ -70,17 +74,23 @@ export default function RelatedProperties({
     });
   };
 
+  const titleColor = textColor || '#111827';
+  const mutedColor = textColor ? `${textColor}99` : '#9ca3af';
+  const featureColor = textColor ? `${textColor}B3` : '#6b7280';
+  const bgColor = cardColor || '#FFFFFF';
+  const borderColor = textColor ? `${textColor}15` : '#f3f4f6';
+
   if (isLoading) {
     return (
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Imóveis Semelhantes</h2>
+        <h2 className="text-xl font-bold mb-6" style={{ color: titleColor }}>Imóveis Semelhantes</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="overflow-hidden rounded-2xl border-0">
-              <div className="h-48 bg-gray-200 animate-pulse" />
+            <Card key={i} className="overflow-hidden rounded-2xl border-0" style={{ backgroundColor: bgColor }}>
+              <div className="h-48 animate-pulse" style={{ backgroundColor: textColor ? `${textColor}15` : '#e5e7eb' }} />
               <CardContent className="p-4">
-                <div className="h-5 bg-gray-200 rounded animate-pulse mb-2" />
-                <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+                <div className="h-5 rounded animate-pulse mb-2" style={{ backgroundColor: textColor ? `${textColor}15` : '#e5e7eb' }} />
+                <div className="h-4 rounded animate-pulse w-2/3" style={{ backgroundColor: textColor ? `${textColor}15` : '#e5e7eb' }} />
               </CardContent>
             </Card>
           ))}
@@ -95,11 +105,14 @@ export default function RelatedProperties({
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Imóveis Semelhantes</h2>
+      <h2 className="text-xl font-bold mb-6" style={{ color: titleColor }}>Imóveis Semelhantes</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {properties.map((property) => (
           <Link key={property.id} to={getHref(`imovel/${property.code}`)}>
-            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-white rounded-2xl h-full">
+            <div 
+              className="overflow-hidden hover:shadow-xl transition-all duration-300 group border rounded-2xl h-full"
+              style={{ backgroundColor: bgColor, borderColor }}
+            >
               <div className="relative h-48 overflow-hidden">
                 <img
                   src={property.imagem_principal || '/placeholder.svg'}
@@ -115,27 +128,25 @@ export default function RelatedProperties({
                 )}
 
                 {property.preco && (
-                  <span 
-                    className="absolute bottom-3 left-3 text-lg font-bold text-white drop-shadow-lg"
-                  >
+                  <span className="absolute bottom-3 left-3 text-lg font-bold text-white drop-shadow-lg">
                     {formatPrice(property.preco)}
                   </span>
                 )}
               </div>
 
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1 group-hover:text-opacity-80">
+              <div className="p-4">
+                <h3 className="font-semibold mb-2 line-clamp-1" style={{ color: titleColor }}>
                   {property.title}
                 </h3>
                 
                 {(property.bairro || property.cidade) && (
-                  <p className="text-sm text-gray-500 flex items-center gap-1 mb-3">
+                  <p className="text-sm flex items-center gap-1 mb-3" style={{ color: mutedColor }}>
                     <MapPin className="w-3.5 h-3.5" />
                     {[property.bairro, property.cidade].filter(Boolean).join(', ')}
                   </p>
                 )}
 
-                <div className="flex items-center gap-4 text-gray-600 text-sm">
+                <div className="flex items-center gap-4 text-sm" style={{ color: featureColor }}>
                   {property.suites != null && property.suites > 0 ? (
                     <span className="flex items-center gap-1">
                       <Bed className="w-4 h-4" />
@@ -166,8 +177,8 @@ export default function RelatedProperties({
                     </span>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </Link>
         ))}
       </div>
