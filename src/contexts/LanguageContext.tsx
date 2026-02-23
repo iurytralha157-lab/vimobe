@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { translations, Language, TranslationKeys } from '@/i18n';
-import { useAuth } from './AuthContext';
+import { AuthContext } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LanguageContextType {
@@ -12,7 +12,9 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { profile, user } = useAuth();
+  const auth = useContext(AuthContext);
+  const profile = auth?.profile ?? null;
+  const user = auth?.user ?? null;
   const [language, setLanguageState] = useState<Language>('pt-BR');
 
   // Initialize language from profile or localStorage
