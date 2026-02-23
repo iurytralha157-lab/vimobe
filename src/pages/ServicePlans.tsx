@@ -117,13 +117,13 @@ export default function ServicePlans() {
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3 pt-4 px-4">
                 <CardDescription>Total</CardDescription>
                 <CardTitle className="text-2xl">{stats.total}</CardTitle>
               </CardHeader>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3 pt-4 px-4">
                 <div className="flex items-center gap-2">
                   <Wifi className="h-4 w-4 text-blue-500" />
                   <CardDescription>Pessoa Física</CardDescription>
@@ -132,7 +132,7 @@ export default function ServicePlans() {
               </CardHeader>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3 pt-4 px-4">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-purple-500" />
                   <CardDescription>Pessoa Jurídica</CardDescription>
@@ -141,7 +141,7 @@ export default function ServicePlans() {
               </CardHeader>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3 pt-4 px-4">
                 <div className="flex items-center gap-2">
                   <Smartphone className="h-4 w-4 text-green-500" />
                   <CardDescription>Móvel</CardDescription>
@@ -150,7 +150,7 @@ export default function ServicePlans() {
               </CardHeader>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3 pt-4 px-4">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-orange-500" />
                   <CardDescription>Adicional</CardDescription>
