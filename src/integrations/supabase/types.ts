@@ -4425,6 +4425,7 @@ export type Database = {
           id: string
           installation_date: string | null
           is_combo: boolean | null
+          is_portability: boolean | null
           lead_id: string | null
           mesh_quantity: number | null
           mesh_repeater: string | null
@@ -4464,6 +4465,7 @@ export type Database = {
           id?: string
           installation_date?: string | null
           is_combo?: boolean | null
+          is_portability?: boolean | null
           lead_id?: string | null
           mesh_quantity?: number | null
           mesh_repeater?: string | null
@@ -4503,6 +4505,7 @@ export type Database = {
           id?: string
           installation_date?: string | null
           is_combo?: boolean | null
+          is_portability?: boolean | null
           lead_id?: string | null
           mesh_quantity?: number | null
           mesh_repeater?: string | null

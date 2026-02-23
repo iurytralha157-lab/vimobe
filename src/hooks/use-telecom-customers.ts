@@ -58,6 +58,7 @@ export interface CreateTelecomCustomerInput {
   name: string;
   phone?: string | null;
   phone2?: string | null;
+  is_portability?: boolean;
   email?: string | null;
   cpf_cnpj?: string | null;
   rg?: string | null;
