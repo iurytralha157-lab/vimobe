@@ -65,7 +65,7 @@ export default function PublicAbout() {
       </section>
 
       {/* Stats */}
-      <section className="py-12 bg-white border-b">
+      <section className="py-12 border-b" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? siteConfig.background_color : '#FFFFFF', borderColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.1)' : undefined }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
@@ -76,7 +76,7 @@ export default function PublicAbout() {
                 >
                   {stat.value}
                 </p>
-                <p className="text-gray-600 font-medium">{stat.label}</p>
+                <p className="font-medium" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>{stat.label}</p>
               </div>
             ))}
           </div>
@@ -84,7 +84,7 @@ export default function PublicAbout() {
       </section>
 
       {/* Content */}
-      <section className="py-20 bg-white">
+      <section className="py-20" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.03)' : '#FFFFFF' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Image */}
@@ -122,15 +122,15 @@ export default function PublicAbout() {
               >
                 Nossa História
               </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-6" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
                 Transformando sonhos em realidade desde o início
               </h2>
               {siteConfig.about_text ? (
-                <div className="text-gray-600 whitespace-pre-wrap leading-relaxed text-lg">
+                <div className="whitespace-pre-wrap leading-relaxed text-lg" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
                   {siteConfig.about_text}
                 </div>
               ) : (
-                <div className="text-gray-600 space-y-4 text-lg leading-relaxed">
+                <div className="space-y-4 text-lg leading-relaxed" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
                   <p>
                     A {siteConfig.organization_name} nasceu com o objetivo de transformar a experiência 
                     de comprar, vender ou alugar imóveis. Acreditamos que encontrar o lugar perfeito 
@@ -154,7 +154,7 @@ export default function PublicAbout() {
                 {["Atendimento personalizado", "Imóveis verificados", "Suporte completo"].map((item, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: siteConfig.primary_color }} />
-                    <span className="text-gray-700 font-medium">{item}</span>
+                    <span className="font-medium" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}CC` : '#374151' }}>{item}</span>
                   </div>
                 ))}
               </div>
@@ -164,7 +164,7 @@ export default function PublicAbout() {
       </section>
 
       {/* Features */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? siteConfig.background_color : '#F9FAFB' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span 
@@ -173,17 +173,17 @@ export default function PublicAbout() {
             >
               Nossos Diferenciais
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-4" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
               Por que escolher a {siteConfig.organization_name}?
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+            <p className="max-w-2xl mx-auto text-lg" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>
               Oferecemos uma experiência diferenciada em todas as etapas do seu negócio imobiliário.
             </p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
-              <Card key={index} className="text-center hover:shadow-xl transition-all duration-300 border-0 rounded-2xl group">
+              <Card key={index} className="text-center hover:shadow-xl transition-all duration-300 border-0 rounded-2xl group" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }}>
                 <CardContent className="p-8">
                   <div 
                     className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center transition-transform group-hover:scale-110"
@@ -194,8 +194,8 @@ export default function PublicAbout() {
                       style={{ color: siteConfig.primary_color }}
                     />
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-3 text-lg">{feature.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{feature.description}</p>
+                  <h3 className="font-bold mb-3 text-lg" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>{feature.title}</h3>
+                  <p className="text-sm leading-relaxed" style={{ color: siteConfig.site_theme !== 'light' ? `${siteConfig.text_color}99` : '#4B5563' }}>{feature.description}</p>
                 </CardContent>
               </Card>
             ))}

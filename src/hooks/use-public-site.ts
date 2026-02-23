@@ -45,6 +45,10 @@ export interface PublicSiteConfig {
   watermark_size: number | null;
   watermark_position: string | null;
   organization_name: string;
+  // Theme fields
+  site_theme: string;
+  background_color: string;
+  text_color: string;
 }
 
 export interface PublicProperty {

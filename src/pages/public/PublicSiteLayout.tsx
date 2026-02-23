@@ -18,6 +18,9 @@ export default function PublicSiteLayout() {
   // Get colors from config with fallbacks
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
+  const backgroundColor = siteConfig?.background_color || '#0D0D0D';
+  const textColor = siteConfig?.text_color || '#FFFFFF';
+  const isDarkTheme = siteConfig?.site_theme !== 'light';
 
   // Dynamic document title & favicon based on site config
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function PublicSiteLayout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D]">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor }}>
         <div 
           className="animate-spin rounded-full h-12 w-12 border-b-2"
           style={{ borderColor: primaryColor }}
@@ -70,9 +73,9 @@ export default function PublicSiteLayout() {
 
   if (error || !siteConfig) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0D0D0D] text-white">
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor, color: textColor }}>
         <h1 className="text-2xl font-bold mb-2">Site não encontrado</h1>
-        <p className="text-white/60">{error || 'Verifique o endereço e tente novamente.'}</p>
+        <p style={{ opacity: 0.6 }}>{error || 'Verifique o endereço e tente novamente.'}</p>
       </div>
     );
   }
@@ -129,11 +132,14 @@ export default function PublicSiteLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0D0D0D] public-site-wrapper">
+    <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }}>
       {/* Header - Floating Glassmorphism */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="max-w-[1200px] mx-auto px-4 pt-4">
-          <div className="bg-black/40 backdrop-blur-xl rounded-2xl px-8 pl-4">
+          <div 
+            className="backdrop-blur-xl rounded-2xl px-8 pl-4"
+            style={{ backgroundColor: isDarkTheme ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.8)', borderBottom: isDarkTheme ? 'none' : '1px solid rgba(0,0,0,0.1)' }}
+          >
             <div className="flex justify-between items-center h-[70px]">
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
@@ -148,7 +154,7 @@ export default function PublicSiteLayout() {
                     className="w-auto object-contain lg:max-w-none lg:max-h-none"
                   />
                 ) : (
-                  <span className="text-lg md:text-xl font-semibold text-white tracking-wider">
+                  <span className="text-lg md:text-xl font-semibold tracking-wider" style={{ color: isDarkTheme ? '#fff' : '#1a1a1a' }}>
                     {siteConfig.site_title}
                   </span>
                 )}
@@ -162,10 +168,10 @@ export default function PublicSiteLayout() {
                     to={getHref(link.href)}
                     className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
                     style={{ 
-                      color: isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'
+                      color: isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.color = isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
                   >
                     {link.label}
                   </Link>
@@ -178,10 +184,10 @@ export default function PublicSiteLayout() {
                     to={getHref(link.href)}
                     className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
                     style={{ 
-                      color: isFilterActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'
+                      color: isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.color = isFilterActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
                   >
                     {link.label}
                   </Link>
@@ -190,7 +196,7 @@ export default function PublicSiteLayout() {
 
               {/* Desktop CTA */}
               <div className="hidden lg:flex items-center gap-4">
-                <Link to={getHref("favoritos")} className="relative text-white/80 hover:text-white transition-colors">
+                <Link to={getHref("favoritos")} className="relative transition-colors" style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}>
                   <Heart className="w-5 h-5" />
                   {favCount > 0 && (
                     <span 
@@ -213,14 +219,14 @@ export default function PublicSiteLayout() {
               {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <button className="lg:hidden p-2 text-white">
+                <button className="lg:hidden p-2" style={{ color: isDarkTheme ? '#fff' : '#1a1a1a' }}>
                   <Menu className="w-6 h-6" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 p-0 bg-[#0D0D0D] border-white/10">
+              <SheetContent side="right" className="w-80 p-0 border-0" style={{ backgroundColor, borderColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
                 <div className="flex flex-col h-full">
                   {/* Mobile Header */}
-                  <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                  <div className="p-6 flex items-center justify-between" style={{ borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
                     {siteConfig.logo_url ? (
                       <img 
                         src={siteConfig.logo_url} 
@@ -232,7 +238,7 @@ export default function PublicSiteLayout() {
                         className="w-auto object-contain"
                       />
                     ) : (
-                      <span className="text-lg font-semibold text-white tracking-wider">
+                      <span className="text-lg font-semibold tracking-wider" style={{ color: textColor }}>
                         {siteConfig.site_title}
                       </span>
                     )}
@@ -248,34 +254,34 @@ export default function PublicSiteLayout() {
                           onClick={() => setMobileMenuOpen(false)}
                           className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
                           style={{ 
-                            color: isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)',
-                            backgroundColor: isActive(link.href) ? 'rgba(255,255,255,0.05)' : 'transparent'
+                            color: isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)'),
+                            backgroundColor: isActive(link.href) ? (isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent'
                           }}
                         >
                           {link.label}
                         </Link>
                       ))}
                       
-                      <div className="border-t border-white/10 my-4"></div>
+                      <div className="my-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}></div>
                       
                       {filterLinks.map((link) => (
                         <Link
                           key={link.href}
                           to={getHref(link.href)}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="block px-4 py-3 text-sm font-medium tracking-wider text-white/80 hover:bg-white/5 transition-colors"
-                          style={{ ':hover': { color: primaryColor } } as React.CSSProperties}
+                          className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
+                          style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}
                         >
                           {link.label}
                         </Link>
                       ))}
                       
-                      <div className="border-t border-white/10 my-4"></div>
+                      <div className="my-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}></div>
                       
                       <Link
                         to={getHref("contato")}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="block px-4 py-3 text-sm font-medium tracking-wider hover:bg-white/5 transition-colors"
+                        className="block px-4 py-3 text-sm font-medium tracking-wider transition-colors"
                         style={{ color: primaryColor }}
                       >
                         CONTATO
@@ -285,7 +291,7 @@ export default function PublicSiteLayout() {
 
                   {/* Mobile Footer */}
                   {siteConfig.whatsapp && (
-                    <div className="p-4 border-t border-white/10">
+                    <div className="p-4" style={{ borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
                       <a
                         href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, '')}`}
                         target="_blank"
@@ -328,8 +334,7 @@ export default function PublicSiteLayout() {
 
       {/* Footer - Dark Style */}
       <footer 
-        className="text-white border-t border-white/10"
-        style={{ backgroundColor: secondaryColor }}
+        style={{ backgroundColor: secondaryColor, color: textColor, borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">

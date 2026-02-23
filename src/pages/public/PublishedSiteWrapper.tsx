@@ -87,6 +87,9 @@ function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: 
             watermark_size: (data as any).watermark_size ?? 80,
             watermark_position: (data as any).watermark_position ?? 'bottom-right',
             organization_name: (data.organizations as any)?.name || 'Imobiliária',
+            site_theme: (data as any).site_theme || 'dark',
+            background_color: (data as any).background_color || '#0D0D0D',
+            text_color: (data as any).text_color || '#FFFFFF',
           });
         }
       } catch (err) {

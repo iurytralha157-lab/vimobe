@@ -30,6 +30,14 @@ export default function PublicHome() {
   // Get colors from config with fallbacks
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
+  const accentColor = siteConfig?.accent_color || '#3B82F6';
+  const backgroundColor = siteConfig?.background_color || '#0D0D0D';
+  const textColor = siteConfig?.text_color || '#FFFFFF';
+  const isDarkTheme = siteConfig?.site_theme !== 'light';
+  // Alternate section background
+  const altBg = isDarkTheme ? 'rgba(255,255,255,0.03)' : '#F9FAFB';
+  const sectionTextColor = isDarkTheme ? textColor : '#111827';
+  const sectionSubTextColor = isDarkTheme ? `${textColor}99` : '#6B7280';
 
   const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
   const orgParam = new URLSearchParams(location.search).get('org');
@@ -81,7 +89,7 @@ export default function PublicHome() {
   }
 
   return (
-    <div className="bg-[#0D0D0D]">
+    <div style={{ backgroundColor }}>
       {/* Hero Section - Fullscreen */}
       <section className="relative h-screen">
         {/* Background Image */}
@@ -163,16 +171,16 @@ export default function PublicHome() {
 
       {/* Featured Properties Section */}
       {featuredProperties.length > 0 && (
-        <section className="py-20 bg-white">
+        <section className="py-20" style={{ backgroundColor: altBg }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <span 
                 className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: primaryColor }}
+                style={{ color: accentColor }}
               >
                 Exclusivos
               </span>
-              <h2 className="text-3xl md:text-4xl font-light text-gray-900 mt-2">
+              <h2 className="text-3xl md:text-4xl font-light mt-2" style={{ color: sectionTextColor }}>
                 Descubra Imóveis que Definem o Conceito de Luxo
               </h2>
             </div>
@@ -226,16 +234,16 @@ export default function PublicHome() {
 
       {/* All Properties Section */}
       {allProperties.length > 0 && (
-        <section className="py-20 bg-gray-50">
+        <section className="py-20" style={{ backgroundColor: isDarkTheme ? backgroundColor : '#FFFFFF' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-6 md:mb-12">
               <span 
                 className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: primaryColor }}
+                style={{ color: accentColor }}
               >
                 Nosso Portfólio
               </span>
-              <h2 className="text-3xl md:text-4xl font-light text-gray-900 mt-2">
+              <h2 className="text-3xl md:text-4xl font-light mt-2" style={{ color: sectionTextColor }}>
                 Todos os Imóveis Disponíveis
               </h2>
             </div>
@@ -288,7 +296,7 @@ export default function PublicHome() {
       )}
 
       {/* Category Accordion Section */}
-      <section className="py-0 bg-[#0D0D0D]">
+      <section className="py-0" style={{ backgroundColor }}>
         {/* Mobile: Grid 2x2, Desktop: Flex accordion */}
         <div className="grid grid-cols-2 md:flex md:h-[500px] overflow-hidden">
           {categories.map((cat, idx) => (
