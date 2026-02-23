@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { maskCPF, maskRG } from '@/lib/masks';
 import {
   Dialog,
   DialogContent,
@@ -208,8 +209,9 @@ export function CustomerFormDialog({
                   <Input
                     id="cpf_cnpj"
                     value={formData.cpf_cnpj || ''}
-                    onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, cpf_cnpj: maskCPF(e.target.value) })}
                     placeholder="000.000.000-00"
+                    maxLength={14}
                     required
                   />
                 </div>
@@ -221,8 +223,9 @@ export function CustomerFormDialog({
                   <Input
                     id="rg"
                     value={formData.rg || ''}
-                    onChange={(e) => setFormData({ ...formData, rg: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, rg: maskRG(e.target.value) })}
                     placeholder="00.000.000-0"
+                    maxLength={12}
                     required
                   />
                 </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { maskCPF, maskRG } from '@/lib/masks';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -251,8 +252,9 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
             <Input
               id="cpf_cnpj"
               value={formData.cpf_cnpj}
-              onChange={e => setFormData(prev => ({ ...prev, cpf_cnpj: e.target.value }))}
+              onChange={e => setFormData(prev => ({ ...prev, cpf_cnpj: maskCPF(e.target.value) }))}
               placeholder="000.000.000-00"
+              maxLength={14}
             />
           </div>
           <div className="space-y-1.5">
@@ -260,8 +262,9 @@ export function TelecomCustomerTab({ lead, onSaved }: TelecomCustomerTabProps) {
             <Input
               id="rg"
               value={formData.rg}
-              onChange={e => setFormData(prev => ({ ...prev, rg: e.target.value }))}
+              onChange={e => setFormData(prev => ({ ...prev, rg: maskRG(e.target.value) }))}
               placeholder="00.000.000-0"
+              maxLength={12}
             />
           </div>
           <div className="space-y-1.5">

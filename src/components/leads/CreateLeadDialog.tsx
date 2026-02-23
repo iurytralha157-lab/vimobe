@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { maskCPF, maskRG } from '@/lib/masks';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -312,8 +313,9 @@ export function CreateLeadDialog({
                           <Label>CPF</Label>
                           <Input
                             value={formData.cpf}
-                            onChange={(e) => updateField('cpf', e.target.value)}
+                            onChange={(e) => updateField('cpf', maskCPF(e.target.value))}
                             placeholder="000.000.000-00"
+                            maxLength={14}
                           />
                         </div>
                       </div>
@@ -323,8 +325,9 @@ export function CreateLeadDialog({
                           <Label>RG</Label>
                           <Input
                             value={formData.rg}
-                            onChange={(e) => updateField('rg', e.target.value)}
-                            placeholder="RG do cliente"
+                            onChange={(e) => updateField('rg', maskRG(e.target.value))}
+                            placeholder="00.000.000-0"
+                            maxLength={12}
                           />
                         </div>
                         <div className="space-y-2">
