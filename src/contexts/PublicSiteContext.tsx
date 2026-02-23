@@ -89,7 +89,15 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
           const data = await response.json();
           if (data.found) {
             setOrganizationId(data.organization_id);
-            setSiteConfig(data.site_config);
+            setSiteConfig({
+              ...data.site_config,
+              site_theme: data.site_config.site_theme || 'dark',
+              background_color: data.site_config.background_color || '#0D0D0D',
+              text_color: data.site_config.text_color || '#FFFFFF',
+              card_color: data.site_config.card_color || '#FFFFFF',
+              watermark_size: data.site_config.watermark_size ?? 80,
+              watermark_position: data.site_config.watermark_position ?? 'bottom-right',
+            });
             return;
           }
         }
