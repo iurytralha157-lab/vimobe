@@ -119,7 +119,7 @@ export default function AdminDashboard() {
               </CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <div className="text-2xl font-bold">{stats.totalOrganizations}</div>
               <p className="text-xs text-muted-foreground">
                 {stats.activeOrganizations} ativas
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
               </CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <div className="text-2xl font-bold">{subscriptionStats.paid}</div>
               <p className="text-xs text-muted-foreground">
                 assinaturas ativas
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
               </CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <div className="text-2xl font-bold">{subscriptionStats.trial}</div>
               <p className="text-xs text-muted-foreground">
                 {trialsExpiringSoon > 0 && (
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
               </CardTitle>
               <Gift className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <div className="text-2xl font-bold">{subscriptionStats.free}</div>
               <p className="text-xs text-muted-foreground">
                 parcerias
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <div className="text-2xl font-bold">{stats.totalUsers}</div>
               <p className="text-xs text-muted-foreground">
                 em todas as organizações
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
               </CardTitle>
               <DollarSign className="h-4 w-4 text-primary" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <div className="text-2xl font-bold text-primary">
                 R$ {mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
               Ver todas
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6 pb-4">
             {loadingOrgs ? (
               <div className="text-center py-8 text-muted-foreground">
                 Carregando...

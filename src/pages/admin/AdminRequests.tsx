@@ -175,7 +175,7 @@ export default function AdminRequests() {
               Solicitações ({filteredRequests.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 md:px-6 pb-4">
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">Carregando...</div>
             ) : filteredRequests.length === 0 ? (

@@ -102,7 +102,7 @@ export default function AdminAnnouncements() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <p className="font-medium">{currentAnnouncement.message}</p>
               <div className="flex gap-2 mt-2">
                 {currentAnnouncement.show_banner && (
@@ -139,7 +139,7 @@ export default function AdminAnnouncements() {
               Envie uma mensagem para todos os usuários ou um grupo específico.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="px-4 md:px-6 pb-4 space-y-6">
             {/* Message */}
             <div className="space-y-2">
               <Label>Mensagem do Comunicado *</Label>
@@ -321,7 +321,7 @@ export default function AdminAnnouncements() {
                 Comunicados anteriores enviados pelo sistema
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6 pb-4">
               <div className="space-y-3">
                 {allAnnouncements.slice(0, 10).map((announcement) => (
                   <div 

@@ -89,7 +89,7 @@ export default function AdminDatabase() {
                   Remover membros órfãos de equipes e filas de distribuição (usuários deletados ou sem organização)
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="px-4 md:px-6 pb-4 space-y-4">
                 {orphanLoading ? (
                   <Skeleton className="h-16 w-full" />
                 ) : orphanStats && orphanStats.total > 0 ? (

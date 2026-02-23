@@ -151,7 +151,7 @@ export default function AdminPlans() {
           </div>
         ) : plans?.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
+            <CardContent className="px-4 md:px-6 py-12 text-center text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum plano cadastrado.</p>
               <Button onClick={() => handleOpenDialog()} className="mt-4">
@@ -175,7 +175,7 @@ export default function AdminPlans() {
                   </CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-4 md:px-6 pb-4 space-y-4">
                   {/* Price */}
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-bold">
