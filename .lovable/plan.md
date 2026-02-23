@@ -1,56 +1,40 @@
 
-# Corrigir Plano nos Negocios e Adicionar Comissao ao Plano Telecom
 
-## Problemas identificados
+# Corrigir Scroll, Adicionar Portabilidade e Verificar Rascunho
 
-1. **Plano nao aparece em "Negocios"**: Quando o plano e selecionado na aba "Contrato" do formulario de criacao, ele e salvo apenas no `telecom_customers.plan_id`, mas NAO no campo `interest_plan_id` do lead. Por isso, na aba "Negocios" do card do lead, o plano aparece como "Nenhum".
+## Problema 1 - Scroll nao funciona
+O formulario usa `ScrollArea` (Radix) dentro de um container flex com `h-[85vh]`. O viewport interno do ScrollArea precisa receber altura explicita para funcionar corretamente. Vou ajustar o CSS para garantir que o scroll funcione tanto no mobile quanto no desktop.
 
-2. **Valor de interesse nao preenche**: Ao selecionar o plano na criacao, o valor do plano (`price`) nao e copiado para `valor_interesse` do lead.
+## Problema 2 - Trocar "Telefone 2" por "Portabilidade"
+O campo "Telefone 2" (linhas 350-357) sera substituido por um checkbox "Portabilidade" com label "Este numero e portabilidade". O campo ficara logo abaixo do campo WhatsApp, no mesmo estilo visual do checkbox "E Combo?" ja existente no `TelecomCustomerTab.tsx`.
 
-3. **Comissao do vendedor nao existe no plano**: A tabela `service_plans` nao tem campo de comissao. Precisa de uma coluna `commission_percentage` para configurar a comissao por plano.
+## Problema 3 - Rascunho
+O rascunho ESTA funcionando no codigo (linhas 117-177 do CreateLeadDialog). Nenhuma alteracao necessaria - ele salva automaticamente com debounce de 500ms e restaura ao reabrir o formulario.
 
-## Solucao em 3 partes
+---
 
-### Parte 1 - Banco de dados
-Adicionar coluna `commission_percentage` (NUMERIC, default NULL) na tabela `service_plans`.
-
-### Parte 2 - Formulario do Plano (PlanFormDialog.tsx)
-Adicionar campo "Comissao do vendedor (%)" ao lado do campo "Valor (R$)" no formulario de criacao/edicao de plano. Atualizar o tipo `CreateServicePlanInput` e `ServicePlan` no hook `use-service-plans.ts` para incluir `commission_percentage`.
-
-### Parte 3 - Sincronizar plano com negocios
-
-**CreateLeadDialog.tsx** (formulario de criacao):
-- Quando o usuario selecionar um plano na aba "Contrato", auto-preencher `valor_interesse` com o `price` do plano
-- Ao submeter, salvar o `interest_plan_id` no lead junto com `valor_interesse` e `commission_percentage` do plano
-- Isso garante que ao abrir o card do lead, a aba "Negocios" ja mostra o plano correto
-
-**LeadDetailDialog.tsx** (card do lead - Desktop e Mobile):
-- Quando o usuario selecionar um plano em "Negocios", alem de preencher `valor_interesse`, tambem preencher `commission_percentage` com o valor configurado no plano
-- Isso ja funciona parcialmente (preenche valor) mas falta a comissao
-
-## Detalhes tecnicos
-
-### Migration SQL
-```sql
-ALTER TABLE service_plans ADD COLUMN commission_percentage NUMERIC DEFAULT NULL;
-```
-
-### use-service-plans.ts
-- Adicionar `commission_percentage?: number | null` em `ServicePlan` e `CreateServicePlanInput`
-
-### PlanFormDialog.tsx
-- Adicionar campo `commission_percentage` na grid ao lado de "Velocidade (MB)" ou "Valor (R$)"
-- Input numerico com step 0.1, placeholder "Ex: 10"
+## Alteracoes tecnicas
 
 ### CreateLeadDialog.tsx
-- No `onValueChange` do Select de plano (aba "Contrato", linha ~578), ao selecionar um plano:
-  - Preencher `valor_interesse` com `plan.price`
-  - Armazenar `plan_id` (ja faz isso)
-- No `handleSubmit`, adicionar ao payload do `createLead`:
-  - `interest_plan_id: formData.plan_id || undefined`
-  - `commission_percentage` do plano selecionado
 
-### LeadDetailDialog.tsx (Desktop e Mobile)
-- No `onValueChange` do Select "Plano de interesse" (linhas ~1224 e ~1979):
-  - Adicionar `commission_percentage` do plano ao `updateData`
-  - Preencher `editForm.commission_percentage` com o valor do plano
+**Scroll fix:**
+- Adicionar `style={{ maxHeight: 'calc(85vh - 180px)' }}` no ScrollArea ou ajustar o viewport com classe `[&>[data-radix-scroll-area-viewport]]:max-h-full` para garantir que o Radix compute a area de scroll corretamente.
+- Alternativa: trocar o ScrollArea por um `div` com `overflow-y-auto flex-1 min-h-0` que e mais confiavel em containers flex.
+
+**Portabilidade:**
+1. Adicionar `is_portability: false` no `getEmptyFormData()` (linha 69)
+2. Na aba "Basico" do Telecom, remover o campo "Telefone 2" (linhas 350-357) e substituir por um checkbox:
+   ```
+   <div className="flex items-center gap-2 mt-1">
+     <Checkbox checked={formData.is_portability} onCheckedChange={...} />
+     <Label>Este numero e portabilidade</Label>
+   </div>
+   ```
+3. Mover o campo abaixo do WhatsApp, na mesma grid
+4. No `handleSubmit`, incluir `is_portability` no payload do `upsertTelecomCustomer`
+5. Remover `phone2` do `getEmptyFormData` e do payload
+
+### TelecomCustomerTab.tsx
+- Adicionar `is_portability` no `FormData`, `defaultFormData`, `useEffect` de inicializacao e `handleSubmit`
+- Trocar o campo "Telefone 2" pelo checkbox "Portabilidade" na secao "Dados Pessoais"
+
