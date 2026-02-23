@@ -192,6 +192,7 @@ export default function PublicHome() {
                     property={property}
                     primaryColor={primaryColor}
                     cardColor={siteConfig?.card_color}
+                    textColor={textColor}
                     isFavorited={isFavorite(property.id)}
                     onToggleFavorite={toggleFavorite}
                     watermarkConfig={siteConfig?.watermark_enabled ? {
@@ -210,10 +211,11 @@ export default function PublicHome() {
               <Link to={getHref("imoveis")}>
                 <Button 
                   variant="outline" 
-                  className="border-2 px-8 py-6 text-sm tracking-wider"
+                  className="border-2 px-8 py-6 text-sm tracking-wider rounded-full"
                   style={{ 
                     borderColor: primaryColor, 
                     color: primaryColor,
+                    backgroundColor: 'transparent',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = primaryColor;
@@ -256,6 +258,7 @@ export default function PublicHome() {
                     property={property}
                     primaryColor={primaryColor}
                     cardColor={siteConfig?.card_color}
+                    textColor={textColor}
                     isFavorited={isFavorite(property.id)}
                     onToggleFavorite={toggleFavorite}
                     watermarkConfig={siteConfig?.watermark_enabled ? {
@@ -274,10 +277,11 @@ export default function PublicHome() {
               <Link to={getHref("imoveis")}>
                 <Button 
                   variant="outline" 
-                  className="border-2 px-8 py-6 text-sm tracking-wider"
+                  className="border-2 px-8 py-6 text-sm tracking-wider rounded-full"
                   style={{ 
                     borderColor: primaryColor, 
                     color: primaryColor,
+                    backgroundColor: 'transparent',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = primaryColor;
