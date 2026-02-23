@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TagSelector } from '@/components/ui/tag-selector';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck, CreditCard, Calendar } from 'lucide-react';
+import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck, CreditCard, Calendar, FileText, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { usePipelines, useStages } from '@/hooks/use-stages';
@@ -62,49 +62,45 @@ export function CreateLeadDialog({
 
   // Form state
   const [activeTab, setActiveTab] = useState('basic');
+  const [draftRestored, setDraftRestored] = useState(false);
 
-  const [formData, setFormData] = useState({
-    // Basic
+  const draftKey = organization?.id ? `lead-draft-${organization.id}` : null;
+
+  const getEmptyFormData = useCallback(() => ({
     name: '',
     phone: '',
     email: '',
     message: '',
     source: '',
-    // Telecom specific - Personal
     cpf: '',
     rg: '',
     birth_date: '',
     phone2: '',
     mother_name: '',
-    // Telecom specific - Address
     uf: '',
     cidade: '',
     bairro: '',
     endereco: '',
     numero: '',
     cep: '',
-    // Telecom specific - Plan/Contract
     plan_id: '',
     due_day: '',
     payment_method: '',
-    // Professional (Real Estate)
     cargo: '',
     empresa: '',
     profissao: '',
-    // Financial (Real Estate)
-    // Financial (Real Estate)
     renda_familiar: '',
     faixa_valor_imovel: '',
     valor_interesse: '',
-    // Lead management
-    assigned_user_id: '',
-    pipeline_id: '',
-    stage_id: '',
+    assigned_user_id: profile?.id || '',
+    pipeline_id: defaultPipelineId || '',
+    stage_id: defaultStageId || '',
     property_id: '',
     deal_status: 'open',
-    // Tags
     tag_ids: [] as string[],
-  });
+  }), [profile?.id, defaultPipelineId, defaultStageId]);
+
+  const [formData, setFormData] = useState(getEmptyFormData);
 
   // Get stages for selected pipeline
   const { data: stages = [] } = useStages(formData.pipeline_id || undefined);
@@ -114,46 +110,80 @@ export function CreateLeadDialog({
   const coverageCities = useCoverageCities(formData.uf);
   const coverageNeighborhoods = useCoverageNeighborhoods(formData.uf, formData.cidade);
 
-  // Reset form when dialog opens
+  const isFormEmpty = useCallback((data: typeof formData) => {
+    return !data.name.trim() && !data.phone && !data.email && !data.message && !data.cpf && !data.cargo && !data.empresa;
+  }, []);
+
+  // Save draft to localStorage with debounce
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    if (!open || !draftKey) return;
+    
+    if (isFormEmpty(formData)) {
+      localStorage.removeItem(draftKey);
+      return;
+    }
+
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({ formData, activeTab }));
+      } catch { /* quota exceeded — ignore */ }
+    }, 500);
+
+    return () => clearTimeout(saveTimerRef.current);
+  }, [formData, activeTab, open, draftKey, isFormEmpty]);
+
+  // Restore draft or reset form when dialog opens
   useEffect(() => {
     if (open) {
+      setDraftRestored(false);
+      
+      if (draftKey) {
+        try {
+          const saved = localStorage.getItem(draftKey);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.formData && !isFormEmpty(parsed.formData)) {
+              setFormData({ ...getEmptyFormData(), ...parsed.formData });
+              if (parsed.activeTab) setActiveTab(parsed.activeTab);
+              setDraftRestored(true);
+              return;
+            }
+          }
+        } catch { /* corrupted data — ignore */ }
+      }
+
       setActiveTab('basic');
       const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
       setFormData({
-        name: '',
-        phone: '',
-        email: '',
-        message: '',
-        source: '',
-        cpf: '',
-        rg: '',
-        birth_date: '',
-        phone2: '',
-        mother_name: '',
-        uf: '',
-        cidade: '',
-        bairro: '',
-        endereco: '',
-        numero: '',
-        cep: '',
-        plan_id: '',
-        due_day: '',
-        payment_method: '',
-        cargo: '',
-        empresa: '',
-        profissao: '',
-        renda_familiar: '',
-        faixa_valor_imovel: '',
-        valor_interesse: '',
-        assigned_user_id: profile?.id || '',
+        ...getEmptyFormData(),
         pipeline_id: defaultPipelineId || defaultPipeline?.id || '',
         stage_id: defaultStageId || '',
-        property_id: '',
-        deal_status: 'open',
-        tag_ids: [],
       });
     }
-  }, [open, profile?.id, pipelines, defaultStageId, defaultPipelineId]);
+  }, [open, pipelines, defaultStageId, defaultPipelineId, draftKey, getEmptyFormData, isFormEmpty]);
+
+  const discardDraft = useCallback(() => {
+    if (draftKey) localStorage.removeItem(draftKey);
+    setDraftRestored(false);
+    setActiveTab('basic');
+    const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
+    setFormData({
+      ...getEmptyFormData(),
+      pipeline_id: defaultPipelineId || defaultPipeline?.id || '',
+      stage_id: defaultStageId || '',
+    });
+  }, [draftKey, pipelines, defaultPipelineId, defaultStageId, getEmptyFormData]);
+
+  // Prevent accidental close when form has data
+  const handleOpenChange = useCallback((newOpen: boolean) => {
+    if (!newOpen && !isFormEmpty(formData)) {
+      // Don't close on backdrop click — data is saved in localStorage anyway
+      return;
+    }
+    onOpenChange(newOpen);
+  }, [formData, isFormEmpty, onOpenChange]);
 
   // Update stage when pipeline changes
   useEffect(() => {
@@ -211,6 +241,9 @@ export function CreateLeadDialog({
         });
       }
       
+      // Clear draft on success
+      if (draftKey) localStorage.removeItem(draftKey);
+      setDraftRestored(false);
       onOpenChange(false);
     } catch (error) {
       // Error handled by mutation
@@ -222,7 +255,7 @@ export function CreateLeadDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={`max-w-lg p-0 flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden w-[90%] sm:w-full rounded-lg`}>
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
@@ -230,6 +263,24 @@ export function CreateLeadDialog({
             {dialogTitle}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Draft restored banner */}
+        {draftRestored && (
+          <div className="mx-6 flex items-center justify-between gap-2 rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+              <FileText className="h-4 w-4 flex-shrink-0" />
+              <span>Rascunho restaurado</span>
+            </div>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 text-xs font-medium flex items-center gap-1"
+            >
+              <X className="h-3 w-3" />
+              Descartar
+            </button>
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <ScrollArea className="flex-1 min-h-0">
