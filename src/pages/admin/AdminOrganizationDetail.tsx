@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Building2, 
-  Users, 
+import {
+  Building2,
+  Users,
   ArrowLeft,
   Eye,
   Save,
@@ -11,8 +11,8 @@ import {
   Mail,
   Copy,
   Trash2,
-  UserPlus
-} from 'lucide-react';
+  UserPlus } from
+'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
@@ -35,8 +35,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  SelectValue } from
+'@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -44,60 +44,60 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  DialogTrigger } from
+'@/components/ui/dialog';
 
 const ALL_MODULES = [
-  // Core
-  { name: 'crm', label: 'CRM (Pipelines, Contatos)', category: 'core' },
-  { name: 'financial', label: 'Financeiro (Dashboard, Contas, Contratos, Comissões)', category: 'core' },
-  { name: 'whatsapp', label: 'WhatsApp', category: 'core' },
-  { name: 'agenda', label: 'Agenda', category: 'core' },
-  { name: 'tags', label: 'Tags', category: 'core' },
-  { name: 'round_robin', label: 'Distribuição (Round Robin)', category: 'core' },
-  { name: 'reports', label: 'Relatórios', category: 'core' },
-  // Imobiliário
-  { name: 'properties', label: 'Imóveis', segment: 'imobiliario', category: 'segment' },
-  { name: 'cadences', label: 'Cadências', segment: 'imobiliario', category: 'segment' },
-  { name: 'performance', label: 'Performance de Corretores', segment: 'imobiliario', category: 'segment' },
-  { name: 'site', label: 'Site Integrado', segment: 'imobiliario', category: 'segment' },
-  // Telecom
-  { name: 'plans', label: 'Planos de Serviços', segment: 'telecom', category: 'segment' },
-  { name: 'coverage', label: 'Áreas de Cobertura', segment: 'telecom', category: 'segment' },
-  { name: 'telecom', label: 'Clientes Telecom', segment: 'telecom', category: 'segment' },
-  // Avançado
-  { name: 'automations', label: 'Automações', category: 'advanced' },
-  { name: 'wordpress', label: 'Integração WordPress', category: 'advanced' },
-  { name: 'webhooks', label: 'Webhooks', category: 'advanced' },
-  { name: 'ai_agent', label: 'Agente de IA (WhatsApp)', category: 'advanced' },
-];
+// Core
+{ name: 'crm', label: 'CRM (Pipelines, Contatos)', category: 'core' },
+{ name: 'financial', label: 'Financeiro (Dashboard, Contas, Contratos, Comissões)', category: 'core' },
+{ name: 'whatsapp', label: 'WhatsApp', category: 'core' },
+{ name: 'agenda', label: 'Agenda', category: 'core' },
+{ name: 'tags', label: 'Tags', category: 'core' },
+{ name: 'round_robin', label: 'Distribuição (Round Robin)', category: 'core' },
+{ name: 'reports', label: 'Relatórios', category: 'core' },
+// Imobiliário
+{ name: 'properties', label: 'Imóveis', segment: 'imobiliario', category: 'segment' },
+{ name: 'cadences', label: 'Cadências', segment: 'imobiliario', category: 'segment' },
+{ name: 'performance', label: 'Performance de Corretores', segment: 'imobiliario', category: 'segment' },
+{ name: 'site', label: 'Site Integrado', segment: 'imobiliario', category: 'segment' },
+// Telecom
+{ name: 'plans', label: 'Planos de Serviços', segment: 'telecom', category: 'segment' },
+{ name: 'coverage', label: 'Áreas de Cobertura', segment: 'telecom', category: 'segment' },
+{ name: 'telecom', label: 'Clientes Telecom', segment: 'telecom', category: 'segment' },
+// Avançado
+{ name: 'automations', label: 'Automações', category: 'advanced' },
+{ name: 'wordpress', label: 'Integração WordPress', category: 'advanced' },
+{ name: 'webhooks', label: 'Webhooks', category: 'advanced' },
+{ name: 'ai_agent', label: 'Agente de IA (WhatsApp)', category: 'advanced' }];
+
 
 export default function AdminOrganizationDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{id: string;}>();
   const navigate = useNavigate();
   const { organizations, updateOrganization, updateModuleAccess } = useSuperAdmin();
   const { startImpersonate } = useAuth();
-  const { 
-    invitations, 
-    isLoading: loadingInvitations, 
-    createInvitation, 
-    deleteInvitation, 
-    getInviteLink 
+  const {
+    invitations,
+    isLoading: loadingInvitations,
+    createInvitation,
+    deleteInvitation,
+    getInviteLink
   } = useAdminInvitations(id);
 
-  const org = organizations?.find(o => o.id === id);
+  const org = organizations?.find((o) => o.id === id);
 
   const [formData, setFormData] = useState({
     name: '',
     subscription_status: 'trial',
     max_users: 10,
-    admin_notes: '',
+    admin_notes: ''
   });
 
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [newInvite, setNewInvite] = useState({
     email: '',
-    role: 'user' as 'admin' | 'user',
+    role: 'user' as 'admin' | 'user'
   });
 
   // Fetch organization modules
@@ -105,13 +105,13 @@ export default function AdminOrganizationDetail() {
     queryKey: ['org-modules', id],
     queryFn: async () => {
       if (!id) return [];
-      const { data } = await supabase
-        .from('organization_modules')
-        .select('*')
-        .eq('organization_id', id);
+      const { data } = await supabase.
+      from('organization_modules').
+      select('*').
+      eq('organization_id', id);
       return data || [];
     },
-    enabled: !!id,
+    enabled: !!id
   });
 
   // Fetch organization users
@@ -119,13 +119,13 @@ export default function AdminOrganizationDetail() {
     queryKey: ['org-users', id],
     queryFn: async () => {
       if (!id) return [];
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('organization_id', id);
+      const { data } = await supabase.
+      from('users').
+      select('*').
+      eq('organization_id', id);
       return data || [];
     },
-    enabled: !!id,
+    enabled: !!id
   });
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function AdminOrganizationDetail() {
         name: org.name,
         subscription_status: org.subscription_status,
         max_users: org.max_users,
-        admin_notes: org.admin_notes || '',
+        admin_notes: org.admin_notes || ''
       });
     }
   }, [org]);
@@ -145,14 +145,14 @@ export default function AdminOrganizationDetail() {
         <div className="text-center py-8 text-muted-foreground">
           Organização não encontrada
         </div>
-      </AdminLayout>
-    );
+      </AdminLayout>);
+
   }
 
   const handleSave = () => {
     updateOrganization.mutate({
       id: org.id,
-      ...formData,
+      ...formData
     });
   };
 
@@ -162,7 +162,7 @@ export default function AdminOrganizationDetail() {
   };
 
   const isModuleEnabled = (moduleName: string) => {
-    const module = modules?.find(m => m.module_name === moduleName);
+    const module = modules?.find((m) => m.module_name === moduleName);
     return module ? module.is_enabled : true; // Default to enabled
   };
 
@@ -170,20 +170,20 @@ export default function AdminOrganizationDetail() {
     await updateModuleAccess.mutateAsync({
       organizationId: org.id,
       moduleName,
-      isEnabled: enabled,
+      isEnabled: enabled
     });
     refetchModules();
   };
 
   const handleCreateInvite = async () => {
     if (!id || !newInvite.email) return;
-    
+
     await createInvitation.mutateAsync({
       email: newInvite.email,
       role: newInvite.role,
-      organizationId: id,
+      organizationId: id
     });
-    
+
     setInviteDialogOpen(false);
     setNewInvite({ email: '', role: 'user' });
   };
@@ -232,15 +232,15 @@ export default function AdminOrganizationDetail() {
                     <Input
                       id="name"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status da Assinatura</Label>
                     <Select
                       value={formData.subscription_status}
-                      onValueChange={(value) => setFormData({ ...formData, subscription_status: value })}
-                    >
+                      onValueChange={(value) => setFormData({ ...formData, subscription_status: value })}>
+
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -258,15 +258,15 @@ export default function AdminOrganizationDetail() {
                       id="maxUsers"
                       type="number"
                       value={formData.max_users}
-                      onChange={(e) => setFormData({ ...formData, max_users: parseInt(e.target.value) || 10 })}
-                    />
+                      onChange={(e) => setFormData({ ...formData, max_users: parseInt(e.target.value) || 10 })} />
+
                   </div>
                   <div className="space-y-2">
                     <Label>Criado em</Label>
                     <Input
                       value={new Date(org.created_at).toLocaleDateString('pt-BR')}
-                      disabled
-                    />
+                      disabled />
+
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -276,8 +276,8 @@ export default function AdminOrganizationDetail() {
                     value={formData.admin_notes}
                     onChange={(e) => setFormData({ ...formData, admin_notes: e.target.value })}
                     placeholder="Anotações sobre este cliente..."
-                    rows={4}
-                  />
+                    rows={4} />
+
                 </div>
                 <Button onClick={handleSave} disabled={updateOrganization.isPending}>
                   <Save className="h-4 w-4 mr-2" />
@@ -298,31 +298,31 @@ export default function AdminOrganizationDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {ALL_MODULES.filter(m => m.category === 'core').map((module) => (
-                    <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                <div className="space-y-3 px-[10px]">
+                  {ALL_MODULES.filter((m) => m.category === 'core').map((module) =>
+                  <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                       <div>
                         <p className="font-medium">{module.label}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {isModuleEnabled(module.name) ? (
-                          <Badge className="bg-green-500">
+                        {isModuleEnabled(module.name) ?
+                      <Badge className="bg-green-500">
                             <Check className="h-3 w-3 mr-1" />
                             Habilitado
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-500">
+                          </Badge> :
+
+                      <Badge variant="outline" className="text-gray-500">
                             <X className="h-3 w-3 mr-1" />
                             Desabilitado
                           </Badge>
-                        )}
+                      }
                         <Switch
-                          checked={isModuleEnabled(module.name)}
-                          onCheckedChange={(checked) => handleModuleToggle(module.name, checked)}
-                        />
+                        checked={isModuleEnabled(module.name)}
+                        onCheckedChange={(checked) => handleModuleToggle(module.name, checked)} />
+
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -336,36 +336,36 @@ export default function AdminOrganizationDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {ALL_MODULES.filter(m => m.category === 'segment').map((module) => (
-                    <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                <div className="space-y-3 px-[10px]">
+                  {ALL_MODULES.filter((m) => m.category === 'segment').map((module) =>
+                  <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{module.label}</p>
-                        {'segment' in module && module.segment && (
-                          <Badge variant="outline" className="text-xs">
+                        {'segment' in module && module.segment &&
+                      <Badge variant="outline" className="text-xs">
                             {module.segment === 'imobiliario' ? 'Imobiliário' : 'Telecom'}
                           </Badge>
-                        )}
+                      }
                       </div>
                       <div className="flex items-center gap-2">
-                        {isModuleEnabled(module.name) ? (
-                          <Badge className="bg-green-500">
+                        {isModuleEnabled(module.name) ?
+                      <Badge className="bg-green-500">
                             <Check className="h-3 w-3 mr-1" />
                             Habilitado
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-500">
+                          </Badge> :
+
+                      <Badge variant="outline" className="text-gray-500">
                             <X className="h-3 w-3 mr-1" />
                             Desabilitado
                           </Badge>
-                        )}
+                      }
                         <Switch
-                          checked={isModuleEnabled(module.name)}
-                          onCheckedChange={(checked) => handleModuleToggle(module.name, checked)}
-                        />
+                        checked={isModuleEnabled(module.name)}
+                        onCheckedChange={(checked) => handleModuleToggle(module.name, checked)} />
+
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -379,31 +379,31 @@ export default function AdminOrganizationDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {ALL_MODULES.filter(m => m.category === 'advanced').map((module) => (
-                    <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                <div className="space-y-3 px-[10px]">
+                  {ALL_MODULES.filter((m) => m.category === 'advanced').map((module) =>
+                  <div key={module.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                       <div>
                         <p className="font-medium">{module.label}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {isModuleEnabled(module.name) ? (
-                          <Badge className="bg-green-500">
+                        {isModuleEnabled(module.name) ?
+                      <Badge className="bg-green-500">
                             <Check className="h-3 w-3 mr-1" />
                             Habilitado
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-500">
+                          </Badge> :
+
+                      <Badge variant="outline" className="text-gray-500">
                             <X className="h-3 w-3 mr-1" />
                             Desabilitado
                           </Badge>
-                        )}
+                      }
                         <Switch
-                          checked={isModuleEnabled(module.name)}
-                          onCheckedChange={(checked) => handleModuleToggle(module.name, checked)}
-                        />
+                        checked={isModuleEnabled(module.name)}
+                        onCheckedChange={(checked) => handleModuleToggle(module.name, checked)} />
+
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -419,14 +419,14 @@ export default function AdminOrganizationDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {orgUsers?.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                {orgUsers?.length === 0 ?
+                <div className="text-center py-8 text-muted-foreground">
                     Nenhum usuário cadastrado
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {orgUsers?.map((user) => (
-                      <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                  </div> :
+
+                <div className="space-y-2">
+                    {orgUsers?.map((user) =>
+                  <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <Users className="h-5 w-5 text-primary" />
@@ -440,14 +440,14 @@ export default function AdminOrganizationDetail() {
                           <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                             {user.role === 'admin' ? 'Administrador' : 'Usuário'}
                           </Badge>
-                          {!user.is_active && (
-                            <Badge variant="outline" className="text-gray-500">Inativo</Badge>
-                          )}
+                          {!user.is_active &&
+                      <Badge variant="outline" className="text-gray-500">Inativo</Badge>
+                      }
                         </div>
                       </div>
-                    ))}
+                  )}
                   </div>
-                )}
+                }
               </CardContent>
             </Card>
           </TabsContent>
@@ -484,15 +484,15 @@ export default function AdminOrganizationDetail() {
                           type="email"
                           value={newInvite.email}
                           onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
-                          placeholder="usuario@email.com"
-                        />
+                          placeholder="usuario@email.com" />
+
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="inviteRole">Função</Label>
                         <Select
                           value={newInvite.role}
-                          onValueChange={(value: 'admin' | 'user') => setNewInvite({ ...newInvite, role: value })}
-                        >
+                          onValueChange={(value: 'admin' | 'user') => setNewInvite({ ...newInvite, role: value })}>
+
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -510,8 +510,8 @@ export default function AdminOrganizationDetail() {
                       <Button
                         className="w-[60%] rounded-xl"
                         onClick={handleCreateInvite}
-                        disabled={!newInvite.email || createInvitation.isPending}
-                      >
+                        disabled={!newInvite.email || createInvitation.isPending}>
+
                         {createInvitation.isPending ? 'Enviando...' : 'Criar Convite'}
                       </Button>
                     </div>
@@ -519,18 +519,18 @@ export default function AdminOrganizationDetail() {
                 </Dialog>
               </CardHeader>
               <CardContent>
-                {loadingInvitations ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                {loadingInvitations ?
+                <div className="text-center py-8 text-muted-foreground">
                     Carregando...
-                  </div>
-                ) : invitations?.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  </div> :
+                invitations?.length === 0 ?
+                <div className="text-center py-8 text-muted-foreground">
                     Nenhum convite pendente
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {invitations?.map((invite) => (
-                      <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
+                  </div> :
+
+                <div className="space-y-2">
+                    {invitations?.map((invite) =>
+                  <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-3">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <Mail className="h-5 w-5 text-primary" />
@@ -538,10 +538,10 @@ export default function AdminOrganizationDetail() {
                           <div>
                             <p className="font-medium">{invite.email}</p>
                             <p className="text-sm text-muted-foreground">
-                              Expira em {formatDistanceToNow(new Date(invite.expires_at), { 
-                                addSuffix: false,
-                                locale: ptBR 
-                              })}
+                              Expira em {formatDistanceToNow(new Date(invite.expires_at), {
+                            addSuffix: false,
+                            locale: ptBR
+                          })}
                             </p>
                           </div>
                         </div>
@@ -550,32 +550,32 @@ export default function AdminOrganizationDetail() {
                             {invite.role === 'admin' ? 'Administrador' : 'Usuário'}
                           </Badge>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyInviteLink(invite.token)}
-                            title="Copiar link"
-                          >
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copyInviteLink(invite.token)}
+                        title="Copiar link">
+
                             <Copy className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteInvitation.mutate(invite.id)}
-                            title="Remover convite"
-                            className="text-destructive hover:text-destructive"
-                          >
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteInvitation.mutate(invite.id)}
+                        title="Remover convite"
+                        className="text-destructive hover:text-destructive">
+
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
-                    ))}
+                  )}
                   </div>
-                )}
+                }
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
-  );
+    </AdminLayout>);
+
 }
