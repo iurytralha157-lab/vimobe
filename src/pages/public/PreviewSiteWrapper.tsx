@@ -87,9 +87,6 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
             background_color: (data as any).background_color || '#0D0D0D',
             text_color: (data as any).text_color || '#FFFFFF',
             card_color: (data as any).card_color || '#FFFFFF',
-            meta_pixel_id: data.meta_pixel_id || null,
-            gtm_id: data.gtm_id || null,
-            google_ads_id: data.google_ads_id || null,
           });
         }
       } catch (err) {

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,20 +40,6 @@ export function ContactFormDialog({
 
   const submittingRef = useRef(false);
 
-  // Capture UTM parameters from the URL (hidden fields)
-  const utmData = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return {
-      utm_source: params.get('utm_source') || null,
-      utm_medium: params.get('utm_medium') || null,
-      utm_campaign: params.get('utm_campaign') || null,
-      utm_content: params.get('utm_content') || null,
-      utm_term: params.get('utm_term') || null,
-      gclid: params.get('gclid') || null,
-      fbclid: params.get('fbclid') || null,
-    };
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -82,7 +68,6 @@ export function ContactFormDialog({
             message: formData.message.trim() || null,
             property_id: propertyId || null,
             property_code: propertyCode || null,
-            ...utmData,
           }),
         }
       );

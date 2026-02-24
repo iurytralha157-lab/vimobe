@@ -54,10 +54,6 @@ export interface OrganizationSite {
   background_color: string | null;
   text_color: string | null;
   card_color: string | null;
-  // Tracking fields
-  meta_pixel_id: string | null;
-  gtm_id: string | null;
-  google_ads_id: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -2845,9 +2845,7 @@ export type Database = {
           email: string | null
           facebook: string | null
           favicon_url: string | null
-          google_ads_id: string | null
           google_analytics_id: string | null
-          gtm_id: string | null
           hero_image_url: string | null
           hero_subtitle: string | null
           hero_title: string | null
@@ -2858,7 +2856,6 @@ export type Database = {
           logo_height: number | null
           logo_url: string | null
           logo_width: number | null
-          meta_pixel_id: string | null
           organization_id: string
           page_banner_url: string | null
           phone: string | null
@@ -2896,9 +2893,7 @@ export type Database = {
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
-          google_ads_id?: string | null
           google_analytics_id?: string | null
-          gtm_id?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
@@ -2909,7 +2904,6 @@ export type Database = {
           logo_height?: number | null
           logo_url?: string | null
           logo_width?: number | null
-          meta_pixel_id?: string | null
           organization_id: string
           page_banner_url?: string | null
           phone?: string | null
@@ -2947,9 +2941,7 @@ export type Database = {
           email?: string | null
           facebook?: string | null
           favicon_url?: string | null
-          google_ads_id?: string | null
           google_analytics_id?: string | null
-          gtm_id?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
@@ -2960,7 +2952,6 @@ export type Database = {
           logo_height?: number | null
           logo_url?: string | null
           logo_width?: number | null
-          meta_pixel_id?: string | null
           organization_id?: string
           page_banner_url?: string | null
           phone?: string | null

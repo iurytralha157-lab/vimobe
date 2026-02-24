@@ -52,9 +52,6 @@ export default function SiteSettings() {
     seo_description: '',
     seo_keywords: '',
     google_analytics_id: '',
-    meta_pixel_id: '',
-    gtm_id: '',
-    google_ads_id: '',
     // New hero fields
     hero_title: '',
     hero_subtitle: '',
@@ -95,9 +92,6 @@ export default function SiteSettings() {
         seo_description: site.seo_description || '',
         seo_keywords: site.seo_keywords || '',
         google_analytics_id: site.google_analytics_id || '',
-        meta_pixel_id: site.meta_pixel_id || '',
-        gtm_id: site.gtm_id || '',
-        google_ads_id: site.google_ads_id || '',
         // New hero fields
         hero_title: site.hero_title || '',
         hero_subtitle: site.hero_subtitle || '',
@@ -1325,51 +1319,6 @@ ${getWorkerCode()}`;
                       onChange={(e) => setFormData({ ...formData, google_analytics_id: e.target.value })}
                       disabled={!isAdmin}
                     />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Códigos de Rastreamento</CardTitle>
-                  <CardDescription>Configure pixels e tags para rastrear conversões e campanhas</CardDescription>
-                </CardHeader>
-                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-                  <div className="space-y-2">
-                    <Label>Meta Pixel ID</Label>
-                    <Input
-                      placeholder="123456789012345"
-                      value={formData.meta_pixel_id}
-                      onChange={(e) => setFormData({ ...formData, meta_pixel_id: e.target.value })}
-                      disabled={!isAdmin}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Pixel do Facebook/Instagram Ads para rastrear conversões
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Google Tag Manager ID</Label>
-                    <Input
-                      placeholder="GTM-XXXXXXX"
-                      value={formData.gtm_id}
-                      onChange={(e) => setFormData({ ...formData, gtm_id: e.target.value })}
-                      disabled={!isAdmin}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Container do GTM para gerenciar todas as tags
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Google Ads ID</Label>
-                    <Input
-                      placeholder="AW-123456789"
-                      value={formData.google_ads_id}
-                      onChange={(e) => setFormData({ ...formData, google_ads_id: e.target.value })}
-                      disabled={!isAdmin}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Tag de remarketing e conversões do Google Ads
-                    </p>
                   </div>
                 </CardContent>
               </Card>
