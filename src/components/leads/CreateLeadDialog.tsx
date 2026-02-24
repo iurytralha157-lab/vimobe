@@ -71,6 +71,7 @@ export function CreateLeadDialog({
   const getEmptyFormData = useCallback(() => ({
     name: '',
     phone: '',
+    phone2: '',
     email: '',
     message: '',
     source: '',
@@ -222,6 +223,7 @@ export function CreateLeadDialog({
           leadId: newLead.id,
           name: formData.name,
           phone: formData.phone || null,
+          phone2: formData.phone2 || null,
           is_portability: formData.is_portability || false,
           email: formData.email || null,
           cpf_cnpj: formData.cpf || null,
@@ -348,6 +350,14 @@ export function CreateLeadDialog({
                         <PhoneInput
                           value={formData.phone}
                           onChange={(value) => updateField('phone', value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Telefone 2</Label>
+                        <PhoneInput
+                          value={formData.phone2}
+                          onChange={(value) => updateField('phone2', value)}
                         />
                       </div>
 
