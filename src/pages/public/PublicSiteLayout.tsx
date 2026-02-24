@@ -54,6 +54,64 @@ export default function PublicSiteLayout() {
     };
   }, [siteConfig]);
 
+  // Inject tracking scripts (Meta Pixel, GTM, GA4, Google Ads)
+  useEffect(() => {
+    if (!siteConfig) return;
+    const trackingElements: HTMLElement[] = [];
+
+    const addScript = (content: string, attr: string) => {
+      const el = document.createElement('script');
+      el.setAttribute('data-tracking', attr);
+      el.textContent = content;
+      document.head.appendChild(el);
+      trackingElements.push(el);
+    };
+
+    const addExternalScript = (src: string, attr: string) => {
+      const el = document.createElement('script');
+      el.setAttribute('data-tracking', attr);
+      el.async = true;
+      el.src = src;
+      document.head.appendChild(el);
+      trackingElements.push(el);
+    };
+
+    // Meta Pixel
+    if (siteConfig.meta_pixel_id) {
+      addScript(`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${siteConfig.meta_pixel_id}');fbq('track','PageView');`, 'meta-pixel');
+      const noscript = document.createElement('noscript');
+      noscript.setAttribute('data-tracking', 'meta-pixel-ns');
+      noscript.innerHTML = `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${siteConfig.meta_pixel_id}&ev=PageView&noscript=1"/>`;
+      document.head.appendChild(noscript);
+      trackingElements.push(noscript);
+    }
+
+    // Google Tag Manager
+    if (siteConfig.gtm_id) {
+      addScript(`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${siteConfig.gtm_id}');`, 'gtm');
+    }
+
+    // Google Analytics (GA4)
+    if (siteConfig.google_analytics_id) {
+      addExternalScript(`https://www.googletagmanager.com/gtag/js?id=${siteConfig.google_analytics_id}`, 'ga4-ext');
+      addScript(`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${siteConfig.google_analytics_id}');`, 'ga4');
+    }
+
+    // Google Ads
+    if (siteConfig.google_ads_id) {
+      if (!siteConfig.google_analytics_id) {
+        addExternalScript(`https://www.googletagmanager.com/gtag/js?id=${siteConfig.google_ads_id}`, 'gads-ext');
+        addScript(`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${siteConfig.google_ads_id}');`, 'gads');
+      } else {
+        addScript(`gtag('config','${siteConfig.google_ads_id}');`, 'gads');
+      }
+    }
+
+    return () => {
+      trackingElements.forEach(el => el.remove());
+    };
+  }, [siteConfig]);
+
   // Close mobile menu on route change (scroll handled by ScrollToTop component)
   useEffect(() => {
     setMobileMenuOpen(false);

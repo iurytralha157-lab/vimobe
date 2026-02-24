@@ -41,7 +41,15 @@ Deno.serve(async (req) => {
       phone, 
       message, 
       property_id,
-      property_code
+      property_code,
+      // UTM tracking fields
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      utm_content,
+      utm_term,
+      gclid,
+      fbclid,
     } = await req.json();
 
     if (!organization_id || !name || !phone) {
@@ -214,6 +222,37 @@ Deno.serve(async (req) => {
       // The DB trigger `trigger_handle_lead_intake` fires on INSERT when assigned_user_id IS NULL.
       // It calls handle_lead_intake() which handles round-robin distribution automatically.
       // If no distribution queue matches, handle_lead_intake assigns to the first admin as fallback.
+    }
+
+    // Save UTM data to lead_meta if any tracking params exist
+    const hasUtmData = utm_source || utm_medium || utm_campaign || utm_content || utm_term || gclid || fbclid;
+    if (hasUtmData) {
+      const metaPayload: Record<string, unknown> = {
+        lead_id: leadId,
+        source_type: 'website',
+        contact_notes: message || null,
+        utm_source: utm_source || null,
+        utm_medium: utm_medium || null,
+        utm_campaign: utm_campaign || null,
+        utm_content: utm_content || null,
+        utm_term: utm_term || null,
+        raw_payload: { gclid, fbclid },
+      };
+
+      // Check if lead_meta already exists for this lead
+      const { data: existingMeta } = await supabase
+        .from('lead_meta')
+        .select('id')
+        .eq('lead_id', leadId)
+        .maybeSingle();
+
+      if (existingMeta) {
+        await supabase.from('lead_meta').update(metaPayload).eq('id', existingMeta.id);
+        console.log(`Updated lead_meta for lead ${leadId} with UTM data`);
+      } else {
+        await supabase.from('lead_meta').insert(metaPayload);
+        console.log(`Created lead_meta for lead ${leadId} with UTM data`);
+      }
     }
 
     // Create notification for the assigned user (admin or distributed user)

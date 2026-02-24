@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     // Direct lookup by custom_domain with all needed fields
     const { data: directMatch, error: directError } = await supabase
       .from('organization_sites')
-      .select('organization_id, subdomain, custom_domain, site_title, site_description, primary_color, secondary_color, accent_color, logo_url, logo_width, logo_height, favicon_url, whatsapp, phone, email, address, city, state, instagram, facebook, youtube, linkedin, about_title, about_text, about_image_url, seo_title, seo_description, seo_keywords, google_analytics_id, hero_image_url, hero_title, hero_subtitle, page_banner_url, watermark_logo_url, watermark_opacity, watermark_enabled, site_theme, background_color, text_color, card_color, watermark_size, watermark_position, organizations(name)')
+      .select('organization_id, subdomain, custom_domain, site_title, site_description, primary_color, secondary_color, accent_color, logo_url, logo_width, logo_height, favicon_url, whatsapp, phone, email, address, city, state, instagram, facebook, youtube, linkedin, about_title, about_text, about_image_url, seo_title, seo_description, seo_keywords, google_analytics_id, hero_image_url, hero_title, hero_subtitle, page_banner_url, watermark_logo_url, watermark_opacity, watermark_enabled, site_theme, background_color, text_color, card_color, watermark_size, watermark_position, meta_pixel_id, gtm_id, google_ads_id, organizations(name)')
       .or(`custom_domain.eq.${cleanDomain},custom_domain.eq.www.${cleanDomain.replace(/^www\./, '')}`)
       .eq('is_active', true)
       .limit(1)
