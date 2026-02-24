@@ -491,6 +491,16 @@ export function CreateLeadDialog({
                           </div>
                         </div>
                       </div>
+
+                      <div className="space-y-2">
+                        <Label>Observações</Label>
+                        <Textarea
+                          value={formData.message}
+                          onChange={(e) => updateField('message', e.target.value)}
+                          placeholder="Interesse, observações iniciais..."
+                          rows={3}
+                        />
+                      </div>
                     </>
                   ) : (
                     <div className="space-y-4">

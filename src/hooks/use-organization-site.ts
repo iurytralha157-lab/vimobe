@@ -73,7 +73,7 @@ export function useOrganizationSite() {
         .maybeSingle();
 
       if (error) throw error;
-      return data as OrganizationSite | null;
+      return data as unknown as OrganizationSite | null;
     },
     enabled: !!organization?.id,
   });
