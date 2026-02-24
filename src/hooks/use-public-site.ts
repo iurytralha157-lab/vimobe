@@ -50,6 +50,10 @@ export interface PublicSiteConfig {
   background_color: string;
   text_color: string;
   card_color: string;
+  // Tracking fields
+  meta_pixel_id: string | null;
+  gtm_id: string | null;
+  google_ads_id: string | null;
 }
 
 export interface PublicProperty {
