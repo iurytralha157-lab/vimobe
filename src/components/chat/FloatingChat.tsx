@@ -154,14 +154,18 @@ export function FloatingChat() {
     const currentLength = messages?.length || 0;
     const previousLength = previousMessagesLengthRef.current;
     
-    // Only auto-scroll if new messages arrived and user is not scrolling up
     if (currentLength > previousLength || previousLength === 0) {
-      if (!isUserScrollingRef.current) {
-        requestAnimationFrame(() => {
+      const isFirstLoad = previousLength === 0;
+      // On first load, ALWAYS scroll (ignore isUserScrollingRef)
+      if (isFirstLoad || !isUserScrollingRef.current) {
+        setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({
-            behavior: previousLength === 0 ? "instant" : "smooth"
+            behavior: isFirstLoad ? "instant" : "smooth"
           });
-        });
+          if (isFirstLoad) {
+            isUserScrollingRef.current = false;
+          }
+        }, 50);
       }
     }
     
@@ -172,9 +176,9 @@ export function FloatingChat() {
   useEffect(() => {
     previousMessagesLengthRef.current = 0;
     isUserScrollingRef.current = false;
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
-    });
+    }, 80);
   }, [activeConversation?.id]);
 
   // Pre-fill message from pendingMessage when conversation is active
@@ -668,7 +672,7 @@ export function FloatingChat() {
     </div>;
   const MessagesView = () => <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
       <ScrollArea className="flex-1" onScrollCapture={handleScrollArea}>
-        <div className="px-3 py-3 w-full max-w-full min-w-0 overflow-hidden">
+        <div className="px-3 py-3 w-full max-w-full min-w-0 overflow-hidden overflow-x-hidden">
           {loadingMessages ? <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12">

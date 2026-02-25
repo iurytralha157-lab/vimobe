@@ -76,7 +76,7 @@ export function MessageBubble({
   const audioRef = useRef<HTMLAudioElement>(null);
   
   // Waveform bars generated from mediaUrl or sentAt as seed
-  const waveformBars = generateWaveform(mediaUrl || sentAt, 40);
+  const waveformBars = generateWaveform(mediaUrl || sentAt, 28);
 
   // Debug: Check media URL accessibility
   useEffect(() => {
@@ -252,7 +252,7 @@ export function MessageBubble({
 
   const renderMediaPending = () => (
     <div className={cn(
-      "flex items-center gap-3 p-4 rounded-md animate-pulse min-w-[200px]",
+      "flex items-center gap-3 p-4 rounded-md animate-pulse min-w-[180px]",
       fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
     )}>
       <Loader2 className="w-5 h-5 animate-spin opacity-70" />
@@ -265,7 +265,7 @@ export function MessageBubble({
 
   const renderMediaFailed = () => (
     <div className={cn(
-      "flex flex-col items-center gap-2 p-4 rounded-md min-w-[200px]",
+      "flex flex-col items-center gap-2 p-4 rounded-md min-w-[180px]",
       fromMe ? "bg-destructive/10" : "bg-destructive/10"
     )}>
       <AlertCircle className="w-6 h-6 text-destructive" />
@@ -307,7 +307,7 @@ export function MessageBubble({
       if (audioError) {
         return (
           <div className={cn(
-            "flex flex-col gap-2 py-2 px-2 min-w-[260px]",
+            "flex flex-col gap-2 py-2 px-2 min-w-0 w-full",
           )}>
             <div className="flex items-center gap-3">
               <div className={cn(
@@ -344,7 +344,7 @@ export function MessageBubble({
       
       return (
         <div className={cn(
-          "flex items-center gap-2 py-1.5 px-2 min-w-[280px]",
+          "flex items-center gap-2 py-1.5 px-2 min-w-0 w-full",
         )}>
           {/* Speed Control Button - only show when playing or has progress */}
           <button
@@ -598,7 +598,7 @@ export function MessageBubble({
         return (
           <div 
             className={cn(
-              "flex items-center gap-2 p-2 rounded-md transition-colors min-w-[220px]",
+              "flex items-center gap-2 p-2 rounded-md transition-colors min-w-0 w-full",
               hasValidMedia ? "cursor-pointer" : "",
               fromMe 
                 ? "bg-primary-foreground/10 hover:bg-primary-foreground/20" 
