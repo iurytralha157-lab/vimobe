@@ -1,71 +1,76 @@
 
-# Corrigir Baloes de Chat Cortados e Scroll Indo ao Topo
+# Migrar Fotos do WordPress Automaticamente
 
-## Problemas Identificados
+## Contexto
+- O site **queroumimovel.com.br** esta online e com todas as fotos acessiveis
+- Existem **23 imoveis** da organizacao "Carlos Minami" no banco, todos SEM fotos (`imagem_principal = null`, `fotos = []`)
+- A edge function `migrate-wp-images` ja existe, mas precisa de um mapeamento manual `property_id -> wp_page_url`
 
-### 1. Baloes cortados nas laterais
-Os componentes de audio e documento dentro do `MessageBubble` tem `min-w-[280px]` e `min-w-[220px]`, que podem ultrapassar o `max-w-[75%]` do container (especialmente no FloatingChat de 420px onde 75% = 315px). Combinado com `overflow-hidden` no balao, isso causa o corte visual.
+## Estrategia
 
-### 2. Scroll vai para o topo ao abrir conversa
-O efeito que roda ao trocar de conversa (linha 172-178) faz `scrollIntoView` antes das mensagens carregarem. Quando as mensagens chegam, o ScrollArea dispara eventos de scroll durante o render, setando `isUserScrollingRef.current = true` (porque o usuario esta no topo, nao no fundo). Isso impede o auto-scroll posterior que deveria levar ao fundo.
+Criar uma **nova edge function `auto-migrate-wp-images`** que faz tudo automaticamente:
 
-## Solucao
+1. Busca todos os imoveis da organizacao Minami sem fotos
+2. Para cada imovel, gera a URL provavel do WordPress baseada no titulo (o WP usa slugs derivados do titulo)
+3. Acessa a pagina individual do imovel no WordPress
+4. Faz scraping das imagens full-size (ignorando thumbnails e logos)
+5. Baixa cada imagem e faz upload para o Supabase Storage
+6. Atualiza o banco com `imagem_principal` e `fotos`
 
-### Arquivo: `src/components/whatsapp/MessageBubble.tsx`
+### Mapeamento Titulo -> URL
 
-1. **Trocar `min-w-[280px]` por `min-w-0 w-full`** no audio player (linha 347) -- deixar o waveform se adaptar ao container
-2. **Trocar `min-w-[260px]` por `min-w-0 w-full`** no fallback de audio com erro (linha 305)
-3. **Trocar `min-w-[220px]` por `min-w-0 w-full`** no documento (linha 583)
-4. **Trocar `min-w-[200px]` por `min-w-[180px]`** nos estados de pending/failed/image fallback
-5. **Reduzir waveform bars de 40 para 28** para caber melhor em telas menores
+Os titulos no banco batem com as URLs do WordPress. Exemplos encontrados:
 
-### Arquivo: `src/components/chat/FloatingChat.tsx`
+| Titulo no Banco | URL no WordPress |
+|---|---|
+| Helbor Alegria Patteo Mogilar | /imoveis/helbor-alegria/ |
+| Condominio Mosaico Essence - Cod Fab01 | /imoveis/condominio-mosaico-essence-em-mogi-das-cruzes-cod-fab01/ |
+| Condominio Real Park - Aruja/SP - PQ Ilha Grande | /imoveis/casa-condominio-real-park-aruja-sp-casa-pq-ilha-grande-cod-atra_109613/ |
 
-1. **Corrigir scroll para baixo**: No efeito de troca de conversa (linha 172-178), usar um `setTimeout` com delay para garantir que as mensagens ja renderizaram antes de fazer scroll
-2. **Proteger contra scroll events falsos**: No efeito de mensagens novas (linha 152-169), quando `previousLength === 0` (primeira carga), forcar scroll sem checar `isUserScrollingRef` -- e so comecar a respeitar o flag apos a primeira carga
-3. **Adicionar `overflow-x-hidden`** no container de mensagens (linha 671) para prevenir scroll horizontal
+Como os titulos NAO correspondem exatamente aos slugs, a funcao vai:
+1. Primeiro, buscar a pagina de listagem (`/imoveis/`) e extrair TODOS os links de imoveis
+2. Para cada imovel no banco, tentar encontrar a URL mais similar por fuzzy matching do titulo
+3. Entrar na pagina do imovel e baixar as fotos
 
-### Detalhes tecnicos
+### Arquivo: `supabase/functions/auto-migrate-wp-images/index.ts`
 
-**MessageBubble - Audio player (linha 347):**
-```
-// De:
-"flex items-center gap-2 py-1.5 px-2 min-w-[280px]"
-// Para:
-"flex items-center gap-2 py-1.5 px-2 min-w-0 w-full"
-```
+Nova edge function que:
+- Recebe apenas `organization_id` (sem necessidade de mapeamento manual)
+- Faz crawling automatico do site WP para descobrir todas as paginas de imoveis
+- Usa fuzzy matching para mapear titulos do banco com URLs do WP
+- Baixa e faz upload das imagens para o storage `properties`
+- Atualiza `imagem_principal` e `fotos` no banco
+- Retorna relatorio detalhado do resultado
 
-**FloatingChat - Scroll fix (linhas 152-178):**
-```typescript
-// Efeito de mensagens novas - forcar scroll na primeira carga
-useEffect(() => {
-  const currentLength = messages?.length || 0;
-  const previousLength = previousMessagesLengthRef.current;
-  
-  if (currentLength > previousLength || previousLength === 0) {
-    // Na primeira carga, SEMPRE scrollar (ignorar isUserScrollingRef)
-    const isFirstLoad = previousLength === 0;
-    if (isFirstLoad || !isUserScrollingRef.current) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({
-          behavior: isFirstLoad ? "instant" : "smooth"
-        });
-        // Resetar flag apos primeira carga
-        if (isFirstLoad) {
-          isUserScrollingRef.current = false;
-        }
-      }, 50);
-    }
-  }
-  
-  previousMessagesLengthRef.current = currentLength;
-}, [messages?.length]);
+### Arquivo: `supabase/config.toml`
+
+Adicionar configuracao da nova funcao com `verify_jwt = false`.
+
+### Execucao
+
+Apos deploy, chamar a funcao via curl passando apenas:
+```json
+{
+  "organization_id": "30933022-a796-435e-8579-b1a02f70a822",
+  "wp_base_url": "https://queroumimovel.com.br"
+}
 ```
 
-**FloatingChat - Container de mensagens (linha 671):**
-```
-// De:
-"px-3 py-3 w-full max-w-full min-w-0 overflow-hidden"
-// Para:
-"px-3 py-3 w-full max-w-full min-w-0 overflow-hidden overflow-x-hidden"
-```
+## Detalhes Tecnicos
+
+### Fuzzy Matching
+- Normalizar ambos os textos (remover acentos, lowercase, remover caracteres especiais)
+- Comparar tokens comuns entre titulo do banco e texto do link WP
+- Usar score de similaridade (% de tokens em comum)
+- Threshold minimo de 60% para aceitar o match
+
+### Scraping de Imagens
+- Reutilizar a logica ja existente em `migrate-wp-images` para extrair imagens do `wp-content/uploads`
+- Filtrar thumbnails (padroes `-NNNxNNN.ext`)
+- Filtrar logos e elementos do site
+- Limitar galeria a 15 fotos por imovel
+
+### Storage
+- Path: `orgs/{org_id}/properties/{property_id}/main.{ext}` e `gallery-{i}.{ext}`
+- Bucket: `properties` (ja existente)
+- Upsert para nao duplicar
