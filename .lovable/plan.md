@@ -1,29 +1,23 @@
 
-# Adicionar Telefone 2 no Formulario de Cadastro Telecom
 
-## Resumo
-O formulario de criacao de lead/cliente telecom (`CreateLeadDialog.tsx`) nao possui o campo "Telefone 2". Os outros formularios (edicao de cliente e aba de contrato) ja tem esse campo. A correcao e simples: adicionar o campo no formulario de criacao.
+# Igualar altura do grafico de Evolucao com o Funil
 
-## O que sera feito
+## Problema
+O card "Evolucao de Negocios" tem uma altura fixa de 250-300px para o grafico, enquanto o Funil ao lado cresce dinamicamente. Isso causa um espaco vazio grande abaixo do grafico quando o funil e maior.
 
-### Arquivo: `src/components/leads/CreateLeadDialog.tsx`
+## Solucao
+Remover a altura fixa do container do grafico e usar `flex-1` para que ele preencha todo o espaco disponivel do card, acompanhando a altura do funil automaticamente via CSS Grid.
 
-1. **Adicionar `phone2` no estado do formulario** (`getEmptyFormData`): incluir `phone2: ''`
-2. **Adicionar campo de input** no bloco telecom da aba "Basico", logo abaixo do campo WhatsApp e acima do checkbox de portabilidade
-3. **Passar `phone2` para o `upsertTelecomCustomer`** no `handleSubmit`, que ja aceita esse campo
+### Arquivo: `src/components/dashboard/DealsEvolutionChart.tsx`
 
-### Detalhes tecnicos
-
-No `getEmptyFormData` (linha ~71), adicionar:
+Trocar o container do grafico de:
 ```
-phone2: '',
+<div className="min-h-[250px] h-[250px] sm:h-[300px]">
 ```
-
-No JSX telecom (apos o campo WhatsApp, linha ~352), adicionar um campo PhoneInput para Telefone 2.
-
-No `handleSubmit` (linha ~221), passar `phone2`:
+Para:
 ```
-phone2: formData.phone2 || null,
+<div className="flex-1 min-h-[200px]">
 ```
 
-Nenhuma alteracao de banco de dados necessaria -- a coluna `phone2` ja existe na tabela `telecom_customers`.
+Isso faz o `ResponsiveContainer` do Recharts preencher toda a altura disponivel, igualando automaticamente com o card do funil ao lado no grid.
+
