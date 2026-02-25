@@ -1,76 +1,32 @@
 
-# Migrar Fotos do WordPress Automaticamente
+# Duplicar Imovel CA0001 como Mostruario
 
-## Contexto
-- O site **queroumimovel.com.br** esta online e com todas as fotos acessiveis
-- Existem **23 imoveis** da organizacao "Carlos Minami" no banco, todos SEM fotos (`imagem_principal = null`, `fotos = []`)
-- A edge function `migrate-wp-images` ja existe, mas precisa de um mapeamento manual `property_id -> wp_page_url`
+## O que sera feito
+Criar **12 copias** do imovel CA0001 (Casa alto padrao) da organizacao Vetter Coponto, com codigos CA0002 ate CA0013. Cada copia tera pequenas variacoes para parecer um catalogo real:
 
-## Estrategia
+| Codigo | Titulo | Quartos | Suites | Banheiros | Area | Preco | Bairro |
+|--------|--------|---------|--------|-----------|------|-------|--------|
+| CA0002 | Casa moderna de 3 suites em Valparaiso | 3 | 3 | 4 | 250m | R$ 1.850.000 | Jardins |
+| CA0003 | Sobrado de luxo com piscina em Rio das Ostras | 5 | 5 | 6 | 350m | R$ 2.800.000 | Village |
+| CA0004 | Casa em condominio fechado 4 quartos | 4 | 3 | 4 | 280m | R$ 1.950.000 | Centro |
+| CA0005 | Residencia premium com area gourmet | 4 | 4 | 5 | 320m | R$ 2.450.000 | Recreio |
+| CA0006 | Casa terrea moderna 3 suites | 3 | 3 | 3 | 220m | R$ 1.650.000 | Extensao do Bosque |
+| CA0007 | Mansao contemporanea 5 quartos | 5 | 4 | 6 | 400m | R$ 3.200.000 | Village |
+| CA0008 | Casa duplex 4 suites com vista | 4 | 4 | 5 | 290m | R$ 2.100.000 | Jardim Marilea |
+| CA0009 | Casa planejada 3 quartos em condominio | 3 | 2 | 3 | 200m | R$ 1.450.000 | Parque das Flores |
+| CA0010 | Residencia de alto padrao 4 suites | 4 | 4 | 5 | 310m | R$ 2.350.000 | Centro |
+| CA0011 | Casa com piscina e churrasqueira 5 quartos | 5 | 3 | 5 | 360m | R$ 2.650.000 | Village |
+| CA0012 | Casa moderna minimalista 3 suites | 3 | 3 | 4 | 240m | R$ 1.750.000 | Recreio |
+| CA0013 | Casa ampla com jardim 4 quartos | 4 | 3 | 4 | 275m | R$ 1.900.000 | Extensao do Bosque |
 
-Criar uma **nova edge function `auto-migrate-wp-images`** que faz tudo automaticamente:
+## Detalhes
+- Todos usarao as **mesmas fotos** do CA0001 (imagem principal + galeria)
+- Tipo: Casa / Venda
+- Cidade: Rio das Ostras / UF: RJ
+- Status: ativo
+- Descricao similar adaptada
+- Sequencia `property_sequences` sera atualizada para `last_number = 13`
 
-1. Busca todos os imoveis da organizacao Minami sem fotos
-2. Para cada imovel, gera a URL provavel do WordPress baseada no titulo (o WP usa slugs derivados do titulo)
-3. Acessa a pagina individual do imovel no WordPress
-4. Faz scraping das imagens full-size (ignorando thumbnails e logos)
-5. Baixa cada imagem e faz upload para o Supabase Storage
-6. Atualiza o banco com `imagem_principal` e `fotos`
-
-### Mapeamento Titulo -> URL
-
-Os titulos no banco batem com as URLs do WordPress. Exemplos encontrados:
-
-| Titulo no Banco | URL no WordPress |
-|---|---|
-| Helbor Alegria Patteo Mogilar | /imoveis/helbor-alegria/ |
-| Condominio Mosaico Essence - Cod Fab01 | /imoveis/condominio-mosaico-essence-em-mogi-das-cruzes-cod-fab01/ |
-| Condominio Real Park - Aruja/SP - PQ Ilha Grande | /imoveis/casa-condominio-real-park-aruja-sp-casa-pq-ilha-grande-cod-atra_109613/ |
-
-Como os titulos NAO correspondem exatamente aos slugs, a funcao vai:
-1. Primeiro, buscar a pagina de listagem (`/imoveis/`) e extrair TODOS os links de imoveis
-2. Para cada imovel no banco, tentar encontrar a URL mais similar por fuzzy matching do titulo
-3. Entrar na pagina do imovel e baixar as fotos
-
-### Arquivo: `supabase/functions/auto-migrate-wp-images/index.ts`
-
-Nova edge function que:
-- Recebe apenas `organization_id` (sem necessidade de mapeamento manual)
-- Faz crawling automatico do site WP para descobrir todas as paginas de imoveis
-- Usa fuzzy matching para mapear titulos do banco com URLs do WP
-- Baixa e faz upload das imagens para o storage `properties`
-- Atualiza `imagem_principal` e `fotos` no banco
-- Retorna relatorio detalhado do resultado
-
-### Arquivo: `supabase/config.toml`
-
-Adicionar configuracao da nova funcao com `verify_jwt = false`.
-
-### Execucao
-
-Apos deploy, chamar a funcao via curl passando apenas:
-```json
-{
-  "organization_id": "30933022-a796-435e-8579-b1a02f70a822",
-  "wp_base_url": "https://queroumimovel.com.br"
-}
-```
-
-## Detalhes Tecnicos
-
-### Fuzzy Matching
-- Normalizar ambos os textos (remover acentos, lowercase, remover caracteres especiais)
-- Comparar tokens comuns entre titulo do banco e texto do link WP
-- Usar score de similaridade (% de tokens em comum)
-- Threshold minimo de 60% para aceitar o match
-
-### Scraping de Imagens
-- Reutilizar a logica ja existente em `migrate-wp-images` para extrair imagens do `wp-content/uploads`
-- Filtrar thumbnails (padroes `-NNNxNNN.ext`)
-- Filtrar logos e elementos do site
-- Limitar galeria a 15 fotos por imovel
-
-### Storage
-- Path: `orgs/{org_id}/properties/{property_id}/main.{ext}` e `gallery-{i}.{ext}`
-- Bucket: `properties` (ja existente)
-- Upsert para nao duplicar
+## Tecnico
+- 12 INSERTs na tabela `properties` via ferramenta de dados
+- 1 UPDATE na tabela `property_sequences` para refletir o ultimo codigo gerado
