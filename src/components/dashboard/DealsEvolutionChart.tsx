@@ -132,7 +132,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
       </CardHeader>
       <CardContent className="pb-4 flex-1 flex flex-col">
         {/* Chart */}
-        <div className="min-h-[250px] h-[250px] sm:h-[300px]">
+        <div className="flex-1 min-h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
