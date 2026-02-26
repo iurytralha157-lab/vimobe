@@ -1,32 +1,66 @@
 
-# Duplicar Imovel CA0001 como Mostruario
 
-## O que sera feito
-Criar **12 copias** do imovel CA0001 (Casa alto padrao) da organizacao Vetter Coponto, com codigos CA0002 ate CA0013. Cada copia tera pequenas variacoes para parecer um catalogo real:
+# Painel Lateral de Lead na Pagina de Conversas (Desktop)
 
-| Codigo | Titulo | Quartos | Suites | Banheiros | Area | Preco | Bairro |
-|--------|--------|---------|--------|-----------|------|-------|--------|
-| CA0002 | Casa moderna de 3 suites em Valparaiso | 3 | 3 | 4 | 250m | R$ 1.850.000 | Jardins |
-| CA0003 | Sobrado de luxo com piscina em Rio das Ostras | 5 | 5 | 6 | 350m | R$ 2.800.000 | Village |
-| CA0004 | Casa em condominio fechado 4 quartos | 4 | 3 | 4 | 280m | R$ 1.950.000 | Centro |
-| CA0005 | Residencia premium com area gourmet | 4 | 4 | 5 | 320m | R$ 2.450.000 | Recreio |
-| CA0006 | Casa terrea moderna 3 suites | 3 | 3 | 3 | 220m | R$ 1.650.000 | Extensao do Bosque |
-| CA0007 | Mansao contemporanea 5 quartos | 5 | 4 | 6 | 400m | R$ 3.200.000 | Village |
-| CA0008 | Casa duplex 4 suites com vista | 4 | 4 | 5 | 290m | R$ 2.100.000 | Jardim Marilea |
-| CA0009 | Casa planejada 3 quartos em condominio | 3 | 2 | 3 | 200m | R$ 1.450.000 | Parque das Flores |
-| CA0010 | Residencia de alto padrao 4 suites | 4 | 4 | 5 | 310m | R$ 2.350.000 | Centro |
-| CA0011 | Casa com piscina e churrasqueira 5 quartos | 5 | 3 | 5 | 360m | R$ 2.650.000 | Village |
-| CA0012 | Casa moderna minimalista 3 suites | 3 | 3 | 4 | 240m | R$ 1.750.000 | Recreio |
-| CA0013 | Casa ampla com jardim 4 quartos | 4 | 3 | 4 | 275m | R$ 1.900.000 | Extensao do Bosque |
+## O que muda
+Adicionar um painel lateral direito na pagina de Conversas (desktop only) que exibe informacoes do lead vinculado a conversa selecionada. Aparece somente quando a conversa tem um lead associado.
 
-## Detalhes
-- Todos usarao as **mesmas fotos** do CA0001 (imagem principal + galeria)
-- Tipo: Casa / Venda
-- Cidade: Rio das Ostras / UF: RJ
-- Status: ativo
-- Descricao similar adaptada
-- Sequencia `property_sequences` sera atualizada para `last_number = 13`
+## Layout
 
-## Tecnico
-- 12 INSERTs na tabela `properties` via ferramenta de dados
-- 1 UPDATE na tabela `property_sequences` para refletir o ultimo codigo gerado
+```text
++------------------+---------------------------+----------------+
+|  Lista Conversas |      Area do Chat         | Painel Lead    |
+|    (350px)       |      (flex-1)             |   (300px)      |
+|                  |                           |                |
+|                  |  Header                   | Avatar + Nome  |
+|                  |  Mensagens                | Telefone       |
+|                  |  Input                    | Email          |
+|                  |                           | Cidade/UF      |
+|                  |                           | Estagio        |
+|                  |                           | Tags           |
+|                  |                           | Acoes rapidas  |
++------------------+---------------------------+----------------+
+```
+
+- Sem lead: painel nao aparece, chat ocupa todo o espaco
+- Com lead: painel de ~300px aparece a direita com animacao suave
+- Mobile: sem painel (tela muito pequena)
+
+## Dados extras necessarios
+
+A query de conversas ja traz `lead.id, name, pipeline, stage, tags`. Para exibir email, telefone, cidade, etc., criaremos um **hook simples** `useConversationLeadDetail` que busca os campos extras do lead quando o painel esta visivel.
+
+## Componentes
+
+### 1. Novo hook: `src/hooks/use-conversation-lead-detail.ts`
+- Query simples: `leads` por ID, trazendo `email, phone, cidade, uf, source, created_at, valor_pretendido`
+- Habilitado apenas quando `leadId` existe
+
+### 2. Novo componente: `src/components/whatsapp/ConversationLeadPanel.tsx`
+- Reutiliza a estrutura visual do `LeadSidePanel` existente mas adaptado para o contexto de conversas
+- Secoes:
+  - **Cabecalho**: Avatar, nome, telefone
+  - **Contato**: email, telefone, cidade/UF
+  - **Estagio**: badge com cor do estagio atual + nome do pipeline
+  - **Tags**: tags do lead com cores
+  - **Valor**: valor pretendido (se houver)
+  - **Acoes**: botao "Ver Lead Completo" (link para pipeline), "Agendar Atividade"
+  - **Data criacao**: quando o lead foi criado
+- Botao de fechar (X) que colapsa o painel
+- Toggle via botao no header do chat
+
+### 3. Alteracao: `src/pages/Conversations.tsx` (desktop layout)
+- Adicionar estado `showLeadPanel` (default: true)
+- Quando `selectedConversation.lead` existe, renderizar o `ConversationLeadPanel` a direita
+- Adicionar botao no header para toggle do painel
+- Ajuste no layout flex para acomodar o terceiro painel
+
+### 4. Alteracao: `src/components/whatsapp/ConversationHeader.tsx`
+- Adicionar prop `onToggleLeadPanel` e `showLeadPanel`
+- Renderizar botao de toggle (icone de painel lateral) ao lado dos botoes existentes
+
+## Detalhes visuais
+- Painel com `border-l`, fundo `bg-card`
+- Transicao suave com `transition-all duration-300`
+- ScrollArea para conteudo que excede a altura
+- Consistente com o design do `LeadSidePanel` ja existente
