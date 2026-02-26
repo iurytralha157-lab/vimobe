@@ -13,6 +13,7 @@ import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { CreateLeadDialog } from "@/components/conversations/CreateLeadDialog";
 import { ConversationHeader } from "@/components/whatsapp/ConversationHeader";
+import { ConversationLeadPanel } from "@/components/whatsapp/ConversationLeadPanel";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { useWhatsAppConversations, useWhatsAppMessages, useSendWhatsAppMessage, useMarkConversationAsRead, useWhatsAppRealtimeConversations, useArchiveConversation, useDeleteConversation, WhatsAppConversation } from "@/hooks/use-whatsapp-conversations";
@@ -71,6 +72,7 @@ export default function Conversations() {
     phone?: string;
     name?: string;
   }>({});
+  const [showLeadPanel, setShowLeadPanel] = useState(true);
   useWhatsAppRealtimeConversations();
 
   // Save hide groups preference
@@ -499,6 +501,8 @@ export default function Conversations() {
                   });
                   setCreateLeadOpen(true);
                 }}
+                onToggleLeadPanel={() => setShowLeadPanel(prev => !prev)}
+                showLeadPanel={showLeadPanel}
               />
 
               {/* Mensagens */}
@@ -570,6 +574,15 @@ export default function Conversations() {
               <p className="text-sm">para começar a enviar mensagens</p>
             </div>}
         </main>
+
+        {/* Lead Side Panel - Desktop only */}
+        {selectedConversation?.lead?.id && showLeadPanel && (
+          <ConversationLeadPanel
+            leadId={selectedConversation.lead.id}
+            onClose={() => setShowLeadPanel(false)}
+            className="w-[300px] min-w-[300px] max-w-[300px] shrink-0 animate-in slide-in-from-right-5 duration-300"
+          />
+        )}
       </div>
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />

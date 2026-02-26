@@ -23,7 +23,9 @@ import {
   Users,
   ExternalLink,
   UserPlus,
-  ArrowRight
+  ArrowRight,
+  PanelRightOpen,
+  PanelRightClose
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
@@ -52,6 +54,8 @@ interface ConversationHeaderProps {
   onArchive?: () => void;
   onDelete?: () => void;
   onCreateLead?: () => void;
+  onToggleLeadPanel?: () => void;
+  showLeadPanel?: boolean;
   className?: string;
 }
 
@@ -70,6 +74,8 @@ export function ConversationHeader({
   onArchive,
   onDelete,
   onCreateLead,
+  onToggleLeadPanel,
+  showLeadPanel,
   className
 }: ConversationHeaderProps) {
   const displayName = contactName && contactName !== contactPhone 
@@ -239,6 +245,12 @@ export function ConversationHeader({
           </Button>
         )}
         
+        {onToggleLeadPanel && leadId && (
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleLeadPanel} title={showLeadPanel ? "Fechar painel" : "Abrir painel do lead"}>
+            {showLeadPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          </Button>
+        )}
+
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Phone className="w-4 h-4" />
         </Button>
