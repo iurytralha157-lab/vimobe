@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useFloatingChat } from "@/contexts/FloatingChatContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -61,7 +62,7 @@ export function FloatingChat() {
   const [pendingStartData, setPendingStartData] = useState<{phone: string, leadName?: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
  const previousMessagesLengthRef = useRef<number>(0);
  const isUserScrollingRef = useRef<boolean>(false);
   const {
@@ -294,7 +295,7 @@ export function FloatingChat() {
       text: textToSend
     });
   };
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -714,13 +715,14 @@ export function FloatingChat() {
         <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
           <Paperclip className="h-5 w-5" />
         </Button>
-        <Input 
+        <Textarea 
           ref={messageInputRef}
           placeholder="Digite sua mensagem..." 
           value={messageText} 
           onChange={(e) => setMessageText(e.target.value)} 
           onKeyDown={handleKeyPress} 
-          className={cn("flex-1", mobile ? "h-11" : "h-10")}
+          className={cn("flex-1 min-h-[40px] max-h-[120px] resize-none py-2", mobile ? "min-h-[44px]" : "")}
+          rows={1}
           autoComplete="off"
         />
         {messageText.trim() ? (
