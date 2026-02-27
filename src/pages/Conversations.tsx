@@ -374,7 +374,7 @@ export default function Conversations() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
-                  <Textarea placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={handleKeyPress} className="flex-1 min-h-[40px] max-h-[120px] resize-none py-2" rows={1} />
+                  <Textarea placeholder="Digite sua mensagem..." value={messageText} onChange={e => { setMessageText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'; }} onKeyDown={handleKeyPress} className="flex-1 min-h-[40px] max-h-[160px] resize-none py-2 overflow-y-auto" rows={1} />
                   <Button onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending} size="icon" className="h-10 w-10 shrink-0">
                     {sendMessage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </Button>
@@ -587,9 +587,9 @@ export default function Conversations() {
                   <Textarea 
                     placeholder="Digite sua mensagem..." 
                     value={messageText} 
-                    onChange={e => setMessageText(e.target.value)} 
+                    onChange={e => { setMessageText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'; }} 
                     onKeyDown={handleKeyPress} 
-                    className="flex-1 min-h-[40px] max-h-[120px] resize-none py-2" 
+                    className="flex-1 min-h-[40px] max-h-[160px] resize-none py-2 overflow-y-auto" 
                     rows={1}
                   />
                   {messageText.trim() ? (

@@ -719,9 +719,9 @@ export function FloatingChat() {
           ref={messageInputRef}
           placeholder="Digite sua mensagem..." 
           value={messageText} 
-          onChange={(e) => setMessageText(e.target.value)} 
+          onChange={(e) => { setMessageText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'; }} 
           onKeyDown={handleKeyPress} 
-          className={cn("flex-1 min-h-[40px] max-h-[120px] resize-none py-2", mobile ? "min-h-[44px]" : "")}
+          className={cn("flex-1 min-h-[40px] max-h-[160px] resize-none py-2 overflow-y-auto", mobile ? "min-h-[44px]" : "")}
           rows={1}
           autoComplete="off"
         />
