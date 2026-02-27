@@ -9,7 +9,7 @@ export function useConversationLeadDetail(leadId: string | null | undefined) {
         .from("leads")
         .select(`
           id, name, phone, email, cidade, uf, source, created_at, valor_interesse,
-          stage_id, pipeline_id,
+          stage_id, pipeline_id, deal_status,
           stage:stages(id, name, color),
           pipeline:pipelines(id, name),
           tags:lead_tags(tag:tags(id, name, color))
@@ -18,9 +18,17 @@ export function useConversationLeadDetail(leadId: string | null | undefined) {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Also fetch lead_meta for campaign info
+      const { data: meta } = await supabase
+        .from("lead_meta")
+        .select("*")
+        .eq("lead_id", leadId!)
+        .maybeSingle();
+
+      return { ...data, meta };
     },
     enabled: !!leadId,
-    staleTime: 30_000,
+    staleTime: 15_000,
   });
 }
