@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +40,8 @@ export default function Conversations() {
   const [showArchived, setShowArchived] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousMessagesLengthRef = useRef<number>(0);
+  const isUserScrollingRef = useRef<boolean>(false);
   const {
     data: sessions
   } = useAccessibleSessions();
@@ -79,11 +82,36 @@ export default function Conversations() {
   useEffect(() => {
     localStorage.setItem("whatsapp-hide-groups", String(hideGroups));
   }, [hideGroups]);
+  // Scroll to bottom only when new messages arrive (not on every re-render)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth"
-    });
-  }, [messages]);
+    const currentLength = messages?.length || 0;
+    const previousLength = previousMessagesLengthRef.current;
+    
+    if (currentLength > previousLength || previousLength === 0) {
+      const isFirstLoad = previousLength === 0;
+      if (isFirstLoad || !isUserScrollingRef.current) {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({
+            behavior: isFirstLoad ? "instant" : "smooth"
+          });
+          if (isFirstLoad) {
+            isUserScrollingRef.current = false;
+          }
+        }, 50);
+      }
+    }
+    
+    previousMessagesLengthRef.current = currentLength;
+  }, [messages?.length]);
+
+  // Reset scroll state when changing conversations
+  useEffect(() => {
+    previousMessagesLengthRef.current = 0;
+    isUserScrollingRef.current = false;
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    }, 80);
+  }, [selectedConversation?.id]);
   useEffect(() => {
     if (selectedConversation && selectedConversation.unread_count > 0) {
       markAsRead.mutate({
@@ -106,13 +134,14 @@ export default function Conversations() {
   }, [conversations, searchTerm]);
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return;
+    const textToSend = messageText.trim();
+    setMessageText("");
     await sendMessage.mutateAsync({
       conversation: selectedConversation,
-      text: messageText.trim()
+      text: textToSend
     });
-    setMessageText("");
   };
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -345,7 +374,7 @@ export default function Conversations() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
-                  <Input placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={handleKeyPress} className="flex-1 h-10" />
+                  <Textarea placeholder="Digite sua mensagem..." value={messageText} onChange={e => setMessageText(e.target.value)} onKeyDown={handleKeyPress} className="flex-1 min-h-[40px] max-h-[120px] resize-none py-2" rows={1} />
                   <Button onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending} size="icon" className="h-10 w-10 shrink-0">
                     {sendMessage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </Button>
@@ -507,7 +536,13 @@ export default function Conversations() {
 
               {/* Mensagens */}
               <div className="flex-1 overflow-hidden min-h-0">
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-full" onScrollCapture={(e: any) => {
+                  const target = e.currentTarget?.querySelector('[data-radix-scroll-area-viewport]') || e.currentTarget;
+                  if (target) {
+                    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
+                    isUserScrollingRef.current = !isAtBottom;
+                  }
+                }}>
                   <div className="p-4 space-y-2 bg-secondary">
                     {loadingMessages ? <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -549,12 +584,13 @@ export default function Conversations() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
-                  <Input 
+                  <Textarea 
                     placeholder="Digite sua mensagem..." 
                     value={messageText} 
                     onChange={e => setMessageText(e.target.value)} 
                     onKeyDown={handleKeyPress} 
-                    className="flex-1 h-10" 
+                    className="flex-1 min-h-[40px] max-h-[120px] resize-none py-2" 
+                    rows={1}
                   />
                   {messageText.trim() ? (
                     <Button onClick={handleSendMessage} disabled={sendMessage.isPending} size="icon" className="h-10 w-10 shrink-0">
