@@ -288,10 +288,10 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg">
+      <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-orange-600" />
+            <Upload className="h-5 w-5 text-primary" />
             Importar contatos
           </DialogTitle>
           <DialogDescription>
@@ -301,7 +301,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
         {importResult ? (
           <div className="py-8 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-orange-600 mx-auto" />
+            <CheckCircle2 className="h-16 w-16 text-primary mx-auto" />
             <div>
               <p className="text-lg font-medium">Importação concluída!</p>
               <p className="text-muted-foreground mt-1">
@@ -309,133 +309,125 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                 {importResult.failed > 0 && `, ${importResult.failed} falharam`}
               </p>
             </div>
-            <Button onClick={() => handleClose(false)}>
+            <Button onClick={() => handleClose(false)} className="rounded-xl">
               Fechar
             </Button>
           </div>
         ) : (
           <>
-            {/* Drop Zone */}
-            <div
-              className={cn(
-                "border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
-                isDragging ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20" : "border-border hover:border-orange-500/50",
-                file && "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
-              )}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                className="hidden"
-              />
-              
-              {file ? (
-                <div className="space-y-2">
-                  <FileSpreadsheet className="h-10 w-10 text-orange-600 mx-auto" />
-                  <p className="font-medium">{file.name}</p>
-                  <p className="text-sm text-muted-foreground">{parsedData.length} contatos encontrados</p>
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+              {/* Drop Zone */}
+              <div
+                className={cn(
+                  "border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer",
+                  isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+                  file && "border-primary bg-primary/5"
+                )}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                  className="hidden"
+                />
+                
+                {file ? (
+                  <div className="space-y-1.5">
+                    <FileSpreadsheet className="h-8 w-8 text-primary mx-auto" />
+                    <p className="font-medium text-sm truncate">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">{parsedData.length} contatos encontrados</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Upload className="h-8 w-8 text-primary mx-auto" />
+                    <p className="font-medium text-sm">Arraste um arquivo ou clique para selecionar</p>
+                    <p className="text-xs text-muted-foreground">.xlsx, .xls, .csv</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Pipeline Selection */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pipeline *</Label>
+                <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Escolha a pipeline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pipelines.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Importados para o primeiro estágio desta pipeline
+                </p>
+              </div>
+
+              {/* Source + Assignee in grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Origem *</Label>
+                  <Select value={selectedSource} onValueChange={setSelectedSource}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Origem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sourceOptions.map(s => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <Upload className="h-10 w-10 text-orange-600 mx-auto" />
-                  <p className="font-medium">Arraste e solte um arquivo aqui, ou clique para selecionar</p>
-                  <p className="text-sm text-muted-foreground">Formatos suportados: .xlsx, .xls, .csv</p>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Responsável</Label>
+                  <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Nenhum" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                      {users.map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Pipeline Selection */}
-            <div className="space-y-2">
-              <Label>Selecione uma Pipeline *</Label>
-              <Select value={selectedPipeline} onValueChange={setSelectedPipeline}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha a pipeline para os contatos" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pipelines.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Os contatos serão importados para o primeiro estágio desta pipeline
-              </p>
-            </div>
-
-            {/* Source Selection */}
-            <div className="space-y-2">
-              <Label>Origem dos leads *</Label>
-              <Select value={selectedSource} onValueChange={setSelectedSource}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a origem" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sourceOptions.map(s => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Assignee Selection */}
-            <div className="space-y-2">
-              <Label>Responsável (opcional)</Label>
-              <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sem responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem responsável</SelectItem>
-                  {users.map(u => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
-              <p className="text-muted-foreground">
-                A planilha deve conter colunas com os títulos: <strong>'nome'</strong> (obrigatório) e opcionais como
-                'telefone', 'email', 'mensagem'.
-              </p>
-              
-              <div className="flex items-center justify-center">
-                <div className="text-center space-y-2">
-                  <p className="text-muted-foreground flex items-center gap-2 justify-center">
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Precisa de um exemplo?
-                  </p>
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="bg-orange-600 hover:bg-orange-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      downloadSample();
-                    }}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Baixar exemplo
-                  </Button>
-                </div>
+              {/* Instructions */}
+              <div className="bg-muted/50 rounded-xl p-3 text-xs space-y-2">
+                <p className="text-muted-foreground">
+                  Colunas: <strong>'nome'</strong> (obrigatório), 'telefone', 'email', 'mensagem' (opcionais).
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full h-8 text-xs rounded-xl"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadSample();
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Baixar planilha exemplo
+                </Button>
               </div>
             </div>
 
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => handleClose(false)}>
+            <div className="flex gap-2 pt-4 border-t">
+              <Button variant="outline" className="w-[40%] rounded-xl" onClick={() => handleClose(false)}>
                 Cancelar
               </Button>
               <Button 
+                className="w-[60%] rounded-xl"
                 onClick={handleImport}
                 disabled={!file || !selectedPipeline || parsedData.length === 0 || isImporting}
-                className="bg-orange-600 hover:bg-orange-700"
               >
                 {isImporting ? (
                   <>
@@ -445,11 +437,11 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                 ) : (
                   <>
                     <Upload className="h-4 w-4 mr-2" />
-                    Importar
+                    Importar {parsedData.length > 0 ? `(${parsedData.length})` : ''}
                   </>
                 )}
               </Button>
-            </DialogFooter>
+            </div>
           </>
         )}
       </DialogContent>
