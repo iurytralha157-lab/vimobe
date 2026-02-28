@@ -861,6 +861,24 @@ export default function Pipelines() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Clear Filters Button */}
+                    {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs h-8"
+                        onClick={() => {
+                          setFilterUser(isAdmin || hasLeadViewAll ? 'all' : profile?.id);
+                          setFilterTag('all');
+                          setFilterDealStatus('all');
+                          setSearchQuery('');
+                        }}
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                        Limpar filtros
+                      </Button>
+                    )}
                   </div>
                 </PopoverContent>
               </Popover>
@@ -988,12 +1006,12 @@ export default function Pipelines() {
 
         {/* Kanban Board with Drag and Drop */}
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
-            <div className="flex gap-3 h-full min-w-max">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0 pb-2">
+            <div className="flex gap-3 h-full min-w-max px-1">
               {filteredStages.map((stage: any) => (
                 <div 
                   key={stage.id}
-                  className="w-72 flex-shrink-0 flex flex-col rounded-lg overflow-hidden h-full"
+                  className="w-[280px] sm:w-72 flex-shrink-0 flex flex-col rounded-lg overflow-hidden h-full"
                   style={{ backgroundColor: `${stage.color}08` }}
                 >
                   {/* Column Header */}
