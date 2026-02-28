@@ -3280,6 +3280,7 @@ export type Database = {
           updated_at: string
           vagas: number | null
           video_imovel: string | null
+          vista_codigo: string | null
         }
         Insert: {
           andar?: number | null
@@ -3326,6 +3327,7 @@ export type Database = {
           updated_at?: string
           vagas?: number | null
           video_imovel?: string | null
+          vista_codigo?: string | null
         }
         Update: {
           andar?: number | null
@@ -3372,6 +3374,7 @@ export type Database = {
           updated_at?: string
           vagas?: number | null
           video_imovel?: string | null
+          vista_codigo?: string | null
         }
         Relationships: [
           {
@@ -4801,6 +4804,56 @@ export type Database = {
             foreignKeyName: "users_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vista_integrations: {
+        Row: {
+          api_key: string
+          api_url: string
+          created_at: string | null
+          id: string
+          import_inactive: boolean | null
+          is_active: boolean | null
+          last_sync_at: string | null
+          organization_id: string
+          sync_log: Json | null
+          total_synced: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          api_url: string
+          created_at?: string | null
+          id?: string
+          import_inactive?: boolean | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id: string
+          sync_log?: Json | null
+          total_synced?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          api_url?: string
+          created_at?: string | null
+          id?: string
+          import_inactive?: boolean | null
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id?: string
+          sync_log?: Json | null
+          total_synced?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vista_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
