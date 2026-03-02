@@ -1,48 +1,93 @@
 
-## Correção: Mensagens WhatsApp não sendo registradas
 
-### Problema Identificado
+## Historico de Mensagens por Lead e Ajuste no First Response
 
-O webhook da Evolution API para a instancia `gabrielbrasil_81839_7pg` esta apontando para um **projeto Supabase errado**.
+### Resumo das Mudancas
 
-No arquivo `src/pages/WhatsAppSettings.tsx` (linha 68), a URL do webhook esta hardcoded como:
-```
-https://ulodfqdmoalttgbxrutj.supabase.co/functions/v1/evolution-webhook
-```
+Tres ajustes principais:
 
-O projeto correto e `iemalzlfnbouobyjwlwi`. Isso significa que quando o webhook e (re)configurado pela pagina de configuracoes, os eventos da Evolution API (mensagens recebidas, atualizacoes de status) vao para o projeto errado e nunca chegam ao banco de dados.
+1. **Remover first response do botao de WhatsApp** - O tempo de resposta so sera marcado quando uma mensagem for realmente enviada (ja acontece no `message-sender`) ou quando o webhook detectar envio pelo WhatsApp pessoal do corretor. Botoes de telefone e email continuam marcando pois nao temos controle sobre eles.
 
-As mensagens **enviadas** pelo app funcionam porque sao salvas diretamente pelo frontend via `evolution-proxy`. Mas mensagens **recebidas** dependem do webhook, que esta apontando pro lugar errado.
+2. **Aba de historico de mensagens no detalhe do lead** - Quem tem acesso ao lead podera ver todas as mensagens WhatsApp trocadas com aquele contato, independente de qual instancia/corretor enviou.
 
-### Solucao
+3. **Identificacao do remetente** - Cada mensagem enviada mostrara qual corretor enviou, usando o `session.owner_user_id` para identificar.
 
-**Arquivo:** `src/pages/WhatsAppSettings.tsx`
-- Substituir a URL hardcoded pela URL dinamica usando a variavel de ambiente `VITE_SUPABASE_URL`
-- Isso garante que o webhook sempre aponte para o projeto correto, mesmo se o projeto mudar
+---
+
+### Detalhes Tecnicos
+
+#### 1. Remover `recordFirstResponse` dos botoes de WhatsApp
+
+**Arquivos:**
+- `src/components/leads/LeadCard.tsx` - Remover `recordFirstResponse` de `handleWhatsAppClick`
+- `src/components/leads/LeadDetailDialog.tsx` - Remover `recordFirstResponse` de `handleQuickWhatsApp`
+
+O `message-sender` edge function ja chama `calculate-first-response` quando uma mensagem e realmente enviada (linhas 145-170). Isso garante que o first response so e marcado quando o corretor de fato envia uma mensagem, nao quando clica no botao.
+
+Para mensagens recebidas pelo webhook do WhatsApp pessoal do corretor, o `evolution-webhook` ja vincula conversas a leads. Precisaremos adicionar a chamada de `calculate-first-response` no webhook quando uma mensagem `from_me: true` for recebida para um lead vinculado (cobrindo o caso de envio pelo app nativo do WhatsApp).
+
+#### 2. Historico de mensagens no detalhe do lead
+
+**Novo hook:** `src/hooks/use-lead-messages.ts`
+- Busca todas as conversas (`whatsapp_conversations`) vinculadas ao `lead_id`
+- Busca todas as mensagens dessas conversas
+- Ordena cronologicamente
+- Inclui dados da sessao (instance_name, owner_user_id) para identificar quem enviou
+
+**Novo componente:** `src/components/leads/LeadMessagesTab.tsx`
+- Lista de mensagens estilo chat (bolhas)
+- Mensagens enviadas (from_me) mostram nome do corretor (via session owner)
+- Mensagens recebidas mostram nome do contato
+- Separadores de data entre mensagens
+- Suporte a midia (imagens, audio, documentos)
+
+**Arquivo modificado:** `src/components/leads/LeadDetailDialog.tsx`
+- Adicionar nova aba "Mensagens" nas tabs do lead detail
+- A aba so aparece se existirem conversas vinculadas ao lead
+
+#### 3. First response via webhook (mensagens do WhatsApp nativo)
+
+**Arquivo:** `supabase/functions/evolution-webhook/index.ts`
+- Na secao de processamento de mensagens `from_me: true`, verificar se a conversa tem `lead_id`
+- Se tiver, chamar `calculate-first-response` com o `owner_user_id` da sessao
+- Tambem marcar `first_touch_at` no lead (mesmo comportamento do `message-sender`)
+
+#### 4. Acesso baseado no lead (nao na sessao)
+
+A query de mensagens no novo hook usara o `lead_id` para buscar conversas, respeitando o acesso ao lead (quem pode ver o lead, pode ver as mensagens). Isso e diferente do acesso ao WhatsApp (sessao), que e restrito ao dono/autorizado.
 
 ```text
-ANTES:
-const webhookUrl = `https://ulodfqdmoalttgbxrutj.supabase.co/functions/v1/evolution-webhook`;
-
-DEPOIS:
-const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-webhook`;
+Fluxo de acesso:
+Lead acessivel -> Conversas vinculadas ao lead -> Mensagens dessas conversas
+(Nao depende de whatsapp_session_access)
 ```
 
-**Apos o deploy do codigo**, sera necessario **reconfigurar o webhook** para as instancias afetadas. Isso pode ser feito de duas formas:
-1. Pela pagina de configuracoes do WhatsApp, clicando em "Configurar Webhook" para cada instancia
-2. Ou desconectando e reconectando a instancia (que recria o webhook automaticamente via `evolution-proxy`)
-
-### Instancias Afetadas
-
-Todas as instancias que tiveram o webhook configurado pela pagina de configuracoes podem estar com a URL errada. A instancia `gabrielbrasil_81839_7pg` e uma delas confirmada.
-
-### Resumo Tecnico
+### Arquivos a Criar/Modificar
 
 ```text
-Arquivo modificado:
-1. src/pages/WhatsAppSettings.tsx
-   - Linha 68: Trocar URL hardcoded por import.meta.env.VITE_SUPABASE_URL
+CRIAR:
+1. src/hooks/use-lead-messages.ts
+   - Hook para buscar mensagens de todas as conversas de um lead
+   
+2. src/components/leads/LeadMessagesTab.tsx
+   - Componente de visualizacao do historico de mensagens do lead
 
-Acao pos-deploy:
-- Reconfigurar webhook em todas as instancias ativas via pagina de configuracoes
+MODIFICAR:
+3. src/components/leads/LeadCard.tsx
+   - Remover recordFirstResponse do handleWhatsAppClick
+
+4. src/components/leads/LeadDetailDialog.tsx
+   - Remover recordFirstResponse do handleQuickWhatsApp
+   - Adicionar aba "Mensagens" com LeadMessagesTab
+
+5. supabase/functions/evolution-webhook/index.ts
+   - Adicionar first response tracking para mensagens from_me via webhook
 ```
+
+### Comportamento Final
+
+- Corretor clica no botao WhatsApp no Kanban: abre chat, NAO marca first response
+- Corretor envia mensagem pelo sistema (FloatingChat): marca first response via `message-sender`
+- Corretor envia mensagem pelo WhatsApp nativo: webhook recebe, marca first response via `evolution-webhook`
+- Gestor/admin abre detalhe do lead: ve aba "Mensagens" com todo historico de conversas
+- Lead transferido para outro corretor: historico preservado, novo corretor ve tudo
