@@ -19,7 +19,7 @@ interface FloatingChatContextType {
   minimizeChat: () => void;
   maximizeChat: () => void;
   openConversation: (conversation: WhatsAppConversation) => void;
-  openNewChat: (phone: string, leadName?: string) => void;
+  openNewChat: (phone: string, leadName?: string, leadId?: string) => void;
   openNewChatWithMessage: (phone: string, message: string, leadId?: string, leadName?: string) => void;
   clearActiveConversation: () => void;
   clearPendingMessage: () => void;
@@ -79,10 +79,11 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
       activeConversation: conversation,
       pendingPhone: null,
       pendingLeadName: null,
+      pendingLeadId: null,
     }));
   }, []);
 
-  const openNewChat = useCallback((phone: string, leadName?: string) => {
+  const openNewChat = useCallback((phone: string, leadName?: string, leadId?: string) => {
     // Limpa o telefone para formato numérico
     const cleanPhone = phone.replace(/\D/g, "");
     setState((prev) => ({ 
@@ -93,7 +94,7 @@ export function FloatingChatProvider({ children }: { children: ReactNode }) {
       pendingPhone: cleanPhone,
       pendingLeadName: leadName || null,
       pendingMessage: null,
-      pendingLeadId: null,
+      pendingLeadId: leadId || null,
     }));
   }, []);
 

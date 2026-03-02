@@ -49,7 +49,8 @@ export function FloatingChat() {
     activeConversation,
     pendingPhone,
     pendingLeadName,
-    pendingMessage
+    pendingMessage,
+    pendingLeadId
   } = state;
   const isMobile = useIsMobile();
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
@@ -59,7 +60,7 @@ export function FloatingChat() {
     return localStorage.getItem("whatsapp-hide-groups-floating") === "true";
   });
   const [showSessionSelector, setShowSessionSelector] = useState(false);
-  const [pendingStartData, setPendingStartData] = useState<{phone: string, leadName?: string} | null>(null);
+  const [pendingStartData, setPendingStartData] = useState<{phone: string, leadName?: string, leadId?: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
@@ -141,14 +142,14 @@ export function FloatingChat() {
       if (connected.length === 1) {
         // Apenas uma sessão conectada: selecionar automaticamente
         setSelectedSessionId(connected[0].id);
-        handleStartConversation(pendingPhone, pendingLeadName || undefined);
+        handleStartConversation(pendingPhone, pendingLeadName || undefined, pendingLeadId || undefined);
       } else {
         // Múltiplas sessões conectadas: mostrar diálogo de seleção
-        setPendingStartData({ phone: pendingPhone, leadName: pendingLeadName || undefined });
+        setPendingStartData({ phone: pendingPhone, leadName: pendingLeadName || undefined, leadId: pendingLeadId || undefined });
         setShowSessionSelector(true);
       }
     }
-  }, [pendingPhone, sessions]);
+  }, [pendingPhone, pendingLeadName, pendingLeadId, sessions]);
 
   // Scroll to bottom only when new messages arrive
   useEffect(() => {
@@ -206,12 +207,12 @@ export function FloatingChat() {
     setSelectedSessionId(session.id);
     setShowSessionSelector(false);
     if (pendingStartData) {
-      handleStartConversationWithSession(pendingStartData.phone, session.id, pendingStartData.leadName);
+      handleStartConversationWithSession(pendingStartData.phone, session.id, pendingStartData.leadName, pendingStartData.leadId);
       setPendingStartData(null);
     }
   };
 
-  const handleStartConversation = async (phone: string, leadName?: string) => {
+  const handleStartConversation = async (phone: string, leadName?: string, leadId?: string) => {
     if (!selectedSessionId) {
       toast({
         title: "Nenhuma sessão WhatsApp",
@@ -220,13 +221,13 @@ export function FloatingChat() {
       });
       return;
     }
-    await handleStartConversationWithSession(phone, selectedSessionId, leadName);
+    await handleStartConversationWithSession(phone, selectedSessionId, leadName, leadId);
   };
 
-  const handleStartConversationWithSession = async (phone: string, sessionId: string, leadName?: string) => {
+  const handleStartConversationWithSession = async (phone: string, sessionId: string, leadName?: string, leadId?: string) => {
     try {
-      // Primeiro tenta encontrar conversa existente
-      const existing = await findConversation.mutateAsync(phone);
+      // Primeiro tenta encontrar conversa existente (prioriza conversa do lead)
+      const existing = await findConversation.mutateAsync({ phone, leadId });
       if (existing) {
         openConversation(existing);
         return;
@@ -236,6 +237,7 @@ export function FloatingChat() {
       const newConversation = await startConversation.mutateAsync({
         phone,
         sessionId,
+        leadId,
         leadName
       });
       openConversation(newConversation);
