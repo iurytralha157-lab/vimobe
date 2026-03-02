@@ -286,7 +286,7 @@ export function LeadDetailDialog({
         metadata: { channel: 'whatsapp' },
       });
     }
-    openNewChat(lead.phone, lead.name);
+    openNewChat(lead.phone, lead.name, lead.id);
   };
   
   const handleQuickEmail = () => {

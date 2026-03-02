@@ -90,12 +90,28 @@ export function useStartConversation() {
 
 export function useFindConversationByPhone() {
   return useMutation({
-    mutationFn: async (phone: string): Promise<WhatsAppConversation | null> => {
-      // Format with Brazil country code
+    mutationFn: async ({ phone, leadId }: { phone: string; leadId?: string }): Promise<WhatsAppConversation | null> => {
+      // 1) Se temos leadId, priorizar conversa já vinculada ao lead
+      if (leadId) {
+        const { data: byLead, error: byLeadError } = await supabase
+          .from("whatsapp_conversations")
+          .select(`
+            *,
+            session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+            lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
+          `)
+          .eq("lead_id", leadId)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(1);
+
+        if (byLeadError) throw byLeadError;
+        if (byLead?.[0]) {
+          return byLead[0] as WhatsAppConversation;
+        }
+      }
+
+      // 2) Fallback por telefone
       const cleanPhone = formatPhoneForWhatsApp(phone);
-      
-      // Buscar por telefone no remote_jid ou contact_phone
-      // Using array result with limit(1) instead of maybeSingle to avoid "Cannot coerce" error
       const { data, error } = await supabase
         .from("whatsapp_conversations")
         .select(`
@@ -104,12 +120,10 @@ export function useFindConversationByPhone() {
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .or(`remote_jid.ilike.%${cleanPhone}%,contact_phone.ilike.%${cleanPhone}%`)
-        .order("last_message_at", { ascending: false })
+        .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(1);
 
       if (error) throw error;
-      
-      // Return first result or null
       return (data?.[0] as WhatsAppConversation) || null;
     },
   });

@@ -140,7 +140,7 @@ export function LeadCard({
           metadata: { channel: 'whatsapp' },
         });
       }
-      openNewChat(lead.phone, lead.name);
+      openNewChat(lead.phone, lead.name, lead.id);
     }
   };
   const handleEmailClick = async (e: React.MouseEvent) => {
