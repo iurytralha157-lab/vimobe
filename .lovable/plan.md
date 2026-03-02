@@ -1,63 +1,48 @@
 
+## Correção: Mensagens WhatsApp não sendo registradas
 
-## Duas Melhorias no Painel Lateral de Conversas WhatsApp
+### Problema Identificado
 
-### 1. Botao de Link do Criativo na Seção de Campanha
+O webhook da Evolution API para a instancia `gabrielbrasil_81839_7pg` esta apontando para um **projeto Supabase errado**.
 
-Na seção "Origem" do `ConversationLeadPanel.tsx`, quando existir `meta.creative_url`, adicionar um botao "Ver Criativo" que abre o link em nova aba.
-
-**Arquivo:** `src/components/whatsapp/ConversationLeadPanel.tsx`
-- Importar icone `ExternalLink` do lucide-react
-- Depois do bloco de `meta.ad_name` (linha ~335), verificar se `meta.creative_url` existe
-- Renderizar um botao compacto com icone `ExternalLink` + texto "Ver Criativo" que faz `window.open(meta.creative_url, '_blank')`
-
-### 2. Adicionar Valor de Interesse, Imovel, Campanha e Observacoes no Painel
-
-**Arquivo:** `src/hooks/use-conversation-lead-detail.ts`
-- Adicionar `property_id`, `interest_property_id` na query do lead para poder vincular imoveis
-
-**Arquivo:** `src/components/whatsapp/ConversationLeadPanel.tsx`
-- Importar `useProperties` e `useUpdateLead`
-- Importar `Input`, `Select` components
-
-**Seção "Valor de Interesse" (editavel):**
-- Substituir a seção atual read-only por um campo `Input` com mascara de moeda pt-BR
-- Salvar via `updateLead.mutate` no `onBlur`
-
-**Seção "Imovel de Interesse":**
-- Adicionar um `Select` dropdown listando os imoveis da organizacao (via `useProperties`)
-- Ao selecionar um imovel, preencher automaticamente o valor de interesse com o preco do imovel (mesmo padrao do LeadDetailDialog)
-- Salvar imediatamente via `updateLead.mutate`
-
-**Seção "Campanha" (dentro da area de Origem):**
-- Ja existe mas apenas mostra nome da campanha e anuncio
-- Adicionar o botao do criativo conforme item 1
-
-**Seção "Observacoes do Contato":**
-- Abaixo da seção de Origem, se `meta.contact_notes` existir, exibir as observacoes em um card estilizado (similar ao padrao do `LeadTrackingSection`)
-
-### Detalhes Tecnicos
-
-```text
-Arquivos modificados:
-1. src/hooks/use-conversation-lead-detail.ts  
-   - Adicionar property_id, interest_property_id na query SELECT
-
-2. src/components/whatsapp/ConversationLeadPanel.tsx
-   - Importar useProperties, Input, ExternalLink
-   - Adicionar estado local para valor_interesse editavel
-   - Seção editavel de valor de interesse com mascara moeda
-   - Seção de seletor de imovel (Select com lista de properties)
-   - Botao "Ver Criativo" quando creative_url existe
-   - Seção de observacoes do contato quando contact_notes existe
+No arquivo `src/pages/WhatsAppSettings.tsx` (linha 68), a URL do webhook esta hardcoded como:
+```
+https://ulodfqdmoalttgbxrutj.supabase.co/functions/v1/evolution-webhook
 ```
 
-### Fluxo de UX
+O projeto correto e `iemalzlfnbouobyjwlwi`. Isso significa que quando o webhook e (re)configurado pela pagina de configuracoes, os eventos da Evolution API (mensagens recebidas, atualizacoes de status) vao para o projeto errado e nunca chegam ao banco de dados.
 
-1. Usuario abre conversa WhatsApp com lead vinculado
-2. No painel lateral direito, alem de status/estagio/tags, agora ve:
-   - Seletor de imovel de interesse (dropdown)
-   - Campo editavel de valor de interesse (com mascara R$)
-   - Dados de campanha com botao "Ver Criativo" abrindo link externo
-   - Observacoes do contato vindas do formulario/webhook
+As mensagens **enviadas** pelo app funcionam porque sao salvas diretamente pelo frontend via `evolution-proxy`. Mas mensagens **recebidas** dependem do webhook, que esta apontando pro lugar errado.
 
+### Solucao
+
+**Arquivo:** `src/pages/WhatsAppSettings.tsx`
+- Substituir a URL hardcoded pela URL dinamica usando a variavel de ambiente `VITE_SUPABASE_URL`
+- Isso garante que o webhook sempre aponte para o projeto correto, mesmo se o projeto mudar
+
+```text
+ANTES:
+const webhookUrl = `https://ulodfqdmoalttgbxrutj.supabase.co/functions/v1/evolution-webhook`;
+
+DEPOIS:
+const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-webhook`;
+```
+
+**Apos o deploy do codigo**, sera necessario **reconfigurar o webhook** para as instancias afetadas. Isso pode ser feito de duas formas:
+1. Pela pagina de configuracoes do WhatsApp, clicando em "Configurar Webhook" para cada instancia
+2. Ou desconectando e reconectando a instancia (que recria o webhook automaticamente via `evolution-proxy`)
+
+### Instancias Afetadas
+
+Todas as instancias que tiveram o webhook configurado pela pagina de configuracoes podem estar com a URL errada. A instancia `gabrielbrasil_81839_7pg` e uma delas confirmada.
+
+### Resumo Tecnico
+
+```text
+Arquivo modificado:
+1. src/pages/WhatsAppSettings.tsx
+   - Linha 68: Trocar URL hardcoded por import.meta.env.VITE_SUPABASE_URL
+
+Acao pos-deploy:
+- Reconfigurar webhook em todas as instancias ativas via pagina de configuracoes
+```
