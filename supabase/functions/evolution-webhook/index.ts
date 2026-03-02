@@ -674,6 +674,42 @@ async function handleMessagesUpsert(
           }
         }
         
+        // ===== FIRST RESPONSE TRACKING: Track when broker sends message via native WhatsApp =====
+        if (fromMe && !isGroup && conversation.lead_id) {
+          try {
+            console.log(`Tracking first response for lead ${conversation.lead_id} via native WhatsApp (session owner: ${session.owner_user_id})`);
+            
+            // Mark first_touch_at on the lead (same as message-sender)
+            await supabase
+              .from("leads")
+              .update({ first_touch_at: new Date().toISOString() })
+              .eq("id", conversation.lead_id)
+              .is("first_touch_at", null);
+            
+            // Call calculate-first-response
+            const frResponse = await fetch(`${supabaseUrl}/functions/v1/calculate-first-response`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseKey}`,
+              },
+              body: JSON.stringify({
+                lead_id: conversation.lead_id,
+                channel: "whatsapp",
+                actor_user_id: session.owner_user_id || null,
+              }),
+            });
+            
+            if (!frResponse.ok) {
+              console.error("Error calling calculate-first-response:", await frResponse.text());
+            } else {
+              console.log("✅ First response tracked via webhook for lead", conversation.lead_id);
+            }
+          } catch (frError) {
+            console.error("Error tracking first response:", frError);
+          }
+        }
+        
         // Trigger automation for received messages (not from us)
         if (!fromMe && !isGroup) {
           try {
