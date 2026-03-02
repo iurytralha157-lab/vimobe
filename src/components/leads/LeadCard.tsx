@@ -124,22 +124,6 @@ export function LeadCard({
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.phone) {
-      recordFirstResponse({
-        leadId: lead.id,
-        organizationId: lead.organization_id || profile?.organization_id || '',
-        channel: 'whatsapp',
-        actorUserId: profile?.id || null,
-        firstResponseAt: lead.first_response_at,
-      });
-      // Criar atividade no histórico (só primeira vez é relevante, mas registramos sempre)
-      if (!lead.first_response_at) {
-        createActivity.mutate({
-          lead_id: lead.id,
-          type: 'message',
-          content: 'Chat WhatsApp iniciado',
-          metadata: { channel: 'whatsapp' },
-        });
-      }
       openNewChat(lead.phone, lead.name, lead.id);
     }
   };
