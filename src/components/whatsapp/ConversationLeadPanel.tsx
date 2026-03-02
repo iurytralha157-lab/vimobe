@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,9 @@ import {
   Globe,
   Tag,
   CircleDot,
+  ExternalLink,
+  Building2,
+  MessageSquareText,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
@@ -39,6 +43,7 @@ import { useStages } from "@/hooks/use-stages";
 import { useTags } from "@/hooks/use-tags";
 import { useUpdateLead } from "@/hooks/use-leads";
 import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
+import { useProperties } from "@/hooks/use-properties";
 
 interface ConversationLeadPanelProps {
   leadId: string;
@@ -52,6 +57,19 @@ const DEAL_STATUS_OPTIONS = [
   { value: "lost", label: "Perdido", color: "hsl(var(--destructive))" },
 ];
 
+function maskCurrency(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  const num = parseInt(digits, 10) / 100;
+  return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function parseCurrencyToNumber(masked: string): number {
+  if (!masked) return 0;
+  const cleaned = masked.replace(/\./g, "").replace(",", ".");
+  return parseFloat(cleaned) || 0;
+}
+
 export function ConversationLeadPanel({
   leadId,
   onClose,
@@ -60,9 +78,22 @@ export function ConversationLeadPanel({
   const { data: lead, isLoading } = useConversationLeadDetail(leadId);
   const { data: allStages } = useStages(lead?.pipeline_id || undefined);
   const { data: allTags } = useTags();
+  const { data: properties } = useProperties();
   const updateLead = useUpdateLead();
   const addTag = useAddLeadTag();
   const removeTag = useRemoveLeadTag();
+
+  const [valorLocal, setValorLocal] = useState("");
+
+  // Sync local value state with lead data
+  useEffect(() => {
+    if (lead?.valor_interesse) {
+      const num = Number(lead.valor_interesse);
+      setValorLocal(num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    } else {
+      setValorLocal("");
+    }
+  }, [lead?.valor_interesse]);
 
   if (isLoading) {
     return (
@@ -81,6 +112,7 @@ export function ConversationLeadPanel({
   const pipeline = lead.pipeline as any;
   const meta = (lead as any).meta;
   const dealStatus = (lead as any).deal_status || "open";
+  const currentPropertyId = (lead as any).property_id || (lead as any).interest_property_id || "";
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -106,6 +138,28 @@ export function ConversationLeadPanel({
 
   const handleRemoveTag = (tagId: string) => {
     removeTag.mutate({ leadId, tagId });
+  };
+
+  const handleValorBlur = () => {
+    const num = parseCurrencyToNumber(valorLocal);
+    const currentNum = Number(lead.valor_interesse) || 0;
+    if (num !== currentNum) {
+      updateLead.mutate({ id: leadId, valor_interesse: num || null });
+    }
+  };
+
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValorLocal(maskCurrency(e.target.value));
+  };
+
+  const handlePropertyChange = (propertyId: string) => {
+    const prop = (properties || []).find((p) => p.id === propertyId);
+    const updates: any = { id: leadId, property_id: propertyId };
+    if (prop?.preco) {
+      updates.valor_interesse = prop.preco;
+      setValorLocal(Number(prop.preco).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    }
+    updateLead.mutate(updates);
   };
 
   const currentDealStatus = DEAL_STATUS_OPTIONS.find((s) => s.value === dealStatus) || DEAL_STATUS_OPTIONS[0];
@@ -284,21 +338,50 @@ export function ConversationLeadPanel({
 
           <Separator />
 
-          {/* Value */}
-          {lead.valor_interesse && (
-            <>
-              <section>
-                <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  Valor de Interesse
-                </h4>
-                <div className="flex items-center gap-1.5 text-sm font-medium">
-                  <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                  {formatCurrency(Number(lead.valor_interesse))}
+          {/* Property Selector */}
+          <section>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Imóvel de Interesse
+            </h4>
+            <Select value={currentPropertyId || "none"} onValueChange={(v) => v !== "none" && handlePropertyChange(v)}>
+              <SelectTrigger className="h-8 text-xs">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <SelectValue placeholder="Selecionar imóvel" />
                 </div>
-              </section>
-              <Separator />
-            </>
-          )}
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                <SelectItem value="none" className="text-xs text-muted-foreground">Nenhum</SelectItem>
+                {(properties || []).map((p) => (
+                  <SelectItem key={p.id} value={p.id} className="text-xs">
+                    {p.code ? `${p.code} - ` : ""}{p.title || "Sem título"}
+                    {p.preco ? ` (${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(p.preco))})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </section>
+
+          <Separator />
+
+          {/* Editable Value */}
+          <section>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Valor de Interesse
+            </h4>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground font-medium">R$</span>
+              <Input
+                className="h-8 text-xs"
+                placeholder="0,00"
+                value={valorLocal}
+                onChange={handleValorChange}
+                onBlur={handleValorBlur}
+              />
+            </div>
+          </section>
+
+          <Separator />
 
           {/* Campaign / Source Info */}
           <section>
@@ -333,6 +416,17 @@ export function ConversationLeadPanel({
                       </div>
                     </div>
                   )}
+                  {meta.creative_url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-7 text-[11px] gap-1.5"
+                      onClick={() => window.open(meta.creative_url, "_blank")}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Ver Criativo
+                    </Button>
+                  )}
                   {meta.form_name && (
                     <div className="text-xs text-muted-foreground">
                       Formulário: <span className="text-foreground">{meta.form_name}</span>
@@ -356,6 +450,24 @@ export function ConversationLeadPanel({
               )}
             </div>
           </section>
+
+          {/* Contact Notes */}
+          {meta?.contact_notes && (
+            <>
+              <Separator />
+              <section>
+                <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  Observações do Contato
+                </h4>
+                <div className="rounded-md bg-muted/50 p-2.5">
+                  <div className="flex items-start gap-2 text-xs">
+                    <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-foreground whitespace-pre-wrap">{meta.contact_notes}</p>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
 
           <Separator />
 
