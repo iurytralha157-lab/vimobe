@@ -65,7 +65,7 @@ export default function WhatsAppSettings() {
   const [verifyingSessionId, setVerifyingSessionId] = useState<string | null>(null);
   const [instanceNotFound, setInstanceNotFound] = useState(false);
 
-  const webhookUrl = `https://ulodfqdmoalttgbxrutj.supabase.co/functions/v1/evolution-webhook`;
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evolution-webhook`;
 
   // Refs para evitar stale closures no polling
   const selectedSessionRef = useRef(selectedSession);
