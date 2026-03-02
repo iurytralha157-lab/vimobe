@@ -8,7 +8,7 @@ export function useConversationLeadDetail(leadId: string | null | undefined) {
       const { data, error } = await supabase
         .from("leads")
         .select(`
-          id, name, phone, email, cidade, uf, source, created_at, valor_interesse,
+          id, name, phone, email, cidade, uf, source, created_at, valor_interesse, property_id, interest_property_id,
           stage_id, pipeline_id, deal_status,
           stage:stages(id, name, color),
           pipeline:pipelines(id, name),
