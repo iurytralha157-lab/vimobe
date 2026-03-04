@@ -102,10 +102,16 @@ export default function SiteSettings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Convert empty strings to null for unique-constrained fields
+      const dataToSave = {
+        ...formData,
+        subdomain: formData.subdomain?.trim() || null,
+        custom_domain: formData.custom_domain?.trim() || null,
+      };
       if (site) {
-        await updateSite.mutateAsync(formData);
+        await updateSite.mutateAsync(dataToSave);
       } else {
-        await createSite.mutateAsync(formData);
+        await createSite.mutateAsync(dataToSave);
       }
     } catch (error) {
       console.error('Error saving site:', error);
