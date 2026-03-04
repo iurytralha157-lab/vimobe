@@ -36,6 +36,7 @@ export function useStartConversation() {
         `)
         .eq("session_id", sessionId)
         .eq("remote_jid", remoteJid)
+        .is("deleted_at", null)
         .maybeSingle();
 
       if (searchError) throw searchError;
@@ -101,6 +102,7 @@ export function useFindConversationByPhone() {
             lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
           `)
           .eq("lead_id", leadId)
+          .is("deleted_at", null)
           .order("last_message_at", { ascending: false, nullsFirst: false })
           .limit(1);
 
@@ -120,6 +122,7 @@ export function useFindConversationByPhone() {
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .or(`remote_jid.ilike.%${cleanPhone}%,contact_phone.ilike.%${cleanPhone}%`)
+        .is("deleted_at", null)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(1);
 
