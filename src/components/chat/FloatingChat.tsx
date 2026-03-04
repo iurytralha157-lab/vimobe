@@ -858,14 +858,13 @@ export function FloatingChat() {
       <>
         <SessionSelectorDialog />
         <Drawer open={isOpen} onOpenChange={open => !open && closeChat()}>
-          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-1.5 max-w-full overflow-hidden">
+          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-1.5 max-w-full overflow-hidden !mt-0 !h-[100dvh] !rounded-none">
             {/* Hidden title for accessibility */}
             <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
             
-            {/* Inner wrapper for balloon effect */}
-            <div className={cn("flex flex-col", "h-[88vh]", "w-full", "max-w-full", "bg-card", "rounded-2xl", "shadow-2xl", "overflow-hidden", "border", "animate-drawer-slide-up")}>
-              {/* Custom handle */}
-              <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-muted-foreground/30 shrink-0" />
+            {/* Inner wrapper - full screen on mobile */}
+            <div className={cn("flex flex-col", "h-full", "w-full", "max-w-full", "bg-card", "overflow-hidden")}>
+              {/* Header */}
               
               {/* Header */}
               <FloatingChatHeader mobile />
