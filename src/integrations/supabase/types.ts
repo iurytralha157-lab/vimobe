@@ -3259,6 +3259,7 @@ export type Database = {
           id: string
           imagem_principal: string | null
           iptu: number | null
+          is_demo: boolean
           latitude: number | null
           longitude: number | null
           mobilia: string | null
@@ -3306,6 +3307,7 @@ export type Database = {
           id?: string
           imagem_principal?: string | null
           iptu?: number | null
+          is_demo?: boolean
           latitude?: number | null
           longitude?: number | null
           mobilia?: string | null
@@ -3353,6 +3355,7 @@ export type Database = {
           id?: string
           imagem_principal?: string | null
           iptu?: number | null
+          is_demo?: boolean
           latitude?: number | null
           longitude?: number | null
           mobilia?: string | null
