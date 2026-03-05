@@ -169,13 +169,13 @@ export default function PublicSiteLayout() {
                     src={siteConfig.logo_url} 
                     alt={siteConfig.site_title} 
                     style={{ 
-                      maxWidth: Math.min(siteConfig.logo_width || 160, 140), 
-                      maxHeight: Math.min(siteConfig.logo_height || 50, 40) 
+                      maxWidth: Math.min(siteConfig.logo_width || 200, 260), 
+                      maxHeight: Math.min(siteConfig.logo_height || 55, 55) 
                     }}
-                    className="w-auto object-contain lg:max-w-none lg:max-h-none"
+                    className="w-auto object-contain"
                   />
                 ) : (
-                  <span className="text-lg md:text-xl font-semibold tracking-wider" style={{ color: isDarkTheme ? '#fff' : '#1a1a1a' }}>
+                  <span className="text-lg md:text-xl font-semibold tracking-wider" style={{ color: '#fff' }}>
                     {siteConfig.site_title}
                   </span>
                 )}
@@ -192,9 +192,9 @@ export default function PublicSiteLayout() {
                       target={item.open_in_new_tab ? "_blank" : undefined}
                       rel={item.open_in_new_tab ? "noopener noreferrer" : undefined}
                       className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
-                      style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}
+                      style={{ color: 'rgba(255,255,255,0.8)' }}
                       onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                      onMouseLeave={(e) => e.currentTarget.style.color = isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
                     >
                       {item.label}
                     </a>
@@ -204,12 +204,12 @@ export default function PublicSiteLayout() {
                       to={getHref(item.href)}
                       className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
                       style={{ 
-                        color: (item.link_type === 'filter' ? isFilterActive(item.href) : isActive(item.href)) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
+                        color: (item.link_type === 'filter' ? isFilterActive(item.href) : isActive(item.href)) ? primaryColor : 'rgba(255,255,255,0.8)'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
                       onMouseLeave={(e) => {
                         const active = item.link_type === 'filter' ? isFilterActive(item.href) : isActive(item.href);
-                        e.currentTarget.style.color = active ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)');
+                        e.currentTarget.style.color = active ? primaryColor : 'rgba(255,255,255,0.8)';
                       }}
                     >
                       {item.label}
@@ -223,10 +223,10 @@ export default function PublicSiteLayout() {
                         to={getHref(link.href)}
                         className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
                         style={{ 
-                          color: isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
+                          color: isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                        onMouseLeave={(e) => e.currentTarget.style.color = isActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
+                        onMouseLeave={(e) => e.currentTarget.style.color = isActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'}
                       >
                         {link.label}
                       </Link>
@@ -238,10 +238,10 @@ export default function PublicSiteLayout() {
                         to={getHref(link.href)}
                         className="px-4 py-2 text-sm font-light tracking-wider transition-colors"
                         style={{ 
-                          color: isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
+                          color: isFilterActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-                        onMouseLeave={(e) => e.currentTarget.style.color = isFilterActive(link.href) ? primaryColor : (isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')}
+                        onMouseLeave={(e) => e.currentTarget.style.color = isFilterActive(link.href) ? primaryColor : 'rgba(255,255,255,0.8)'}
                       >
                         {link.label}
                       </Link>
@@ -252,7 +252,7 @@ export default function PublicSiteLayout() {
 
               {/* Desktop CTA */}
               <div className="hidden lg:flex items-center gap-4">
-                <Link to={getHref("favoritos")} className="relative transition-colors" style={{ color: isDarkTheme ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }}>
+                <Link to={getHref("favoritos")} className="relative transition-colors" style={{ color: 'rgba(255,255,255,0.9)' }}>
                   <Heart className="w-5 h-5" />
                   {favCount > 0 && (
                     <span 
@@ -275,7 +275,7 @@ export default function PublicSiteLayout() {
               {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <button className="lg:hidden p-2" style={{ color: isDarkTheme ? '#fff' : '#1a1a1a' }}>
+                <button className="lg:hidden p-2" style={{ color: '#fff' }}>
                   <Menu className="w-6 h-6" />
                 </button>
               </SheetTrigger>
