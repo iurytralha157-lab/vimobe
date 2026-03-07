@@ -52,6 +52,11 @@ export interface PublicSiteConfig {
   card_color: string;
   // About on home
   show_about_on_home: boolean;
+  // About page customization
+  about_subtitle: string | null;
+  about_stats: { value: string; label: string }[] | null;
+  about_checkmarks: string[] | null;
+  about_features: { title: string; description: string; icon: string }[] | null;
 }
 
 export interface PublicProperty {
