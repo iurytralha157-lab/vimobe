@@ -54,6 +54,7 @@ export interface OrganizationSite {
   background_color: string | null;
   text_color: string | null;
   card_color: string | null;
+  show_about_on_home: boolean | null;
   created_at: string;
   updated_at: string;
 }

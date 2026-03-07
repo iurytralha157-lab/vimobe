@@ -55,6 +55,7 @@ export default function SiteSettings() {
     // New hero fields
     hero_title: '',
     hero_subtitle: '',
+    show_about_on_home: false,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -95,6 +96,7 @@ export default function SiteSettings() {
         // New hero fields
         hero_title: site.hero_title || '',
         hero_subtitle: site.hero_subtitle || '',
+        show_about_on_home: site.show_about_on_home ?? false,
       });
     }
   }, [site]);
@@ -981,6 +983,19 @@ ${getWorkerCode()}`;
                         </Button>
                       </label>
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="space-y-0.5">
+                      <Label>Exibir seção Sobre na Home</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Mostra o conteúdo da página Sobre também na página inicial
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.show_about_on_home}
+                      onCheckedChange={(checked) => setFormData({ ...formData, show_about_on_home: checked })}
+                      disabled={!isAdmin}
+                    />
                   </div>
                 </CardContent>
               </Card>

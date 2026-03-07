@@ -50,6 +50,8 @@ export interface PublicSiteConfig {
   background_color: string;
   text_color: string;
   card_color: string;
+  // About on home
+  show_about_on_home: boolean;
 }
 
 export interface PublicProperty {
