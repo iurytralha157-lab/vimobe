@@ -318,7 +318,7 @@ ${getWorkerCode()}`;
 
         {site && (
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
                 <span className="hidden sm:inline">Geral</span>
@@ -330,6 +330,10 @@ ${getWorkerCode()}`;
               <TabsTrigger value="menu" className="flex items-center gap-2">
                 <Menu className="w-4 h-4" />
                 <span className="hidden sm:inline">Menu</span>
+              </TabsTrigger>
+              <TabsTrigger value="about" className="flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                <span className="hidden sm:inline">Sobre</span>
               </TabsTrigger>
               <TabsTrigger value="contact" className="flex items-center gap-2">
                 <Phone className="w-4 h-4" />
