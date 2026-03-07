@@ -966,73 +966,7 @@ ${getWorkerCode()}`;
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Página Sobre</CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-                  <div className="space-y-2">
-                    <Label>Título da Seção</Label>
-                    <Input
-                      placeholder="Sobre a Nossa Imobiliária"
-                      value={formData.about_title}
-                      onChange={(e) => setFormData({ ...formData, about_title: e.target.value })}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Texto</Label>
-                    <Textarea
-                      placeholder="Conte a história da sua imobiliária..."
-                      value={formData.about_text}
-                      onChange={(e) => setFormData({ ...formData, about_text: e.target.value })}
-                      rows={6}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <Label>Imagem</Label>
-                    {site?.about_image_url ? (
-                      <div className="border rounded-lg p-4 bg-muted">
-                        <img src={site.about_image_url} alt="Sobre" className="h-32 object-cover rounded" />
-                      </div>
-                    ) : null}
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e, 'about')}
-                        className="hidden"
-                        id="about-upload"
-                        disabled={!isAdmin}
-                      />
-                      <label htmlFor="about-upload">
-                        <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                          <span>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Enviar Imagem
-                          </span>
-                        </Button>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="space-y-0.5">
-                      <Label>Exibir seção Sobre na Home</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Mostra o conteúdo da página Sobre também na página inicial
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formData.show_about_on_home}
-                      onCheckedChange={(checked) => setFormData({ ...formData, show_about_on_home: checked })}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Watermark Settings */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
