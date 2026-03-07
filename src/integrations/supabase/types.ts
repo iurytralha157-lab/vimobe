@@ -2830,7 +2830,11 @@ export type Database = {
       }
       organization_sites: {
         Row: {
+          about_checkmarks: Json | null
+          about_features: Json | null
           about_image_url: string | null
+          about_stats: Json | null
+          about_subtitle: string | null
           about_text: string | null
           about_title: string | null
           accent_color: string | null
@@ -2882,7 +2886,11 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          about_checkmarks?: Json | null
+          about_features?: Json | null
           about_image_url?: string | null
+          about_stats?: Json | null
+          about_subtitle?: string | null
           about_text?: string | null
           about_title?: string | null
           accent_color?: string | null
@@ -2934,7 +2942,11 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          about_checkmarks?: Json | null
+          about_features?: Json | null
           about_image_url?: string | null
+          about_stats?: Json | null
+          about_subtitle?: string | null
           about_text?: string | null
           about_title?: string | null
           accent_color?: string | null

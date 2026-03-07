@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu } from "lucide-react";
+import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu, Info } from "lucide-react";
 import { MenuTab } from "@/components/site/MenuTab";
+import { AboutTab } from "@/components/site/AboutTab";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -48,6 +49,20 @@ export default function SiteSettings() {
     linkedin: '',
     about_title: '',
     about_text: '',
+    about_subtitle: '',
+    about_stats: [
+      { value: '500+', label: 'Imóveis Vendidos' },
+      { value: '98%', label: 'Clientes Satisfeitos' },
+      { value: '15+', label: 'Anos de Experiência' },
+      { value: '50+', label: 'Parceiros' },
+    ],
+    about_checkmarks: ['Atendimento personalizado', 'Imóveis verificados', 'Suporte completo'],
+    about_features: [
+      { title: 'Imóveis Selecionados', description: 'Curadoria dos melhores imóveis da região com critérios rigorosos de qualidade', icon: 'building' },
+      { title: 'Atendimento Personalizado', description: 'Equipe dedicada e treinada para encontrar o imóvel ideal para você', icon: 'users' },
+      { title: 'Experiência no Mercado', description: 'Anos de experiência e centenas de clientes satisfeitos no setor imobiliário', icon: 'award' },
+      { title: 'Compromisso', description: 'Seu sonho é a nossa prioridade e trabalhamos para realizá-lo', icon: 'heart' },
+    ],
     seo_title: '',
     seo_description: '',
     seo_keywords: '',
@@ -89,11 +104,24 @@ export default function SiteSettings() {
         linkedin: site.linkedin || '',
         about_title: site.about_title || '',
         about_text: site.about_text || '',
+        about_subtitle: (site as any).about_subtitle || '',
+        about_stats: (site as any).about_stats || [
+          { value: '500+', label: 'Imóveis Vendidos' },
+          { value: '98%', label: 'Clientes Satisfeitos' },
+          { value: '15+', label: 'Anos de Experiência' },
+          { value: '50+', label: 'Parceiros' },
+        ],
+        about_checkmarks: (site as any).about_checkmarks || ['Atendimento personalizado', 'Imóveis verificados', 'Suporte completo'],
+        about_features: (site as any).about_features || [
+          { title: 'Imóveis Selecionados', description: 'Curadoria dos melhores imóveis da região com critérios rigorosos de qualidade', icon: 'building' },
+          { title: 'Atendimento Personalizado', description: 'Equipe dedicada e treinada para encontrar o imóvel ideal para você', icon: 'users' },
+          { title: 'Experiência no Mercado', description: 'Anos de experiência e centenas de clientes satisfeitos no setor imobiliário', icon: 'award' },
+          { title: 'Compromisso', description: 'Seu sonho é a nossa prioridade e trabalhamos para realizá-lo', icon: 'heart' },
+        ],
         seo_title: site.seo_title || '',
         seo_description: site.seo_description || '',
         seo_keywords: site.seo_keywords || '',
         google_analytics_id: site.google_analytics_id || '',
-        // New hero fields
         hero_title: site.hero_title || '',
         hero_subtitle: site.hero_subtitle || '',
         show_about_on_home: site.show_about_on_home ?? false,
@@ -290,7 +318,7 @@ ${getWorkerCode()}`;
 
         {site && (
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
                 <span className="hidden sm:inline">Geral</span>
@@ -302,6 +330,10 @@ ${getWorkerCode()}`;
               <TabsTrigger value="menu" className="flex items-center gap-2">
                 <Menu className="w-4 h-4" />
                 <span className="hidden sm:inline">Menu</span>
+              </TabsTrigger>
+              <TabsTrigger value="about" className="flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                <span className="hidden sm:inline">Sobre</span>
               </TabsTrigger>
               <TabsTrigger value="contact" className="flex items-center gap-2">
                 <Phone className="w-4 h-4" />
@@ -934,73 +966,7 @@ ${getWorkerCode()}`;
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Página Sobre</CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-                  <div className="space-y-2">
-                    <Label>Título da Seção</Label>
-                    <Input
-                      placeholder="Sobre a Nossa Imobiliária"
-                      value={formData.about_title}
-                      onChange={(e) => setFormData({ ...formData, about_title: e.target.value })}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Texto</Label>
-                    <Textarea
-                      placeholder="Conte a história da sua imobiliária..."
-                      value={formData.about_text}
-                      onChange={(e) => setFormData({ ...formData, about_text: e.target.value })}
-                      rows={6}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <Label>Imagem</Label>
-                    {site?.about_image_url ? (
-                      <div className="border rounded-lg p-4 bg-muted">
-                        <img src={site.about_image_url} alt="Sobre" className="h-32 object-cover rounded" />
-                      </div>
-                    ) : null}
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e, 'about')}
-                        className="hidden"
-                        id="about-upload"
-                        disabled={!isAdmin}
-                      />
-                      <label htmlFor="about-upload">
-                        <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                          <span>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Enviar Imagem
-                          </span>
-                        </Button>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="space-y-0.5">
-                      <Label>Exibir seção Sobre na Home</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Mostra o conteúdo da página Sobre também na página inicial
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formData.show_about_on_home}
-                      onCheckedChange={(checked) => setFormData({ ...formData, show_about_on_home: checked })}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Watermark Settings */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1347,6 +1313,16 @@ ${getWorkerCode()}`;
 
             <TabsContent value="menu" className="space-y-6">
               <MenuTab />
+            </TabsContent>
+
+            <TabsContent value="about" className="space-y-6">
+              <AboutTab
+                formData={formData}
+                setFormData={setFormData}
+                site={site}
+                isAdmin={isAdmin}
+                handleFileUpload={handleFileUpload}
+              />
             </TabsContent>
 
             {isAdmin && (
