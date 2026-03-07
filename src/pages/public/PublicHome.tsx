@@ -354,7 +354,7 @@ export default function PublicHome() {
                 )}
 
                 <div className="mt-8 space-y-3">
-                  {["Atendimento personalizado", "Imóveis verificados", "Suporte completo"].map((item, index) => (
+                  {(siteConfig.about_checkmarks?.length ? siteConfig.about_checkmarks : ["Atendimento personalizado", "Imóveis verificados", "Suporte completo"]).map((item, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
                       <span className="font-medium" style={{ color: isDarkTheme ? `${textColor}CC` : '#374151' }}>{item}</span>
