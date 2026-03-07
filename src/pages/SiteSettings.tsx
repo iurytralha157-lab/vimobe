@@ -1381,6 +1381,16 @@ ${getWorkerCode()}`;
               <MenuTab />
             </TabsContent>
 
+            <TabsContent value="about" className="space-y-6">
+              <AboutTab
+                formData={formData}
+                setFormData={setFormData}
+                site={site}
+                isAdmin={isAdmin}
+                handleFileUpload={handleFileUpload}
+              />
+            </TabsContent>
+
             {isAdmin && (
               <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={isSaving} size="lg">
