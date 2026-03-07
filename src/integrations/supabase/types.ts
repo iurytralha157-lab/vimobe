@@ -2867,6 +2867,7 @@ export type Database = {
           seo_description: string | null
           seo_keywords: string | null
           seo_title: string | null
+          show_about_on_home: boolean | null
           site_description: string | null
           site_theme: string
           site_title: string | null
@@ -2918,6 +2919,7 @@ export type Database = {
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
+          show_about_on_home?: boolean | null
           site_description?: string | null
           site_theme?: string
           site_title?: string | null
@@ -2969,6 +2971,7 @@ export type Database = {
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
+          show_about_on_home?: boolean | null
           site_description?: string | null
           site_theme?: string
           site_title?: string | null
