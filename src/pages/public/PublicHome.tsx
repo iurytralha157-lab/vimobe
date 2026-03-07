@@ -337,7 +337,7 @@ export default function PublicHome() {
                   Nossa História
                 </span>
                 <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-6" style={{ color: sectionTextColor }}>
-                  {siteConfig.about_title || 'Transformando sonhos em realidade desde o início'}
+                  {siteConfig.about_subtitle || siteConfig.about_title || 'Transformando sonhos em realidade desde o início'}
                 </h2>
                 {siteConfig.about_text ? (
                   <div className="whitespace-pre-wrap leading-relaxed text-lg" style={{ color: sectionSubTextColor }}>
