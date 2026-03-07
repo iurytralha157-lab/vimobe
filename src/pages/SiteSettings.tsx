@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu } from "lucide-react";
+import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu, Info } from "lucide-react";
 import { MenuTab } from "@/components/site/MenuTab";
+import { AboutTab } from "@/components/site/AboutTab";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -48,6 +49,20 @@ export default function SiteSettings() {
     linkedin: '',
     about_title: '',
     about_text: '',
+    about_subtitle: '',
+    about_stats: [
+      { value: '500+', label: 'Imóveis Vendidos' },
+      { value: '98%', label: 'Clientes Satisfeitos' },
+      { value: '15+', label: 'Anos de Experiência' },
+      { value: '50+', label: 'Parceiros' },
+    ],
+    about_checkmarks: ['Atendimento personalizado', 'Imóveis verificados', 'Suporte completo'],
+    about_features: [
+      { title: 'Imóveis Selecionados', description: 'Curadoria dos melhores imóveis da região com critérios rigorosos de qualidade', icon: 'building' },
+      { title: 'Atendimento Personalizado', description: 'Equipe dedicada e treinada para encontrar o imóvel ideal para você', icon: 'users' },
+      { title: 'Experiência no Mercado', description: 'Anos de experiência e centenas de clientes satisfeitos no setor imobiliário', icon: 'award' },
+      { title: 'Compromisso', description: 'Seu sonho é a nossa prioridade e trabalhamos para realizá-lo', icon: 'heart' },
+    ],
     seo_title: '',
     seo_description: '',
     seo_keywords: '',
