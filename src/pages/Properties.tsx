@@ -504,6 +504,7 @@ export default function Properties() {
         />
         {/* Vista Import Dialog */}
         <VistaImportDialog open={vistaOpen} onOpenChange={setVistaOpen} />
+        <ImoviewImportDialog open={imoviewOpen} onOpenChange={setImoviewOpen} />
       </div>
     </AppLayout>
   );
