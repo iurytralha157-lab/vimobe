@@ -858,7 +858,7 @@ export function FloatingChat() {
       <>
         <SessionSelectorDialog />
         <Drawer open={isOpen} onOpenChange={open => !open && closeChat()}>
-          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-1.5 max-w-full overflow-hidden !mt-0 !h-[100dvh] !rounded-none">
+          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-0 max-w-full overflow-hidden !mt-0 h-[100dvh] !max-h-[100dvh] !rounded-none">
             {/* Hidden title for accessibility */}
             <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
             
