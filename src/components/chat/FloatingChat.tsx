@@ -857,13 +857,13 @@ export function FloatingChat() {
     return (
       <>
         <SessionSelectorDialog />
-        <Drawer open={isOpen} onOpenChange={open => !open && closeChat()}>
-          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-0 max-w-full overflow-hidden !mt-0 h-[100dvh] !max-h-[100dvh] !rounded-none">
+        <Drawer open={isOpen} onOpenChange={open => !open && closeChat()} direction="bottom">
+          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-0 max-w-full overflow-hidden !mt-0 !h-[100dvh] !max-h-[100dvh] !rounded-none !top-0 !bottom-0 inset-x-0">
             {/* Hidden title for accessibility */}
             <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
             
             {/* Inner wrapper - full screen on mobile */}
-            <div className={cn("flex flex-col", "h-full", "w-full", "max-w-full", "bg-card", "overflow-hidden")}>
+            <div className="flex flex-col h-[100dvh] w-full max-w-full bg-card overflow-hidden">
               {/* Header */}
               
               {/* Header */}
