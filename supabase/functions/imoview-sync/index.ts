@@ -104,8 +104,8 @@ Deno.serve(async (req) => {
               "chave": apiKey,
             },
             body: JSON.stringify({
-              pagina: page,
-              quantidade: perPage,
+              numeroPagina: page,
+              numeroRegistros: perPage,
             }),
           });
         } catch (e) {
