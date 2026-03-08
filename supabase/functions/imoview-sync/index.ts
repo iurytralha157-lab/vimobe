@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
     // ---- TEST MODE ----
     if (action === "test") {
       try {
+        console.log("Testing Imoview connection with key:", apiKey.substring(0, 4) + "...");
         const res = await fetch(`${IMOVIEW_BASE}/Imovel/RetornarImoveisDisponiveis`, {
           method: "POST",
           headers: {
@@ -58,20 +59,25 @@ Deno.serve(async (req) => {
           }),
         });
 
+        const text = await res.text();
+        console.log("Imoview test response status:", res.status);
+        console.log("Imoview test response body:", text.substring(0, 2000));
+
         if (!res.ok) {
-          const text = await res.text();
           return new Response(
-            JSON.stringify({ success: false, error: `API returned ${res.status}: ${text}` }),
+            JSON.stringify({ success: false, error: `API returned ${res.status}: ${text.substring(0, 500)}` }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const data = await res.json();
+        let data;
+        try { data = JSON.parse(text); } catch { data = text; }
         return new Response(
           JSON.stringify({ success: true, message: "Conexão válida", sample: data }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (e) {
+        console.error("Imoview test error:", e);
         return new Response(
           JSON.stringify({ success: false, error: `Connection failed: ${e.message}` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
