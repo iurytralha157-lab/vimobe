@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     // ---- SYNC MODE ----
     if (action === "sync") {
       let page = 1;
-      const perPage = 50;
+      const perPage = 20;
       let totalSynced = 0;
       let totalSkipped = 0;
       let hasMore = true;
