@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
     // ---- TEST MODE ----
     if (action === "test") {
       try {
+        console.log("Testing Imoview connection with key:", apiKey.substring(0, 4) + "...");
         const res = await fetch(`${IMOVIEW_BASE}/Imovel/RetornarImoveisDisponiveis`, {
           method: "POST",
           headers: {
@@ -58,20 +59,25 @@ Deno.serve(async (req) => {
           }),
         });
 
+        const text = await res.text();
+        console.log("Imoview test response status:", res.status);
+        console.log("Imoview test response body:", text.substring(0, 2000));
+
         if (!res.ok) {
-          const text = await res.text();
           return new Response(
-            JSON.stringify({ success: false, error: `API returned ${res.status}: ${text}` }),
+            JSON.stringify({ success: false, error: `API returned ${res.status}: ${text.substring(0, 500)}` }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        const data = await res.json();
+        let data;
+        try { data = JSON.parse(text); } catch { data = text; }
         return new Response(
           JSON.stringify({ success: true, message: "Conexão válida", sample: data }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (e) {
+        console.error("Imoview test error:", e);
         return new Response(
           JSON.stringify({ success: false, error: `Connection failed: ${e.message}` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -108,14 +114,35 @@ Deno.serve(async (req) => {
         }
 
         if (!res.ok) {
+          const errText = await res.text();
+          console.error(`API error page ${page}: ${res.status} - ${errText.substring(0, 500)}`);
           errors.push(`API error page ${page}: ${res.status}`);
           break;
         }
 
-        const data = await res.json();
+        const rawText = await res.text();
+        console.log(`Imoview sync page ${page} response (first 2000 chars):`, rawText.substring(0, 2000));
+        
+        let data;
+        try { data = JSON.parse(rawText); } catch { 
+          errors.push(`Invalid JSON on page ${page}`);
+          break;
+        }
 
-        // Imoview returns an array of properties or object with lista
-        const items: any[] = Array.isArray(data) ? data : (data.lista || data.imoveis || []);
+        // Imoview may return: array, {lista: [...]}, {imoveis: [...]}, or object with numeric keys
+        let items: any[] = [];
+        if (Array.isArray(data)) {
+          items = data;
+        } else if (data && typeof data === "object") {
+          if (data.lista) items = data.lista;
+          else if (data.imoveis) items = data.imoveis;
+          else {
+            // Try extracting values (Vista-style numeric keys)
+            items = Object.values(data).filter((v: any) => v && typeof v === "object" && (v.codigo || v.codigoImovel));
+          }
+        }
+        
+        console.log(`Page ${page}: found ${items.length} items`);
 
         if (items.length === 0) {
           hasMore = false;
