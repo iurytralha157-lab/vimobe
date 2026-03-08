@@ -23,6 +23,7 @@ import { PropertyCard } from '@/components/properties/PropertyCard';
 import { PropertyFormDialog } from '@/components/properties/PropertyFormDialog';
 import { PropertyPreviewDialog } from '@/components/properties/PropertyPreviewDialog';
 import { VistaImportDialog } from '@/components/properties/VistaImportDialog';
+import { ImoviewImportDialog } from '@/components/properties/ImoviewImportDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 
@@ -127,6 +128,7 @@ export default function Properties() {
   const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(null);
   const [gridCols, setGridCols] = useState('4');
   const [vistaOpen, setVistaOpen] = useState(false);
+  const [imoviewOpen, setImoviewOpen] = useState(false);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
@@ -355,6 +357,10 @@ export default function Properties() {
               <CloudDownload className="h-4 w-4 mr-2" />
               {isMobile ? 'Vista' : 'Importar Vista'}
             </Button>
+            <Button variant="outline" onClick={() => setImoviewOpen(true)} className="flex-1 sm:flex-none">
+              <CloudDownload className="h-4 w-4 mr-2" />
+              {isMobile ? 'Imoview' : 'Importar Imoview'}
+            </Button>
             <Button onClick={() => setDialogOpen(true)} className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" />
               {isMobile ? 'Novo' : 'Novo Imóvel'}
@@ -498,6 +504,7 @@ export default function Properties() {
         />
         {/* Vista Import Dialog */}
         <VistaImportDialog open={vistaOpen} onOpenChange={setVistaOpen} />
+        <ImoviewImportDialog open={imoviewOpen} onOpenChange={setImoviewOpen} />
       </div>
     </AppLayout>
   );
