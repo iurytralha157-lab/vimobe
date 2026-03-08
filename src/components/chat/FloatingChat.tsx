@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MessageCircle, X, Minus, Send, ArrowLeft, Search, Loader2, Check, CheckCheck, Clock, Video, FileText, User, Phone, Users, Paperclip, Image, Mic, ExternalLink, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -711,7 +710,7 @@ export function FloatingChat() {
       </ScrollArea>
     </div>;
   const renderMessageInput = (mobile = false) => (
-    <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-6")}>
+    <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-2")}>
       <div className="flex items-center gap-2">
         <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" />
         <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
@@ -852,40 +851,28 @@ export function FloatingChat() {
       </ScrollArea>
     </div>;
 
-  // Mobile version - use Drawer with balloon effect
+  // Mobile version - fullscreen fixed container (stable bottom input)
   if (isMobile) {
     return (
       <>
         <SessionSelectorDialog />
-        <Drawer open={isOpen} onOpenChange={open => !open && closeChat()} direction="bottom">
-          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-0 max-w-full overflow-hidden !mt-0 !h-[100dvh] !max-h-[100dvh] !rounded-none !top-0 !bottom-0 inset-x-0">
-            {/* Hidden title for accessibility */}
-            <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
-            
-            {/* Inner wrapper - full screen on mobile */}
-            <div className="flex flex-col h-[100dvh] w-full max-w-full bg-card overflow-hidden">
-              {/* Header */}
-              
-              {/* Header */}
-              <FloatingChatHeader mobile />
+        <div className="fixed inset-0 z-50 bg-card flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <FloatingChatHeader mobile />
 
-              {/* Content */}
-              <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
-                {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
-                  <>
-                    <MessagesView />
-                    {renderMessageInput(true)}
-                  </>
-                ) : (
-                  <>
-                    <ConversationFilters />
-                    <ConversationList />
-                  </>
-                )}
-              </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
+            {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
+              <>
+                <MessagesView />
+                {renderMessageInput(true)}
+              </>
+            ) : (
+              <>
+                <ConversationFilters />
+                <ConversationList />
+              </>
+            )}
+          </div>
+        </div>
       </>
     );
   }
