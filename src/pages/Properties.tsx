@@ -357,6 +357,10 @@ export default function Properties() {
               <CloudDownload className="h-4 w-4 mr-2" />
               {isMobile ? 'Vista' : 'Importar Vista'}
             </Button>
+            <Button variant="outline" onClick={() => setImoviewOpen(true)} className="flex-1 sm:flex-none">
+              <CloudDownload className="h-4 w-4 mr-2" />
+              {isMobile ? 'Imoview' : 'Importar Imoview'}
+            </Button>
             <Button onClick={() => setDialogOpen(true)} className="flex-1 sm:flex-none">
               <Plus className="h-4 w-4 mr-2" />
               {isMobile ? 'Novo' : 'Novo Imóvel'}
