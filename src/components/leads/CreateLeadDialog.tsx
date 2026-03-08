@@ -52,7 +52,9 @@ export function CreateLeadDialog({
   defaultPipelineId 
 }: CreateLeadDialogProps) {
   const { profile, organization } = useAuth();
-  const { data: users = [] } = useOrganizationUsers();
+  const { hasPermission } = useUserPermissions();
+  const { data: allUsers = [] } = useOrganizationUsers();
+  const users = hasPermission('lead_view_all') ? allUsers : allUsers.filter(u => u.id === profile?.id);
   const { data: pipelines = [] } = usePipelines();
   const { data: properties = [] } = useProperties();
   const { data: servicePlans = [] } = useServicePlans();
