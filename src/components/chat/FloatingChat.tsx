@@ -710,7 +710,7 @@ export function FloatingChat() {
       </ScrollArea>
     </div>;
   const renderMessageInput = (mobile = false) => (
-    <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-6")}>
+    <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-2")}>
       <div className="flex items-center gap-2">
         <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" />
         <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
