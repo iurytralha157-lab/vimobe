@@ -851,40 +851,28 @@ export function FloatingChat() {
       </ScrollArea>
     </div>;
 
-  // Mobile version - use Drawer with balloon effect
+  // Mobile version - fullscreen fixed container (stable bottom input)
   if (isMobile) {
     return (
       <>
         <SessionSelectorDialog />
-        <Drawer open={isOpen} onOpenChange={open => !open && closeChat()} direction="bottom">
-          <DrawerContent showHandle={false} className="bg-card border-none shadow-none p-0 max-w-full overflow-hidden !mt-0 !h-[100dvh] !max-h-[100dvh] !rounded-none !top-0 !bottom-0 inset-x-0">
-            {/* Hidden title for accessibility */}
-            <DrawerTitle className="sr-only">WhatsApp Chat</DrawerTitle>
-            
-            {/* Inner wrapper - full screen on mobile */}
-            <div className="flex flex-col h-[100dvh] w-full max-w-full bg-card overflow-hidden">
-              {/* Header */}
-              
-              {/* Header */}
-              <FloatingChatHeader mobile />
+        <div className="fixed inset-0 z-50 bg-card flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <FloatingChatHeader mobile />
 
-              {/* Content */}
-              <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
-                {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
-                  <>
-                    <MessagesView />
-                    {renderMessageInput(true)}
-                  </>
-                ) : (
-                  <>
-                    <ConversationFilters />
-                    <ConversationList />
-                  </>
-                )}
-              </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
+            {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
+              <>
+                <MessagesView />
+                {renderMessageInput(true)}
+              </>
+            ) : (
+              <>
+                <ConversationFilters />
+                <ConversationList />
+              </>
+            )}
+          </div>
+        </div>
       </>
     );
   }
