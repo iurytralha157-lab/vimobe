@@ -128,6 +128,7 @@ export default function Properties() {
   const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(null);
   const [gridCols, setGridCols] = useState('4');
   const [vistaOpen, setVistaOpen] = useState(false);
+  const [imoviewOpen, setImoviewOpen] = useState(false);
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
