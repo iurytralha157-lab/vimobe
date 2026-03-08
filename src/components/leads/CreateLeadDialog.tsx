@@ -14,6 +14,7 @@ import { TagSelector } from '@/components/ui/tag-selector';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck, CreditCard, Calendar, FileText, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useOrganizationUsers } from '@/hooks/use-users';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useProperties } from '@/hooks/use-properties';
@@ -51,7 +52,9 @@ export function CreateLeadDialog({
   defaultPipelineId 
 }: CreateLeadDialogProps) {
   const { profile, organization } = useAuth();
-  const { data: users = [] } = useOrganizationUsers();
+  const { hasPermission } = useUserPermissions();
+  const { data: allUsers = [] } = useOrganizationUsers();
+  const users = hasPermission('lead_view_all') ? allUsers : allUsers.filter(u => u.id === profile?.id);
   const { data: pipelines = [] } = usePipelines();
   const { data: properties = [] } = useProperties();
   const { data: servicePlans = [] } = useServicePlans();
