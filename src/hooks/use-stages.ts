@@ -456,6 +456,7 @@ export function useLoadMoreLeads() {
               .from('whatsapp_conversations')
               .select('contact_phone, contact_picture, unread_count')
               .in('contact_phone', phoneNumbers)
+              .is('deleted_at', null)
           : { data: [] };
         
         (conversations || []).forEach(c => {
