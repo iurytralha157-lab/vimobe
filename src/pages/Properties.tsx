@@ -23,6 +23,7 @@ import { PropertyCard } from '@/components/properties/PropertyCard';
 import { PropertyFormDialog } from '@/components/properties/PropertyFormDialog';
 import { PropertyPreviewDialog } from '@/components/properties/PropertyPreviewDialog';
 import { VistaImportDialog } from '@/components/properties/VistaImportDialog';
+import { ImoviewImportDialog } from '@/components/properties/ImoviewImportDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 
