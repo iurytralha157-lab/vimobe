@@ -1588,6 +1588,50 @@ export type Database = {
         }
         Relationships: []
       }
+      imoview_integrations: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          organization_id: string
+          sync_log: Json | null
+          total_synced: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id: string
+          sync_log?: Json | null
+          total_synced?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id?: string
+          sync_log?: Json | null
+          total_synced?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imoview_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           created_at: string | null
@@ -3273,6 +3317,7 @@ export type Database = {
           fotos: Json | null
           id: string
           imagem_principal: string | null
+          imoview_codigo: string | null
           iptu: number | null
           is_demo: boolean
           latitude: number | null
@@ -3321,6 +3366,7 @@ export type Database = {
           fotos?: Json | null
           id?: string
           imagem_principal?: string | null
+          imoview_codigo?: string | null
           iptu?: number | null
           is_demo?: boolean
           latitude?: number | null
@@ -3369,6 +3415,7 @@ export type Database = {
           fotos?: Json | null
           id?: string
           imagem_principal?: string | null
+          imoview_codigo?: string | null
           iptu?: number | null
           is_demo?: boolean
           latitude?: number | null
