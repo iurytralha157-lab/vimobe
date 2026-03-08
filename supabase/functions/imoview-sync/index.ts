@@ -54,8 +54,8 @@ Deno.serve(async (req) => {
             "chave": apiKey,
           },
           body: JSON.stringify({
-            pagina: 1,
-            quantidade: 1,
+            numeroPagina: 1,
+            numeroRegistros: 1,
           }),
         });
 
