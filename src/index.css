@@ -153,10 +153,10 @@
     /* Sidebar Black Premium */
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 21 77% 51%;
+    --sidebar-primary: 8 100% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 21 77% 12%;
-    --sidebar-accent-foreground: 21 77% 65%;
+    --sidebar-accent: 8 100% 12%;
+    --sidebar-accent-foreground: 8 100% 65%;
     --sidebar-border: 0 0% 12%;
     --sidebar-ring: 21 77% 51%;
     --radius: 0.875rem;
