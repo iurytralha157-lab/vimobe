@@ -263,7 +263,28 @@ export default function AdminSettings() {
     }
   };
 
-  const handleSaveWhatsapp = async () => {
+  const handleUploadLoginBg = async (file: File) => {
+    if (!settings) return;
+    setUploadingLoginBg(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `system/login-bg.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(path);
+      await updateSettingsValue({ login_bg_url: publicUrl });
+      toast.success('Imagem de fundo do login atualizada!');
+    } catch (error: any) {
+      toast.error('Erro ao fazer upload: ' + error.message);
+    } finally {
+      setUploadingLoginBg(false);
+    }
+  };
+
     if (!settings) return;
 
     setSaving(true);
