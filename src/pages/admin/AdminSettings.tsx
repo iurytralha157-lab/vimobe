@@ -48,6 +48,7 @@ export default function AdminSettings() {
   const [uploadingDark, setUploadingDark] = useState(false);
   const [uploadingFaviconLight, setUploadingFaviconLight] = useState(false);
   const [uploadingFaviconDark, setUploadingFaviconDark] = useState(false);
+  const [uploadingLoginBg, setUploadingLoginBg] = useState(false);
   const [logoWidth, setLogoWidth] = useState(140);
   const [logoHeight, setLogoHeight] = useState(40);
   const [broadcastingRefresh, setBroadcastingRefresh] = useState(false);
