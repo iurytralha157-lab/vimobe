@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 import loginBg from "@/assets/login-bg.jpg";
-import logoWhite from "@/assets/logo-white.png";
+import logoWhiteFallback from "@/assets/logo-white.png";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -22,6 +23,7 @@ const forgotPasswordSchema = z.object({
 export default function Auth() {
   const { signIn } = useAuth();
   const { toast } = useToast();
+  const { data: systemSettings } = useSystemSettings();
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +31,9 @@ export default function Auth() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [forgotEmail, setForgotEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Use logo from system_settings (dark variant for dark login page), fallback to static asset
+  const logoSrc = systemSettings?.logo_url_dark || logoWhiteFallback;
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
     const fieldErrors: Record<string, string> = {};
@@ -83,11 +88,9 @@ export default function Auth() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
           <img 
-            src={logoWhite} 
+            src={logoSrc} 
             alt="Vimob" 
             className="h-28 w-auto mb-5" 
-            fetchPriority="high"
-            decoding="async"
           />
           <p className="text-center text-sm" style={{ color: '#ff482a' }}>
             {mode === 'login' 
