@@ -285,6 +285,7 @@ export default function AdminSettings() {
     }
   };
 
+  const handleSaveWhatsapp = async () => {
     if (!settings) return;
 
     setSaving(true);
