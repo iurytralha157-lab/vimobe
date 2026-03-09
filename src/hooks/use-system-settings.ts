@@ -30,6 +30,7 @@ interface SystemSettings {
   logo_url_dark?: string | null;
   favicon_url_light?: string | null;
   favicon_url_dark?: string | null;
+  login_bg_url?: string | null;
   default_whatsapp?: string | null;
   contact_whatsapp?: string | null;
   logo_width?: number | null;
