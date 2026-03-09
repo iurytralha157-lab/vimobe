@@ -153,6 +153,7 @@ export default function AdminSettings() {
       logo_url_dark: settings.logo_url_dark,
       favicon_url_light: settings.favicon_url_light,
       favicon_url_dark: settings.favicon_url_dark,
+      login_bg_url: settings.login_bg_url,
       default_whatsapp: settings.default_whatsapp,
       logo_width: settings.logo_width,
       logo_height: settings.logo_height,
