@@ -132,8 +132,8 @@ async function requestNotificationPermission(): Promise<boolean> {
 function sendBrowserNotification(title: string, options?: NotificationOptions) {
   if (Notification.permission === 'granted') {
     const notification = new Notification(title, {
-      icon: '/logo.png',
-      badge: '/logo.png',
+      icon: '/favicon.png',
+      badge: '/favicon.png',
       tag: 'crm-notification',
       ...options,
     });
