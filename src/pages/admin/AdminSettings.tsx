@@ -125,6 +125,7 @@ export default function AdminSettings() {
         logo_url_dark: value.logo_url_dark || null,
         favicon_url_light: value.favicon_url_light || null,
         favicon_url_dark: value.favicon_url_dark || null,
+        login_bg_url: value.login_bg_url || null,
         default_whatsapp: value.default_whatsapp || null,
         logo_width: value.logo_width || null,
         logo_height: value.logo_height || null,
