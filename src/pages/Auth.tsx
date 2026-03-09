@@ -85,7 +85,7 @@ export default function Auth() {
           <img 
             src={logoWhite} 
             alt="Vimob" 
-            className="h-16 w-auto mb-5" 
+            className="h-28 w-auto mb-5" 
             fetchPriority="high"
             decoding="async"
           />
