@@ -545,6 +545,58 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
+        {/* Login Background Image */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Imagem de Fundo do Login</CardTitle>
+            <CardDescription>
+              Imagem exibida no lado direito da tela de login. Recomendado: 1920x1080px.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-64 h-36 rounded-lg bg-slate-900 border-2 border-dashed border-border flex items-center justify-center overflow-hidden">
+                {settings?.login_bg_url ? (
+                  <img 
+                    src={settings.login_bg_url} 
+                    alt="Login Background" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-muted-foreground text-sm">Sem imagem</span>
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  id="login-bg-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadLoginBg(file);
+                  }}
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => document.getElementById('login-bg-upload')?.click()}
+                  disabled={uploadingLoginBg}
+                >
+                  {uploadingLoginBg ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Upload Imagem
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recomendado: imagem de alta qualidade, 1920x1080px
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Logo Size Settings */}
         <Card>
           <CardHeader>
