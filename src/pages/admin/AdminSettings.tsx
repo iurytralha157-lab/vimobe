@@ -129,6 +129,7 @@ export default function AdminSettings() {
         maintenance_mode: value.maintenance_mode || false,
         maintenance_message: value.maintenance_message || '',
         feature_flags: value.feature_flags || {},
+        notification_instance_name: value.notification_instance_name || null,
       });
       setWhatsapp(value.default_whatsapp || '');
       setLogoWidth(value.logo_width || 140);
