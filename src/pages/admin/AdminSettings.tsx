@@ -19,6 +19,7 @@ interface SystemSettingsValue {
   logo_url_dark?: string | null;
   favicon_url_light?: string | null;
   favicon_url_dark?: string | null;
+  login_bg_url?: string | null;
   default_whatsapp?: string | null;
   logo_width?: number | null;
   logo_height?: number | null;
@@ -47,6 +48,7 @@ export default function AdminSettings() {
   const [uploadingDark, setUploadingDark] = useState(false);
   const [uploadingFaviconLight, setUploadingFaviconLight] = useState(false);
   const [uploadingFaviconDark, setUploadingFaviconDark] = useState(false);
+  const [uploadingLoginBg, setUploadingLoginBg] = useState(false);
   const [logoWidth, setLogoWidth] = useState(140);
   const [logoHeight, setLogoHeight] = useState(40);
   const [broadcastingRefresh, setBroadcastingRefresh] = useState(false);
@@ -123,6 +125,7 @@ export default function AdminSettings() {
         logo_url_dark: value.logo_url_dark || null,
         favicon_url_light: value.favicon_url_light || null,
         favicon_url_dark: value.favicon_url_dark || null,
+        login_bg_url: value.login_bg_url || null,
         default_whatsapp: value.default_whatsapp || null,
         logo_width: value.logo_width || null,
         logo_height: value.logo_height || null,
@@ -150,6 +153,7 @@ export default function AdminSettings() {
       logo_url_dark: settings.logo_url_dark,
       favicon_url_light: settings.favicon_url_light,
       favicon_url_dark: settings.favicon_url_dark,
+      login_bg_url: settings.login_bg_url,
       default_whatsapp: settings.default_whatsapp,
       logo_width: settings.logo_width,
       logo_height: settings.logo_height,
@@ -256,6 +260,28 @@ export default function AdminSettings() {
       toast.error('Erro ao fazer upload: ' + error.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleUploadLoginBg = async (file: File) => {
+    if (!settings) return;
+    setUploadingLoginBg(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `system/login-bg.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(path);
+      await updateSettingsValue({ login_bg_url: publicUrl });
+      toast.success('Imagem de fundo do login atualizada!');
+    } catch (error: any) {
+      toast.error('Erro ao fazer upload: ' + error.message);
+    } finally {
+      setUploadingLoginBg(false);
     }
   };
 
@@ -515,6 +541,58 @@ export default function AdminSettings() {
                     Upload Ícone Escuro
                   </Button>
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Login Background Image */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Imagem de Fundo do Login</CardTitle>
+            <CardDescription>
+              Imagem exibida no lado direito da tela de login. Recomendado: 1920x1080px.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-64 h-36 rounded-lg bg-slate-900 border-2 border-dashed border-border flex items-center justify-center overflow-hidden">
+                {settings?.login_bg_url ? (
+                  <img 
+                    src={settings.login_bg_url} 
+                    alt="Login Background" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-muted-foreground text-sm">Sem imagem</span>
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  id="login-bg-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadLoginBg(file);
+                  }}
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => document.getElementById('login-bg-upload')?.click()}
+                  disabled={uploadingLoginBg}
+                >
+                  {uploadingLoginBg ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Upload Imagem
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recomendado: imagem de alta qualidade, 1920x1080px
+                </p>
               </div>
             </div>
           </CardContent>

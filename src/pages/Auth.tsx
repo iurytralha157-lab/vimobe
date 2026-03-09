@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useSystemSettings } from "@/hooks/use-system-settings";
-import loginBg from "@/assets/login-bg.jpg";
+import loginBgFallback from "@/assets/login-bg.jpg";
 import logoWhiteFallback from "@/assets/logo-white.png";
 
 const loginSchema = z.object({
@@ -32,8 +32,8 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Use logo from system_settings (dark variant for dark login page), fallback to static asset
   const logoSrc = systemSettings?.logo_url_dark || logoWhiteFallback;
+  const loginBgSrc = systemSettings?.login_bg_url || loginBgFallback;
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
     const fieldErrors: Record<string, string> = {};
@@ -90,7 +90,7 @@ export default function Auth() {
           <img 
             src={logoSrc} 
             alt="Vimob" 
-            className="h-28 w-auto mb-5" 
+            className="h-14 w-auto mb-5" 
           />
           <p className="text-center text-sm" style={{ color: '#ff482a' }}>
             {mode === 'login' 
@@ -208,11 +208,10 @@ export default function Auth() {
       {/* Right side - Image */}
       <div className="hidden lg:block flex-1 relative overflow-hidden">
         <img 
-          src={loginBg} 
+          src={loginBgSrc} 
           alt="" 
           className="absolute inset-0 w-full h-full object-cover"
         />
-        {/* Decorative circles */}
         <div className="absolute bottom-12 right-12 flex flex-col gap-3 opacity-30">
           <div className="flex gap-3">
             <div className="w-16 h-16 rounded-full border-2" style={{ borderColor: '#ff482a' }} />
