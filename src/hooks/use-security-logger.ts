@@ -55,7 +55,7 @@ export function useSecurityLogger() {
     }
 
     // Em produção, enviar para servidor de logs
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // Implementar API call aqui
       // fetch('/api/logs/security', { method: 'POST', body: JSON.stringify(securityEvent) })
     }

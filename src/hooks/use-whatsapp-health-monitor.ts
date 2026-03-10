@@ -30,7 +30,7 @@ export function useWhatsAppHealthMonitor() {
   const { data: sessions } = useAccessibleSessions();
   
   const healthStatesRef = useRef<Map<string, SessionHealthState>>(new Map());
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isPollingRef = useRef(false);
 
   // Check a single session's connection status
