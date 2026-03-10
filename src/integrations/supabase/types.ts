@@ -1588,6 +1588,50 @@ export type Database = {
         }
         Relationships: []
       }
+      imoview_integrations: {
+        Row: {
+          api_key: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          organization_id: string
+          sync_log: Json | null
+          total_synced: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id: string
+          sync_log?: Json | null
+          total_synced?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id?: string
+          sync_log?: Json | null
+          total_synced?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imoview_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           created_at: string | null
@@ -2830,7 +2874,11 @@ export type Database = {
       }
       organization_sites: {
         Row: {
+          about_checkmarks: Json | null
+          about_features: Json | null
           about_image_url: string | null
+          about_stats: Json | null
+          about_subtitle: string | null
           about_text: string | null
           about_title: string | null
           accent_color: string | null
@@ -2867,6 +2915,7 @@ export type Database = {
           seo_description: string | null
           seo_keywords: string | null
           seo_title: string | null
+          show_about_on_home: boolean | null
           site_description: string | null
           site_theme: string
           site_title: string | null
@@ -2881,7 +2930,11 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          about_checkmarks?: Json | null
+          about_features?: Json | null
           about_image_url?: string | null
+          about_stats?: Json | null
+          about_subtitle?: string | null
           about_text?: string | null
           about_title?: string | null
           accent_color?: string | null
@@ -2918,6 +2971,7 @@ export type Database = {
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
+          show_about_on_home?: boolean | null
           site_description?: string | null
           site_theme?: string
           site_title?: string | null
@@ -2932,7 +2986,11 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          about_checkmarks?: Json | null
+          about_features?: Json | null
           about_image_url?: string | null
+          about_stats?: Json | null
+          about_subtitle?: string | null
           about_text?: string | null
           about_title?: string | null
           accent_color?: string | null
@@ -2969,6 +3027,7 @@ export type Database = {
           seo_description?: string | null
           seo_keywords?: string | null
           seo_title?: string | null
+          show_about_on_home?: boolean | null
           site_description?: string | null
           site_theme?: string
           site_title?: string | null
@@ -3258,7 +3317,9 @@ export type Database = {
           fotos: Json | null
           id: string
           imagem_principal: string | null
+          imoview_codigo: string | null
           iptu: number | null
+          is_demo: boolean
           latitude: number | null
           longitude: number | null
           mobilia: string | null
@@ -3305,7 +3366,9 @@ export type Database = {
           fotos?: Json | null
           id?: string
           imagem_principal?: string | null
+          imoview_codigo?: string | null
           iptu?: number | null
+          is_demo?: boolean
           latitude?: number | null
           longitude?: number | null
           mobilia?: string | null
@@ -3352,7 +3415,9 @@ export type Database = {
           fotos?: Json | null
           id?: string
           imagem_principal?: string | null
+          imoview_codigo?: string | null
           iptu?: number | null
+          is_demo?: boolean
           latitude?: number | null
           longitude?: number | null
           mobilia?: string | null

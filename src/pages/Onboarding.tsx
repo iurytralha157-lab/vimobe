@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Building2, CheckCircle2 } from 'lucide-react';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import { seedDemoProperties } from '@/lib/demo-properties';
 
 const defaultStages = [
   { name: 'Novo Lead', stage_key: 'new', position: 0, color: '#3b82f6' },
@@ -115,6 +116,9 @@ export default function Onboarding() {
         .insert({
           organization_id: org.id,
         });
+
+      // 7. Seed demo properties
+      await seedDemoProperties(org.id);
 
       setStatus('success');
       await refreshProfile();

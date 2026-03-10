@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
+import { removeDemoProperties } from '@/lib/demo-properties';
 
 export type Property = Tables<'properties'>;
 
@@ -126,7 +127,11 @@ export function useCreateProperty() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Remove demo properties when user creates their first real property
+      if (data?.organization_id) {
+        removeDemoProperties(data.organization_id);
+      }
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       toast.success('Imóvel cadastrado com sucesso!');
     },

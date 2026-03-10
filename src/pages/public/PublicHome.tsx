@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useFeaturedProperties, usePropertyTypes, usePublicProperties } from "@/hooks/use-public-site";
-import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle } from "lucide-react";
+import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle, CheckCircle2 } from "lucide-react";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -296,6 +296,84 @@ export default function PublicHome() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* About Section on Home */}
+      {siteConfig.show_about_on_home && (
+        <section className="py-20" style={{ backgroundColor: altBg }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              {/* Image */}
+              <div>
+                {siteConfig.about_image_url ? (
+                  <img 
+                    src={siteConfig.about_image_url} 
+                    alt="Sobre nós"
+                    className="rounded-3xl shadow-2xl w-full h-auto"
+                  />
+                ) : (
+                  <div 
+                    className="rounded-3xl h-[400px] md:h-[500px] flex items-center justify-center relative overflow-hidden"
+                    style={{ backgroundColor: `${primaryColor}10` }}
+                  >
+                    <div 
+                      className="absolute inset-0 opacity-20"
+                      style={{ backgroundImage: `linear-gradient(135deg, ${primaryColor} 0%, transparent 50%)` }}
+                    />
+                    <Building className="w-32 h-32" style={{ color: primaryColor }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Text */}
+              <div>
+                <span 
+                  className="text-sm font-semibold uppercase tracking-wider"
+                  style={{ color: primaryColor }}
+                >
+                  Nossa História
+                </span>
+                <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-6" style={{ color: sectionTextColor }}>
+                  {siteConfig.about_subtitle || siteConfig.about_title || 'Transformando sonhos em realidade desde o início'}
+                </h2>
+                {siteConfig.about_text ? (
+                  <div className="whitespace-pre-wrap leading-relaxed text-lg" style={{ color: sectionSubTextColor }}>
+                    {siteConfig.about_text}
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-lg leading-relaxed" style={{ color: sectionSubTextColor }}>
+                    <p>
+                      A {siteConfig.organization_name} nasceu com o objetivo de transformar a experiência 
+                      de comprar, vender ou alugar imóveis. Nossa equipe é formada por profissionais 
+                      experientes e apaixonados pelo mercado imobiliário.
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-8 space-y-3">
+                  {(siteConfig.about_checkmarks?.length ? siteConfig.about_checkmarks : ["Atendimento personalizado", "Imóveis verificados", "Suporte completo"]).map((item, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
+                      <span className="font-medium" style={{ color: isDarkTheme ? `${textColor}CC` : '#374151' }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8">
+                  <Link to={getHref("sobre")}>
+                    <Button 
+                      className="px-8 py-6 text-sm tracking-wider rounded-full text-white"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      Saiba Mais
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>

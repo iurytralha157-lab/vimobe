@@ -91,6 +91,11 @@ function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: 
             background_color: (data as any).background_color || '#0D0D0D',
             text_color: (data as any).text_color || '#FFFFFF',
             card_color: (data as any).card_color || '#FFFFFF',
+            show_about_on_home: (data as any).show_about_on_home ?? false,
+            about_subtitle: (data as any).about_subtitle || null,
+            about_stats: (data as any).about_stats || null,
+            about_checkmarks: (data as any).about_checkmarks || null,
+            about_features: (data as any).about_features || null,
           });
         }
       } catch (err) {

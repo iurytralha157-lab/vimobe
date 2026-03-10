@@ -49,6 +49,11 @@ function mapSiteDataToConfig(data: any, orgName: string): PublicSiteConfig {
     background_color: data.background_color || '#0D0D0D',
     text_color: data.text_color || '#FFFFFF',
     card_color: data.card_color || '#FFFFFF',
+    show_about_on_home: data.show_about_on_home ?? false,
+    about_subtitle: data.about_subtitle || null,
+    about_stats: data.about_stats || null,
+    about_checkmarks: data.about_checkmarks || null,
+    about_features: data.about_features || null,
   };
 }
 
