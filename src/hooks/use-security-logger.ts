@@ -50,7 +50,7 @@ export function useSecurityLogger() {
     localStorage.setItem('security_logs', JSON.stringify(logArray));
 
     // Log no console em desenvolvimento
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[Security]', event.type, securityEvent);
     }
 
