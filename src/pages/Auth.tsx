@@ -201,24 +201,26 @@ export default function Auth() {
   const showBg = loginBgUrl && bgLoaded;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
-      {/* Mobile hero image */}
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background relative">
+      {/* Mobile: full-screen background image behind everything */}
       {showBg && (
-        <div className="lg:hidden relative w-full h-[38vh] min-h-[220px] overflow-hidden">
+        <div className="lg:hidden absolute inset-0 w-full h-[55vh] overflow-hidden">
           <img
             src={loginBgUrl!}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover scale-110"
+            className="w-full h-full object-cover scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-background" />
         </div>
       )}
 
+      {/* Mobile spacer to push form below image */}
+      {showBg && <div className="lg:hidden h-[40vh] min-h-[200px] flex-shrink-0" />}
+
       {/* Login form */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none">
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10">
         <div className="w-full max-w-sm">
-          {/* LOGO - hidden on mobile when bg image is shown */}
-          <div className="flex flex-col items-center mb-8">
+          <div className="flex flex-col items-center mb-6">
             {logoUrl && (
               <img 
                 src={logoUrl} 
