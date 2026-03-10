@@ -204,24 +204,13 @@ export default function Auth() {
     <div className="min-h-screen flex flex-col lg:flex-row bg-background">
       {/* Mobile hero image */}
       {showBg && (
-        <div className="lg:hidden relative w-full h-[28vh] min-h-[180px] overflow-hidden">
+        <div className="lg:hidden relative w-full h-[38vh] min-h-[220px] overflow-hidden">
           <img
             src={loginBgUrl!}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover scale-110"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-background" />
-          {logoUrl && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="h-10 w-auto drop-shadow-lg" 
-                fetchPriority="high"
-                decoding="async"
-              />
-            </div>
-          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-background" />
         </div>
       )}
 
@@ -229,7 +218,7 @@ export default function Auth() {
       <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none">
         <div className="w-full max-w-sm">
           {/* LOGO - hidden on mobile when bg image is shown */}
-          <div className={`flex flex-col items-center mb-8 ${showBg ? 'hidden lg:flex' : ''}`}>
+          <div className="flex flex-col items-center mb-8">
             {logoUrl && (
               <img 
                 src={logoUrl} 
