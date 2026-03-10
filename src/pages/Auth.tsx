@@ -218,7 +218,7 @@ export default function Auth() {
       <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none">
         <div className="w-full max-w-sm">
           {/* LOGO - hidden on mobile when bg image is shown */}
-          <div className={`flex flex-col items-center mb-8 ${showBg ? 'hidden lg:flex' : ''}`}>
+          <div className="flex flex-col items-center mb-8">
             {logoUrl && (
               <img 
                 src={logoUrl} 
