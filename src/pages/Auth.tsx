@@ -201,12 +201,35 @@ export default function Auth() {
   const showBg = loginBgUrl && bgLoaded;
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Login form - centered */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-10 flex-shrink-0 mx-auto lg:mx-0">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+      {/* Mobile hero image */}
+      {showBg && (
+        <div className="lg:hidden relative w-full h-[28vh] min-h-[180px] overflow-hidden">
+          <img
+            src={loginBgUrl!}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-background" />
+          {logoUrl && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img 
+                src={logoUrl} 
+                alt="Logo" 
+                className="h-10 w-auto drop-shadow-lg" 
+                fetchPriority="high"
+                decoding="async"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Login form */}
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none">
         <div className="w-full max-w-sm">
-          {/* LOGO */}
-          <div className="flex flex-col items-center mb-8">
+          {/* LOGO - hidden on mobile when bg image is shown */}
+          <div className={`flex flex-col items-center mb-8 ${showBg ? 'hidden lg:flex' : ''}`}>
             {logoUrl && (
               <img 
                 src={logoUrl} 
@@ -216,12 +239,12 @@ export default function Auth() {
                 decoding="async"
               />
             )}
-            <p className="text-sm text-muted-foreground">
-              {mode === 'login' 
-                ? 'Acesse seu sistema de gestão imobiliário' 
-                : 'Recupere o acesso à sua conta'}
-            </p>
           </div>
+          <p className="text-sm text-muted-foreground text-center mb-6">
+            {mode === 'login' 
+              ? 'Acesse seu sistema de gestão imobiliário' 
+              : 'Recupere o acesso à sua conta'}
+          </p>
 
           {mode === 'login' ? (
             <form onSubmit={handleLogin} className="space-y-5">
