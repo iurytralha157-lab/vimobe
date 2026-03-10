@@ -50,12 +50,12 @@ export function useSecurityLogger() {
     localStorage.setItem('security_logs', JSON.stringify(logArray));
 
     // Log no console em desenvolvimento
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[Security]', event.type, securityEvent);
     }
 
     // Em produção, enviar para servidor de logs
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // Implementar API call aqui
       // fetch('/api/logs/security', { method: 'POST', body: JSON.stringify(securityEvent) })
     }

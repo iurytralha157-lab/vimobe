@@ -202,11 +202,11 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Left panel - Login form */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col justify-center px-8 py-10 flex-shrink-0">
-        <div className="w-full max-w-sm mx-auto">
+      {/* Login form - centered */}
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-center px-8 py-10 flex-shrink-0 mx-auto lg:mx-0">
+        <div className="w-full max-w-sm">
           {/* LOGO */}
-          <div className="flex flex-col items-start mb-8">
+          <div className="flex flex-col items-center mb-8">
             {logoUrl && (
               <img 
                 src={logoUrl} 

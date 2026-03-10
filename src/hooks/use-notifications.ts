@@ -206,7 +206,7 @@ export function useNotifications() {
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
     const baseDelay = 1000;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let isUnmounting = false;
 
     const setupChannel = () => {
