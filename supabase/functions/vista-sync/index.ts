@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
               totalSynced++;
             }
           } catch (e) {
-            errors.push(`Process error: ${e.message}`);
+            errors.push(`Process error: ${(e as Error).message}`);
           }
         }
 
