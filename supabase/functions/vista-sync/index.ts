@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             }
           );
         } catch (e) {
-          errors.push(`Fetch error page ${page}: ${e.message}`);
+          errors.push(`Fetch error page ${page}: ${(e as Error).message}`);
           break;
         }
 
