@@ -106,16 +106,16 @@ Deno.serve(async (req) => {
 
       while (hasMore) {
         const pesquisaObj: any = {
+          fields,
           paginacao: { pagina: page, quantidade: perPage },
-          ...(integration.import_inactive ? {} : { filter: { Status: ["Ativo"] } }),
+          ...(integration.import_inactive ? {} : { filter: { Status: "Ativo" } }),
         };
         const pesquisaParam = encodeURIComponent(JSON.stringify(pesquisaObj));
-        const fieldsParam = encodeURIComponent(JSON.stringify(fields));
 
         let res: Response;
         try {
           res = await fetch(
-            `${apiUrl}/imoveis/listar?key=${apiKey}&pesquisa=${pesquisaParam}&fields=${fieldsParam}`,
+            `${apiUrl}/imoveis/listar?key=${apiKey}&pesquisa=${pesquisaParam}`,
             {
               method: "GET",
               headers: { Accept: "application/json" },
