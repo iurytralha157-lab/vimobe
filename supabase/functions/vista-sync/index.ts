@@ -49,13 +49,13 @@ Deno.serve(async (req) => {
     // ---- TEST MODE ----
     if (action === "test") {
       try {
-        const testPayload = {
+        const pesquisa = encodeURIComponent(JSON.stringify({
           fields: ["Codigo"],
-        };
-        const pesquisa = encodeURIComponent(JSON.stringify({ paginacao: { pagina: 1, quantidade: 1 } }));
+          paginacao: { pagina: 1, quantidade: 1 },
+        }));
 
         const res = await fetch(
-          `${apiUrl}/imoveis/listar?key=${apiKey}&showtotal=1&pesquisa=${pesquisa}&fields=${encodeURIComponent(JSON.stringify(testPayload.fields))}`,
+          `${apiUrl}/imoveis/listar?key=${apiKey}&showtotal=1&pesquisa=${pesquisa}`,
           {
             method: "GET",
             headers: { Accept: "application/json" },
@@ -106,16 +106,16 @@ Deno.serve(async (req) => {
 
       while (hasMore) {
         const pesquisaObj: any = {
+          fields,
           paginacao: { pagina: page, quantidade: perPage },
-          ...(integration.import_inactive ? {} : { filter: { Status: ["Ativo"] } }),
+          ...(integration.import_inactive ? {} : { filter: { Status: "Ativo" } }),
         };
         const pesquisaParam = encodeURIComponent(JSON.stringify(pesquisaObj));
-        const fieldsParam = encodeURIComponent(JSON.stringify(fields));
 
         let res: Response;
         try {
           res = await fetch(
-            `${apiUrl}/imoveis/listar?key=${apiKey}&pesquisa=${pesquisaParam}&fields=${fieldsParam}`,
+            `${apiUrl}/imoveis/listar?key=${apiKey}&pesquisa=${pesquisaParam}`,
             {
               method: "GET",
               headers: { Accept: "application/json" },
@@ -161,10 +161,11 @@ Deno.serve(async (req) => {
             let fotos: string[] = [];
             let imagemPrincipal = "";
             try {
-              const fotosPesquisa = encodeURIComponent(JSON.stringify({ fotos: { quantidade: 20 } }));
-              const fotosFields = encodeURIComponent(JSON.stringify(["Foto"]));
+              const fotosPesquisa = encodeURIComponent(JSON.stringify({
+                fields: ["Foto", "FotoPequena", "Destaque"],
+              }));
               const fotosRes = await fetch(
-                `${apiUrl}/imoveis/detalhes?key=${apiKey}&imovel=${codigo}&pesquisa=${fotosPesquisa}&fields=${fotosFields}`,
+                `${apiUrl}/imoveis/detalhes?key=${apiKey}&imovel=${codigo}&pesquisa=${fotosPesquisa}`,
                 {
                   method: "GET",
                   headers: { Accept: "application/json" },
