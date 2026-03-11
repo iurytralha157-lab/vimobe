@@ -104,23 +104,22 @@ Deno.serve(async (req) => {
       let hasMore = true;
       const errors: string[] = [];
 
-      while (hasMore) {
-        const payload = {
-          fields,
-          ppimovel: "1",
-          pesquisa: {
-            paginacao: { pagina: page, quantidade: perPage },
-            ...(integration.import_inactive ? {} : { condicao: "E", campos: [{ campo: "Status", valor: "Ativo", tipo: "igual" }] }),
-          },
+        const pesquisaObj: any = {
+          paginacao: { pagina: page, quantidade: perPage },
+          ...(integration.import_inactive ? {} : { condicao: "E", campos: [{ campo: "Status", valor: "Ativo", tipo: "igual" }] }),
         };
+        const pesquisaParam = encodeURIComponent(JSON.stringify(pesquisaObj));
+        const fieldsParam = encodeURIComponent(JSON.stringify(fields));
 
         let res: Response;
         try {
-          res = await fetch(`${apiUrl}/imoveis/listar?key=${apiKey}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify(payload),
-          });
+          res = await fetch(
+            `${apiUrl}/imoveis/listar?key=${apiKey}&pesquisa=${pesquisaParam}&fields=${fieldsParam}`,
+            {
+              method: "GET",
+              headers: { Accept: "application/json" },
+            }
+          );
         } catch (e) {
           errors.push(`Fetch error page ${page}: ${e.message}`);
           break;
