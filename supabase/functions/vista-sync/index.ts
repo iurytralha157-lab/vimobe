@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         );
       } catch (e) {
         return new Response(
-          JSON.stringify({ success: false, error: `Connection failed: ${e.message}` }),
+          JSON.stringify({ success: false, error: `Connection failed: ${(e as Error).message}` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
       let hasMore = true;
       const errors: string[] = [];
 
+      while (hasMore) {
         const pesquisaObj: any = {
           paginacao: { pagina: page, quantidade: perPage },
           ...(integration.import_inactive ? {} : { condicao: "E", campos: [{ campo: "Status", valor: "Ativo", tipo: "igual" }] }),
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
             }
           );
         } catch (e) {
-          errors.push(`Fetch error page ${page}: ${e.message}`);
+          errors.push(`Fetch error page ${page}: ${(e as Error).message}`);
           break;
         }
 
@@ -261,7 +262,7 @@ Deno.serve(async (req) => {
               totalSynced++;
             }
           } catch (e) {
-            errors.push(`Process error: ${e.message}`);
+            errors.push(`Process error: ${(e as Error).message}`);
           }
         }
 
@@ -299,7 +300,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
