@@ -36,26 +36,42 @@ export function VistaImportDialog({ open, onOpenChange }: Props) {
   const handleSaveAndTest = async () => {
     if (!apiUrl.trim() || !apiKey.trim()) return;
     setTestResult(null);
-    await saveIntegration.mutateAsync({ api_url: apiUrl.trim(), api_key: apiKey.trim() });
-    const result = await testConnection.mutateAsync();
-    setTestResult(result);
+    try {
+      await saveIntegration.mutateAsync({ api_url: apiUrl.trim(), api_key: apiKey.trim() });
+      const result = await testConnection.mutateAsync();
+      setTestResult(result);
+    } catch (error: any) {
+      setTestResult({ success: false, error: 'Erro de comunicação com o servidor: ' + (error.message || 'Desconhecido') });
+    }
   };
 
   const handleTestExisting = async () => {
     setTestResult(null);
-    const result = await testConnection.mutateAsync();
-    setTestResult(result);
+    try {
+      const result = await testConnection.mutateAsync();
+      setTestResult(result);
+    } catch (error: any) {
+      setTestResult({ success: false, error: 'Erro de comunicação com o servidor: ' + (error.message || 'Desconhecido') });
+    }
   };
 
   const handleSync = async () => {
-    await syncProperties.mutateAsync();
+    try {
+      await syncProperties.mutateAsync();
+    } catch (error) {
+      // The use-vista-integration hook already triggers a toast on error
+    }
   };
 
   const handleDisconnect = async () => {
-    await deleteIntegration.mutateAsync();
-    setTestResult(null);
-    setApiUrl('');
-    setApiKey('');
+    try {
+      await deleteIntegration.mutateAsync();
+      setTestResult(null);
+      setApiUrl('');
+      setApiKey('');
+    } catch (error) {
+      // Handled by hook error toast
+    }
   };
 
   if (isLoading) {

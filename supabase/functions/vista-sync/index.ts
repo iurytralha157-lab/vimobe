@@ -49,18 +49,20 @@ Deno.serve(async (req) => {
     // ---- TEST MODE ----
     if (action === "test") {
       try {
-        const pesquisa = encodeURIComponent(JSON.stringify({
+        const testPayload = {
           fields: ["Codigo"],
-          paginacao: { pagina: 1, quantidade: 1 },
-        }));
+          ppimovel: "1",
+          pesquisa: { paginacao: { pagina: 1, quantidade: 1 } },
+        };
 
-        const res = await fetch(
-          `${apiUrl}/imoveis/listar?key=${apiKey}&showtotal=1&pesquisa=${pesquisa}`,
-          {
-            method: "GET",
-            headers: { Accept: "application/json" },
-          }
-        );
+        const searchParams = new URLSearchParams();
+        searchParams.append("key", apiKey);
+        searchParams.append("pesquisa", JSON.stringify(testPayload));
+
+        const res = await fetch(`${apiUrl}/imoveis/listar?${searchParams.toString()}`, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+        });
 
         if (!res.ok) {
           const text = await res.text();
@@ -105,22 +107,25 @@ Deno.serve(async (req) => {
       const errors: string[] = [];
 
       while (hasMore) {
-        const pesquisaObj: any = {
+        const payload = {
           fields,
-          paginacao: { pagina: page, quantidade: perPage },
-          ...(integration.import_inactive ? {} : { filter: { Status: "Ativo" } }),
+          ppimovel: "1",
+          pesquisa: {
+            paginacao: { pagina: page, quantidade: perPage },
+            ...(integration.import_inactive ? {} : { condicao: "E", campos: [{ campo: "Status", valor: "Ativo", tipo: "igual" }] }),
+          },
         };
-        const pesquisaParam = encodeURIComponent(JSON.stringify(pesquisaObj));
+
+        const searchParams = new URLSearchParams();
+        searchParams.append("key", apiKey);
+        searchParams.append("pesquisa", JSON.stringify(payload));
 
         let res: Response;
         try {
-          res = await fetch(
-            `${apiUrl}/imoveis/listar?key=${apiKey}&pesquisa=${pesquisaParam}`,
-            {
-              method: "GET",
-              headers: { Accept: "application/json" },
-            }
-          );
+          res = await fetch(`${apiUrl}/imoveis/listar?${searchParams.toString()}`, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+          });
         } catch (e) {
           errors.push(`Fetch error page ${page}: ${(e as Error).message}`);
           break;
@@ -161,11 +166,17 @@ Deno.serve(async (req) => {
             let fotos: string[] = [];
             let imagemPrincipal = "";
             try {
-              const fotosPesquisa = encodeURIComponent(JSON.stringify({
-                fields: ["Foto", "FotoPequena", "Destaque"],
-              }));
+              const detailsPayload = {
+                imovel: codigo,
+                fields: ["Foto"],
+                pesquisa: { fotos: { quantidade: 20 } },
+              };
+              const detailsParams = new URLSearchParams();
+              detailsParams.append("key", apiKey);
+              detailsParams.append("pesquisa", JSON.stringify(detailsPayload));
+
               const fotosRes = await fetch(
-                `${apiUrl}/imoveis/detalhes?key=${apiKey}&imovel=${codigo}&pesquisa=${fotosPesquisa}`,
+                `${apiUrl}/imoveis/detalhes?${detailsParams.toString()}`,
                 {
                   method: "GET",
                   headers: { Accept: "application/json" },
