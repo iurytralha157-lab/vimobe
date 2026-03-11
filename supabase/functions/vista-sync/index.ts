@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       while (hasMore) {
         const pesquisaObj: any = {
           paginacao: { pagina: page, quantidade: perPage },
-          ...(integration.import_inactive ? {} : { condicao: "E", campos: [{ campo: "Status", valor: "Ativo", tipo: "igual" }] }),
+          ...(integration.import_inactive ? {} : { filter: { Status: ["Ativo"] } }),
         };
         const pesquisaParam = encodeURIComponent(JSON.stringify(pesquisaObj));
         const fieldsParam = encodeURIComponent(JSON.stringify(fields));
