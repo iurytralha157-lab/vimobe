@@ -87,13 +87,13 @@ Deno.serve(async (req) => {
     if (action === "sync") {
       const fields = [
         "Codigo", "Categoria", "Status", "Finalidade",
-        "ValorVenda", "ValorLocacao", "Dormitorio", "Suite",
-        "BanheiroSocialQtd", "Vagas", "AreaUtil", "AreaTotal",
+        "ValorVenda", "ValorLocacao", "Dormitorios", "Suites",
+        "BanheiroSocialQtd", "Vagas", "AreaPrivativa", "AreaTotal",
         "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "UF", "CEP",
-        "Descricao", "DescricaWeb",
-        "FotoDestaque", "FotoDestaqueEmpreworking",
+        "DescricaoWeb",
+        "FotoDestaque",
         "Latitude", "Longitude",
-        "Condominio", "IPTU", "AnoConstrucao", "Andar",
+        "ValorCondominio", "ValorIPTU", "AnoConstrucao",
         "TituloSite",
       ];
 
