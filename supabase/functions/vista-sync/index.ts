@@ -161,10 +161,11 @@ Deno.serve(async (req) => {
             let fotos: string[] = [];
             let imagemPrincipal = "";
             try {
-              const fotosPesquisa = encodeURIComponent(JSON.stringify({ fotos: { quantidade: 20 } }));
-              const fotosFields = encodeURIComponent(JSON.stringify(["Foto"]));
+              const fotosPesquisa = encodeURIComponent(JSON.stringify({
+                fields: ["Foto", "FotoPequena", "Destaque"],
+              }));
               const fotosRes = await fetch(
-                `${apiUrl}/imoveis/detalhes?key=${apiKey}&imovel=${codigo}&pesquisa=${fotosPesquisa}&fields=${fotosFields}`,
+                `${apiUrl}/imoveis/detalhes?key=${apiKey}&imovel=${codigo}&pesquisa=${fotosPesquisa}`,
                 {
                   method: "GET",
                   headers: { Accept: "application/json" },
