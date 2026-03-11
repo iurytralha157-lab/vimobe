@@ -85,8 +85,6 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const currentPasswordStrength = usePasswordStrength(loginData.password);
-
   // Pre-load background image
   useEffect(() => {
     if (!loginBgUrl) return;
@@ -275,11 +273,11 @@ export default function Auth() {
         </div>
       )}
 
-      {/* Mobile spacer to push form below image */}
-      {showBg && <div className="lg:hidden h-[40vh] min-h-[200px] flex-shrink-0" />}
+      {/* Mobile spacer to push form below image - reduced to allow move the form up */}
+      {showBg && <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />}
 
       {/* Login form container */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10">
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-6">
             {logoUrl && (
@@ -386,32 +384,6 @@ export default function Auth() {
                     <div className="flex items-center gap-1.5 mt-1.5 text-xs text-warning">
                       <ShieldAlert size={14} />
                       <span>Caps Lock está ativado</span>
-                    </div>
-                  )}
-
-                  {/* Password strength indicator */}
-                  {loginData.password.length > 0 && (
-                    <div className="mt-2 space-y-1.5">
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <div
-                            key={i}
-                            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= currentPasswordStrength.score
-                                ? STRENGTH_COLORS[currentPasswordStrength.level]
-                                : 'bg-muted-foreground/20'
-                              }`}
-                          />
-                        ))}
-                      </div>
-                      <p className={`text-xs ${currentPasswordStrength.score <= 2 ? 'text-destructive' :
-                          currentPasswordStrength.score <= 3 ? 'text-yellow-600 dark:text-yellow-400' :
-                            'text-green-600 dark:text-green-400'
-                        }`}>
-                        {STRENGTH_LABELS[currentPasswordStrength.level]}
-                        {currentPasswordStrength.feedback.length > 0 && currentPasswordStrength.score < 5 && (
-                          <span className="text-muted-foreground"> — {currentPasswordStrength.feedback[0]}</span>
-                        )}
-                      </p>
                     </div>
                   )}
                 </div>
