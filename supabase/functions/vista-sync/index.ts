@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         );
       } catch (e) {
         return new Response(
-          JSON.stringify({ success: false, error: `Connection failed: ${e.message}` }),
+          JSON.stringify({ success: false, error: `Connection failed: ${(e as Error).message}` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
