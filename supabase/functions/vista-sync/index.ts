@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
       let hasMore = true;
       const errors: string[] = [];
 
+      while (hasMore) {
         const pesquisaObj: any = {
           paginacao: { pagina: page, quantidade: perPage },
           ...(integration.import_inactive ? {} : { condicao: "E", campos: [{ campo: "Status", valor: "Ativo", tipo: "igual" }] }),
