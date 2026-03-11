@@ -5,12 +5,30 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// Custom storage to handle "Remember Me" logic
+const customStorage = {
+  getItem: (key: string) => {
+    // Try to get from both, as we might be transitioning
+    return localStorage.getItem(key) || sessionStorage.getItem(key);
+  },
+  setItem: (key: string, value: string) => {
+    const rememberMe = localStorage.getItem('remember_me') === 'true';
+    if (rememberMe) {
+      localStorage.setItem(key, value);
+    } else {
+      // If not remember me, use session storage so it clears on browser close
+      sessionStorage.setItem(key, value);
+    }
+  },
+  removeItem: (key: string) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  }
+};
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: customStorage,
     persistSession: true,
     autoRefreshToken: true,
   }
