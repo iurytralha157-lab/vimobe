@@ -51,15 +51,16 @@ Deno.serve(async (req) => {
       try {
         const testPayload = {
           fields: ["Codigo"],
-          ppimovel: "1",
-          pesquisa: { paginacao: { pagina: 1, quantidade: 1 } },
         };
+        const pesquisa = encodeURIComponent(JSON.stringify({ paginacao: { pagina: 1, quantidade: 1 } }));
 
-        const res = await fetch(`${apiUrl}/imoveis/listar?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify(testPayload),
-        });
+        const res = await fetch(
+          `${apiUrl}/imoveis/listar?key=${apiKey}&showtotal=1&pesquisa=${pesquisa}&fields=${encodeURIComponent(JSON.stringify(testPayload.fields))}`,
+          {
+            method: "GET",
+            headers: { Accept: "application/json" },
+          }
+        );
 
         if (!res.ok) {
           const text = await res.text();
