@@ -39,7 +39,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const apiUrl = integration.api_url.replace(/\/+$/, "");
+    let apiUrl = integration.api_url.replace(/\/+$/, "");
+    // Auto-add protocol if missing
+    if (!/^https?:\/\//i.test(apiUrl)) {
+      apiUrl = `https://${apiUrl}`;
+    }
     const apiKey = integration.api_key;
 
     // ---- TEST MODE ----
