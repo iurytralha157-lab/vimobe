@@ -197,7 +197,14 @@ export function VistaImportDialog({ open, onOpenChange }: Props) {
                   <p className="text-muted-foreground">{syncProperties.data.skipped} ignorados (inativos)</p>
                 )}
                 {syncProperties.data.errors?.length > 0 && (
-                  <p className="text-destructive">{syncProperties.data.errors.length} erros</p>
+                  <div className="text-destructive mt-2 space-y-1">
+                    <p>{syncProperties.data.errors.length} erros:</p>
+                    <ul className="list-disc list-inside text-xs">
+                      {syncProperties.data.errors.map((err: string, idx: number) => (
+                        <li key={idx} className="break-words">{err}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             )}
