@@ -127,11 +127,14 @@ Deno.serve(async (req) => {
         }
 
         if (!res.ok) {
-          errors.push(`API error page ${page}: ${res.status}`);
+          const errText = await res.text();
+          console.error(`API error page ${page}: ${res.status} - ${errText}`);
+          errors.push(`API error page ${page}: ${res.status} - ${errText}`);
           break;
         }
 
         const data = await res.json();
+        console.log(`Page ${page} response keys:`, Object.keys(data), `Total items found:`, Object.values(data).filter((v: any) => v && typeof v === "object" && v.Codigo).length);
 
         // Vista returns object with numeric keys, or empty
         const items = Object.values(data).filter(
