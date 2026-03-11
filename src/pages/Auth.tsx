@@ -1,12 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useSystemSettings } from "@/hooks/use-system-settings";
 import { useLoginAttempts } from "@/hooks/use-login-attempts";
-import { usePasswordStrength } from "@/hooks/use-password-strength";
+import { usePasswordStrength, type PasswordStrength } from "@/hooks/use-password-strength";
 import { useSecurityLogger } from "@/hooks/use-security-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,15 +15,33 @@ import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres")
+  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres")
 });
+
+const RESET_COOLDOWN_MS = 60 * 1000; // 1 minuto entre resets
+
+const STRENGTH_COLORS: Record<PasswordStrength['level'], string> = {
+  'very-weak': 'bg-red-500',
+  'weak': 'bg-orange-500',
+  'fair': 'bg-yellow-500',
+  'good': 'bg-lime-500',
+  'strong': 'bg-green-500',
+};
+
+const STRENGTH_LABELS: Record<PasswordStrength['level'], string> = {
+  'very-weak': 'Muito fraca',
+  'weak': 'Fraca',
+  'fair': 'Razoável',
+  'good': 'Boa',
+  'strong': 'Forte',
+};
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Email inválido"),
 });
 
 export default function Auth() {
-  const { signIn } = useAuth();
+  const { signIn, resetPassword } = useAuth();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
@@ -32,7 +50,7 @@ export default function Auth() {
 
   const logoUrl = useMemo(() => {
     if (!systemSettings) return null;
-    return resolvedTheme === 'dark' 
+    return resolvedTheme === 'dark'
       ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
       : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
   }, [systemSettings, resolvedTheme]);
@@ -42,19 +60,31 @@ export default function Auth() {
     return systemSettings.login_bg_url || null;
   }, [systemSettings]);
 
-  useEffect(() => {
+  const logPageAccess = useCallback(() => {
     securityLogger.logPageAccess();
-  }, []);
+  }, [securityLogger]);
+
+  useEffect(() => {
+    logPageAccess();
+  }, [logPageAccess]);
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordStrength, setShowPasswordStrength] = useState(false);
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [forgotEmail, setForgotEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bgLoaded, setBgLoaded] = useState(false);
-  
+  const [rememberMe, setRememberMe] = useState(() => {
+    return localStorage.getItem('remember_me') === 'true';
+  });
+  const [lastResetTime, setLastResetTime] = useState<number>(() => {
+    const stored = localStorage.getItem('last_password_reset');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   const currentPasswordStrength = usePasswordStrength(loginData.password);
 
   // Pre-load background image
@@ -73,6 +103,22 @@ export default function Auth() {
     });
     setErrors(fieldErrors);
   };
+
+  const handleCapsLock = useCallback((e: React.KeyboardEvent) => {
+    setCapsLockOn(e.getModifierState('CapsLock'));
+  }, []);
+
+  const switchMode = useCallback((newMode: 'login' | 'forgot') => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setMode(newMode);
+      setErrors({});
+      if (newMode === 'forgot') {
+        setForgotEmail(loginData.email);
+      }
+      setTimeout(() => setIsTransitioning(false), 50);
+    }, 200);
+  }, [loginData.email]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,13 +160,11 @@ export default function Auth() {
           title: "Erro ao entrar",
           description: "Credenciais inválidas. Verifique seu email e senha.",
         });
-        setLoading(false);
         return;
       }
 
       loginAttempts.resetOnSuccess();
       securityLogger.logLoginAttempt(loginData.email, true);
-      setLoading(false);
     } catch (error) {
       loginAttempts.recordFailedAttempt();
       securityLogger.logLoginAttempt(loginData.email, false, String(error));
@@ -129,6 +173,7 @@ export default function Auth() {
         title: "Erro ao entrar",
         description: "Ocorreu um erro. Tente novamente.",
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -136,21 +181,32 @@ export default function Auth() {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    
+
+    // Rate limiting: 1 reset por minuto
+    const now = Date.now();
+    const timeSinceLastReset = now - lastResetTime;
+    if (timeSinceLastReset < RESET_COOLDOWN_MS) {
+      const remainingSeconds = Math.ceil((RESET_COOLDOWN_MS - timeSinceLastReset) / 1000);
+      toast({
+        variant: "destructive",
+        title: "Aguarde",
+        description: `Você já solicitou um reset recentemente. Tente novamente em ${remainingSeconds} segundos.`,
+      });
+      return;
+    }
+
     const parsed = forgotPasswordSchema.safeParse({ email: forgotEmail });
     if (!parsed.success) {
       setFieldErrorFromZod(parsed.error);
       securityLogger.logValidationError('email', 'Email inválido para reset');
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/auth`,
-      });
-      
+      const { error } = await resetPassword(forgotEmail);
+
       if (error) {
         toast({
           variant: "destructive",
@@ -162,16 +218,19 @@ export default function Auth() {
           email: forgotEmail,
           details: { error: error.message },
         });
-        setLoading(false);
         return;
       }
-      
+
+      // Registrar timestamp do reset para rate limiting
+      setLastResetTime(now);
+      localStorage.setItem('last_password_reset', now.toString());
+
       toast({
         title: "Email enviado!",
         description: "Verifique sua caixa de entrada para redefinir sua senha.",
       });
       securityLogger.logPasswordResetRequest(forgotEmail);
-      setMode('login');
+      switchMode('login');
       setForgotEmail("");
     } catch (error) {
       toast({
@@ -184,9 +243,9 @@ export default function Auth() {
         email: forgotEmail,
         details: { error: String(error) },
       });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   // Show nothing until settings are loaded to avoid flash
@@ -208,6 +267,8 @@ export default function Auth() {
           <img
             src={loginBgUrl!}
             alt=""
+            aria-hidden="true"
+            role="presentation"
             className="w-full h-full object-cover scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-background" />
@@ -217,142 +278,211 @@ export default function Auth() {
       {/* Mobile spacer to push form below image */}
       {showBg && <div className="lg:hidden h-[40vh] min-h-[200px] flex-shrink-0" />}
 
-      {/* Login form */}
+      {/* Login form container */}
       <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10">
         <div className="w-full max-w-sm">
           <div className="flex flex-col items-center mb-6">
             {logoUrl && (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="h-10 w-auto mb-4" 
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="h-10 w-auto mb-4"
                 fetchPriority="high"
                 decoding="async"
               />
             )}
           </div>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            {mode === 'login' 
-              ? 'Acesse seu sistema de gestão imobiliário' 
+            {mode === 'login'
+              ? 'Acesse seu sistema de gestão imobiliário'
               : 'Recupere o acesso à sua conta'}
           </p>
 
-          {mode === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-5">
-              {loginAttempts.isLockedOut && (
-                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-destructive">
-                    <p className="font-semibold">Temporariamente bloqueado</p>
-                    <p>Muitas tentativas. Tente novamente em {Math.ceil(loginAttempts.remainingLockoutTime / 1000 / 60)} minutos.</p>
+          <div
+            className={`transition-all duration-200 ease-in-out ${isTransitioning ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
+              }`}
+          >
+            {mode === 'login' ? (
+              <form onSubmit={handleLogin} className="space-y-5">
+                {loginAttempts.isLockedOut && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2" role="alert">
+                    <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-destructive">
+                      <p className="font-semibold">Temporariamente bloqueado</p>
+                      <p>Muitas tentativas. Tente novamente em {Math.ceil(loginAttempts.remainingLockoutTime / 1000 / 60)} minutos.</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div>
-                <Label className="text-sm text-foreground">Seu e-mail</Label>
-                <Input 
-                  type="email" 
-                  placeholder="seu@email.com" 
-                  value={loginData.email} 
-                  onChange={e => setLoginData({ ...loginData, email: e.target.value })} 
-                  className="h-11 rounded-xl bg-muted" 
-                  disabled={loginAttempts.isLockedOut}
-                />
-                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <Label className="text-sm text-foreground">Sua senha</Label>
+                <div>
+                  <Label htmlFor="login-email" className="text-sm text-foreground">Seu e-mail</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={loginData.email}
+                      onChange={e => setLoginData({ ...loginData, email: e.target.value })}
+                      className="h-11 rounded-xl bg-muted pl-11"
+                      disabled={loginAttempts.isLockedOut}
+                      aria-invalid={!!errors.email}
+                      aria-describedby={errors.email ? 'login-email-error' : undefined}
+                    />
+                  </div>
+                  {errors.email && <p id="login-email-error" className="text-xs text-destructive mt-1" role="alert">{errors.email}</p>}
                 </div>
-                <div className="relative">
-                  <Input 
-                    type={showPassword ? "text" : "password"} 
-                    placeholder="••••••••" 
-                    value={loginData.password} 
-                    onChange={e => setLoginData({ ...loginData, password: e.target.value })} 
-                    className="h-11 rounded-xl bg-muted pr-12" 
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor="login-password" className="text-sm text-foreground">Sua senha</Label>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={loginData.password}
+                      onChange={e => setLoginData({ ...loginData, password: e.target.value })}
+                      onKeyDown={handleCapsLock}
+                      onKeyUp={handleCapsLock}
+                      className="h-11 rounded-xl bg-muted pr-12"
+                      disabled={loginAttempts.isLockedOut}
+                      aria-invalid={!!errors.password}
+                      aria-describedby={errors.password ? 'login-password-error' : undefined}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      disabled={loginAttempts.isLockedOut}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {errors.password && <p id="login-password-error" className="text-xs text-destructive mt-1" role="alert">{errors.password}</p>}
+
+                  <div className="flex items-center justify-between mt-3 px-1">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="remember-me"
+                        checked={rememberMe}
+                        onChange={(e) => {
+                          setRememberMe(e.target.checked);
+                          localStorage.setItem('remember_me', e.target.checked.toString());
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="remember-me" className="text-xs text-muted-foreground cursor-pointer select-none">
+                        Lembrar-me
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Caps Lock warning */}
+                  {capsLockOn && (
+                    <div className="flex items-center gap-1.5 mt-1.5 text-xs text-warning">
+                      <ShieldAlert size={14} />
+                      <span>Caps Lock está ativado</span>
+                    </div>
+                  )}
+
+                  {/* Password strength indicator */}
+                  {loginData.password.length > 0 && (
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div
+                            key={i}
+                            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= currentPasswordStrength.score
+                                ? STRENGTH_COLORS[currentPasswordStrength.level]
+                                : 'bg-muted-foreground/20'
+                              }`}
+                          />
+                        ))}
+                      </div>
+                      <p className={`text-xs ${currentPasswordStrength.score <= 2 ? 'text-destructive' :
+                          currentPasswordStrength.score <= 3 ? 'text-yellow-600 dark:text-yellow-400' :
+                            'text-green-600 dark:text-green-400'
+                        }`}>
+                        {STRENGTH_LABELS[currentPasswordStrength.level]}
+                        {currentPasswordStrength.feedback.length > 0 && currentPasswordStrength.score < 5 && (
+                          <span className="text-muted-foreground"> — {currentPasswordStrength.feedback[0]}</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading || loginAttempts.isLockedOut}
+                  className="w-full h-11 rounded-xl font-semibold uppercase tracking-wider text-xs"
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Entrar
+                </Button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
                     disabled={loginAttempts.isLockedOut}
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)} 
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    disabled={loginAttempts.isLockedOut}
+                    className="text-sm text-primary hover:underline disabled:opacity-50"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    Esqueceu sua senha?
                   </button>
                 </div>
-                {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
-              </div>
-
-              <Button 
-                type="submit" 
-                disabled={loading || loginAttempts.isLockedOut} 
-                className="w-full h-11 rounded-xl font-semibold uppercase tracking-wider text-xs"
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Entrar
-              </Button>
-              
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('forgot');
-                    setErrors({});
-                    setForgotEmail(loginData.email);
-                  }}
-                  disabled={loginAttempts.isLockedOut}
-                  className="text-sm text-primary hover:underline disabled:opacity-50"
-                >
-                  Esqueceu sua senha?
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleForgotPassword} className="space-y-5">
-              <div className="flex items-center gap-2 mb-2">
-                <button
-                  type="button"
-                  onClick={() => { setMode('login'); setErrors({}); }}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft size={20} />
-                </button>
-                <span className="text-sm font-medium text-foreground">Recuperar senha</span>
-              </div>
-              
-              <p className="text-sm text-muted-foreground">
-                Digite seu e-mail e enviaremos um link para redefinir sua senha.
-              </p>
-              
-              <div>
-                <Label className="text-sm text-foreground">Seu e-mail</Label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    type="email" 
-                    placeholder="seu@email.com" 
-                    value={forgotEmail} 
-                    onChange={e => setForgotEmail(e.target.value)} 
-                    className="h-11 rounded-xl bg-muted pl-11" 
-                  />
+              </form>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('login')}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Voltar para login"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                  <span className="text-sm font-medium text-foreground">Recuperar senha</span>
                 </div>
-                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
-              </div>
 
-              <Button 
-                type="submit" 
-                disabled={loading} 
-                className="w-full h-11 rounded-xl font-semibold uppercase tracking-wider text-xs"
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Enviar link de recuperação
-              </Button>
-            </form>
-          )}
+                <p className="text-sm text-muted-foreground">
+                  Digite seu e-mail e enviaremos um link para redefinir sua senha.
+                </p>
+
+                <div>
+                  <Label htmlFor="forgot-email" className="text-sm text-foreground">Seu e-mail</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      className="h-11 rounded-xl bg-muted pl-11"
+                      aria-invalid={!!errors.email}
+                      aria-describedby={errors.email ? 'forgot-email-error' : undefined}
+                    />
+                  </div>
+                  {errors.email && <p id="forgot-email-error" className="text-xs text-destructive mt-1" role="alert">{errors.email}</p>}
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-11 rounded-xl font-semibold uppercase tracking-wider text-xs"
+                >
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Enviar link de recuperação
+                </Button>
+              </form>
+            )}
+          </div>
         </div>
       </div>
 
@@ -362,6 +492,8 @@ export default function Auth() {
           <img
             src={loginBgUrl!}
             alt=""
+            aria-hidden="true"
+            role="presentation"
             className="absolute inset-0 w-full h-full object-cover"
           />
         </div>

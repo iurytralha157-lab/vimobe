@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 /**
  * Hook para logging de eventos de segurança
  * Registra:
@@ -8,7 +10,7 @@
  * - Acessos à página
  */
 
-export type SecurityEventType = 
+export type SecurityEventType =
   | 'login_attempt_failed'
   | 'login_attempt_success'
   | 'login_brute_force_lockout'
@@ -54,11 +56,28 @@ export function useSecurityLogger() {
       console.log('[Security]', event.type, securityEvent);
     }
 
-    // Em produção, enviar para servidor de logs
-    if (import.meta.env.PROD) {
-      // Implementar API call aqui
-      // fetch('/api/logs/security', { method: 'POST', body: JSON.stringify(securityEvent) })
-    }
+    // Em produção ou se quisermos persistência, enviar para tabela audit_logs
+    const syncWithServer = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+
+        await supabase.from('audit_logs').insert([{
+          action: event.type,
+          entity_type: 'security_event',
+          user_id: userData.user?.id || null,
+          new_data: {
+            email: event.email,
+            details: event.details,
+            ipHint: event.ipHint
+          } as Json,
+          user_agent: navigator.userAgent,
+        }]);
+      } catch (err) {
+        console.error('[Security] Failed to sync log with server:', err);
+      }
+    };
+
+    syncWithServer();
   };
 
   // Funções de conveniência

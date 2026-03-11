@@ -50,6 +50,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
   startImpersonate: (orgId: string, orgName: string) => Promise<void>;
   stopImpersonate: () => Promise<void>;
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('role', 'super_admin')
         .maybeSingle()
     ]);
-    
+
     return !!(rolesResult.data || usersResult.data);
   };
 
@@ -101,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if super_admin
         const superAdmin = await checkSuperAdmin(userId);
         setIsSuperAdmin(superAdmin);
-        
+
         setProfile(profileData as UserProfile);
 
         // Ler do localStorage para garantir que o valor está atualizado,
@@ -192,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (!isMounted) return;
-      
+
       // Se houve erro ou sessão inválida, limpar tudo
       if (error || !session) {
         console.log('Sessão inválida na inicialização:', error?.message);
@@ -200,10 +201,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         return;
       }
-      
+
       setSession(session);
       setUser(session.user);
-      
+
       await fetchProfile(session.user.id);
       setLoading(false);
     });
@@ -211,21 +212,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!isMounted) return;
-        
+
         console.log('Auth event:', event, 'Session:', !!session);
-        
+
         // Logout ou sessão expirada - limpar tudo e NÃO processar mais nada
         if (event === 'SIGNED_OUT') {
           clearAllStates();
           return;
         }
-        
+
         // Se não tem sessão, limpar estados
         if (!session) {
           clearAllStates();
           return;
         }
-        
+
         // Ignorar TOKEN_REFRESHED se já fizemos logout manualmente
         // Verificar se o storage foi limpo (indicativo de logout manual)
         const storageKey = `sb-iemalzlfnbouobyjwlwi-auth-token`;
@@ -234,11 +235,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('Ignorando TOKEN_REFRESHED - logout foi realizado');
           return;
         }
-        
+
         // Sessão válida
         setSession(session);
         setUser(session.user);
-        
+
         // Usar setTimeout para evitar deadlock do Supabase
         setTimeout(() => {
           if (isMounted) {
@@ -256,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-    
+
     // Log successful login (async to avoid blocking)
     if (!error && data.user) {
       setTimeout(() => {
@@ -266,13 +267,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }).catch(console.error);
       }, 0);
     }
-    
+
     return { error };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -284,13 +285,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+
+    if (!error) {
+      logAuditAction('password_reset_request', 'session', null, undefined, {
+        email,
+        requested_at: new Date().toISOString()
+      }).catch(console.error);
+    }
+
+    return { error };
+  };
+
   const signOut = async () => {
     // Log logout before clearing states (capture user ID while we still have it)
     const currentUserId = user?.id;
     if (currentUserId) {
       logAuditAction('logout', 'session', currentUserId).catch(console.error);
     }
-    
+
     // Limpar estados PRIMEIRO (antes de qualquer await)
     // Isso garante que o logout funcione mesmo se a sessão já expirou no servidor
     setUser(null);
@@ -300,12 +316,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSuperAdmin(false);
     setImpersonating(null);
     localStorage.removeItem('impersonating');
-    
+
     // Limpar storage do Supabase manualmente para garantir que tokens sejam removidos
     const storageKey = `sb-iemalzlfnbouobyjwlwi-auth-token`;
     localStorage.removeItem(storageKey);
     sessionStorage.removeItem(storageKey);
-    
+
     // Tentar signOut global (invalida refresh token no servidor)
     // Se falhar (sessão já expirada), não importa - tokens já foram limpos
     try {
@@ -333,6 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn,
       signUp,
       signOut,
+      resetPassword,
       refreshProfile,
       startImpersonate,
       stopImpersonate
