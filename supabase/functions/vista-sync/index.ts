@@ -51,8 +51,7 @@ Deno.serve(async (req) => {
       try {
         const testPayload = {
           fields: ["Codigo"],
-          ppimovel: "1",
-          pesquisa: { paginacao: { pagina: 1, quantidade: 1 } },
+          paginacao: { pagina: 1, quantidade: 1 },
         };
 
         const searchParams = new URLSearchParams();
@@ -109,11 +108,8 @@ Deno.serve(async (req) => {
       while (hasMore) {
         const payload = {
           fields,
-          ppimovel: "1",
-          pesquisa: {
-            paginacao: { pagina: page, quantidade: perPage },
-            ...(integration.import_inactive ? {} : { condicao: "E", campos: [{ campo: "Status", valor: "Ativo", tipo: "igual" }] }),
-          },
+          paginacao: { pagina: page, quantidade: perPage },
+          ...(integration.import_inactive ? {} : { filter: { Status: "Ativo" } }),
         };
 
         const searchParams = new URLSearchParams();
@@ -166,14 +162,19 @@ Deno.serve(async (req) => {
             let fotos: string[] = [];
             let imagemPrincipal = "";
             try {
-              const detailsPayload = {
-                imovel: codigo,
+              const detailsPayload: any = {
                 fields: ["Foto"],
-                pesquisa: { fotos: { quantidade: 20 } },
               };
+              detailsPayload.imovel = codigo; // Imovel is passed as a separate param, not in pesquisa generally? Wait, Vista API says you can pass imovel in URL or body. But in GET we usually pass `imovel=123`.
+              // But wait, let's keep it in URL search params instead, or maybe it is part of pesquisa? 
+              // Wait, previous code:
+              //   imovel: codigo, fields: ["Foto"], pesquisa: { fotos: { quantidade: 20 } }
+              // This is also nested! For detalhes endpoint, we should probably pass imovel as a direct parameter, and pesquisa with fields. Or just fields inside pesquisa?
+              
               const detailsParams = new URLSearchParams();
               detailsParams.append("key", apiKey);
-              detailsParams.append("pesquisa", JSON.stringify(detailsPayload));
+              detailsParams.append("imovel", codigo);
+              detailsParams.append("pesquisa", JSON.stringify({ fields: ["Foto", "FotoPequena", "Destaque"] }));
 
               const fotosRes = await fetch(
                 `${apiUrl}/imoveis/detalhes?${detailsParams.toString()}`,
