@@ -209,23 +209,32 @@ export default function SiteSettings() {
     return `export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const target = 'vimobe.lovable.app';
-    const targetUrl = 'https://' + target + url.pathname + url.search;
+    const targetUrl = new URL(request.url);
+    targetUrl.hostname = 'vimobe.lovable.app';
+    targetUrl.protocol = 'https:';
 
-    const response = await fetch(targetUrl, {
-      method: request.method,
-      headers: {
-        ...Object.fromEntries(request.headers),
-        'Host': target,
-        'X-Forwarded-Host': url.hostname,
-      },
-      body: ['GET','HEAD'].includes(request.method) ? undefined : request.body,
-    });
+    // Cria um novo request preservando os headers e body originais
+    const proxyRequest = new Request(targetUrl.toString(), request);
+    
+    // Adiciona o host original para que a aplicação saiba o domínio real
+    proxyRequest.headers.set('X-Forwarded-Host', url.hostname);
 
-    return new Response(response.body, {
-      status: response.status,
-      headers: response.headers,
-    });
+    try {
+      // Faz o fetch para o destino
+      const response = await fetch(proxyRequest);
+
+      // Cria uma nova resposta baseada na original
+      const proxyResponse = new Response(response.body, response);
+      
+      // Remove headers de segurança que poderiam bloquear o site de renderizar no domínio customizado (CORS/CSP/IFrames)
+      proxyResponse.headers.delete('X-Frame-Options');
+      proxyResponse.headers.delete('Content-Security-Policy');
+      proxyResponse.headers.set('Access-Control-Allow-Origin', '*');
+
+      return proxyResponse;
+    } catch (e) {
+      return new Response('Erro ao conectar com o servidor de origem: ' + e.message, { status: 502 });
+    }
   }
 };`;
   };
