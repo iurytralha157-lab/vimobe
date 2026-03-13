@@ -1054,7 +1054,7 @@ export default function Pipelines() {
                         className="text-xs shrink-0"
                         style={{ backgroundColor: `${stage.color}20`, color: stage.color }}
                       >
-                      {stage.total_lead_count || stage.leads?.length || 0}
+                      {stage.leads?.length || 0}
                       </Badge>
                       {/* VGV Badge */}
                       {stageVGVMap.get(stage.id)?.openVGV ? (
