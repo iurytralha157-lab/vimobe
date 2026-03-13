@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DnsVerificationStatus } from "@/components/site/DnsVerificationStatus";
 
 export default function SiteSettings() {
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const { data: site, isLoading } = useOrganizationSite();
   const createSite = useCreateOrganizationSite();
   const updateSite = useUpdateOrganizationSite();
@@ -206,35 +206,67 @@ export default function SiteSettings() {
   };
 
   const getWorkerCode = () => {
+    const siteTitle = (formData.site_title || organization?.name || 'Site Imobiliário').replace(/'/g, "\\'");
+    const siteDescription = (formData.site_description || 'Encontre o imóvel dos seus sonhos conosco.').replace(/'/g, "\\'");
+    const siteFavicon = (site?.favicon_url || '/favicon.png').replace(/'/g, "\\'");
+
     return `export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const targetUrl = new URL(request.url);
-    targetUrl.hostname = 'vimobe.lovable.app';
-    targetUrl.protocol = 'https:';
+    const target = 'vimobe.lovable.app';
+    const targetUrl = 'https://' + target + url.pathname + url.search;
 
-    // Cria um novo request preservando os headers e body originais
-    const proxyRequest = new Request(targetUrl.toString(), request);
-    
-    // Adiciona o host original para que a aplicação saiba o domínio real
-    proxyRequest.headers.set('X-Forwarded-Host', url.hostname);
+    const blockedResponseHeaders = [
+      'content-encoding',
+      'transfer-encoding', 
+      'content-length',
+    ];
 
-    try {
-      // Faz o fetch para o destino
-      const response = await fetch(proxyRequest);
+    const response = await fetch(targetUrl, {
+      method: request.method,
+      headers: {
+        ...Object.fromEntries(request.headers),
+        'Host': target,
+      },
+      body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+      redirect: 'follow',
+    });
 
-      // Cria uma nova resposta baseada na original
-      const proxyResponse = new Response(response.body, response);
-      
-      // Remove headers de segurança que poderiam bloquear o site de renderizar no domínio customizado (CORS/CSP/IFrames)
-      proxyResponse.headers.delete('X-Frame-Options');
-      proxyResponse.headers.delete('Content-Security-Policy');
-      proxyResponse.headers.set('Access-Control-Allow-Origin', '*');
-
-      return proxyResponse;
-    } catch (e) {
-      return new Response('Erro ao conectar com o servidor de origem: ' + e.message, { status: 502 });
+    const newHeaders = new Headers();
+    for (const [key, value] of response.headers.entries()) {
+      if (!blockedResponseHeaders.includes(key.toLowerCase())) {
+        newHeaders.set(key, value);
+      }
     }
+    
+    // Essencial: Evita iframe e CORS bloqueados (Página Branca)
+    newHeaders.delete('x-frame-options');
+    newHeaders.delete('content-security-policy');
+    newHeaders.set('access-control-allow-origin', '*');
+
+    let finalResponse = new Response(response.body, {
+      status: response.status,
+      headers: newHeaders,
+    });
+    
+    // Injeta as configurações da imobiliária no HTML para aparecer correto ao compartilhar no WhatsApp/Redes Sociais
+    const contentType = finalResponse.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      return new HTMLRewriter()
+        .on('title', { element(e) { e.setInnerContent('${siteTitle}'); } })
+        .on('meta[property="og:title"]', { element(e) { e.setAttribute('content', '${siteTitle}'); } })
+        .on('meta[name="twitter:title"]', { element(e) { e.setAttribute('content', '${siteTitle}'); } })
+        .on('meta[name="description"]', { element(e) { e.setAttribute('content', '${siteDescription}'); } })
+        .on('meta[property="og:description"]', { element(e) { e.setAttribute('content', '${siteDescription}'); } })
+        .on('meta[name="twitter:description"]', { element(e) { e.setAttribute('content', '${siteDescription}'); } })
+        .on('link[rel="icon"]', { element(e) { e.setAttribute('href', '${siteFavicon}'); } })
+        .on('link[rel="apple-touch-icon"]', { element(e) { e.setAttribute('href', '${siteFavicon}'); } })
+        .on('meta[property="og:image"]', { element(e) { e.setAttribute('content', '${siteFavicon}'); } })
+        .on('meta[name="twitter:image"]', { element(e) { e.setAttribute('content', '${siteFavicon}'); } })
+        .transform(finalResponse);
+    }
+
+    return finalResponse;
   }
 };`;
   };
@@ -496,7 +528,18 @@ ${getWorkerCode()}`;
                             </div>
                             <div className="flex gap-3">
                               <span className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shrink-0">5</span>
-                              <p>Configure a rota do Worker: <code className="bg-background px-1 py-0.5 rounded text-xs">{formData.custom_domain}/*</code> → seu Worker</p>
+                              <div className="flex-1 space-y-2">
+                                <p>Configure a Rota para o seu domínio acessar o Worker:</p>
+                                <ul className="list-disc pl-5 space-y-1">
+                                  <li>No menu do site, vá em <strong>Workers Routes</strong> → <strong>Add Route</strong></li>
+                                  <li>Em "Route", coloque exato: <code className="bg-background px-1 py-0.5 rounded text-xs">{formData.custom_domain}/*</code></li>
+                                  <li>Em "Worker", selecione o worker criado no passo 3.</li>
+                                  <li>Se quiser com 'www', crie outra rota: <code className="bg-background px-1 py-0.5 rounded text-xs">www.{formData.custom_domain}/*</code></li>
+                                </ul>
+                                <div className="mt-2 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/30 p-2 rounded text-xs border border-amber-200 dark:border-amber-900 border-l-2">
+                                  <strong>⚠️ Importante:</strong> Se você abrir o botão "Visualizar" no Cloudflare (link `.workers.dev`), ele vai mostrar <strong>"Site não encontrado"</strong>. Isso é perfeitamente <strong>normal</strong> e indica que o código está funcionando! O sistema só reconhece o site quando acessado pelo seu domínio real configurado na rota.
+                                </div>
+                              </div>
                             </div>
                           </div>
 
