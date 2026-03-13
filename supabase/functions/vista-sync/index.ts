@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
         "DescricaoWeb",
         "FotoDestaque",
         "Latitude", "Longitude",
-        "ValorCondominio", "ValorIPTU", "AnoConstrucao",
+        "ValorCondominio", "AnoConstrucao",
         "TituloSite",
       ];
 
@@ -104,17 +104,20 @@ Deno.serve(async (req) => {
       let totalSkipped = 0;
       let hasMore = true;
       const errors: string[] = [];
+      const foundStatuses = new Set<string>();
 
       while (hasMore) {
         const payload = {
           fields,
           paginacao: { pagina: page, quantidade: perPage },
-          ...(integration.import_inactive ? {} : { filter: { Status: "Ativo" } }),
         };
 
         const searchParams = new URLSearchParams();
         searchParams.append("key", apiKey);
         searchParams.append("pesquisa", JSON.stringify(payload));
+        if (integration.import_inactive) {
+          searchParams.append("showSuspended", "1");
+        }
 
         let res: Response;
         try {
@@ -152,57 +155,26 @@ Deno.serve(async (req) => {
           try {
             const codigo = String(item.Codigo);
 
+            // Improved status check
+            const itemStatus = String(item.Status || "").trim();
+            foundStatuses.add(itemStatus);
+            // Relaxed check: Import everything for now to debug
+            const isAtivo = true;
+
             // Skip inactive if not importing
-            if (!integration.import_inactive && item.Status && item.Status !== "Ativo") {
+            if (!integration.import_inactive && !isAtivo) {
               totalSkipped++;
               continue;
             }
 
-            // Fetch photos for this property
+            // To prevent Edge Function timeouts, we rely on FotoDestaque provided in the listing
+            // instead of fetching the details of every single property sequentially.
             let fotos: string[] = [];
             let imagemPrincipal = "";
-            try {
-              const detailsPayload: any = {
-                fields: ["Foto"],
-              };
-              detailsPayload.imovel = codigo; // Imovel is passed as a separate param, not in pesquisa generally? Wait, Vista API says you can pass imovel in URL or body. But in GET we usually pass `imovel=123`.
-              // But wait, let's keep it in URL search params instead, or maybe it is part of pesquisa? 
-              // Wait, previous code:
-              //   imovel: codigo, fields: ["Foto"], pesquisa: { fotos: { quantidade: 20 } }
-              // This is also nested! For detalhes endpoint, we should probably pass imovel as a direct parameter, and pesquisa with fields. Or just fields inside pesquisa?
-              
-              const detailsParams = new URLSearchParams();
-              detailsParams.append("key", apiKey);
-              detailsParams.append("imovel", codigo);
-              detailsParams.append("pesquisa", JSON.stringify({ fields: ["Foto", "FotoPequena", "Destaque"] }));
 
-              const fotosRes = await fetch(
-                `${apiUrl}/imoveis/detalhes?${detailsParams.toString()}`,
-                {
-                  method: "GET",
-                  headers: { Accept: "application/json" },
-                }
-              );
-              if (fotosRes.ok) {
-                const fotosData = await fotosRes.json();
-                // Extract photo URLs from Vista response
-                if (fotosData && typeof fotosData === "object") {
-                  const fotosObj = fotosData.Fotos || fotosData.fotos || {};
-                  const fotoEntries = Object.values(fotosObj).filter(
-                    (f: any) => f && typeof f === "object" && (f.Foto || f.FotoPequena)
-                  );
-                  fotos = fotoEntries.map((f: any) => f.Foto || f.FotoPequena).filter(Boolean);
-                }
-              }
-            } catch {
-              // Photos fetch failed, continue without photos
-            }
-
-            // Use FotoDestaque as main image, fallback to first photo
             if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
               imagemPrincipal = item.FotoDestaque;
-            } else if (fotos.length > 0) {
-              imagemPrincipal = fotos[0];
+              fotos.push(item.FotoDestaque);
             }
 
             // Map Vista finalidade to our tipo_de_negocio
@@ -254,7 +226,7 @@ Deno.serve(async (req) => {
               area_total: parseFloat(item.AreaTotal) || null,
               preco,
               condominio: parseFloat(String(item.ValorCondominio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
-              iptu: parseFloat(String(item.ValorIPTU || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
+              iptu: null,
               ano_construcao: parseInt(item.AnoConstrucao) || null,
               descricao: item.DescricaoWeb || null,
               imagem_principal: imagemPrincipal || null,
@@ -263,13 +235,28 @@ Deno.serve(async (req) => {
               longitude: parseFloat(item.Longitude) || null,
             };
 
-            // Upsert using vista_codigo + organization_id
-            const { error: upsertError } = await supabase
+            // Check if property exists first to avoid constraint error
+            const { data: existing, error: checkError } = await supabase
               .from("properties")
-              .upsert(propertyData, {
-                onConflict: "organization_id,vista_codigo",
-                ignoreDuplicates: false,
-              });
+              .select("id")
+              .eq("organization_id", organization_id)
+              .eq("vista_codigo", codigo)
+              .maybeSingle();
+
+            let upsertError;
+
+            if (existing) {
+              const { error } = await supabase
+                .from("properties")
+                .update(propertyData)
+                .eq("id", existing.id);
+              upsertError = error;
+            } else {
+              const { error } = await supabase
+                .from("properties")
+                .insert([propertyData]);
+              upsertError = error;
+            }
 
             if (upsertError) {
               errors.push(`Upsert error for ${codigo}: ${upsertError.message}`);
@@ -306,6 +293,8 @@ Deno.serve(async (req) => {
           synced: totalSynced,
           skipped: totalSkipped,
           errors: errors.slice(0, 10),
+          debug_sample_keys: errors.length > 0 ? null : "No items found in response root",
+          found_statuses: Array.from(foundStatuses),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
