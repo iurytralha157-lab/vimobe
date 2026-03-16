@@ -706,6 +706,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string | null
+          flow_definition: Json | null
           id: string
           is_active: boolean | null
           name: string
@@ -718,6 +719,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          flow_definition?: Json | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -730,6 +732,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          flow_definition?: Json | null
           id?: string
           is_active?: boolean | null
           name?: string
