@@ -221,6 +221,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
               impressions: adInsight?.impressions ?? null,
               reach: adInsight?.reach ?? null,
               leads_count: adData.leads.size,
+              won_count: adData.won.size,
               cpl: adInsight?.cpl ?? null,
               creative_url: adData.creative_url,
               creative_video_url: adData.creative_video_url,
@@ -235,6 +236,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
             impressions: asInsight?.impressions ?? null,
             reach: asInsight?.reach ?? null,
             leads_count: asData.leads.size,
+            won_count: asData.won.size,
             cpl: asInsight?.cpl ?? null,
             ads: ads.sort((a, b) => b.leads_count - a.leads_count),
           });
