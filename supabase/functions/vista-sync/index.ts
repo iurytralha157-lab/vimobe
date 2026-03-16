@@ -68,14 +68,14 @@ async function testConnection(apiUrl: string, apiKey: string) {
 async function syncProperties(supabase: any, apiUrl: string, apiKey: string, organizationId: string, importInactive: boolean) {
   const fields = [
     "Codigo", "Categoria", "Status", "Finalidade",
-    "ValorVenda", "ValorLocacao", "Dormitorios", "Suites",
-    "BanheiroSocialQtd", "Vagas", "AreaPrivativa", "AreaTotal",
+    "ValorVenda", "ValorLocacao", "Dormitorio", "Suites",
+    "Banheiros", "Vagas", "AreaUtil", "AreaTotal",
     "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "UF", "CEP",
     "DescricaoWeb", "FotoDestaque",
     "Latitude", "Longitude",
-    "ValorCondominio", "AnoConstrucao", "TituloSite",
-    // Request photo gallery
-    {"Foto": ["Foto", "FotoPequena", "Destaque"]},
+    "ValorCondominio", "AnoConstrucao", "Titulo",
+    // Request photo gallery (lowercase "fotos" required by Vista API)
+    {"fotos": ["Foto", "FotoPequena", "Destaque"]},
   ];
 
   let page = 1;
