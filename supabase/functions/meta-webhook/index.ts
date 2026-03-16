@@ -161,17 +161,37 @@ serve(async (req) => {
 
             console.log("Lead data received:", JSON.stringify(leadData, null, 2));
 
-            // Fetch creative URL if ad_id is available
+            // Fetch creative URL and video URL if ad_id is available
             let creativeUrl: string | null = null;
+            let creativeVideoUrl: string | null = null;
             if (leadData.ad_id) {
               try {
-                const creativeApiUrl = `https://graph.facebook.com/v19.0/${leadData.ad_id}?fields=creative{effective_image_url,thumbnail_url}&access_token=${integration.access_token}`;
+                const creativeApiUrl = `https://graph.facebook.com/v19.0/${leadData.ad_id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${integration.access_token}`;
                 const creativeResponse = await fetch(creativeApiUrl);
                 const creativeData = await creativeResponse.json();
                 
                 if (creativeData?.creative) {
                   creativeUrl = creativeData.creative.effective_image_url || creativeData.creative.thumbnail_url || null;
                   console.log("Creative URL fetched:", creativeUrl ? "success" : "no image found");
+                  
+                  // Fetch video source URL if video_id exists
+                  if (creativeData.creative.video_id) {
+                    try {
+                      const videoApiUrl = `https://graph.facebook.com/v19.0/${creativeData.creative.video_id}?fields=source,permalink_url&access_token=${integration.access_token}`;
+                      const videoResponse = await fetch(videoApiUrl);
+                      const videoData = await videoResponse.json();
+                      
+                      if (videoData?.source) {
+                        creativeVideoUrl = videoData.source;
+                        console.log("Creative video URL fetched: success");
+                      } else if (videoData?.permalink_url) {
+                        creativeVideoUrl = videoData.permalink_url;
+                        console.log("Creative video permalink fetched: success");
+                      }
+                    } catch (videoError) {
+                      console.warn("Error fetching video URL (non-blocking):", videoError);
+                    }
+                  }
                 } else if (creativeData?.error) {
                   console.warn("Could not fetch creative:", creativeData.error.message);
                 }
