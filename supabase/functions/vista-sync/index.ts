@@ -6,6 +6,292 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Map Vista category to code prefix
+function getCategoryPrefix(categoria: string): string {
+  const cat = (categoria || "").toLowerCase();
+  if (cat.includes("casa") || cat.includes("sobrado")) return "CA";
+  if (cat.includes("cobertura")) return "CB";
+  if (cat.includes("comercial") || cat.includes("sala") || cat.includes("loja") || cat.includes("galpao") || cat.includes("galpão")) return "CO";
+  if (cat.includes("terreno") || cat.includes("lote")) return "TE";
+  return "AP"; // Default: Apartamento
+}
+
+async function generateCode(supabase: any, organizationId: string, prefix: string): Promise<string> {
+  const { data: seq } = await supabase
+    .from("property_sequences")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .eq("prefix", prefix)
+    .single();
+
+  let nextNumber = 1;
+
+  if (seq) {
+    nextNumber = (seq.last_number || 0) + 1;
+    await supabase
+      .from("property_sequences")
+      .update({ last_number: nextNumber })
+      .eq("id", seq.id);
+  } else {
+    await supabase
+      .from("property_sequences")
+      .insert({ organization_id: organizationId, prefix, last_number: 1 });
+  }
+
+  return `${prefix}${String(nextNumber).padStart(4, "0")}`;
+}
+
+async function testConnection(apiUrl: string, apiKey: string) {
+  const pesquisa = {
+    fields: ["Codigo"],
+    paginacao: { pagina: 1, quantidade: 1 },
+  };
+
+  const searchParams = new URLSearchParams();
+  searchParams.append("key", apiKey);
+  searchParams.append("pesquisa", JSON.stringify(pesquisa));
+
+  const res = await fetch(`${apiUrl}/imoveis/listar?${searchParams.toString()}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    return { success: false, error: `API returned ${res.status}: ${text}` };
+  }
+
+  const data = await res.json();
+  return { success: true, message: "Conexão válida", sample: data };
+}
+
+async function syncProperties(supabase: any, apiUrl: string, apiKey: string, organizationId: string, importInactive: boolean) {
+  const fields = [
+    "Codigo", "Categoria", "Status", "Finalidade",
+    "ValorVenda", "ValorLocacao", "Dormitorios", "Suites",
+    "BanheiroSocialQtd", "Vagas", "AreaPrivativa", "AreaTotal",
+    "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "UF", "CEP",
+    "DescricaoWeb", "FotoDestaque",
+    "Latitude", "Longitude",
+    "ValorCondominio", "AnoConstrucao", "TituloSite",
+    // Request photo gallery
+    {"Foto": ["Foto", "FotoPequena", "Destaque"]},
+  ];
+
+  let page = 1;
+  const perPage = 50;
+  let totalSynced = 0;
+  let totalSkipped = 0;
+  let hasMore = true;
+  const errors: string[] = [];
+
+  while (hasMore) {
+    const pesquisa = {
+      fields,
+      paginacao: { pagina: page, quantidade: perPage },
+    };
+
+    const searchParams = new URLSearchParams();
+    searchParams.append("key", apiKey);
+    searchParams.append("pesquisa", JSON.stringify(pesquisa));
+    if (importInactive) {
+      searchParams.append("showSuspended", "1");
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(`${apiUrl}/imoveis/listar?${searchParams.toString()}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+    } catch (e) {
+      errors.push(`Fetch error page ${page}: ${(e as Error).message}`);
+      break;
+    }
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Vista API error page ${page}: ${res.status} - ${errText}`);
+      errors.push(`API error page ${page}: ${res.status}`);
+      break;
+    }
+
+    const data = await res.json();
+    const items = Object.values(data).filter(
+      (v: any) => v && typeof v === "object" && v.Codigo
+    );
+
+    console.log(`Page ${page}: ${items.length} items found`);
+
+    if (items.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    // Pre-fetch existing properties for this batch to reduce queries
+    const codigos = (items as any[]).map((item: any) => String(item.Codigo));
+    const { data: existingProps } = await supabase
+      .from("properties")
+      .select("id, vista_codigo")
+      .eq("organization_id", organizationId)
+      .in("vista_codigo", codigos);
+
+    const existingMap = new Map<string, string>();
+    if (existingProps) {
+      for (const p of existingProps) {
+        existingMap.set(p.vista_codigo, p.id);
+      }
+    }
+
+    for (const item of items as any[]) {
+      try {
+        const codigo = String(item.Codigo);
+
+        // Skip inactive if not importing them
+        const itemStatus = String(item.Status || "").toLowerCase();
+        if (!importInactive && (itemStatus.includes("inativ") || itemStatus.includes("suspend"))) {
+          totalSkipped++;
+          continue;
+        }
+
+        // Parse photos from nested Foto field
+        let fotos: string[] = [];
+        let imagemPrincipal = "";
+
+        // FotoDestaque as primary
+        if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
+          imagemPrincipal = item.FotoDestaque;
+          fotos.push(item.FotoDestaque);
+        }
+
+        // Parse gallery photos from Foto object
+        if (item.Foto && typeof item.Foto === "object") {
+          const fotoObj = item.Foto;
+          const fotoValues = Object.values(fotoObj);
+          for (const foto of fotoValues) {
+            if (foto && typeof foto === "object") {
+              const f = foto as any;
+              const url = f.Foto || f.FotoPequena || "";
+              if (url && typeof url === "string" && url.startsWith("http") && !fotos.includes(url)) {
+                fotos.push(url);
+              }
+              // Set primary from Destaque flag
+              if (f.Destaque === "Sim" && f.Foto && !imagemPrincipal) {
+                imagemPrincipal = f.Foto;
+              }
+            }
+          }
+        }
+
+        // If no primary image but has photos, use first
+        if (!imagemPrincipal && fotos.length > 0) {
+          imagemPrincipal = fotos[0];
+        }
+
+        // Map finalidade to tipo_de_negocio
+        let tipoNegocio = "Venda";
+        const finalidade = String(item.Finalidade || "").toLowerCase();
+        if (finalidade.includes("locac") || finalidade.includes("alugu")) {
+          tipoNegocio = "Aluguel";
+        }
+        if (finalidade.includes("venda") && (finalidade.includes("locac") || finalidade.includes("alugu"))) {
+          tipoNegocio = "Venda e Aluguel";
+        }
+
+        // Price
+        let preco: number | null = null;
+        if (tipoNegocio === "Aluguel") {
+          preco = parseFloat(String(item.ValorLocacao || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
+        }
+        if (!preco) {
+          preco = parseFloat(String(item.ValorVenda || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
+        }
+
+        // Map status
+        let status = "ativo";
+        if (itemStatus.includes("inativ") || itemStatus.includes("suspend")) {
+          status = "inativo";
+        } else if (itemStatus.includes("vendid") || itemStatus.includes("locad")) {
+          status = "vendido";
+        }
+
+        const categoria = item.Categoria || "Apartamento";
+        const existingId = existingMap.get(codigo);
+
+        const propertyData: Record<string, any> = {
+          organization_id: organizationId,
+          vista_codigo: codigo,
+          title: item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
+          tipo_de_imovel: categoria,
+          tipo_de_negocio: tipoNegocio,
+          status,
+          endereco: item.Endereco || null,
+          numero: item.Numero || null,
+          complemento: item.Complemento || null,
+          bairro: item.Bairro || null,
+          cidade: item.Cidade || null,
+          uf: item.UF || null,
+          cep: item.CEP || null,
+          quartos: parseInt(item.Dormitorios) || null,
+          suites: parseInt(item.Suites) || null,
+          banheiros: parseInt(item.BanheiroSocialQtd) || null,
+          vagas: parseInt(item.Vagas) || null,
+          area_util: parseFloat(item.AreaPrivativa) || null,
+          area_total: parseFloat(item.AreaTotal) || null,
+          preco,
+          condominio: parseFloat(String(item.ValorCondominio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
+          ano_construcao: parseInt(item.AnoConstrucao) || null,
+          descricao: item.DescricaoWeb || null,
+          imagem_principal: imagemPrincipal || null,
+          fotos,
+          latitude: parseFloat(item.Latitude) || null,
+          longitude: parseFloat(item.Longitude) || null,
+        };
+
+        let upsertError;
+
+        if (existingId) {
+          // Update existing - no need for code
+          const { error } = await supabase
+            .from("properties")
+            .update(propertyData)
+            .eq("id", existingId);
+          upsertError = error;
+        } else {
+          // New property - generate code
+          const prefix = getCategoryPrefix(categoria);
+          const code = await generateCode(supabase, organizationId, prefix);
+          propertyData.code = code;
+
+          const { error } = await supabase
+            .from("properties")
+            .insert([propertyData]);
+          upsertError = error;
+        }
+
+        if (upsertError) {
+          console.error(`DB error for Vista ${codigo}: ${upsertError.message}`);
+          errors.push(`DB error ${codigo}: ${upsertError.message}`);
+        } else {
+          totalSynced++;
+        }
+      } catch (e) {
+        const msg = (e as Error).message;
+        console.error(`Process error:`, msg);
+        errors.push(`Process error: ${msg}`);
+      }
+    }
+
+    if (items.length < perPage) {
+      hasMore = false;
+    } else {
+      page++;
+    }
+  }
+
+  return { totalSynced, totalSkipped, errors };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,42 +326,19 @@ Deno.serve(async (req) => {
     }
 
     let apiUrl = integration.api_url.replace(/\/+$/, "");
-    // Auto-add protocol if missing
     if (!/^https?:\/\//i.test(apiUrl)) {
       apiUrl = `https://${apiUrl}`;
     }
     const apiKey = integration.api_key;
 
-    // ---- TEST MODE ----
+    // ---- TEST ----
     if (action === "test") {
       try {
-        const testPayload = {
-          fields: ["Codigo"],
-          paginacao: { pagina: 1, quantidade: 1 },
-        };
-
-        const searchParams = new URLSearchParams();
-        searchParams.append("key", apiKey);
-        searchParams.append("pesquisa", JSON.stringify(testPayload));
-
-        const res = await fetch(`${apiUrl}/imoveis/listar?${searchParams.toString()}`, {
-          method: "GET",
-          headers: { Accept: "application/json" },
+        const result = await testConnection(apiUrl, apiKey);
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-
-        if (!res.ok) {
-          const text = await res.text();
-          return new Response(
-            JSON.stringify({ success: false, error: `API returned ${res.status}: ${text}` }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const data = await res.json();
-        return new Response(
-          JSON.stringify({ success: true, message: "Conexão válida", sample: data }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
       } catch (e) {
         return new Response(
           JSON.stringify({ success: false, error: `Connection failed: ${(e as Error).message}` }),
@@ -84,197 +347,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---- SYNC MODE ----
+    // ---- SYNC ----
     if (action === "sync") {
-      const fields = [
-        "Codigo", "Categoria", "Status", "Finalidade",
-        "ValorVenda", "ValorLocacao", "Dormitorios", "Suites",
-        "BanheiroSocialQtd", "Vagas", "AreaPrivativa", "AreaTotal",
-        "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "UF", "CEP",
-        "DescricaoWeb",
-        "FotoDestaque",
-        "Latitude", "Longitude",
-        "ValorCondominio", "AnoConstrucao",
-        "TituloSite",
-      ];
-
-      let page = 1;
-      const perPage = 50;
-      let totalSynced = 0;
-      let totalSkipped = 0;
-      let hasMore = true;
-      const errors: string[] = [];
-      const foundStatuses = new Set<string>();
-
-      while (hasMore) {
-        const payload = {
-          fields,
-          paginacao: { pagina: page, quantidade: perPage },
-        };
-
-        const searchParams = new URLSearchParams();
-        searchParams.append("key", apiKey);
-        searchParams.append("pesquisa", JSON.stringify(payload));
-        if (integration.import_inactive) {
-          searchParams.append("showSuspended", "1");
-        }
-
-        let res: Response;
-        try {
-          res = await fetch(`${apiUrl}/imoveis/listar?${searchParams.toString()}`, {
-            method: "GET",
-            headers: { Accept: "application/json" },
-          });
-        } catch (e) {
-          errors.push(`Fetch error page ${page}: ${(e as Error).message}`);
-          break;
-        }
-
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error(`API error page ${page}: ${res.status} - ${errText}`);
-          errors.push(`API error page ${page}: ${res.status} - ${errText}`);
-          break;
-        }
-
-        const data = await res.json();
-        console.log(`Page ${page} response keys:`, Object.keys(data), `Total items found:`, Object.values(data).filter((v: any) => v && typeof v === "object" && v.Codigo).length);
-
-        // Vista returns object with numeric keys, or empty
-        const items = Object.values(data).filter(
-          (v: any) => v && typeof v === "object" && v.Codigo
-        );
-
-        if (items.length === 0) {
-          hasMore = false;
-          break;
-        }
-
-        // For each property, fetch photos
-        for (const item of items as any[]) {
-          try {
-            const codigo = String(item.Codigo);
-
-            // Improved status check
-            const itemStatus = String(item.Status || "").trim();
-            foundStatuses.add(itemStatus);
-            // Relaxed check: Import everything for now to debug
-            const isAtivo = true;
-
-            // Skip inactive if not importing
-            if (!integration.import_inactive && !isAtivo) {
-              totalSkipped++;
-              continue;
-            }
-
-            // To prevent Edge Function timeouts, we rely on FotoDestaque provided in the listing
-            // instead of fetching the details of every single property sequentially.
-            let fotos: string[] = [];
-            let imagemPrincipal = "";
-
-            if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
-              imagemPrincipal = item.FotoDestaque;
-              fotos.push(item.FotoDestaque);
-            }
-
-            // Map Vista finalidade to our tipo_de_negocio
-            let tipoNegocio = "Venda";
-            const finalidade = String(item.Finalidade || "").toLowerCase();
-            if (finalidade.includes("locac") || finalidade.includes("alugu")) {
-              tipoNegocio = "Aluguel";
-            } else if (finalidade.includes("venda") && finalidade.includes("locac")) {
-              tipoNegocio = "Venda e Aluguel";
-            }
-
-            // Determine price
-            let preco: number | null = null;
-            if (tipoNegocio === "Aluguel") {
-              preco = parseFloat(String(item.ValorLocacao || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
-            }
-            if (!preco) {
-              preco = parseFloat(String(item.ValorVenda || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
-            }
-
-            // Map status
-            let status = "ativo";
-            const vistaStatus = String(item.Status || "").toLowerCase();
-            if (vistaStatus.includes("inativ") || vistaStatus.includes("suspend")) {
-              status = "inativo";
-            } else if (vistaStatus.includes("vendid") || vistaStatus.includes("locad")) {
-              status = "vendido";
-            }
-
-            const propertyData = {
-              organization_id,
-              vista_codigo: codigo,
-              title: item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
-              tipo_de_imovel: item.Categoria || "Outro",
-              tipo_de_negocio: tipoNegocio,
-              status,
-              endereco: item.Endereco || null,
-              numero: item.Numero || null,
-              complemento: item.Complemento || null,
-              bairro: item.Bairro || null,
-              cidade: item.Cidade || null,
-              uf: item.UF || null,
-              cep: item.CEP || null,
-              quartos: parseInt(item.Dormitorios) || null,
-              suites: parseInt(item.Suites) || null,
-              banheiros: parseInt(item.BanheiroSocialQtd) || null,
-              vagas: parseInt(item.Vagas) || null,
-              area_util: parseFloat(item.AreaPrivativa) || null,
-              area_total: parseFloat(item.AreaTotal) || null,
-              preco,
-              condominio: parseFloat(String(item.ValorCondominio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
-              iptu: null,
-              ano_construcao: parseInt(item.AnoConstrucao) || null,
-              descricao: item.DescricaoWeb || null,
-              imagem_principal: imagemPrincipal || null,
-              fotos,
-              latitude: parseFloat(item.Latitude) || null,
-              longitude: parseFloat(item.Longitude) || null,
-            };
-
-            // Check if property exists first to avoid constraint error
-            const { data: existing, error: checkError } = await supabase
-              .from("properties")
-              .select("id")
-              .eq("organization_id", organization_id)
-              .eq("vista_codigo", codigo)
-              .maybeSingle();
-
-            let upsertError;
-
-            if (existing) {
-              const { error } = await supabase
-                .from("properties")
-                .update(propertyData)
-                .eq("id", existing.id);
-              upsertError = error;
-            } else {
-              const { error } = await supabase
-                .from("properties")
-                .insert([propertyData]);
-              upsertError = error;
-            }
-
-            if (upsertError) {
-              errors.push(`Upsert error for ${codigo}: ${upsertError.message}`);
-            } else {
-              totalSynced++;
-            }
-          } catch (e) {
-            console.error(`Process error for item:`, (e as Error).message);
-            errors.push(`Process error: ${(e as Error).message}`);
-          }
-        }
-
-        if (items.length < perPage) {
-          hasMore = false;
-        } else {
-          page++;
-        }
-      }
+      const { totalSynced, totalSkipped, errors } = await syncProperties(
+        supabase, apiUrl, apiKey, organization_id, !!integration.import_inactive
+      );
 
       // Update integration stats
       await supabase
@@ -282,7 +359,12 @@ Deno.serve(async (req) => {
         .update({
           last_sync_at: new Date().toISOString(),
           total_synced: totalSynced,
-          sync_log: { last_run: new Date().toISOString(), synced: totalSynced, skipped: totalSkipped, errors: errors.slice(0, 20) },
+          sync_log: {
+            last_run: new Date().toISOString(),
+            synced: totalSynced,
+            skipped: totalSkipped,
+            errors: errors.slice(0, 20),
+          },
           updated_at: new Date().toISOString(),
         })
         .eq("organization_id", organization_id);
@@ -293,8 +375,6 @@ Deno.serve(async (req) => {
           synced: totalSynced,
           skipped: totalSkipped,
           errors: errors.slice(0, 10),
-          debug_sample_keys: errors.length > 0 ? null : "No items found in response root",
-          found_statuses: Array.from(foundStatuses),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -305,6 +385,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    console.error("Vista sync fatal error:", (e as Error).message);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
