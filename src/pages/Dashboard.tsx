@@ -185,6 +185,9 @@ export default function Dashboard() {
               <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} isFallbackMode={isBrokersFallback} />
               {sourcesComponent}
             </div>
+
+            {/* Campaign Performance Widget */}
+            <CampaignPerformanceWidget filters={filters} />
           </>
         )}
       </div>
