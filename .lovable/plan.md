@@ -1,93 +1,96 @@
 
 
-## Historico de Mensagens por Lead e Ajuste no First Response
+# Melhoria do Design e Arquitetura JSON das Automacoes
 
-### Resumo das Mudancas
+## Contexto
 
-Tres ajustes principais:
+A pagina de Automacoes esta visualmente diferente do resto do sistema (Dashboard, Pipelines, etc). Atualmente usa tabs simples e cards basicos. Alem disso, o fluxo atual salva nodes/connections em tabelas separadas no banco. A ideia e adotar um modelo JSON (como n8n) onde todo o fluxo fica em um unico campo JSONB na tabela `automations`, simplificando leitura, escrita e versionamento.
 
-1. **Remover first response do botao de WhatsApp** - O tempo de resposta so sera marcado quando uma mensagem for realmente enviada (ja acontece no `message-sender`) ou quando o webhook detectar envio pelo WhatsApp pessoal do corretor. Botoes de telefone e email continuam marcando pois nao temos controle sobre eles.
+## O que muda
 
-2. **Aba de historico de mensagens no detalhe do lead** - Quem tem acesso ao lead podera ver todas as mensagens WhatsApp trocadas com aquele contato, independente de qual instancia/corretor enviou.
+### 1. Novo campo JSONB na tabela `automations`
 
-3. **Identificacao do remetente** - Cada mensagem enviada mostrara qual corretor enviou, usando o `session.owner_user_id` para identificar.
-
----
-
-### Detalhes Tecnicos
-
-#### 1. Remover `recordFirstResponse` dos botoes de WhatsApp
-
-**Arquivos:**
-- `src/components/leads/LeadCard.tsx` - Remover `recordFirstResponse` de `handleWhatsAppClick`
-- `src/components/leads/LeadDetailDialog.tsx` - Remover `recordFirstResponse` de `handleQuickWhatsApp`
-
-O `message-sender` edge function ja chama `calculate-first-response` quando uma mensagem e realmente enviada (linhas 145-170). Isso garante que o first response so e marcado quando o corretor de fato envia uma mensagem, nao quando clica no botao.
-
-Para mensagens recebidas pelo webhook do WhatsApp pessoal do corretor, o `evolution-webhook` ja vincula conversas a leads. Precisaremos adicionar a chamada de `calculate-first-response` no webhook quando uma mensagem `from_me: true` for recebida para um lead vinculado (cobrindo o caso de envio pelo app nativo do WhatsApp).
-
-#### 2. Historico de mensagens no detalhe do lead
-
-**Novo hook:** `src/hooks/use-lead-messages.ts`
-- Busca todas as conversas (`whatsapp_conversations`) vinculadas ao `lead_id`
-- Busca todas as mensagens dessas conversas
-- Ordena cronologicamente
-- Inclui dados da sessao (instance_name, owner_user_id) para identificar quem enviou
-
-**Novo componente:** `src/components/leads/LeadMessagesTab.tsx`
-- Lista de mensagens estilo chat (bolhas)
-- Mensagens enviadas (from_me) mostram nome do corretor (via session owner)
-- Mensagens recebidas mostram nome do contato
-- Separadores de data entre mensagens
-- Suporte a midia (imagens, audio, documentos)
-
-**Arquivo modificado:** `src/components/leads/LeadDetailDialog.tsx`
-- Adicionar nova aba "Mensagens" nas tabs do lead detail
-- A aba so aparece se existirem conversas vinculadas ao lead
-
-#### 3. First response via webhook (mensagens do WhatsApp nativo)
-
-**Arquivo:** `supabase/functions/evolution-webhook/index.ts`
-- Na secao de processamento de mensagens `from_me: true`, verificar se a conversa tem `lead_id`
-- Se tiver, chamar `calculate-first-response` com o `owner_user_id` da sessao
-- Tambem marcar `first_touch_at` no lead (mesmo comportamento do `message-sender`)
-
-#### 4. Acesso baseado no lead (nao na sessao)
-
-A query de mensagens no novo hook usara o `lead_id` para buscar conversas, respeitando o acesso ao lead (quem pode ver o lead, pode ver as mensagens). Isso e diferente do acesso ao WhatsApp (sessao), que e restrito ao dono/autorizado.
+Adicionar coluna `flow_definition jsonb` na tabela `automations`. Esse campo armazena todo o fluxo em um unico JSON:
 
 ```text
-Fluxo de acesso:
-Lead acessivel -> Conversas vinculadas ao lead -> Mensagens dessas conversas
-(Nao depende de whatsapp_session_access)
+{
+  "nodes": [
+    { "id": "start-1", "type": "trigger", "position": {...}, "config": {...} },
+    { "id": "msg-1", "type": "message", "position": {...}, "config": { "message": "...", "day": 1 } },
+    { "id": "wait-1", "type": "wait", "position": {...}, "config": { "wait_type": "days", "wait_value": 1 } }
+  ],
+  "connections": [
+    { "source": "start-1", "target": "msg-1" },
+    { "source": "msg-1", "target": "wait-1" }
+  ],
+  "settings": {
+    "session_id": "...",
+    "stop_on_reply": true,
+    "on_reply_message": "...",
+    "on_reply_stage_id": "..."
+  }
+}
 ```
 
-### Arquivos a Criar/Modificar
+As tabelas `automation_nodes` e `automation_connections` continuam existindo para retrocompatibilidade, mas novas automacoes gravam tudo no `flow_definition`. O hook de save/load prioriza `flow_definition` quando presente.
+
+### 2. Redesign visual da pagina Automacoes
+
+Alinhar com o estilo do resto do app (glassmorphism, fundo escuro `#1f1f1f`, accent `#ff482a`, `rounded-2xl`):
+
+**Header da pagina:**
+- Hero section com gradiente sutil, titulo "Automacoes" com contagem e botao "Nova Automacao" proeminente
+
+**Lista de automacoes (tab principal):**
+- Cards com glassmorphism (`bg-card/50 backdrop-blur border border-border/50 rounded-2xl`)
+- Icone do gatilho com fundo colorido, nome, badge de status (Ativa/Inativa com cores), stats inline
+- Switch de ativar/desativar integrado no card
+- Hover revela acoes (editar, historico, excluir)
+- Indicadores visuais de execucao (dot pulsante quando running)
+
+**Templates (tab modelos):**
+- Grid de cards com hover effect e gradiente no icone
+- Botao "Criar do Zero" como card especial com borda tracejada e icone `+`
+- Tags de industria (Imobiliario, Telecom, Geral)
+
+**Historico:**
+- Timeline vertical com icones de status coloridos
+- Cards expansiveis com detalhes da execucao
+
+### 3. Refatorar hooks para suportar JSON
+
+**`use-automations.ts`:**
+- `useSaveAutomationFlow`: ao salvar, grava `flow_definition` JSONB na tabela `automations` (unico update) em vez de deletar/reinserir em `automation_nodes` e `automation_connections`
+- `useAutomation`: ao carregar, se `flow_definition` existe, usa ele; senao, faz fallback para as tabelas separadas (retrocompatibilidade)
+- Menos queries, menos latencia, atomicidade garantida
+
+**`FollowUpBuilder.tsx` e `FollowUpBuilderEdit.tsx`:**
+- Salvar: serializa nodes/edges do ReactFlow para o JSON e chama um unico `update` na tabela `automations`
+- Carregar: deserializa `flow_definition` para nodes/edges do ReactFlow
+
+### 4. Migration SQL
 
 ```text
-CRIAR:
-1. src/hooks/use-lead-messages.ts
-   - Hook para buscar mensagens de todas as conversas de um lead
-   
-2. src/components/leads/LeadMessagesTab.tsx
-   - Componente de visualizacao do historico de mensagens do lead
-
-MODIFICAR:
-3. src/components/leads/LeadCard.tsx
-   - Remover recordFirstResponse do handleWhatsAppClick
-
-4. src/components/leads/LeadDetailDialog.tsx
-   - Remover recordFirstResponse do handleQuickWhatsApp
-   - Adicionar aba "Mensagens" com LeadMessagesTab
-
-5. supabase/functions/evolution-webhook/index.ts
-   - Adicionar first response tracking para mensagens from_me via webhook
+ALTER TABLE automations ADD COLUMN flow_definition jsonb;
 ```
 
-### Comportamento Final
+Migrar dados existentes das tabelas de nodes/connections para o campo JSONB (script de migracao dentro da mesma migration).
 
-- Corretor clica no botao WhatsApp no Kanban: abre chat, NAO marca first response
-- Corretor envia mensagem pelo sistema (FloatingChat): marca first response via `message-sender`
-- Corretor envia mensagem pelo WhatsApp nativo: webhook recebe, marca first response via `evolution-webhook`
-- Gestor/admin abre detalhe do lead: ve aba "Mensagens" com todo historico de conversas
-- Lead transferido para outro corretor: historico preservado, novo corretor ve tudo
+## Etapas de execucao
+
+1. **Migration**: adicionar `flow_definition jsonb` em `automations` + migrar dados existentes
+2. **Hook `use-automations.ts`**: refatorar `useSaveAutomationFlow` e `useAutomation` para ler/gravar JSON
+3. **Redesign `Automations.tsx`**: novo layout com header hero, visual consistente
+4. **Redesign `AutomationList.tsx`**: cards com glassmorphism, stats inline, hover actions
+5. **Redesign `FollowUpTemplates.tsx`**: grid refinado com card "criar do zero" especial
+6. **Redesign `ExecutionHistory.tsx`**: timeline visual com cards expansiveis
+7. **Atualizar `FollowUpBuilder.tsx` e `FollowUpBuilderEdit.tsx`**: serializar/deserializar `flow_definition`
+
+## Beneficios do JSON
+
+- **Performance**: 1 query em vez de 3 (automacao + nodes + connections)
+- **Atomicidade**: salvar e um unico UPDATE, sem risco de estado inconsistente
+- **Versionamento**: facil comparar versoes, fazer undo/redo, duplicar automacoes
+- **Export/Import**: usuario pode exportar/importar automacoes como JSON
+- **Compatibilidade**: mesmo modelo mental do n8n, facilita integracao futura
+
