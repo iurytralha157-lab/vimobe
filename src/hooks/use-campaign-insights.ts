@@ -104,6 +104,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
       const leadIds = leadMetaRaw.map(lm => lm.lead_id);
       const batchSize = 500;
       const validLeadIds = new Set<string>();
+      const wonLeadIds = new Set<string>();
 
       for (let i = 0; i < leadIds.length; i += batchSize) {
         const batch = leadIds.slice(i, i + batchSize);
