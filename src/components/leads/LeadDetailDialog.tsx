@@ -1661,10 +1661,6 @@ export function LeadDetailDialog({
             </div>
           </TabsContent>
 
-          {/* Mensagens Tab */}
-          <TabsContent value="messages" className="p-6 mt-0">
-            <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
-          </TabsContent>
 
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="p-6 mt-0">
