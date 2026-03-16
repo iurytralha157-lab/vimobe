@@ -165,10 +165,10 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           fotos.push(item.FotoDestaque);
         }
 
-        // Parse gallery photos from Foto object
-        if (item.Foto && typeof item.Foto === "object") {
-          const fotoObj = item.Foto;
-          const fotoValues = Object.values(fotoObj);
+        // Parse gallery photos from "fotos" object (lowercase, as returned by Vista API)
+        const fotosObj = item.Fotos || item.fotos || item.Foto;
+        if (fotosObj && typeof fotosObj === "object") {
+          const fotoValues = Object.values(fotosObj);
           for (const foto of fotoValues) {
             if (foto && typeof foto === "object") {
               const f = foto as any;
