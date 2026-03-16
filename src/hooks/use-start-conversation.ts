@@ -112,8 +112,25 @@ export function useFindConversationByPhone() {
         }
       }
 
-      // 2) Fallback por telefone
+      // 2) Fallback por telefone - buscar com múltiplas variações de formato
       const cleanPhone = formatPhoneForWhatsApp(phone);
+      
+      // Gerar variações: com e sem código do país
+      const digits = cleanPhone.replace(/\D/g, '');
+      const withoutCountry = digits.startsWith('55') && digits.length >= 12 
+        ? digits.substring(2) 
+        : digits;
+      const withCountry = digits.startsWith('55') ? digits : `55${digits}`;
+      
+      // Buscar por qualquer variação
+      const searchVariants = [...new Set([digits, withoutCountry, withCountry])];
+      const orFilter = searchVariants
+        .flatMap(v => [
+          `remote_jid.ilike.%${v}%`,
+          `contact_phone.ilike.%${v}%`
+        ])
+        .join(',');
+      
       const { data, error } = await supabase
         .from("whatsapp_conversations")
         .select(`
@@ -121,7 +138,7 @@ export function useFindConversationByPhone() {
           session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
-        .or(`remote_jid.ilike.%${cleanPhone}%,contact_phone.ilike.%${cleanPhone}%`)
+        .or(orFilter)
         .is("deleted_at", null)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(1);
