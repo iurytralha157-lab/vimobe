@@ -126,12 +126,15 @@ export function useCampaignInsights(filters: DashboardFilters) {
       const campaignMap = new Map<string, {
         name: string;
         leads: Set<string>;
+        won: Set<string>;
         adsets: Map<string, {
           name: string;
           leads: Set<string>;
+          won: Set<string>;
           ads: Map<string, {
             name: string;
             leads: Set<string>;
+            won: Set<string>;
             creative_url: string | null;
             creative_video_url: string | null;
           }>;
