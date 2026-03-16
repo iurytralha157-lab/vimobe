@@ -11,6 +11,7 @@ export interface CampaignAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  won_count: number;
   cpl: number | null;
   adsets: AdsetAggregated[];
 }
@@ -22,6 +23,7 @@ export interface AdsetAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  won_count: number;
   cpl: number | null;
   ads: AdAggregated[];
 }
@@ -33,9 +35,23 @@ export interface AdAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  won_count: number;
   cpl: number | null;
   creative_url: string | null;
   creative_video_url: string | null;
+}
+
+export interface TopCreative {
+  ad_id: string;
+  ad_name: string;
+  campaign_name: string;
+  leads_count: number;
+  won_count: number;
+  score: number;
+  creative_url: string | null;
+  creative_video_url: string | null;
+  spend: number | null;
+  cpl: number | null;
 }
 
 interface LeadMetaRow {
