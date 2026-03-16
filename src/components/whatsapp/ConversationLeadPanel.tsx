@@ -416,16 +416,34 @@ export function ConversationLeadPanel({
                       </div>
                     </div>
                   )}
-                  {meta.creative_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-7 text-[11px] gap-1.5"
-                      onClick={() => window.open(meta.creative_url, "_blank")}
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Ver Criativo
-                    </Button>
+                  {(meta.creative_video_url || meta.creative_url) && (
+                    <div className="space-y-1.5">
+                      {meta.creative_video_url ? (
+                        <video
+                          src={meta.creative_video_url}
+                          controls
+                          preload="metadata"
+                          className="w-full rounded max-h-[140px] bg-black"
+                          poster={meta.creative_url || undefined}
+                        />
+                      ) : meta.creative_url ? (
+                        <img
+                          src={meta.creative_url}
+                          alt="Criativo"
+                          className="w-full rounded max-h-[140px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(meta.creative_url, "_blank")}
+                        />
+                      ) : null}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-7 text-[11px] gap-1.5"
+                        onClick={() => window.open(meta.creative_video_url || meta.creative_url, "_blank")}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Ver Criativo
+                      </Button>
+                    </div>
                   )}
                   {meta.form_name && (
                     <div className="text-xs text-muted-foreground">

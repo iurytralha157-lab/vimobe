@@ -501,6 +501,7 @@ serve(async (req) => {
                 platform: leadData.platform || null,
                 contact_notes: contactNotes,
                 creative_url: creativeUrl,
+                creative_video_url: creativeVideoUrl,
                 raw_payload: JSON.stringify(leadData)
               });
             

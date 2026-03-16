@@ -664,9 +664,12 @@ export function MessageBubble({
           ? "bg-primary text-primary-foreground rounded-br-[4px]" 
           : "bg-chatBubble text-chatBubble-foreground rounded-bl-[4px]"
       )}>
-        {/* Sender name for groups */}
-        {isGroup && !fromMe && senderName && (
+        {/* Sender name for groups or sent messages with sender info */}
+        {!fromMe && senderName && (
           <p className="text-xs font-semibold text-primary mb-0.5">{senderName}</p>
+        )}
+        {fromMe && senderName && (
+          <p className="text-[11px] font-medium mb-0.5 opacity-70">{senderName}</p>
         )}
 
         {/* Media content */}

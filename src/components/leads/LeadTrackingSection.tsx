@@ -131,14 +131,30 @@ export function LeadTrackingSection({ leadMeta, isLoading }: LeadTrackingSection
             )}
           </div>
 
-          {/* Creative Link Button */}
-          {leadMeta.creative_url && (
-            <div className="mt-3 pt-3 border-t border-border/50">
+          {/* Creative Preview (Video or Image) */}
+          {(leadMeta.creative_video_url || leadMeta.creative_url) && (
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+              {leadMeta.creative_video_url ? (
+                <video
+                  src={leadMeta.creative_video_url}
+                  controls
+                  preload="metadata"
+                  className="w-full rounded-lg max-h-[240px] bg-black"
+                  poster={leadMeta.creative_url || undefined}
+                />
+              ) : leadMeta.creative_url ? (
+                <img
+                  src={leadMeta.creative_url}
+                  alt="Criativo do anúncio"
+                  className="w-full rounded-lg max-h-[240px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(leadMeta.creative_url!, '_blank')}
+                />
+              ) : null}
               <Button
                 variant="outline"
                 size="sm"
                 className="w-full gap-2 text-xs"
-                onClick={() => window.open(leadMeta.creative_url!, '_blank')}
+                onClick={() => window.open(leadMeta.creative_video_url || leadMeta.creative_url!, '_blank')}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 Ver Criativo
