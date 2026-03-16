@@ -188,6 +188,16 @@ export function AppSidebar() {
   const logoWidth = systemSettings?.logo_width || 140;
   const logoHeight = systemSettings?.logo_height || 40;
 
+  // Preload both images so swap is instant
+  useMemo(() => {
+    [logoUrl, faviconUrl].forEach(url => {
+      if (url) {
+        const img = new Image();
+        img.src = url;
+      }
+    });
+  }, [logoUrl, faviconUrl]);
+
   // Filter nav items based on enabled modules, user role, permissions, and organization segment
   // While modules are loading, only show items without module requirement to prevent flash
   const navItems = useMemo(() => {
