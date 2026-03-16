@@ -153,7 +153,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           continue;
         }
 
-        // Parse photos from nested Foto field
+        // Parse photos - only FotoDestaque available for this API method
         let fotos: string[] = [];
         let imagemPrincipal = "";
 
@@ -161,30 +161,6 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
           imagemPrincipal = item.FotoDestaque;
           fotos.push(item.FotoDestaque);
-        }
-
-        // Parse gallery photos from "fotos" object (lowercase, as returned by Vista API)
-        const fotosObj = item.Fotos || item.fotos || item.Foto;
-        if (fotosObj && typeof fotosObj === "object") {
-          const fotoValues = Object.values(fotosObj);
-          for (const foto of fotoValues) {
-            if (foto && typeof foto === "object") {
-              const f = foto as any;
-              const url = f.Foto || f.FotoPequena || "";
-              if (url && typeof url === "string" && url.startsWith("http") && !fotos.includes(url)) {
-                fotos.push(url);
-              }
-              // Set primary from Destaque flag
-              if (f.Destaque === "Sim" && f.Foto && !imagemPrincipal) {
-                imagemPrincipal = f.Foto;
-              }
-            }
-          }
-        }
-
-        // If no primary image but has photos, use first
-        if (!imagemPrincipal && fotos.length > 0) {
-          imagemPrincipal = fotos[0];
         }
 
         // Map finalidade to tipo_de_negocio
