@@ -109,11 +109,14 @@ export function useCampaignInsights(filters: DashboardFilters) {
         const batch = leadIds.slice(i, i + batchSize);
         const { data: leadsInRange } = await supabase
           .from("leads")
-          .select("id")
+          .select("id, deal_status")
           .in("id", batch)
           .gte("created_at", dateFrom)
           .lte("created_at", dateTo);
-        (leadsInRange || []).forEach(l => validLeadIds.add(l.id));
+        (leadsInRange || []).forEach(l => {
+          validLeadIds.add(l.id);
+          if (l.deal_status === 'won') wonLeadIds.add(l.id);
+        });
       }
 
       const filtered = (leadMetaRaw as LeadMetaRow[]).filter(lm => validLeadIds.has(lm.lead_id));
