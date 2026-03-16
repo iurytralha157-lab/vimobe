@@ -628,7 +628,33 @@ async function processActionNode(
           throw new Error(`Failed to send WhatsApp: ${errorText}`);
         }
 
-        console.log("WhatsApp message sent successfully");
+        const convSendResult = await response.json();
+        const convSentMsgId = convSendResult?.key?.id || convSendResult?.messageId || crypto.randomUUID();
+        console.log("WhatsApp message sent successfully, messageId:", convSentMsgId);
+        
+        // ===== SAVE MESSAGE TO DB =====
+        await supabase.from("whatsapp_messages").upsert({
+          conversation_id: execution.conversation_id,
+          session_id: conversation.session_id,
+          message_id: convSentMsgId,
+          from_me: true,
+          content: messageContent,
+          message_type: "text",
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          sender_name: "Automação",
+        }, { onConflict: "session_id,message_id" });
+        
+        // Update conversation
+        await supabase
+          .from("whatsapp_conversations")
+          .update({
+            last_message: messageContent,
+            last_message_at: new Date().toISOString(),
+          })
+          .eq("id", execution.conversation_id);
+        
+        console.log(`Automation message saved to whatsapp_messages in conversation ${execution.conversation_id}`);
         
         // Log activity for sent message via conversation
         await logAutomationActivity(
