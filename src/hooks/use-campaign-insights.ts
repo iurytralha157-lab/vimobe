@@ -11,6 +11,7 @@ export interface CampaignAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  won_count: number;
   cpl: number | null;
   adsets: AdsetAggregated[];
 }
@@ -22,6 +23,7 @@ export interface AdsetAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  won_count: number;
   cpl: number | null;
   ads: AdAggregated[];
 }
@@ -33,9 +35,23 @@ export interface AdAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  won_count: number;
   cpl: number | null;
   creative_url: string | null;
   creative_video_url: string | null;
+}
+
+export interface TopCreative {
+  ad_id: string;
+  ad_name: string;
+  campaign_name: string;
+  leads_count: number;
+  won_count: number;
+  score: number;
+  creative_url: string | null;
+  creative_video_url: string | null;
+  spend: number | null;
+  cpl: number | null;
 }
 
 interface LeadMetaRow {
@@ -88,16 +104,20 @@ export function useCampaignInsights(filters: DashboardFilters) {
       const leadIds = leadMetaRaw.map(lm => lm.lead_id);
       const batchSize = 500;
       const validLeadIds = new Set<string>();
+      const wonLeadIds = new Set<string>();
 
       for (let i = 0; i < leadIds.length; i += batchSize) {
         const batch = leadIds.slice(i, i + batchSize);
         const { data: leadsInRange } = await supabase
           .from("leads")
-          .select("id")
+          .select("id, deal_status")
           .in("id", batch)
           .gte("created_at", dateFrom)
           .lte("created_at", dateTo);
-        (leadsInRange || []).forEach(l => validLeadIds.add(l.id));
+        (leadsInRange || []).forEach(l => {
+          validLeadIds.add(l.id);
+          if (l.deal_status === 'won') wonLeadIds.add(l.id);
+        });
       }
 
       const filtered = (leadMetaRaw as LeadMetaRow[]).filter(lm => validLeadIds.has(lm.lead_id));
@@ -106,12 +126,15 @@ export function useCampaignInsights(filters: DashboardFilters) {
       const campaignMap = new Map<string, {
         name: string;
         leads: Set<string>;
+        won: Set<string>;
         adsets: Map<string, {
           name: string;
           leads: Set<string>;
+          won: Set<string>;
           ads: Map<string, {
             name: string;
             leads: Set<string>;
+            won: Set<string>;
             creative_url: string | null;
             creative_video_url: string | null;
           }>;
@@ -120,25 +143,29 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       for (const lm of filtered) {
         const cId = lm.campaign_id || "unknown";
+        const isWon = wonLeadIds.has(lm.lead_id);
         if (!campaignMap.has(cId)) {
-          campaignMap.set(cId, { name: lm.campaign_name || "Sem nome", leads: new Set(), adsets: new Map() });
+          campaignMap.set(cId, { name: lm.campaign_name || "Sem nome", leads: new Set(), won: new Set(), adsets: new Map() });
         }
         const campaign = campaignMap.get(cId)!;
         campaign.leads.add(lm.lead_id);
+        if (isWon) campaign.won.add(lm.lead_id);
 
         if (lm.adset_id) {
           if (!campaign.adsets.has(lm.adset_id)) {
-            campaign.adsets.set(lm.adset_id, { name: lm.adset_name || "Sem nome", leads: new Set(), ads: new Map() });
+            campaign.adsets.set(lm.adset_id, { name: lm.adset_name || "Sem nome", leads: new Set(), won: new Set(), ads: new Map() });
           }
           const adset = campaign.adsets.get(lm.adset_id)!;
           adset.leads.add(lm.lead_id);
+          if (isWon) adset.won.add(lm.lead_id);
 
           if (lm.ad_id) {
             if (!adset.ads.has(lm.ad_id)) {
-              adset.ads.set(lm.ad_id, { name: lm.ad_name || "Sem nome", leads: new Set(), creative_url: lm.creative_url, creative_video_url: lm.creative_video_url });
+              adset.ads.set(lm.ad_id, { name: lm.ad_name || "Sem nome", leads: new Set(), won: new Set(), creative_url: lm.creative_url, creative_video_url: lm.creative_video_url });
             }
             const ad = adset.ads.get(lm.ad_id)!;
             ad.leads.add(lm.lead_id);
+            if (isWon) ad.won.add(lm.lead_id);
             if (lm.creative_url) ad.creative_url = lm.creative_url;
             if (lm.creative_video_url) ad.creative_video_url = lm.creative_video_url;
           }
@@ -194,6 +221,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
               impressions: adInsight?.impressions ?? null,
               reach: adInsight?.reach ?? null,
               leads_count: adData.leads.size,
+              won_count: adData.won.size,
               cpl: adInsight?.cpl ?? null,
               creative_url: adData.creative_url,
               creative_video_url: adData.creative_video_url,
@@ -208,6 +236,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
             impressions: asInsight?.impressions ?? null,
             reach: asInsight?.reach ?? null,
             leads_count: asData.leads.size,
+            won_count: asData.won.size,
             cpl: asInsight?.cpl ?? null,
             ads: ads.sort((a, b) => b.leads_count - a.leads_count),
           });
@@ -221,6 +250,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           impressions: cInsight?.impressions ?? null,
           reach: cInsight?.reach ?? null,
           leads_count: cData.leads.size,
+          won_count: cData.won.size,
           cpl: cInsight?.cpl ?? null,
           adsets: adsets.sort((a, b) => b.leads_count - a.leads_count),
         });
@@ -228,15 +258,41 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       campaigns.sort((a, b) => b.leads_count - a.leads_count);
 
+      // Build top creatives ranking
+      const allAds: TopCreative[] = [];
+      for (const c of campaigns) {
+        for (const as of c.adsets) {
+          for (const ad of as.ads) {
+            allAds.push({
+              ad_id: ad.ad_id,
+              ad_name: ad.ad_name,
+              campaign_name: c.campaign_name,
+              leads_count: ad.leads_count,
+              won_count: ad.won_count,
+              score: ad.leads_count + (ad.won_count * 10),
+              creative_url: ad.creative_url,
+              creative_video_url: ad.creative_video_url,
+              spend: ad.spend,
+              cpl: ad.cpl,
+            });
+          }
+        }
+      }
+      allAds.sort((a, b) => b.score - a.score);
+      const topCreatives = allAds.slice(0, 10);
+
       const totalLeads = campaigns.reduce((s, c) => s + c.leads_count, 0);
+      const totalWon = campaigns.reduce((s, c) => s + c.won_count, 0);
       const totalSpend = hasSpendData ? campaigns.reduce((s, c) => s + (c.spend || 0), 0) : null;
       const totalImpressions = hasSpendData ? campaigns.reduce((s, c) => s + (c.impressions || 0), 0) : null;
       const avgCpl = hasSpendData && totalLeads > 0 && totalSpend ? Math.round((totalSpend / totalLeads) * 100) / 100 : null;
 
       return {
         campaigns,
+        topCreatives,
         summary: {
           totalLeads,
+          totalWon,
           totalCampaigns: campaigns.length,
           totalAdsets: totalAdsetsCount,
           totalAds: totalAdsCount,
