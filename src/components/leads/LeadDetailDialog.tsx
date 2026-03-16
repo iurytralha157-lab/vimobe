@@ -31,7 +31,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
-import { LeadMessagesTab } from '@/components/leads/LeadMessagesTab';
+
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { EventsList } from '@/components/schedule/EventsList';
