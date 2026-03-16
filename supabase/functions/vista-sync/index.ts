@@ -68,14 +68,14 @@ async function testConnection(apiUrl: string, apiKey: string) {
 async function syncProperties(supabase: any, apiUrl: string, apiKey: string, organizationId: string, importInactive: boolean) {
   const fields = [
     "Codigo", "Categoria", "Status", "Finalidade",
-    "ValorVenda", "ValorLocacao", "Dormitorios", "Suites",
-    "BanheiroSocialQtd", "Vagas", "AreaPrivativa", "AreaTotal",
+    "ValorVenda", "ValorLocacao", "Dormitorio", "Suites",
+    "Banheiros", "Vagas", "AreaUtil", "AreaTotal",
     "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "UF", "CEP",
     "DescricaoWeb", "FotoDestaque",
     "Latitude", "Longitude",
-    "ValorCondominio", "AnoConstrucao", "TituloSite",
-    // Request photo gallery
-    {"Foto": ["Foto", "FotoPequena", "Destaque"]},
+    "ValorCondominio", "AnoConstrucao", "Titulo",
+    // Request photo gallery (lowercase "fotos" required by Vista API)
+    {"fotos": ["Foto", "FotoPequena", "Destaque"]},
   ];
 
   let page = 1;
@@ -94,6 +94,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
     const searchParams = new URLSearchParams();
     searchParams.append("key", apiKey);
     searchParams.append("pesquisa", JSON.stringify(pesquisa));
+    searchParams.append("showtotal", "1");
     if (importInactive) {
       searchParams.append("showSuspended", "1");
     }
@@ -164,10 +165,10 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           fotos.push(item.FotoDestaque);
         }
 
-        // Parse gallery photos from Foto object
-        if (item.Foto && typeof item.Foto === "object") {
-          const fotoObj = item.Foto;
-          const fotoValues = Object.values(fotoObj);
+        // Parse gallery photos from "fotos" object (lowercase, as returned by Vista API)
+        const fotosObj = item.Fotos || item.fotos || item.Foto;
+        if (fotosObj && typeof fotosObj === "object") {
+          const fotoValues = Object.values(fotosObj);
           for (const foto of fotoValues) {
             if (foto && typeof foto === "object") {
               const f = foto as any;
@@ -221,7 +222,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         const propertyData: Record<string, any> = {
           organization_id: organizationId,
           vista_codigo: codigo,
-          title: item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
+          title: item.Titulo || item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
           tipo_de_imovel: categoria,
           tipo_de_negocio: tipoNegocio,
           status,
@@ -232,11 +233,11 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           cidade: item.Cidade || null,
           uf: item.UF || null,
           cep: item.CEP || null,
-          quartos: parseInt(item.Dormitorios) || null,
+          quartos: parseInt(item.Dormitorio || item.Dormitorios) || null,
           suites: parseInt(item.Suites) || null,
-          banheiros: parseInt(item.BanheiroSocialQtd) || null,
+          banheiros: parseInt(item.Banheiros || item.BanheiroSocialQtd) || null,
           vagas: parseInt(item.Vagas) || null,
-          area_util: parseFloat(item.AreaPrivativa) || null,
+          area_util: parseFloat(item.AreaUtil || item.AreaPrivativa) || null,
           area_total: parseFloat(item.AreaTotal) || null,
           preco,
           condominio: parseFloat(String(item.ValorCondominio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
