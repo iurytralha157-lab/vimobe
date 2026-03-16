@@ -279,7 +279,7 @@ export function useCreateAutomation() {
         }]);
       }
 
-      return automation as Automation;
+      return automation as unknown as Automation;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automations'] });
