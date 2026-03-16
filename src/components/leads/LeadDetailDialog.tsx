@@ -821,8 +821,6 @@ export function LeadDetailDialog({
               {/* Seção removida - Histórico agora é a única fonte de eventos */}
             </div>}
 
-          {/* Messages Tab */}
-          {activeTab === 'messages' && <LeadMessagesTab leadId={lead.id} leadName={lead.name} />}
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && <div className="space-y-4">
