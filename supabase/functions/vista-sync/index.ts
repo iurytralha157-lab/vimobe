@@ -94,6 +94,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
     const searchParams = new URLSearchParams();
     searchParams.append("key", apiKey);
     searchParams.append("pesquisa", JSON.stringify(pesquisa));
+    searchParams.append("showtotal", "1");
     if (importInactive) {
       searchParams.append("showSuspended", "1");
     }
