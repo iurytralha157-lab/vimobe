@@ -143,25 +143,29 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       for (const lm of filtered) {
         const cId = lm.campaign_id || "unknown";
+        const isWon = wonLeadIds.has(lm.lead_id);
         if (!campaignMap.has(cId)) {
-          campaignMap.set(cId, { name: lm.campaign_name || "Sem nome", leads: new Set(), adsets: new Map() });
+          campaignMap.set(cId, { name: lm.campaign_name || "Sem nome", leads: new Set(), won: new Set(), adsets: new Map() });
         }
         const campaign = campaignMap.get(cId)!;
         campaign.leads.add(lm.lead_id);
+        if (isWon) campaign.won.add(lm.lead_id);
 
         if (lm.adset_id) {
           if (!campaign.adsets.has(lm.adset_id)) {
-            campaign.adsets.set(lm.adset_id, { name: lm.adset_name || "Sem nome", leads: new Set(), ads: new Map() });
+            campaign.adsets.set(lm.adset_id, { name: lm.adset_name || "Sem nome", leads: new Set(), won: new Set(), ads: new Map() });
           }
           const adset = campaign.adsets.get(lm.adset_id)!;
           adset.leads.add(lm.lead_id);
+          if (isWon) adset.won.add(lm.lead_id);
 
           if (lm.ad_id) {
             if (!adset.ads.has(lm.ad_id)) {
-              adset.ads.set(lm.ad_id, { name: lm.ad_name || "Sem nome", leads: new Set(), creative_url: lm.creative_url, creative_video_url: lm.creative_video_url });
+              adset.ads.set(lm.ad_id, { name: lm.ad_name || "Sem nome", leads: new Set(), won: new Set(), creative_url: lm.creative_url, creative_video_url: lm.creative_video_url });
             }
             const ad = adset.ads.get(lm.ad_id)!;
             ad.leads.add(lm.lead_id);
+            if (isWon) ad.won.add(lm.lead_id);
             if (lm.creative_url) ad.creative_url = lm.creative_url;
             if (lm.creative_video_url) ad.creative_video_url = lm.creative_video_url;
           }
