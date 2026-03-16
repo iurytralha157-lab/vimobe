@@ -490,11 +490,13 @@ async function handleMessagesUpsert(
           .eq("id", conversation.id);
         
         // ===== AUTO-SYNC PROFILE PICTURE =====
-        // Fetch profile picture if: (a) no picture yet, or (b) periodically retry (every ~50 messages)
+        // Fetch profile picture more frequently:
+        // (a) no picture yet, (b) every ~10 received messages, (c) picture URL likely expired (>7 days old)
         const shouldFetchPicture = !isGroup && !fromMe && (
           !conversation.contact_picture || 
-          // Retry periodically: use unread_count as a rough proxy for activity
-          (conversation.unread_count > 0 && conversation.unread_count % 50 === 0)
+          ((conversation.unread_count || 0) % 10 === 0) ||
+          // If picture URL is a WhatsApp CDN URL (pps.whatsapp.net), it expires - refresh periodically
+          (conversation.contact_picture && conversation.contact_picture.includes('pps.whatsapp.net'))
         );
         
         if (shouldFetchPicture) {
