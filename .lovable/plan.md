@@ -1,93 +1,78 @@
 
 
-## Historico de Mensagens por Lead e Ajuste no First Response
+# Melhorias no Lead Detail e Dashboard de Campanhas
 
-### Resumo das Mudancas
+## Resumo das solicitações
 
-Tres ajustes principais:
-
-1. **Remover first response do botao de WhatsApp** - O tempo de resposta so sera marcado quando uma mensagem for realmente enviada (ja acontece no `message-sender`) ou quando o webhook detectar envio pelo WhatsApp pessoal do corretor. Botoes de telefone e email continuam marcando pois nao temos controle sobre eles.
-
-2. **Aba de historico de mensagens no detalhe do lead** - Quem tem acesso ao lead podera ver todas as mensagens WhatsApp trocadas com aquele contato, independente de qual instancia/corretor enviou.
-
-3. **Identificacao do remetente** - Cada mensagem enviada mostrara qual corretor enviou, usando o `session.owner_user_id` para identificar.
+O usuário pediu 3 coisas distintas. Vou organizar por etapas:
 
 ---
 
-### Detalhes Tecnicos
+### Etapa 1: Remover aba "Mensagens" do card do lead
 
-#### 1. Remover `recordFirstResponse` dos botoes de WhatsApp
+**O que muda:**
+- Remover o item `{ id: 'messages', label: 'Mensagens', icon: MessageCircle }` do array `tabs` (linha ~568-572)
+- Remover o `TabsContent value="messages"` no desktop (linha ~1671-1674)
+- Remover o `activeTab === 'messages'` no mobile (linha ~829-830)
+- Remover o import de `LeadMessagesTab` (linha 34)
+- Os arquivos `LeadMessagesTab.tsx` e `use-lead-messages.ts` continuam existindo pois podem ser usados futuramente
 
-**Arquivos:**
-- `src/components/leads/LeadCard.tsx` - Remover `recordFirstResponse` de `handleWhatsAppClick`
-- `src/components/leads/LeadDetailDialog.tsx` - Remover `recordFirstResponse` de `handleQuickWhatsApp`
+---
 
-O `message-sender` edge function ja chama `calculate-first-response` quando uma mensagem e realmente enviada (linhas 145-170). Isso garante que o first response so e marcado quando o corretor de fato envia uma mensagem, nao quando clica no botao.
+### Etapa 2: Melhorar o criativo/vídeo na seção de Rastreamento do lead
 
-Para mensagens recebidas pelo webhook do WhatsApp pessoal do corretor, o `evolution-webhook` ja vincula conversas a leads. Precisaremos adicionar a chamada de `calculate-first-response` no webhook quando uma mensagem `from_me: true` for recebida para um lead vinculado (cobrindo o caso de envio pelo app nativo do WhatsApp).
+**Problema atual:** O meta-webhook já busca `creative_url` via API do Meta, mas só pega `effective_image_url` ou `thumbnail_url`. Não busca o vídeo do criativo.
 
-#### 2. Historico de mensagens no detalhe do lead
+**O que muda no webhook (`meta-webhook/index.ts`):**
+- Expandir os campos da API do Meta para incluir `effective_object_story_id` e `video_id`
+- Fazer uma segunda chamada para buscar `source` (URL do vídeo) quando houver `video_id`
+- Salvar no `lead_meta` um novo campo `creative_video_url` além do `creative_url` (imagem)
 
-**Novo hook:** `src/hooks/use-lead-messages.ts`
-- Busca todas as conversas (`whatsapp_conversations`) vinculadas ao `lead_id`
-- Busca todas as mensagens dessas conversas
-- Ordena cronologicamente
-- Inclui dados da sessao (instance_name, owner_user_id) para identificar quem enviou
+**O que muda no banco:**
+- Adicionar coluna `creative_video_url text` na tabela `lead_meta`
 
-**Novo componente:** `src/components/leads/LeadMessagesTab.tsx`
-- Lista de mensagens estilo chat (bolhas)
-- Mensagens enviadas (from_me) mostram nome do corretor (via session owner)
-- Mensagens recebidas mostram nome do contato
-- Separadores de data entre mensagens
-- Suporte a midia (imagens, audio, documentos)
+**O que muda no frontend (`LeadTrackingSection.tsx`):**
+- Se `creative_video_url` existir, renderizar um player de vídeo inline (tag `<video>`) com controles
+- Se só tiver `creative_url` (imagem), mostrar a imagem inline com preview clicável
+- Manter o botão "Ver Criativo" como link externo
 
-**Arquivo modificado:** `src/components/leads/LeadDetailDialog.tsx`
-- Adicionar nova aba "Mensagens" nas tabs do lead detail
-- A aba so aparece se existirem conversas vinculadas ao lead
+**O que muda no `ConversationLeadPanel.tsx`:**
+- Mesmo tratamento: mostrar preview do criativo (imagem ou vídeo) inline
 
-#### 3. First response via webhook (mensagens do WhatsApp nativo)
+---
 
-**Arquivo:** `supabase/functions/evolution-webhook/index.ts`
-- Na secao de processamento de mensagens `from_me: true`, verificar se a conversa tem `lead_id`
-- Se tiver, chamar `calculate-first-response` com o `owner_user_id` da sessao
-- Tambem marcar `first_touch_at` no lead (mesmo comportamento do `message-sender`)
+### Etapa 3: Visibilidade de conversas WhatsApp para gestores e transferências
 
-#### 4. Acesso baseado no lead (nao na sessao)
+**Estado atual (já funciona):**
+- Quando um lead é transferido, a conversa fica vinculada ao `lead_id`, então o novo responsável já consegue ver o histórico ao abrir o chat
+- O `FloatingChat` busca conversas por `lead_id` primeiro
 
-A query de mensagens no novo hook usara o `lead_id` para buscar conversas, respeitando o acesso ao lead (quem pode ver o lead, pode ver as mensagens). Isso e diferente do acesso ao WhatsApp (sessao), que e restrito ao dono/autorizado.
+**O que precisa melhorar:**
+- No `MessageBubble` (dentro do chat), quando `from_me = true`, já mostra o `sender_name` ou `session_owner_name`, mas precisa ficar mais claro visualmente quem enviou cada mensagem
+- Para o gestor (quem tem `lead_view_all`), ele já pode ver o lead, mas precisa ver as conversas vinculadas. Atualmente a visibilidade do WhatsApp é restrita ao dono da sessão (`whatsapp_session_access`). Para o gestor ver a conversa do lead, ele precisa:
+  1. Abrir via o card do lead (FloatingChat com `lead_id`) — isso já funciona pois a busca é por `lead_id`
+  2. O problema é que a RLS de `whatsapp_messages` pode bloquear se o gestor não tem acesso à sessão
 
-```text
-Fluxo de acesso:
-Lead acessivel -> Conversas vinculadas ao lead -> Mensagens dessas conversas
-(Nao depende de whatsapp_session_access)
-```
+**Alterações necessárias:**
+- No `MessageBubble` do chat, adicionar label mais visível do remetente (nome do corretor) nas mensagens enviadas, com cor diferenciada
+- Verificar se a RLS de `whatsapp_messages` permite leitura quando o usuário tem acesso ao lead (via `lead_view_all` ou é o responsável atual). Se não, criar uma policy adicional
 
-### Arquivos a Criar/Modificar
+---
 
-```text
-CRIAR:
-1. src/hooks/use-lead-messages.ts
-   - Hook para buscar mensagens de todas as conversas de um lead
-   
-2. src/components/leads/LeadMessagesTab.tsx
-   - Componente de visualizacao do historico de mensagens do lead
+## Plano de execução por etapa
 
-MODIFICAR:
-3. src/components/leads/LeadCard.tsx
-   - Remover recordFirstResponse do handleWhatsAppClick
+### Etapa 1 — Remover aba Mensagens (frontend only)
+- Editar `LeadDetailDialog.tsx`: remover tab "messages" do array, remover TabsContent e condicional mobile, limpar import
 
-4. src/components/leads/LeadDetailDialog.tsx
-   - Remover recordFirstResponse do handleQuickWhatsApp
-   - Adicionar aba "Mensagens" com LeadMessagesTab
+### Etapa 2 — Criativo com vídeo
+1. Migration: adicionar `creative_video_url text` em `lead_meta`
+2. Atualizar `meta-webhook/index.ts`: buscar video_id e source URL do vídeo via Graph API
+3. Atualizar `use-lead-meta.ts`: adicionar campo `creative_video_url`
+4. Atualizar `LeadTrackingSection.tsx`: renderizar preview de imagem/vídeo inline
+5. Atualizar `ConversationLeadPanel.tsx`: mesmo tratamento
 
-5. supabase/functions/evolution-webhook/index.ts
-   - Adicionar first response tracking para mensagens from_me via webhook
-```
+### Etapa 3 — Visibilidade de conversas para gestores
+1. Investigar RLS de `whatsapp_messages` e `whatsapp_conversations` para verificar se gestor com `lead_view_all` consegue ler mensagens de leads que supervisiona
+2. Se necessário, criar policy RLS adicional
+3. No `MessageBubble.tsx` do chat, melhorar a identificação visual do remetente (badge com nome do corretor)
 
-### Comportamento Final
-
-- Corretor clica no botao WhatsApp no Kanban: abre chat, NAO marca first response
-- Corretor envia mensagem pelo sistema (FloatingChat): marca first response via `message-sender`
-- Corretor envia mensagem pelo WhatsApp nativo: webhook recebe, marca first response via `evolution-webhook`
-- Gestor/admin abre detalhe do lead: ve aba "Mensagens" com todo historico de conversas
-- Lead transferido para outro corretor: historico preservado, novo corretor ve tudo
