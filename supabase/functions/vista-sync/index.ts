@@ -222,7 +222,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         const propertyData: Record<string, any> = {
           organization_id: organizationId,
           vista_codigo: codigo,
-          title: item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
+          title: item.Titulo || item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
           tipo_de_imovel: categoria,
           tipo_de_negocio: tipoNegocio,
           status,
