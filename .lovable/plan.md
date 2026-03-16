@@ -1,46 +1,93 @@
 
 
-# Refatorar widget de campanhas para usar dados do `lead_meta` como fonte primária
+## Historico de Mensagens por Lead e Ajuste no First Response
 
-## Problema atual
+### Resumo das Mudancas
 
-O hook `useCampaignInsights` depende da tabela `meta_campaign_insights` para montar a hierarquia de campanhas. Se a sincronização com a API do Meta nunca foi feita, o widget fica vazio -- mesmo tendo centenas de leads com dados de campanha já salvos em `lead_meta`.
+Tres ajustes principais:
 
-## Solução
+1. **Remover first response do botao de WhatsApp** - O tempo de resposta so sera marcado quando uma mensagem for realmente enviada (ja acontece no `message-sender`) ou quando o webhook detectar envio pelo WhatsApp pessoal do corretor. Botoes de telefone e email continuam marcando pois nao temos controle sobre eles.
 
-Inverter a lógica: construir a hierarquia (campanha > conjunto > anuncio) a partir do `lead_meta`, que ja tem `campaign_id/name`, `adset_id/name`, `ad_id/name`, `creative_url`, `creative_video_url`. Depois, enriquecer com dados de spend/impressoes do `meta_campaign_insights` quando disponíveis.
+2. **Aba de historico de mensagens no detalhe do lead** - Quem tem acesso ao lead podera ver todas as mensagens WhatsApp trocadas com aquele contato, independente de qual instancia/corretor enviou.
 
-## Alterações
+3. **Identificacao do remetente** - Cada mensagem enviada mostrara qual corretor enviou, usando o `session.owner_user_id` para identificar.
 
-### 1. Hook `use-campaign-insights.ts` -- refatorar queryFn
+---
 
-**Antes:** Busca `meta_campaign_insights` primeiro, depois faz overlay de lead counts.
-**Depois:**
-1. Buscar todos os `lead_meta` com `campaign_id` nao nulo, fazer join com `leads` para filtrar por data
-2. Agrupar por campanha > conjunto > anuncio, contando leads
-3. Buscar `meta_campaign_insights` opcionalmente para enriquecer com spend/impressoes/CPL
-4. Merge: se tem dados do Meta, mostra; se nao, mostra so lead counts com spend/CPL como "—"
+### Detalhes Tecnicos
 
-Fluxo simplificado:
+#### 1. Remover `recordFirstResponse` dos botoes de WhatsApp
+
+**Arquivos:**
+- `src/components/leads/LeadCard.tsx` - Remover `recordFirstResponse` de `handleWhatsAppClick`
+- `src/components/leads/LeadDetailDialog.tsx` - Remover `recordFirstResponse` de `handleQuickWhatsApp`
+
+O `message-sender` edge function ja chama `calculate-first-response` quando uma mensagem e realmente enviada (linhas 145-170). Isso garante que o first response so e marcado quando o corretor de fato envia uma mensagem, nao quando clica no botao.
+
+Para mensagens recebidas pelo webhook do WhatsApp pessoal do corretor, o `evolution-webhook` ja vincula conversas a leads. Precisaremos adicionar a chamada de `calculate-first-response` no webhook quando uma mensagem `from_me: true` for recebida para um lead vinculado (cobrindo o caso de envio pelo app nativo do WhatsApp).
+
+#### 2. Historico de mensagens no detalhe do lead
+
+**Novo hook:** `src/hooks/use-lead-messages.ts`
+- Busca todas as conversas (`whatsapp_conversations`) vinculadas ao `lead_id`
+- Busca todas as mensagens dessas conversas
+- Ordena cronologicamente
+- Inclui dados da sessao (instance_name, owner_user_id) para identificar quem enviou
+
+**Novo componente:** `src/components/leads/LeadMessagesTab.tsx`
+- Lista de mensagens estilo chat (bolhas)
+- Mensagens enviadas (from_me) mostram nome do corretor (via session owner)
+- Mensagens recebidas mostram nome do contato
+- Separadores de data entre mensagens
+- Suporte a midia (imagens, audio, documentos)
+
+**Arquivo modificado:** `src/components/leads/LeadDetailDialog.tsx`
+- Adicionar nova aba "Mensagens" nas tabs do lead detail
+- A aba so aparece se existirem conversas vinculadas ao lead
+
+#### 3. First response via webhook (mensagens do WhatsApp nativo)
+
+**Arquivo:** `supabase/functions/evolution-webhook/index.ts`
+- Na secao de processamento de mensagens `from_me: true`, verificar se a conversa tem `lead_id`
+- Se tiver, chamar `calculate-first-response` com o `owner_user_id` da sessao
+- Tambem marcar `first_touch_at` no lead (mesmo comportamento do `message-sender`)
+
+#### 4. Acesso baseado no lead (nao na sessao)
+
+A query de mensagens no novo hook usara o `lead_id` para buscar conversas, respeitando o acesso ao lead (quem pode ver o lead, pode ver as mensagens). Isso e diferente do acesso ao WhatsApp (sessao), que e restrito ao dono/autorizado.
+
 ```text
-lead_meta + leads (filtro data) → agrupar por campaign/adset/ad → hierarquia base
-meta_campaign_insights (opcional) → enriquecer com spend/impressions
+Fluxo de acesso:
+Lead acessivel -> Conversas vinculadas ao lead -> Mensagens dessas conversas
+(Nao depende de whatsapp_session_access)
 ```
 
-### 2. Widget `CampaignPerformanceWidget.tsx` -- ajustar UI
+### Arquivos a Criar/Modificar
 
-- KPIs: mostrar "Total Leads Meta", "Campanhas ativas", "Conjuntos", "Anuncios" quando nao tem dados de spend
-- Quando tem dados de spend (apos sync), mostrar Investimento + CPL tambem
-- Colunas da tabela: se nao tem spend, esconder colunas Gasto/CPL e mostrar so Leads
-- Botao "Sincronizar Meta Ads" continua disponível para enriquecer com dados financeiros
-- Mostrar preview de criativo nos anuncios (ja funciona)
-- Remover a condicao que esconde o widget quando nao tem dados de `meta_campaign_insights`
+```text
+CRIAR:
+1. src/hooks/use-lead-messages.ts
+   - Hook para buscar mensagens de todas as conversas de um lead
+   
+2. src/components/leads/LeadMessagesTab.tsx
+   - Componente de visualizacao do historico de mensagens do lead
 
-### 3. Sem alteracoes no banco
+MODIFICAR:
+3. src/components/leads/LeadCard.tsx
+   - Remover recordFirstResponse do handleWhatsAppClick
 
-Tudo ja existe. Apenas muda a logica de consulta no frontend.
+4. src/components/leads/LeadDetailDialog.tsx
+   - Remover recordFirstResponse do handleQuickWhatsApp
+   - Adicionar aba "Mensagens" com LeadMessagesTab
 
-## Resultado esperado
+5. supabase/functions/evolution-webhook/index.ts
+   - Adicionar first response tracking para mensagens from_me via webhook
+```
 
-O widget mostra imediatamente todas as campanhas que geraram leads no CRM, com contagem de leads por campanha/conjunto/anuncio. O botao de sincronizar adiciona dados financeiros (gasto, CPL, impressoes) por cima.
+### Comportamento Final
 
+- Corretor clica no botao WhatsApp no Kanban: abre chat, NAO marca first response
+- Corretor envia mensagem pelo sistema (FloatingChat): marca first response via `message-sender`
+- Corretor envia mensagem pelo WhatsApp nativo: webhook recebe, marca first response via `evolution-webhook`
+- Gestor/admin abre detalhe do lead: ve aba "Mensagens" com todo historico de conversas
+- Lead transferido para outro corretor: historico preservado, novo corretor ve tudo
