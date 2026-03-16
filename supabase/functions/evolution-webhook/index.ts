@@ -490,11 +490,13 @@ async function handleMessagesUpsert(
           .eq("id", conversation.id);
         
         // ===== AUTO-SYNC PROFILE PICTURE =====
-        // Fetch profile picture if: (a) no picture yet, or (b) periodically retry (every ~50 messages)
+        // Fetch profile picture more frequently:
+        // (a) no picture yet, (b) every ~10 received messages, (c) picture URL likely expired (>7 days old)
         const shouldFetchPicture = !isGroup && !fromMe && (
           !conversation.contact_picture || 
-          // Retry periodically: use unread_count as a rough proxy for activity
-          (conversation.unread_count > 0 && conversation.unread_count % 50 === 0)
+          ((conversation.unread_count || 0) % 10 === 0) ||
+          // If picture URL is a WhatsApp CDN URL (pps.whatsapp.net), it expires - refresh periodically
+          (conversation.contact_picture && conversation.contact_picture.includes('pps.whatsapp.net'))
         );
         
         if (shouldFetchPicture) {
@@ -1968,6 +1970,7 @@ async function applyFacebookAdsTag(
 }
 
 // Fetch and save contact profile picture from Evolution API
+// Downloads the image and stores permanently in Supabase Storage to avoid expired URLs
 async function fetchAndSaveProfilePicture(
   supabase: any,
   session: any,
@@ -2003,19 +2006,72 @@ async function fetchAndSaveProfilePicture(
     const data = await response.json();
     const pictureUrl = data.profilePictureUrl || data.wpiUrl || null;
 
-    if (pictureUrl) {
+    if (!pictureUrl) {
+      console.log(`No profile picture available for ${formattedPhone}`);
+      return;
+    }
+
+    // Download the image and store it permanently in Supabase Storage
+    try {
+      const imgResponse = await fetch(pictureUrl);
+      if (!imgResponse.ok) {
+        console.log(`Failed to download profile picture: ${imgResponse.status}`);
+        // Fall back to saving the URL directly
+        await supabase
+          .from("whatsapp_conversations")
+          .update({ contact_picture: pictureUrl })
+          .eq("id", conversationId);
+        return;
+      }
+
+      const imgBuffer = await imgResponse.arrayBuffer();
+      if (imgBuffer.byteLength < 100) {
+        console.log("Downloaded image too small, skipping");
+        return;
+      }
+
+      const filePath = `orgs/${session.organization_id}/profile-pictures/${formattedPhone}.jpg`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("whatsapp-media")
+        .upload(filePath, new Uint8Array(imgBuffer), {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Error uploading profile picture:", uploadError);
+        // Fall back to saving the URL directly
+        await supabase
+          .from("whatsapp_conversations")
+          .update({ contact_picture: pictureUrl })
+          .eq("id", conversationId);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("whatsapp-media")
+        .getPublicUrl(filePath);
+
+      const permanentUrl = `${urlData.publicUrl}?t=${Date.now()}`; // Cache bust
+
       const { error } = await supabase
         .from("whatsapp_conversations")
-        .update({ contact_picture: pictureUrl })
+        .update({ contact_picture: permanentUrl })
         .eq("id", conversationId);
 
       if (error) {
         console.error("Error saving profile picture:", error);
       } else {
-        console.log(`Saved profile picture for conversation ${conversationId}`);
+        console.log(`Profile picture stored permanently for conversation ${conversationId}: ${filePath}`);
       }
-    } else {
-      console.log(`No profile picture available for ${formattedPhone}`);
+    } catch (downloadError) {
+      console.log("Error downloading/storing profile picture, saving URL directly:", downloadError);
+      // Fallback: save the temporary URL
+      await supabase
+        .from("whatsapp_conversations")
+        .update({ contact_picture: pictureUrl })
+        .eq("id", conversationId);
     }
   } catch (error) {
     console.log("Could not fetch profile picture:", error);
