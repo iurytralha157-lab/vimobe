@@ -68,14 +68,12 @@ async function testConnection(apiUrl: string, apiKey: string) {
 async function syncProperties(supabase: any, apiUrl: string, apiKey: string, organizationId: string, importInactive: boolean) {
   const fields = [
     "Codigo", "Categoria", "Status", "Finalidade",
-    "ValorVenda", "ValorLocacao", "Dormitorio", "Suites",
-    "Banheiros", "Vagas", "AreaUtil", "AreaTotal",
+    "ValorVenda", "ValorLocacao", "Dormitorios", "Suites",
+    "BanheiroSocialQtd", "Vagas", "AreaPrivativa", "AreaTotal",
     "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "UF", "CEP",
     "DescricaoWeb", "FotoDestaque",
     "Latitude", "Longitude",
-    "ValorCondominio", "AnoConstrucao", "Titulo",
-    // Request photo gallery (lowercase "fotos" required by Vista API)
-    {"fotos": ["Foto", "FotoPequena", "Destaque"]},
+    "ValorCondominio", "AnoConstrucao", "TituloSite",
   ];
 
   let page = 1;
@@ -155,7 +153,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           continue;
         }
 
-        // Parse photos from nested Foto field
+        // Parse photos - only FotoDestaque available for this API method
         let fotos: string[] = [];
         let imagemPrincipal = "";
 
@@ -163,30 +161,6 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
           imagemPrincipal = item.FotoDestaque;
           fotos.push(item.FotoDestaque);
-        }
-
-        // Parse gallery photos from "fotos" object (lowercase, as returned by Vista API)
-        const fotosObj = item.Fotos || item.fotos || item.Foto;
-        if (fotosObj && typeof fotosObj === "object") {
-          const fotoValues = Object.values(fotosObj);
-          for (const foto of fotoValues) {
-            if (foto && typeof foto === "object") {
-              const f = foto as any;
-              const url = f.Foto || f.FotoPequena || "";
-              if (url && typeof url === "string" && url.startsWith("http") && !fotos.includes(url)) {
-                fotos.push(url);
-              }
-              // Set primary from Destaque flag
-              if (f.Destaque === "Sim" && f.Foto && !imagemPrincipal) {
-                imagemPrincipal = f.Foto;
-              }
-            }
-          }
-        }
-
-        // If no primary image but has photos, use first
-        if (!imagemPrincipal && fotos.length > 0) {
-          imagemPrincipal = fotos[0];
         }
 
         // Map finalidade to tipo_de_negocio
@@ -222,7 +196,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         const propertyData: Record<string, any> = {
           organization_id: organizationId,
           vista_codigo: codigo,
-          title: item.Titulo || item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
+          title: item.TituloSite || item.Categoria || `Imóvel ${codigo}`,
           tipo_de_imovel: categoria,
           tipo_de_negocio: tipoNegocio,
           status,
@@ -233,11 +207,11 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           cidade: item.Cidade || null,
           uf: item.UF || null,
           cep: item.CEP || null,
-          quartos: parseInt(item.Dormitorio || item.Dormitorios) || null,
+          quartos: parseInt(item.Dormitorios) || null,
           suites: parseInt(item.Suites) || null,
-          banheiros: parseInt(item.Banheiros || item.BanheiroSocialQtd) || null,
+          banheiros: parseInt(item.BanheiroSocialQtd) || null,
           vagas: parseInt(item.Vagas) || null,
-          area_util: parseFloat(item.AreaUtil || item.AreaPrivativa) || null,
+          area_util: parseFloat(item.AreaPrivativa) || null,
           area_total: parseFloat(item.AreaTotal) || null,
           preco,
           condominio: parseFloat(String(item.ValorCondominio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
