@@ -566,11 +566,6 @@ export function LeadDetailDialog({
     icon: Activity,
     badge: totalTasksCount > 0 ? `${completedTasksCount}/${totalTasksCount}` : null
   }, {
-    id: 'messages',
-    label: 'Mensagens',
-    icon: MessageCircle,
-    badge: null
-  }, {
     id: 'schedule',
     label: 'Agenda',
     icon: Calendar,
