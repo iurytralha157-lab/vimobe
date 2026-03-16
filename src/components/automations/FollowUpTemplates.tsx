@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, Clock, Calendar, Plus, Sparkles, Building2 } from 'lucide-react';
@@ -17,7 +17,6 @@ export interface FollowUpTemplate {
   onReplyMessage?: string;
 }
 
-// Default message when lead replies
 export const DEFAULT_ON_REPLY_MESSAGE = `Olá {{lead.name}}! 🎉
 
 Que bom que você se interessou!
@@ -25,7 +24,6 @@ Nossa equipe entrará em contato em breve para te atender.
 
 Enquanto isso, posso te ajudar com algo?`;
 
-// Pre-configured templates for real estate industry
 export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
   {
     id: 'real_estate_3',
@@ -35,33 +33,9 @@ export const FOLLOW_UP_TEMPLATES: FollowUpTemplate[] = [
     industry: 'real_estate',
     onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
     messages: [
-      {
-        day: 1,
-        title: 'Primeiro contato',
-        content: `Olá {{lead.name}}! 👋
-
-Aqui é da {{organization.name}}. Vi que você demonstrou interesse em nossos imóveis.
-
-Posso ajudar a encontrar o imóvel perfeito para você? Qual região você está procurando?`,
-      },
-      {
-        day: 2,
-        title: 'Lembrete',
-        content: `Oi {{lead.name}}, tudo bem? 
-
-Só passando para lembrar que estamos à disposição para ajudar na sua busca!
-
-Temos ótimas opções disponíveis. Quer que eu envie algumas sugestões?`,
-      },
-      {
-        day: 3,
-        title: 'Última tentativa',
-        content: `{{lead.name}}, última mensagem! 😊
-
-Caso ainda esteja procurando imóvel, ficarei feliz em ajudar.
-
-Se mudar de ideia, é só me chamar aqui!`,
-      },
+      { day: 1, title: 'Primeiro contato', content: `Olá {{lead.name}}! 👋\n\nAqui é da {{organization.name}}. Vi que você demonstrou interesse em nossos imóveis.\n\nPosso ajudar a encontrar o imóvel perfeito para você? Qual região você está procurando?` },
+      { day: 2, title: 'Lembrete', content: `Oi {{lead.name}}, tudo bem? \n\nSó passando para lembrar que estamos à disposição para ajudar na sua busca!\n\nTemos ótimas opções disponíveis. Quer que eu envie algumas sugestões?` },
+      { day: 3, title: 'Última tentativa', content: `{{lead.name}}, última mensagem! 😊\n\nCaso ainda esteja procurando imóvel, ficarei feliz em ajudar.\n\nSe mudar de ideia, é só me chamar aqui!` },
     ],
   },
   {
@@ -72,60 +46,12 @@ Se mudar de ideia, é só me chamar aqui!`,
     industry: 'real_estate',
     onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
     messages: [
-      {
-        day: 1,
-        title: 'Boas-vindas',
-        content: `Olá {{lead.name}}! 👋
-
-Seja bem-vindo(a) à {{organization.name}}! 
-
-Estou aqui para ajudar você a encontrar o imóvel ideal. Pode me contar um pouco sobre o que você busca? 🏠`,
-      },
-      {
-        day: 2,
-        title: 'Apresentação',
-        content: `Oi {{lead.name}}! Tudo bem?
-
-Aproveitando para me apresentar melhor: sou consultor(a) imobiliário(a) e tenho acesso a diversas opções que podem te interessar.
-
-Qual tipo de imóvel você está procurando? Casa, apartamento, terreno?`,
-      },
-      {
-        day: 3,
-        title: 'Dica de mercado',
-        content: `{{lead.name}}, você sabia? 📊
-
-O momento atual está muito favorável para quem quer comprar ou alugar imóvel.
-
-Posso te mostrar algumas oportunidades imperdíveis na sua região de interesse!`,
-      },
-      {
-        day: 4,
-        title: 'Oferta especial',
-        content: `Oi {{lead.name}}! 
-
-Separei algumas opções especiais que podem combinar com o que você procura.
-
-Quer que eu te envie os detalhes? É só me responder! 📱`,
-      },
-      {
-        day: 5,
-        title: 'Convite para visita',
-        content: `{{lead.name}}, que tal agendar uma visita? 🗓️
-
-Posso organizar para você conhecer pessoalmente os imóveis que mais se encaixam no seu perfil.
-
-Qual o melhor dia e horário para você?`,
-      },
-      {
-        day: 6,
-        title: 'Encerramento',
-        content: `{{lead.name}}, última mensagem da nossa sequência! 
-
-Caso precise de ajuda com imóveis no futuro, pode contar comigo.
-
-Salva meu contato e chama quando precisar! 🤝`,
-      },
+      { day: 1, title: 'Boas-vindas', content: `Olá {{lead.name}}! 👋\n\nSeja bem-vindo(a) à {{organization.name}}! \n\nEstou aqui para ajudar você a encontrar o imóvel ideal. Pode me contar um pouco sobre o que você busca? 🏠` },
+      { day: 2, title: 'Apresentação', content: `Oi {{lead.name}}! Tudo bem?\n\nAproveitando para me apresentar melhor: sou consultor(a) imobiliário(a) e tenho acesso a diversas opções que podem te interessar.\n\nQual tipo de imóvel você está procurando? Casa, apartamento, terreno?` },
+      { day: 3, title: 'Dica de mercado', content: `{{lead.name}}, você sabia? 📊\n\nO momento atual está muito favorável para quem quer comprar ou alugar imóvel.\n\nPosso te mostrar algumas oportunidades imperdíveis na sua região de interesse!` },
+      { day: 4, title: 'Oferta especial', content: `Oi {{lead.name}}! \n\nSeparei algumas opções especiais que podem combinar com o que você procura.\n\nQuer que eu te envie os detalhes? É só me responder! 📱` },
+      { day: 5, title: 'Convite para visita', content: `{{lead.name}}, que tal agendar uma visita? 🗓️\n\nPosso organizar para você conhecer pessoalmente os imóveis que mais se encaixam no seu perfil.\n\nQual o melhor dia e horário para você?` },
+      { day: 6, title: 'Encerramento', content: `{{lead.name}}, última mensagem da nossa sequência! \n\nCaso precise de ajuda com imóveis no futuro, pode contar comigo.\n\nSalva meu contato e chama quando precisar! 🤝` },
     ],
   },
   {
@@ -136,98 +62,16 @@ Salva meu contato e chama quando precisar! 🤝`,
     industry: 'real_estate',
     onReplyMessage: DEFAULT_ON_REPLY_MESSAGE,
     messages: [
-      {
-        day: 1,
-        title: 'Primeiro contato',
-        content: `Olá {{lead.name}}! 👋
-
-Bem-vindo(a) à {{organization.name}}! 
-
-Estou aqui para ajudar você na busca pelo imóvel ideal. O que você está procurando?`,
-      },
-      {
-        day: 2,
-        title: 'Apresentação',
-        content: `Oi {{lead.name}}! 
-
-Sou especialista em imóveis na região e posso te ajudar a encontrar opções que combinam com você.
-
-Qual seu orçamento e localização de preferência?`,
-      },
-      {
-        day: 3,
-        title: 'Opções disponíveis',
-        content: `{{lead.name}}, temos várias opções interessantes! 🏠
-
-Posso te enviar uma seleção personalizada com base no que você procura.
-
-Me conta mais sobre suas preferências!`,
-      },
-      {
-        day: 4,
-        title: 'Conteúdo educativo',
-        content: `Oi {{lead.name}}! Dica do dia 📚
-
-Sabia que é importante verificar a documentação do imóvel antes de fechar negócio?
-
-Posso te ajudar com isso também! Quer saber mais?`,
-      },
-      {
-        day: 5,
-        title: 'Destaques da semana',
-        content: `{{lead.name}}, olha só os destaques desta semana! ⭐
-
-Separei algumas opções especiais com ótimas condições.
-
-Quer que eu te mostre?`,
-      },
-      {
-        day: 6,
-        title: 'Convite para conhecer',
-        content: `Oi {{lead.name}}! 
-
-Que tal marcar uma visita para conhecer pessoalmente os imóveis?
-
-Posso organizar tudo para você! Qual sua disponibilidade? 🗓️`,
-      },
-      {
-        day: 7,
-        title: 'Lembrete de benefícios',
-        content: `{{lead.name}}, lembre-se dos benefícios de trabalhar comigo:
-
-✅ Atendimento personalizado
-✅ Opções selecionadas para você
-✅ Suporte em toda a negociação
-
-Vamos conversar?`,
-      },
-      {
-        day: 8,
-        title: 'Última promoção',
-        content: `Oi {{lead.name}}! 
-
-Recebi uma oportunidade imperdível que pode te interessar.
-
-Posso te contar mais? É por tempo limitado! ⏰`,
-      },
-      {
-        day: 9,
-        title: 'Disponibilidade',
-        content: `{{lead.name}}, só confirmando:
-
-Continuo à disposição para te ajudar quando precisar! 
-
-É só me chamar aqui que respondo rapidinho 📱`,
-      },
-      {
-        day: 10,
-        title: 'Despedida',
-        content: `{{lead.name}}, última mensagem! 
-
-Foi um prazer te conhecer. Quando decidir buscar um imóvel, pode contar comigo.
-
-Salva meu contato e até breve! 🤝`,
-      },
+      { day: 1, title: 'Primeiro contato', content: `Olá {{lead.name}}! 👋\n\nBem-vindo(a) à {{organization.name}}! \n\nEstou aqui para ajudar você na busca pelo imóvel ideal. O que você está procurando?` },
+      { day: 2, title: 'Apresentação', content: `Oi {{lead.name}}! \n\nSou especialista em imóveis na região e posso te ajudar a encontrar opções que combinam com você.\n\nQual seu orçamento e localização de preferência?` },
+      { day: 3, title: 'Opções disponíveis', content: `{{lead.name}}, temos várias opções interessantes! 🏠\n\nPosso te enviar uma seleção personalizada com base no que você procura.\n\nMe conta mais sobre suas preferências!` },
+      { day: 4, title: 'Conteúdo educativo', content: `Oi {{lead.name}}! Dica do dia 📚\n\nSabia que é importante verificar a documentação do imóvel antes de fechar negócio?\n\nPosso te ajudar com isso também! Quer saber mais?` },
+      { day: 5, title: 'Destaques da semana', content: `{{lead.name}}, olha só os destaques desta semana! ⭐\n\nSeparei algumas opções especiais com ótimas condições.\n\nQuer que eu te mostre?` },
+      { day: 6, title: 'Convite para conhecer', content: `Oi {{lead.name}}! \n\nQue tal marcar uma visita para conhecer pessoalmente os imóveis?\n\nPosso organizar tudo para você! Qual sua disponibilidade? 🗓️` },
+      { day: 7, title: 'Lembrete de benefícios', content: `{{lead.name}}, lembre-se dos benefícios de trabalhar comigo:\n\n✅ Atendimento personalizado\n✅ Opções selecionadas para você\n✅ Suporte em toda a negociação\n\nVamos conversar?` },
+      { day: 8, title: 'Última promoção', content: `Oi {{lead.name}}! \n\nRecebi uma oportunidade imperdível que pode te interessar.\n\nPosso te contar mais? É por tempo limitado! ⏰` },
+      { day: 9, title: 'Disponibilidade', content: `{{lead.name}}, só confirmando:\n\nContinuo à disposição para te ajudar quando precisar! \n\nÉ só me chamar aqui que respondo rapidinho 📱` },
+      { day: 10, title: 'Despedida', content: `{{lead.name}}, última mensagem! \n\nFoi um prazer te conhecer. Quando decidir buscar um imóvel, pode contar comigo.\n\nSalva meu contato e até breve! 🤝` },
     ],
   },
 ];
@@ -239,67 +83,72 @@ interface FollowUpTemplatesProps {
 export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) {
   return (
     <div className="space-y-6">
-      {/* Hero CTA - Criar do Zero */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
+      {/* Create from scratch - special card */}
+      <Card 
+        className="border-dashed border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 rounded-2xl cursor-pointer transition-all duration-200 group"
+        onClick={() => onSelectTemplate(null)}
+      >
+        <CardContent className="flex items-center gap-4 p-6">
+          <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <Plus className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
               Criar do Zero
             </h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-md">
-              Monte seu fluxo completamente personalizado com o editor visual de arrastar e soltar
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Monte seu fluxo personalizado com o editor visual
             </p>
           </div>
-          <Button onClick={() => onSelectTemplate(null)} size="lg" className="shrink-0">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova automação
+          <Button size="sm" className="shrink-0">
+            Começar
           </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Templates Section */}
+      {/* Templates */}
       <div>
-        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
           Ou comece com um modelo pronto
         </h4>
 
-        {/* Templates Grid */}
         <div className="grid gap-4 md:grid-cols-3">
           {FOLLOW_UP_TEMPLATES.map((template) => (
             <Card
               key={template.id}
-              className="cursor-pointer hover:border-primary/50 transition-colors group"
+              className="cursor-pointer rounded-2xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/40 transition-all duration-200 group"
               onClick={() => onSelectTemplate(template)}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
                     <MessageSquare className="h-5 w-5 text-primary" />
                   </div>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px]">
                     <Building2 className="h-3 w-3 mr-1" />
                     Imobiliário
                   </Badge>
                 </div>
-                <CardTitle className="text-base mt-3">{template.name}</CardTitle>
-                <CardDescription className="text-sm">{template.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+
+                <h3 className="font-semibold text-sm mb-1">{template.name}</h3>
+                <p className="text-xs text-muted-foreground mb-4 line-clamp-2">{template.description}</p>
+
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
                   <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
+                    <Calendar className="h-3.5 w-3.5" />
                     <span>{template.days} dias</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{template.messages.length} mensagens</span>
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>{template.messages.length} msgs</span>
                   </div>
                 </div>
+
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full mt-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                  className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                 >
                   Usar template
                 </Button>

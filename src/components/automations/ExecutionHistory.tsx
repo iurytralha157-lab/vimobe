@@ -25,88 +25,35 @@ interface ExecutionHistoryProps {
   automationId?: string;
 }
 
-
 const getStatusConfig = (status: string) => {
   switch (status) {
     case 'completed':
-      return {
-        label: 'Concluída',
-        icon: CheckCircle2,
-        variant: 'default' as const,
-        bgClass: 'bg-primary/10',
-        textClass: 'text-primary',
-        borderClass: 'border-primary/20',
-      };
+      return { label: 'Concluída', icon: CheckCircle2, variant: 'default' as const, dotColor: 'bg-primary' };
     case 'running':
-      return {
-        label: 'Executando',
-        icon: Play,
-        variant: 'default' as const,
-        bgClass: 'bg-accent',
-        textClass: 'text-accent-foreground',
-        borderClass: 'border-accent',
-      };
+      return { label: 'Executando', icon: Play, variant: 'default' as const, dotColor: 'bg-accent' };
     case 'waiting':
-      return {
-        label: 'Aguardando',
-        icon: Clock,
-        variant: 'secondary' as const,
-        bgClass: 'bg-secondary',
-        textClass: 'text-secondary-foreground',
-        borderClass: 'border-secondary',
-      };
+      return { label: 'Aguardando', icon: Clock, variant: 'secondary' as const, dotColor: 'bg-secondary' };
     case 'failed':
-      return {
-        label: 'Falhou',
-        icon: XCircle,
-        variant: 'destructive' as const,
-        bgClass: 'bg-destructive/10',
-        textClass: 'text-destructive',
-        borderClass: 'border-destructive/20',
-      };
+      return { label: 'Falhou', icon: XCircle, variant: 'destructive' as const, dotColor: 'bg-destructive' };
     default:
-      return {
-        label: status,
-        icon: AlertTriangle,
-        variant: 'outline' as const,
-        bgClass: 'bg-muted',
-        textClass: 'text-muted-foreground',
-        borderClass: 'border-muted',
-      };
+      return { label: status, icon: AlertTriangle, variant: 'outline' as const, dotColor: 'bg-muted' };
   }
 };
 
-// Translate common error messages to Portuguese
 function translateError(error: string): string {
-  if (error.includes("exists") && error.includes("false")) {
-    return "Número WhatsApp inválido ou não cadastrado";
-  }
-  if (error.includes("Connection refused") || error.includes("ECONNREFUSED")) {
-    return "Falha na conexão com WhatsApp";
-  }
-  if (error.includes("timeout") || error.includes("ETIMEDOUT")) {
-    return "Tempo limite excedido";
-  }
-  if (error.includes("not connected")) {
-    return "Sessão WhatsApp desconectada";
-  }
-  if (error.includes("Node not found")) {
-    return "Nó de automação não encontrado";
-  }
+  if (error.includes("exists") && error.includes("false")) return "Número WhatsApp inválido ou não cadastrado";
+  if (error.includes("Connection refused") || error.includes("ECONNREFUSED")) return "Falha na conexão com WhatsApp";
+  if (error.includes("timeout") || error.includes("ETIMEDOUT")) return "Tempo limite excedido";
+  if (error.includes("not connected")) return "Sessão WhatsApp desconectada";
+  if (error.includes("Node not found")) return "Nó de automação não encontrado";
   if (error.includes("Failed to send WhatsApp")) {
-    // Extract the error details
     const match = error.match(/Failed to send WhatsApp: (.+)/);
     if (match) {
       try {
         const details = JSON.parse(match[1]);
-        if (details.status === "error" && details.message) {
-          return `Erro WhatsApp: ${details.message}`;
-        }
+        if (details.status === "error" && details.message) return `Erro WhatsApp: ${details.message}`;
       } catch {
-        // If not JSON, try to get a readable message
-        if (error.includes("exists")) {
-          return "Número WhatsApp inválido ou não cadastrado";
-        }
+        if (error.includes("exists")) return "Número WhatsApp inválido ou não cadastrado";
       }
     }
     return "Falha ao enviar mensagem WhatsApp";
@@ -128,114 +75,94 @@ export function ExecutionHistory({ automationId: initialAutomationId }: Executio
     );
   }
 
+  const FilterSelect = () => (
+    automations && automations.length > 0 ? (
+      <div className="flex items-center gap-2">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Select
+          value={selectedAutomationId || '__all__'}
+          onValueChange={(v) => setSelectedAutomationId(v === '__all__' ? undefined : v)}
+        >
+          <SelectTrigger className="w-[260px]">
+            <SelectValue placeholder="Todas as automações" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todas as automações</SelectItem>
+            {automations.map((a) => (
+              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {selectedAutomationId && (
+          <Button variant="ghost" size="sm" onClick={() => setSelectedAutomationId(undefined)}>
+            Limpar
+          </Button>
+        )}
+      </div>
+    ) : null
+  );
+
   if (!executions || executions.length === 0) {
     return (
       <div className="space-y-4">
-        {/* Filter */}
-        {automations && automations.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select
-              value={selectedAutomationId || '__all__'}
-              onValueChange={(v) => setSelectedAutomationId(v === '__all__' ? undefined : v)}
-            >
-              <SelectTrigger className="w-[260px]">
-                <SelectValue placeholder="Todas as automações" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Todas as automações</SelectItem>
-                {automations.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <FilterSelect />
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="p-4 rounded-2xl bg-muted mb-4">
+            <Clock className="h-10 w-10 text-muted-foreground" />
           </div>
-        )}
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhuma execução ainda</h3>
-            <p className="text-muted-foreground text-sm">
-              As execuções das automações aparecerão aqui quando forem disparadas
-            </p>
-          </CardContent>
-        </Card>
+          <h3 className="text-lg font-semibold mb-2">Nenhuma execução ainda</h3>
+          <p className="text-muted-foreground text-sm">
+            As execuções aparecerão aqui quando as automações forem disparadas
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Group executions by status
   const runningExecutions = executions.filter(e => e.status === 'running' || e.status === 'waiting');
   const completedExecutions = executions.filter(e => e.status === 'completed');
   const failedExecutions = executions.filter(e => e.status === 'failed');
 
-  const stats = {
-    running: runningExecutions.length,
-    completed: completedExecutions.length,
-    failed: failedExecutions.length,
-  };
-
   return (
     <div className="space-y-6">
-      {/* Filter */}
-      {automations && automations.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select
-            value={selectedAutomationId || '__all__'}
-            onValueChange={(v) => setSelectedAutomationId(v === '__all__' ? undefined : v)}
-          >
-            <SelectTrigger className="w-[260px]">
-              <SelectValue placeholder="Todas as automações" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Todas as automações</SelectItem>
-              {automations.map((a) => (
-                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedAutomationId && (
-            <Button variant="ghost" size="sm" onClick={() => setSelectedAutomationId(undefined)}>
-              Limpar filtro
-            </Button>
-          )}
-        </div>
-      )}
+      <FilterSelect />
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-accent/50 border-accent">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl text-foreground">{stats.running}</CardTitle>
-            <CardDescription className="text-foreground/70">Em andamento</CardDescription>
-          </CardHeader>
+      <div className="grid gap-3 grid-cols-3">
+        <Card className="rounded-2xl bg-card/50 backdrop-blur-sm border-border/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{runningExecutions.length}</p>
+            <p className="text-xs text-muted-foreground">Em andamento</p>
+          </CardContent>
         </Card>
-        <Card className="bg-primary/10 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl text-primary">{stats.completed}</CardTitle>
-            <CardDescription className="text-primary/80">Concluídas</CardDescription>
-          </CardHeader>
+        <Card className="rounded-2xl bg-card/50 backdrop-blur-sm border-border/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-primary">{completedExecutions.length}</p>
+            <p className="text-xs text-muted-foreground">Concluídas</p>
+          </CardContent>
         </Card>
-        <Card className="bg-destructive/10 border-destructive/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl text-destructive">{stats.failed}</CardTitle>
-            <CardDescription className="text-destructive/80">Com erro</CardDescription>
-          </CardHeader>
+        <Card className="rounded-2xl bg-card/50 backdrop-blur-sm border-border/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-destructive">{failedExecutions.length}</p>
+            <p className="text-xs text-muted-foreground">Com erro</p>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Executions List */}
-      <Card>
+      {/* Timeline */}
+      <Card className="rounded-2xl bg-card/50 backdrop-blur-sm border-border/50">
         <CardHeader>
           <CardTitle className="text-base">Histórico de Execuções</CardTitle>
           <CardDescription>Últimas 100 execuções • Atualiza automaticamente</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[400px]">
-            <div className="divide-y">
-              {executions.map((execution) => (
-                <ExecutionRow key={execution.id} execution={execution} />
+            <div className="relative px-6 pb-4">
+              {/* Vertical timeline line */}
+              <div className="absolute left-[30px] top-0 bottom-0 w-px bg-border" />
+
+              {executions.map((execution, index) => (
+                <ExecutionTimelineItem key={execution.id} execution={execution} isLast={index === executions.length - 1} />
               ))}
             </div>
           </ScrollArea>
@@ -245,8 +172,7 @@ export function ExecutionHistory({ automationId: initialAutomationId }: Executio
   );
 }
 
-
-function ExecutionRow({ execution }: { execution: AutomationExecution }) {
+function ExecutionTimelineItem({ execution, isLast }: { execution: AutomationExecution; isLast: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const cancelExecution = useCancelExecution();
   const statusConfig = getStatusConfig(execution.status);
@@ -260,125 +186,96 @@ function ExecutionRow({ execution }: { execution: AutomationExecution }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className={`p-2 rounded-full shrink-0 ${statusConfig.bgClass} ${statusConfig.textClass}`}>
-            <StatusIcon className="h-4 w-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium truncate">
-                {leadName}
-              </span>
-              <Badge variant={statusConfig.variant} className="shrink-0">
-                {statusConfig.label}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {automationName}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Iniciado {formatDistanceToNow(new Date(execution.started_at), { 
-                addSuffix: true, 
-                locale: ptBR 
-              })}
-              {execution.next_execution_at && execution.status === 'waiting' && (
-                <span className="ml-2 text-accent-foreground">
-                  • Próximo: {formatDistanceToNow(new Date(execution.next_execution_at), { 
-                    addSuffix: true, 
-                    locale: ptBR 
-                  })}
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
+      <div className="relative flex gap-4 py-3">
+        {/* Timeline dot */}
+        <div className={`relative z-10 w-3 h-3 rounded-full mt-1.5 shrink-0 ${statusConfig.dotColor} ${execution.status === 'running' ? 'animate-pulse' : ''}`} />
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right hidden sm:block">
-            {execution.completed_at && (
-              <p className="text-xs text-muted-foreground">
-                Concluído {formatDistanceToNow(new Date(execution.completed_at), { 
-                  addSuffix: true, 
-                  locale: ptBR 
-                })}
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium truncate">{leadName}</span>
+                <Badge variant={statusConfig.variant} className="text-[10px] px-1.5 py-0">
+                  {statusConfig.label}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{automationName}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {formatDistanceToNow(new Date(execution.started_at), { addSuffix: true, locale: ptBR })}
+                {execution.next_execution_at && execution.status === 'waiting' && (
+                  <span className="ml-2 text-accent-foreground">
+                    • Próximo: {formatDistanceToNow(new Date(execution.next_execution_at), { addSuffix: true, locale: ptBR })}
+                  </span>
+                )}
               </p>
-            )}
-          </div>
+            </div>
 
-          {canCancel && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  disabled={cancelExecution.isPending}
-                >
-                  <StopCircle className="h-4 w-4 mr-1" />
-                  Interromper
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Interromper automação?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação irá cancelar a execução. As mensagens pendentes não serão enviadas.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={() => cancelExecution.mutate(execution.id)}
-                    className="bg-destructive hover:bg-destructive/90"
-                  >
-                    Confirmar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+            <div className="flex items-center gap-1 shrink-0">
+              {canCancel && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={cancelExecution.isPending}
+                    >
+                      <StopCircle className="h-3.5 w-3.5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Interromper automação?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        As mensagens pendentes não serão enviadas.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => cancelExecution.mutate(execution.id)}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        Confirmar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
+              {hasError && (
+                <CollapsibleTrigger asChild>
+                  <button className="p-1 rounded hover:bg-muted">
+                    {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </button>
+                </CollapsibleTrigger>
+              )}
+            </div>
+          </div>
 
           {hasError && (
-            <CollapsibleTrigger asChild>
-              <button className="p-1 rounded hover:bg-muted">
-                {isOpen ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 bg-destructive/10 border border-destructive/20 rounded-xl p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-xs font-medium text-destructive">{translatedError}</p>
+                    {execution.error_message !== translatedError && (
+                      <details className="text-[10px] text-muted-foreground">
+                        <summary className="cursor-pointer hover:text-foreground">Detalhes técnicos</summary>
+                        <pre className="mt-1 p-2 bg-muted rounded text-[10px] overflow-x-auto whitespace-pre-wrap break-all">
+                          {execution.error_message}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
           )}
         </div>
       </div>
-
-      {hasError && (
-        <CollapsibleContent>
-          <div className="px-4 pb-4 pt-0">
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                <div className="space-y-1 min-w-0">
-                  <p className="text-sm font-medium text-destructive">
-                    {translatedError}
-                  </p>
-                  {execution.error_message !== translatedError && (
-                    <details className="text-xs text-muted-foreground">
-                      <summary className="cursor-pointer hover:text-foreground">
-                        Ver detalhes técnicos
-                      </summary>
-                      <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-x-auto whitespace-pre-wrap break-all">
-                        {execution.error_message}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </CollapsibleContent>
-      )}
     </Collapsible>
   );
 }
