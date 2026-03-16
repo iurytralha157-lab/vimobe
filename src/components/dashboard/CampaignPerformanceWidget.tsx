@@ -22,6 +22,9 @@ import {
   Play,
   Image as ImageIcon,
   TrendingUp,
+  BarChart3,
+  Layers,
+  MonitorPlay,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,7 +43,6 @@ function formatNumber(value: number): string {
   return value.toLocaleString("pt-BR");
 }
 
-// KPI mini card
 function KpiCard({ icon: Icon, label, value, iconColor }: { icon: any; label: string; value: string; iconColor: string }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-card p-3">
@@ -55,7 +57,6 @@ function KpiCard({ icon: Icon, label, value, iconColor }: { icon: any; label: st
   );
 }
 
-// Creative preview
 function CreativePreview({ url, videoUrl }: { url: string | null; videoUrl: string | null }) {
   if (videoUrl) {
     return (
@@ -81,21 +82,23 @@ function CreativePreview({ url, videoUrl }: { url: string | null; videoUrl: stri
   );
 }
 
-// Ad row
-function AdRow({ ad }: { ad: AdAggregated }) {
+function AdRow({ ad, hasSpend }: { ad: AdAggregated; hasSpend: boolean }) {
   return (
     <div className="flex items-center gap-3 py-2 pl-12 pr-3 text-xs border-t border-border/30">
       <CreativePreview url={ad.creative_url} videoUrl={ad.creative_video_url} />
       <span className="flex-1 truncate text-muted-foreground">{ad.ad_name}</span>
-      <span className="w-16 text-right font-medium">{ad.leads_count_crm}</span>
-      <span className="w-20 text-right">{formatCurrency(ad.spend)}</span>
-      <span className="w-20 text-right">{ad.cpl > 0 ? formatCurrency(ad.cpl) : "—"}</span>
+      <span className="w-16 text-right font-medium">{ad.leads_count}</span>
+      {hasSpend && (
+        <>
+          <span className="w-20 text-right">{ad.spend != null ? formatCurrency(ad.spend) : "—"}</span>
+          <span className="w-20 text-right">{ad.cpl != null && ad.cpl > 0 ? formatCurrency(ad.cpl) : "—"}</span>
+        </>
+      )}
     </div>
   );
 }
 
-// Adset row (expandable)
-function AdsetRow({ adset }: { adset: AdsetAggregated }) {
+function AdsetRow({ adset, hasSpend }: { adset: AdsetAggregated; hasSpend: boolean }) {
   const [open, setOpen] = useState(false);
   const hasAds = adset.ads.length > 0;
 
@@ -109,22 +112,25 @@ function AdsetRow({ adset }: { adset: AdsetAggregated }) {
             <span className="w-3 shrink-0" />
           )}
           <span className="flex-1 truncate text-muted-foreground">{adset.adset_name}</span>
-          <span className="w-16 text-right font-medium">{adset.leads_count_crm}</span>
-          <span className="w-20 text-right">{formatCurrency(adset.spend)}</span>
-          <span className="w-20 text-right">{adset.cpl > 0 ? formatCurrency(adset.cpl) : "—"}</span>
+          <span className="w-16 text-right font-medium">{adset.leads_count}</span>
+          {hasSpend && (
+            <>
+              <span className="w-20 text-right">{adset.spend != null ? formatCurrency(adset.spend) : "—"}</span>
+              <span className="w-20 text-right">{adset.cpl != null && adset.cpl > 0 ? formatCurrency(adset.cpl) : "—"}</span>
+            </>
+          )}
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
         {adset.ads.map((ad) => (
-          <AdRow key={ad.ad_id} ad={ad} />
+          <AdRow key={ad.ad_id} ad={ad} hasSpend={hasSpend} />
         ))}
       </CollapsibleContent>
     </Collapsible>
   );
 }
 
-// Campaign row (expandable)
-function CampaignRow({ campaign }: { campaign: CampaignAggregated }) {
+function CampaignRow({ campaign, hasSpend }: { campaign: CampaignAggregated; hasSpend: boolean }) {
   const [open, setOpen] = useState(false);
   const hasAdsets = campaign.adsets.length > 0;
 
@@ -138,14 +144,18 @@ function CampaignRow({ campaign }: { campaign: CampaignAggregated }) {
             <span className="w-4 shrink-0" />
           )}
           <span className="flex-1 truncate font-medium text-foreground">{campaign.campaign_name}</span>
-          <span className="w-16 text-right font-semibold text-foreground">{campaign.leads_count_crm}</span>
-          <span className="w-20 text-right text-foreground">{formatCurrency(campaign.spend)}</span>
-          <span className="w-20 text-right text-foreground">{campaign.cpl > 0 ? formatCurrency(campaign.cpl) : "—"}</span>
+          <span className="w-16 text-right font-semibold text-foreground">{campaign.leads_count}</span>
+          {hasSpend && (
+            <>
+              <span className="w-20 text-right text-foreground">{campaign.spend != null ? formatCurrency(campaign.spend) : "—"}</span>
+              <span className="w-20 text-right text-foreground">{campaign.cpl != null && campaign.cpl > 0 ? formatCurrency(campaign.cpl) : "—"}</span>
+            </>
+          )}
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent>
         {campaign.adsets.map((adset) => (
-          <AdsetRow key={adset.adset_id} adset={adset} />
+          <AdsetRow key={adset.adset_id} adset={adset} hasSpend={hasSpend} />
         ))}
       </CollapsibleContent>
     </Collapsible>
@@ -161,29 +171,6 @@ export function CampaignPerformanceWidget({ filters }: Props) {
     const dateStop = filters.dateRange.to.toISOString().split("T")[0];
     syncMutation.mutate({ dateStart, dateStop });
   };
-
-  // Don't show widget if no data and not loading
-  if (!isLoading && (!data || data.campaigns.length === 0) && !data?.lastSync) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Performance de Campanhas</CardTitle>
-          </div>
-          <Button size="sm" variant="outline" onClick={handleSync} disabled={syncMutation.isPending}>
-            <RefreshCw className={`h-4 w-4 mr-1.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-            Sincronizar Meta Ads
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Nenhum dado de campanha encontrado. Clique em "Sincronizar" para buscar dados do Meta Ads.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -203,8 +190,11 @@ export function CampaignPerformanceWidget({ filters }: Props) {
     );
   }
 
-  const summary = data?.summary;
-  const campaigns = data?.campaigns || [];
+  if (!data || data.campaigns.length === 0) {
+    return null; // No campaigns with leads at all — hide widget
+  }
+
+  const { summary, campaigns, hasSpendData } = data;
 
   return (
     <Card>
@@ -214,66 +204,56 @@ export function CampaignPerformanceWidget({ filters }: Props) {
           <CardTitle className="text-base">Performance de Campanhas</CardTitle>
         </div>
         <div className="flex items-center gap-2">
-          {data?.lastSync && (
+          {data.lastSync && (
             <span className="text-xs text-muted-foreground hidden sm:inline">
               Sincronizado {formatDistanceToNow(new Date(data.lastSync), { addSuffix: true, locale: ptBR })}
             </span>
           )}
           <Button size="sm" variant="outline" onClick={handleSync} disabled={syncMutation.isPending}>
             <RefreshCw className={`h-4 w-4 mr-1.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Sincronizar</span>
+            <span className="hidden sm:inline">Sincronizar Meta Ads</span>
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard
-            icon={DollarSign}
-            label="Investimento"
-            value={formatCurrency(summary?.totalSpend || 0)}
-            iconColor="bg-primary"
-          />
-          <KpiCard
-            icon={Target}
-            label="CPL Médio"
-            value={summary?.avgCpl ? formatCurrency(summary.avgCpl) : "—"}
-            iconColor="bg-chart-2"
-          />
-          <KpiCard
-            icon={Users}
-            label="Leads (CRM)"
-            value={formatNumber(summary?.totalLeadsCrm || 0)}
-            iconColor="bg-chart-3"
-          />
-          <KpiCard
-            icon={Eye}
-            label="Impressões"
-            value={formatNumber(summary?.totalImpressions || 0)}
-            iconColor="bg-chart-4"
-          />
+        <div className={`grid grid-cols-2 ${hasSpendData ? "md:grid-cols-4 lg:grid-cols-6" : "md:grid-cols-4"} gap-3`}>
+          <KpiCard icon={Users} label="Leads" value={formatNumber(summary.totalLeads)} iconColor="bg-primary" />
+          <KpiCard icon={BarChart3} label="Campanhas" value={String(summary.totalCampaigns)} iconColor="bg-chart-2" />
+          <KpiCard icon={Layers} label="Conjuntos" value={String(summary.totalAdsets)} iconColor="bg-chart-3" />
+          <KpiCard icon={MonitorPlay} label="Anúncios" value={String(summary.totalAds)} iconColor="bg-chart-4" />
+          {hasSpendData && summary.totalSpend != null && (
+            <KpiCard icon={DollarSign} label="Investimento" value={formatCurrency(summary.totalSpend)} iconColor="bg-chart-5" />
+          )}
+          {hasSpendData && summary.avgCpl != null && (
+            <KpiCard icon={Target} label="CPL Médio" value={formatCurrency(summary.avgCpl)} iconColor="bg-destructive" />
+          )}
         </div>
 
-        {/* Table header */}
+        {/* Table */}
         <div className="rounded-lg border border-border overflow-hidden">
           <div className="flex items-center gap-3 py-2 px-3 text-xs font-medium text-muted-foreground bg-muted/50">
             <span className="w-4 shrink-0" />
             <span className="flex-1">Campanha</span>
             <span className="w-16 text-right">Leads</span>
-            <span className="w-20 text-right">Gasto</span>
-            <span className="w-20 text-right">CPL</span>
+            {hasSpendData && (
+              <>
+                <span className="w-20 text-right">Gasto</span>
+                <span className="w-20 text-right">CPL</span>
+              </>
+            )}
           </div>
 
-          {campaigns.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              Nenhuma campanha encontrada no período
-            </div>
-          ) : (
-            campaigns.map((campaign) => (
-              <CampaignRow key={campaign.campaign_id} campaign={campaign} />
-            ))
-          )}
+          {campaigns.map((campaign) => (
+            <CampaignRow key={campaign.campaign_id} campaign={campaign} hasSpend={hasSpendData} />
+          ))}
         </div>
+
+        {!hasSpendData && (
+          <p className="text-xs text-muted-foreground text-center">
+            Clique em "Sincronizar Meta Ads" para adicionar dados de investimento e CPL.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
