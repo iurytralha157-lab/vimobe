@@ -31,7 +31,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
-import { LeadMessagesTab } from '@/components/leads/LeadMessagesTab';
+
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { EventsList } from '@/components/schedule/EventsList';
@@ -566,11 +566,6 @@ export function LeadDetailDialog({
     icon: Activity,
     badge: totalTasksCount > 0 ? `${completedTasksCount}/${totalTasksCount}` : null
   }, {
-    id: 'messages',
-    label: 'Mensagens',
-    icon: MessageCircle,
-    badge: null
-  }, {
     id: 'schedule',
     label: 'Agenda',
     icon: Calendar,
@@ -826,8 +821,6 @@ export function LeadDetailDialog({
               {/* Seção removida - Histórico agora é a única fonte de eventos */}
             </div>}
 
-          {/* Messages Tab */}
-          {activeTab === 'messages' && <LeadMessagesTab leadId={lead.id} leadName={lead.name} />}
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && <div className="space-y-4">
@@ -1668,10 +1661,6 @@ export function LeadDetailDialog({
             </div>
           </TabsContent>
 
-          {/* Mensagens Tab */}
-          <TabsContent value="messages" className="p-6 mt-0">
-            <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
-          </TabsContent>
 
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="p-6 mt-0">

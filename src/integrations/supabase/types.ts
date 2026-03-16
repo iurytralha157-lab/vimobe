@@ -1753,6 +1753,7 @@ export type Database = {
           contact_notes: string | null
           created_at: string
           creative_url: string | null
+          creative_video_url: string | null
           form_id: string | null
           form_name: string | null
           id: string
@@ -1777,6 +1778,7 @@ export type Database = {
           contact_notes?: string | null
           created_at?: string
           creative_url?: string | null
+          creative_video_url?: string | null
           form_id?: string | null
           form_name?: string | null
           id?: string
@@ -1801,6 +1803,7 @@ export type Database = {
           contact_notes?: string | null
           created_at?: string
           creative_url?: string | null
+          creative_video_url?: string | null
           form_id?: string | null
           form_name?: string | null
           id?: string
