@@ -250,6 +250,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           impressions: cInsight?.impressions ?? null,
           reach: cInsight?.reach ?? null,
           leads_count: cData.leads.size,
+          won_count: cData.won.size,
           cpl: cInsight?.cpl ?? null,
           adsets: adsets.sort((a, b) => b.leads_count - a.leads_count),
         });
@@ -257,15 +258,41 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       campaigns.sort((a, b) => b.leads_count - a.leads_count);
 
+      // Build top creatives ranking
+      const allAds: TopCreative[] = [];
+      for (const c of campaigns) {
+        for (const as of c.adsets) {
+          for (const ad of as.ads) {
+            allAds.push({
+              ad_id: ad.ad_id,
+              ad_name: ad.ad_name,
+              campaign_name: c.campaign_name,
+              leads_count: ad.leads_count,
+              won_count: ad.won_count,
+              score: ad.leads_count + (ad.won_count * 10),
+              creative_url: ad.creative_url,
+              creative_video_url: ad.creative_video_url,
+              spend: ad.spend,
+              cpl: ad.cpl,
+            });
+          }
+        }
+      }
+      allAds.sort((a, b) => b.score - a.score);
+      const topCreatives = allAds.slice(0, 10);
+
       const totalLeads = campaigns.reduce((s, c) => s + c.leads_count, 0);
+      const totalWon = campaigns.reduce((s, c) => s + c.won_count, 0);
       const totalSpend = hasSpendData ? campaigns.reduce((s, c) => s + (c.spend || 0), 0) : null;
       const totalImpressions = hasSpendData ? campaigns.reduce((s, c) => s + (c.impressions || 0), 0) : null;
       const avgCpl = hasSpendData && totalLeads > 0 && totalSpend ? Math.round((totalSpend / totalLeads) * 100) / 100 : null;
 
       return {
         campaigns,
+        topCreatives,
         summary: {
           totalLeads,
+          totalWon,
           totalCampaigns: campaigns.length,
           totalAdsets: totalAdsetsCount,
           totalAds: totalAdsCount,
