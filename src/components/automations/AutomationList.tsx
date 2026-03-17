@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -70,7 +70,6 @@ const getTriggerIcon = (triggerType: TriggerType) => {
   }
 };
 
-// Sub-component to show trigger context (pipeline/stage/tag name)
 function TriggerContext({ automation }: { automation: Automation }) {
   const config = automation.trigger_config as Record<string, unknown> || {};
   const triggerType = automation.trigger_type as TriggerType;
@@ -86,17 +85,13 @@ function TriggerContext({ automation }: { automation: Automation }) {
   if (triggerType === 'lead_stage_changed' && pipelineId) {
     const pipeline = pipelines?.find(p => p.id === pipelineId);
     const stage = stageId ? stages?.find(s => s.id === stageId) : null;
-
     if (!pipeline && !stage) return null;
 
     return (
-      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-        <MapPin className="h-3 w-3 shrink-0" />
-        <span>
-          {pipeline?.name || '—'}
-          {stage ? ` → ${stage.name}` : ''}
-        </span>
-      </div>
+      <span className="text-xs text-muted-foreground">
+        {pipeline?.name || '—'}
+        {stage ? ` → ${stage.name}` : ''}
+      </span>
     );
   }
 
@@ -105,18 +100,15 @@ function TriggerContext({ automation }: { automation: Automation }) {
     if (!tag) return null;
 
     return (
-      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-        <Tag className="h-3 w-3 shrink-0" />
-        <span
-          className="px-1.5 py-0.5 rounded-full text-xs font-medium"
-          style={{
-            backgroundColor: tag.color ? `${tag.color}22` : undefined,
-            color: tag.color || undefined,
-          }}
-        >
-          {tag.name}
-        </span>
-      </div>
+      <span
+        className="px-1.5 py-0.5 rounded-full text-xs font-medium"
+        style={{
+          backgroundColor: tag.color ? `${tag.color}22` : undefined,
+          color: tag.color || undefined,
+        }}
+      >
+        {tag.name}
+      </span>
     );
   }
 
@@ -129,7 +121,6 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
   const deleteAutomation = useDeleteAutomation();
   const toggleAutomation = useToggleAutomation();
 
-  // Calculate execution stats per automation
   const getExecutionStats = (automationId: string) => {
     const automationExecutions = executions?.filter(e => e.automation_id === automationId) || [];
     return {
@@ -150,147 +141,152 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {automations?.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center px-4 md:px-6">
-            <Zap className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhuma automação criada</h3>
-            <p className="text-muted-foreground mb-4 text-sm">
-              Vá para a aba "Modelos" para criar sua primeira automação
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {automations?.map((automation) => {
-            const TriggerIcon = getTriggerIcon(automation.trigger_type as TriggerType);
-            const stats = getExecutionStats(automation.id);
-            
-            return (
-              <Card key={automation.id} className="group">
-                <CardHeader className="pb-2">
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 w-full sm:w-auto">
-                      <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                        <TriggerIcon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-base flex flex-wrap items-center gap-2">
-                          <span className="truncate">{automation.name}</span>
-                          <Badge variant={automation.is_active ? 'default' : 'secondary'} className="shrink-0">
-                            {automation.is_active ? 'Ativa' : 'Inativa'}
-                          </Badge>
-                        </CardTitle>
-                        <CardDescription className="mt-1 line-clamp-2">
-                          {automation.description || 'Sem descrição'}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={automation.is_active}
-                      onCheckedChange={(checked) => 
-                        toggleAutomation.mutate({ id: automation.id, is_active: checked })
-                      }
-                      className="shrink-0"
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 md:px-6 pb-4">
-                  <div className="flex flex-col gap-3">
-                    {/* Trigger info and stats */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div className="flex flex-col gap-1 text-xs md:text-sm text-muted-foreground">
-                        <span className="truncate">
-                          <span className="hidden sm:inline">Gatilho: </span>
-                          {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
-                        </span>
-                        <TriggerContext automation={automation} />
-                        {stats.lastRun && (
-                          <span className="text-xs">
-                            Último run: {formatDistanceToNow(stats.lastRun, { 
-                              addSuffix: true, 
-                              locale: ptBR 
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Execution stats */}
-                    {(stats.running > 0 || stats.completed > 0 || stats.failed > 0) && (
-                      <div className="flex items-center gap-4 text-xs">
-                        {stats.running > 0 && (
-                          <div className="flex items-center gap-1 text-primary">
-                            <AlertCircle className="h-3.5 w-3.5" />
-                            <span>{stats.running} em andamento</span>
-                          </div>
-                        )}
-                        {stats.completed > 0 && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                            <span>{stats.completed} concluídas</span>
-                          </div>
-                        )}
-                        {stats.failed > 0 && (
-                          <div className="flex items-center gap-1 text-destructive">
-                            <XCircle className="h-3.5 w-3.5" />
-                            <span>{stats.failed} erros</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      {onViewHistory && (stats.running > 0 || stats.completed > 0 || stats.failed > 0) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onViewHistory(automation.id)}
-                          className="flex-1 sm:flex-none text-muted-foreground"
-                        >
-                          <History className="h-4 w-4 mr-1" />
-                          Histórico
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(automation.id)} className="flex-1 sm:flex-none">
-                        <Edit2 className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação não pode ser desfeita. A automação "{automation.name}" será excluída permanentemente.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteAutomation.mutate(automation.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+  if (!automations || automations.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="p-4 rounded-2xl bg-primary/10 mb-4">
+          <Zap className="h-10 w-10 text-primary" />
         </div>
-      )}
+        <h3 className="text-lg font-semibold mb-2">Nenhuma automação criada</h3>
+        <p className="text-muted-foreground text-sm max-w-sm">
+          Vá para a aba "Modelos" para criar sua primeira automação a partir de templates prontos
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {automations.map((automation) => {
+        const TriggerIcon = getTriggerIcon(automation.trigger_type as TriggerType);
+        const stats = getExecutionStats(automation.id);
+        const hasStats = stats.running > 0 || stats.completed > 0 || stats.failed > 0;
+        
+        return (
+          <Card 
+            key={automation.id} 
+            className="group bg-card/50 backdrop-blur-sm border-border/50 rounded-2xl hover:border-primary/30 transition-all duration-200"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                {/* Icon */}
+                <div className="relative shrink-0">
+                  <div className={`p-2.5 rounded-xl ${automation.is_active ? 'bg-primary/10' : 'bg-muted'}`}>
+                    <TriggerIcon className={`h-5 w-5 ${automation.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
+                  </div>
+                  {stats.running > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm truncate">{automation.name}</span>
+                    <Badge 
+                      variant={automation.is_active ? 'default' : 'secondary'} 
+                      className="shrink-0 text-[10px] px-1.5 py-0"
+                    >
+                      {automation.is_active ? 'Ativa' : 'Inativa'}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-muted-foreground">
+                      {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
+                    </span>
+                    <TriggerContext automation={automation} />
+                  </div>
+
+                  {/* Stats row */}
+                  {hasStats && (
+                    <div className="flex items-center gap-3 mt-2">
+                      {stats.running > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-primary">
+                          <AlertCircle className="h-3 w-3" />
+                          <span>{stats.running}</span>
+                        </div>
+                      )}
+                      {stats.completed > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <CheckCircle2 className="h-3 w-3 text-primary" />
+                          <span>{stats.completed}</span>
+                        </div>
+                      )}
+                      {stats.failed > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-destructive">
+                          <XCircle className="h-3 w-3" />
+                          <span>{stats.failed}</span>
+                        </div>
+                      )}
+                      {stats.lastRun && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(stats.lastRun, { addSuffix: true, locale: ptBR })}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {onViewHistory && hasStats && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => onViewHistory(automation.id)}
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => onEdit(automation.id)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. A automação "{automation.name}" será excluída permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteAutomation.mutate(automation.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+
+                  <Switch
+                    checked={automation.is_active}
+                    onCheckedChange={(checked) => 
+                      toggleAutomation.mutate({ id: automation.id, is_active: checked })
+                    }
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

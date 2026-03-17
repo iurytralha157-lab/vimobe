@@ -484,7 +484,84 @@ async function processActionNode(
               throw new Error(`Failed to send WhatsApp: ${errorText}`);
             }
 
-            console.log("WhatsApp message sent successfully via configured session");
+            const sendResult = await response.json();
+            const sentMessageId = sendResult?.key?.id || sendResult?.messageId || crypto.randomUUID();
+            console.log("WhatsApp message sent successfully via configured session, messageId:", sentMessageId);
+            
+            // ===== SAVE MESSAGE TO DB =====
+            // Find or create conversation for this lead+session
+            const normalizedPhone = normalizePhoneNumber(lead.phone);
+            const remoteJid = `${normalizedPhone}@s.whatsapp.net`;
+            
+            let { data: convForMsg } = await supabase
+              .from("whatsapp_conversations")
+              .select("id")
+              .eq("session_id", configuredSessionId)
+              .eq("contact_phone", normalizedPhone)
+              .is("deleted_at", null)
+              .maybeSingle();
+            
+            if (!convForMsg) {
+              // Try searching by lead_id
+              const { data: convByLead } = await supabase
+                .from("whatsapp_conversations")
+                .select("id")
+                .eq("lead_id", execution.lead_id)
+                .is("deleted_at", null)
+                .order("last_message_at", { ascending: false, nullsFirst: false })
+                .limit(1)
+                .maybeSingle();
+              
+              convForMsg = convByLead;
+            }
+            
+            if (!convForMsg) {
+              // Create conversation
+              const { data: newConv } = await supabase
+                .from("whatsapp_conversations")
+                .insert({
+                  session_id: configuredSessionId,
+                  remote_jid: remoteJid,
+                  contact_phone: normalizedPhone,
+                  contact_name: lead.name || normalizedPhone,
+                  lead_id: execution.lead_id,
+                  is_group: false,
+                  last_message: messageContent,
+                  last_message_at: new Date().toISOString(),
+                  unread_count: 0,
+                })
+                .select("id")
+                .single();
+              convForMsg = newConv;
+              console.log("Created new conversation for automation message:", convForMsg?.id);
+            }
+            
+            if (convForMsg) {
+              // Insert message record
+              await supabase.from("whatsapp_messages").upsert({
+                conversation_id: convForMsg.id,
+                session_id: configuredSessionId,
+                message_id: sentMessageId,
+                from_me: true,
+                content: messageContent,
+                message_type: "text",
+                status: "sent",
+                sent_at: new Date().toISOString(),
+                sender_name: "Automação",
+              }, { onConflict: "session_id,message_id" });
+              
+              // Update conversation
+              await supabase
+                .from("whatsapp_conversations")
+                .update({
+                  last_message: messageContent,
+                  last_message_at: new Date().toISOString(),
+                  lead_id: execution.lead_id, // Ensure linked
+                })
+                .eq("id", convForMsg.id);
+              
+              console.log(`Automation message saved to whatsapp_messages in conversation ${convForMsg.id}`);
+            }
             
             // Log activity for sent message
             await logAutomationActivity(
@@ -551,7 +628,33 @@ async function processActionNode(
           throw new Error(`Failed to send WhatsApp: ${errorText}`);
         }
 
-        console.log("WhatsApp message sent successfully");
+        const convSendResult = await response.json();
+        const convSentMsgId = convSendResult?.key?.id || convSendResult?.messageId || crypto.randomUUID();
+        console.log("WhatsApp message sent successfully, messageId:", convSentMsgId);
+        
+        // ===== SAVE MESSAGE TO DB =====
+        await supabase.from("whatsapp_messages").upsert({
+          conversation_id: execution.conversation_id,
+          session_id: conversation.session_id,
+          message_id: convSentMsgId,
+          from_me: true,
+          content: messageContent,
+          message_type: "text",
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          sender_name: "Automação",
+        }, { onConflict: "session_id,message_id" });
+        
+        // Update conversation
+        await supabase
+          .from("whatsapp_conversations")
+          .update({
+            last_message: messageContent,
+            last_message_at: new Date().toISOString(),
+          })
+          .eq("id", execution.conversation_id);
+        
+        console.log(`Automation message saved to whatsapp_messages in conversation ${execution.conversation_id}`);
         
         // Log activity for sent message via conversation
         await logAutomationActivity(

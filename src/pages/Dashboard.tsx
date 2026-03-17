@@ -17,6 +17,7 @@ import {
 import { useTelecomDashboardStats, useTelecomEvolutionData } from '@/hooks/use-telecom-dashboard-stats';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CampaignPerformanceWidget } from '@/components/dashboard/CampaignPerformanceWidget';
 
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
@@ -184,6 +185,9 @@ export default function Dashboard() {
               <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} isFallbackMode={isBrokersFallback} />
               {sourcesComponent}
             </div>
+
+            {/* Campaign Performance Widget */}
+            <CampaignPerformanceWidget filters={filters} />
           </>
         )}
       </div>

@@ -8,6 +8,7 @@ import { FollowUpBuilderEdit } from '@/components/automations/FollowUpBuilderEdi
 import { ExecutionHistory } from '@/components/automations/ExecutionHistory';
 import { LayoutGrid, Zap, History } from 'lucide-react';
 import { useAutomations } from '@/hooks/use-automations';
+import { Badge } from '@/components/ui/badge';
 
 type ViewMode = 'list' | 'build-followup' | 'edit-existing';
 
@@ -19,7 +20,6 @@ export default function Automations() {
   const [historyAutomationId, setHistoryAutomationId] = useState<string | undefined>(undefined);
   const { data: automations } = useAutomations();
 
-  // Smart default tab: open "automations" tab if user already has automations
   useEffect(() => {
     if (automations && automations.length > 0) {
       setActiveTab('automations');
@@ -54,7 +54,6 @@ export default function Automations() {
     setActiveTab('history');
   };
 
-  // Follow-up Builder (full screen) - Creating new
   if (viewMode === 'build-followup') {
     return (
       <AppLayout title={undefined}>
@@ -64,15 +63,15 @@ export default function Automations() {
             onComplete={handleComplete}
             initialTemplate={selectedTemplate ? {
               name: selectedTemplate.name,
-              messages: selectedTemplate.messages.map((m) => ({ day: m.day, content: m.content }))
-            } : null} />
-
+              messages: selectedTemplate.messages.map((m) => ({ day: m.day, content: m.content })),
+              onReplyMessage: selectedTemplate.onReplyMessage,
+            } : null}
+          />
         </div>
-      </AppLayout>);
-
+      </AppLayout>
+    );
   }
 
-  // Follow-up Builder Edit (full screen) - Editing existing
   if (viewMode === 'edit-existing' && editingAutomationId) {
     return (
       <AppLayout title={undefined}>
@@ -80,46 +79,41 @@ export default function Automations() {
           <FollowUpBuilderEdit
             automationId={editingAutomationId}
             onBack={handleBack}
-            onComplete={handleComplete} />
-
+            onComplete={handleComplete}
+          />
         </div>
-      </AppLayout>);
-
+      </AppLayout>
+    );
   }
 
-  // List view
   return (
     <AppLayout title="Automações">
       <div className="space-y-6 animate-in">
-        
-
-
-        
         <Tabs
           value={activeTab}
           onValueChange={(v) => {
             setActiveTab(v);
             if (v !== 'history') setHistoryAutomationId(undefined);
           }}
-          className="w-full">
-
-          <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
-            <TabsTrigger value="templates" className="flex items-center gap-2">
+          className="w-full"
+        >
+          <TabsList className="inline-flex h-11 p-1 bg-muted/50 rounded-xl">
+            <TabsTrigger value="templates" className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
               <LayoutGrid className="h-4 w-4" />
-              <span className="hidden sm:inline">Modelos</span>
+              Modelos
             </TabsTrigger>
-            <TabsTrigger value="automations" className="flex items-center gap-2">
+            <TabsTrigger value="automations" className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
               <Zap className="h-4 w-4" />
-              <span className="hidden sm:inline">Minhas Automações</span>
-              {automations && automations.length > 0 &&
-              <span className="hidden sm:inline bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
+              Minhas Automações
+              {automations && automations.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 min-w-[18px] text-center">
                   {automations.length}
-                </span>
-              }
+                </Badge>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
+            <TabsTrigger value="history" className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all">
               <History className="h-4 w-4" />
-              <span className="hidden sm:inline">Histórico</span>
+              Histórico
             </TabsTrigger>
           </TabsList>
 
@@ -136,6 +130,6 @@ export default function Automations() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>);
-
+    </AppLayout>
+  );
 }
