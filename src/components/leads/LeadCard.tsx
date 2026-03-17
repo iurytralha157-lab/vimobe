@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2 } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { cn } from '@/lib/utils';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
 import { formatDistanceToNow } from 'date-fns';
@@ -266,7 +265,7 @@ export function LeadCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button onClick={handleWhatsAppClick} disabled={!hasPhone} className={cn("h-6 w-6 rounded-full flex items-center justify-center transition-colors", hasPhone ? iconColors.whatsapp : "bg-muted text-muted-foreground/50 cursor-not-allowed")}>
-                    <WhatsAppIcon size={14} trigger="hover" />
+                    <MessageCircle className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">

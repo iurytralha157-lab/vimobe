@@ -1,5 +1,4 @@
 import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,7 +30,7 @@ const allNavItems: NavItem[] = [{
   path: '/crm/pipelines',
   module: 'crm'
 }, {
-  icon: WhatsAppIcon,
+  icon: MessageSquare,
   labelKey: 'conversations',
   path: '/crm/conversas',
   module: 'whatsapp'
@@ -297,11 +296,7 @@ export function AppSidebar() {
                       </NavLink>)}
                   </CollapsibleContent>
                 </Collapsible> : <NavLink to={item.children ? item.children[0].path : item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
-                  {item.icon === WhatsAppIcon ? (
-                    <WhatsAppIcon size={20} className="flex-shrink-0" />
-                  ) : (
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                  )}
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
                   {!collapsed && <span>{getLabel(item.labelKey)}</span>}
                 </NavLink>}
             </li>)}
