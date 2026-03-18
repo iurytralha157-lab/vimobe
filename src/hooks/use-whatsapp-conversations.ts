@@ -27,6 +27,8 @@ export interface WhatsAppConversation {
     id: string;
     instance_name: string;
     phone_number: string | null;
+    status: string;
+    organization_id: string;
   };
   lead?: {
     id: string;
@@ -94,7 +96,7 @@ export function useWhatsAppConversations(
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
           lead:leads!whatsapp_conversations_lead_id_fkey(
             id, 
             name,
@@ -114,9 +116,10 @@ export function useWhatsAppConversations(
       } else if (accessibleSessionIds && accessibleSessionIds.length > 0) {
         // Defense in depth: filter by accessible sessions when "All channels" is selected
         query = query.in("session_id", accessibleSessionIds);
-      } else if (!accessibleSessionIds) {
-        // No sessions accessible - return empty (shouldn't happen in normal flow)
-        return [];
+      } else if (accessibleSessionIds === undefined || accessibleSessionIds.length === 0) {
+        // Sessions not yet loaded or user has no session access — rely on RLS only.
+        // RLS policy on whatsapp_conversations will filter rows the user can see.
+        // No extra filter needed here; RLS handles it.
       }
 
       // Filter archived
@@ -140,51 +143,58 @@ export function useWhatsAppConversations(
       const unlinkedConversations = conversations.filter(c => !c.lead_id && c.contact_phone && !c.is_group);
       
       if (unlinkedConversations.length > 0) {
-        // Normalizar telefones das conversas
+        // Obter lista de telefones originais e normalizados para busca
+        const rawPhones = unlinkedConversations.map(c => c.contact_phone).filter(Boolean) as string[];
         const normalizedPhones = unlinkedConversations.map(c => normalizePhone(c.contact_phone || ''));
+        const allPossiblePhones = [...new Set([...rawPhones, ...normalizedPhones])];
         
-        // Buscar leads que correspondem aos telefones
-        const { data: leads } = await supabase
+        // Buscar apenas leads que correspondem aos telefones (otimizado)
+        const { data: leads, error: leadsError } = await supabase
           .from('leads')
           .select('id, phone, name, pipeline_id, stage_id, pipeline:pipelines(id, name), stage:stages(id, name, color), tags:lead_tags(tag:tags(id, name, color))')
-          .not('phone', 'is', null);
+          .eq('organization_id', profile.organization_id)
+          .in('phone', allPossiblePhones);
         
-        // Criar mapa de telefone normalizado -> lead
-        const phoneToLead = new Map<string, typeof leads[0]>();
-        if (leads) {
+        if (leadsError) {
+          console.error("Error fetching leads for linking:", leadsError);
+        } else if (leads && leads.length > 0) {
+          // Criar mapa de telefone normalizado -> lead para busca eficiente
+          const phoneToLead = new Map<string, typeof leads[0]>();
           for (const lead of leads) {
             if (lead.phone) {
               const normalizedLeadPhone = normalizePhone(lead.phone);
               if (normalizedLeadPhone) {
                 phoneToLead.set(normalizedLeadPhone, lead);
               }
+              // Também indexar pelo telefone bruto se disponível no banco
+              phoneToLead.set(lead.phone, lead);
             }
           }
+          
+          // Associar leads às conversas
+          conversations = conversations.map(conv => {
+            if (conv.lead_id || !conv.contact_phone || conv.is_group) return conv;
+            
+            const normalizedConvPhone = normalizePhone(conv.contact_phone);
+            const matchingLead = phoneToLead.get(normalizedConvPhone) || phoneToLead.get(conv.contact_phone);
+            
+            if (matchingLead) {
+              return { 
+                ...conv, 
+                lead: { 
+                  id: matchingLead.id, 
+                  name: matchingLead.name,
+                  pipeline_id: matchingLead.pipeline_id,
+                  stage_id: matchingLead.stage_id,
+                  pipeline: matchingLead.pipeline as any,
+                  stage: matchingLead.stage as any,
+                  tags: matchingLead.tags as any
+                } 
+              };
+            }
+            return conv;
+          });
         }
-        
-        // Associar leads às conversas
-        conversations = conversations.map(conv => {
-          if (conv.lead_id || !conv.contact_phone || conv.is_group) return conv;
-          
-          const normalizedConvPhone = normalizePhone(conv.contact_phone);
-          const matchingLead = phoneToLead.get(normalizedConvPhone);
-          
-          if (matchingLead) {
-            return { 
-              ...conv, 
-              lead: { 
-                id: matchingLead.id, 
-                name: matchingLead.name,
-                pipeline_id: matchingLead.pipeline_id,
-                stage_id: matchingLead.stage_id,
-                pipeline: matchingLead.pipeline as any,
-                stage: matchingLead.stage as any,
-                tags: matchingLead.tags as any
-              } 
-            };
-          }
-          return conv;
-        });
       }
       
       return conversations;
@@ -207,7 +217,7 @@ export function useWhatsAppConversation(conversationId: string | null) {
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .eq("id", conversationId)
@@ -353,14 +363,17 @@ export function useSendWhatsAppMessage() {
       filename?: string;
       _optimisticId?: string;
     }) => {
-      // Get session info
-      const { data: session, error: sessionError } = await supabase
-        .from("whatsapp_sessions")
-        .select("id, instance_name, organization_id")
-        .eq("id", conversation.session_id)
-        .single();
-
-      if (sessionError) throw sessionError;
+      console.log("[useSendWhatsAppMessage] Starting mutation", { 
+        convId: conversation.id, 
+        text: text?.substring(0, 20),
+        hasMedia: !!(mediaUrl || base64)
+      });
+      // Use session info from the conversation object
+      const session = (conversation as any).session;
+      
+      if (!session) {
+        throw new Error("Sessão não encontrada na conversa.");
+      }
 
       // Extract phone number from remote_jid and format
       const rawPhone = conversation.remote_jid
@@ -428,6 +441,12 @@ export function useSendWhatsAppMessage() {
         }
       }
 
+      console.log("[useSendWhatsAppMessage] Calling evolution-proxy", {
+        action: (storedMediaUrl || base64) ? "sendFile" : "sendMessage",
+        instance: session.instance_name,
+        phone
+      });
+
       // Send via Evolution API - prefer stored URL over base64
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {
         body: {
@@ -449,7 +468,16 @@ export function useSendWhatsAppMessage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("[useSendWhatsAppMessage] evolution-proxy Error:", error);
+        throw error;
+      }
+      
+      console.log("[useSendWhatsAppMessage] evolution-proxy Success:", { 
+        success: data?.success,
+        evolutionData: data?.data?.key?.id ? "has_id" : "no_id"
+      });
+
       if (!data.success) throw new Error(data.error || "Failed to send message");
 
       // Insert message in database with client_message_id for deduplication
@@ -464,6 +492,7 @@ export function useSendWhatsAppMessage() {
       );
       const actualContent = isMediaMessage && isFilenameOnly ? null : text;
       
+      console.log("[useSendWhatsAppMessage] Inserting message into DB");
       const { error: insertError } = await supabase.from("whatsapp_messages").insert({
         conversation_id: conversation.id,
         session_id: conversation.session_id,
@@ -478,21 +507,48 @@ export function useSendWhatsAppMessage() {
         media_storage_path: storedMediaPath,
         status: "sent",
         sent_at: new Date().toISOString(),
+        sender_name: profile?.name || null,
       });
+
+      if (insertError) {
+        console.error("[useSendWhatsAppMessage] insert whatsapp_messages Error:", insertError);
+      }
+
+      if (!insertError && conversation.lead_id) {
+        console.log("[useSendWhatsAppMessage] Logging to timeline");
+        // Log to lead_timeline_events
+        await supabase.from("lead_timeline_events").insert({
+          organization_id: session.organization_id,
+          lead_id: conversation.lead_id,
+          event_type: "whatsapp_message_sent",
+          title: "Mensagem WhatsApp enviada",
+          description: actualContent || "Mídia enviada",
+          user_id: profile?.id,
+          metadata: {
+            message_id: messageId,
+            content: actualContent,
+            media_type: mediaType || "text",
+            session_id: session.id,
+            instance_name: session.instance_name
+          }
+        });
+      }
 
       if (insertError) {
         console.error("Error inserting sent message:", insertError);
       }
 
-      // Update conversation
-      await supabase
-        .from("whatsapp_conversations")
-        .update({
-          last_message: text,
-          last_message_at: new Date().toISOString(),
-          unread_count: 0,
-        })
-        .eq("id", conversation.id);
+        console.log("[useSendWhatsAppMessage] Updating conversation last_message");
+        await supabase
+          .from("whatsapp_conversations")
+          .update({
+            last_message: text,
+            last_message_at: new Date().toISOString(),
+            unread_count: 0,
+          })
+          .eq("id", conversation.id);
+        
+        console.log("[useSendWhatsAppMessage] Mutation complete!");
 
       return { ...data.data, clientMessageId };
     },
@@ -536,7 +592,7 @@ export function useSendWhatsAppMessage() {
         delivered_at: null,
         read_at: null,
         sender_jid: null,
-        sender_name: null,
+        sender_name: profile?.name || null,
         media_status: null,
         media_storage_path: null,
         media_error: null,
@@ -789,6 +845,16 @@ export function useWhatsAppRealtimeConversations() {
       } catch {}
     };
 
+    // Debounce to coalesce rapid realtime events into a single refetch
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedInvalidate = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+        debounceTimer = null;
+      }, 500);
+    };
+
     const channel = supabase
       .channel("whatsapp-realtime")
       .on(
@@ -799,7 +865,7 @@ export function useWhatsAppRealtimeConversations() {
           table: "whatsapp_conversations",
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+          debouncedInvalidate();
         }
       )
       .on(
@@ -810,7 +876,7 @@ export function useWhatsAppRealtimeConversations() {
           table: "whatsapp_messages",
         },
         (payload) => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+          debouncedInvalidate();
           // Play sound only for incoming messages (not sent by us)
           const msg = payload.new as any;
           if (msg && !msg.from_me) {
@@ -821,6 +887,7 @@ export function useWhatsAppRealtimeConversations() {
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);

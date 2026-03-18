@@ -74,7 +74,7 @@ export function FloatingChat() {
     isLoading: loadingConversations
   } = useWhatsAppConversations(selectedSessionId || undefined, {
     hideGroups
-  });
+  }, loadingSessions ? undefined : sessions?.map(s => s.id));
   const {
     data: messages,
     isLoading: loadingMessages
@@ -267,19 +267,10 @@ export function FloatingChat() {
     const textToSend = messageText.trim();
     if (!textToSend || !activeConversation) return;
 
-    // Verify session is valid and connected before sending
-    const sessionId = activeConversation.session_id;
-    const sessionExists = sessions?.find(s => s.id === sessionId);
-    if (!sessionExists) {
-      toast({
-        title: "Sessão inválida",
-        description: "A sessão WhatsApp não existe mais. Selecione outra conversa.",
-        variant: "destructive"
-      });
-      clearActiveConversation();
-      return;
-    }
-    if (sessionExists.status !== "connected") {
+    // Use session data from the conversation itself (already fetched via the conversations query)
+    // This avoids relying on the `sessions` list which might be empty for regular users.
+    const conversationSession = (activeConversation as any).session;
+    if (conversationSession && conversationSession.status && conversationSession.status !== "connected") {
       toast({
         title: "WhatsApp Desconectado",
         description: "Reconecte o WhatsApp em Configurações → WhatsApp",
@@ -375,7 +366,7 @@ export function FloatingChat() {
   };
   const unreadCount = conversations?.reduce((acc, c) => acc + (c.unread_count || 0), 0) || 0;
   const connectedSessions = sessions?.filter(s => s.status === "connected") || [];
-  const hasConnectedSession = connectedSessions.length > 0;
+  const hasConnectedSession = loadingSessions || connectedSessions.length > 0;
 
   // Session Selector Dialog Component
   const SessionSelectorDialog = () => (

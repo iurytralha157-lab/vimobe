@@ -631,6 +631,28 @@ async function handleMessagesUpsert(
         console.error("Error inserting message:", msgError);
       } else {
         console.log(`Message saved: ${messageId} in conversation ${conversation.id}`);
+
+        // ===== TIMELINE LOGGING: Log incoming messages to lead_timeline_events =====
+        if (!fromMe && conversation.lead_id) {
+          try {
+            await supabase.from("lead_timeline_events").insert({
+              organization_id: session.organization_id,
+              lead_id: conversation.lead_id,
+              event_type: "whatsapp_message_received",
+              channel: "whatsapp",
+              metadata: {
+                message_id: messageId,
+                content: content,
+                media_type: messageType,
+                contact_name: contactName,
+                contact_phone: contactPhone
+              }
+            });
+            console.log(`✅ Incoming message logged to timeline for lead ${conversation.lead_id}`);
+          } catch (timelineError) {
+            console.error("Error logging incoming message to timeline:", timelineError);
+          }
+        }
         
         // If media failed to download, create a job for the media-worker
         if (mediaStatusForInsert === 'pending' && insertedMessage?.id) {

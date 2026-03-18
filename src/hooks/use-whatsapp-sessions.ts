@@ -67,6 +67,8 @@ export function useWhatsAppSessions() {
       })) as WhatsAppSession[];
     },
     enabled: !!profile?.organization_id,
+    staleTime: 0,
+    gcTime: 1000 * 60 * 5,
   });
 }
 
