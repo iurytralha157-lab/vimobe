@@ -478,7 +478,24 @@ export function useSendWhatsAppMessage() {
         media_storage_path: storedMediaPath,
         status: "sent",
         sent_at: new Date().toISOString(),
+        sender_name: profile?.name || null,
       });
+
+      if (!insertError && conversation.lead_id) {
+        // Log to lead_timeline_events
+        await supabase.from("lead_timeline_events").insert({
+          organization_id: session.organization_id,
+          lead_id: conversation.lead_id,
+          event_type: "whatsapp_message_sent",
+          actor_user_id: profile?.id,
+          channel: "whatsapp",
+          metadata: {
+            message_id: messageId,
+            content: actualContent,
+            media_type: mediaType || "text",
+          }
+        });
+      }
 
       if (insertError) {
         console.error("Error inserting sent message:", insertError);
@@ -536,7 +553,7 @@ export function useSendWhatsAppMessage() {
         delivered_at: null,
         read_at: null,
         sender_jid: null,
-        sender_name: null,
+        sender_name: profile?.name || null,
         media_status: null,
         media_storage_path: null,
         media_error: null,
