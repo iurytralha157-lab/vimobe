@@ -543,15 +543,13 @@ function AccessControlDialog({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isOwner ?
-                    <Badge variant="secondary">Proprietário</Badge> :
-
+                    {isOwner && <Badge variant="secondary" className="mr-2">Proprietário</Badge>}
                     <Checkbox
                       checked={hasAccess}
                       onCheckedChange={() => handleToggleAccess(user.id, hasAccess)}
-                      disabled={grantAccess.isPending || revokeAccess.isPending} />
-
-                    }
+                      disabled={grantAccess.isPending || revokeAccess.isPending} 
+                      title={isOwner ? "Forçar permissão explícita (útil se o acesso falhar)" : ""}
+                    />
                   </div>
                 </div>);
 
