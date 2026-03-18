@@ -37,6 +37,7 @@ import {
   Settings,
   HelpCircle,
 } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 
 interface NavItem {
   icon: any;
@@ -52,7 +53,7 @@ interface NavItem {
 const allNavItems: NavItem[] = [
   { icon: LayoutDashboard, labelKey: 'dashboard', path: '/dashboard' },
   { icon: Kanban, labelKey: 'pipelines', path: '/crm/pipelines', module: 'crm' },
-  { icon: MessageSquare, labelKey: 'conversations', path: '/crm/conversas', module: 'whatsapp' },
+  { icon: WhatsAppIcon, labelKey: 'conversations', path: '/crm/conversas', module: 'whatsapp' },
   { icon: Users, labelKey: 'contacts', path: '/crm/contacts', module: 'crm' },
   { 
     icon: DollarSign, 
@@ -264,7 +265,11 @@ export function MobileSidebar({ externalOpen, onExternalOpenChange }: MobileSide
                         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     )}
                   >
-                    <item.icon className="h-5 w-5" />
+                    {item.icon === WhatsAppIcon ? (
+                      <WhatsAppIcon size={32} className="flex-shrink-0" />
+                    ) : (
+                      <item.icon className="h-5 w-5" />
+                    )}
                     <span>{getLabel(item.labelKey)}</span>
                   </button>
                 </li>

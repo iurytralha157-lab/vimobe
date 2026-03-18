@@ -1,4 +1,8 @@
 import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
+import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
+import GLOBE_JSON from '@/components/icons/globe-icon.json';
+import AVATAR_JSON from '@/components/icons/avatar-icon.json';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,7 +34,7 @@ const allNavItems: NavItem[] = [{
   path: '/crm/pipelines',
   module: 'crm'
 }, {
-  icon: MessageSquare,
+  icon: WhatsAppIcon,
   labelKey: 'conversations',
   path: '/crm/conversas',
   module: 'whatsapp'
@@ -247,72 +251,82 @@ export function AppSidebar() {
     return location.pathname.startsWith(item.path);
   };
   return <aside className={cn("h-[calc(100%-24px)] bg-card rounded-xl shadow-sm relative flex flex-col transition-all duration-300 m-3 flex-shrink-0 border-0", collapsed ? "w-16" : "w-56")}>
-      {/* Header with Logo and Toggle */}
-      <div className={cn("flex items-center px-3 py-3", collapsed ? "justify-center" : "justify-between")}>
-        {collapsed ?
-      // Collapsed: Show favicon only
-      <div className="h-8 w-8 flex items-center justify-center">
-            {faviconUrl ? <img src={faviconUrl} alt="Icon" className="h-8 w-8 object-contain" /> : <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-                V
-              </div>}
-          </div> :
-      // Expanded: Show full logo + toggle button
-      <>
-            <div className="flex items-center">
-              {logoUrl ? <img src={logoUrl} alt="Logo" style={{
-            maxWidth: logoWidth,
-            maxHeight: logoHeight
-          }} className="object-contain" /> : <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-                  V
-                </div>}
-            </div>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={toggleCollapsed}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          </>}
-      </div>
+    {/* Header with Logo and Toggle */}
+    <div className={cn("flex items-center px-3 py-3", collapsed ? "justify-center" : "justify-between")}>
+      {collapsed ?
+        // Collapsed: Show favicon only
+        <div className="h-8 w-8 flex items-center justify-center">
+          {faviconUrl ? <img src={faviconUrl} alt="Icon" className="h-8 w-8 object-contain" /> : <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+            V
+          </div>}
+        </div> :
+        // Expanded: Show full logo + toggle button
+        <>
+          <div className="flex items-center">
+            {logoUrl ? <img src={logoUrl} alt="Logo" style={{
+              maxWidth: logoWidth,
+              maxHeight: logoHeight
+            }} className="object-contain" /> : <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
+              V
+            </div>}
+          </div>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={toggleCollapsed}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        </>}
+    </div>
 
-      {/* Floating toggle button when collapsed */}
-      {collapsed && <Button variant="outline" size="icon" className="absolute -right-3 top-14 z-50 h-6 w-6 rounded-full bg-card border shadow-md flex items-center justify-center" onClick={toggleCollapsed}>
-          <ChevronRight className="h-3 w-3" />
-        </Button>}
+    {/* Floating toggle button when collapsed */}
+    {collapsed && <Button variant="outline" size="icon" className="absolute -right-3 top-14 z-50 h-6 w-6 rounded-full bg-card border shadow-md flex items-center justify-center" onClick={toggleCollapsed}>
+      <ChevronRight className="h-3 w-3" />
+    </Button>}
 
-      {/* Navigation */}
-      <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-thin">
-        <ul className="space-y-1">
-          {navItems.map(item => <li key={item.path}>
-              {item.children && !collapsed ? <Collapsible open={isMenuOpen(item.path) || isActiveParent(item)} onOpenChange={() => toggleMenu(item.path)}>
-                  <CollapsibleTrigger asChild>
-                    <button className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", isActiveParent(item) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30")}>
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="flex-1 text-left">{getLabel(item.labelKey)}</span>
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", (isMenuOpen(item.path) || isActiveParent(item)) && "rotate-180")} />
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pl-4 mt-1 space-y-1">
-                    {item.children.map(child => <NavLink key={child.path} to={child.path} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors", "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", location.pathname === child.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30")}>
-                        <child.icon className="h-4 w-4 flex-shrink-0" />
-                        <span>{getLabel(child.labelKey)}</span>
-                      </NavLink>)}
-                  </CollapsibleContent>
-                </Collapsible> : <NavLink to={item.children ? item.children[0].path : item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && <span>{getLabel(item.labelKey)}</span>}
-                </NavLink>}
-            </li>)}
-        </ul>
-      </nav>
-
-      {/* Bottom items */}
-      <div className="py-3 px-2">
-        <ul className="space-y-1">
-          {computedBottomItems.map(item => <li key={item.path}>
-              <NavLink to={item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", location.pathname === item.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
+    {/* Navigation */}
+    <nav className="flex-1 py-3 px-2 overflow-y-auto scrollbar-thin">
+      <ul className="space-y-1">
+        {navItems.map(item => <li key={item.path}>
+          {item.children && !collapsed ? <Collapsible open={isMenuOpen(item.path) || isActiveParent(item)} onOpenChange={() => toggleMenu(item.path)}>
+            <CollapsibleTrigger asChild>
+              <button className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", isActiveParent(item) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30")}>
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span>{getLabel(item.labelKey)}</span>}
-              </NavLink>
-            </li>)}
-        </ul>
-      </div>
-    </aside>;
+                <span className="flex-1 text-left">{getLabel(item.labelKey)}</span>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", (isMenuOpen(item.path) || isActiveParent(item)) && "rotate-180")} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4 mt-1 space-y-1">
+              {item.children.map(child => <NavLink key={child.path} to={child.path} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors", "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", location.pathname === child.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30")}>
+                <child.icon className="h-4 w-4 flex-shrink-0" />
+                <span>{getLabel(child.labelKey)}</span>
+              </NavLink>)}
+            </CollapsibleContent>
+          </Collapsible> : <NavLink to={item.children ? item.children[0].path : item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
+            {item.icon === WhatsAppIcon ? (
+              <WhatsAppIcon size={32} className="flex-shrink-0" />
+            ) : item.icon === Users ? (
+              <AnimatedIcon icon={AVATAR_JSON} size={28} trigger="hover" className="flex-shrink-0" />
+            ) : (
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+            )}
+            {!collapsed && <span>{getLabel(item.labelKey)}</span>}
+          </NavLink>}
+        </li>)}
+      </ul>
+    </nav>
+
+    {/* Bottom items */}
+    <div className="py-3 px-2">
+      <ul className="space-y-1">
+        {computedBottomItems.map(item => <li key={item.path}>
+          <NavLink to={item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", location.pathname === item.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
+            {item.icon === Globe ? (
+              <AnimatedIcon icon={GLOBE_JSON} size={26} trigger="hover" className="flex-shrink-0" />
+            ) : (
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+            )}
+            {!collapsed && <span>{getLabel(item.labelKey)}</span>}
+          </NavLink>
+        </li>)}
+      </ul>
+    </div>
+  </aside>;
 }

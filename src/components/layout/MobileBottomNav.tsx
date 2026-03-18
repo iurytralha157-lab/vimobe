@@ -18,6 +18,7 @@ import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { MobileSidebar } from './MobileSidebar';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 
 interface TabItem {
   icon: any;
@@ -57,7 +58,7 @@ export function MobileBottomNav() {
 
     // Slot 4: Conversas or fallback
     if (hasModule('whatsapp')) {
-      result.push({ icon: MessageSquare, labelKey: 'conversations', path: '/crm/conversas' });
+      result.push({ icon: WhatsAppIcon, labelKey: 'conversations', path: '/crm/conversas' });
     } else if (hasModule('crm') && organization?.segment !== 'telecom') {
       result.push({ icon: Users, labelKey: 'contacts', path: '/crm/contacts' });
     } else if (hasModule('agenda') && !result.some((r) => typeof r !== 'string' && r.path === '/agenda')) {
@@ -122,7 +123,11 @@ export function MobileBottomNav() {
                 {active &&
                 <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />
                 }
-                <tab.icon className="h-5 w-5" />
+                {tab.icon === WhatsAppIcon ? (
+                  <WhatsAppIcon size={32} trigger={active ? 'loop-on-hover' : 'hover'} />
+                ) : (
+                  <tab.icon className="h-5 w-5" />
+                )}
                 <span className="text-[10px] font-medium leading-tight truncate max-w-[56px]">
                   {getLabel(tab.labelKey)}
                 </span>
