@@ -10,6 +10,12 @@ import { WhatsAppSession } from "./use-whatsapp-sessions";
  * - Non-admins see only:
  *   - Sessions they own (owner_user_id)
  *   - Sessions they have explicit access to via whatsapp_session_access
+ *
+ * NOTE: The whatsapp_session_access RLS has a circular dependency with whatsapp_sessions.
+ * To work around this, we use two separate queries for regular users:
+ * 1. Fetch owned sessions (bypasses access grant check)
+ * 2. Fetch session_ids from access grants using only user_id filter
+ * 3. Fetch those sessions by ID
  */
 export function useAccessibleSessions() {
   const { profile } = useAuth();
@@ -25,7 +31,6 @@ export function useAccessibleSessions() {
           .from("whatsapp_sessions")
           .select("*")
           .eq("organization_id", profile.organization_id)
-          .eq("is_active", true)
           .order("created_at", { ascending: false });
 
         if (error) {
@@ -35,36 +40,55 @@ export function useAccessibleSessions() {
         return (data || []) as WhatsAppSession[];
       }
 
-      // Regular users: fetch owned sessions + sessions with explicit access
-      const [ownedResult, accessResult] = await Promise.all([
-        supabase
-          .from("whatsapp_sessions")
-          .select("*")
-          .eq("organization_id", profile.organization_id)
-          .eq("owner_user_id", profile.id),
-        supabase
-          .from("whatsapp_session_access")
-          .select("session:whatsapp_sessions!whatsapp_session_access_session_id_fkey(*)")
-          .eq("user_id", profile.id)
-          .eq("can_view", true)
-      ]);
+      // Regular users: fetch owned sessions first
+      const { data: ownedSessions, error: ownedError } = await supabase
+        .from("whatsapp_sessions")
+        .select("*")
+        .eq("organization_id", profile.organization_id)
+        .eq("owner_user_id", profile.id);
 
-      if (ownedResult.error) {
-        console.error("Error fetching owned sessions:", ownedResult.error);
-      }
-      if (accessResult.error) {
-        console.error("Error fetching session access:", accessResult.error);
+      if (ownedError) {
+        console.error("Error fetching owned sessions:", ownedError);
       }
 
-      const ownedSessions = (ownedResult.data || []) as WhatsAppSession[];
-      const accessSessions = (accessResult.data || [])
-        .map((grant: any) => grant.session)
-        .filter((session: any): session is WhatsAppSession => 
-          session !== null && session.organization_id === profile.organization_id
-        );
+      // Separately fetch access grants filtered only by user_id.
+      // This avoids the circular RLS: the policy on whatsapp_session_access checks
+      // session_id IN (SELECT id FROM whatsapp_sessions WITH RLS), which itself checks
+      // whatsapp_session_access again — causing a circular loop that returns nothing.
+      // By querying just session_id from the grants and then fetching sessions by ID,
+      // we break the cycle.
+      const { data: accessGrants, error: accessError } = await supabase
+        .from("whatsapp_session_access")
+        .select("session_id")
+        .eq("user_id", profile.id)
+        .eq("can_view", true);
+
+      if (accessError) {
+        console.error("Error fetching session access grants:", accessError);
+      }
+
+      // Fetch the actual session data for granted session IDs
+      let accessSessions: WhatsAppSession[] = [];
+      if (accessGrants && accessGrants.length > 0) {
+        const grantedSessionIds = accessGrants.map((g: any) => g.session_id).filter(Boolean);
+        if (grantedSessionIds.length > 0) {
+          const { data: grantedSessions, error: gsError } = await supabase
+            .from("whatsapp_sessions")
+            .select("*")
+            .in("id", grantedSessionIds)
+            .eq("organization_id", profile.organization_id);
+
+          if (gsError) {
+            console.error("Error fetching granted sessions:", gsError);
+          } else {
+            accessSessions = (grantedSessions || []) as WhatsAppSession[];
+          }
+        }
+      }
 
       // Combine and deduplicate by session ID
-      const allSessions = [...ownedSessions, ...accessSessions];
+      const ownedList = (ownedSessions || []) as WhatsAppSession[];
+      const allSessions = [...ownedList, ...accessSessions];
       const uniqueSessions = [...new Map(allSessions.map(s => [s.id, s])).values()];
       
       return uniqueSessions.sort((a, b) => 
