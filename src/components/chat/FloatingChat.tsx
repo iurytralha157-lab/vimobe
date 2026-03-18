@@ -74,7 +74,7 @@ export function FloatingChat() {
     isLoading: loadingConversations
   } = useWhatsAppConversations(selectedSessionId || undefined, {
     hideGroups
-  });
+  }, sessions?.map(s => s.id) || []);
   const {
     data: messages,
     isLoading: loadingMessages

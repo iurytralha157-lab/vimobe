@@ -140,51 +140,58 @@ export function useWhatsAppConversations(
       const unlinkedConversations = conversations.filter(c => !c.lead_id && c.contact_phone && !c.is_group);
       
       if (unlinkedConversations.length > 0) {
-        // Normalizar telefones das conversas
+        // Obter lista de telefones originais e normalizados para busca
+        const rawPhones = unlinkedConversations.map(c => c.contact_phone).filter(Boolean) as string[];
         const normalizedPhones = unlinkedConversations.map(c => normalizePhone(c.contact_phone || ''));
+        const allPossiblePhones = [...new Set([...rawPhones, ...normalizedPhones])];
         
-        // Buscar leads que correspondem aos telefones
-        const { data: leads } = await supabase
+        // Buscar apenas leads que correspondem aos telefones (otimizado)
+        const { data: leads, error: leadsError } = await supabase
           .from('leads')
           .select('id, phone, name, pipeline_id, stage_id, pipeline:pipelines(id, name), stage:stages(id, name, color), tags:lead_tags(tag:tags(id, name, color))')
-          .not('phone', 'is', null);
+          .eq('organization_id', profile.organization_id)
+          .in('phone', allPossiblePhones);
         
-        // Criar mapa de telefone normalizado -> lead
-        const phoneToLead = new Map<string, typeof leads[0]>();
-        if (leads) {
+        if (leadsError) {
+          console.error("Error fetching leads for linking:", leadsError);
+        } else if (leads && leads.length > 0) {
+          // Criar mapa de telefone normalizado -> lead para busca eficiente
+          const phoneToLead = new Map<string, typeof leads[0]>();
           for (const lead of leads) {
             if (lead.phone) {
               const normalizedLeadPhone = normalizePhone(lead.phone);
               if (normalizedLeadPhone) {
                 phoneToLead.set(normalizedLeadPhone, lead);
               }
+              // Também indexar pelo telefone bruto se disponível no banco
+              phoneToLead.set(lead.phone, lead);
             }
           }
+          
+          // Associar leads às conversas
+          conversations = conversations.map(conv => {
+            if (conv.lead_id || !conv.contact_phone || conv.is_group) return conv;
+            
+            const normalizedConvPhone = normalizePhone(conv.contact_phone);
+            const matchingLead = phoneToLead.get(normalizedConvPhone) || phoneToLead.get(conv.contact_phone);
+            
+            if (matchingLead) {
+              return { 
+                ...conv, 
+                lead: { 
+                  id: matchingLead.id, 
+                  name: matchingLead.name,
+                  pipeline_id: matchingLead.pipeline_id,
+                  stage_id: matchingLead.stage_id,
+                  pipeline: matchingLead.pipeline as any,
+                  stage: matchingLead.stage as any,
+                  tags: matchingLead.tags as any
+                } 
+              };
+            }
+            return conv;
+          });
         }
-        
-        // Associar leads às conversas
-        conversations = conversations.map(conv => {
-          if (conv.lead_id || !conv.contact_phone || conv.is_group) return conv;
-          
-          const normalizedConvPhone = normalizePhone(conv.contact_phone);
-          const matchingLead = phoneToLead.get(normalizedConvPhone);
-          
-          if (matchingLead) {
-            return { 
-              ...conv, 
-              lead: { 
-                id: matchingLead.id, 
-                name: matchingLead.name,
-                pipeline_id: matchingLead.pipeline_id,
-                stage_id: matchingLead.stage_id,
-                pipeline: matchingLead.pipeline as any,
-                stage: matchingLead.stage as any,
-                tags: matchingLead.tags as any
-              } 
-            };
-          }
-          return conv;
-        });
       }
       
       return conversations;
@@ -806,6 +813,16 @@ export function useWhatsAppRealtimeConversations() {
       } catch {}
     };
 
+    // Debounce to coalesce rapid realtime events into a single refetch
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedInvalidate = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+        debounceTimer = null;
+      }, 500);
+    };
+
     const channel = supabase
       .channel("whatsapp-realtime")
       .on(
@@ -816,7 +833,7 @@ export function useWhatsAppRealtimeConversations() {
           table: "whatsapp_conversations",
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+          debouncedInvalidate();
         }
       )
       .on(
@@ -827,7 +844,7 @@ export function useWhatsAppRealtimeConversations() {
           table: "whatsapp_messages",
         },
         (payload) => {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+          debouncedInvalidate();
           // Play sound only for incoming messages (not sent by us)
           const msg = payload.new as any;
           if (msg && !msg.from_me) {
@@ -838,6 +855,7 @@ export function useWhatsAppRealtimeConversations() {
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
