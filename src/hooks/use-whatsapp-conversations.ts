@@ -114,9 +114,10 @@ export function useWhatsAppConversations(
       } else if (accessibleSessionIds && accessibleSessionIds.length > 0) {
         // Defense in depth: filter by accessible sessions when "All channels" is selected
         query = query.in("session_id", accessibleSessionIds);
-      } else if (!accessibleSessionIds) {
-        // No sessions accessible - return empty (shouldn't happen in normal flow)
-        return [];
+      } else if (accessibleSessionIds === undefined || accessibleSessionIds.length === 0) {
+        // Sessions not yet loaded or user has no session access — rely on RLS only.
+        // RLS policy on whatsapp_conversations will filter rows the user can see.
+        // No extra filter needed here; RLS handles it.
       }
 
       // Filter archived
