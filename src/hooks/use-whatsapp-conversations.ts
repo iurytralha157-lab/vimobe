@@ -28,6 +28,7 @@ export interface WhatsAppConversation {
     instance_name: string;
     phone_number: string | null;
     status: string;
+    organization_id: string;
   };
   lead?: {
     id: string;
@@ -95,7 +96,7 @@ export function useWhatsAppConversations(
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
           lead:leads!whatsapp_conversations_lead_id_fkey(
             id, 
             name,
@@ -216,7 +217,7 @@ export function useWhatsAppConversation(conversationId: string | null) {
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .eq("id", conversationId)
@@ -362,14 +363,17 @@ export function useSendWhatsAppMessage() {
       filename?: string;
       _optimisticId?: string;
     }) => {
-      // Get session info
-      const { data: session, error: sessionError } = await supabase
-        .from("whatsapp_sessions")
-        .select("id, instance_name, organization_id")
-        .eq("id", conversation.session_id)
-        .single();
-
-      if (sessionError) throw sessionError;
+      console.log("[useSendWhatsAppMessage] Starting mutation", { 
+        convId: conversation.id, 
+        text: text?.substring(0, 20),
+        hasMedia: !!(mediaUrl || base64)
+      });
+      // Use session info from the conversation object
+      const session = (conversation as any).session;
+      
+      if (!session) {
+        throw new Error("Sessão não encontrada na conversa.");
+      }
 
       // Extract phone number from remote_jid and format
       const rawPhone = conversation.remote_jid
@@ -437,6 +441,12 @@ export function useSendWhatsAppMessage() {
         }
       }
 
+      console.log("[useSendWhatsAppMessage] Calling evolution-proxy", {
+        action: (storedMediaUrl || base64) ? "sendFile" : "sendMessage",
+        instance: session.instance_name,
+        phone
+      });
+
       // Send via Evolution API - prefer stored URL over base64
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {
         body: {
@@ -458,7 +468,16 @@ export function useSendWhatsAppMessage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("[useSendWhatsAppMessage] evolution-proxy Error:", error);
+        throw error;
+      }
+      
+      console.log("[useSendWhatsAppMessage] evolution-proxy Success:", { 
+        success: data?.success,
+        evolutionData: data?.data?.key?.id ? "has_id" : "no_id"
+      });
+
       if (!data.success) throw new Error(data.error || "Failed to send message");
 
       // Insert message in database with client_message_id for deduplication
@@ -473,6 +492,7 @@ export function useSendWhatsAppMessage() {
       );
       const actualContent = isMediaMessage && isFilenameOnly ? null : text;
       
+      console.log("[useSendWhatsAppMessage] Inserting message into DB");
       const { error: insertError } = await supabase.from("whatsapp_messages").insert({
         conversation_id: conversation.id,
         session_id: conversation.session_id,
@@ -490,18 +510,26 @@ export function useSendWhatsAppMessage() {
         sender_name: profile?.name || null,
       });
 
+      if (insertError) {
+        console.error("[useSendWhatsAppMessage] insert whatsapp_messages Error:", insertError);
+      }
+
       if (!insertError && conversation.lead_id) {
+        console.log("[useSendWhatsAppMessage] Logging to timeline");
         // Log to lead_timeline_events
         await supabase.from("lead_timeline_events").insert({
           organization_id: session.organization_id,
           lead_id: conversation.lead_id,
           event_type: "whatsapp_message_sent",
-          actor_user_id: profile?.id,
-          channel: "whatsapp",
+          title: "Mensagem WhatsApp enviada",
+          description: actualContent || "Mídia enviada",
+          user_id: profile?.id,
           metadata: {
             message_id: messageId,
             content: actualContent,
             media_type: mediaType || "text",
+            session_id: session.id,
+            instance_name: session.instance_name
           }
         });
       }
@@ -510,15 +538,17 @@ export function useSendWhatsAppMessage() {
         console.error("Error inserting sent message:", insertError);
       }
 
-      // Update conversation
-      await supabase
-        .from("whatsapp_conversations")
-        .update({
-          last_message: text,
-          last_message_at: new Date().toISOString(),
-          unread_count: 0,
-        })
-        .eq("id", conversation.id);
+        console.log("[useSendWhatsAppMessage] Updating conversation last_message");
+        await supabase
+          .from("whatsapp_conversations")
+          .update({
+            last_message: text,
+            last_message_at: new Date().toISOString(),
+            unread_count: 0,
+          })
+          .eq("id", conversation.id);
+        
+        console.log("[useSendWhatsAppMessage] Mutation complete!");
 
       return { ...data.data, clientMessageId };
     },
