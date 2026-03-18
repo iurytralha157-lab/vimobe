@@ -23,14 +23,25 @@ export function useAccessibleSessions() {
   return useQuery({
     queryKey: ["accessible-sessions", profile?.id, profile?.organization_id, profile?.role],
     queryFn: async (): Promise<WhatsAppSession[]> => {
-      if (!profile?.id || !profile?.organization_id) return [];
+      if (!profile?.id || !profile?.organization_id) {
+        console.warn("[useAccessibleSessions] Missing profile data:", { 
+          id: profile?.id, 
+          org: profile?.organization_id 
+        });
+        return [];
+      }
+
+      console.log("[useAccessibleSessions] Fetching for:", {
+        userId: profile.id,
+        orgId: profile.organization_id,
+        role: profile.role
+      });
 
       // Admins see ALL sessions in the organization
       if (profile.role === 'admin' || profile.role === 'super_admin') {
         const { data, error } = await supabase
           .from("whatsapp_sessions")
           .select("*")
-          .eq("organization_id", profile.organization_id)
           .order("created_at", { ascending: false });
 
         if (error) {
@@ -44,12 +55,15 @@ export function useAccessibleSessions() {
       const { data: ownedSessions, error: ownedError } = await supabase
         .from("whatsapp_sessions")
         .select("*")
-        .eq("organization_id", profile.organization_id)
         .eq("owner_user_id", profile.id);
 
       if (ownedError) {
         console.error("Error fetching owned sessions:", ownedError);
       }
+      console.log("[useAccessibleSessions] Owned sessions query result:", {
+        count: ownedSessions?.length || 0,
+        sessions: ownedSessions?.map(s => ({ id: s.id, name: s.instance_name, owner: s.owner_user_id }))
+      });
 
       // Separately fetch access grants filtered only by user_id.
       // This avoids the circular RLS: the policy on whatsapp_session_access checks
@@ -66,6 +80,7 @@ export function useAccessibleSessions() {
       if (accessError) {
         console.error("Error fetching session access grants:", accessError);
       }
+      console.log("[useAccessibleSessions] Access grants found:", accessGrants?.length || 0);
 
       // Fetch the actual session data for granted session IDs
       let accessSessions: WhatsAppSession[] = [];
@@ -75,8 +90,7 @@ export function useAccessibleSessions() {
           const { data: grantedSessions, error: gsError } = await supabase
             .from("whatsapp_sessions")
             .select("*")
-            .in("id", grantedSessionIds)
-            .eq("organization_id", profile.organization_id);
+            .in("id", grantedSessionIds);
 
           if (gsError) {
             console.error("Error fetching granted sessions:", gsError);

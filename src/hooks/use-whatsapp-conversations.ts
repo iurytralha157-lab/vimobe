@@ -27,6 +27,7 @@ export interface WhatsAppConversation {
     id: string;
     instance_name: string;
     phone_number: string | null;
+    status: string;
   };
   lead?: {
     id: string;
@@ -94,7 +95,7 @@ export function useWhatsAppConversations(
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status),
           lead:leads!whatsapp_conversations_lead_id_fkey(
             id, 
             name,
@@ -215,7 +216,7 @@ export function useWhatsAppConversation(conversationId: string | null) {
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status),
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .eq("id", conversationId)
