@@ -13,9 +13,6 @@ import {
   SelectValue } from
 '@/components/ui/select';
 import { Users, Building2, Check, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, Bot, LucideIcon, Facebook } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
-import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
-import AVATAR_JSON from '@/components/icons/avatar-icon.json';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useMetaIntegrations } from '@/hooks/use-meta-integration';
@@ -30,7 +27,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface TabItem {
   value: string;
   label: string;
-  icon: any; // Allow LucideIcon or custom component
+  icon: LucideIcon;
 }
 
 export default function Settings() {
@@ -66,7 +63,7 @@ export default function Settings() {
     tabs.push({ value: 'meta', label: t.settings.meta, icon: Facebook });
 
     if (hasWhatsAppModule) {
-      tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: WhatsAppIcon });
+      tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: Smartphone });
     }
 
     if (hasWhatsAppModule && hasAIAgentModule) {
@@ -88,47 +85,27 @@ export default function Settings() {
               <SelectTrigger className="w-full">
                 <SelectValue>
                   <div className="flex items-center gap-2">
-                    {CurrentIcon && (
-                      CurrentIcon === WhatsAppIcon ? (
-                        <WhatsAppIcon size={24} variant="logo" trigger="hover" />
-                      ) : (currentTab?.value === 'account' || currentTab?.value === 'team') ? (
-                        <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" />
-                      ) : (
-                        <CurrentIcon className="h-4 w-4" />
-                      )
-                    )}
+                    {CurrentIcon && <CurrentIcon className="h-4 w-4" />}
                     <span>{currentTab?.label}</span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {settingsTabs.map((tab) =>
-                  <SelectItem key={tab.value} value={tab.value}>
+              <SelectItem key={tab.value} value={tab.value}>
                     <div className="flex items-center gap-2">
-                      {tab.icon === WhatsAppIcon ? (
-                        <WhatsAppIcon size={24} variant="logo" trigger="hover" />
-                      ) : (tab.value === 'account' || tab.value === 'team') ? (
-                        <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" />
-                      ) : (
-                        <tab.icon className="h-4 w-4" />
-                      )}
+                      <tab.icon className="h-4 w-4" />
                       <span>{tab.label}</span>
                     </div>
                   </SelectItem>
-                )}
+              )}
               </SelectContent>
             </Select> :
 
           <TabsList className="flex-wrap h-auto gap-1">
               {settingsTabs.map((tab) =>
             <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
-                  {tab.icon === WhatsAppIcon ? (
-                    <WhatsAppIcon size={24} variant="logo" trigger="hover" />
-                  ) : (tab.value === 'account' || tab.value === 'team') ? (
-                    <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" />
-                  ) : (
-                    <tab.icon className="h-4 w-4" />
-                  )}
+                  <tab.icon className="h-4 w-4" />
                   <span>{tab.label}</span>
                 </TabsTrigger>
             )}

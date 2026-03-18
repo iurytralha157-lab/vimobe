@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   useCampaignInsights,
@@ -11,13 +9,13 @@ import {
   type CampaignAggregated,
   type AdsetAggregated,
   type AdAggregated,
-  type TopCreative,
 } from "@/hooks/use-campaign-insights";
 import type { DashboardFilters } from "@/hooks/use-dashboard-filters";
 import {
   DollarSign,
   Target,
   Users,
+  Eye,
   RefreshCw,
   ChevronDown,
   ChevronRight,
@@ -27,7 +25,6 @@ import {
   BarChart3,
   Layers,
   MonitorPlay,
-  Trophy,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,31 +57,27 @@ function KpiCard({ icon: Icon, label, value, iconColor }: { icon: any; label: st
   );
 }
 
-function CreativePreview({ url, videoUrl, size = "sm" }: { url: string | null; videoUrl: string | null; size?: "sm" | "lg" }) {
-  const dim = size === "lg" ? "h-16 w-16" : "h-10 w-10";
-  const iconDim = size === "lg" ? "h-5 w-5" : "h-3 w-3";
-  const playIcon = size === "lg" ? "h-4 w-4" : "h-3 w-3";
-
+function CreativePreview({ url, videoUrl }: { url: string | null; videoUrl: string | null }) {
   if (videoUrl) {
     return (
-      <div className={`relative ${dim} rounded-lg overflow-hidden bg-muted shrink-0`}>
+      <div className="relative h-10 w-10 rounded overflow-hidden bg-muted shrink-0">
         <video src={videoUrl} className="h-full w-full object-cover" muted />
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-          <Play className={`${playIcon} text-white`} />
+          <Play className="h-3 w-3 text-white" />
         </div>
       </div>
     );
   }
   if (url) {
     return (
-      <div className={`${dim} rounded-lg overflow-hidden bg-muted shrink-0`}>
+      <div className="h-10 w-10 rounded overflow-hidden bg-muted shrink-0">
         <img src={url} alt="Criativo" className="h-full w-full object-cover" />
       </div>
     );
   }
   return (
-    <div className={`${dim} rounded-lg bg-muted flex items-center justify-center shrink-0`}>
-      <ImageIcon className={`${iconDim} text-muted-foreground`} />
+    <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+      <ImageIcon className="h-4 w-4 text-muted-foreground" />
     </div>
   );
 }
@@ -169,57 +162,6 @@ function CampaignRow({ campaign, hasSpend }: { campaign: CampaignAggregated; has
   );
 }
 
-const MEDAL_COLORS = [
-  "bg-amber-400 text-amber-950",
-  "bg-slate-300 text-slate-800",
-  "bg-amber-600 text-amber-50",
-];
-
-function CreativeRankingRow({ creative, index, maxScore }: { creative: TopCreative; index: number; maxScore: number }) {
-  const position = index + 1;
-  const pct = maxScore > 0 ? (creative.score / maxScore) * 100 : 0;
-
-  return (
-    <div className="flex items-center gap-3 py-3 px-3 border-t border-border">
-      {/* Position */}
-      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-        index < 3 ? MEDAL_COLORS[index] : "bg-muted text-muted-foreground"
-      }`}>
-        {position}
-      </div>
-
-      {/* Creative thumbnail */}
-      <CreativePreview url={creative.creative_url} videoUrl={creative.creative_video_url} size="lg" />
-
-      {/* Info */}
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <p className="text-sm font-medium text-foreground truncate">{creative.ad_name}</p>
-        <p className="text-xs text-muted-foreground truncate">{creative.campaign_name}</p>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="text-muted-foreground">
-            <Users className="h-3 w-3 inline mr-1" />{creative.leads_count} leads
-          </span>
-          {creative.won_count > 0 && (
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-              <Trophy className="h-3 w-3 inline mr-1" />{creative.won_count} {creative.won_count === 1 ? "venda" : "vendas"}
-            </span>
-          )}
-          {creative.spend != null && (
-            <span className="text-muted-foreground">{formatCurrency(creative.spend)}</span>
-          )}
-        </div>
-        <Progress value={pct} className="h-1.5" />
-      </div>
-
-      {/* Score */}
-      <div className="text-right shrink-0">
-        <p className="text-lg font-bold text-foreground">{creative.score}</p>
-        <p className="text-[10px] text-muted-foreground">pts</p>
-      </div>
-    </div>
-  );
-}
-
 export function CampaignPerformanceWidget({ filters }: Props) {
   const { data, isLoading } = useCampaignInsights(filters);
   const syncMutation = useSyncCampaignInsights();
@@ -249,11 +191,10 @@ export function CampaignPerformanceWidget({ filters }: Props) {
   }
 
   if (!data || data.campaigns.length === 0) {
-    return null;
+    return null; // No campaigns with leads at all — hide widget
   }
 
-  const { summary, campaigns, hasSpendData, topCreatives } = data;
-  const maxScore = topCreatives.length > 0 ? topCreatives[0].score : 0;
+  const { summary, campaigns, hasSpendData } = data;
 
   return (
     <Card>
@@ -276,9 +217,8 @@ export function CampaignPerformanceWidget({ filters }: Props) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* KPIs */}
-        <div className={`grid grid-cols-2 ${hasSpendData ? "md:grid-cols-4 lg:grid-cols-7" : "md:grid-cols-5"} gap-3`}>
+        <div className={`grid grid-cols-2 ${hasSpendData ? "md:grid-cols-4 lg:grid-cols-6" : "md:grid-cols-4"} gap-3`}>
           <KpiCard icon={Users} label="Leads" value={formatNumber(summary.totalLeads)} iconColor="bg-primary" />
-          <KpiCard icon={Trophy} label="Vendas" value={String(summary.totalWon)} iconColor="bg-emerald-600" />
           <KpiCard icon={BarChart3} label="Campanhas" value={String(summary.totalCampaigns)} iconColor="bg-chart-2" />
           <KpiCard icon={Layers} label="Conjuntos" value={String(summary.totalAdsets)} iconColor="bg-chart-3" />
           <KpiCard icon={MonitorPlay} label="Anúncios" value={String(summary.totalAds)} iconColor="bg-chart-4" />
@@ -290,61 +230,30 @@ export function CampaignPerformanceWidget({ filters }: Props) {
           )}
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="campaigns">
-          <TabsList>
-            <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-            <TabsTrigger value="creatives">Criativos</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="campaigns">
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="flex items-center gap-3 py-2 px-3 text-xs font-medium text-muted-foreground bg-muted/50">
-                <span className="w-4 shrink-0" />
-                <span className="flex-1">Campanha</span>
-                <span className="w-16 text-right">Leads</span>
-                {hasSpendData && (
-                  <>
-                    <span className="w-20 text-right">Gasto</span>
-                    <span className="w-20 text-right">CPL</span>
-                  </>
-                )}
-              </div>
-              {campaigns.map((campaign) => (
-                <CampaignRow key={campaign.campaign_id} campaign={campaign} hasSpend={hasSpendData} />
-              ))}
-            </div>
-
-            {!hasSpendData && (
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                Clique em "Sincronizar Meta Ads" para adicionar dados de investimento e CPL.
-              </p>
+        {/* Table */}
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="flex items-center gap-3 py-2 px-3 text-xs font-medium text-muted-foreground bg-muted/50">
+            <span className="w-4 shrink-0" />
+            <span className="flex-1">Campanha</span>
+            <span className="w-16 text-right">Leads</span>
+            {hasSpendData && (
+              <>
+                <span className="w-20 text-right">Gasto</span>
+                <span className="w-20 text-right">CPL</span>
+              </>
             )}
-          </TabsContent>
+          </div>
 
-          <TabsContent value="creatives">
-            {topCreatives.length === 0 ? (
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                Nenhum criativo encontrado no período selecionado.
-              </div>
-            ) : (
-              <div className="rounded-lg border border-border overflow-hidden">
-                <div className="flex items-center gap-3 py-2 px-3 text-xs font-medium text-muted-foreground bg-muted/50">
-                  <span className="w-7 shrink-0 text-center">#</span>
-                  <span className="w-16 shrink-0" />
-                  <span className="flex-1">Criativo</span>
-                  <span className="w-12 text-right">Score</span>
-                </div>
-                {topCreatives.map((creative, i) => (
-                  <CreativeRankingRow key={creative.ad_id} creative={creative} index={i} maxScore={maxScore} />
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground text-center mt-3">
-              Pontuação: 1 pt por lead + 10 pts por venda
-            </p>
-          </TabsContent>
-        </Tabs>
+          {campaigns.map((campaign) => (
+            <CampaignRow key={campaign.campaign_id} campaign={campaign} hasSpend={hasSpendData} />
+          ))}
+        </div>
+
+        {!hasSpendData && (
+          <p className="text-xs text-muted-foreground text-center">
+            Clique em "Sincronizar Meta Ads" para adicionar dados de investimento e CPL.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -9,8 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu, Info } from "lucide-react";
-import { AnimatedIcon } from "@/components/icons/AnimatedIcon";
-import GLOBE_JSON from "@/components/icons/globe-icon.json";
 import { MenuTab } from "@/components/site/MenuTab";
 import { AboutTab } from "@/components/site/AboutTab";
 import { Slider } from "@/components/ui/slider";
@@ -347,7 +345,7 @@ ${getWorkerCode()}`;
         {!site && (
           <Card className="mb-6">
             <CardContent className="p-6 text-center">
-              <AnimatedIcon icon={GLOBE_JSON} size={48} trigger="loop" className="mx-auto mb-4" />
+              <Globe className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-semibold mb-2">Crie seu site imobiliário</h2>
               <p className="text-muted-foreground mb-4">
                 Configure seu site público para exibir seus imóveis e captar leads automaticamente.
@@ -363,7 +361,7 @@ ${getWorkerCode()}`;
           <Tabs defaultValue="general" className="space-y-6">
             <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="general" className="flex items-center gap-2">
-                <AnimatedIcon icon={GLOBE_JSON} size={20} trigger="hover" />
+                <Globe className="w-4 h-4" />
                 <span className="hidden sm:inline">Geral</span>
               </TabsTrigger>
               <TabsTrigger value="appearance" className="flex items-center gap-2">

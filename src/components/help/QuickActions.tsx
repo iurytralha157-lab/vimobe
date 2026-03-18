@@ -15,7 +15,6 @@ import {
   Users,
   ExternalLink,
 } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { useOrganizationModules, type ModuleName } from '@/hooks/use-organization-modules';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -74,7 +73,7 @@ const QUICK_ACTIONS: QuickAction[] = [
     segment: 'telecom',
   },
   {
-    icon: WhatsAppIcon as any,
+    icon: MessageSquare,
     title: 'Configurar WhatsApp',
     description: 'Conectar sessão do WhatsApp',
     path: '/settings/whatsapp',
@@ -142,11 +141,7 @@ export function QuickActions() {
         >
           <div className="p-4 flex items-start gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-              {action.icon === WhatsAppIcon ? (
-                <WhatsAppIcon size={40} trigger="hover" variant="logo" />
-              ) : (
-                <action.icon className="h-5 w-5 text-primary" />
-              )}
+              <action.icon className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">

@@ -10,25 +10,13 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 const TABLET_MAX = 1024;
 
-const STORAGE_KEY = 'sidebar-collapsed';
-
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsedState] = useState(() => {
+  const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved !== null) return saved === 'true';
       return window.innerWidth < TABLET_MAX;
     }
     return false;
   });
-
-  const setCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
-    setCollapsedState(prev => {
-      const next = typeof value === 'function' ? value(prev) : value;
-      localStorage.setItem(STORAGE_KEY, String(next));
-      return next;
-    });
-  };
 
   // Collapse automatically when resizing into tablet range
   useEffect(() => {
