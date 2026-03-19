@@ -889,7 +889,7 @@ export function FloatingChat() {
           <>
             {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
               <>
-                <MessagesView />
+                {messagesViewJsx}
                 {renderMessageInput(false)}
               </>
             ) : (
