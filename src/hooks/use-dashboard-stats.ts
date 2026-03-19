@@ -110,13 +110,13 @@ export function useDashboardStats() {
 
 // Enhanced dashboard stats with filters
 export function useEnhancedDashboardStats(filters?: DashboardFilters) {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['enhanced-dashboard-stats', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['enhanced-dashboard-stats', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level (admin, team leader, or normal user)
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
