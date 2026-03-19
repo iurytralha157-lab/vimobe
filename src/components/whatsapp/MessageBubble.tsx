@@ -505,7 +505,7 @@ export function MessageBubble({
           return (
             <>
               <div 
-                className="rounded-md overflow-hidden max-w-[280px] cursor-pointer relative"
+                className="rounded-md overflow-hidden max-w-full cursor-pointer relative"
                 onClick={() => setViewerOpen(true)}
               >
                 {imageLoading && (
