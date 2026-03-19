@@ -225,14 +225,21 @@ export function FloatingChat() {
 
   const handleStartConversationWithSession = async (phone: string, sessionId: string, leadName?: string, leadId?: string) => {
     try {
-      // Primeiro tenta encontrar conversa existente (prioriza conversa do lead)
-      const existing = await findConversation.mutateAsync({ phone, leadId });
+      // Buscar conversa existente NA SESSÃO SELECIONADA (evita abrir conversa de outra sessão)
+      const existing = await findConversation.mutateAsync({ phone, leadId, sessionId });
       if (existing) {
+        // Vincular lead se necessário
+        if (leadId && existing.lead_id !== leadId) {
+          await supabase
+            .from("whatsapp_conversations")
+            .update({ lead_id: leadId })
+            .eq("id", existing.id);
+        }
         openConversation(existing);
         return;
       }
 
-      // Se não existe, criar nova
+      // Se não existe na sessão selecionada, criar nova
       const newConversation = await startConversation.mutateAsync({
         phone,
         sessionId,

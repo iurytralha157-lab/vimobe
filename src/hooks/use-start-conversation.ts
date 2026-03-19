@@ -91,9 +91,30 @@ export function useStartConversation() {
 
 export function useFindConversationByPhone() {
   return useMutation({
-    mutationFn: async ({ phone, leadId }: { phone: string; leadId?: string }): Promise<WhatsAppConversation | null> => {
-      // 1) Se temos leadId, priorizar conversa já vinculada ao lead
-      if (leadId) {
+    mutationFn: async ({ phone, leadId, sessionId }: { phone: string; leadId?: string; sessionId?: string }): Promise<WhatsAppConversation | null> => {
+      // 1) Se temos leadId E sessionId, buscar conversa vinculada ao lead NA sessão específica
+      if (leadId && sessionId) {
+        const { data: byLeadSession, error: byLeadSessionError } = await supabase
+          .from("whatsapp_conversations")
+          .select(`
+            *,
+            session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
+            lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
+          `)
+          .eq("lead_id", leadId)
+          .eq("session_id", sessionId)
+          .is("deleted_at", null)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(1);
+
+        if (byLeadSessionError) throw byLeadSessionError;
+        if (byLeadSession?.[0]) {
+          return byLeadSession[0] as WhatsAppConversation;
+        }
+      }
+
+      // 2) Se temos leadId (sem sessionId específico), priorizar conversa já vinculada ao lead
+      if (leadId && !sessionId) {
         const { data: byLead, error: byLeadError } = await supabase
           .from("whatsapp_conversations")
           .select(`
@@ -112,17 +133,15 @@ export function useFindConversationByPhone() {
         }
       }
 
-      // 2) Fallback por telefone - buscar com múltiplas variações de formato
+      // 3) Fallback por telefone - restringir pela sessão se fornecida
       const cleanPhone = formatPhoneForWhatsApp(phone);
       
-      // Gerar variações: com e sem código do país
       const digits = cleanPhone.replace(/\D/g, '');
       const withoutCountry = digits.startsWith('55') && digits.length >= 12 
         ? digits.substring(2) 
         : digits;
       const withCountry = digits.startsWith('55') ? digits : `55${digits}`;
       
-      // Buscar por qualquer variação
       const searchVariants = [...new Set([digits, withoutCountry, withCountry])];
       const orFilter = searchVariants
         .flatMap(v => [
@@ -131,7 +150,7 @@ export function useFindConversationByPhone() {
         ])
         .join(',');
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("whatsapp_conversations")
         .select(`
           *,
@@ -142,6 +161,13 @@ export function useFindConversationByPhone() {
         .is("deleted_at", null)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(1);
+
+      // Se temos sessionId, restringir busca à sessão selecionada
+      if (sessionId) {
+        query = query.eq("session_id", sessionId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return (data?.[0] as WhatsAppConversation) || null;
