@@ -110,13 +110,13 @@ export function useDashboardStats() {
 
 // Enhanced dashboard stats with filters
 export function useEnhancedDashboardStats(filters?: DashboardFilters) {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['enhanced-dashboard-stats', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['enhanced-dashboard-stats', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level (admin, team leader, or normal user)
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
@@ -318,13 +318,13 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
 
 // Dados do gráfico de leads por dia (otimizado)
 export function useLeadsChartData() {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['leads-chart-data'],
+    queryKey: ['leads-chart-data', currentUserId],
+    enabled: !!currentUserId,
     queryFn: async () => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
@@ -478,13 +478,16 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
 
 // Top Brokers (ranking de corretores) - com fallback para leads totais
 export function useTopBrokers(filters?: DashboardFilters) {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['top-brokers', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<TopBrokersResult> => {
       // Get current user to check visibility
-      const { data: { user } } = await supabase.auth.getUser();
-      const visibility = user?.id 
-        ? await checkLeadVisibility(user.id) 
+      const visibility = currentUserId 
+        ? await checkLeadVisibility(currentUserId) 
         : { canViewAll: false, userId: undefined };
       
       // Team leaders and admins can see broker ranking
@@ -642,13 +645,13 @@ export function useTopBrokers(filters?: DashboardFilters) {
 
 // Upcoming tasks
 export function useUpcomingTasks() {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['upcoming-tasks'],
+    queryKey: ['upcoming-tasks', currentUserId],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<UpcomingTask[]> => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
@@ -716,13 +719,13 @@ export function useUpcomingTasks() {
 
 // Deals evolution (ganhos, perdas, em aberto) grouped by time
 export function useDealsEvolutionData(filters?: DashboardFilters) {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['deals-evolution', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['deals-evolution', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<DealsEvolutionPoint[]> => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
