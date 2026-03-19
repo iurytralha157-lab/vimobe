@@ -31,7 +31,7 @@ export function useStartConversation() {
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .eq("session_id", sessionId)
@@ -67,7 +67,7 @@ export function useStartConversation() {
         })
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .single();
@@ -98,7 +98,7 @@ export function useFindConversationByPhone() {
           .from("whatsapp_conversations")
           .select(`
             *,
-            session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+            session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
             lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
           `)
           .eq("lead_id", leadId)
@@ -135,7 +135,7 @@ export function useFindConversationByPhone() {
         .from("whatsapp_conversations")
         .select(`
           *,
-          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number),
+          session:whatsapp_sessions!whatsapp_conversations_session_id_fkey(id, instance_name, phone_number, status, organization_id),
           lead:leads!whatsapp_conversations_lead_id_fkey(id, name)
         `)
         .or(orFilter)
