@@ -478,13 +478,16 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
 
 // Top Brokers (ranking de corretores) - com fallback para leads totais
 export function useTopBrokers(filters?: DashboardFilters) {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['top-brokers', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['top-brokers', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<TopBrokersResult> => {
       // Get current user to check visibility
-      const { data: { user } } = await supabase.auth.getUser();
-      const visibility = user?.id 
-        ? await checkLeadVisibility(user.id) 
+      const visibility = currentUserId 
+        ? await checkLeadVisibility(currentUserId) 
         : { canViewAll: false, userId: undefined };
       
       // Team leaders and admins can see broker ranking
