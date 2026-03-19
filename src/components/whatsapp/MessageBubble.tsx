@@ -505,7 +505,7 @@ export function MessageBubble({
           return (
             <>
               <div 
-                className="rounded-md overflow-hidden max-w-[280px] cursor-pointer relative"
+                className="rounded-md overflow-hidden max-w-full cursor-pointer relative"
                 onClick={() => setViewerOpen(true)}
               >
                 {imageLoading && (
@@ -533,7 +533,7 @@ export function MessageBubble({
         }
         return (
           <div className={cn(
-            "flex flex-col items-center justify-center gap-2 p-6 rounded-md min-w-[200px]",
+            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-full max-w-[200px]",
             fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
           )}>
             <ImageIcon className="w-10 h-10 opacity-50" />
@@ -557,7 +557,7 @@ export function MessageBubble({
           return (
             <>
               <div 
-                className="rounded-md overflow-hidden max-w-[280px] cursor-pointer relative"
+                className="rounded-md overflow-hidden max-w-full cursor-pointer relative"
                 onClick={() => setViewerOpen(true)}
               >
                 <video
@@ -583,7 +583,7 @@ export function MessageBubble({
         }
         return (
           <div className={cn(
-            "flex flex-col items-center justify-center gap-2 p-6 rounded-md min-w-[200px]",
+            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-full max-w-[200px]",
             fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
           )}>
             <Video className="w-10 h-10 opacity-50" />
