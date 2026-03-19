@@ -645,13 +645,13 @@ export function useTopBrokers(filters?: DashboardFilters) {
 
 // Upcoming tasks
 export function useUpcomingTasks() {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['upcoming-tasks'],
+    queryKey: ['upcoming-tasks', currentUserId],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<UpcomingTask[]> => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
