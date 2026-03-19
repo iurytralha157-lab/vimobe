@@ -670,7 +670,8 @@ export function FloatingChat() {
         Acesse Configurações → WhatsApp para conectar
       </p>
     </div>;
-  const MessagesView = () => <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
+  const messagesViewJsx = (
+    <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
       <ScrollArea className="flex-1" onScrollCapture={handleScrollArea}>
         <div className="px-3 py-3 w-full max-w-full min-w-0 overflow-hidden overflow-x-hidden">
           {loadingMessages ? <div className="flex items-center justify-center py-8">
@@ -706,7 +707,8 @@ export function FloatingChat() {
             </div>}
         </div>
       </ScrollArea>
-    </div>;
+    </div>
+  );
   const renderMessageInput = (mobile = false) => (
     <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-2")}>
       <div className="flex items-center gap-2">
