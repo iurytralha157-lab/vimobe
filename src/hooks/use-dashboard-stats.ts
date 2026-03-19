@@ -318,13 +318,13 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
 
 // Dados do gráfico de leads por dia (otimizado)
 export function useLeadsChartData() {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['leads-chart-data'],
+    queryKey: ['leads-chart-data', currentUserId],
+    enabled: !!currentUserId,
     queryFn: async () => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
