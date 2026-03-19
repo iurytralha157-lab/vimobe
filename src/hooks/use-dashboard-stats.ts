@@ -719,13 +719,13 @@ export function useUpcomingTasks() {
 
 // Deals evolution (ganhos, perdas, em aberto) grouped by time
 export function useDealsEvolutionData(filters?: DashboardFilters) {
+  const { profile } = useAuth();
+  const currentUserId = profile?.id;
+
   return useQuery({
-    queryKey: ['deals-evolution', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['deals-evolution', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId,
     queryFn: async (): Promise<DealsEvolutionPoint[]> => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-      
       // Get visibility level
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
