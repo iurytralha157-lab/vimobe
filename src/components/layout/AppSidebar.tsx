@@ -4,6 +4,8 @@ import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
 import CALENDAR_JSON from '@/components/icons/calendar-icon.json';
+import FINANCE_JSON from '@/components/icons/finance-icon.json';
+import MANAGEMENT_JSON from '@/components/icons/management-icon.json';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -302,11 +304,15 @@ export function AppSidebar() {
             </CollapsibleContent>
           </Collapsible> : <NavLink to={item.children ? item.children[0].path : item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
             {item.icon === WhatsAppIcon ? (
-              <WhatsAppIcon size={32} className="flex-shrink-0" />
+              <WhatsAppIcon size={24} className="flex-shrink-0" trigger="hover" />
             ) : item.icon === Users ? (
-              <AnimatedIcon icon={AVATAR_JSON} size={28} trigger="hover" className="flex-shrink-0" />
+              <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" className="flex-shrink-0" />
             ) : item.icon === Calendar ? (
-              <AnimatedIcon icon={CALENDAR_JSON} size={28} trigger="hover" className="flex-shrink-0" />
+              <AnimatedIcon icon={CALENDAR_JSON} size={24} className="flex-shrink-0" trigger="hover" />
+            ) : item.icon === DollarSign ? (
+              <AnimatedIcon icon={FINANCE_JSON} size={24} className="flex-shrink-0" trigger="hover" />
+            ) : item.icon === Shuffle ? (
+              <AnimatedIcon icon={MANAGEMENT_JSON} size={24} className="flex-shrink-0" trigger="hover" />
             ) : (
               <item.icon className="h-5 w-5 flex-shrink-0" />
             )}
