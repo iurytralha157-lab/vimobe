@@ -724,10 +724,11 @@ export function useUpcomingTasks() {
 export function useDealsEvolutionData(filters?: DashboardFilters) {
   const { profile } = useAuth();
   const currentUserId = profile?.id;
+  const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['deals-evolution', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
-    enabled: !!currentUserId,
+    queryKey: ['deals-evolution', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<DealsEvolutionPoint[]> => {
       // Get visibility level
       const visibility = currentUserId 
@@ -744,6 +745,7 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       let query = supabase
         .from('leads')
         .select('id, created_at, deal_status, assigned_user_id, source')
+        .eq('organization_id', organizationId!)
         .gte('created_at', dateFrom.toISOString())
         .lte('created_at', dateTo.toISOString());
 
