@@ -1,50 +1,57 @@
 
 
-# Fix: Chat Scroll Jumps to Top on Typing + Media Overflow
+# Fix: Property Limit, Photo Gallery Sync, and Property Code Prefixes
 
-## Problems
+## 3 Issues to Fix
 
-### 1. Scroll jumps to top when typing
-`MessagesView` is defined as a **function component inside the render body** of `FloatingChat`. Every keystroke in the textarea calls `setMessageText`, which re-renders `FloatingChat`, which creates a **new `MessagesView` function reference**. React sees a different component type each render and **unmounts/remounts** the ScrollArea — destroying scroll position.
+### 1. Property listing limited to 200
+In `src/hooks/use-properties.ts` line 26, the query has `.limit(200)`. This hard cap prevents showing more than 200 properties.
 
-### 2. Media bubbles overflow the chat container
-The "Imagem não disponível" fallback boxes use `min-w-[200px]` and `p-6` which can push content beyond the chat's visible area. Images and videos use `max-w-[280px]` without constraining to the bubble's width, causing horizontal overflow in the 420px floating chat.
+**Fix**: Remove the `.limit(200)` or increase it to 1000 (Supabase default max). For large catalogs, increase to 1000 and add pagination later if needed.
 
-## Fix
+**File**: `src/hooks/use-properties.ts`
 
-### File: `src/components/chat/FloatingChat.tsx`
+### 2. Imoview sync not pulling photo gallery
+The edge function `imoview-sync` already attempts to fetch detail photos (lines 160-186), but:
+- The detail endpoint URL and method may not match Loft/Imoview's actual API
+- The `fotos` field IS being written to `propertyData` (line 235), so photos should be saved if the API returns them
 
-**Scroll fix**: Convert `MessagesView` from an inline component (`const MessagesView = () => ...` used as `<MessagesView />`) to **inline JSX** directly in the render tree. This prevents React from unmounting/remounting the scroll container on every keystroke.
+**Fix**: Improve the photo extraction logic to handle more response formats (e.g., `detail.urlFotos`, `detail.galerias`, nested arrays). Also ensure the listing response itself is checked for photo URLs (many APIs return photo arrays in the listing, not just the detail endpoint).
 
-Before:
-```tsx
-const MessagesView = () => <div>...</div>;
-// used as <MessagesView />
-```
+**File**: `supabase/functions/imoview-sync/index.ts`
 
-After:
-```tsx
-// Inline the JSX directly where <MessagesView /> was used
-{activeConversation ? (
-  <>
-    <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
-      <ScrollArea ...>
-        ...
-      </ScrollArea>
-    </div>
-    {renderMessageInput()}
-  </>
-) : ...}
-```
+### 3. Property code prefixes too limited
+Currently `generatePropertyCode()` only handles 4 types: Casa→CA, Cobertura→CB, Comercial→CO, everything else→AP.
 
-This applies to both mobile and desktop render paths (lines ~861 and ~889).
+**Fix**: Expand the prefix map to cover all property types properly:
 
-### File: `src/components/whatsapp/MessageBubble.tsx`
+| Type | Prefix |
+|------|--------|
+| Casa | CA |
+| Apartamento | AP |
+| Cobertura | AP (is apartment) |
+| Kitnet | AP or CA (apartment variant) |
+| Flat | AP |
+| Comercial | CO |
+| Galpão | GA |
+| Terreno | TR |
+| Sítio | SI |
+| Fazenda | FA |
+| Other/custom | IM (generic) |
 
-**Overflow fix**: 
-- Change image/video containers from `max-w-[280px]` to `max-w-full` so they respect the parent bubble's `max-w-[75%]` constraint.
-- Change "Imagem não disponível" fallback from `min-w-[200px]` to `w-full max-w-[200px]` to prevent overflow.
-- Add `overflow-hidden` to the outer bubble wrapper to catch any remaining overflow.
+**File**: `src/hooks/use-properties.ts` — update `generatePropertyCode()`
 
-### No database changes needed.
+### Build Error
+The build errors shown are **pre-existing** bundle size warnings (5.3MB chunk). They are not caused by recent changes. The builds complete successfully but may exceed a size limit check. No action needed for the current fixes.
+
+## Technical Details
+
+### File: `src/hooks/use-properties.ts`
+- Line 26: Change `.limit(200)` to `.limit(1000)`
+- Lines 60-63: Expand the prefix mapping to a dictionary covering all property types
+
+### File: `supabase/functions/imoview-sync/index.ts`
+- Lines 160-186: Enhance photo extraction to also check the listing item itself for photo arrays (`item.fotos`, `item.imagens`, `item.urlFotos`, `item.galeria`)
+- If listing already has photos, skip the per-item detail API call (saves time and avoids rate limiting)
+- Add more field name patterns for photo URLs in the detail response
 
