@@ -28,6 +28,9 @@ import {
   Layers,
   MonitorPlay,
   Trophy,
+  Eye,
+  Radio,
+  Banknote,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -94,7 +97,9 @@ function AdRow({ ad, hasSpend }: { ad: AdAggregated; hasSpend: boolean }) {
     <div className="flex items-center gap-3 py-2 pl-12 pr-3 text-xs border-t border-border/30">
       <CreativePreview url={ad.creative_url} videoUrl={ad.creative_video_url} />
       <span className="flex-1 truncate text-muted-foreground">{ad.ad_name}</span>
-      <span className="w-16 text-right font-medium">{ad.leads_count}</span>
+      <span className="w-14 text-right font-medium">{ad.leads_count}</span>
+      <span className="w-14 text-right font-medium text-emerald-600">{ad.won_count}</span>
+      <span className="w-20 text-right">{ad.revenue > 0 ? formatCurrency(ad.revenue) : "—"}</span>
       {hasSpend && (
         <>
           <span className="w-20 text-right">{ad.spend != null ? formatCurrency(ad.spend) : "—"}</span>
@@ -119,7 +124,9 @@ function AdsetRow({ adset, hasSpend }: { adset: AdsetAggregated; hasSpend: boole
             <span className="w-3 shrink-0" />
           )}
           <span className="flex-1 truncate text-muted-foreground">{adset.adset_name}</span>
-          <span className="w-16 text-right font-medium">{adset.leads_count}</span>
+          <span className="w-14 text-right font-medium">{adset.leads_count}</span>
+          <span className="w-14 text-right font-medium text-emerald-600">{adset.won_count}</span>
+          <span className="w-20 text-right">{adset.revenue > 0 ? formatCurrency(adset.revenue) : "—"}</span>
           {hasSpend && (
             <>
               <span className="w-20 text-right">{adset.spend != null ? formatCurrency(adset.spend) : "—"}</span>
@@ -151,7 +158,9 @@ function CampaignRow({ campaign, hasSpend }: { campaign: CampaignAggregated; has
             <span className="w-4 shrink-0" />
           )}
           <span className="flex-1 truncate font-medium text-foreground">{campaign.campaign_name}</span>
-          <span className="w-16 text-right font-semibold text-foreground">{campaign.leads_count}</span>
+          <span className="w-14 text-right font-semibold text-foreground">{campaign.leads_count}</span>
+          <span className="w-14 text-right font-semibold text-emerald-600">{campaign.won_count}</span>
+          <span className="w-20 text-right text-foreground">{campaign.revenue > 0 ? formatCurrency(campaign.revenue) : "—"}</span>
           {hasSpend && (
             <>
               <span className="w-20 text-right text-foreground">{campaign.spend != null ? formatCurrency(campaign.spend) : "—"}</span>
@@ -195,13 +204,18 @@ function CreativeRankingRow({ creative, index, maxScore }: { creative: TopCreati
       <div className="flex-1 min-w-0 space-y-1.5">
         <p className="text-sm font-medium text-foreground truncate">{creative.ad_name}</p>
         <p className="text-xs text-muted-foreground truncate">{creative.campaign_name}</p>
-        <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-3 text-xs flex-wrap">
           <span className="text-muted-foreground">
             <Users className="h-3 w-3 inline mr-1" />{creative.leads_count} leads
           </span>
           {creative.won_count > 0 && (
             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
               <Trophy className="h-3 w-3 inline mr-1" />{creative.won_count} {creative.won_count === 1 ? "venda" : "vendas"}
+            </span>
+          )}
+          {creative.revenue > 0 && (
+            <span className="text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(creative.revenue)}
             </span>
           )}
           {creative.spend != null && (
@@ -276,18 +290,27 @@ export function CampaignPerformanceWidget({ filters }: Props) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* KPIs */}
-        <div className={`grid grid-cols-2 ${hasSpendData ? "md:grid-cols-4 lg:grid-cols-7" : "md:grid-cols-5"} gap-3`}>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <KpiCard icon={Users} label="Leads" value={formatNumber(summary.totalLeads)} iconColor="bg-primary" />
           <KpiCard icon={Trophy} label="Vendas" value={String(summary.totalWon)} iconColor="bg-emerald-600" />
-          <KpiCard icon={BarChart3} label="Campanhas" value={String(summary.totalCampaigns)} iconColor="bg-chart-2" />
-          <KpiCard icon={Layers} label="Conjuntos" value={String(summary.totalAdsets)} iconColor="bg-chart-3" />
-          <KpiCard icon={MonitorPlay} label="Anúncios" value={String(summary.totalAds)} iconColor="bg-chart-4" />
+          {summary.totalRevenue > 0 && (
+            <KpiCard icon={Banknote} label="Receita" value={formatCurrency(summary.totalRevenue)} iconColor="bg-emerald-700" />
+          )}
           {hasSpendData && summary.totalSpend != null && (
             <KpiCard icon={DollarSign} label="Investimento" value={formatCurrency(summary.totalSpend)} iconColor="bg-chart-5" />
           )}
           {hasSpendData && summary.avgCpl != null && (
             <KpiCard icon={Target} label="CPL Médio" value={formatCurrency(summary.avgCpl)} iconColor="bg-destructive" />
           )}
+          {hasSpendData && summary.totalImpressions != null && summary.totalImpressions > 0 && (
+            <KpiCard icon={Eye} label="Impressões" value={formatNumber(summary.totalImpressions)} iconColor="bg-chart-2" />
+          )}
+          {hasSpendData && summary.totalReach != null && summary.totalReach > 0 && (
+            <KpiCard icon={Radio} label="Alcance" value={formatNumber(summary.totalReach)} iconColor="bg-chart-3" />
+          )}
+          <KpiCard icon={BarChart3} label="Campanhas" value={String(summary.totalCampaigns)} iconColor="bg-chart-4" />
+          <KpiCard icon={Layers} label="Conjuntos" value={String(summary.totalAdsets)} iconColor="bg-muted-foreground" />
+          <KpiCard icon={MonitorPlay} label="Anúncios" value={String(summary.totalAds)} iconColor="bg-muted-foreground" />
         </div>
 
         {/* Tabs */}
@@ -298,11 +321,13 @@ export function CampaignPerformanceWidget({ filters }: Props) {
           </TabsList>
 
           <TabsContent value="campaigns">
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="flex items-center gap-3 py-2 px-3 text-xs font-medium text-muted-foreground bg-muted/50">
+            <div className="rounded-lg border border-border overflow-hidden overflow-x-auto">
+              <div className="flex items-center gap-3 py-2 px-3 text-xs font-medium text-muted-foreground bg-muted/50 min-w-[500px]">
                 <span className="w-4 shrink-0" />
                 <span className="flex-1">Campanha</span>
-                <span className="w-16 text-right">Leads</span>
+                <span className="w-14 text-right">Leads</span>
+                <span className="w-14 text-right">Vendas</span>
+                <span className="w-20 text-right">Receita</span>
                 {hasSpendData && (
                   <>
                     <span className="w-20 text-right">Gasto</span>
