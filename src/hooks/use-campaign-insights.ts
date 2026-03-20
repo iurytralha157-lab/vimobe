@@ -12,6 +12,7 @@ export interface CampaignAggregated {
   reach: number | null;
   leads_count: number;
   won_count: number;
+  revenue: number;
   cpl: number | null;
   adsets: AdsetAggregated[];
 }
@@ -24,6 +25,7 @@ export interface AdsetAggregated {
   reach: number | null;
   leads_count: number;
   won_count: number;
+  revenue: number;
   cpl: number | null;
   ads: AdAggregated[];
 }
@@ -36,6 +38,7 @@ export interface AdAggregated {
   reach: number | null;
   leads_count: number;
   won_count: number;
+  revenue: number;
   cpl: number | null;
   creative_url: string | null;
   creative_video_url: string | null;
@@ -47,6 +50,7 @@ export interface TopCreative {
   campaign_name: string;
   leads_count: number;
   won_count: number;
+  revenue: number;
   score: number;
   creative_url: string | null;
   creative_video_url: string | null;
@@ -79,6 +83,20 @@ interface InsightRow {
   fetched_at: string;
 }
 
+interface LeadRow {
+  id: string;
+  deal_status: string | null;
+  valor_interesse: number | null;
+}
+
+async function fetchTeamMemberIds(teamId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from("team_members")
+    .select("user_id")
+    .eq("team_id", teamId);
+  return (data || []).map(m => m.user_id);
+}
+
 // Build hierarchy from lead_meta (primary), enrich with meta_campaign_insights (optional)
 export function useCampaignInsights(filters: DashboardFilters) {
   const { profile } = useAuth();
@@ -86,55 +104,92 @@ export function useCampaignInsights(filters: DashboardFilters) {
   const dateTo = filters.dateRange.to.toISOString();
 
   return useQuery({
-    queryKey: ["campaign-insights", profile?.organization_id, dateFrom, dateTo],
+    queryKey: ["campaign-insights", profile?.organization_id, dateFrom, dateTo, filters.teamId, filters.userId, filters.source],
     queryFn: async () => {
       if (!profile?.organization_id) return null;
+      const orgId = profile.organization_id;
 
-      // 1. Get all lead_meta with campaign_id, joined with leads for date filter
+      // 0. If team filter, resolve member IDs
+      let teamMemberIds: string[] | null = null;
+      if (filters.teamId) {
+        teamMemberIds = await fetchTeamMemberIds(filters.teamId);
+        if (teamMemberIds.length === 0) {
+          return emptyResult();
+        }
+      }
+
+      // 1. Get all lead_meta with campaign_id for this org's leads
       const { data: leadMetaRaw } = await supabase
         .from("lead_meta")
         .select("campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, creative_url, creative_video_url, lead_id")
         .not("campaign_id", "is", null);
 
       if (!leadMetaRaw || leadMetaRaw.length === 0) {
-        return { campaigns: [], summary: { totalLeads: 0, totalCampaigns: 0, totalAdsets: 0, totalAds: 0, totalSpend: null, avgCpl: null, totalImpressions: null }, lastSync: null, hasSpendData: false };
+        return emptyResult();
       }
 
-      // 2. Filter leads by date range
+      // 2. Filter leads by date range + all dashboard filters
       const leadIds = leadMetaRaw.map(lm => lm.lead_id);
       const batchSize = 500;
       const validLeadIds = new Set<string>();
       const wonLeadIds = new Set<string>();
+      const leadRevenueMap = new Map<string, number>();
 
       for (let i = 0; i < leadIds.length; i += batchSize) {
         const batch = leadIds.slice(i, i + batchSize);
-        const { data: leadsInRange } = await supabase
+        let query = supabase
           .from("leads")
-          .select("id, deal_status")
+          .select("id, deal_status, valor_interesse")
           .in("id", batch)
+          .eq("organization_id", orgId)
           .gte("created_at", dateFrom)
           .lte("created_at", dateTo);
-        (leadsInRange || []).forEach(l => {
+
+        // Apply team filter
+        if (teamMemberIds) {
+          query = query.in("assigned_user_id", teamMemberIds);
+        }
+        // Apply user filter
+        if (filters.userId) {
+          query = query.eq("assigned_user_id", filters.userId);
+        }
+        // Apply source filter
+        if (filters.source && filters.source !== "all") {
+          query = query.eq("source", filters.source);
+        }
+
+        const { data: leadsInRange } = await query;
+        ((leadsInRange || []) as LeadRow[]).forEach(l => {
           validLeadIds.add(l.id);
-          if (l.deal_status === 'won') wonLeadIds.add(l.id);
+          if (l.deal_status === 'won') {
+            wonLeadIds.add(l.id);
+            leadRevenueMap.set(l.id, l.valor_interesse || 0);
+          }
         });
       }
 
       const filtered = (leadMetaRaw as LeadMetaRow[]).filter(lm => validLeadIds.has(lm.lead_id));
+
+      if (filtered.length === 0) {
+        return emptyResult();
+      }
 
       // 3. Build hierarchy from lead_meta
       const campaignMap = new Map<string, {
         name: string;
         leads: Set<string>;
         won: Set<string>;
+        revenue: number;
         adsets: Map<string, {
           name: string;
           leads: Set<string>;
           won: Set<string>;
+          revenue: number;
           ads: Map<string, {
             name: string;
             leads: Set<string>;
             won: Set<string>;
+            revenue: number;
             creative_url: string | null;
             creative_video_url: string | null;
           }>;
@@ -144,28 +199,36 @@ export function useCampaignInsights(filters: DashboardFilters) {
       for (const lm of filtered) {
         const cId = lm.campaign_id || "unknown";
         const isWon = wonLeadIds.has(lm.lead_id);
+        const rev = leadRevenueMap.get(lm.lead_id) || 0;
+
         if (!campaignMap.has(cId)) {
-          campaignMap.set(cId, { name: lm.campaign_name || "Sem nome", leads: new Set(), won: new Set(), adsets: new Map() });
+          campaignMap.set(cId, { name: lm.campaign_name || "Sem nome", leads: new Set(), won: new Set(), revenue: 0, adsets: new Map() });
         }
         const campaign = campaignMap.get(cId)!;
-        campaign.leads.add(lm.lead_id);
-        if (isWon) campaign.won.add(lm.lead_id);
+        if (!campaign.leads.has(lm.lead_id)) {
+          campaign.leads.add(lm.lead_id);
+          if (isWon) { campaign.won.add(lm.lead_id); campaign.revenue += rev; }
+        }
 
         if (lm.adset_id) {
           if (!campaign.adsets.has(lm.adset_id)) {
-            campaign.adsets.set(lm.adset_id, { name: lm.adset_name || "Sem nome", leads: new Set(), won: new Set(), ads: new Map() });
+            campaign.adsets.set(lm.adset_id, { name: lm.adset_name || "Sem nome", leads: new Set(), won: new Set(), revenue: 0, ads: new Map() });
           }
           const adset = campaign.adsets.get(lm.adset_id)!;
-          adset.leads.add(lm.lead_id);
-          if (isWon) adset.won.add(lm.lead_id);
+          if (!adset.leads.has(lm.lead_id)) {
+            adset.leads.add(lm.lead_id);
+            if (isWon) { adset.won.add(lm.lead_id); adset.revenue += rev; }
+          }
 
           if (lm.ad_id) {
             if (!adset.ads.has(lm.ad_id)) {
-              adset.ads.set(lm.ad_id, { name: lm.ad_name || "Sem nome", leads: new Set(), won: new Set(), creative_url: lm.creative_url, creative_video_url: lm.creative_video_url });
+              adset.ads.set(lm.ad_id, { name: lm.ad_name || "Sem nome", leads: new Set(), won: new Set(), revenue: 0, creative_url: lm.creative_url, creative_video_url: lm.creative_video_url });
             }
             const ad = adset.ads.get(lm.ad_id)!;
-            ad.leads.add(lm.lead_id);
-            if (isWon) ad.won.add(lm.lead_id);
+            if (!ad.leads.has(lm.lead_id)) {
+              ad.leads.add(lm.lead_id);
+              if (isWon) { ad.won.add(lm.lead_id); ad.revenue += rev; }
+            }
             if (lm.creative_url) ad.creative_url = lm.creative_url;
             if (lm.creative_video_url) ad.creative_video_url = lm.creative_video_url;
           }
@@ -179,7 +242,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
       const { data: insightsRaw } = await (supabase as any)
         .from("meta_campaign_insights")
         .select("campaign_id, adset_id, ad_id, level, spend, impressions, reach, leads_count, cpl, fetched_at")
-        .eq("organization_id", profile.organization_id)
+        .eq("organization_id", orgId)
         .gte("date_start", dateFromDate)
         .lte("date_stop", dateToDate);
 
@@ -222,6 +285,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
               reach: adInsight?.reach ?? null,
               leads_count: adData.leads.size,
               won_count: adData.won.size,
+              revenue: adData.revenue,
               cpl: adInsight?.cpl ?? null,
               creative_url: adData.creative_url,
               creative_video_url: adData.creative_video_url,
@@ -237,6 +301,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
             reach: asInsight?.reach ?? null,
             leads_count: asData.leads.size,
             won_count: asData.won.size,
+            revenue: asData.revenue,
             cpl: asInsight?.cpl ?? null,
             ads: ads.sort((a, b) => b.leads_count - a.leads_count),
           });
@@ -251,6 +316,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           reach: cInsight?.reach ?? null,
           leads_count: cData.leads.size,
           won_count: cData.won.size,
+          revenue: cData.revenue,
           cpl: cInsight?.cpl ?? null,
           adsets: adsets.sort((a, b) => b.leads_count - a.leads_count),
         });
@@ -269,6 +335,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
               campaign_name: c.campaign_name,
               leads_count: ad.leads_count,
               won_count: ad.won_count,
+              revenue: ad.revenue,
               score: ad.leads_count + (ad.won_count * 10),
               creative_url: ad.creative_url,
               creative_video_url: ad.creative_video_url,
@@ -283,8 +350,10 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       const totalLeads = campaigns.reduce((s, c) => s + c.leads_count, 0);
       const totalWon = campaigns.reduce((s, c) => s + c.won_count, 0);
+      const totalRevenue = campaigns.reduce((s, c) => s + c.revenue, 0);
       const totalSpend = hasSpendData ? campaigns.reduce((s, c) => s + (c.spend || 0), 0) : null;
       const totalImpressions = hasSpendData ? campaigns.reduce((s, c) => s + (c.impressions || 0), 0) : null;
+      const totalReach = hasSpendData ? campaigns.reduce((s, c) => s + (c.reach || 0), 0) : null;
       const avgCpl = hasSpendData && totalLeads > 0 && totalSpend ? Math.round((totalSpend / totalLeads) * 100) / 100 : null;
 
       return {
@@ -293,12 +362,14 @@ export function useCampaignInsights(filters: DashboardFilters) {
         summary: {
           totalLeads,
           totalWon,
+          totalRevenue,
           totalCampaigns: campaigns.length,
           totalAdsets: totalAdsetsCount,
           totalAds: totalAdsCount,
           totalSpend,
           avgCpl,
           totalImpressions,
+          totalReach,
         },
         lastSync,
         hasSpendData,
@@ -307,6 +378,27 @@ export function useCampaignInsights(filters: DashboardFilters) {
     enabled: !!profile?.organization_id,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+function emptyResult() {
+  return {
+    campaigns: [],
+    topCreatives: [],
+    summary: {
+      totalLeads: 0,
+      totalWon: 0,
+      totalRevenue: 0,
+      totalCampaigns: 0,
+      totalAdsets: 0,
+      totalAds: 0,
+      totalSpend: null,
+      avgCpl: null,
+      totalImpressions: null,
+      totalReach: null,
+    },
+    lastSync: null,
+    hasSpendData: false,
+  };
 }
 
 // Sync insights from Meta API
