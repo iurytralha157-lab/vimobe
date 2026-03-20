@@ -256,7 +256,7 @@ export function AppSidebar() {
   };
   return <aside className={cn("h-[calc(100%-24px)] bg-card rounded-xl shadow-sm relative flex flex-col transition-all duration-300 m-3 flex-shrink-0 border-0", collapsed ? "w-16" : "w-56")}>
     {/* Header with Logo and Toggle */}
-    <div className={cn("flex items-center px-3 py-3", collapsed ? "justify-center" : "justify-between")}>
+    <div className={cn("flex items-center px-3 pt-4 pb-3", collapsed ? "justify-center" : "justify-between")}>
       {collapsed ?
         // Collapsed: Show favicon only
         <div className="h-8 w-8 flex items-center justify-center">

@@ -34,7 +34,7 @@ export const WhatsAppIcon: React.FC<WhatsAppIconProps> = ({
     const isDark = resolvedTheme === 'dark';
     return {
       primary: customColors.primary || (isDark ? '#f8fafc' : '#121212'), // White for dark mode, dark for light mode
-      secondary: customColors.secondary || '#ff9800' // Default orange
+      secondary: customColors.secondary || '#ed492f' // Default orange
     };
   }, [resolvedTheme, customColors]);
 

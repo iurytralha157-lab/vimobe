@@ -31,7 +31,7 @@ export const AnimatedIcon: React.FC<AnimatedIconProps> = ({
     const isDark = resolvedTheme === 'dark';
     return {
       primary: customColors.primary || (isDark ? '#f8fafc' : '#121212'),
-      secondary: customColors.secondary || '#ff9800'
+      secondary: customColors.secondary || '#ed492f'
     };
   }, [resolvedTheme, customColors]);
 

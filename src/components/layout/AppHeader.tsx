@@ -75,7 +75,7 @@ export function AppHeader({
           variant="ghost" 
           size="icon" 
           onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')} 
-          className="h-10 w-10 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 shadow-sm hover:shadow-md transition-all duration-300"
+          className="h-10 w-10 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 transition-all duration-300"
         >
           {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
@@ -86,7 +86,7 @@ export function AppHeader({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="relative h-10 w-10 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 shadow-sm hover:shadow-md transition-all duration-300"
+              className="relative h-10 w-10 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 transition-all duration-300"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
@@ -157,7 +157,7 @@ export function AppHeader({
           <DropdownMenuTrigger asChild>
             <Button 
               variant="ghost" 
-              className="h-12 gap-3 pl-1.5 pr-2 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 shadow-sm hover:shadow-md transition-all duration-300 group"
+              className="h-12 gap-3 pl-1.5 pr-2 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 transition-all duration-300 group"
             >
               <Avatar className="h-9 w-9 border border-border/40 dark:border-white/10 ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all">
                 <AvatarImage src={profile?.avatar_url || undefined} className="object-cover" />
