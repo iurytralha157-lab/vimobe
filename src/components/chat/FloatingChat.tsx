@@ -525,9 +525,9 @@ export function FloatingChat() {
             </Button>
             
             {/* Avatar */}
-            <Avatar className="h-8 w-8 shrink-0">
+            <Avatar className="h-8 w-8 shrink-0 border border-primary/20">
               <AvatarImage src={activeConversation.contact_picture || undefined} />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground font-bold">
                 {activeConversation.is_group ? (
                   <Users className="h-4 w-4" />
                 ) : (
@@ -774,9 +774,9 @@ export function FloatingChat() {
               <MessageCircle className="h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground text-sm">Nenhuma conversa</p>
             </div> : filteredConversations.map(conv => <div key={conv.id} className="group flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-accent hover:shadow-sm transition-all duration-200 border-b border-border active:bg-accent w-full max-w-full overflow-hidden box-border relative" onClick={() => openConversation(conv)}>
-                <Avatar className="h-12 w-12 shrink-0 ring-2 ring-background shadow-sm">
+                <Avatar className="h-12 w-12 shrink-0 ring-2 ring-primary/20 shadow-sm">
                   <AvatarImage src={conv.contact_picture || undefined} />
-                  <AvatarFallback className="text-sm bg-primary/10 text-primary">
+                  <AvatarFallback className="text-sm bg-primary text-primary-foreground font-bold">
                     {conv.is_group ? <Users className="w-5 h-5" /> : conv.contact_name?.[0] || conv.contact_phone?.[0] || "?"}
                   </AvatarFallback>
                 </Avatar>
