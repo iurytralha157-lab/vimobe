@@ -8,6 +8,35 @@ const corsHeaders = {
 
 const IMOVIEW_BASE = "https://api.imoview.com.br";
 
+function extractPhotos(obj: any): string[] {
+  if (!obj || typeof obj !== "object") return [];
+  const photos: string[] = [];
+  const photoFields = ["fotos", "imagens", "urlFotos", "galeria", "galerias", "photos", "images", "midia", "midias"];
+  for (const field of photoFields) {
+    const val = obj[field];
+    if (Array.isArray(val)) {
+      for (const item of val) {
+        if (typeof item === "string" && item.startsWith("http")) {
+          photos.push(item);
+        } else if (item && typeof item === "object") {
+          const url = item.url || item.urlFoto || item.foto || item.src || item.link || item.original || item.grande || item.media || "";
+          if (url && typeof url === "string" && url.startsWith("http")) photos.push(url);
+        }
+      }
+    }
+  }
+  return photos;
+}
+
+function extractMainImage(obj: any): string {
+  if (!obj || typeof obj !== "object") return "";
+  const fields = ["fotoPrincipal", "imagemPrincipal", "foto_principal", "imagem_principal", "mainImage", "thumbnail", "capa"];
+  for (const f of fields) {
+    if (obj[f] && typeof obj[f] === "string" && obj[f].startsWith("http")) return obj[f];
+  }
+  return "";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -27,7 +56,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get integration config
     const { data: integration, error: intError } = await supabase
       .from("imoview_integrations")
       .select("*")
@@ -49,14 +77,8 @@ Deno.serve(async (req) => {
         console.log("Testing Imoview connection with key:", apiKey.substring(0, 4) + "...");
         const res = await fetch(`${IMOVIEW_BASE}/Imovel/RetornarImoveisDisponiveis`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "chave": apiKey,
-          },
-          body: JSON.stringify({
-            numeroPagina: 1,
-            numeroRegistros: 1,
-          }),
+          headers: { "Content-Type": "application/json", "chave": apiKey },
+          body: JSON.stringify({ numeroPagina: 1, numeroRegistros: 1 }),
         });
 
         const text = await res.text();
@@ -88,7 +110,7 @@ Deno.serve(async (req) => {
     // ---- SYNC MODE ----
     if (action === "sync") {
       let page = 1;
-      const perPage = 20;
+      const perPage = 50;
       let totalSynced = 0;
       let totalSkipped = 0;
       let hasMore = true;
@@ -99,14 +121,8 @@ Deno.serve(async (req) => {
         try {
           res = await fetch(`${IMOVIEW_BASE}/Imovel/RetornarImoveisDisponiveis`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "chave": apiKey,
-            },
-            body: JSON.stringify({
-              numeroPagina: page,
-              numeroRegistros: perPage,
-            }),
+            headers: { "Content-Type": "application/json", "chave": apiKey },
+            body: JSON.stringify({ numeroPagina: page, numeroRegistros: perPage }),
           });
         } catch (e) {
           errors.push(`Fetch error page ${page}: ${e.message}`);
@@ -122,14 +138,13 @@ Deno.serve(async (req) => {
 
         const rawText = await res.text();
         console.log(`Imoview sync page ${page} response (first 2000 chars):`, rawText.substring(0, 2000));
-        
+
         let data;
-        try { data = JSON.parse(rawText); } catch { 
+        try { data = JSON.parse(rawText); } catch {
           errors.push(`Invalid JSON on page ${page}`);
           break;
         }
 
-        // Imoview may return: array, {lista: [...]}, {imoveis: [...]}, or object with numeric keys
         let items: any[] = [];
         if (Array.isArray(data)) {
           items = data;
@@ -137,11 +152,10 @@ Deno.serve(async (req) => {
           if (data.lista) items = data.lista;
           else if (data.imoveis) items = data.imoveis;
           else {
-            // Try extracting values (Vista-style numeric keys)
             items = Object.values(data).filter((v: any) => v && typeof v === "object" && (v.codigo || v.codigoImovel));
           }
         }
-        
+
         console.log(`Page ${page}: found ${items.length} items`);
 
         if (items.length === 0) {
@@ -157,32 +171,27 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            // Try to fetch details for photos
-            let fotos: string[] = [];
-            let imagemPrincipal = "";
-            try {
-              const detailRes = await fetch(
-                `${IMOVIEW_BASE}/Imovel/RetornarDetalhesImovelDisponivel?codigoImovel=${codigo}`,
-                {
-                  method: "GET",
-                  headers: { "chave": apiKey },
+            // Extract photos from listing item first
+            let fotos: string[] = extractPhotos(item);
+            let imagemPrincipal = extractMainImage(item);
+
+            // If no photos from listing, try detail endpoint
+            if (fotos.length === 0) {
+              try {
+                const detailRes = await fetch(
+                  `${IMOVIEW_BASE}/Imovel/RetornarDetalhesImovelDisponivel?codigoImovel=${codigo}`,
+                  { method: "GET", headers: { "chave": apiKey } }
+                );
+                if (detailRes.ok) {
+                  const detail = await detailRes.json();
+                  fotos = extractPhotos(detail);
+                  if (!imagemPrincipal) {
+                    imagemPrincipal = extractMainImage(detail);
+                  }
                 }
-              );
-              if (detailRes.ok) {
-                const detail = await detailRes.json();
-                // Extract photos
-                const fotosArr = detail.fotos || detail.imagens || [];
-                if (Array.isArray(fotosArr)) {
-                  fotos = fotosArr
-                    .map((f: any) => typeof f === "string" ? f : (f.url || f.urlFoto || f.foto || ""))
-                    .filter(Boolean);
-                }
-                if (detail.fotoPrincipal || detail.imagemPrincipal) {
-                  imagemPrincipal = detail.fotoPrincipal || detail.imagemPrincipal;
-                }
+              } catch {
+                // continue without detail photos
               }
-            } catch {
-              // continue without photos
             }
 
             if (!imagemPrincipal && fotos.length > 0) {
@@ -198,7 +207,6 @@ Deno.serve(async (req) => {
               tipoNegocio = "Venda e Aluguel";
             }
 
-            // Price
             let preco: number | null = null;
             if (tipoNegocio === "Aluguel") {
               preco = parseFloat(String(item.valorAluguel || item.valor_aluguel || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
@@ -261,7 +269,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Update integration stats
       await supabase
         .from("imoview_integrations")
         .update({
