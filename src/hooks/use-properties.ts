@@ -58,9 +58,27 @@ export function useProperty(id: string | null) {
 }
 
 async function generatePropertyCode(organizationId: string, tipoImovel: string): Promise<string> {
-  const prefix = tipoImovel === 'Casa' ? 'CA' : 
-                 tipoImovel === 'Cobertura' ? 'CB' :
-                 tipoImovel === 'Comercial' ? 'CO' : 'AP';
+  const prefixMap: Record<string, string> = {
+    'Casa': 'CA',
+    'Apartamento': 'AP',
+    'Cobertura': 'AP',
+    'Kitnet': 'AP',
+    'Flat': 'AP',
+    'Loft': 'AP',
+    'Studio': 'AP',
+    'Comercial': 'CO',
+    'Sala Comercial': 'CO',
+    'Loja': 'CO',
+    'Galpão': 'GA',
+    'Terreno': 'TR',
+    'Lote': 'TR',
+    'Sítio': 'SI',
+    'Chácara': 'SI',
+    'Fazenda': 'FA',
+    'Sobrado': 'CA',
+    'Condomínio': 'CA',
+  };
+  const prefix = prefixMap[tipoImovel] || 'IM';
   
   const { data: seq } = await supabase
     .from('property_sequences')
