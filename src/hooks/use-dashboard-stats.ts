@@ -483,10 +483,11 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
 export function useTopBrokers(filters?: DashboardFilters) {
   const { profile } = useAuth();
   const currentUserId = profile?.id;
+  const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['top-brokers', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
-    enabled: !!currentUserId,
+    queryKey: ['top-brokers', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<TopBrokersResult> => {
       // Get current user to check visibility
       const visibility = currentUserId 
@@ -508,6 +509,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
           deal_status,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
         `)
+        .eq('organization_id', organizationId!)
         .not('assigned_user_id', 'is', null)
         .eq('deal_status', 'won');
 
