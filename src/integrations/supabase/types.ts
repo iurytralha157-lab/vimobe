@@ -5606,7 +5606,7 @@ export type Database = {
           source_name: string
         }[]
       }
-      get_session_owner: { Args: { session_id: string }; Returns: string }
+      get_session_owner: { Args: { p_session_id: string }; Returns: string }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {
         Args: {
@@ -5652,6 +5652,10 @@ export type Database = {
       }
       get_user_team_ids: { Args: never; Returns: string[] }
       handle_lead_intake: { Args: { p_lead_id: string }; Returns: undefined }
+      has_whatsapp_session_ownership: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_member_available: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }

@@ -1,105 +1,50 @@
-# Melhorias Telecom - Solicitação do Cliente
 
-## Contexto
-Todas as mudanças são EXCLUSIVAMENTE para o segmento Telecom (`organization.segment === 'telecom'`). Nenhuma alteração deve afetar o fluxo imobiliário existente.
 
----
+# Fix: Chat Scroll Jumps to Top on Typing + Media Overflow
 
-## 1. DASHBOARD - Ranking de Vendas dos Colaboradores
+## Problems
 
-**Situação atual:** O widget `TopBrokersWidget` existe e é exibido apenas no dashboard imobiliário. O dashboard Telecom não possui ranking.
+### 1. Scroll jumps to top when typing
+`MessagesView` is defined as a **function component inside the render body** of `FloatingChat`. Every keystroke in the textarea calls `setMessageText`, which re-renders `FloatingChat`, which creates a **new `MessagesView` function reference**. React sees a different component type each render and **unmounts/remounts** the ScrollArea — destroying scroll position.
 
-**O que fazer:**
-- Criar um hook `useTelecomTopSellers` em `use-telecom-dashboard-stats.ts` que busca vendedores com mais vendas (leads `deal_status = 'won'`) no período filtrado
-- Incluir dados de valor total vendido (soma de `valor_interesse` dos leads ganhos) e comissões
-- Reutilizar o componente `TopBrokersWidget` no dashboard Telecom (já é genérico)
-- Posicionar o ranking na seção inferior junto com origens
+### 2. Media bubbles overflow the chat container
+The "Imagem não disponível" fallback boxes use `min-w-[200px]` and `p-6` which can push content beyond the chat's visible area. Images and videos use `max-w-[280px]` without constraining to the bubble's width, causing horizontal overflow in the 420px floating chat.
 
-**Arquivos a alterar:**
-- `src/hooks/use-telecom-dashboard-stats.ts` — adicionar hook de ranking telecom
-- `src/pages/Dashboard.tsx` — incluir `TopBrokersWidget` na seção telecom
+## Fix
 
----
+### File: `src/components/chat/FloatingChat.tsx`
 
-## 2. DASHBOARD - Alterar Receita Mensal para Ticket Médio
+**Scroll fix**: Convert `MessagesView` from an inline component (`const MessagesView = () => ...` used as `<MessagesView />`) to **inline JSX** directly in the render tree. This prevents React from unmounting/remounting the scroll container on every keystroke.
 
-**Situação atual:** O 4º KPI no `TelecomKPICards` é "Receita Mensal" (MRR = soma dos plan_value de clientes INSTALADOS).
+Before:
+```tsx
+const MessagesView = () => <div>...</div>;
+// used as <MessagesView />
+```
 
-**O que fazer:**
-- Substituir "Receita Mensal" por "Ticket Médio"
-- Cálculo: MRR / número de clientes ativos (INSTALADOS). Se 0 ativos, ticket médio = 0.
-- Manter o MRR disponível internamente para cálculos financeiros, apenas trocar o KPI exibido
-- Atualizar o tooltip, label e ícone do card
+After:
+```tsx
+// Inline the JSX directly where <MessagesView /> was used
+{activeConversation ? (
+  <>
+    <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
+      <ScrollArea ...>
+        ...
+      </ScrollArea>
+    </div>
+    {renderMessageInput()}
+  </>
+) : ...}
+```
 
-**Arquivos a alterar:**
-- `src/components/dashboard/TelecomKPICards.tsx` — trocar o 4º KPI de MRR para Ticket Médio
-- `src/hooks/use-telecom-dashboard-stats.ts` — adicionar `averageTicket` ao retorno
+This applies to both mobile and desktop render paths (lines ~861 and ~889).
 
----
+### File: `src/components/whatsapp/MessageBubble.tsx`
 
-## 3. DASHBOARD - Visibilidade de Comissões em Tempo Real para Vendedores
+**Overflow fix**: 
+- Change image/video containers from `max-w-[280px]` to `max-w-full` so they respect the parent bubble's `max-w-[75%]` constraint.
+- Change "Imagem não disponível" fallback from `min-w-[200px]` to `w-full max-w-[200px]` to prevent overflow.
+- Add `overflow-hidden` to the outer bubble wrapper to catch any remaining overflow.
 
-**Situação atual:** Vendedores não veem suas comissões no dashboard. As comissões só aparecem na página dedicada de Comissões.
+### No database changes needed.
 
-**O que fazer:**
-- Criar um widget compacto `TelecomSellerCommissions` que mostra:
-  - Total de comissões acumuladas (forecast + approved) no período
-  - Comissões já pagas
-  - Lista das últimas 5 comissões com status (badge colorido)
-- O widget respeita a visibilidade: vendedor vê SÓ as suas; admin vê de todos
-- Posicionar no dashboard Telecom abaixo do ranking
-
-**Arquivos a criar/alterar:**
-- `src/components/dashboard/TelecomSellerCommissions.tsx` — novo widget
-- `src/pages/Dashboard.tsx` — incluir widget na seção telecom
-
----
-
-## 4. FINANCEIRO - Comissionamento por Plano de Serviço
-
-**Situação atual:** A `commission_percentage` vem do lead (preenchida manualmente ou copiada do plano). A tabela `service_plans` pode ou não ter coluna `commission_percentage`.
-
-**O que fazer:**
-- Verificar/adicionar `commission_percentage numeric` na tabela `service_plans` via migration
-- No formulário de cadastro de planos, adicionar campo "% Comissão" editável
-- Garantir que o sync automático (quando vendedor seleciona plano no lead telecom) copie `commission_percentage` do plano para o lead
-- Cada plano terá sua própria comissão, permitindo diferenciação por produto
-
-**Arquivos a alterar:**
-- Migration SQL: `ALTER TABLE service_plans ADD COLUMN IF NOT EXISTS commission_percentage numeric;`
-- `src/pages/ServicePlans.tsx` — adicionar campo de comissão no formulário
-- `src/hooks/use-service-plans.ts` — incluir `commission_percentage` no tipo
-- Verificar sync em `src/components/leads/TelecomCustomerTab.tsx`
-
----
-
-## 5. FINANCEIRO - Exportar DRE
-
-**Situação atual:** Os botões "Excel" e "PDF" na página DRE mostram toast "em desenvolvimento".
-
-**O que fazer:**
-- Implementar exportação Excel da DRE usando lib existente (`export-financial.ts`)
-- Gerar .xlsx com linhas formatadas (conta, valor, AV%, anterior, variação)
-- Implementar exportação PDF via `window.print()` com CSS de impressão
-- A DRE já funciona para qualquer segmento, não precisa lógica telecom-específica
-
-**Arquivos a alterar:**
-- `src/pages/FinancialDRE.tsx` — implementar export handlers
-- `src/lib/export-financial.ts` — adicionar `prepareDREExport`
-
----
-
-## Ordem de Execução
-
-1. Migration: `commission_percentage` em `service_plans`
-2. Hook: telecom ranking + averageTicket em `use-telecom-dashboard-stats.ts`
-3. TelecomKPICards: trocar MRR por Ticket Médio
-4. Widget: `TelecomSellerCommissions`
-5. Dashboard: integrar ranking + comissões na seção telecom
-6. ServicePlans: campo de comissão por plano
-7. DRE: implementar exportação Excel/PDF
-
-## Regra de Ouro
-- Verificar `isTelecom` antes de renderizar qualquer novo componente no dashboard
-- Não alterar nenhum fluxo do segmento imobiliário
-- Respeitar visibilidade (admin vs vendedor) em todos os novos dados

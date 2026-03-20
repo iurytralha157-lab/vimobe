@@ -4,24 +4,23 @@ import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Hook to check if the current user has access to any WhatsApp session.
- * Returns true if user is owner of a session OR has been granted access via whatsapp_session_access.
+ *
+ * Access rules:
+ * - Admin and super_admin: full organization access
+ * - Regular users: own sessions OR explicit grants via whatsapp_session_access
  */
 export function useHasWhatsAppAccess() {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ["whatsapp-access-check", profile?.id, profile?.organization_id],
+    queryKey: ["whatsapp-access-check", profile?.id, profile?.organization_id, profile?.role],
     queryFn: async () => {
       if (!profile?.id || !profile?.organization_id) return false;
 
-      // Super admins têm acesso total (suporte técnico)
-      if (profile.role === 'super_admin') {
+      // Admins and super admins have full access by business rule
+      if (profile.role === "admin" || profile.role === "super_admin") {
         return true;
       }
-
-      // Todos os outros (incluindo admins) precisam ter acesso real:
-      // - Ser proprietário de uma sessão OU
-      // - Ter acesso concedido via whatsapp_session_access
 
       // Check if user owns any session
       const { data: ownedSessions, error: ownedError } = await supabase
@@ -54,7 +53,7 @@ export function useHasWhatsAppAccess() {
 
       // Filter by organization
       const hasAccess = accessGrants?.some(
-        (grant: any) => grant.session?.organization_id === profile.organization_id
+        (grant: any) => grant.session?.organization_id === profile.organization_id,
       );
 
       return !!hasAccess;

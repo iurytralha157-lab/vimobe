@@ -225,14 +225,21 @@ export function FloatingChat() {
 
   const handleStartConversationWithSession = async (phone: string, sessionId: string, leadName?: string, leadId?: string) => {
     try {
-      // Primeiro tenta encontrar conversa existente (prioriza conversa do lead)
-      const existing = await findConversation.mutateAsync({ phone, leadId });
+      // Buscar conversa existente NA SESSÃO SELECIONADA (evita abrir conversa de outra sessão)
+      const existing = await findConversation.mutateAsync({ phone, leadId, sessionId });
       if (existing) {
+        // Vincular lead se necessário
+        if (leadId && existing.lead_id !== leadId) {
+          await supabase
+            .from("whatsapp_conversations")
+            .update({ lead_id: leadId })
+            .eq("id", existing.id);
+        }
         openConversation(existing);
         return;
       }
 
-      // Se não existe, criar nova
+      // Se não existe na sessão selecionada, criar nova
       const newConversation = await startConversation.mutateAsync({
         phone,
         sessionId,
@@ -663,7 +670,8 @@ export function FloatingChat() {
         Acesse Configurações → WhatsApp para conectar
       </p>
     </div>;
-  const MessagesView = () => <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
+  const messagesViewJsx = (
+    <div className="flex-1 overflow-hidden min-h-0 flex flex-col bg-card">
       <ScrollArea className="flex-1" onScrollCapture={handleScrollArea}>
         <div className="px-3 py-3 w-full max-w-full min-w-0 overflow-hidden overflow-x-hidden">
           {loadingMessages ? <div className="flex items-center justify-center py-8">
@@ -699,7 +707,8 @@ export function FloatingChat() {
             </div>}
         </div>
       </ScrollArea>
-    </div>;
+    </div>
+  );
   const renderMessageInput = (mobile = false) => (
     <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-2")}>
       <div className="flex items-center gap-2">
@@ -853,7 +862,7 @@ export function FloatingChat() {
           <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
             {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
               <>
-                <MessagesView />
+                {messagesViewJsx}
                 {renderMessageInput(true)}
               </>
             ) : (
@@ -880,7 +889,7 @@ export function FloatingChat() {
           <>
             {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
               <>
-                <MessagesView />
+                {messagesViewJsx}
                 {renderMessageInput(false)}
               </>
             ) : (

@@ -109,5 +109,5 @@ export function applyVisibilityFilter<T>(
   }
   
   // Fallback de segurança - não retornar nada
-  return query.eq(userIdColumn, 'no-access');
+  return query.eq(userIdColumn, '00000000-0000-0000-0000-000000000000');
 }
