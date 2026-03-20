@@ -1,57 +1,55 @@
 
 
-# Fix: Property Limit, Photo Gallery Sync, and Property Code Prefixes
+# Enhanced Campaign Performance Widget — Full Filter Integration + Missing Data
 
-## 3 Issues to Fix
+## What's Already Working
+- Campaign hierarchy (Campaign > Adset > Ad) with lead counts
+- Spend, CPL, and creative previews
+- Sales tracking (won_count) per campaign
+- Meta API sync edge function
 
-### 1. Property listing limited to 200
-In `src/hooks/use-properties.ts` line 26, the query has `.limit(200)`. This hard cap prevents showing more than 200 properties.
+## What's Missing (User's Request)
+1. **Dashboard filters not applied**: Team, User, and Source filters are ignored — only date range is used
+2. **No sales revenue per campaign**: `won_count` exists but `valor_interesse` (deal value) is not tracked per campaign
+3. **Impressions/Reach not shown in UI**: Data is fetched but not displayed (user wants "visualizações")
+4. **No organization filter on lead_meta query**: Could return cross-org data in edge cases
 
-**Fix**: Remove the `.limit(200)` or increase it to 1000 (Supabase default max). For large catalogs, increase to 1000 and add pagination later if needed.
+## Plan
 
-**File**: `src/hooks/use-properties.ts`
+### File: `src/hooks/use-campaign-insights.ts`
 
-### 2. Imoview sync not pulling photo gallery
-The edge function `imoview-sync` already attempts to fetch detail photos (lines 160-186), but:
-- The detail endpoint URL and method may not match Loft/Imoview's actual API
-- The `fotos` field IS being written to `propertyData` (line 235), so photos should be saved if the API returns them
+1. **Apply all dashboard filters** to the leads query (lines 111-116):
+   - Add `teamId` filter: fetch team member IDs and filter `assigned_user_id` 
+   - Add `userId` filter: filter `assigned_user_id`
+   - Add `source` filter: filter by lead source
+   - Add `organization_id` filter to lead_meta query
 
-**Fix**: Improve the photo extraction logic to handle more response formats (e.g., `detail.urlFotos`, `detail.galerias`, nested arrays). Also ensure the listing response itself is checked for photo URLs (many APIs return photo arrays in the listing, not just the detail endpoint).
+2. **Fetch deal value (valor_interesse)** alongside `deal_status` in the leads query, then aggregate `totalRevenue` and per-campaign revenue from won leads
 
-**File**: `supabase/functions/imoview-sync/index.ts`
+3. **Add to summary**: `totalImpressions`, `totalReach`, `totalRevenue` (sum of `valor_interesse` from won leads)
 
-### 3. Property code prefixes too limited
-Currently `generatePropertyCode()` only handles 4 types: Casa→CA, Cobertura→CB, Comercial→CO, everything else→AP.
+4. **Add to CampaignAggregated/AdAggregated interfaces**: `revenue` field for won deal values
 
-**Fix**: Expand the prefix map to cover all property types properly:
+### File: `src/components/dashboard/CampaignPerformanceWidget.tsx`
 
-| Type | Prefix |
-|------|--------|
-| Casa | CA |
-| Apartamento | AP |
-| Cobertura | AP (is apartment) |
-| Kitnet | AP or CA (apartment variant) |
-| Flat | AP |
-| Comercial | CO |
-| Galpão | GA |
-| Terreno | TR |
-| Sítio | SI |
-| Fazenda | FA |
-| Other/custom | IM (generic) |
+1. **Add KPI cards** for: Impressões, Alcance, Receita (VGV from won deals)
+2. **Add "Vendas" and "Receita" columns** to campaign table (alongside Leads, Gasto, CPL)
+3. **Show impressions per campaign** in an expandable or tooltip
 
-**File**: `src/hooks/use-properties.ts` — update `generatePropertyCode()`
+### No database changes needed
+All required data already exists in `leads` (valor_interesse, deal_status, assigned_user_id, source) and `lead_meta` tables.
 
-### Build Error
-The build errors shown are **pre-existing** bundle size warnings (5.3MB chunk). They are not caused by recent changes. The builds complete successfully but may exceed a size limit check. No action needed for the current fixes.
+### Technical Detail
+The key fix is in the leads batch query (hook line 111):
+```typescript
+// Current: only filters by date
+.select("id, deal_status")
 
-## Technical Details
-
-### File: `src/hooks/use-properties.ts`
-- Line 26: Change `.limit(200)` to `.limit(1000)`
-- Lines 60-63: Expand the prefix mapping to a dictionary covering all property types
-
-### File: `supabase/functions/imoview-sync/index.ts`
-- Lines 160-186: Enhance photo extraction to also check the listing item itself for photo arrays (`item.fotos`, `item.imagens`, `item.urlFotos`, `item.galeria`)
-- If listing already has photos, skip the per-item detail API call (saves time and avoids rate limiting)
-- Add more field name patterns for photo URLs in the detail response
+// New: also fetch valor_interesse + apply team/user/source filters  
+.select("id, deal_status, valor_interesse, assigned_user_id, source")
+.eq("organization_id", organizationId)
+// + conditional .in("assigned_user_id", teamMemberIds) for team filter
+// + conditional .eq("assigned_user_id", userId) for user filter  
+// + conditional .eq("source", source) for source filter
+```
 
