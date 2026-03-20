@@ -23,7 +23,7 @@ export function useProperties(search?: string) {
         .from('properties')
         .select(PROPERTY_LIST_FIELDS)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(1000);
       
       if (search) {
         query = query.or(`code.ilike.%${search}%,title.ilike.%${search}%,bairro.ilike.%${search}%,cidade.ilike.%${search}%,uf.ilike.%${search}%,tipo_de_imovel.ilike.%${search}%,tipo_de_negocio.ilike.%${search}%`);
