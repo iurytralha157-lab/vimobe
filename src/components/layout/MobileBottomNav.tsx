@@ -21,6 +21,7 @@ import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import CALENDAR_JSON from '@/components/icons/calendar-icon.json';
+import AVATAR_JSON from '@/components/icons/avatar-icon.json';
 import FINANCE_JSON from '@/components/icons/finance-icon.json';
 import DASHBOARD_JSON from '@/components/icons/dashboard-icon.json';
 
@@ -133,6 +134,8 @@ export function MobileBottomNav() {
                   <AnimatedIcon icon={DASHBOARD_JSON} size={28} trigger={active ? 'loop-on-hover' : 'hover'} className="flex-shrink-0" />
                 ) : tab.icon === Calendar ? (
                   <AnimatedIcon icon={CALENDAR_JSON} size={28} trigger={active ? 'loop-on-hover' : 'hover'} className="flex-shrink-0" />
+                ) : tab.icon === Users ? (
+                  <AnimatedIcon icon={AVATAR_JSON} size={28} trigger={active ? 'loop-on-hover' : 'hover'} className="flex-shrink-0" />
                 ) : tab.icon === DollarSign ? (
                   <AnimatedIcon icon={FINANCE_JSON} size={28} trigger={active ? 'loop-on-hover' : 'hover'} className="flex-shrink-0" />
                 ) : (
