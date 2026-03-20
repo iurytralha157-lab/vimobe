@@ -112,10 +112,11 @@ export function useDashboardStats() {
 export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   const { profile } = useAuth();
   const currentUserId = profile?.id;
+  const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['enhanced-dashboard-stats', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
-    enabled: !!currentUserId,
+    queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
       // Get visibility level (admin, team leader, or normal user)
       const visibility = currentUserId 
@@ -136,6 +137,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       let query = supabase
         .from('leads')
         .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds')
+        .eq('organization_id', organizationId!)
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString());
 
@@ -187,6 +189,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       let previousQuery = supabase
         .from('leads')
         .select('id, deal_status')
+        .eq('organization_id', organizationId!)
         .gte('created_at', previousFrom.toISOString())
         .lte('created_at', previousTo.toISOString());
       
@@ -480,10 +483,11 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
 export function useTopBrokers(filters?: DashboardFilters) {
   const { profile } = useAuth();
   const currentUserId = profile?.id;
+  const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['top-brokers', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
-    enabled: !!currentUserId,
+    queryKey: ['top-brokers', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<TopBrokersResult> => {
       // Get current user to check visibility
       const visibility = currentUserId 
@@ -505,6 +509,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
           deal_status,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
         `)
+        .eq('organization_id', organizationId!)
         .not('assigned_user_id', 'is', null)
         .eq('deal_status', 'won');
 
@@ -721,10 +726,11 @@ export function useUpcomingTasks() {
 export function useDealsEvolutionData(filters?: DashboardFilters) {
   const { profile } = useAuth();
   const currentUserId = profile?.id;
+  const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['deals-evolution', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
-    enabled: !!currentUserId,
+    queryKey: ['deals-evolution', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<DealsEvolutionPoint[]> => {
       // Get visibility level
       const visibility = currentUserId 
@@ -741,6 +747,7 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       let query = supabase
         .from('leads')
         .select('id, created_at, deal_status, assigned_user_id, source')
+        .eq('organization_id', organizationId!)
         .gte('created_at', dateFrom.toISOString())
         .lte('created_at', dateTo.toISOString());
 
