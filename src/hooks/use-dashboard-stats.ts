@@ -189,6 +189,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       let previousQuery = supabase
         .from('leads')
         .select('id, deal_status')
+        .eq('organization_id', organizationId!)
         .gte('created_at', previousFrom.toISOString())
         .lte('created_at', previousTo.toISOString());
       
