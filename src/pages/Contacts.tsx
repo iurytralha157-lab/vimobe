@@ -59,14 +59,18 @@ import {
   ChevronsLeft,
   ChevronLeft,
   ChevronRight,
+  Filter,
+  CircleDot,
+  Check,
+  Plus,
   ChevronsRight,
   Tags,
   CheckSquare,
   Square,
   Trophy,
   XCircle,
-  CircleDot,
 } from 'lucide-react';
+import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ContactCard } from '@/components/contacts/ContactCard';
@@ -86,6 +90,7 @@ import { useLead, useDeleteLead } from '@/hooks/use-leads';
 import { useToast } from '@/hooks/use-toast';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
+import { AdvancedFilters } from '@/components/contacts/AdvancedFilters';
 
 export default function Contacts() {
   const isMobile = useIsMobile();
@@ -106,6 +111,7 @@ export default function Contacts() {
   const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
   const [pageInputValue, setPageInputValue] = useState('1');
   const [isExporting, setIsExporting] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -261,6 +267,13 @@ export default function Contacts() {
     datePreset || customDateRange,
   ].filter(Boolean).length;
 
+  const activeAdvancedCount = [
+    selectedAssignee !== 'all',
+    selectedTag !== 'all',
+    selectedSource !== 'all',
+    selectedDealStatus !== 'all',
+  ].filter(Boolean).length;
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -291,43 +304,8 @@ export default function Contacts() {
   return (
     <AppLayout title="Contatos">
       <div className="space-y-6 animate-in relative">
-        {/* Loading indicator for background fetches */}
-        {isFetching && !isLoading && (
-          <div className="absolute top-0 left-0 right-0 h-0.5 z-50">
-            <div className="h-full bg-primary animate-pulse" />
-          </div>
-        )}
 
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <p className="text-muted-foreground text-sm">
-            {isLoading ? 'Carregando...' : `${totalCount} contatos`}
-          </p>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size={isMobile ? 'sm' : 'default'} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                {isMobile ? <Upload className="h-4 w-4" /> : (
-                  <>
-                    Importar / Exportar
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-                <Upload className="h-4 w-4 mr-2 text-primary" />
-                Importar Contatos
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={handleExport}
-                disabled={isExporting || totalCount === 0}
-              >
-                <Download className="h-4 w-4 mr-2 text-primary" />
-                {isExporting ? 'Exportando...' : 'Exportar Contatos'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+
 
         {/* Filters - Mobile vs Desktop */}
         {isMobile ? (
@@ -357,140 +335,130 @@ export default function Contacts() {
             activeFilterCount={activeFilterCount}
           />
         ) : (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-wrap gap-3">
-                {/* Search */}
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome, email ou telefone..."
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    className="pl-9"
-                  />
-                </div>
-
-                {/* Pipeline */}
-                <Select value={selectedPipeline} onValueChange={(v) => {
-                  handleFilterChange(setSelectedPipeline)(v);
-                  setSelectedStage('all');
-                }}>
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="Pipeline" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas pipelines</SelectItem>
-                    {pipelines.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Stage */}
-                <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="Estágio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos estágios</SelectItem>
-                    {stages.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Assignee */}
-                <Select value={selectedAssignee} onValueChange={handleFilterChange(setSelectedAssignee)}>
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="Responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="unassigned">Sem responsável</SelectItem>
-                    {users.map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Tag */}
-                <Select value={selectedTag} onValueChange={handleFilterChange(setSelectedTag)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Tag" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas tags</SelectItem>
-                    {tags.map(t => (
-                      <SelectItem key={t.id} value={t.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: t.color }} />
-                          {t.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Source */}
-                <Select value={selectedSource} onValueChange={handleFilterChange(setSelectedSource)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Fonte" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas fontes</SelectItem>
-                    <SelectItem value="manual">Manual</SelectItem>
-                    <SelectItem value="meta">Meta Ads</SelectItem>
-                    <SelectItem value="site">Site</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Deal Status */}
-                <Select value={selectedDealStatus} onValueChange={handleFilterChange(setSelectedDealStatus)}>
-                  <SelectTrigger className="w-[130px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos status</SelectItem>
-                    <SelectItem value="open">
-                      <div className="flex items-center gap-2">
-                        <CircleDot className="h-3 w-3" />
-                        Aberto
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="won">
-                      <div className="flex items-center gap-2">
-                        <Trophy className="h-3 w-3 text-emerald-600" />
-                        Ganho
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="lost">
-                      <div className="flex items-center gap-2">
-                        <XCircle className="h-3 w-3 text-red-600" />
-                        Perdido
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Date Filter - Using the nice DateFilterPopover */}
-                <DateFilterPopover
-                  datePreset={datePreset}
-                  onDatePresetChange={handleFilterChange(setDatePreset)}
-                  customDateRange={customDateRange}
-                  onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
-                  defaultPreset="last30days"
-                />
-
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    <X className="h-4 w-4 mr-1" />
-                    Limpar filtros
-                  </Button>
-                )}
+          <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* Title & Count */}
+              <div className="flex items-center gap-2 pr-2 border-r mr-1">
+                <Badge variant="secondary" className="h-6 px-2 text-xs bg-muted/50 border-none font-bold">
+                  {isLoading ? '...' : totalCount}
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Search */}
+              <div className="relative w-[180px] lg:w-[240px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="pl-9 h-9 border-none bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/20"
+                />
+              </div>
+
+              <div className="h-6 w-[1px] bg-border mx-1" />
+
+              {/* Pipeline */}
+              <Select value={selectedPipeline} onValueChange={(v) => {
+                handleFilterChange(setSelectedPipeline)(v);
+                setSelectedStage('all');
+              }}>
+                <SelectTrigger className="w-[130px] lg:w-[150px] h-9 border-none bg-transparent hover:bg-muted font-medium">
+                  <SelectValue placeholder="Pipeline" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas pipelines</SelectItem>
+                  {pipelines.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Stage */}
+              <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
+                <SelectTrigger className="w-[130px] lg:w-[150px] h-9 border-none bg-transparent hover:bg-muted font-medium">
+                  <SelectValue placeholder="Estágio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos estágios</SelectItem>
+                  {stages.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="h-6 w-[1px] bg-border mx-1" />
+
+              {/* Advanced Filters Popover */}
+              <AdvancedFilters
+                selectedAssignee={selectedAssignee}
+                setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
+                users={users}
+                selectedTag={selectedTag}
+                setSelectedTag={handleFilterChange(setSelectedTag)}
+                tags={tags}
+                selectedSource={selectedSource}
+                setSelectedSource={handleFilterChange(setSelectedSource)}
+                selectedDealStatus={selectedDealStatus}
+                setSelectedDealStatus={handleFilterChange(setSelectedDealStatus)}
+                activeCount={activeAdvancedCount}
+              />
+
+              {/* Date Filter */}
+              <DateFilterPopover
+                datePreset={datePreset}
+                onDatePresetChange={handleFilterChange(setDatePreset)}
+                customDateRange={customDateRange}
+                onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
+                defaultPreset="last30days"
+                triggerClassName="rounded-lg"
+              />
+
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-3 text-muted-foreground hover:text-primary transition-colors">
+                  <X className="h-4 w-4 mr-1.5" />
+                  Limpar
+                </Button>
+              )}
+
+              <div className="h-6 w-[1px] bg-border mx-1" />
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 ml-auto">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-2 font-medium border-none hover:bg-muted">
+                      <Upload className="h-4 w-4" />
+                      {!isMobile && "Importar / Exportar"}
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="py-2.5">
+                      <Upload className="h-4 w-4 mr-2 text-primary" />
+                      Importar CSV/Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={handleExport}
+                      disabled={isExporting || totalCount === 0}
+                      className="py-2.5"
+                    >
+                      <Download className="h-4 w-4 mr-2 text-primary" />
+                      {isExporting ? 'Exportando...' : 'Exportar Lista'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Button 
+                  size="sm" 
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  className="h-9 gap-2 shadow-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Plus className="h-4 w-4" />
+                  {!isMobile && "Novo Contato"}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Content - Mobile Cards vs Desktop Table */}
@@ -520,7 +488,7 @@ export default function Contacts() {
                 <EmptyState
                   hasActiveFilters={!!hasActiveFilters}
                   onImport={() => setImportDialogOpen(true)}
-                  onCreate={() => {/* TODO: Open create dialog */}}
+                  onCreate={() => setIsCreateDialogOpen(true)}
                   onClearFilters={clearFilters}
                 />
               ) : (
@@ -545,7 +513,7 @@ export default function Contacts() {
                 <EmptyState
                   hasActiveFilters={!!hasActiveFilters}
                   onImport={() => setImportDialogOpen(true)}
-                  onCreate={() => {/* TODO: Open create dialog */}}
+                  onCreate={() => setIsCreateDialogOpen(true)}
                   onClearFilters={clearFilters}
                 />
               ) : (
@@ -597,6 +565,7 @@ export default function Contacts() {
                           isLost && "bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100/50 dark:hover:bg-red-950/30",
                           isWon && "bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/30"
                         )}
+                        onClick={() => setSelectedContactId(contact.id)}
                       >
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox 
@@ -604,10 +573,10 @@ export default function Contacts() {
                             onCheckedChange={() => toggleSelectOne(contact.id)}
                           />
                         </TableCell>
-                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                        <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-9 w-9">
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                                 {getInitials(contact.name)}
                               </AvatarFallback>
                             </Avatar>
@@ -621,7 +590,7 @@ export default function Contacts() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell onClick={() => setSelectedContactId(contact.id)}>
+                        <TableCell>
                           <div className="space-y-1">
                             {contact.phone && (
                               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -872,6 +841,12 @@ export default function Contacts() {
             refetchStages={() => {}}
           />
         )}
+
+        {/* Create Lead Dialog */}
+        <CreateLeadDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+        />
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!deleteContactId} onOpenChange={(open) => !open && setDeleteContactId(null)}>

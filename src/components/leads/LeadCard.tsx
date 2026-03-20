@@ -197,7 +197,7 @@ export function LeadCard({
               <div className="relative shrink-0">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={lead.whatsapp_picture} alt={lead.name} />
-                  <AvatarFallback className="bg-muted text-muted-foreground text-xs font-medium">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
                     {lead.name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
                   </AvatarFallback>
                 </Avatar>

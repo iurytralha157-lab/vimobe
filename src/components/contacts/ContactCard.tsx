@@ -48,11 +48,14 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
   const StatusIcon = dealStatusConfig[status]?.icon || CircleDot;
 
   return (
-    <div className={cn(
-      "p-4 border-b last:border-b-0 space-y-3 transition-colors",
-      isLost && "bg-red-50/50 dark:bg-red-950/20",
-      isWon && "bg-emerald-50/50 dark:bg-emerald-950/20"
-    )}>
+    <div 
+      className={cn(
+        "p-4 border-b last:border-b-0 space-y-3 transition-colors cursor-pointer hover:bg-muted/30",
+        isLost && "bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100/50 dark:hover:bg-red-100/50",
+        isWon && "bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 dark:hover:bg-emerald-100/50"
+      )}
+      onClick={onViewDetails}
+    >
       {/* Header: Name + Actions */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -62,6 +65,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
               <a 
                 href={`tel:${contact.phone}`} 
                 className="flex items-center gap-1 hover:text-foreground"
+                onClick={(e) => e.stopPropagation()}
               >
                 <Phone className="h-3 w-3" />
                 <span className="truncate max-w-[120px]">{contact.phone}</span>
@@ -71,6 +75,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
               <a 
                 href={`mailto:${contact.email}`} 
                 className="flex items-center gap-1 hover:text-foreground"
+                onClick={(e) => e.stopPropagation()}
               >
                 <Mail className="h-3 w-3" />
                 <span className="truncate max-w-[140px]">{contact.email}</span>
@@ -80,7 +85,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

@@ -155,6 +155,34 @@ const bottomItems: NavItem[] = [{
   labelKey: 'help',
   path: '/help'
 }];
+
+function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {
+  if (item.icon === WhatsAppIcon) {
+    return <WhatsAppIcon size={size + 4} className={cn("flex-shrink-0", className)} trigger="hover" />;
+  }
+  if (item.icon === LayoutDashboard) {
+    return <AnimatedIcon icon={DASHBOARD_JSON} size={size + 4} className={cn("flex-shrink-0", className)} trigger="hover" />;
+  }
+  if (item.icon === Users) {
+    return <AnimatedIcon icon={AVATAR_JSON} size={size + 4} trigger="hover" className={cn("flex-shrink-0", className)} />;
+  }
+  if (item.icon === Calendar) {
+    return <AnimatedIcon icon={CALENDAR_JSON} size={size + 4} className={cn("flex-shrink-0", className)} trigger="hover" />;
+  }
+  if (item.icon === DollarSign) {
+    return <AnimatedIcon icon={FINANCE_JSON} size={size + 4} className={cn("flex-shrink-0", className)} trigger="hover" />;
+  }
+  if (item.icon === Shuffle) {
+    return <AnimatedIcon icon={MANAGEMENT_JSON} size={size + 4} className={cn("flex-shrink-0", className)} trigger="hover" />;
+  }
+  if (item.labelKey === 'mySite') {
+    return <AnimatedIcon icon={GLOBE_JSON} size={size + 6} trigger="hover" className={cn("flex-shrink-0", className)} />;
+  }
+
+  const Icon = item.icon;
+  return <Icon className={cn(`h-${Math.round(size/4)} w-${Math.round(size/4)} flex-shrink-0`, className)} />;
+}
+
 export function AppSidebar() {
   const location = useLocation();
   const {
@@ -292,7 +320,7 @@ export function AppSidebar() {
           {item.children && !collapsed ? <Collapsible open={isMenuOpen(item.path) || isActiveParent(item)} onOpenChange={() => toggleMenu(item.path)}>
             <CollapsibleTrigger asChild>
               <button className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", isActiveParent(item) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30")}>
-                <item.icon className="h-5 w-5 flex-shrink-0" />
+                <SidebarIcon item={item} size={20} />
                 <span className="flex-1 text-left">{getLabel(item.labelKey)}</span>
                 <ChevronDown className={cn("h-4 w-4 transition-transform", (isMenuOpen(item.path) || isActiveParent(item)) && "rotate-180")} />
               </button>
@@ -304,21 +332,7 @@ export function AppSidebar() {
               </NavLink>)}
             </CollapsibleContent>
           </Collapsible> : <NavLink to={item.children ? item.children[0].path : item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
-            {item.icon === WhatsAppIcon ? (
-              <WhatsAppIcon size={24} className="flex-shrink-0" trigger="hover" />
-            ) : item.icon === LayoutDashboard ? (
-              <AnimatedIcon icon={DASHBOARD_JSON} size={24} className="flex-shrink-0" trigger="hover" />
-            ) : item.icon === Users ? (
-              <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" className="flex-shrink-0" />
-            ) : item.icon === Calendar ? (
-              <AnimatedIcon icon={CALENDAR_JSON} size={24} className="flex-shrink-0" trigger="hover" />
-            ) : item.icon === DollarSign ? (
-              <AnimatedIcon icon={FINANCE_JSON} size={24} className="flex-shrink-0" trigger="hover" />
-            ) : item.icon === Shuffle ? (
-              <AnimatedIcon icon={MANAGEMENT_JSON} size={24} className="flex-shrink-0" trigger="hover" />
-            ) : (
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-            )}
+            <SidebarIcon item={item} size={20} />
             {!collapsed && <span>{getLabel(item.labelKey)}</span>}
           </NavLink>}
         </li>)}
@@ -330,11 +344,7 @@ export function AppSidebar() {
       <ul className="space-y-1">
         {computedBottomItems.map(item => <li key={item.path}>
           <NavLink to={item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", location.pathname === item.path && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
-            {item.icon === Globe ? (
-              <AnimatedIcon icon={GLOBE_JSON} size={26} trigger="hover" className="flex-shrink-0" />
-            ) : (
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-            )}
+            <SidebarIcon item={item} size={20} />
             {!collapsed && <span>{getLabel(item.labelKey)}</span>}
           </NavLink>
         </li>)}

@@ -124,7 +124,7 @@ export function ConversationHeader({
         <div className="relative">
           <Avatar className="h-10 w-10 ring-2 ring-background">
             <AvatarImage src={contactPicture || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary">
+            <AvatarFallback className="bg-primary text-primary-foreground">
               {isGroup ? (
                 <Users className="w-5 h-5" />
               ) : (

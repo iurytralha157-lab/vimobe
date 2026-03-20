@@ -94,12 +94,12 @@ export function FloatingChatButton() {
           setIsDragging(false);
         }}
         onClick={handleClick}
-        size="lg"
-        className={`h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200 hover:scale-105 select-none ${isDragging ? 'scale-95 opacity-80 cursor-grabbing' : 'cursor-grab'}`}
+        size="icon"
+        className={`h-16 w-16 rounded-full shadow-2xl hover:shadow-[0_20px_50px_rgba(255,87,34,0.3)] bg-primary text-primary-foreground transition-all duration-300 hover:scale-110 active:scale-95 select-none ${isDragging ? 'scale-95 opacity-80 cursor-grabbing' : 'cursor-grab animate-in fade-in zoom-in duration-500'}`}
       >
-        <MessageCircle className="h-6 w-6" />
+        <MessageCircle className="h-8 w-8 stroke-[2.5px]" />
         {leadUnreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold shadow-sm animate-pulse">
+          <span className="absolute -top-1 -right-1 h-6 min-w-6 px-1.5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold shadow-md border-2 border-background animate-pulse">
             {leadUnreadCount > 99 ? "99+" : leadUnreadCount}
           </span>
         )}

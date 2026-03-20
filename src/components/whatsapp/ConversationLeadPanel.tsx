@@ -174,7 +174,7 @@ export function ConversationLeadPanel({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Avatar className="h-11 w-11 shrink-0">
-              <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
+              <AvatarFallback className="bg-primary text-primary-foreground text-base font-semibold">
                 {lead.name?.[0]?.toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>

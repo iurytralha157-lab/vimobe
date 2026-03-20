@@ -205,7 +205,7 @@ export function AdminHeader({ title }: AdminHeaderProps) {
                 }
                 window.location.href = '/auth';
               }} 
-              className="text-destructive focus:text-destructive cursor-pointer"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:bg-destructive/90 cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2 transition-colors"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Sair

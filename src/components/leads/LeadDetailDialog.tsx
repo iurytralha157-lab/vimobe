@@ -8,6 +8,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -1542,27 +1543,46 @@ export function LeadDetailDialog({
         <div className="mt-4 overflow-hidden">
           <ScrollArea className="w-full" type="scroll">
             <div className="flex items-center gap-0 pb-2 pr-4">
-              {stages.map((stage, idx) => {
-              const isActive = stage.id === lead.stage_id;
-              const isPast = idx < currentStageIndex;
-              const isFirst = idx === 0;
-              return <div key={stage.id} className="flex items-center shrink-0">
-                    {!isFirst && <div className={cn("w-2 h-0.5 transition-colors", isPast ? "bg-primary" : isActive ? "bg-gradient-to-r from-primary to-border" : "bg-border/50")} />}
-                    <button title={stage.name} onClick={() => handleMoveToStage(stage.id)} className={cn("relative h-5 rounded-full text-[10px] font-normal transition-all whitespace-nowrap flex items-center justify-center gap-0.5", isActive ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-2" : isPast ? "bg-primary/15 text-primary hover:bg-primary/25 min-w-5 px-1" : "text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent hover:border-border/50 min-w-5 px-1")}>
-                      {isActive ? (
-                        <>
-                          <div className="h-1 w-1 rounded-full bg-primary-foreground animate-pulse" />
-                          {stage.name}
-                        </>
-                      ) : (
-                        <>
-                          {isPast && <Check className="h-2 w-2" />}
-                          {idx + 1}
-                        </>
-                      )}
-                    </button>
-                  </div>;
-            })}
+              <TooltipProvider delayDuration={0}>
+                {stages.map((stage, idx) => {
+                  const isActive = stage.id === lead.stage_id;
+                  const isPast = idx < currentStageIndex;
+                  const isFirst = idx === 0;
+                  return (
+                    <div key={stage.id} className="flex items-center shrink-0">
+                      {!isFirst && <div className={cn("w-2 h-0.5 transition-colors", isPast ? "bg-primary" : isActive ? "bg-gradient-to-r from-primary to-border" : "bg-border/50")} />}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button 
+                            onClick={() => handleMoveToStage(stage.id)} 
+                            className={cn(
+                              "relative h-5 rounded-full text-[10px] font-normal transition-all whitespace-nowrap flex items-center justify-center gap-0.5", 
+                              isActive ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-2" : 
+                              isPast ? "bg-primary/15 text-primary hover:bg-primary/25 min-w-5 px-1" : 
+                              "text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent hover:border-border/50 min-w-5 px-1"
+                            )}
+                          >
+                            {isActive ? (
+                              <>
+                                <div className="h-1 w-1 rounded-full bg-primary-foreground animate-pulse" />
+                                {stage.name}
+                              </>
+                            ) : (
+                              <>
+                                {isPast && <Check className="h-2 w-2" />}
+                                {idx + 1}
+                              </>
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="bg-popover text-popover-foreground border shadow-md py-1.5 px-3 text-xs font-medium">
+                          <p>{stage.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  );
+                })}
+              </TooltipProvider>
             </div>
             <ScrollBar orientation="horizontal" className="h-1.5" />
           </ScrollArea>

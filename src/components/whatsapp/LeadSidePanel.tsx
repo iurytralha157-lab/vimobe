@@ -93,7 +93,7 @@ export function LeadSidePanel({
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
               <AvatarImage src={undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+              <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                 {lead.name?.[0]?.toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
