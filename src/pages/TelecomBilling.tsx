@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, DollarSign, Users, AlertTriangle, CheckCircle } from 'lucide-react';
@@ -101,7 +102,6 @@ export default function TelecomBilling() {
       });
     } else {
       // Create new billing record
-      const { supabase } = await import('@/integrations/supabase/client');
       const customer = customers.find(c => c.id === customerId);
       
       await supabase.from('telecom_billing').insert({
