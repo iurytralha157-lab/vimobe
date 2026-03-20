@@ -112,10 +112,11 @@ export function useDashboardStats() {
 export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   const { profile } = useAuth();
   const currentUserId = profile?.id;
+  const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['enhanced-dashboard-stats', currentUserId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
-    enabled: !!currentUserId,
+    queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
       // Get visibility level (admin, team leader, or normal user)
       const visibility = currentUserId 
@@ -136,6 +137,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       let query = supabase
         .from('leads')
         .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds')
+        .eq('organization_id', organizationId!)
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString());
 
