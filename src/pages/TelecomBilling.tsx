@@ -102,7 +102,6 @@ export default function TelecomBilling() {
       });
     } else {
       // Create new billing record
-      const { supabase } = await import(/* @vite-ignore */ '@/integrations/supabase/client');
       const customer = customers.find(c => c.id === customerId);
       
       await supabase.from('telecom_billing').insert({
