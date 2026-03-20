@@ -19,6 +19,8 @@ import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { MobileSidebar } from './MobileSidebar';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
+import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
+import CALENDAR_JSON from '@/components/icons/calendar-icon.json';
 
 interface TabItem {
   icon: any;
@@ -125,6 +127,8 @@ export function MobileBottomNav() {
                 }
                 {tab.icon === WhatsAppIcon ? (
                   <WhatsAppIcon size={32} trigger={active ? 'loop-on-hover' : 'hover'} />
+                ) : tab.icon === Calendar ? (
+                  <AnimatedIcon icon={CALENDAR_JSON} size={28} trigger={active ? 'loop-on-hover' : 'hover'} className="flex-shrink-0" />
                 ) : (
                   <tab.icon className="h-5 w-5" />
                 )}

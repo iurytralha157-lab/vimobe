@@ -3,6 +3,7 @@ import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
+import CALENDAR_JSON from '@/components/icons/calendar-icon.json';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -304,6 +305,8 @@ export function AppSidebar() {
               <WhatsAppIcon size={32} className="flex-shrink-0" />
             ) : item.icon === Users ? (
               <AnimatedIcon icon={AVATAR_JSON} size={28} trigger="hover" className="flex-shrink-0" />
+            ) : item.icon === Calendar ? (
+              <AnimatedIcon icon={CALENDAR_JSON} size={28} trigger="hover" className="flex-shrink-0" />
             ) : (
               <item.icon className="h-5 w-5 flex-shrink-0" />
             )}

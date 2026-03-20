@@ -38,6 +38,8 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
+import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
+import CALENDAR_JSON from '@/components/icons/calendar-icon.json';
 
 interface NavItem {
   icon: any;
@@ -267,6 +269,8 @@ export function MobileSidebar({ externalOpen, onExternalOpenChange }: MobileSide
                   >
                     {item.icon === WhatsAppIcon ? (
                       <WhatsAppIcon size={32} className="flex-shrink-0" />
+                    ) : item.icon === Calendar ? (
+                      <AnimatedIcon icon={CALENDAR_JSON} size={28} trigger="hover" className="flex-shrink-0" />
                     ) : (
                       <item.icon className="h-5 w-5" />
                     )}
