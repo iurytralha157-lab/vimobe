@@ -6,6 +6,7 @@ import AVATAR_JSON from '@/components/icons/avatar-icon.json';
 import CALENDAR_JSON from '@/components/icons/calendar-icon.json';
 import FINANCE_JSON from '@/components/icons/finance-icon.json';
 import MANAGEMENT_JSON from '@/components/icons/management-icon.json';
+import DASHBOARD_JSON from '@/components/icons/dashboard-icon.json';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -305,6 +306,8 @@ export function AppSidebar() {
           </Collapsible> : <NavLink to={item.children ? item.children[0].path : item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
             {item.icon === WhatsAppIcon ? (
               <WhatsAppIcon size={24} className="flex-shrink-0" trigger="hover" />
+            ) : item.icon === LayoutDashboard ? (
+              <AnimatedIcon icon={DASHBOARD_JSON} size={24} className="flex-shrink-0" trigger="hover" />
             ) : item.icon === Users ? (
               <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" className="flex-shrink-0" />
             ) : item.icon === Calendar ? (

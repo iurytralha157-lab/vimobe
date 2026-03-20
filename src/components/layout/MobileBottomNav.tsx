@@ -22,6 +22,7 @@ import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import CALENDAR_JSON from '@/components/icons/calendar-icon.json';
 import FINANCE_JSON from '@/components/icons/finance-icon.json';
+import DASHBOARD_JSON from '@/components/icons/dashboard-icon.json';
 
 interface TabItem {
   icon: any;
@@ -128,6 +129,8 @@ export function MobileBottomNav() {
                 }
                 {tab.icon === WhatsAppIcon ? (
                   <WhatsAppIcon size={28} trigger={active ? 'loop-on-hover' : 'hover'} />
+                ) : tab.icon === LayoutDashboard ? (
+                  <AnimatedIcon icon={DASHBOARD_JSON} size={28} trigger={active ? 'loop-on-hover' : 'hover'} className="flex-shrink-0" />
                 ) : tab.icon === Calendar ? (
                   <AnimatedIcon icon={CALENDAR_JSON} size={28} trigger={active ? 'loop-on-hover' : 'hover'} className="flex-shrink-0" />
                 ) : tab.icon === DollarSign ? (
