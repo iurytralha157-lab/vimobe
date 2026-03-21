@@ -677,8 +677,8 @@ export default function Contacts() {
                                 variant="secondary"
                                 className="text-[10px] px-1.5"
                                 style={{ 
-                                  backgroundColor: `${tag.color}20`,
-                                  color: tag.color,
+                                  backgroundColor: tag.color,
+                                  color: '#FFFFFF',
                                   borderColor: tag.color
                                 }}
                               >
