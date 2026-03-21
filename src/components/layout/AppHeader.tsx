@@ -86,7 +86,7 @@ export function AppHeader({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="relative h-10 w-10 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 transition-all duration-300"
+              className="relative h-10 w-10 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
