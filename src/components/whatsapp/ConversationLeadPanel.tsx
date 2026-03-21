@@ -396,9 +396,9 @@ export function ConversationLeadPanel({
                 </div>
                 {/* Collapsible Filters */}
                 {showFilters && (
-                  <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b">
+                  <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b">
                     <select
-                      className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
+                      className="h-9 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
                       value={filterType}
                       onChange={(e) => setFilterType(e.target.value)}
                     >
@@ -408,7 +408,7 @@ export function ConversationLeadPanel({
                       ))}
                     </select>
                     <select
-                      className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
+                      className="h-9 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
                       value={filterPurpose}
                       onChange={(e) => setFilterPurpose(e.target.value)}
                     >
@@ -418,7 +418,7 @@ export function ConversationLeadPanel({
                       ))}
                     </select>
                     <select
-                      className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
+                      className="h-9 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
                       value={filterLocation}
                       onChange={(e) => setFilterLocation(e.target.value)}
                     >
