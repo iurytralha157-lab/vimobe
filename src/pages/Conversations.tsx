@@ -446,9 +446,9 @@ export default function Conversations() {
 
   // Desktop Layout
   return <AppLayout title="Conversas">
-      <div className="flex h-[calc(100vh-7rem)] bg-background rounded-lg overflow-hidden border-0">
+      <div className="flex h-[calc(100vh-7rem)] gap-3 overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-[350px] min-w-[350px] max-w-[350px] border-r bg-card flex flex-col overflow-hidden">
+        <aside className="w-[350px] min-w-[350px] max-w-[350px] bg-card flex flex-col overflow-hidden rounded-2xl">
           {/* Header com filtros */}
           <div className="p-3 border-b space-y-2 bg-card">
             <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
@@ -506,7 +506,7 @@ export default function Conversations() {
         </aside>
 
         {/* Chat Area */}
-        <main className="flex-1 flex flex-col bg-background min-w-0">
+        <main className="flex-1 flex flex-col bg-card min-w-0 rounded-2xl overflow-hidden">
           {selectedConversation ? <>
               {/* Header do chat */}
               <ConversationHeader
