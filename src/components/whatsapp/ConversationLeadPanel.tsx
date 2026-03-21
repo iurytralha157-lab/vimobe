@@ -71,7 +71,7 @@ function parseCurrencyToNumber(masked: string): number {
   return parseFloat(cleaned) || 0;
 }
 
-export function ConversationLeadPanel({ leadId, onClose, className }: ConversationLeadPanelProps) {
+export function ConversationLeadPanel({ leadId, onClose, className, contactPicture }: ConversationLeadPanelProps) {
   const { data: lead, isLoading } = useConversationLeadDetail(leadId);
   const { data: allStages } = useStages(lead?.pipeline_id || undefined);
   const { data: allTags } = useTags();
