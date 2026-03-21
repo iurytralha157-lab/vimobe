@@ -294,8 +294,8 @@ export function TagsTab() {
                       <div>
                         <Badge 
                           variant="secondary"
-                          style={{ backgroundColor: `${tag.color}15`, color: tag.color, borderColor: `${tag.color}30` }}
-                          className="text-sm font-semibold border"
+                          style={{ backgroundColor: tag.color, color: '#FFFFFF' }}
+                          className="text-sm font-semibold border-0"
                         >
                           {tag.name}
                         </Badge>
