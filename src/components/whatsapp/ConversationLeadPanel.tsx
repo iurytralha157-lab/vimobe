@@ -379,7 +379,7 @@ export function ConversationLeadPanel({
                     />
                   </div>
                 </DialogHeader>
-                <ScrollArea className="flex-1 min-h-0 px-4 pb-4">
+                <div className="flex-1 overflow-y-auto px-4 pb-4">
                   <div className="grid grid-cols-3 gap-2">
                     {(properties || [])
                       .filter((p) => {
