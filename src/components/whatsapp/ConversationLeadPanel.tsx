@@ -42,6 +42,7 @@ import {
   Search,
   ChevronRight,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
