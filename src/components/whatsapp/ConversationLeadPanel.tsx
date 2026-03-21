@@ -291,10 +291,10 @@ export function ConversationLeadPanel({
                 <Badge
                   key={lt.tag.id}
                   variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-5 cursor-pointer group/tag hover:opacity-80"
+                  className="text-[10px] px-1.5 py-0 h-5 cursor-pointer group/tag hover:opacity-80 border-0"
                   style={{
-                    backgroundColor: `${lt.tag.color}20`,
-                    color: lt.tag.color,
+                    backgroundColor: lt.tag.color,
+                    color: '#FFFFFF',
                   }}
                   onClick={() => handleRemoveTag(lt.tag.id)}
                   title="Clique para remover"
