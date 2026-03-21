@@ -472,7 +472,7 @@ export function ConversationLeadPanel({
                               </div>
                             )}
                             {p.code && (
-                              <Badge className="absolute top-1.5 left-1.5 text-[9px] px-1.5 py-0 h-4 bg-background/80 text-foreground backdrop-blur-sm border-0">
+                              <Badge className="absolute top-1.5 left-1.5 text-[9px] px-1.5 py-0 h-4 bg-[#ff482a] text-white backdrop-blur-sm border-0">
                                 {p.code}
                               </Badge>
                             )}
