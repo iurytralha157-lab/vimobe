@@ -366,7 +366,7 @@ export function ConversationLeadPanel({
             </Button>
 
             <Dialog open={propertyPickerOpen} onOpenChange={setPropertyPickerOpen}>
-              <DialogContent className="w-[90%] max-w-2xl max-h-[85vh] flex flex-col p-0">
+              <DialogContent className="w-[90%] max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
                 <DialogHeader className="p-4 pb-2">
                   <DialogTitle className="text-sm">Selecionar Imóvel</DialogTitle>
                   <div className="relative mt-2">
@@ -379,7 +379,7 @@ export function ConversationLeadPanel({
                     />
                   </div>
                 </DialogHeader>
-                <ScrollArea className="flex-1 min-h-0 px-4 pb-4">
+                <div className="flex-1 overflow-y-auto px-4 pb-4">
                   <div className="grid grid-cols-3 gap-2">
                     {(properties || [])
                       .filter((p) => {
@@ -435,7 +435,7 @@ export function ConversationLeadPanel({
                         </button>
                       ))}
                   </div>
-                </ScrollArea>
+                </div>
               </DialogContent>
             </Dialog>
           </section>
