@@ -92,6 +92,8 @@ export function ConversationLeadPanel({
   const removeTag = useRemoveLeadTag();
 
   const [valorLocal, setValorLocal] = useState("");
+  const [propertyPickerOpen, setPropertyPickerOpen] = useState(false);
+  const [propertySearch, setPropertySearch] = useState("");
 
   // Sync local value state with lead data
   useEffect(() => {
