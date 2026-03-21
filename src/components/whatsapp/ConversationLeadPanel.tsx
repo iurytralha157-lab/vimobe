@@ -43,6 +43,7 @@ import {
   MessageSquareText,
   Search,
   ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
