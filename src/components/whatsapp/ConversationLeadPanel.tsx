@@ -203,10 +203,7 @@ export function ConversationLeadPanel({
             </h4>
             <Select value={dealStatus} onValueChange={handleDealStatusChange}>
               <SelectTrigger className="h-8 text-xs">
-                <div className="flex items-center gap-2">
-                  <CircleDot className="h-3 w-3" style={{ color: currentDealStatus.color }} />
-                  <SelectValue />
-                </div>
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {DEAL_STATUS_OPTIONS.map((opt) => (
@@ -234,15 +231,7 @@ export function ConversationLeadPanel({
             {allStages && allStages.length > 0 ? (
               <Select value={lead.stage_id || ""} onValueChange={handleStageChange}>
                 <SelectTrigger className="h-8 text-xs">
-                  <div className="flex items-center gap-2">
-                    {stage?.color && (
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: stage.color }}
-                      />
-                    )}
-                    <SelectValue placeholder="Selecionar estágio" />
-                  </div>
+                  <SelectValue placeholder="Selecionar estágio" />
                 </SelectTrigger>
                 <SelectContent>
                   {allStages.map((s) => (
