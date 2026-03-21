@@ -157,7 +157,7 @@ export function AppHeader({
           <DropdownMenuTrigger asChild>
             <Button 
               variant="ghost" 
-              className="h-12 gap-3 pl-1.5 pr-2 rounded-full bg-card dark:bg-[#111] border border-border/40 dark:border-white/5 transition-all duration-300 group"
+              className="h-12 gap-3 pl-1.5 pr-2 rounded-full bg-card dark:bg-[#111] transition-all duration-300 group"
             >
               <Avatar className="h-9 w-9 border border-border/40 dark:border-white/10 ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all">
                 <AvatarImage src={profile?.avatar_url || undefined} className="object-cover" />
