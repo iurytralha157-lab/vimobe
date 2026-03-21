@@ -369,9 +369,9 @@ export function ConversationLeadPanel({
 
             <Dialog open={propertyPickerOpen} onOpenChange={setPropertyPickerOpen}>
               <DialogContent className="w-[90%] max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
-                <DialogHeader className="p-4 pb-2">
-                  <DialogTitle className="text-sm">Selecionar Imóvel</DialogTitle>
-                  <div className="relative mt-2">
+                <div className="flex items-center gap-3 p-4 pb-3 border-b">
+                  <DialogTitle className="text-sm font-semibold whitespace-nowrap">Selecionar Imóvel</DialogTitle>
+                  <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       placeholder="Buscar por código ou nome..."
@@ -380,7 +380,7 @@ export function ConversationLeadPanel({
                       onChange={(e) => setPropertySearch(e.target.value)}
                     />
                   </div>
-                </DialogHeader>
+                </div>
                 <div className="flex-1 overflow-y-auto px-4 pb-4">
                   <div className="grid grid-cols-3 gap-2">
                     {(properties || [])
