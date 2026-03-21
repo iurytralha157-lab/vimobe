@@ -178,9 +178,9 @@ export function LeadCard({
             
             {/* Tags - primeira tag em destaque */}
             {lead.tags && lead.tags.length > 0 && <>
-                <span className="text-[9px] px-1.5 py-0.5 font-medium rounded-full" style={{
-            backgroundColor: `${lead.tags[0].color}20`,
-            color: lead.tags[0].color,
+                <span className="text-[9px] px-1.5 py-0.5 font-medium rounded-full border" style={{
+            backgroundColor: lead.tags[0].color,
+            color: '#FFFFFF',
             borderColor: lead.tags[0].color
           }}>
                   {lead.tags[0].name}

@@ -182,7 +182,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
                 key={tag.id} 
                 variant="secondary"
                 className="text-xs"
-                style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                style={{ backgroundColor: tag.color, color: '#FFFFFF' }}
               >
                 {tag.name}
               </Badge>
