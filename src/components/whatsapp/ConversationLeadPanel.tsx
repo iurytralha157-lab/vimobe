@@ -369,7 +369,7 @@ export function ConversationLeadPanel({ leadId, onClose, className }: Conversati
                 </div>
                 {/* Collapsible Filters */}
                 {showFilters && (
-                  <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b">
+                  <div className="flex flex-wrap items-center gap-3 px-4 pt-4 pb-3 border-b">
                     <select
                       className="h-9 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
                       value={filterType}
