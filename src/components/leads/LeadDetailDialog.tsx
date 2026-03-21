@@ -612,9 +612,9 @@ export function LeadDetailDialog({
                   key={tag.id}
                   className="flex items-center gap-1 pr-1 py-0 text-[10px] rounded-full h-5 leading-none"
                   style={{
-                    backgroundColor: `${tag.color}18`,
-                    color: tag.color,
-                    borderColor: `${tag.color}30`
+                    backgroundColor: tag.color,
+                    color: '#FFFFFF',
+                    borderColor: tag.color
                   }}
                 >
                   <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
