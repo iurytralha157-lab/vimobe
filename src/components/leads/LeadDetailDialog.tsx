@@ -1510,9 +1510,9 @@ export function LeadDetailDialog({
         {/* Tags - Premium */}
         <div className="flex flex-wrap items-center gap-2">
           {lead.tags?.map((tag: any) => <Badge key={tag.id} className="flex items-center gap-1.5 pr-1.5 py-1 rounded-full shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5" style={{
-          backgroundColor: `${tag.color}15`,
-          color: tag.color,
-          borderColor: `${tag.color}30`
+          backgroundColor: tag.color,
+          color: '#FFFFFF',
+          borderColor: tag.color
         }}>
               <div className="h-2 w-2 rounded-full shadow-sm" style={{
             backgroundColor: tag.color
