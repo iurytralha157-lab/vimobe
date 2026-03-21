@@ -376,7 +376,7 @@ export function ConversationLeadPanel({
               <DialogContent className="w-[90%] max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
                 <div className="flex items-center gap-3 p-4 pr-12 pb-3 border-b">
                   <DialogTitle className="text-sm font-semibold whitespace-nowrap">Selecionar Imóvel</DialogTitle>
-                  <div className="relative flex-1">
+                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       placeholder="Buscar por código ou nome..."
@@ -385,40 +385,50 @@ export function ConversationLeadPanel({
                       onChange={(e) => setPropertySearch(e.target.value)}
                     />
                   </div>
+                  <Button
+                    variant={showFilters ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => setShowFilters(!showFilters)}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                {/* Filters */}
-                <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto">
-                  <select
-                    className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                  >
-                    <option value="">Todos os tipos</option>
-                    {[...new Set((properties || []).map(p => p.tipo_de_imovel).filter(Boolean))].sort().map(t => (
-                      <option key={t} value={t!}>{t}</option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
-                    value={filterPurpose}
-                    onChange={(e) => setFilterPurpose(e.target.value)}
-                  >
-                    <option value="">Todas finalidades</option>
-                    {[...new Set((properties || []).map(p => p.tipo_de_negocio).filter(Boolean))].sort().map(t => (
-                      <option key={t} value={t!}>{t}</option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
-                    value={filterLocation}
-                    onChange={(e) => setFilterLocation(e.target.value)}
-                  >
-                    <option value="">Todas localizações</option>
-                    {[...new Set((properties || []).map(p => [p.bairro, p.cidade].filter(Boolean).join(", ")).filter(v => v))].sort().map(loc => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Collapsible Filters */}
+                {showFilters && (
+                  <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto border-b">
+                    <select
+                      className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                    >
+                      <option value="">Todos os tipos</option>
+                      {[...new Set((properties || []).map(p => p.tipo_de_imovel).filter(Boolean))].sort().map(t => (
+                        <option key={t} value={t!}>{t}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
+                      value={filterPurpose}
+                      onChange={(e) => setFilterPurpose(e.target.value)}
+                    >
+                      <option value="">Todas finalidades</option>
+                      {[...new Set((properties || []).map(p => p.tipo_de_negocio).filter(Boolean))].sort().map(t => (
+                        <option key={t} value={t!}>{t}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
+                      value={filterLocation}
+                      onChange={(e) => setFilterLocation(e.target.value)}
+                    >
+                      <option value="">Todas localizações</option>
+                      {[...new Set((properties || []).map(p => [p.bairro, p.cidade].filter(Boolean).join(", ")).filter(v => v))].sort().map(loc => (
+                        <option key={loc} value={loc}>{loc}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto px-4 pb-4">
                   <div className="grid grid-cols-3 gap-2">
                     {(properties || [])
