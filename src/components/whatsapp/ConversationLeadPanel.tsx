@@ -366,7 +366,7 @@ export function ConversationLeadPanel({
             </Button>
 
             <Dialog open={propertyPickerOpen} onOpenChange={setPropertyPickerOpen}>
-              <DialogContent className="w-[90%] max-w-2xl max-h-[85vh] flex flex-col p-0">
+              <DialogContent className="w-[90%] max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
                 <DialogHeader className="p-4 pb-2">
                   <DialogTitle className="text-sm">Selecionar Imóvel</DialogTitle>
                   <div className="relative mt-2">
