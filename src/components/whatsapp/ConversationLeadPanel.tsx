@@ -168,7 +168,7 @@ export function ConversationLeadPanel({
   const hasCampaignInfo = meta?.campaign_name || meta?.ad_name || meta?.form_name || meta?.utm_source || meta?.utm_campaign;
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-l", className)}>
+    <div className={cn("flex flex-col h-full bg-card rounded-2xl overflow-hidden", className)}>
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-start justify-between">
