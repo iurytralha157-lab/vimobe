@@ -211,8 +211,8 @@ export function LeadSidePanel({
                   <Badge
                     key={lt.tag.id}
                     variant="secondary"
-                    className="text-xs cursor-pointer hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: `${lt.tag.color}20`, color: lt.tag.color }}
+                    className="text-xs cursor-pointer hover:opacity-80 transition-opacity border-0"
+                    style={{ backgroundColor: lt.tag.color, color: '#FFFFFF' }}
                     onClick={() => onRemoveTag?.(lt.tag.id)}
                   >
                     {lt.tag.name}
