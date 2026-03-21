@@ -506,7 +506,7 @@ export default function Conversations() {
         </aside>
 
         {/* Chat Area */}
-        <main className="flex-1 flex flex-col bg-background min-w-0">
+        <main className="flex-1 flex flex-col bg-card min-w-0 rounded-2xl overflow-hidden">
           {selectedConversation ? <>
               {/* Header do chat */}
               <ConversationHeader
