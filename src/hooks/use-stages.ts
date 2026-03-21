@@ -149,17 +149,29 @@ export function useStagesWithLeads(pipelineId?: string) {
       let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
       
       if (leadsWithPhone.length > 0) {
-        // Collect normalized phone numbers to filter server-side
-        const phoneNumbers = leadsWithPhone
-          .map((l: any) => normalizePhone(l.phone))
-          .filter(Boolean);
+        // Collect phone numbers in both normalized and with-55 formats for DB matching
+        const phoneNumbers: string[] = [];
+        leadsWithPhone.forEach((l: any) => {
+          const cleaned = l.phone.replace(/\D/g, '');
+          if (!cleaned) return;
+          // Add the cleaned version
+          phoneNumbers.push(cleaned);
+          // If it starts with 55, also add without 55
+          if (cleaned.startsWith('55') && cleaned.length >= 12) {
+            phoneNumbers.push(cleaned.substring(2));
+          } else {
+            // If it doesn't start with 55, also add with 55
+            phoneNumbers.push('55' + cleaned);
+          }
+        });
+        const uniquePhones = [...new Set(phoneNumbers.filter(Boolean))];
         
         // Filter by phone numbers to avoid fetching all conversations
-        const { data: conversations } = phoneNumbers.length > 0
+        const { data: conversations } = uniquePhones.length > 0
           ? await supabase
               .from('whatsapp_conversations')
               .select('contact_phone, contact_picture, unread_count')
-              .in('contact_phone', phoneNumbers)
+              .in('contact_phone', uniquePhones)
               .is('deleted_at', null)
           : { data: [] };
         
