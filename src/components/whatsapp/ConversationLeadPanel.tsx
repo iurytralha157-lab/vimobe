@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,6 +49,7 @@ interface ConversationLeadPanelProps {
   leadId: string;
   onClose: () => void;
   className?: string;
+  contactPicture?: string | null;
 }
 
 const DEAL_STATUS_OPTIONS = [
@@ -70,7 +71,7 @@ function parseCurrencyToNumber(masked: string): number {
   return parseFloat(cleaned) || 0;
 }
 
-export function ConversationLeadPanel({ leadId, onClose, className }: ConversationLeadPanelProps) {
+export function ConversationLeadPanel({ leadId, onClose, className, contactPicture }: ConversationLeadPanelProps) {
   const { data: lead, isLoading } = useConversationLeadDetail(leadId);
   const { data: allStages } = useStages(lead?.pipeline_id || undefined);
   const { data: allTags } = useTags();
@@ -177,6 +178,7 @@ export function ConversationLeadPanel({ leadId, onClose, className }: Conversati
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Avatar className="h-11 w-11 shrink-0">
+              <AvatarImage src={contactPicture || undefined} />
               <AvatarFallback className="bg-primary text-primary-foreground text-base font-semibold">
                 {lead.name?.[0]?.toUpperCase() || "?"}
               </AvatarFallback>

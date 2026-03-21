@@ -617,6 +617,7 @@ export default function Conversations() {
           <ConversationLeadPanel
             leadId={selectedConversation.lead.id}
             onClose={() => setShowLeadPanel(false)}
+            contactPicture={selectedConversation.contact_picture}
             className="w-[300px] min-w-[300px] max-w-[300px] shrink-0 animate-in slide-in-from-right-5 duration-300"
           />
         )}
