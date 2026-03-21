@@ -309,31 +309,54 @@ export default function Contacts() {
 
         {/* Filters - Mobile vs Desktop */}
         {isMobile ? (
-          <MobileFilters
-            search={search}
-            setSearch={(v) => { setSearch(v); setPage(1); }}
-            selectedPipeline={selectedPipeline}
-            setSelectedPipeline={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}
-            selectedStage={selectedStage}
-            setSelectedStage={handleFilterChange(setSelectedStage)}
-            selectedAssignee={selectedAssignee}
-            setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
-            selectedTag={selectedTag}
-            setSelectedTag={handleFilterChange(setSelectedTag)}
-            selectedSource={selectedSource}
-            setSelectedSource={handleFilterChange(setSelectedSource)}
-            datePreset={datePreset}
-            onDatePresetChange={handleFilterChange(setDatePreset)}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
-            pipelines={pipelines}
-            stages={stages}
-            users={users}
-            tags={tags}
-            hasActiveFilters={!!hasActiveFilters}
-            clearFilters={clearFilters}
-            activeFilterCount={activeFilterCount}
-          />
+          <div className="flex gap-2 items-center w-full">
+            <MobileFilters
+              search={search}
+              setSearch={(v) => { setSearch(v); setPage(1); }}
+              selectedPipeline={selectedPipeline}
+              setSelectedPipeline={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}
+              selectedStage={selectedStage}
+              setSelectedStage={handleFilterChange(setSelectedStage)}
+              selectedAssignee={selectedAssignee}
+              setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
+              selectedTag={selectedTag}
+              setSelectedTag={handleFilterChange(setSelectedTag)}
+              selectedSource={selectedSource}
+              setSelectedSource={handleFilterChange(setSelectedSource)}
+              datePreset={datePreset}
+              onDatePresetChange={handleFilterChange(setDatePreset)}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
+              pipelines={pipelines}
+              stages={stages}
+              users={users}
+              tags={tags}
+              hasActiveFilters={!!hasActiveFilters}
+              clearFilters={clearFilters}
+              activeFilterCount={activeFilterCount}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0">
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setImportDialogOpen(true)} className="py-2.5">
+                  <Upload className="h-4 w-4 mr-2 text-primary" />
+                  Importar CSV/Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={handleExport}
+                  disabled={isExporting || totalCount === 0}
+                  className="py-2.5"
+                >
+                  <Download className="h-4 w-4 mr-2 text-primary" />
+                  {isExporting ? 'Exportando...' : 'Exportar Lista'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : (
           <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm">
             <div className="flex flex-wrap items-center gap-1.5">
