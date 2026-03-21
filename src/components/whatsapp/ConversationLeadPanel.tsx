@@ -435,7 +435,7 @@ export function ConversationLeadPanel({
                         </button>
                       ))}
                   </div>
-                </ScrollArea>
+                </div>
               </DialogContent>
             </Dialog>
           </section>
