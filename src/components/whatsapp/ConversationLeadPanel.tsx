@@ -96,6 +96,9 @@ export function ConversationLeadPanel({
   const [valorLocal, setValorLocal] = useState("");
   const [propertyPickerOpen, setPropertyPickerOpen] = useState(false);
   const [propertySearch, setPropertySearch] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterPurpose, setFilterPurpose] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
 
   // Sync local value state with lead data
   useEffect(() => {
