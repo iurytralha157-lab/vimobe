@@ -100,6 +100,7 @@ export function ConversationLeadPanel({
   const [filterType, setFilterType] = useState("");
   const [filterPurpose, setFilterPurpose] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Sync local value state with lead data
   useEffect(() => {
