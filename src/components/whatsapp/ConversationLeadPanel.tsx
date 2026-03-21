@@ -178,6 +178,7 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <Avatar className="h-11 w-11 shrink-0">
+              <AvatarImage src={contactPicture || undefined} />
               <AvatarFallback className="bg-primary text-primary-foreground text-base font-semibold">
                 {lead.name?.[0]?.toUpperCase() || "?"}
               </AvatarFallback>
