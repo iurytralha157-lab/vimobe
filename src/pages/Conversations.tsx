@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
 import { CreateLeadDialog } from "@/components/conversations/CreateLeadDialog";
@@ -605,7 +606,7 @@ export default function Conversations() {
                 </div>
               </footer>
             </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30">
-              <MessageSquare className="w-12 h-12 mb-3 opacity-50" />
+              <WhatsAppIcon className="w-12 h-12 mb-3 opacity-50" />
               <p className="font-medium">Selecione uma conversa</p>
               <p className="text-sm">para começar a enviar mensagens</p>
             </div>}
