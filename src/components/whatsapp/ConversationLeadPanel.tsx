@@ -203,10 +203,7 @@ export function ConversationLeadPanel({
             </h4>
             <Select value={dealStatus} onValueChange={handleDealStatusChange}>
               <SelectTrigger className="h-8 text-xs">
-                <div className="flex items-center gap-2">
-                  <CircleDot className="h-3 w-3" style={{ color: currentDealStatus.color }} />
-                  <SelectValue />
-                </div>
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {DEAL_STATUS_OPTIONS.map((opt) => (
