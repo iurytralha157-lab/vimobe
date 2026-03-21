@@ -7,19 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,11 +70,7 @@ function parseCurrencyToNumber(masked: string): number {
   return parseFloat(cleaned) || 0;
 }
 
-export function ConversationLeadPanel({
-  leadId,
-  onClose,
-  className,
-}: ConversationLeadPanelProps) {
+export function ConversationLeadPanel({ leadId, onClose, className }: ConversationLeadPanelProps) {
   const { data: lead, isLoading } = useConversationLeadDetail(leadId);
   const { data: allStages } = useStages(lead?.pipeline_id || undefined);
   const { data: allTags } = useTags();
@@ -182,7 +167,8 @@ export function ConversationLeadPanel({
   const currentDealStatus = DEAL_STATUS_OPTIONS.find((s) => s.value === dealStatus) || DEAL_STATUS_OPTIONS[0];
 
   // Campaign/source info
-  const hasCampaignInfo = meta?.campaign_name || meta?.ad_name || meta?.form_name || meta?.utm_source || meta?.utm_campaign;
+  const hasCampaignInfo =
+    meta?.campaign_name || meta?.ad_name || meta?.form_name || meta?.utm_source || meta?.utm_campaign;
 
   return (
     <div className={cn("flex flex-col h-full bg-card rounded-2xl overflow-hidden", className)}>
@@ -197,11 +183,7 @@ export function ConversationLeadPanel({
             </Avatar>
             <div className="min-w-0">
               <h3 className="font-semibold text-sm truncate">{lead.name}</h3>
-              {lead.phone && (
-                <p className="text-xs text-muted-foreground">
-                  {formatPhoneForDisplay(lead.phone)}
-                </p>
-              )}
+              {lead.phone && <p className="text-xs text-muted-foreground">{formatPhoneForDisplay(lead.phone)}</p>}
             </div>
           </div>
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onClose}>
@@ -212,12 +194,9 @@ export function ConversationLeadPanel({
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
-
           {/* Deal Status */}
           <section>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Status
-            </h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Status</h4>
             <Select value={dealStatus} onValueChange={handleDealStatusChange}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
@@ -239,12 +218,8 @@ export function ConversationLeadPanel({
 
           {/* Pipeline / Stage - Editable */}
           <section>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Estágio
-            </h4>
-            {pipeline && (
-              <p className="text-xs text-muted-foreground mb-1.5">{pipeline.name}</p>
-            )}
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Estágio</h4>
+            {pipeline && <p className="text-xs text-muted-foreground mb-1.5">{pipeline.name}</p>}
             {allStages && allStages.length > 0 ? (
               <Select value={lead.stage_id || ""} onValueChange={handleStageChange}>
                 <SelectTrigger className="h-8 text-xs">
@@ -289,9 +264,7 @@ export function ConversationLeadPanel({
 
           {/* Tags - Editable */}
           <section>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Tags
-            </h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tags</h4>
             <div className="flex flex-wrap gap-1.5">
               {leadTags.map((lt: any) => (
                 <Badge
@@ -300,7 +273,7 @@ export function ConversationLeadPanel({
                   className="text-[10px] px-1.5 py-0 h-5 cursor-pointer group/tag hover:opacity-80 border-0"
                   style={{
                     backgroundColor: lt.tag.color,
-                    color: '#FFFFFF',
+                    color: "#FFFFFF",
                   }}
                   onClick={() => handleRemoveTag(lt.tag.id)}
                   title="Clique para remover"
@@ -309,7 +282,7 @@ export function ConversationLeadPanel({
                   <X className="h-2.5 w-2.5 ml-1 opacity-0 group-hover/tag:opacity-100 transition-opacity" />
                 </Badge>
               ))}
-              
+
               {/* Add tag button */}
               {availableTagsToAdd.length > 0 && (
                 <DropdownMenu>
@@ -326,10 +299,7 @@ export function ConversationLeadPanel({
                         onClick={() => handleAddTag(tag.id)}
                         className="flex items-center gap-2 text-xs"
                       >
-                        <div
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: tag.color }}
-                        />
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                         {tag.name}
                       </DropdownMenuItem>
                     ))}
@@ -352,7 +322,10 @@ export function ConversationLeadPanel({
             <Button
               variant="outline"
               className="w-full h-8 text-xs justify-between px-3"
-              onClick={() => { setPropertySearch(""); setPropertyPickerOpen(true); }}
+              onClick={() => {
+                setPropertySearch("");
+                setPropertyPickerOpen(true);
+              }}
             >
               <div className="flex items-center gap-2 min-w-0">
                 <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -364,7 +337,7 @@ export function ConversationLeadPanel({
                         const code = p.code || "";
                         const title = p.title || "Sem título";
                         const full = code ? `${code} - ${title}` : title;
-                        return full.length > (code.length + 13) ? full.slice(0, code.length + 13) + "..." : full;
+                        return full.length > code.length + 13 ? full.slice(0, code.length + 13) + "..." : full;
                       })()
                     : "Nenhum"}
                 </span>
@@ -376,7 +349,7 @@ export function ConversationLeadPanel({
               <DialogContent className="w-[95%] max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
                 <div className="flex items-center gap-3 p-4 pr-12 pb-3 border-b">
                   <DialogTitle className="text-sm font-semibold whitespace-nowrap">Selecionar Imóvel</DialogTitle>
-                   <div className="relative flex-1">
+                  <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       placeholder="Buscar por código ou nome..."
@@ -398,13 +371,15 @@ export function ConversationLeadPanel({
                 {showFilters && (
                   <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b">
                     <select
-                      className="h-9 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
+                      className="h-5 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
                       value={filterType}
                       onChange={(e) => setFilterType(e.target.value)}
                     >
                       <option value="">Todos os tipos</option>
-                      {[...new Set((properties || []).map(p => p.tipo_de_imovel).filter(Boolean))].sort().map(t => (
-                        <option key={t} value={t!}>{t}</option>
+                      {[...new Set((properties || []).map((p) => p.tipo_de_imovel).filter(Boolean))].sort().map((t) => (
+                        <option key={t} value={t!}>
+                          {t}
+                        </option>
                       ))}
                     </select>
                     <select
@@ -413,9 +388,13 @@ export function ConversationLeadPanel({
                       onChange={(e) => setFilterPurpose(e.target.value)}
                     >
                       <option value="">Todas finalidades</option>
-                      {[...new Set((properties || []).map(p => p.tipo_de_negocio).filter(Boolean))].sort().map(t => (
-                        <option key={t} value={t!}>{t}</option>
-                      ))}
+                      {[...new Set((properties || []).map((p) => p.tipo_de_negocio).filter(Boolean))]
+                        .sort()
+                        .map((t) => (
+                          <option key={t} value={t!}>
+                            {t}
+                          </option>
+                        ))}
                     </select>
                     <select
                       className="h-9 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
@@ -423,9 +402,19 @@ export function ConversationLeadPanel({
                       onChange={(e) => setFilterLocation(e.target.value)}
                     >
                       <option value="">Todas localizações</option>
-                      {[...new Set((properties || []).map(p => [p.bairro, p.cidade].filter(Boolean).join(", ")).filter(v => v))].sort().map(loc => (
-                        <option key={loc} value={loc}>{loc}</option>
-                      ))}
+                      {[
+                        ...new Set(
+                          (properties || [])
+                            .map((p) => [p.bairro, p.cidade].filter(Boolean).join(", "))
+                            .filter((v) => v),
+                        ),
+                      ]
+                        .sort()
+                        .map((loc) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 )}
@@ -434,11 +423,15 @@ export function ConversationLeadPanel({
                     {(properties || [])
                       .filter((p) => {
                         const s = propertySearch.toLowerCase();
-                        if (s && !(
-                          (p.code || "").toLowerCase().includes(s) ||
-                          (p.title || "").toLowerCase().includes(s) ||
-                          (p.bairro || "").toLowerCase().includes(s)
-                        )) return false;
+                        if (
+                          s &&
+                          !(
+                            (p.code || "").toLowerCase().includes(s) ||
+                            (p.title || "").toLowerCase().includes(s) ||
+                            (p.bairro || "").toLowerCase().includes(s)
+                          )
+                        )
+                          return false;
                         if (filterType && p.tipo_de_imovel !== filterType) return false;
                         if (filterPurpose && p.tipo_de_negocio !== filterPurpose) return false;
                         if (filterLocation) {
@@ -452,7 +445,7 @@ export function ConversationLeadPanel({
                           key={p.id}
                           className={cn(
                             "flex flex-col rounded-xl border overflow-hidden text-left transition-all hover:ring-2 hover:ring-primary/50",
-                            currentPropertyId === p.id && "ring-2 ring-primary"
+                            currentPropertyId === p.id && "ring-2 ring-primary",
                           )}
                           onClick={() => {
                             handlePropertyChange(p.id);
@@ -480,11 +473,16 @@ export function ConversationLeadPanel({
                           <div className="p-2 space-y-0.5">
                             <p className="text-[11px] font-medium truncate">{p.title || "Sem título"}</p>
                             {p.bairro && (
-                              <p className="text-[10px] text-muted-foreground truncate">{p.bairro}{p.cidade ? `, ${p.cidade}` : ""}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {p.bairro}
+                                {p.cidade ? `, ${p.cidade}` : ""}
+                              </p>
                             )}
                             {p.preco && (
                               <p className="text-[11px] font-semibold text-primary">
-                                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(p.preco))}
+                                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+                                  Number(p.preco),
+                                )}
                               </p>
                             )}
                           </div>
@@ -519,9 +517,7 @@ export function ConversationLeadPanel({
 
           {/* Campaign / Source Info */}
           <section>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Origem
-            </h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Origem</h4>
             <div className="space-y-2">
               {lead.source && (
                 <div className="flex items-center gap-2 text-xs">
@@ -529,7 +525,7 @@ export function ConversationLeadPanel({
                   <span className="capitalize">{lead.source}</span>
                 </div>
               )}
-              
+
               {hasCampaignInfo && (
                 <div className="rounded-md bg-muted/50 p-2.5 space-y-1.5">
                   {meta.campaign_name && (
@@ -586,7 +582,11 @@ export function ConversationLeadPanel({
                   )}
                   {meta.utm_source && !meta.campaign_name && (
                     <div className="text-xs text-muted-foreground">
-                      UTM: <span className="text-foreground">{meta.utm_source}{meta.utm_medium ? ` / ${meta.utm_medium}` : ""}</span>
+                      UTM:{" "}
+                      <span className="text-foreground">
+                        {meta.utm_source}
+                        {meta.utm_medium ? ` / ${meta.utm_medium}` : ""}
+                      </span>
                     </div>
                   )}
                   {meta.utm_campaign && !meta.campaign_name && (
@@ -596,7 +596,7 @@ export function ConversationLeadPanel({
                   )}
                 </div>
               )}
-              
+
               {!lead.source && !hasCampaignInfo && (
                 <p className="text-xs text-muted-foreground">Sem informação de origem</p>
               )}
@@ -625,9 +625,7 @@ export function ConversationLeadPanel({
 
           {/* Quick Actions */}
           <section>
-            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Ações
-            </h4>
+            <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações</h4>
             <div className="space-y-1.5">
               <Button variant="outline" size="sm" className="w-full justify-start h-8 text-xs !rounded-xl" asChild>
                 <Link to={`/crm/pipelines?lead=${lead.id}`}>
