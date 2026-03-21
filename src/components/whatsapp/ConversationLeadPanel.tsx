@@ -396,7 +396,7 @@ export function ConversationLeadPanel({
                 </div>
                 {/* Collapsible Filters */}
                 {showFilters && (
-                  <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto border-b">
+                  <div className="flex flex-wrap items-center gap-2 px-4 py-3 overflow-x-auto border-b">
                     <select
                       className="h-7 text-[11px] rounded-md border bg-background px-2 min-w-0"
                       value={filterType}
