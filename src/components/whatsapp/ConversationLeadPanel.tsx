@@ -49,6 +49,7 @@ interface ConversationLeadPanelProps {
   leadId: string;
   onClose: () => void;
   className?: string;
+  contactPicture?: string | null;
 }
 
 const DEAL_STATUS_OPTIONS = [
