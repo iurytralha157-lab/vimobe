@@ -371,7 +371,7 @@ export function ConversationLeadPanel({ leadId, onClose, className }: Conversati
                 {showFilters && (
                   <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b">
                     <select
-                      className="h-5 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
+                      className="h-9 text-xs rounded-md border bg-background px-3 flex-1 min-w-[140px]"
                       value={filterType}
                       onChange={(e) => setFilterType(e.target.value)}
                     >
