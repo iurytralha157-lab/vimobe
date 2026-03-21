@@ -495,14 +495,14 @@ export function ConversationLeadPanel({
               Ações
             </h4>
             <div className="space-y-1.5">
-              <Button variant="outline" size="sm" className="w-full justify-start h-8 text-xs rounded-lg" asChild>
+              <Button variant="outline" size="sm" className="w-full justify-start h-8 text-xs !rounded-xl" asChild>
                 <Link to={`/crm/pipelines?lead=${lead.id}`}>
                   <User className="h-3.5 w-3.5 mr-2" />
                   Ver Lead Completo
                   <ArrowRight className="h-3.5 w-3.5 ml-auto" />
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start h-8 text-xs rounded-lg" asChild>
+              <Button variant="outline" size="sm" className="w-full justify-start h-8 text-xs !rounded-xl" asChild>
                 <Link to={`/crm/pipelines?lead=${lead.id}&tab=history`}>
                   <History className="h-3.5 w-3.5 mr-2" />
                   Ver Histórico
