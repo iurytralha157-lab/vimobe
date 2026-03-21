@@ -606,7 +606,7 @@ export default function Conversations() {
                 </div>
               </footer>
             </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30">
-              <WhatsAppIcon className="w-12 h-12 mb-3 opacity-50" />
+              <WhatsAppIcon className="w-20 h-20 mb-3 opacity-50" />
               <p className="font-medium">Selecione uma conversa</p>
               <p className="text-sm">para começar a enviar mensagens</p>
             </div>}
