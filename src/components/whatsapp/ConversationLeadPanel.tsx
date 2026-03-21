@@ -341,12 +341,19 @@ export function ConversationLeadPanel({
               </SelectTrigger>
               <SelectContent className="max-h-60">
                 <SelectItem value="none" className="text-xs text-muted-foreground">Nenhum</SelectItem>
-                {(properties || []).map((p) => (
-                  <SelectItem key={p.id} value={p.id} className="text-xs">
-                    {p.code ? `${p.code} - ` : ""}{p.title || "Sem título"}
-                    {p.preco ? ` (${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(p.preco))})` : ""}
-                  </SelectItem>
-                ))}
+                {(properties || []).map((p) => {
+                  const code = p.code || "";
+                  const title = p.title || "Sem título";
+                  const fullLabel = code ? `${code} - ${title}` : title;
+                  const truncatedLabel = fullLabel.length > (code.length + 13) 
+                    ? fullLabel.slice(0, code.length + 13) + "..." 
+                    : fullLabel;
+                  return (
+                    <SelectItem key={p.id} value={p.id} className="text-xs">
+                      {truncatedLabel}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </section>
