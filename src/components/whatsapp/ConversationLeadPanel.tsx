@@ -6,6 +6,12 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,6 +39,8 @@ import {
   ExternalLink,
   Building2,
   MessageSquareText,
+  Search,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
@@ -84,6 +92,8 @@ export function ConversationLeadPanel({
   const removeTag = useRemoveLeadTag();
 
   const [valorLocal, setValorLocal] = useState("");
+  const [propertyPickerOpen, setPropertyPickerOpen] = useState(false);
+  const [propertySearch, setPropertySearch] = useState("");
 
   // Sync local value state with lead data
   useEffect(() => {
@@ -332,30 +342,102 @@ export function ConversationLeadPanel({
             <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Imóvel de Interesse
             </h4>
-            <Select value={currentPropertyId || "none"} onValueChange={(v) => v !== "none" && handlePropertyChange(v)}>
-              <SelectTrigger className="h-8 text-xs">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <SelectValue placeholder="Selecionar imóvel" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                <SelectItem value="none" className="text-xs text-muted-foreground">Nenhum</SelectItem>
-                {(properties || []).map((p) => {
-                  const code = p.code || "";
-                  const title = p.title || "Sem título";
-                  const fullLabel = code ? `${code} - ${title}` : title;
-                  const truncatedLabel = fullLabel.length > (code.length + 13) 
-                    ? fullLabel.slice(0, code.length + 13) + "..." 
-                    : fullLabel;
-                  return (
-                    <SelectItem key={p.id} value={p.id} className="text-xs">
-                      {truncatedLabel}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            <Button
+              variant="outline"
+              className="w-full h-8 text-xs justify-between px-3"
+              onClick={() => { setPropertySearch(""); setPropertyPickerOpen(true); }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="truncate">
+                  {currentPropertyId
+                    ? (() => {
+                        const p = (properties || []).find((p) => p.id === currentPropertyId);
+                        if (!p) return "Selecionar imóvel";
+                        const code = p.code || "";
+                        const title = p.title || "Sem título";
+                        const full = code ? `${code} - ${title}` : title;
+                        return full.length > (code.length + 13) ? full.slice(0, code.length + 13) + "..." : full;
+                      })()
+                    : "Nenhum"}
+                </span>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </Button>
+
+            <Dialog open={propertyPickerOpen} onOpenChange={setPropertyPickerOpen}>
+              <DialogContent className="w-[90%] max-w-2xl max-h-[85vh] flex flex-col p-0">
+                <DialogHeader className="p-4 pb-2">
+                  <DialogTitle className="text-sm">Selecionar Imóvel</DialogTitle>
+                  <div className="relative mt-2">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por código ou nome..."
+                      className="h-8 text-xs pl-8"
+                      value={propertySearch}
+                      onChange={(e) => setPropertySearch(e.target.value)}
+                    />
+                  </div>
+                </DialogHeader>
+                <ScrollArea className="flex-1 min-h-0 px-4 pb-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    {(properties || [])
+                      .filter((p) => {
+                        if (!propertySearch) return true;
+                        const s = propertySearch.toLowerCase();
+                        return (
+                          (p.code || "").toLowerCase().includes(s) ||
+                          (p.title || "").toLowerCase().includes(s) ||
+                          (p.bairro || "").toLowerCase().includes(s)
+                        );
+                      })
+                      .map((p) => (
+                        <button
+                          key={p.id}
+                          className={cn(
+                            "flex flex-col rounded-xl border overflow-hidden text-left transition-all hover:ring-2 hover:ring-primary/50",
+                            currentPropertyId === p.id && "ring-2 ring-primary"
+                          )}
+                          onClick={() => {
+                            handlePropertyChange(p.id);
+                            setPropertyPickerOpen(false);
+                          }}
+                        >
+                          <div className="aspect-[4/3] bg-muted relative">
+                            {p.imagem_principal ? (
+                              <img
+                                src={p.imagem_principal}
+                                alt={p.title || "Imóvel"}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Building2 className="h-6 w-6 text-muted-foreground/40" />
+                              </div>
+                            )}
+                            {p.code && (
+                              <Badge className="absolute top-1.5 left-1.5 text-[9px] px-1.5 py-0 h-4 bg-background/80 text-foreground backdrop-blur-sm border-0">
+                                {p.code}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="p-2 space-y-0.5">
+                            <p className="text-[11px] font-medium truncate">{p.title || "Sem título"}</p>
+                            {p.bairro && (
+                              <p className="text-[10px] text-muted-foreground truncate">{p.bairro}{p.cidade ? `, ${p.cidade}` : ""}</p>
+                            )}
+                            {p.preco && (
+                              <p className="text-[11px] font-semibold text-primary">
+                                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(p.preco))}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
           </section>
 
           <Separator />
