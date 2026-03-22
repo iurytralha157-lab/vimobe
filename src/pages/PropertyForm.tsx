@@ -205,7 +205,14 @@ export default function PropertyForm() {
     if (!loadingProximities && proximities.length === 0) seedProximities.mutate();
   }, [loadingProximities, proximities.length]);
 
-  // Populate form when editing
+  // Auto-save draft for new properties
+  useEffect(() => {
+    if (!isEditing) {
+      const timer = setTimeout(() => saveDraft(formData), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [formData, isEditing]);
+
   useEffect(() => {
     if (property && isEditing) {
       const p = property as any;
