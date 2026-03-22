@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Loader2, ArrowLeft, Save, User, MapPin, Home, Settings2, Image, Globe, Key, FileText, DollarSign, Lock, Tag } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, Save, User, MapPin, Home, Settings2, Image, Globe, Key, DollarSign, Lock, Tag } from 'lucide-react';
 import { useProperty, useCreateProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { usePropertyTypes, useCreatePropertyType } from '@/hooks/use-property-types';
 import { usePropertyFeatures, useCreatePropertyFeature, useSeedDefaultFeatures, DEFAULT_FEATURES } from '@/hooks/use-property-features';
