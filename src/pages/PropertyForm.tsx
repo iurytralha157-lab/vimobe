@@ -1095,14 +1095,6 @@ export default function PropertyForm() {
             </Card>
           </TabsContent>
 
-          {/* 11. Arquivos */}
-          <TabsContent value="files">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Arquivos do Imóvel</CardTitle></CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-sm">Upload de arquivos estará disponível em breve. Use a aba "Fotos" para enviar imagens do imóvel.</p>
-              </CardContent>
-            </Card>
           </TabsContent>
           </div>
         </Tabs>
