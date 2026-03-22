@@ -19,6 +19,7 @@ import { Wrench } from 'lucide-react';
 interface AppLayoutProps {
   children: ReactNode;
   title?: string;
+  disableMainScroll?: boolean;
 }
 
 function MaintenanceBanner() {
@@ -39,7 +40,7 @@ function MaintenanceBanner() {
   );
 }
 
-function AppLayoutContent({ children, title }: AppLayoutProps) {
+function AppLayoutContent({ children, title, disableMainScroll = false }: AppLayoutProps) {
   const isMobile = useIsMobile();
   
   // Start WhatsApp session health monitoring
@@ -71,7 +72,7 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
           <AppHeader title={title} />
           
           {/* Conteúdo da página */}
-          <main className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-3 md:py-4 ${isMobile ? 'pb-20' : ''}`}>
+          <main className={`flex-1 min-h-0 ${disableMainScroll ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'} px-4 md:px-6 py-3 md:py-4 ${isMobile ? 'pb-20' : ''}`}>
             {children}
           </main>
         </div>
@@ -91,11 +92,13 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
   );
 }
 
-export function AppLayout({ children, title }: AppLayoutProps) {
+export function AppLayout({ children, title, disableMainScroll = false }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <FloatingChatProvider>
-        <AppLayoutContent title={title}>{children}</AppLayoutContent>
+        <AppLayoutContent title={title} disableMainScroll={disableMainScroll}>
+          {children}
+        </AppLayoutContent>
       </FloatingChatProvider>
     </SidebarProvider>
   );

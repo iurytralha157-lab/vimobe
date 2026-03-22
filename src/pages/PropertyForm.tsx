@@ -384,10 +384,10 @@ export default function PropertyForm() {
   const set = (field: keyof PropertyFormData, value: any) => setFormData(prev => ({ ...prev, [field]: value }));
 
   return (
-    <AppLayout title={isEditing ? 'Editar Imóvel' : 'Novo Imóvel'}>
-      <form onSubmit={handleSubmit} className="space-y-4 animate-in pb-4">
+    <AppLayout title={isEditing ? 'Editar Imóvel' : 'Novo Imóvel'} disableMainScroll>
+      <form onSubmit={handleSubmit} className="h-full min-h-0 flex flex-col gap-4 animate-in">
         {/* Top bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-shrink-0">
           <Button type="button" variant="ghost" onClick={() => navigate('/properties')}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Button>
@@ -407,10 +407,10 @@ export default function PropertyForm() {
         </div>
 
         {isEditing && property && (
-          <div className="text-sm text-muted-foreground">Código: <span className="font-mono font-medium text-foreground">{property.code}</span></div>
+          <div className="text-sm text-muted-foreground flex-shrink-0">Código: <span className="font-mono font-medium text-foreground">{property.code}</span></div>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col gap-4">
           {isMobile ? (
             <Select value={activeTab} onValueChange={setActiveTab}>
               <SelectTrigger className="w-full">
@@ -432,7 +432,7 @@ export default function PropertyForm() {
               </SelectContent>
             </Select>
           ) : (
-            <TabsList className="flex-wrap h-auto gap-1">
+            <TabsList className="flex-wrap h-auto gap-1 flex-shrink-0">
               {tabs.map(tab => (
                 <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
                   <tab.icon className="h-4 w-4" />
@@ -442,6 +442,7 @@ export default function PropertyForm() {
             </TabsList>
           )}
 
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-6">
           {/* 1. Proprietário */}
           <TabsContent value="owner">
             <Card>
@@ -1103,8 +1104,8 @@ export default function PropertyForm() {
               </CardContent>
             </Card>
           </TabsContent>
+          </div>
         </Tabs>
-
       </form>
     </AppLayout>
   );
