@@ -25,6 +25,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Contacts = lazy(() => import("./pages/Contacts"));
 const Properties = lazy(() => import("./pages/Properties"));
+const PropertyForm = lazy(() => import("./pages/PropertyForm"));
 const PropertyRentals = lazy(() => import("./pages/PropertyRentals"));
 const PropertyLocations = lazy(() => import("./pages/PropertyLocations"));
 const CRMManagement = lazy(() => import("./pages/CRMManagement"));
