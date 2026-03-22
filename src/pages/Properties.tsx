@@ -118,15 +118,10 @@ const GRID_OPTIONS = [
 ];
 
 export default function Properties() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [previewProperty, setPreviewProperty] = useState<Property | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [newTypeName, setNewTypeName] = useState('');
-  const [showAddType, setShowAddType] = useState(false);
-  const [loadingPropertyId, setLoadingPropertyId] = useState<string | null>(null);
   const [gridCols, setGridCols] = useState('4');
   const [vistaOpen, setVistaOpen] = useState(false);
   const [imoviewOpen, setImoviewOpen] = useState(false);
