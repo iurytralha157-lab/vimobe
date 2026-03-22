@@ -1095,7 +1095,6 @@ export default function PropertyForm() {
             </Card>
           </TabsContent>
 
-          </TabsContent>
           </div>
         </Tabs>
       </form>
