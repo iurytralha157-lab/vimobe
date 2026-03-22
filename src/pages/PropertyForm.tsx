@@ -154,13 +154,32 @@ const formatCurrencyDisplay = (value: string): string => {
 
 const parseCurrencyInput = (value: string): string => value.replace(/\D/g, '');
 
+const DRAFT_KEY = 'property-form-draft';
+
+function saveDraft(data: PropertyFormData) {
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
 export default function PropertyForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
   const isMobile = useIsMobile();
 
-  const [formData, setFormData] = useState<PropertyFormData>(initialFormData);
+  const [formData, setFormData] = useState<PropertyFormData>(() => {
+    if (!id) {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (raw) return { ...initialFormData, ...JSON.parse(raw) };
+      } catch {}
+    }
+    return initialFormData;
+  });
+  const [hasDraft] = useState(() => !id && !!localStorage.getItem(DRAFT_KEY));
   const [activeTab, setActiveTab] = useState('owner');
   const [newTypeName, setNewTypeName] = useState('');
   const [showAddType, setShowAddType] = useState(false);
