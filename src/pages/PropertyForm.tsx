@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Loader2, ArrowLeft, Save, User, MapPin, Home, Settings2, Image, Globe, Key, FileText, DollarSign, Lock, Tag } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, Save, User, MapPin, Home, Settings2, Image, Globe, Key, DollarSign, Lock, Tag } from 'lucide-react';
 import { useProperty, useCreateProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { usePropertyTypes, useCreatePropertyType } from '@/hooks/use-property-types';
 import { usePropertyFeatures, useCreatePropertyFeature, useSeedDefaultFeatures, DEFAULT_FEATURES } from '@/hooks/use-property-features';
@@ -378,7 +378,7 @@ export default function PropertyForm() {
     { value: 'publication', label: 'Publicação', icon: Globe },
     { value: 'commissions', label: 'Comissões', icon: DollarSign },
     { value: 'confidential', label: 'Confidencial', icon: Lock },
-    { value: 'files', label: 'Arquivos', icon: FileText },
+    
   ];
 
   const set = (field: keyof PropertyFormData, value: any) => setFormData(prev => ({ ...prev, [field]: value }));
@@ -1095,15 +1095,6 @@ export default function PropertyForm() {
             </Card>
           </TabsContent>
 
-          {/* 11. Arquivos */}
-          <TabsContent value="files">
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Arquivos do Imóvel</CardTitle></CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-sm">Upload de arquivos estará disponível em breve. Use a aba "Fotos" para enviar imagens do imóvel.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
           </div>
         </Tabs>
       </form>
