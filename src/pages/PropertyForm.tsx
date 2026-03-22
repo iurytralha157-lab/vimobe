@@ -18,6 +18,7 @@ import { usePropertyProximities, useCreatePropertyProximity, useSeedDefaultProxi
 import { ImageUploader } from '@/components/properties/ImageUploader';
 import { FeatureSelector } from '@/components/properties/FeatureSelector';
 import { useUsers } from '@/hooks/use-users';
+import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 
