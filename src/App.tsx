@@ -25,6 +25,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Contacts = lazy(() => import("./pages/Contacts"));
 const Properties = lazy(() => import("./pages/Properties"));
+const PropertyForm = lazy(() => import("./pages/PropertyForm"));
 const PropertyRentals = lazy(() => import("./pages/PropertyRentals"));
 const PropertyLocations = lazy(() => import("./pages/PropertyLocations"));
 const CRMManagement = lazy(() => import("./pages/CRMManagement"));
@@ -182,6 +183,8 @@ function AppRoutes() {
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
+            <Route path="/properties/new" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
+            <Route path="/properties/:id/edit" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
             <Route path="/properties/rentals" element={<ProtectedRoute><PropertyRentals /></ProtectedRoute>} />
             <Route path="/properties/condominiums" element={<ProtectedRoute><PropertyLocations /></ProtectedRoute>} />
             <Route path="/properties/locations" element={<ProtectedRoute><PropertyLocations /></ProtectedRoute>} />

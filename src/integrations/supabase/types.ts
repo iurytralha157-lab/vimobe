@@ -3381,25 +3381,45 @@ export type Database = {
       }
       properties: {
         Row: {
+          aceita_financiamento: boolean | null
           andar: number | null
           ano_construcao: number | null
+          ano_reforma: number | null
+          anunciar: boolean | null
+          aprovacao_ambiental: string | null
           area_total: number | null
           area_util: number | null
+          arquivos: Json | null
+          autorizado_comercializacao: boolean | null
           bairro: string | null
           banheiros: number | null
+          cadastrado_por: string | null
           cep: string | null
           cidade: string | null
           city_id: string | null
           code: string
+          codigo_agua: string | null
+          codigo_eletricidade: string | null
+          codigo_iptu: string | null
+          comentarios_internos: string | null
+          comissao_locacao: number | null
+          comissao_venda: number | null
           commission_percentage: number | null
           complemento: string | null
+          condicao_comercial: string | null
+          condicao_pagamento: string | null
           condominio: number | null
           condominium_id: string | null
+          corretor_id: string | null
           created_at: string
+          data_inicio_comissao: string | null
           descricao: string | null
+          descricao_site: string | null
           destaque: boolean | null
           detalhes_extras: string[] | null
           endereco: string | null
+          exclusividade: boolean | null
+          finalidade: string | null
           fotos: Json | null
           id: string
           imagem_principal: string | null
@@ -3407,48 +3427,97 @@ export type Database = {
           iptu: number | null
           is_demo: boolean
           latitude: number | null
+          local_chaves: string | null
           longitude: number | null
+          marcadores: string[] | null
           mobilia: string | null
           neighborhood_id: string | null
           numero: string | null
+          numero_matricula: string | null
+          observacoes_documentacao: string | null
+          ocupacao: string | null
           organization_id: string
+          owner_cellphone: string | null
+          owner_email: string | null
+          owner_media_source: string | null
+          owner_name: string | null
+          owner_notify_email: boolean | null
+          owner_phone_commercial: string | null
+          owner_phone_residential: string | null
+          padrao: string | null
+          pais: string | null
+          placa_no_local: boolean | null
+          posicao_localizacao: string | null
           preco: number | null
+          projeto_aprovado: boolean | null
           proximidades: string[] | null
           quartos: number | null
+          referencia_alternativa: string | null
           regra_pet: boolean | null
           seguro_incendio: number | null
+          situacao_imovel: string | null
           status: string | null
+          status_descritivo: string | null
           suites: number | null
+          super_destaque: boolean | null
           taxa_de_servico: number | null
+          tipo_comissao: string | null
           tipo_de_imovel: string | null
           tipo_de_negocio: string | null
           title: string | null
+          tour_virtual: string | null
           uf: string | null
           updated_at: string
+          usou_fgts: boolean | null
           vagas: number | null
+          valor_itr: number | null
+          valor_locacao_avaliado: number | null
+          valor_seguro_fianca: number | null
+          valor_venda_avaliado: number | null
           video_imovel: string | null
           vista_codigo: string | null
+          zoneamento: string | null
         }
         Insert: {
+          aceita_financiamento?: boolean | null
           andar?: number | null
           ano_construcao?: number | null
+          ano_reforma?: number | null
+          anunciar?: boolean | null
+          aprovacao_ambiental?: string | null
           area_total?: number | null
           area_util?: number | null
+          arquivos?: Json | null
+          autorizado_comercializacao?: boolean | null
           bairro?: string | null
           banheiros?: number | null
+          cadastrado_por?: string | null
           cep?: string | null
           cidade?: string | null
           city_id?: string | null
           code: string
+          codigo_agua?: string | null
+          codigo_eletricidade?: string | null
+          codigo_iptu?: string | null
+          comentarios_internos?: string | null
+          comissao_locacao?: number | null
+          comissao_venda?: number | null
           commission_percentage?: number | null
           complemento?: string | null
+          condicao_comercial?: string | null
+          condicao_pagamento?: string | null
           condominio?: number | null
           condominium_id?: string | null
+          corretor_id?: string | null
           created_at?: string
+          data_inicio_comissao?: string | null
           descricao?: string | null
+          descricao_site?: string | null
           destaque?: boolean | null
           detalhes_extras?: string[] | null
           endereco?: string | null
+          exclusividade?: boolean | null
+          finalidade?: string | null
           fotos?: Json | null
           id?: string
           imagem_principal?: string | null
@@ -3456,48 +3525,97 @@ export type Database = {
           iptu?: number | null
           is_demo?: boolean
           latitude?: number | null
+          local_chaves?: string | null
           longitude?: number | null
+          marcadores?: string[] | null
           mobilia?: string | null
           neighborhood_id?: string | null
           numero?: string | null
+          numero_matricula?: string | null
+          observacoes_documentacao?: string | null
+          ocupacao?: string | null
           organization_id: string
+          owner_cellphone?: string | null
+          owner_email?: string | null
+          owner_media_source?: string | null
+          owner_name?: string | null
+          owner_notify_email?: boolean | null
+          owner_phone_commercial?: string | null
+          owner_phone_residential?: string | null
+          padrao?: string | null
+          pais?: string | null
+          placa_no_local?: boolean | null
+          posicao_localizacao?: string | null
           preco?: number | null
+          projeto_aprovado?: boolean | null
           proximidades?: string[] | null
           quartos?: number | null
+          referencia_alternativa?: string | null
           regra_pet?: boolean | null
           seguro_incendio?: number | null
+          situacao_imovel?: string | null
           status?: string | null
+          status_descritivo?: string | null
           suites?: number | null
+          super_destaque?: boolean | null
           taxa_de_servico?: number | null
+          tipo_comissao?: string | null
           tipo_de_imovel?: string | null
           tipo_de_negocio?: string | null
           title?: string | null
+          tour_virtual?: string | null
           uf?: string | null
           updated_at?: string
+          usou_fgts?: boolean | null
           vagas?: number | null
+          valor_itr?: number | null
+          valor_locacao_avaliado?: number | null
+          valor_seguro_fianca?: number | null
+          valor_venda_avaliado?: number | null
           video_imovel?: string | null
           vista_codigo?: string | null
+          zoneamento?: string | null
         }
         Update: {
+          aceita_financiamento?: boolean | null
           andar?: number | null
           ano_construcao?: number | null
+          ano_reforma?: number | null
+          anunciar?: boolean | null
+          aprovacao_ambiental?: string | null
           area_total?: number | null
           area_util?: number | null
+          arquivos?: Json | null
+          autorizado_comercializacao?: boolean | null
           bairro?: string | null
           banheiros?: number | null
+          cadastrado_por?: string | null
           cep?: string | null
           cidade?: string | null
           city_id?: string | null
           code?: string
+          codigo_agua?: string | null
+          codigo_eletricidade?: string | null
+          codigo_iptu?: string | null
+          comentarios_internos?: string | null
+          comissao_locacao?: number | null
+          comissao_venda?: number | null
           commission_percentage?: number | null
           complemento?: string | null
+          condicao_comercial?: string | null
+          condicao_pagamento?: string | null
           condominio?: number | null
           condominium_id?: string | null
+          corretor_id?: string | null
           created_at?: string
+          data_inicio_comissao?: string | null
           descricao?: string | null
+          descricao_site?: string | null
           destaque?: boolean | null
           detalhes_extras?: string[] | null
           endereco?: string | null
+          exclusividade?: boolean | null
+          finalidade?: string | null
           fotos?: Json | null
           id?: string
           imagem_principal?: string | null
@@ -3505,27 +3623,56 @@ export type Database = {
           iptu?: number | null
           is_demo?: boolean
           latitude?: number | null
+          local_chaves?: string | null
           longitude?: number | null
+          marcadores?: string[] | null
           mobilia?: string | null
           neighborhood_id?: string | null
           numero?: string | null
+          numero_matricula?: string | null
+          observacoes_documentacao?: string | null
+          ocupacao?: string | null
           organization_id?: string
+          owner_cellphone?: string | null
+          owner_email?: string | null
+          owner_media_source?: string | null
+          owner_name?: string | null
+          owner_notify_email?: boolean | null
+          owner_phone_commercial?: string | null
+          owner_phone_residential?: string | null
+          padrao?: string | null
+          pais?: string | null
+          placa_no_local?: boolean | null
+          posicao_localizacao?: string | null
           preco?: number | null
+          projeto_aprovado?: boolean | null
           proximidades?: string[] | null
           quartos?: number | null
+          referencia_alternativa?: string | null
           regra_pet?: boolean | null
           seguro_incendio?: number | null
+          situacao_imovel?: string | null
           status?: string | null
+          status_descritivo?: string | null
           suites?: number | null
+          super_destaque?: boolean | null
           taxa_de_servico?: number | null
+          tipo_comissao?: string | null
           tipo_de_imovel?: string | null
           tipo_de_negocio?: string | null
           title?: string | null
+          tour_virtual?: string | null
           uf?: string | null
           updated_at?: string
+          usou_fgts?: boolean | null
           vagas?: number | null
+          valor_itr?: number | null
+          valor_locacao_avaliado?: number | null
+          valor_seguro_fianca?: number | null
+          valor_venda_avaliado?: number | null
           video_imovel?: string | null
           vista_codigo?: string | null
+          zoneamento?: string | null
         }
         Relationships: [
           {
@@ -3540,6 +3687,13 @@ export type Database = {
             columns: ["condominium_id"]
             isOneToOne: false
             referencedRelation: "property_condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_corretor_id_fkey"
+            columns: ["corretor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
