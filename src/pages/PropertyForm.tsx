@@ -385,7 +385,7 @@ export default function PropertyForm() {
 
   return (
     <AppLayout title={isEditing ? 'Editar Imóvel' : 'Novo Imóvel'}>
-      <form onSubmit={handleSubmit} className="space-y-4 animate-in">
+      <form onSubmit={handleSubmit} className="space-y-4 animate-in pb-4">
         {/* Top bar */}
         <div className="flex items-center justify-between">
           <Button type="button" variant="ghost" onClick={() => navigate('/properties')}>
