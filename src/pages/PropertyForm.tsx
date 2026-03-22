@@ -401,15 +401,37 @@ export default function PropertyForm() {
           <div className="text-sm text-muted-foreground">Código: <span className="font-mono font-medium text-foreground">{property.code}</span></div>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={`flex flex-wrap gap-1 h-auto ${isMobile ? 'justify-start' : ''}`}>
-            {tabs.map(tab => (
-              <TabsTrigger key={tab.value} value={tab.value} className="text-xs gap-1.5 px-3 py-2">
-                <tab.icon className="h-3.5 w-3.5" />
-                {!isMobile && tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          {isMobile ? (
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {(() => { const t = tabs.find(t => t.value === activeTab); return t ? <><t.icon className="h-4 w-4" /><span>{t.label}</span></> : null; })()}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {tabs.map(tab => (
+                  <SelectItem key={tab.value} value={tab.value}>
+                    <div className="flex items-center gap-2">
+                      <tab.icon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <TabsList className="flex-wrap h-auto gap-1">
+              {tabs.map(tab => (
+                <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
+                  <tab.icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
 
           {/* 1. Proprietário */}
           <TabsContent value="owner">
