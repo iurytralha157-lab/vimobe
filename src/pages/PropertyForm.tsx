@@ -330,6 +330,7 @@ export default function PropertyForm() {
       } else {
         await createProperty.mutateAsync(propertyData);
       }
+      clearDraft();
       navigate('/properties');
     } catch (err) {
       // errors handled by mutation
