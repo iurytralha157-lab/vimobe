@@ -154,13 +154,32 @@ const formatCurrencyDisplay = (value: string): string => {
 
 const parseCurrencyInput = (value: string): string => value.replace(/\D/g, '');
 
+const DRAFT_KEY = 'property-form-draft';
+
+function saveDraft(data: PropertyFormData) {
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
 export default function PropertyForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
   const isMobile = useIsMobile();
 
-  const [formData, setFormData] = useState<PropertyFormData>(initialFormData);
+  const [formData, setFormData] = useState<PropertyFormData>(() => {
+    if (!id) {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (raw) return { ...initialFormData, ...JSON.parse(raw) };
+      } catch {}
+    }
+    return initialFormData;
+  });
+  const [hasDraft] = useState(() => !id && !!localStorage.getItem(DRAFT_KEY));
   const [activeTab, setActiveTab] = useState('owner');
   const [newTypeName, setNewTypeName] = useState('');
   const [showAddType, setShowAddType] = useState(false);
@@ -186,7 +205,14 @@ export default function PropertyForm() {
     if (!loadingProximities && proximities.length === 0) seedProximities.mutate();
   }, [loadingProximities, proximities.length]);
 
-  // Populate form when editing
+  // Auto-save draft for new properties
+  useEffect(() => {
+    if (!isEditing) {
+      const timer = setTimeout(() => saveDraft(formData), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [formData, isEditing]);
+
   useEffect(() => {
     if (property && isEditing) {
       const p = property as any;
@@ -304,6 +330,7 @@ export default function PropertyForm() {
       } else {
         await createProperty.mutateAsync(propertyData);
       }
+      clearDraft();
       navigate('/properties');
     } catch (err) {
       // errors handled by mutation
@@ -355,11 +382,19 @@ export default function PropertyForm() {
           <Button type="button" variant="ghost" onClick={() => navigate('/properties')}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Button>
-          <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>
-            {(createProperty.isPending || updateProperty.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            <Save className="h-4 w-4 mr-2" />
-            {isEditing ? 'Salvar' : 'Cadastrar'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasDraft && !isEditing && (
+              <span className="text-xs text-muted-foreground mr-2">Rascunho restaurado</span>
+            )}
+            <Button type="button" variant="outline" onClick={() => { clearDraft(); navigate('/properties'); }}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>
+              {(createProperty.isPending || updateProperty.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Save className="h-4 w-4 mr-2" />
+              {isEditing ? 'Salvar' : 'Cadastrar Imóvel'}
+            </Button>
+          </div>
         </div>
 
         {isEditing && property && (
@@ -1017,15 +1052,6 @@ export default function PropertyForm() {
           </TabsContent>
         </Tabs>
 
-        {/* Bottom save bar */}
-        <div className="flex justify-end gap-2 pt-4 border-t sticky bottom-0 bg-background py-4">
-          <Button type="button" variant="outline" onClick={() => navigate('/properties')}>Cancelar</Button>
-          <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>
-            {(createProperty.isPending || updateProperty.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            <Save className="h-4 w-4 mr-2" />
-            {isEditing ? 'Salvar Alterações' : 'Cadastrar Imóvel'}
-          </Button>
-        </div>
       </form>
     </AppLayout>
   );
