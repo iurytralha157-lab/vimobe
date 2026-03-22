@@ -213,7 +213,7 @@ export function ImageUploader({
           </div>
         ) : (
           <label className={cn(
-            "flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-lg cursor-pointer",
+            "flex flex-col items-center justify-center w-full min-h-[200px] border-2 border-dashed rounded-lg cursor-pointer",
             "hover:bg-muted/50 transition-colors border-primary/50",
             uploadingMain && "opacity-50 cursor-not-allowed"
           )}>
