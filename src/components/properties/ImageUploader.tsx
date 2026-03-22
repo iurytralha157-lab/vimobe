@@ -171,14 +171,14 @@ export function ImageUploader({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Main Image Section */}
       <div className="space-y-3">
         <Label className="text-base font-medium">Imagem Principal</Label>
         <p className="text-sm text-muted-foreground">Esta imagem será exibida em destaque nos anúncios</p>
         
         {mainImage ? (
-          <div className="relative w-full max-w-md aspect-video rounded-lg overflow-hidden border-2 border-primary group">
+          <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-primary group">
             <img 
               src={mainImage} 
               alt="Imagem principal" 
@@ -213,7 +213,7 @@ export function ImageUploader({
           </div>
         ) : (
           <label className={cn(
-            "flex flex-col items-center justify-center w-full max-w-md aspect-video border-2 border-dashed rounded-lg cursor-pointer",
+            "flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed rounded-lg cursor-pointer",
             "hover:bg-muted/50 transition-colors border-primary/50",
             uploadingMain && "opacity-50 cursor-not-allowed"
           )}>
