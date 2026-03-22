@@ -66,12 +66,12 @@ function AppLayoutContent({ children, title }: AppLayoutProps) {
         )}
         
         {/* Main content area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* Header com título e ações */}
           <AppHeader title={title} />
           
           {/* Conteúdo da página */}
-          <main className={`flex-1 overflow-auto px-4 md:px-6 py-3 md:py-4 ${isMobile ? 'pb-20' : ''}`}>
+          <main className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-3 md:py-4 ${isMobile ? 'pb-20' : ''}`}>
             {children}
           </main>
         </div>

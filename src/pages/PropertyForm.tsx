@@ -387,7 +387,7 @@ export default function PropertyForm() {
     <AppLayout title={isEditing ? 'Editar Imóvel' : 'Novo Imóvel'}>
       <form onSubmit={handleSubmit} className="space-y-4 animate-in pb-4">
         {/* Top bar */}
-        <div className="flex items-center justify-between sticky top-0 z-10 bg-background py-2 -mt-2">
+        <div className="flex items-center justify-between">
           <Button type="button" variant="ghost" onClick={() => navigate('/properties')}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Button>
@@ -432,7 +432,7 @@ export default function PropertyForm() {
               </SelectContent>
             </Select>
           ) : (
-            <TabsList className="flex-wrap h-auto gap-1 sticky top-12 z-10 bg-background">
+            <TabsList className="flex-wrap h-auto gap-1">
               {tabs.map(tab => (
                 <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
                   <tab.icon className="h-4 w-4" />
