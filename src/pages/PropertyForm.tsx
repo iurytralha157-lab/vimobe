@@ -378,7 +378,7 @@ export default function PropertyForm() {
     { value: 'publication', label: 'Publicação', icon: Globe },
     { value: 'commissions', label: 'Comissões', icon: DollarSign },
     { value: 'confidential', label: 'Confidencial', icon: Lock },
-    { value: 'files', label: 'Arquivos', icon: FileText },
+    
   ];
 
   const set = (field: keyof PropertyFormData, value: any) => setFormData(prev => ({ ...prev, [field]: value }));
