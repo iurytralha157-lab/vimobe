@@ -828,27 +828,32 @@ export default function PropertyForm() {
 
           {/* 5. Extras (Features/Proximities) */}
           <TabsContent value="extras">
-            <Card>
-              <CardContent className="space-y-6 pt-6">
-                <FeatureSelector
-                  title="Detalhes Extras do Imóvel"
-                  options={features.length > 0 ? features.map(f => f.name) : DEFAULT_FEATURES}
-                  selected={formData.detalhes_extras}
-                  onChange={selected => set('detalhes_extras', selected)}
-                  allowAdd onAddNew={async (name) => { await createFeature.mutateAsync(name); }}
-                  isLoading={loadingFeatures}
-                />
-                <Separator />
-                <FeatureSelector
-                  title="Proximidades"
-                  options={proximities.length > 0 ? proximities.map(p => p.name) : DEFAULT_PROXIMITIES}
-                  selected={formData.proximidades}
-                  onChange={selected => set('proximidades', selected)}
-                  allowAdd onAddNew={async (name) => { await createProximity.mutateAsync(name); }}
-                  isLoading={loadingProximities}
-                />
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <FeatureSelector
+                    title="Detalhes Extras do Imóvel"
+                    options={features.length > 0 ? features.map(f => f.name) : DEFAULT_FEATURES}
+                    selected={formData.detalhes_extras}
+                    onChange={selected => set('detalhes_extras', selected)}
+                    allowAdd onAddNew={async (name) => { await createFeature.mutateAsync(name); }}
+                    isLoading={loadingFeatures}
+                  />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <FeatureSelector
+                    title="Proximidades"
+                    options={proximities.length > 0 ? proximities.map(p => p.name) : DEFAULT_PROXIMITIES}
+                    selected={formData.proximidades}
+                    onChange={selected => set('proximidades', selected)}
+                    allowAdd onAddNew={async (name) => { await createProximity.mutateAsync(name); }}
+                    isLoading={loadingProximities}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* 6. Valores */}
