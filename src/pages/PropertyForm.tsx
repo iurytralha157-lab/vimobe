@@ -355,11 +355,19 @@ export default function PropertyForm() {
           <Button type="button" variant="ghost" onClick={() => navigate('/properties')}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Button>
-          <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>
-            {(createProperty.isPending || updateProperty.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            <Save className="h-4 w-4 mr-2" />
-            {isEditing ? 'Salvar' : 'Cadastrar'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasDraft && !isEditing && (
+              <span className="text-xs text-muted-foreground mr-2">Rascunho restaurado</span>
+            )}
+            <Button type="button" variant="outline" onClick={() => { clearDraft(); navigate('/properties'); }}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>
+              {(createProperty.isPending || updateProperty.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Save className="h-4 w-4 mr-2" />
+              {isEditing ? 'Salvar' : 'Cadastrar Imóvel'}
+            </Button>
+          </div>
         </div>
 
         {isEditing && property && (
