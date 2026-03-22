@@ -190,6 +190,7 @@ export default function PropertyForm() {
   const { data: features = [], isLoading: loadingFeatures } = usePropertyFeatures();
   const { data: proximities = [], isLoading: loadingProximities } = usePropertyProximities();
   const { data: users = [] } = useUsers();
+  const { user, profile } = useAuth();
   const createPropertyType = useCreatePropertyType();
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
