@@ -1017,15 +1017,6 @@ export default function PropertyForm() {
           </TabsContent>
         </Tabs>
 
-        {/* Bottom save bar */}
-        <div className="flex justify-end gap-2 pt-4 border-t sticky bottom-0 bg-background py-4">
-          <Button type="button" variant="outline" onClick={() => navigate('/properties')}>Cancelar</Button>
-          <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>
-            {(createProperty.isPending || updateProperty.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            <Save className="h-4 w-4 mr-2" />
-            {isEditing ? 'Salvar Alterações' : 'Cadastrar Imóvel'}
-          </Button>
-        </div>
       </form>
     </AppLayout>
   );
