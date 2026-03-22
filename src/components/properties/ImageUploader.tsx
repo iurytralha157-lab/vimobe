@@ -178,7 +178,7 @@ export function ImageUploader({
         <p className="text-sm text-muted-foreground">Esta imagem será exibida em destaque nos anúncios</p>
         
         {mainImage ? (
-          <div className="relative w-full max-w-md aspect-video rounded-lg overflow-hidden border-2 border-primary group">
+          <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-primary group">
             <img 
               src={mainImage} 
               alt="Imagem principal" 
