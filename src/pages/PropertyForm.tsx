@@ -432,7 +432,7 @@ export default function PropertyForm() {
               </SelectContent>
             </Select>
           ) : (
-            <TabsList className="flex-wrap h-auto gap-1">
+            <TabsList className="flex-wrap h-auto gap-1 sticky top-12 z-10 bg-background">
               {tabs.map(tab => (
                 <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
                   <tab.icon className="h-4 w-4" />
