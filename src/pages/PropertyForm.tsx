@@ -18,6 +18,7 @@ import { usePropertyProximities, useCreatePropertyProximity, useSeedDefaultProxi
 import { ImageUploader } from '@/components/properties/ImageUploader';
 import { FeatureSelector } from '@/components/properties/FeatureSelector';
 import { useUsers } from '@/hooks/use-users';
+import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 
@@ -189,6 +190,7 @@ export default function PropertyForm() {
   const { data: features = [], isLoading: loadingFeatures } = usePropertyFeatures();
   const { data: proximities = [], isLoading: loadingProximities } = usePropertyProximities();
   const { data: users = [] } = useUsers();
+  const { user, profile } = useAuth();
   const createPropertyType = useCreatePropertyType();
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
@@ -204,6 +206,13 @@ export default function PropertyForm() {
   useEffect(() => {
     if (!loadingProximities && proximities.length === 0) seedProximities.mutate();
   }, [loadingProximities, proximities.length]);
+
+  // Auto-set cadastrado_por to current user for new properties
+  useEffect(() => {
+    if (!isEditing && user?.id && !formData.cadastrado_por) {
+      set('cadastrado_por', user.id);
+    }
+  }, [isEditing, user?.id]);
 
   // Auto-save draft for new properties
   useEffect(() => {
@@ -646,7 +655,24 @@ export default function PropertyForm() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Cadastrado por</Label>
-                      <Input value={formData.cadastrado_por} onChange={e => set('cadastrado_por', e.target.value)} placeholder="Nome do responsável" />
+                      <Select value={formData.cadastrado_por} onValueChange={v => set('cadastrado_por', v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o responsável" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* Current user first */}
+                          {user?.id && (
+                            <SelectItem key={user.id} value={user.id}>
+                              {profile?.name || user.email} (Você)
+                            </SelectItem>
+                          )}
+                          {users.filter(u => u.id !== user?.id).map(u => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.name || u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label>Condição de Pagamento (IPTU / ITR)</Label>
