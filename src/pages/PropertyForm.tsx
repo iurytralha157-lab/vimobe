@@ -207,6 +207,13 @@ export default function PropertyForm() {
     if (!loadingProximities && proximities.length === 0) seedProximities.mutate();
   }, [loadingProximities, proximities.length]);
 
+  // Auto-set cadastrado_por to current user for new properties
+  useEffect(() => {
+    if (!isEditing && user?.id && !formData.cadastrado_por) {
+      set('cadastrado_por', user.id);
+    }
+  }, [isEditing, user?.id]);
+
   // Auto-save draft for new properties
   useEffect(() => {
     if (!isEditing) {
