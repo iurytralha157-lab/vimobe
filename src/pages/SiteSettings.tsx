@@ -1384,6 +1384,10 @@ ${getWorkerCode()}`;
               />
             </TabsContent>
 
+            <TabsContent value="analytics" className="space-y-6">
+              <SiteAnalyticsTab />
+            </TabsContent>
+
             {isAdmin && (
               <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={isSaving} size="lg">
