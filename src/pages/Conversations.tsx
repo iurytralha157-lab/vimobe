@@ -699,11 +699,10 @@ function ConversationItem({
                 <Badge 
                   key={lt.tag.id} 
                   variant="secondary" 
-                  className="text-[9px] px-1.5 py-0 h-4 font-medium" 
+                  className="text-[9px] px-1.5 py-0 h-4 font-medium border-0" 
                   style={{
-                    backgroundColor: `${lt.tag.color}20`,
-                    color: lt.tag.color,
-                    borderColor: lt.tag.color
+                    backgroundColor: lt.tag.color,
+                    color: '#FFFFFF',
                   }}
                 >
                   {lt.tag.name}
