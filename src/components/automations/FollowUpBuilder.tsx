@@ -268,17 +268,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     setEdges(initialEdges);
   }, [initialTemplate, setNodes, setEdges]);
 
-  // Update trigger node when trigger type changes
-  useEffect(() => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.type === 'start') {
-          return { ...node, data: { ...node.data, trigger_type: triggerType } };
-        }
-        return node;
-      })
-    );
-  }, [triggerType, setNodes]);
+  // No longer globally sync trigger type - each start node has its own config
 
   // Clear stage when pipeline changes
   useEffect(() => {
