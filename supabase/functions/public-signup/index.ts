@@ -106,18 +106,20 @@ Deno.serve(async (req) => {
     );
 
     // 5. Create modules based on segment
+    // Self-signup accounts: NO financial, NO whatsapp (chat), NO meta integration
+    // Only CRM core + webhooks
     let enabledModules: string[] = [];
     let disabledModules: string[] = [];
 
     if (segment === 'telecom') {
-      enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
+      enabledModules = ['crm', 'agenda', 'plans', 'coverage', 'telecom', 'tags', 'round_robin', 'reports', 'webhooks'];
+      disabledModules = ['financial', 'whatsapp', 'properties', 'cadences', 'automations', 'performance', 'site', 'ai_agent'];
     } else if (segment === 'imobiliario') {
-      enabledModules = ['crm', 'financial', 'properties', 'whatsapp', 'agenda', 'cadences', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['plans', 'coverage', 'telecom', 'automations', 'performance', 'webhooks', 'site'];
+      enabledModules = ['crm', 'properties', 'agenda', 'cadences', 'tags', 'round_robin', 'reports', 'webhooks'];
+      disabledModules = ['financial', 'whatsapp', 'plans', 'coverage', 'telecom', 'automations', 'performance', 'site', 'ai_agent'];
     } else {
-      enabledModules = ['crm', 'financial', 'whatsapp', 'agenda', 'tags', 'round_robin', 'reports'];
-      disabledModules = ['properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'webhooks', 'site'];
+      enabledModules = ['crm', 'agenda', 'tags', 'round_robin', 'reports', 'webhooks'];
+      disabledModules = ['financial', 'whatsapp', 'properties', 'plans', 'coverage', 'telecom', 'cadences', 'automations', 'performance', 'site', 'ai_agent'];
     }
 
     await supabaseAdmin.from('organization_modules').insert([
@@ -158,8 +160,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 7. Create meta integration placeholder
-    await supabaseAdmin.from('meta_integrations').insert({ organization_id: org.id });
+    // Meta integration NOT created for self-signup accounts
 
     return new Response(JSON.stringify({
       success: true,
