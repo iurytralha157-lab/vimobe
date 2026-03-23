@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Trash2, Play, MessageSquare, Timer, Image, Headphones, Video, Type,
   GitBranch, Webhook, FlipHorizontal, ExternalLink, PenLine, X, Save, GripHorizontal,
@@ -30,6 +31,13 @@ interface NodeConfigPanelProps {
   stageId?: string;
   setStageId?: (id: string) => void;
   position?: { x: number; y: number };
+  // Start node extras
+  sessions?: Array<{ id: string; instance_name: string; display_name?: string | null; status: string }>;
+  sessionId?: string;
+  setSessionId?: (id: string) => void;
+  users?: Array<{ id: string; name: string | null; email: string }>;
+  filterUserId?: string;
+  setFilterUserId?: (id: string) => void;
 }
 
 const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
@@ -52,57 +60,54 @@ export function NodeConfigPanel({
   tags, tagId, setTagId, setTriggerType,
   pipelines, pipelineId, setPipelineId, stages, stageId, setStageId,
   position,
+  sessions, sessionId, setSessionId,
+  users, filterUserId, setFilterUserId,
 }: NodeConfigPanelProps) {
   const nodeInfo = NODE_TITLES[selectedNode.type || ''] || { icon: Play, label: 'Nó', color: 'text-foreground' };
   const Icon = nodeInfo.icon;
 
   // Dragging logic
   const panelRef = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
+  const [panelPos, setPanelPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, panelX: 0, panelY: 0 });
+
+  // Set initial position from prop when node changes
+  useEffect(() => {
+    if (position) {
+      setPanelPos({ x: position.x, y: position.y });
+    }
+  }, [selectedNode.id, position]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setIsDragging(true);
-    dragStart.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
-  }, [offset]);
+    e.stopPropagation();
+    isDraggingRef.current = true;
+    dragStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, panelX: panelPos.x, panelY: panelPos.y };
 
-  useEffect(() => {
-    if (!isDragging) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      setOffset({
-        x: dragStart.current.ox + (e.clientX - dragStart.current.x),
-        y: dragStart.current.oy + (e.clientY - dragStart.current.y),
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      setPanelPos({
+        x: dragStartRef.current.panelX + (ev.clientX - dragStartRef.current.mouseX),
+        y: dragStartRef.current.panelY + (ev.clientY - dragStartRef.current.mouseY),
       });
     };
-    const handleMouseUp = () => setIsDragging(false);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging]);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  }, [panelPos]);
 
-  // Reset offset when node changes
-  useEffect(() => {
-    setOffset({ x: 0, y: 0 });
-  }, [selectedNode.id]);
-
-  const style: React.CSSProperties = position ? {
-    left: position.x + offset.x,
-    top: position.y + offset.y,
-  } : {
-    right: 16 + -offset.x,
-    top: 64 + offset.y,
-  };
+  const connectedSessions = sessions?.filter(s => s.status === 'connected') || [];
 
   return (
     <div
       ref={panelRef}
-      className="w-[300px] bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[70vh] z-50"
-      style={style}
+      className="absolute w-[300px] bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[70vh] z-[100] shadow-lg"
+      style={{ left: panelPos.x, top: panelPos.y }}
     >
       <div
         className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary/50 shrink-0 cursor-grab active:cursor-grabbing select-none"
@@ -184,6 +189,34 @@ export function NodeConfigPanel({
                   </div>
                 </div>
               )}
+
+              {/* Session WhatsApp - moved from sidebar */}
+              {connectedSessions.length > 0 && setSessionId && (
+                <div className="space-y-1.5 pt-2 border-t border-border">
+                  <Label className="text-xs">Sessão WhatsApp</Label>
+                  <Select value={sessionId || ''} onValueChange={setSessionId}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>{connectedSessions.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.display_name || s.instance_name}</SelectItem>
+                    ))}</SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* User filter - moved from sidebar */}
+              {users && setFilterUserId && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Filtrar por usuário</Label>
+                  <Select value={filterUserId || '__all__'} onValueChange={(v) => setFilterUserId(v === '__all__' ? '' : v)}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Todos os usuários</SelectItem>
+                      <SelectItem value="__me__">Apenas meus leads</SelectItem>
+                      {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
@@ -197,15 +230,63 @@ export function NodeConfigPanel({
           )}
 
           {selectedNode.type === 'wait' && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Tempo de espera</Label>
-              <div className="flex gap-2">
-                <Input type="number" min={1} value={selectedNode.data.wait_value || 1} className="w-20 h-9"
-                  onChange={(e) => onNodeDataChange(selectedNode.id, { wait_value: parseInt(e.target.value) || 1 })} />
-                <Select value={selectedNode.data.wait_type || 'days'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { wait_type: v })}>
-                  <SelectTrigger className="flex-1 h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="minutes">Minutos</SelectItem><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
-                </Select>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tempo de espera</Label>
+                <div className="flex gap-2">
+                  <Input type="number" min={1} value={selectedNode.data.wait_value || 1} className="w-20 h-9"
+                    onChange={(e) => onNodeDataChange(selectedNode.id, { wait_value: parseInt(e.target.value) || 1 })} />
+                  <Select value={selectedNode.data.wait_type || 'days'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { wait_type: v })}>
+                    <SelectTrigger className="flex-1 h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="minutes">Minutos</SelectItem><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Stop on reply - moved here from sidebar */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <Checkbox 
+                    id={`stop-reply-${selectedNode.id}`} 
+                    checked={selectedNode.data.stop_on_reply === true} 
+                    onCheckedChange={(c) => onNodeDataChange(selectedNode.id, { stop_on_reply: c === true })} 
+                  />
+                  <Label htmlFor={`stop-reply-${selectedNode.id}`} className="text-xs cursor-pointer">
+                    Se o lead responder
+                  </Label>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Cria duas saídas: "Respondeu" e "Timeout". Configure ações diferentes para cada caminho.
+                </p>
+                {selectedNode.data.stop_on_reply && (
+                  <div className="space-y-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Mensagem ao responder</Label>
+                      <Textarea 
+                        value={selectedNode.data.on_reply_message || ''} 
+                        onChange={(e) => onNodeDataChange(selectedNode.id, { on_reply_message: e.target.value })} 
+                        placeholder="Mensagem automática ao responder..."
+                        rows={2}
+                        className="text-xs"
+                      />
+                    </div>
+                    {stages && stages.length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Mover para etapa</Label>
+                        <Select 
+                          value={selectedNode.data.on_reply_stage_id || '__none__'} 
+                          onValueChange={(v) => onNodeDataChange(selectedNode.id, { on_reply_stage_id: v === '__none__' ? '' : v })}
+                        >
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Não mover" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Não mover</SelectItem>
+                            {stages.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
