@@ -34,11 +34,37 @@ import {
   GripVertical,
   Play,
   X,
+  Image,
+  Headphones,
+  Video,
+  Type,
+  Hash,
+  AtSign,
+  Globe,
+  Phone,
+  Calendar,
+  MousePointerClick,
+  GitBranch,
+  Webhook,
+  FlipHorizontal,
+  ExternalLink,
+  PenLine,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { MessageNode } from './nodes/MessageNode';
 import { DEFAULT_ON_REPLY_MESSAGE } from './FollowUpTemplates';
 import { WaitNode } from './nodes/WaitNode';
 import { StartNode } from './nodes/StartNode';
+import { ImageNode } from './nodes/ImageNode';
+import { AudioNode } from './nodes/AudioNode';
+import { VideoNode } from './nodes/VideoNode';
+import { InputNode } from './nodes/InputNode';
+import { ConditionNode } from './nodes/ConditionNode';
+import { WebhookNode } from './nodes/WebhookNode';
+import { ABTestNode } from './nodes/ABTestNode';
+import { RedirectNode } from './nodes/RedirectNode';
+import { VariableNode } from './nodes/VariableNode';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
@@ -51,6 +77,15 @@ const nodeTypes = {
   start: StartNode,
   message: MessageNode,
   wait: WaitNode,
+  image: ImageNode,
+  audio: AudioNode,
+  video: VideoNode,
+  input: InputNode,
+  condition: ConditionNode,
+  webhook: WebhookNode,
+  abtest: ABTestNode,
+  redirect: RedirectNode,
+  variable: VariableNode,
 };
 
 interface FollowUpBuilderProps {
@@ -63,10 +98,54 @@ interface FollowUpBuilderProps {
   } | null;
 }
 
-const NODE_PALETTE = [
-  { type: 'message', label: 'Mensagem', icon: MessageSquare, color: 'bg-green-500/10 text-green-600' },
-  { type: 'wait', label: 'Aguardar', icon: Timer, color: 'bg-purple-500/10 text-purple-600' },
+type NodeCategory = 'bubbles' | 'inputs' | 'conditionals' | 'actions';
+
+interface PaletteItem {
+  type: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  category: NodeCategory;
+  defaultData: Record<string, unknown>;
+}
+
+const NODE_PALETTE: PaletteItem[] = [
+  // Bubbles (mensagens de saída)
+  { type: 'message', label: 'Texto', icon: MessageSquare, color: 'text-green-600 bg-green-500/10', category: 'bubbles', defaultData: { message: 'Nova mensagem...', day: 1 } },
+  { type: 'image', label: 'Imagem', icon: Image, color: 'text-blue-600 bg-blue-500/10', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
+  { type: 'video', label: 'Vídeo', icon: Video, color: 'text-rose-600 bg-rose-500/10', category: 'bubbles', defaultData: { video_url: '' } },
+  { type: 'audio', label: 'Áudio', icon: Headphones, color: 'text-amber-600 bg-amber-500/10', category: 'bubbles', defaultData: { audio_url: '' } },
+  // Inputs (captura de dados)
+  { type: 'input', label: 'Texto', icon: Type, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'text', prompt: '', variable_name: '' } },
+  { type: 'input', label: 'Número', icon: Hash, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'number', prompt: '', variable_name: '' } },
+  { type: 'input', label: 'Email', icon: AtSign, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'email', prompt: '', variable_name: '' } },
+  { type: 'input', label: 'Website', icon: Globe, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'website', prompt: '', variable_name: '' } },
+  { type: 'input', label: 'Telefone', icon: Phone, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'phone', prompt: '', variable_name: '' } },
+  { type: 'input', label: 'Data', icon: Calendar, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'date', prompt: '', variable_name: '' } },
+  { type: 'input', label: 'Botão', icon: MousePointerClick, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'button', prompt: '', buttons: ['Opção 1', 'Opção 2'], variable_name: '' } },
+  // Condicionais
+  { type: 'variable', label: 'Variável', icon: PenLine, color: 'text-yellow-600 bg-yellow-600/10', category: 'conditionals', defaultData: { variable_name: '', variable_value: '' } },
+  { type: 'condition', label: 'Condição', icon: GitBranch, color: 'text-yellow-600 bg-yellow-500/10', category: 'conditionals', defaultData: { variable: '', operator: 'equals', value: '' } },
+  { type: 'redirect', label: 'Redirecionar', icon: ExternalLink, color: 'text-teal-600 bg-teal-500/10', category: 'conditionals', defaultData: { redirect_url: '' } },
+  { type: 'abtest', label: 'Teste AB', icon: FlipHorizontal, color: 'text-pink-600 bg-pink-500/10', category: 'conditionals', defaultData: { split_a: 50 } },
+  // Ações
+  { type: 'wait', label: 'Espera', icon: Timer, color: 'text-purple-600 bg-purple-500/10', category: 'actions', defaultData: { wait_type: 'days', wait_value: 1 } },
+  { type: 'webhook', label: 'Webhook', icon: Webhook, color: 'text-indigo-600 bg-indigo-500/10', category: 'actions', defaultData: { webhook_url: '', method: 'POST' } },
 ];
+
+const CATEGORY_LABELS: Record<NodeCategory, string> = {
+  bubbles: 'Bubbles',
+  inputs: 'Inputs',
+  conditionals: 'Condicionais',
+  actions: 'Ações',
+};
+
+const CATEGORY_COLORS: Record<NodeCategory, string> = {
+  bubbles: 'text-green-500',
+  inputs: 'text-cyan-500',
+  conditionals: 'text-yellow-500',
+  actions: 'text-purple-500',
+};
 
 function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpBuilderProps) {
   const { data: sessions } = useWhatsAppSessions();
@@ -94,6 +173,13 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
+    bubbles: true,
+    inputs: true,
+    conditionals: true,
+    actions: true,
+  });
+  const [showConfig, setShowConfig] = useState(false);
   const [onReplyMessage, setOnReplyMessage] = useState<string>(initialTemplate?.onReplyMessage || DEFAULT_ON_REPLY_MESSAGE);
 
   const connectedSessions = sessions?.filter(s => s.status === 'connected') || [];
@@ -219,19 +305,22 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     setSelectedNode(null);
   }, []);
 
-  const handleAddNode = useCallback((type: 'message' | 'wait') => {
+  const handleAddNode = useCallback((paletteItem: PaletteItem) => {
     const lastNode = nodes[nodes.length - 1];
     const newY = lastNode ? lastNode.position.y + 140 : 200;
     
-    const newNodeId = `${type}-${Date.now()}`;
+    const newNodeId = `${paletteItem.type}-${Date.now()}`;
     const newNode: Node = {
       id: newNodeId,
-      type,
+      type: paletteItem.type,
       position: { x: 250, y: newY },
-      data: type === 'message' 
-        ? { message: 'Nova mensagem...', day: nodes.filter(n => n.type === 'message').length + 1 }
-        : { wait_type: 'days', wait_value: 1 },
+      data: { ...paletteItem.defaultData },
     };
+
+    // For message nodes, set incrementing day
+    if (paletteItem.type === 'message') {
+      newNode.data.day = nodes.filter(n => n.type === 'message').length + 1;
+    }
 
     setNodes((nds) => [...nds, newNode]);
 
@@ -325,57 +414,93 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       // Build nodes for database
       const dbNodes: {
         id: string;
-        node_type: 'trigger' | 'action' | 'delay';
-        action_type: 'send_whatsapp' | null;
+        node_type: 'trigger' | 'action' | 'delay' | 'condition';
+        action_type: import('@/hooks/use-automations').ActionType | null;
         config: Record<string, unknown>;
         position_x: number;
         position_y: number;
       }[] = [];
 
       nodes.forEach((node) => {
+        const pos = { position_x: Math.round(node.position.x), position_y: Math.round(node.position.y) };
+        
         if (node.type === 'start') {
           dbNodes.push({
-            id: node.id,
-            node_type: 'trigger',
-            action_type: null,
+            id: node.id, node_type: 'trigger', action_type: null,
             config: { 
-              trigger_type: triggerType, 
-              tag_id: tagId, 
-              pipeline_id: pipelineId, 
-              to_stage_id: stageId,
+              trigger_type: triggerType, tag_id: tagId, pipeline_id: pipelineId, to_stage_id: stageId,
               filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
               on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
               on_reply_message: stopOnReply && onReplyMessage?.trim() ? onReplyMessage.trim() : null,
             },
-            position_x: Math.round(node.position.x),
-            position_y: Math.round(node.position.y),
+            ...pos,
           });
         } else if (node.type === 'message') {
           dbNodes.push({
-            id: node.id,
-            node_type: 'action',
-            action_type: 'send_whatsapp',
-            config: {
-              session_id: sessionId,
-              message: node.data.message,
-              actionType: 'send_whatsapp',
-            },
-            position_x: Math.round(node.position.x),
-            position_y: Math.round(node.position.y),
+            id: node.id, node_type: 'action', action_type: 'send_whatsapp',
+            config: { session_id: sessionId, message: node.data.message, actionType: 'send_whatsapp' },
+            ...pos,
+          });
+        } else if (node.type === 'image') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'send_image',
+            config: { session_id: sessionId, image_url: node.data.image_url, caption: node.data.caption, actionType: 'send_image' },
+            ...pos,
+          });
+        } else if (node.type === 'audio') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'send_audio',
+            config: { session_id: sessionId, audio_url: node.data.audio_url, actionType: 'send_audio' },
+            ...pos,
+          });
+        } else if (node.type === 'video') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'send_video',
+            config: { session_id: sessionId, video_url: node.data.video_url, actionType: 'send_video' },
+            ...pos,
+          });
+        } else if (node.type === 'input') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'collect_input',
+            config: { ...node.data, actionType: 'collect_input' },
+            ...pos,
           });
         } else if (node.type === 'wait') {
           dbNodes.push({
-            id: node.id,
-            node_type: 'delay',
-            action_type: null,
-            config: {
-              delay_type: node.data.wait_type || 'days',
-              delay_value: node.data.wait_value || 1,
-              nodeType: 'delay',
-            },
-            position_x: Math.round(node.position.x),
-            position_y: Math.round(node.position.y),
+            id: node.id, node_type: 'delay', action_type: null,
+            config: { delay_type: node.data.wait_type || 'days', delay_value: node.data.wait_value || 1, nodeType: 'delay' },
+            ...pos,
+          });
+        } else if (node.type === 'condition') {
+          dbNodes.push({
+            id: node.id, node_type: 'condition', action_type: null,
+            config: { variable: node.data.variable, operator: node.data.operator, value: node.data.value, nodeType: 'condition' },
+            ...pos,
+          });
+        } else if (node.type === 'abtest') {
+          dbNodes.push({
+            id: node.id, node_type: 'condition', action_type: null,
+            config: { split_a: node.data.split_a, nodeType: 'abtest' },
+            ...pos,
+          });
+        } else if (node.type === 'webhook') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'webhook',
+            config: { webhook_url: node.data.webhook_url, method: node.data.method, actionType: 'webhook' },
+            ...pos,
+          });
+        } else if (node.type === 'redirect') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'redirect',
+            config: { redirect_url: node.data.redirect_url, actionType: 'redirect' },
+            ...pos,
+          });
+        } else if (node.type === 'variable') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable',
+            config: { variable_name: node.data.variable_name, variable_value: node.data.variable_value, actionType: 'set_variable' },
+            ...pos,
           });
         }
       });
@@ -443,111 +568,71 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
       {/* Main Content */}
       <div className="flex-1 flex min-h-0">
-        {/* Left Panel - Config */}
-        <div className="w-72 border-r bg-muted/30 flex flex-col">
+        {/* Left Panel - Typebot-style Node Palette */}
+        <div className="w-64 border-r bg-card/50 flex flex-col">
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-6">
-              {/* Session */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Sessão WhatsApp
-                </Label>
-                <Select value={sessionId} onValueChange={setSessionId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {connectedSessions.map((session) => (
-                      <SelectItem key={session.id} value={session.id}>
-                        {session.display_name || session.instance_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="p-3 space-y-1">
+              {/* Config Toggle */}
+              <button 
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground"
+                onClick={() => setShowConfig(!showConfig)}
+              >
+                {showConfig ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                ⚙️ Configurações
+              </button>
 
-              {/* Trigger */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Disparar quando
-                </Label>
-                <Select value={triggerType} onValueChange={(v: TriggerType) => setTriggerType(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tag_added">Tag adicionada</SelectItem>
-                    <SelectItem value="lead_created">Lead criado</SelectItem>
-                    <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
-                    <SelectItem value="manual">Manual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {triggerType === 'tag_added' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Tag específica
-                  </Label>
-                  <Select value={tagId} onValueChange={setTagId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a tag..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tags?.map((tag) => (
-                        <SelectItem key={tag.id} value={tag.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: tag.color || '#888' }}
-                            />
-                            {tag.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {triggerType === 'lead_stage_changed' && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Pipeline
+              {showConfig && (
+                <div className="px-3 py-2 space-y-4 border rounded-xl bg-muted/20 mb-3">
+                  {/* Session */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
+                      Sessão WhatsApp
                     </Label>
-                    <Select value={pipelineId} onValueChange={setPipelineId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a pipeline..." />
+                    <Select value={sessionId} onValueChange={setSessionId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {pipelines?.map((pipeline) => (
-                          <SelectItem key={pipeline.id} value={pipeline.id}>
-                            {pipeline.name}
+                        {connectedSessions.map((session) => (
+                          <SelectItem key={session.id} value={session.id}>
+                            {session.display_name || session.instance_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {pipelineId && (
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                        Etapa específica
-                      </Label>
-                      <Select value={stageId} onValueChange={setStageId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a etapa..." />
+                  {/* Trigger */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
+                      Disparar quando
+                    </Label>
+                    <Select value={triggerType} onValueChange={(v: TriggerType) => setTriggerType(v)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tag_added">Tag adicionada</SelectItem>
+                        <SelectItem value="lead_created">Lead criado</SelectItem>
+                        <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
+                        <SelectItem value="manual">Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {triggerType === 'tag_added' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Tag</Label>
+                      <Select value={tagId} onValueChange={setTagId}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {stages?.map((stage) => (
-                            <SelectItem key={stage.id} value={stage.id}>
+                          {tags?.map((tag) => (
+                            <SelectItem key={tag.id} value={tag.id}>
                               <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full" 
-                                  style={{ backgroundColor: stage.color || '#888' }}
-                                />
-                                {stage.name}
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color || '#888' }} />
+                                {tag.name}
                               </div>
                             </SelectItem>
                           ))}
@@ -555,152 +640,144 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                       </Select>
                     </div>
                   )}
-                </>
-              )}
 
-              {/* User Filter */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Filtrar por usuário
-                </Label>
-                <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os usuários" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Todos os usuários</SelectItem>
-                    <SelectItem value="__me__">Apenas meus leads</SelectItem>
-                    {users?.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Dispara apenas para leads do usuário selecionado
-                </p>
-              </div>
-
-              {/* Stop on Reply */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="stop-on-reply"
-                    checked={stopOnReply} 
-                    onCheckedChange={(checked) => setStopOnReply(checked === true)} 
-                  />
-                  <Label htmlFor="stop-on-reply" className="text-sm cursor-pointer">
-                    Parar follow-up se lead responder
-                  </Label>
-                </div>
-                
-                {stopOnReply && (
-                  <div className="space-y-4 ml-6">
-                    {pipelineId && (
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">
-                          Ao responder, mover para:
-                        </Label>
-                        <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Não mover (apenas parar)" />
+                  {triggerType === 'lead_stage_changed' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Pipeline</Label>
+                        <Select value={pipelineId} onValueChange={setPipelineId}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">Não mover (apenas parar)</SelectItem>
-                            {/* Fallback: show loading item if stage is selected but not yet in list */}
-                            {onReplyStageId && 
-                             onReplyStageId !== "__none__" && 
-                             !stages?.find(s => s.id === onReplyStageId) && (
-                              <SelectItem value={onReplyStageId} disabled>
-                                Carregando etapa...
-                              </SelectItem>
-                            )}
-                            {stages?.map((stage) => (
-                              <SelectItem key={stage.id} value={stage.id}>
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="w-3 h-3 rounded-full" 
-                                    style={{ backgroundColor: stage.color || '#888' }}
-                                  />
-                                  {stage.name}
-                                </div>
-                              </SelectItem>
+                            {pipelines?.map((pipeline) => (
+                              <SelectItem key={pipeline.id} value={pipeline.id}>{pipeline.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+                      {pipelineId && (
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Etapa</Label>
+                          <Select value={stageId} onValueChange={setStageId}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {stages?.map((stage) => (
+                                <SelectItem key={stage.id} value={stage.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color || '#888' }} />
+                                    {stage.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* User Filter */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Filtrar por usuário</Label>
+                    <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todos os usuários</SelectItem>
+                        <SelectItem value="__me__">Apenas meus leads</SelectItem>
+                        {users?.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>{user.name || user.email}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Stop on Reply */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="stop-on-reply" checked={stopOnReply} onCheckedChange={(c) => setStopOnReply(c === true)} />
+                      <Label htmlFor="stop-on-reply" className="text-xs cursor-pointer">Parar se lead responder</Label>
+                    </div>
+                    {stopOnReply && pipelineId && (
+                      <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Mover para..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Não mover</SelectItem>
+                          {stages?.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
-                    
-                    {/* Auto-reply message */}
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Mensagem automática ao responder:
-                      </Label>
+                    {stopOnReply && (
                       <Textarea
                         value={onReplyMessage}
                         onChange={(e) => setOnReplyMessage(e.target.value)}
-                        placeholder="Ex: Que bom que você se interessou! Nossa equipe entrará em contato..."
-                        className="min-h-[80px] text-sm"
+                        placeholder="Mensagem automática ao responder..."
+                        className="min-h-[60px] text-xs"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Enviar esta mensagem automaticamente quando o lead responder
-                      </p>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Node Palette */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Adicionar ao fluxo
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {NODE_PALETTE.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Button
-                        key={item.type}
-                        variant="outline"
-                        className="h-auto py-3 flex-col gap-1"
-                        onClick={() => handleAddNode(item.type as 'message' | 'wait')}
-                      >
-                        <div className={`p-1.5 rounded ${item.color}`}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs">{item.label}</span>
-                      </Button>
-                    );
-                  })}
                 </div>
-              </div>
+              )}
 
-              {/* Variables Help - Expanded */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Variáveis disponíveis
-                </Label>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p className="font-medium text-foreground">Lead:</p>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.name}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.phone}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.email}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.source}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.message}}'}</code>
-                  
-                  <p className="font-medium text-foreground pt-2">Telecom:</p>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.address}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.city}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.neighborhood}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.cep}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.plan_value}}'}</code>
-                  
-                  <p className="font-medium text-foreground pt-2">Outros:</p>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{organization.name}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{date}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{time}}'}</code>
-                </div>
+              {/* Node Categories - Typebot Style */}
+              {(['bubbles', 'inputs', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
+                const items = NODE_PALETTE.filter(item => item.category === category);
+                const isExpanded = expandedCategories[category];
+                
+                return (
+                  <div key={category}>
+                    <button 
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors"
+                      onClick={() => setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }))}
+                    >
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      <span className={CATEGORY_COLORS[category]}>{CATEGORY_LABELS[category]}</span>
+                    </button>
+                    
+                    {isExpanded && (
+                      <div className="grid grid-cols-2 gap-1.5 px-2 pb-2">
+                        {items.map((item, idx) => {
+                          const Icon = item.icon;
+                          return (
+                            <button
+                              key={`${item.type}-${item.label}-${idx}`}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border/50 bg-background hover:bg-muted/50 hover:border-primary/30 transition-all text-left group cursor-pointer"
+                              onClick={() => handleAddNode(item)}
+                            >
+                              <div className={`p-1 rounded-lg ${item.color}`}>
+                                <Icon className="h-3.5 w-3.5" />
+                              </div>
+                              <span className="text-xs font-medium truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Variables Help */}
+              <button 
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground"
+                onClick={() => {}}
+              >
+                📋 Variáveis
+              </button>
+              <div className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.name}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.phone}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.email}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{organization.name}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{date}}'}</code>
               </div>
             </div>
           </ScrollArea>
@@ -733,77 +810,215 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           <SheetContent className="w-[400px] sm:w-[400px]">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
-                {selectedNode?.type === 'message' && (
-                  <>
-                    <MessageSquare className="h-5 w-5 text-green-600" />
-                    Editar Mensagem
-                  </>
-                )}
-                {selectedNode?.type === 'wait' && (
-                  <>
-                    <Timer className="h-5 w-5 text-purple-600" />
-                    Configurar Espera
-                  </>
-                )}
+                {selectedNode?.type === 'message' && <><MessageSquare className="h-5 w-5 text-green-600" /> Editar Mensagem</>}
+                {selectedNode?.type === 'wait' && <><Timer className="h-5 w-5 text-purple-600" /> Configurar Espera</>}
+                {selectedNode?.type === 'image' && <><Image className="h-5 w-5 text-blue-600" /> Configurar Imagem</>}
+                {selectedNode?.type === 'audio' && <><Headphones className="h-5 w-5 text-amber-600" /> Configurar Áudio</>}
+                {selectedNode?.type === 'video' && <><Video className="h-5 w-5 text-rose-600" /> Configurar Vídeo</>}
+                {selectedNode?.type === 'input' && <><Type className="h-5 w-5 text-cyan-600" /> Configurar Input</>}
+                {selectedNode?.type === 'condition' && <><GitBranch className="h-5 w-5 text-yellow-600" /> Configurar Condição</>}
+                {selectedNode?.type === 'webhook' && <><Webhook className="h-5 w-5 text-indigo-600" /> Configurar Webhook</>}
+                {selectedNode?.type === 'abtest' && <><FlipHorizontal className="h-5 w-5 text-pink-600" /> Teste AB</>}
+                {selectedNode?.type === 'redirect' && <><ExternalLink className="h-5 w-5 text-teal-600" /> Redirecionar</>}
+                {selectedNode?.type === 'variable' && <><PenLine className="h-5 w-5 text-yellow-600" /> Variável</>}
               </SheetTitle>
             </SheetHeader>
 
             <div className="mt-6 space-y-4">
               {selectedNode?.type === 'message' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Mensagem</Label>
-                    <Textarea
-                      value={selectedNode.data.message || ''}
-                      onChange={(e) => handleNodeDataChange(selectedNode.id, { message: e.target.value })}
-                      rows={8}
-                      placeholder="Digite a mensagem..."
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Use variáveis como {'{{lead.name}}'} para personalizar
-                    </p>
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label>Mensagem</Label>
+                  <Textarea
+                    value={selectedNode.data.message || ''}
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { message: e.target.value })}
+                    rows={8}
+                    placeholder="Digite a mensagem..."
+                  />
+                  <p className="text-xs text-muted-foreground">Use variáveis como {'{{lead.name}}'}</p>
+                </div>
               )}
 
               {selectedNode?.type === 'wait' && (
+                <div className="space-y-2">
+                  <Label>Tempo de espera</Label>
+                  <div className="flex gap-2">
+                    <Input type="number" min={1} value={selectedNode.data.wait_value || 1}
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { wait_value: parseInt(e.target.value) || 1 })}
+                      className="w-24" />
+                    <Select value={selectedNode.data.wait_type || 'days'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { wait_type: v })}>
+                      <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minutes">Minutos</SelectItem>
+                        <SelectItem value="hours">Horas</SelectItem>
+                        <SelectItem value="days">Dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'image' && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Tempo de espera</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min={1}
-                        value={selectedNode.data.wait_value || 1}
-                        onChange={(e) => handleNodeDataChange(selectedNode.id, { 
-                          wait_value: parseInt(e.target.value) || 1 
-                        })}
-                        className="w-24"
-                      />
-                      <Select
-                        value={selectedNode.data.wait_type || 'days'}
-                        onValueChange={(v) => handleNodeDataChange(selectedNode.id, { wait_type: v })}
-                      >
-                        <SelectTrigger className="flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="minutes">Minutos</SelectItem>
-                          <SelectItem value="hours">Horas</SelectItem>
-                          <SelectItem value="days">Dias</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <Label>URL da Imagem</Label>
+                    <Input value={selectedNode.data.image_url || ''} placeholder="https://..."
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { image_url: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Legenda (opcional)</Label>
+                    <Input value={selectedNode.data.caption || ''} placeholder="Legenda da imagem"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { caption: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'audio' && (
+                <div className="space-y-2">
+                  <Label>URL do Áudio</Label>
+                  <Input value={selectedNode.data.audio_url || ''} placeholder="https://..."
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { audio_url: e.target.value })} />
+                </div>
+              )}
+
+              {selectedNode?.type === 'video' && (
+                <div className="space-y-2">
+                  <Label>URL do Vídeo</Label>
+                  <Input value={selectedNode.data.video_url || ''} placeholder="https://..."
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { video_url: e.target.value })} />
+                </div>
+              )}
+
+              {selectedNode?.type === 'input' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Input</Label>
+                    <Select value={selectedNode.data.input_type || 'text'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { input_type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Texto</SelectItem>
+                        <SelectItem value="number">Número</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="phone">Telefone</SelectItem>
+                        <SelectItem value="website">Website</SelectItem>
+                        <SelectItem value="date">Data</SelectItem>
+                        <SelectItem value="button">Botão</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Pergunta / Prompt</Label>
+                    <Textarea value={selectedNode.data.prompt || ''} rows={3} placeholder="Ex: Qual seu nome?"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { prompt: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Salvar em variável</Label>
+                    <Input value={selectedNode.data.variable_name || ''} placeholder="ex: nome_cliente"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable_name: e.target.value })} />
+                  </div>
+                  {selectedNode.data.input_type === 'button' && (
+                    <div className="space-y-2">
+                      <Label>Opções (uma por linha)</Label>
+                      <Textarea value={(selectedNode.data.buttons || []).join('\n')} rows={4}
+                        placeholder="Opção 1\nOpção 2\nOpção 3"
+                        onChange={(e) => handleNodeDataChange(selectedNode.id, { buttons: e.target.value.split('\n').filter(Boolean) })} />
                     </div>
+                  )}
+                </div>
+              )}
+
+              {selectedNode?.type === 'condition' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Variável</Label>
+                    <Input value={selectedNode.data.variable || ''} placeholder="ex: lead.source"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Operador</Label>
+                    <Select value={selectedNode.data.operator || 'equals'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { operator: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="equals">Igual a</SelectItem>
+                        <SelectItem value="not_equals">Diferente de</SelectItem>
+                        <SelectItem value="contains">Contém</SelectItem>
+                        <SelectItem value="not_contains">Não contém</SelectItem>
+                        <SelectItem value="greater_than">Maior que</SelectItem>
+                        <SelectItem value="less_than">Menor que</SelectItem>
+                        <SelectItem value="is_set">Existe</SelectItem>
+                        <SelectItem value="is_not_set">Não existe</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor</Label>
+                    <Input value={selectedNode.data.value || ''} placeholder="valor esperado"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { value: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'webhook' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>URL do Webhook</Label>
+                    <Input value={selectedNode.data.webhook_url || ''} placeholder="https://..."
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { webhook_url: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Método</Label>
+                    <Select value={selectedNode.data.method || 'POST'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { method: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GET">GET</SelectItem>
+                        <SelectItem value="POST">POST</SelectItem>
+                        <SelectItem value="PUT">PUT</SelectItem>
+                        <SelectItem value="PATCH">PATCH</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'abtest' && (
+                <div className="space-y-2">
+                  <Label>Distribuição A (%)</Label>
+                  <Input type="number" min={1} max={99} value={selectedNode.data.split_a || 50}
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { split_a: parseInt(e.target.value) || 50 })} />
+                  <p className="text-xs text-muted-foreground">
+                    A: {selectedNode.data.split_a || 50}% / B: {100 - (selectedNode.data.split_a || 50)}%
+                  </p>
+                </div>
+              )}
+
+              {selectedNode?.type === 'redirect' && (
+                <div className="space-y-2">
+                  <Label>URL de Redirecionamento</Label>
+                  <Input value={selectedNode.data.redirect_url || ''} placeholder="https://..."
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { redirect_url: e.target.value })} />
+                </div>
+              )}
+
+              {selectedNode?.type === 'variable' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nome da variável</Label>
+                    <Input value={selectedNode.data.variable_name || ''} placeholder="ex: pontuacao"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor</Label>
+                    <Input value={selectedNode.data.variable_value || ''} placeholder="ex: 100"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable_value: e.target.value })} />
                   </div>
                 </div>
               )}
 
               <div className="pt-4 border-t">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDeleteNode(selectedNode!.id)}
-                >
+                <Button variant="destructive" size="sm" onClick={() => handleDeleteNode(selectedNode!.id)}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Remover nó
                 </Button>
