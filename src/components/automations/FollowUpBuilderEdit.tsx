@@ -132,6 +132,12 @@ const CATEGORY_COLORS: Record<NodeCategory, string> = {
   actions: 'text-purple-500',
 };
 
+interface FollowUpBuilderEditProps {
+  automationId: string;
+  onBack: () => void;
+  onComplete: (automationId?: string) => void;
+}
+
 function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUpBuilderEditProps) {
   const { data: automation, isLoading: isLoadingAutomation } = useAutomation(automationId);
   const { data: sessions } = useWhatsAppSessions();
