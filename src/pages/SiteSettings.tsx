@@ -398,7 +398,8 @@ ${getWorkerCode()}`;
             </div>
 
             <TabsContent value="general" className="space-y-6">
-              <Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle>Status do Site</CardTitle>
                   <CardDescription>Ative ou desative seu site público</CardDescription>
@@ -567,6 +568,7 @@ ${getWorkerCode()}`;
                   </div>
                 </CardContent>
               </Card>
+              </div>
 
               <Card>
                 <CardHeader>
