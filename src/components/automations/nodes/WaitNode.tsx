@@ -20,7 +20,7 @@ export const WaitNode = memo(({ data, selected }: NodeProps) => {
           <Timer className="h-5 w-5 text-white" />
         </div>
         <div>
-          <div className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Aguardar</div>
+          <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Aguardar</div>
           <div className="text-sm font-semibold text-foreground">{getValue()}</div>
         </div>
       </div>

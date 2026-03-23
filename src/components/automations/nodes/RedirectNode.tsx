@@ -15,7 +15,7 @@ export const RedirectNode = memo(({ data, selected }: NodeProps) => {
           <ExternalLink className="h-5 w-5 text-white" />
         </div>
         <div>
-          <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">Redirecionar</span>
+          <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Redirecionar</span>
           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
             {url || 'Clique para configurar...'}
           </p>

@@ -17,8 +17,8 @@ export const WebhookNode = memo(({ data, selected }: NodeProps) => {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Webhook</span>
-            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded-md font-mono">
+            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Webhook</span>
+            <span className="text-[10px] bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-md font-mono">
               {method}
             </span>
           </div>

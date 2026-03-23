@@ -16,10 +16,10 @@ export const VariableNode = memo(({ data, selected }: NodeProps) => {
           <PenLine className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Variável</span>
+          <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Variável</span>
           {variableName ? (
             <p className="text-xs text-muted-foreground mt-1">
-              <code className="bg-white/10 px-1 rounded text-yellow-300">{variableName}</code> = {variableValue || '...'}
+              <code className="bg-yellow-500/15 px-1 rounded text-yellow-700 dark:text-yellow-300">{variableName}</code> = {variableValue || '...'}
             </p>
           ) : (
             <p className="text-xs text-muted-foreground mt-1">Clique para configurar...</p>

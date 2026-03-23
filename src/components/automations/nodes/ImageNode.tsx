@@ -16,7 +16,7 @@ export const ImageNode = memo(({ data, selected }: NodeProps) => {
           <Image className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Imagem</span>
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Imagem</span>
           <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
             {url ? caption || 'Imagem configurada' : 'Clique para configurar...'}
           </p>

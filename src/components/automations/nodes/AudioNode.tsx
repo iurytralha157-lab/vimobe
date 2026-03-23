@@ -15,7 +15,7 @@ export const AudioNode = memo(({ data, selected }: NodeProps) => {
           <Headphones className="h-5 w-5 text-white" />
         </div>
         <div>
-          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Áudio</span>
+          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Áudio</span>
           <p className="text-xs text-muted-foreground mt-0.5">
             {url ? 'Áudio configurado' : 'Clique para configurar...'}
           </p>

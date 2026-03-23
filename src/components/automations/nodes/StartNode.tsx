@@ -38,7 +38,7 @@ export const StartNode = memo(({ data, selected }: NodeProps) => {
           <Icon className="h-5 w-5 text-white" />
         </div>
         <div>
-          <div className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Início</div>
+          <div className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Início</div>
           <div className="text-sm font-semibold text-foreground">{getTriggerLabel(data.trigger_type)}</div>
         </div>
       </div>

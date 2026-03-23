@@ -18,8 +18,8 @@ export const MessageNode = memo(({ data, selected }: NodeProps) => {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold text-green-400 uppercase tracking-wider">Mensagem</span>
-            <span className="text-[10px] bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded-md font-medium">
+            <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Mensagem</span>
+            <span className="text-[10px] bg-green-500/20 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-md font-medium">
               Dia {day}
             </span>
           </div>
