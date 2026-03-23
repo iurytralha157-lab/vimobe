@@ -39,9 +39,40 @@ export function useSiteAnalytics(dateFrom?: Date, dateTo?: Date) {
 
       if (error) {
         console.error('Site analytics RPC error:', error);
-        throw error;
+        // Return empty data instead of throwing so the tab still renders
+        return {
+          totalViews: 0, totalPages: 0, uniquePages: 0, uniqueSessions: 0,
+          avgDuration: 0, desktopPct: 0, mobilePct: 0, tabletPct: 0,
+          directPct: 0, searchPct: 0, socialPct: 0, campaignPct: 0,
+          conversions: 0, prevViews: 0, prevPages: 0, prevUniquePages: 0,
+          prevAvgDuration: 0, prevDesktopPct: 0, prevMobilePct: 0, prevConversions: 0,
+        };
       }
-      return data as SiteAnalyticsSummary;
+      
+      // RPC returns the JSON directly
+      const result = data || {};
+      return {
+        totalViews: result.totalViews ?? 0,
+        totalPages: result.totalPages ?? 0,
+        uniquePages: result.uniquePages ?? 0,
+        uniqueSessions: result.uniqueSessions ?? 0,
+        avgDuration: result.avgDuration ?? 0,
+        desktopPct: result.desktopPct ?? 0,
+        mobilePct: result.mobilePct ?? 0,
+        tabletPct: result.tabletPct ?? 0,
+        directPct: result.directPct ?? 0,
+        searchPct: result.searchPct ?? 0,
+        socialPct: result.socialPct ?? 0,
+        campaignPct: result.campaignPct ?? 0,
+        conversions: result.conversions ?? 0,
+        prevViews: result.prevViews ?? 0,
+        prevPages: result.prevPages ?? 0,
+        prevUniquePages: result.prevUniquePages ?? 0,
+        prevAvgDuration: result.prevAvgDuration ?? 0,
+        prevDesktopPct: result.prevDesktopPct ?? 0,
+        prevMobilePct: result.prevMobilePct ?? 0,
+        prevConversions: result.prevConversions ?? 0,
+      };
     },
     enabled: !!organization?.id,
   });

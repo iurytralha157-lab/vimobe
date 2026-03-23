@@ -55,8 +55,21 @@ export function SiteAnalyticsTab() {
     prevDesktopPct: 0, prevMobilePct: 0, prevConversions: 0,
   };
 
+  const hasData = stats.totalViews > 0;
+
   return (
     <div className="space-y-6">
+      {!hasData && (
+        <Card className="border-dashed">
+          <CardContent className="p-6 text-center">
+            <BarChart3 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="font-semibold mb-1">Nenhum dado registrado ainda</p>
+            <p className="text-sm text-muted-foreground">
+              Os dados aparecerão automaticamente quando visitantes acessarem seu site público. Certifique-se de que o site está ativo e publicado.
+            </p>
+          </CardContent>
+        </Card>
+      )}
       {/* Period Selector */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
