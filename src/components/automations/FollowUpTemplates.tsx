@@ -108,14 +108,10 @@ export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) 
           <div
             key={template.id}
             className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center relative transition-all duration-300 group overflow-hidden"
-            style={{
-              background: 'rgba(15, 15, 20, 0.6)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-            }}
+            style={{ border: '1px solid hsl(var(--border))' }}
             onClick={() => onSelectTemplate(template)}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="flex flex-col items-center justify-center p-5 text-center relative z-10">
               <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-all duration-300 mb-3 group-hover:scale-110">
                 <MessageSquare className="h-7 w-7 text-primary" />
@@ -132,7 +128,7 @@ export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) 
                 </span>
               </div>
             </div>
-            <Badge variant="secondary" className="absolute top-3 right-3 text-[9px] px-1.5 py-0 bg-white/10 text-white/60 border-white/10">
+            <Badge variant="secondary" className="absolute top-3 right-3 text-[9px] px-1.5 py-0">
               <Building2 className="h-2.5 w-2.5 mr-0.5" />
               Imob.
             </Badge>
