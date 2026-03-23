@@ -82,6 +82,11 @@ export function ContactFormDialog({
       setIsSuccess(true);
       toast.success('Mensagem enviada com sucesso!');
       
+      // Track conversion for analytics
+      if (organizationId) {
+        trackConversion(organizationId);
+      }
+      
     } catch (error) {
       console.error('Error submitting contact form:', error);
       toast.error('Erro ao enviar mensagem. Tente novamente.');
