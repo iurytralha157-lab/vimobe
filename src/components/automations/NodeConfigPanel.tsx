@@ -106,8 +106,8 @@ export function NodeConfigPanel({
   return (
     <div
       ref={panelRef}
-      className="absolute w-[300px] bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[70vh] z-[100] shadow-lg"
-      style={{ left: panelPos.x, top: panelPos.y }}
+      className="absolute w-[300px] bg-card border border-border rounded-2xl flex flex-col max-h-[70vh] z-[100] shadow-lg"
+      style={{ left: panelPos.x, top: panelPos.y, isolation: 'isolate' }}
     >
       <div
         className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary/50 shrink-0 cursor-grab active:cursor-grabbing select-none"
