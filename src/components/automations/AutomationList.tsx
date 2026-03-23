@@ -50,7 +50,7 @@ function TriggerContext({ automation }: { automation: Automation }) {
     const stage = stageId ? stages?.find(s => s.id === stageId) : null;
     if (!pipeline && !stage) return null;
     return (
-      <span className="text-xs text-white/40">
+        <span className="text-xs text-muted-foreground">
         {pipeline?.name || '—'}{stage ? ` → ${stage.name}` : ''}
       </span>
     );
@@ -128,19 +128,15 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
             className={`group rounded-2xl cursor-pointer relative aspect-[4/3] flex items-center justify-center transition-all duration-300 overflow-hidden ${
               !automation.is_active ? 'opacity-50' : ''
             }`}
-            style={{
-              background: 'rgba(15, 15, 20, 0.6)',
-              backdropFilter: 'blur(12px)',
-              border: `1px solid ${automation.is_active ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.03)'}`,
-            }}
+            style={{ border: '1px solid hsl(var(--border))' }}
             onClick={() => onEdit(automation.id)}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             
             <div className="flex flex-col items-center justify-center p-5 text-center w-full relative z-10">
               <div className="relative mb-3">
-                <div className={`p-3 rounded-xl transition-all duration-300 group-hover:scale-110 ${automation.is_active ? 'bg-primary/15' : 'bg-white/5'}`}>
-                  <TriggerIcon className={`h-7 w-7 ${automation.is_active ? 'text-primary' : 'text-white/30'}`} />
+                <div className={`p-3 rounded-xl transition-all duration-300 group-hover:scale-110 ${automation.is_active ? 'bg-primary/15' : 'bg-muted'}`}>
+                  <TriggerIcon className={`h-7 w-7 ${automation.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
                 {stats.running > 0 && (
                   <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
@@ -156,7 +152,7 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
               {hasStats && (
                 <div className="flex items-center gap-2 text-[10px] mb-1">
                   {stats.completed > 0 && (
-                    <span className="flex items-center gap-0.5 text-white/50">
+                    <span className="flex items-center gap-0.5 text-muted-foreground">
                       <CheckCircle2 className="h-3 w-3 text-green-400" />
                       {stats.completed}
                     </span>
@@ -222,8 +218,8 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
             <Badge 
               className={`absolute top-2.5 left-2.5 text-[11px] px-2.5 py-0.5 font-medium border ${
                 automation.is_active 
-                  ? 'bg-green-500/15 text-green-400 border-green-500/20' 
-                  : 'bg-white/5 text-white/40 border-white/10'
+                  ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/20' 
+                  : 'bg-muted text-muted-foreground border-border'
               }`}
             >
               {automation.is_active ? 'Ativa' : 'Inativa'}
