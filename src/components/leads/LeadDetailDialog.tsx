@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
