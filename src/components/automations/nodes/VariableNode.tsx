@@ -26,7 +26,7 @@ export const VariableNode = memo(({ data, selected }: NodeProps) => {
           )}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
+      <Handle type="source" position={Position.Right} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
     </div>
   );
 });

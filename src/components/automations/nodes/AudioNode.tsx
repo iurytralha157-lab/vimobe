@@ -21,7 +21,7 @@ export const AudioNode = memo(({ data, selected }: NodeProps) => {
           </p>
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-amber-400 !w-3 !h-3 !border-2 !border-amber-500/50" />
+      <Handle type="source" position={Position.Right} className="!bg-amber-400 !w-3 !h-3 !border-2 !border-amber-500/50" />
     </div>
   );
 });

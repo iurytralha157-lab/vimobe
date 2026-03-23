@@ -27,7 +27,7 @@ export const WebhookNode = memo(({ data, selected }: NodeProps) => {
           </p>
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-indigo-400 !w-3 !h-3 !border-2 !border-indigo-500/50" />
+      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-3 !h-3 !border-2 !border-indigo-500/50" />
     </div>
   );
 });
