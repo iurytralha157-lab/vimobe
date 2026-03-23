@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1239,32 +1240,22 @@ export function LeadDetailDialog({
                 ) : (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
-                    <Select value={lead.interest_property_id || 'none'} onValueChange={value => {
-                      const newValue = value === 'none' ? null : value;
-                      const selectedProperty = properties.find((p: any) => p.id === value);
-                      const propertyPrice = selectedProperty?.preco || null;
-                      setEditForm({
-                        ...editForm,
-                        valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
-                      });
-                      updateLead.mutateAsync({
-                        id: lead.id,
-                        interest_property_id: newValue,
-                        valor_interesse: propertyPrice || lead.valor_interesse
-                      } as any).then(() => refetchStages());
-                    }}>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Selecionar imóvel" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum</SelectItem>
-                        {properties.map((p: any) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.code} - {p.title || p.bairro || 'Sem título'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <PropertyPickerDialog
+                      properties={properties}
+                      selectedPropertyId={lead.interest_property_id}
+                      onSelect={(p) => {
+                        const propertyPrice = p.preco || null;
+                        setEditForm({
+                          ...editForm,
+                          valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse
+                        });
+                        updateLead.mutateAsync({
+                          id: lead.id,
+                          interest_property_id: p.id,
+                          valor_interesse: propertyPrice || lead.valor_interesse
+                        } as any).then(() => refetchStages());
+                      }}
+                    />
                   </div>
                 )}
 
@@ -2015,41 +2006,31 @@ export function LeadDetailDialog({
                 ) : (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
-                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
-                      const newValue = value === 'none' ? '' : value;
-                      const selectedProperty = properties.find((p: any) => p.id === value);
-                      const propertyPrice = selectedProperty?.preco || null;
-                      const propertyCommission = (selectedProperty as any)?.commission_percentage || null;
-                      setEditForm({
-                        ...editForm,
-                        property_id: newValue,
-                        valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse,
-                        commission_percentage: propertyCommission ? propertyCommission.toString() : editForm.commission_percentage
-                      });
-                      const updateData: any = {
-                        id: lead.id,
-                        property_id: newValue || null
-                      };
-                      if (propertyPrice) {
-                        updateData.valor_interesse = propertyPrice;
-                      }
-                      if (propertyCommission) {
-                        updateData.commission_percentage = propertyCommission;
-                      }
-                      updateLead.mutateAsync(updateData).then(() => refetchStages());
-                    }}>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Selecionar imóvel" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum</SelectItem>
-                        {properties.map((p: any) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.code} - {p.title || p.bairro || 'Sem título'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <PropertyPickerDialog
+                      properties={properties}
+                      selectedPropertyId={editForm.property_id || null}
+                      onSelect={(p) => {
+                        const propertyPrice = p.preco || null;
+                        const propertyCommission = (p as any)?.commission_percentage || null;
+                        setEditForm({
+                          ...editForm,
+                          property_id: p.id,
+                          valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse,
+                          commission_percentage: propertyCommission ? propertyCommission.toString() : editForm.commission_percentage
+                        });
+                        const updateData: any = {
+                          id: lead.id,
+                          property_id: p.id
+                        };
+                        if (propertyPrice) {
+                          updateData.valor_interesse = propertyPrice;
+                        }
+                        if (propertyCommission) {
+                          updateData.commission_percentage = propertyCommission;
+                        }
+                        updateLead.mutateAsync(updateData).then(() => refetchStages());
+                      }}
+                    />
                   </div>
                 )}
 
