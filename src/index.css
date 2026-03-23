@@ -327,24 +327,16 @@
     @apply bg-accent/50 border-2 border-dashed border-primary;
   }
 
-  /* Automation Node - Themed Glassmorphism */
+  /* Automation Node */
   .automation-node {
-    background: hsl(var(--card) / 0.9);
-    backdrop-filter: blur(16px);
+    background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    box-shadow:
-      0 0 20px rgba(var(--node-accent-rgb, 0, 0, 0), 0.1),
-      0 8px 32px hsl(var(--foreground) / 0.05);
     transition: all 0.2s ease;
     color: hsl(var(--card-foreground));
   }
 
   .automation-node:hover {
     border-color: hsl(var(--border) / 0.8);
-    box-shadow:
-      0 0 30px rgba(var(--node-accent-rgb, 0, 0, 0), 0.2),
-      0 12px 40px hsl(var(--foreground) / 0.08);
-    transform: translateY(-1px);
   }
 
   /* Automation canvas */
@@ -353,7 +345,7 @@
   }
 
   .automation-canvas .react-flow__background {
-    opacity: 0.4;
+    opacity: 1;
   }
 
   .automation-canvas .react-flow__edge-path {
