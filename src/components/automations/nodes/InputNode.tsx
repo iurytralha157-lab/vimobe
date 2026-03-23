@@ -23,7 +23,7 @@ export const InputNode = memo(({ data, selected }: NodeProps) => {
     <div className={`automation-node px-4 py-3 rounded-xl min-w-[220px] max-w-[280px] ${
       selected ? 'ring-2 ring-cyan-400/60' : ''
     }`} style={{ '--node-accent': '#06b6d4' } as React.CSSProperties}>
-      <Handle type="target" position={Position.Top} className="!bg-cyan-400 !w-3 !h-3 !border-2 !border-cyan-500/50" />
+      <Handle type="target" position={Position.Left} className="!bg-cyan-400 !w-3 !h-3 !border-2 !border-cyan-500/50" />
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-cyan-500/20 shrink-0">
           <Icon className="h-5 w-5 text-cyan-400" />
