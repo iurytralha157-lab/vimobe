@@ -2006,41 +2006,31 @@ export function LeadDetailDialog({
                 ) : (
                   <div>
                     <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
-                    <Select value={editForm.property_id || 'none'} onValueChange={value => {
-                      const newValue = value === 'none' ? '' : value;
-                      const selectedProperty = properties.find((p: any) => p.id === value);
-                      const propertyPrice = selectedProperty?.preco || null;
-                      const propertyCommission = (selectedProperty as any)?.commission_percentage || null;
-                      setEditForm({
-                        ...editForm,
-                        property_id: newValue,
-                        valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse,
-                        commission_percentage: propertyCommission ? propertyCommission.toString() : editForm.commission_percentage
-                      });
-                      const updateData: any = {
-                        id: lead.id,
-                        property_id: newValue || null
-                      };
-                      if (propertyPrice) {
-                        updateData.valor_interesse = propertyPrice;
-                      }
-                      if (propertyCommission) {
-                        updateData.commission_percentage = propertyCommission;
-                      }
-                      updateLead.mutateAsync(updateData).then(() => refetchStages());
-                    }}>
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Selecionar imóvel" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum</SelectItem>
-                        {properties.map((p: any) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.code} - {p.title || p.bairro || 'Sem título'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <PropertyPickerDialog
+                      properties={properties}
+                      selectedPropertyId={editForm.property_id || null}
+                      onSelect={(p) => {
+                        const propertyPrice = p.preco || null;
+                        const propertyCommission = (p as any)?.commission_percentage || null;
+                        setEditForm({
+                          ...editForm,
+                          property_id: p.id,
+                          valor_interesse: propertyPrice ? propertyPrice.toString() : editForm.valor_interesse,
+                          commission_percentage: propertyCommission ? propertyCommission.toString() : editForm.commission_percentage
+                        });
+                        const updateData: any = {
+                          id: lead.id,
+                          property_id: p.id
+                        };
+                        if (propertyPrice) {
+                          updateData.valor_interesse = propertyPrice;
+                        }
+                        if (propertyCommission) {
+                          updateData.commission_percentage = propertyCommission;
+                        }
+                        updateLead.mutateAsync(updateData).then(() => refetchStages());
+                      }}
+                    />
                   </div>
                 )}
 
