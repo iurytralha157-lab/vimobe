@@ -544,9 +544,9 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                 ⚙️ Configurações
               </button>
               {showConfig && (
-                <div className="px-3 py-2 space-y-4 border rounded-xl bg-muted/20 mb-3">
+                <div className="px-3 py-2 space-y-4 border border-white/5 rounded-xl bg-white/[0.02] mb-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Sessão WhatsApp</Label>
+                    <Label className="text-[10px] font-semibold uppercase text-white/40">Sessão WhatsApp</Label>
                     <Select value={sessionId} onValueChange={setSessionId}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>{connectedSessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.display_name || s.instance_name}</SelectItem>)}</SelectContent>
