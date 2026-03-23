@@ -31,14 +31,17 @@ export function useSiteAnalytics(dateFrom?: Date, dateTo?: Date) {
   return useQuery({
     queryKey: ['site-analytics', organization?.id, dateFrom?.toISOString(), dateTo?.toISOString()],
     queryFn: async (): Promise<SiteAnalyticsSummary> => {
-      const { data, error } = await supabase.rpc('get_site_analytics_summary', {
+      const { data, error } = await (supabase.rpc as any)('get_site_analytics_summary', {
         p_organization_id: organization!.id,
         p_date_from: (dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).toISOString(),
         p_date_to: (dateTo || new Date()).toISOString(),
       });
 
-      if (error) throw error;
-      return data as unknown as SiteAnalyticsSummary;
+      if (error) {
+        console.error('Site analytics RPC error:', error);
+        throw error;
+      }
+      return data as SiteAnalyticsSummary;
     },
     enabled: !!organization?.id,
   });
