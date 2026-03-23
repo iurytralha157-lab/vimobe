@@ -570,7 +570,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         {/* Left Panel - Typebot-style Node Palette */}
         <div className="w-64 border-r automation-sidebar flex flex-col">
           <ScrollArea className="flex-1">
-            <div className="p-3 space-y-1">
+             <div className="p-3 space-y-1">
               {/* Config Toggle */}
               <button 
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-white/5 transition-colors text-white/50"
@@ -600,83 +600,6 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Trigger */}
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
-                      Disparar quando
-                    </Label>
-                    <Select value={triggerType} onValueChange={(v: TriggerType) => setTriggerType(v)}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tag_added">Tag adicionada</SelectItem>
-                        <SelectItem value="lead_created">Lead criado</SelectItem>
-                        <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
-                        <SelectItem value="manual">Manual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {triggerType === 'tag_added' && (
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Tag</Label>
-                      <Select value={tagId} onValueChange={setTagId}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tags?.map((tag) => (
-                            <SelectItem key={tag.id} value={tag.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color || '#888' }} />
-                                {tag.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {triggerType === 'lead_stage_changed' && (
-                    <>
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Pipeline</Label>
-                        <Select value={pipelineId} onValueChange={setPipelineId}>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {pipelines?.map((pipeline) => (
-                              <SelectItem key={pipeline.id} value={pipeline.id}>{pipeline.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {pipelineId && (
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Etapa</Label>
-                          <Select value={stageId} onValueChange={setStageId}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {stages?.map((stage) => (
-                                <SelectItem key={stage.id} value={stage.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color || '#888' }} />
-                                    {stage.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </>
-                  )}
 
                   {/* User Filter */}
                   <div className="space-y-1.5">
