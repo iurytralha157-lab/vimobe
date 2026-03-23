@@ -795,11 +795,11 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
-            className="bg-muted/20"
+            className="automation-canvas"
           >
             <Controls />
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-            <Panel position="bottom-center" className="bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-muted-foreground shadow-lg border">
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(255,255,255,0.08)" />
+            <Panel position="bottom-center" className="!bg-[rgba(15,15,20,0.85)] backdrop-blur-xl rounded-xl px-4 py-2.5 text-xs text-white/40 shadow-lg border border-white/5">
               Arraste para conectar • Clique em um nó para editar
             </Panel>
           </ReactFlow>
