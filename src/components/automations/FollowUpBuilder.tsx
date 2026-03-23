@@ -582,7 +582,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               </button>
 
               {showConfig && (
-                <div className="px-3 py-2 space-y-4 border rounded-xl bg-muted/20 mb-3">
+                <div className="px-3 py-2 space-y-4 border border-white/5 rounded-xl bg-white/[0.02] mb-3">
                   {/* Session */}
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
