@@ -755,7 +755,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                               <div className={`p-1 rounded-lg ${item.color}`}>
                                 <Icon className="h-3.5 w-3.5" />
                               </div>
-                              <span className="text-xs font-medium truncate">{item.label}</span>
+                              <span className="text-xs font-medium truncate text-white/70">{item.label}</span>
                             </button>
                           );
                         })}
