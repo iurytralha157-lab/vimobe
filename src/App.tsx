@@ -1,5 +1,4 @@
 import { lazy, Suspense } from "react";
-import logoWhite from "@/assets/logo-white.png";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -105,7 +104,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const PageLoader = () => null;
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="animate-pulse text-muted-foreground">Carregando...</div>
+  </div>
+);
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization } = useAuth();
