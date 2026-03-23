@@ -255,31 +255,33 @@ export function AboutTab({ formData, setFormData, site, isAdmin, handleFileUploa
           <CardDescription>Cards com ícones exibidos na seção "Por que escolher"</CardDescription>
         </CardHeader>
         <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-          {formData.about_features.map((feature: AboutFeature, index: number) => (
-            <div key={index} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">Diferencial {index + 1}</span>
-                {isAdmin && formData.about_features.length > 1 && (
-                  <Button variant="ghost" size="icon" onClick={() => removeFeature(index)} className="text-destructive hover:text-destructive h-8 w-8">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {formData.about_features.map((feature: AboutFeature, index: number) => (
+              <div key={index} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Diferencial {index + 1}</span>
+                  {isAdmin && formData.about_features.length > 1 && (
+                    <Button variant="ghost" size="icon" onClick={() => removeFeature(index)} className="text-destructive hover:text-destructive h-8 w-8">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  placeholder="Título do diferencial"
+                  value={feature.title}
+                  onChange={(e) => updateFeature(index, 'title', e.target.value)}
+                  disabled={!isAdmin}
+                />
+                <Textarea
+                  placeholder="Descrição do diferencial"
+                  value={feature.description}
+                  onChange={(e) => updateFeature(index, 'description', e.target.value)}
+                  rows={2}
+                  disabled={!isAdmin}
+                />
               </div>
-              <Input
-                placeholder="Título do diferencial"
-                value={feature.title}
-                onChange={(e) => updateFeature(index, 'title', e.target.value)}
-                disabled={!isAdmin}
-              />
-              <Textarea
-                placeholder="Descrição do diferencial"
-                value={feature.description}
-                onChange={(e) => updateFeature(index, 'description', e.target.value)}
-                rows={2}
-                disabled={!isAdmin}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
           {isAdmin && formData.about_features.length < 6 && (
             <Button variant="outline" size="sm" onClick={addFeature} className="w-full">
               <Plus className="w-4 h-4 mr-2" />
