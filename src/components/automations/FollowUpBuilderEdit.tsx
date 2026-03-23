@@ -644,10 +644,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                           const Icon = item.icon;
                           return (
                             <button key={`${item.type}-${item.label}-${idx}`}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border/50 bg-background hover:bg-muted/50 hover:border-primary/30 transition-all text-left group cursor-pointer"
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 transition-all text-left group cursor-pointer"
                               onClick={() => handleAddNode(item)}>
                               <div className={`p-1 rounded-lg ${item.color}`}><Icon className="h-3.5 w-3.5" /></div>
-                              <span className="text-xs font-medium truncate">{item.label}</span>
+                              <span className="text-xs font-medium truncate text-white/70">{item.label}</span>
                             </button>
                           );
                         })}
