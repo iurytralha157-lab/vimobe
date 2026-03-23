@@ -506,7 +506,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#0a0a0f]">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-background">
         <div className="flex items-center gap-4">
