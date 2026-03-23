@@ -9,7 +9,7 @@ export const AudioNode = memo(({ data, selected }: NodeProps) => {
     <div className={`automation-node px-4 py-3 rounded-xl min-w-[220px] max-w-[280px] ${
       selected ? 'ring-2 ring-amber-400/60' : ''
     }`} style={{ '--node-accent': '#f59e0b' } as React.CSSProperties}>
-      <Handle type="target" position={Position.Top} className="!bg-amber-400 !w-3 !h-3 !border-2 !border-amber-500/50" />
+      <Handle type="target" position={Position.Left} className="!bg-amber-400 !w-3 !h-3 !border-2 !border-amber-500/50" />
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-amber-500/20 shrink-0">
           <Headphones className="h-5 w-5 text-amber-400" />
@@ -21,7 +21,7 @@ export const AudioNode = memo(({ data, selected }: NodeProps) => {
           </p>
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-amber-400 !w-3 !h-3 !border-2 !border-amber-500/50" />
+      <Handle type="source" position={Position.Right} className="!bg-amber-400 !w-3 !h-3 !border-2 !border-amber-500/50" />
     </div>
   );
 });

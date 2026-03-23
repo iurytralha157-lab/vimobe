@@ -10,7 +10,7 @@ export const WebhookNode = memo(({ data, selected }: NodeProps) => {
     <div className={`automation-node px-4 py-3 rounded-xl min-w-[220px] max-w-[280px] ${
       selected ? 'ring-2 ring-indigo-400/60' : ''
     }`} style={{ '--node-accent': '#6366f1' } as React.CSSProperties}>
-      <Handle type="target" position={Position.Top} className="!bg-indigo-400 !w-3 !h-3 !border-2 !border-indigo-500/50" />
+      <Handle type="target" position={Position.Left} className="!bg-indigo-400 !w-3 !h-3 !border-2 !border-indigo-500/50" />
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-indigo-500/20 shrink-0">
           <Webhook className="h-5 w-5 text-indigo-400" />
@@ -27,7 +27,7 @@ export const WebhookNode = memo(({ data, selected }: NodeProps) => {
           </p>
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-indigo-400 !w-3 !h-3 !border-2 !border-indigo-500/50" />
+      <Handle type="source" position={Position.Right} className="!bg-indigo-400 !w-3 !h-3 !border-2 !border-indigo-500/50" />
     </div>
   );
 });

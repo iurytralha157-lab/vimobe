@@ -14,7 +14,7 @@ export const WaitNode = memo(({ data, selected }: NodeProps) => {
     <div className={`automation-node px-4 py-3 rounded-xl min-w-[180px] ${
       selected ? 'ring-2 ring-purple-400/60' : ''
     }`} style={{ '--node-accent': '#a855f7' } as React.CSSProperties}>
-      <Handle type="target" position={Position.Top} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-500/50" />
+      <Handle type="target" position={Position.Left} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-500/50" />
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-purple-500/20 shrink-0">
           <Timer className="h-5 w-5 text-purple-400" />
@@ -24,7 +24,7 @@ export const WaitNode = memo(({ data, selected }: NodeProps) => {
           <div className="text-sm font-semibold text-white/90">{getValue()}</div>
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-500/50" />
+      <Handle type="source" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-500/50" />
     </div>
   );
 });

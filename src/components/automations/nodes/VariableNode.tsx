@@ -10,7 +10,7 @@ export const VariableNode = memo(({ data, selected }: NodeProps) => {
     <div className={`automation-node px-4 py-3 rounded-xl min-w-[220px] max-w-[280px] ${
       selected ? 'ring-2 ring-yellow-400/60' : ''
     }`} style={{ '--node-accent': '#eab308' } as React.CSSProperties}>
-      <Handle type="target" position={Position.Top} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
+      <Handle type="target" position={Position.Left} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-yellow-500/20 shrink-0">
           <PenLine className="h-5 w-5 text-yellow-400" />
@@ -26,7 +26,7 @@ export const VariableNode = memo(({ data, selected }: NodeProps) => {
           )}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
+      <Handle type="source" position={Position.Right} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
     </div>
   );
 });
