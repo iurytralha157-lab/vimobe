@@ -569,7 +569,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       {/* Main Content */}
       <div className="flex-1 flex min-h-0">
         {/* Left Panel - Typebot-style Node Palette */}
-        <div className="w-64 border-r bg-card/50 flex flex-col">
+        <div className="w-64 border-r automation-sidebar flex flex-col">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-1">
               {/* Config Toggle */}
