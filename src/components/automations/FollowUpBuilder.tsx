@@ -748,6 +748,112 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             </SheetHeader>
 
             <div className="mt-6 space-y-4">
+              {selectedNode?.type === 'start' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Disparar quando</Label>
+                    <Select 
+                      value={selectedNode.data.trigger_type || 'manual'} 
+                      onValueChange={(v: TriggerType) => {
+                        handleNodeDataChange(selectedNode.id, { trigger_type: v });
+                        setTriggerType(v);
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tag_added">Tag adicionada</SelectItem>
+                        <SelectItem value="lead_created">Lead criado</SelectItem>
+                        <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
+                        <SelectItem value="manual">Disparo manual</SelectItem>
+                        <SelectItem value="message_received">Mensagem recebida</SelectItem>
+                        <SelectItem value="inactivity">Inatividade</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedNode.data.trigger_type === 'tag_added' && (
+                    <div className="space-y-2">
+                      <Label>Tag</Label>
+                      <Select value={tagId} onValueChange={setTagId}>
+                        <SelectTrigger><SelectValue placeholder="Selecione a tag..." /></SelectTrigger>
+                        <SelectContent>
+                          {tags?.map((tag) => (
+                            <SelectItem key={tag.id} value={tag.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color || '#888' }} />
+                                {tag.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedNode.data.trigger_type === 'lead_stage_changed' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Pipeline</Label>
+                        <Select value={pipelineId} onValueChange={setPipelineId}>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            {pipelines?.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {pipelineId && (
+                        <div className="space-y-2">
+                          <Label>Etapa</Label>
+                          <Select value={stageId} onValueChange={setStageId}>
+                            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                            <SelectContent>
+                              {stages?.map((stage) => (
+                                <SelectItem key={stage.id} value={stage.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color || '#888' }} />
+                                    {stage.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {selectedNode.data.trigger_type === 'inactivity' && (
+                    <div className="space-y-2">
+                      <Label>Tempo de inatividade</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          type="number" min={1} 
+                          value={selectedNode.data.inactivity_value || 1}
+                          onChange={(e) => handleNodeDataChange(selectedNode.id, { inactivity_value: parseInt(e.target.value) || 1 })}
+                          className="w-24" 
+                        />
+                        <Select 
+                          value={selectedNode.data.inactivity_unit || 'days'}
+                          onValueChange={(v) => handleNodeDataChange(selectedNode.id, { inactivity_unit: v })}
+                        >
+                          <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hours">Horas</SelectItem>
+                            <SelectItem value="days">Dias</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Defina o gatilho que iniciará este fluxo. Você pode ter múltiplos nós de início para diferentes gatilhos.
+                  </p>
+                </div>
+              )}
+
               {selectedNode?.type === 'message' && (
                 <div className="space-y-2">
                   <Label>Mensagem</Label>
