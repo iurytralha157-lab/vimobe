@@ -362,10 +362,14 @@ ${getWorkerCode()}`;
 
         {site && (
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <AnimatedIcon icon={GLOBE_JSON} size={20} trigger="hover" />
                 <span className="hidden sm:inline">Geral</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Analytics</span>
               </TabsTrigger>
               <TabsTrigger value="appearance" className="flex items-center gap-2">
                 <Palette className="w-4 h-4" />
