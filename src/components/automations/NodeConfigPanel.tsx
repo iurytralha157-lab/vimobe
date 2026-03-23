@@ -7,15 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Trash2, Play, MessageSquare, Timer, Image, Headphones, Video, Type,
-  GitBranch, Webhook, FlipHorizontal, ExternalLink, PenLine, X,
+  GitBranch, Webhook, FlipHorizontal, ExternalLink, PenLine, X, Save, GripHorizontal,
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
+import { useRef, useState, useCallback, useEffect } from 'react';
 
 interface NodeConfigPanelProps {
   selectedNode: Node;
   onClose: () => void;
   onNodeDataChange: (nodeId: string, data: Record<string, unknown>) => void;
   onDeleteNode: (nodeId: string) => void;
+  onSaveNode?: () => void;
   triggerType?: TriggerType;
   setTriggerType?: (t: TriggerType) => void;
   tags?: Array<{ id: string; name: string; color?: string | null }>;
@@ -27,6 +29,7 @@ interface NodeConfigPanelProps {
   stages?: Array<{ id: string; name: string; color?: string | null }>;
   stageId?: string;
   setStageId?: (id: string) => void;
+  position?: { x: number; y: number };
 }
 
 const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
@@ -45,17 +48,68 @@ const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: stri
 };
 
 export function NodeConfigPanel({
-  selectedNode, onClose, onNodeDataChange, onDeleteNode,
+  selectedNode, onClose, onNodeDataChange, onDeleteNode, onSaveNode,
   tags, tagId, setTagId, setTriggerType,
   pipelines, pipelineId, setPipelineId, stages, stageId, setStageId,
+  position,
 }: NodeConfigPanelProps) {
   const nodeInfo = NODE_TITLES[selectedNode.type || ''] || { icon: Play, label: 'Nó', color: 'text-foreground' };
   const Icon = nodeInfo.icon;
 
+  // Dragging logic
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, ox: 0, oy: 0 });
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+  }, [offset]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      setOffset({
+        x: dragStart.current.ox + (e.clientX - dragStart.current.x),
+        y: dragStart.current.oy + (e.clientY - dragStart.current.y),
+      });
+    };
+    const handleMouseUp = () => setIsDragging(false);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Reset offset when node changes
+  useEffect(() => {
+    setOffset({ x: 0, y: 0 });
+  }, [selectedNode.id]);
+
+  const style: React.CSSProperties = position ? {
+    left: position.x + offset.x,
+    top: position.y + offset.y,
+  } : {
+    right: 16 + -offset.x,
+    top: 64 + offset.y,
+  };
+
   return (
-    <div className="w-[300px] bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[70vh] z-50">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary/50 shrink-0">
+    <div
+      ref={panelRef}
+      className="w-[300px] bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[70vh] z-50"
+      style={style}
+    >
+      <div
+        className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary/50 shrink-0 cursor-grab active:cursor-grabbing select-none"
+        onMouseDown={handleMouseDown}
+      >
         <div className="flex items-center gap-2">
+          <GripHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
           <Icon className={`h-4 w-4 ${nodeInfo.color}`} />
           <span className="text-sm font-semibold text-foreground">{nodeInfo.label}</span>
         </div>
@@ -242,7 +296,13 @@ export function NodeConfigPanel({
             </div>
           )}
 
-          <div className="pt-3 border-t border-border">
+          <div className="pt-3 border-t border-border space-y-2">
+            {onSaveNode && (
+              <Button size="sm" className="w-full h-8 text-xs" onClick={onSaveNode}>
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                Guardar
+              </Button>
+            )}
             <Button variant="destructive" size="sm" className="w-full h-8 text-xs" onClick={() => onDeleteNode(selectedNode.id)}>
               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
               Remover nó

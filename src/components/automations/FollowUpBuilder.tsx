@@ -269,8 +269,17 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     [setEdges]
   );
 
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
+
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
+    // Position the panel near the click, offset a bit to the right
+    const rect = (event.currentTarget as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+    if (rect) {
+      const x = event.clientX - rect.left + 20;
+      const y = event.clientY - rect.top - 20;
+      setPanelPosition({ x: Math.min(x, rect.width - 320), y: Math.max(0, Math.min(y, rect.height - 300)) });
+    }
   }, []);
 
   const onPaneClick = useCallback(() => {
