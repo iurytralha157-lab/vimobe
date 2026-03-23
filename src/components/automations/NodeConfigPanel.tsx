@@ -106,8 +106,8 @@ export function NodeConfigPanel({
   return (
     <div
       ref={panelRef}
-      className="absolute w-[300px] bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[70vh] z-[100] shadow-lg"
-      style={{ left: panelPos.x, top: panelPos.y }}
+      className="absolute w-[300px] bg-card border border-border rounded-2xl flex flex-col max-h-[70vh] z-[100] shadow-lg"
+      style={{ left: panelPos.x, top: panelPos.y, isolation: 'isolate' }}
     >
       <div
         className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary/50 shrink-0 cursor-grab active:cursor-grabbing select-none"
@@ -132,7 +132,7 @@ export function NodeConfigPanel({
                 <Select value={selectedNode.data.trigger_type || 'manual'}
                   onValueChange={(v: TriggerType) => { onNodeDataChange(selectedNode.id, { trigger_type: v }); setTriggerType?.(v); }}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[200]">
                     <SelectItem value="tag_added">Tag adicionada</SelectItem>
                     <SelectItem value="lead_created">Lead criado</SelectItem>
                     <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
@@ -147,7 +147,7 @@ export function NodeConfigPanel({
                   <Label className="text-xs">Tag</Label>
                   <Select value={tagId} onValueChange={setTagId}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>{tags.map((t) => (
+                    <SelectContent className="z-[200]">{tags.map((t) => (
                       <SelectItem key={t.id} value={t.id}><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color || '#888' }} />{t.name}</div></SelectItem>
                     ))}</SelectContent>
                   </Select>
@@ -159,7 +159,7 @@ export function NodeConfigPanel({
                     <Label className="text-xs">Pipeline</Label>
                     <Select value={pipelineId} onValueChange={setPipelineId}>
                       <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>{pipelines.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                      <SelectContent className="z-[200]">{pipelines.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   {pipelineId && stages && setStageId && (
@@ -167,7 +167,7 @@ export function NodeConfigPanel({
                       <Label className="text-xs">Etapa</Label>
                       <Select value={stageId} onValueChange={setStageId}>
                         <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>{stages.map((s) => (
+                        <SelectContent className="z-[200]">{stages.map((s) => (
                           <SelectItem key={s.id} value={s.id}><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color || '#888' }} />{s.name}</div></SelectItem>
                         ))}</SelectContent>
                       </Select>
@@ -184,7 +184,7 @@ export function NodeConfigPanel({
                     <Select value={selectedNode.data.inactivity_unit || 'days'}
                       onValueChange={(v) => onNodeDataChange(selectedNode.id, { inactivity_unit: v })}>
                       <SelectTrigger className="flex-1 h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
+                      <SelectContent className="z-[200]"><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -196,7 +196,7 @@ export function NodeConfigPanel({
                   <Label className="text-xs">Sessão WhatsApp</Label>
                   <Select value={sessionId || ''} onValueChange={setSessionId}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>{connectedSessions.map((s) => (
+                    <SelectContent className="z-[200]">{connectedSessions.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.display_name || s.instance_name}</SelectItem>
                     ))}</SelectContent>
                   </Select>
@@ -209,7 +209,7 @@ export function NodeConfigPanel({
                   <Label className="text-xs">Filtrar por usuário</Label>
                   <Select value={filterUserId || '__all__'} onValueChange={(v) => setFilterUserId(v === '__all__' ? '' : v)}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[200]">
                       <SelectItem value="__all__">Todos os usuários</SelectItem>
                       <SelectItem value="__me__">Apenas meus leads</SelectItem>
                       {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>)}
@@ -238,7 +238,7 @@ export function NodeConfigPanel({
                     onChange={(e) => onNodeDataChange(selectedNode.id, { wait_value: parseInt(e.target.value) || 1 })} />
                   <Select value={selectedNode.data.wait_type || 'days'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { wait_type: v })}>
                     <SelectTrigger className="flex-1 h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="minutes">Minutos</SelectItem><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
+                    <SelectContent className="z-[200]"><SelectItem value="minutes">Minutos</SelectItem><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
                   </Select>
                 </div>
               </div>
@@ -278,7 +278,7 @@ export function NodeConfigPanel({
                           onValueChange={(v) => onNodeDataChange(selectedNode.id, { on_reply_stage_id: v === '__none__' ? '' : v })}
                         >
                           <SelectTrigger className="h-9"><SelectValue placeholder="Não mover" /></SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="z-[200]">
                             <SelectItem value="__none__">Não mover</SelectItem>
                             {stages.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                           </SelectContent>
@@ -315,7 +315,7 @@ export function NodeConfigPanel({
               <div className="space-y-1.5"><Label className="text-xs">Tipo</Label>
                 <Select value={selectedNode.data.input_type || 'text'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { input_type: v })}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="text">Texto</SelectItem><SelectItem value="number">Número</SelectItem><SelectItem value="email">Email</SelectItem><SelectItem value="phone">Telefone</SelectItem><SelectItem value="website">Website</SelectItem><SelectItem value="date">Data</SelectItem><SelectItem value="button">Botão</SelectItem></SelectContent>
+                  <SelectContent className="z-[200]"><SelectItem value="text">Texto</SelectItem><SelectItem value="number">Número</SelectItem><SelectItem value="email">Email</SelectItem><SelectItem value="phone">Telefone</SelectItem><SelectItem value="website">Website</SelectItem><SelectItem value="date">Data</SelectItem><SelectItem value="button">Botão</SelectItem></SelectContent>
                 </Select></div>
               <div className="space-y-1.5"><Label className="text-xs">Pergunta</Label>
                 <Textarea value={selectedNode.data.prompt || ''} rows={2} placeholder="Ex: Qual seu nome?" onChange={(e) => onNodeDataChange(selectedNode.id, { prompt: e.target.value })} /></div>
@@ -335,7 +335,7 @@ export function NodeConfigPanel({
               <div className="space-y-1.5"><Label className="text-xs">Operador</Label>
                 <Select value={selectedNode.data.operator || 'equals'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { operator: v })}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="equals">Igual a</SelectItem><SelectItem value="not_equals">Diferente</SelectItem><SelectItem value="contains">Contém</SelectItem><SelectItem value="not_contains">Não contém</SelectItem><SelectItem value="greater_than">Maior que</SelectItem><SelectItem value="less_than">Menor que</SelectItem><SelectItem value="is_set">Existe</SelectItem><SelectItem value="is_not_set">Não existe</SelectItem></SelectContent>
+                  <SelectContent className="z-[200]"><SelectItem value="equals">Igual a</SelectItem><SelectItem value="not_equals">Diferente</SelectItem><SelectItem value="contains">Contém</SelectItem><SelectItem value="not_contains">Não contém</SelectItem><SelectItem value="greater_than">Maior que</SelectItem><SelectItem value="less_than">Menor que</SelectItem><SelectItem value="is_set">Existe</SelectItem><SelectItem value="is_not_set">Não existe</SelectItem></SelectContent>
                 </Select></div>
               <div className="space-y-1.5"><Label className="text-xs">Valor</Label>
                 <Input value={selectedNode.data.value || ''} placeholder="valor esperado" className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { value: e.target.value })} /></div>
@@ -349,7 +349,7 @@ export function NodeConfigPanel({
               <div className="space-y-1.5"><Label className="text-xs">Método</Label>
                 <Select value={selectedNode.data.method || 'POST'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { method: v })}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="GET">GET</SelectItem><SelectItem value="POST">POST</SelectItem><SelectItem value="PUT">PUT</SelectItem><SelectItem value="PATCH">PATCH</SelectItem></SelectContent>
+                  <SelectContent className="z-[200]"><SelectItem value="GET">GET</SelectItem><SelectItem value="POST">POST</SelectItem><SelectItem value="PUT">PUT</SelectItem><SelectItem value="PATCH">PATCH</SelectItem></SelectContent>
                 </Select></div>
             </div>
           )}
