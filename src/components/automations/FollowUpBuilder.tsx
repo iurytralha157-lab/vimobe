@@ -732,6 +732,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           <SheetContent className="w-[400px] sm:w-[400px]">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
+                {selectedNode?.type === 'start' && <><Play className="h-5 w-5 text-orange-500" /> Configurar Início</>}
                 {selectedNode?.type === 'message' && <><MessageSquare className="h-5 w-5 text-green-600" /> Editar Mensagem</>}
                 {selectedNode?.type === 'wait' && <><Timer className="h-5 w-5 text-purple-600" /> Configurar Espera</>}
                 {selectedNode?.type === 'image' && <><Image className="h-5 w-5 text-blue-600" /> Configurar Imagem</>}
