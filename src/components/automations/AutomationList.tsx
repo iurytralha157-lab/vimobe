@@ -155,8 +155,15 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
     );
   }
 
+  const getNodeCount = (automation: Automation) => {
+    const flow = automation.flow_definition as unknown as Record<string, unknown> | null;
+    if (!flow) return 0;
+    const nodes = flow.nodes as unknown[] | undefined;
+    return nodes?.length || 0;
+  };
+
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
       {automations.map((automation) => {
         const TriggerIcon = getTriggerIcon(automation.trigger_type as TriggerType);
         const stats = getExecutionStats(automation.id);
@@ -165,125 +172,93 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
         return (
           <Card 
             key={automation.id} 
-            className="group bg-card/50 backdrop-blur-sm border-border/50 rounded-2xl hover:border-primary/30 transition-all duration-200"
+            className={`group rounded-2xl border-border/50 hover:border-primary/40 transition-all duration-200 cursor-pointer relative aspect-[4/3] flex items-center justify-center ${
+              automation.is_active ? 'bg-card/50 backdrop-blur-sm' : 'bg-muted/30 opacity-70'
+            }`}
+            onClick={() => onEdit(automation.id)}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                {/* Icon */}
-                <div className="relative shrink-0">
-                  <div className={`p-2.5 rounded-xl ${automation.is_active ? 'bg-primary/10' : 'bg-muted'}`}>
-                    <TriggerIcon className={`h-5 w-5 ${automation.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
-                  </div>
-                  {stats.running > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
-                  )}
+            <CardContent className="flex flex-col items-center justify-center p-5 text-center w-full">
+              <div className="relative mb-3">
+                <div className={`p-3 rounded-xl ${automation.is_active ? 'bg-primary/10' : 'bg-muted'}`}>
+                  <TriggerIcon className={`h-7 w-7 ${automation.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm truncate">{automation.name}</span>
-                    <Badge 
-                      variant={automation.is_active ? 'default' : 'secondary'} 
-                      className="shrink-0 text-[10px] px-1.5 py-0"
-                    >
-                      {automation.is_active ? 'Ativa' : 'Inativa'}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">
-                      {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
-                    </span>
-                    <TriggerContext automation={automation} />
-                  </div>
-
-                  {/* Stats row */}
-                  {hasStats && (
-                    <div className="flex items-center gap-3 mt-2">
-                      {stats.running > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-primary">
-                          <AlertCircle className="h-3 w-3" />
-                          <span>{stats.running}</span>
-                        </div>
-                      )}
-                      {stats.completed > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <CheckCircle2 className="h-3 w-3 text-primary" />
-                          <span>{stats.completed}</span>
-                        </div>
-                      )}
-                      {stats.failed > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-destructive">
-                          <XCircle className="h-3 w-3" />
-                          <span>{stats.failed}</span>
-                        </div>
-                      )}
-                      {stats.lastRun && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {formatDistanceToNow(stats.lastRun, { addSuffix: true, locale: ptBR })}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {onViewHistory && hasStats && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => onViewHistory(automation.id)}
-                      >
-                        <History className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => onEdit(automation.id)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta ação não pode ser desfeita. A automação "{automation.name}" será excluída permanentemente.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteAutomation.mutate(automation.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-
-                  <Switch
-                    checked={automation.is_active}
-                    onCheckedChange={(checked) => 
-                      toggleAutomation.mutate({ id: automation.id, is_active: checked })
-                    }
-                  />
-                </div>
+                {stats.running > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
+                )}
               </div>
+
+              <h3 className="font-semibold text-sm mb-1 truncate max-w-full">{automation.name}</h3>
+              
+              <span className="text-[11px] text-muted-foreground mb-2">
+                {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
+              </span>
+
+              {hasStats && (
+                <div className="flex items-center gap-2 text-[10px]">
+                  {stats.completed > 0 && (
+                    <span className="flex items-center gap-0.5 text-muted-foreground">
+                      <CheckCircle2 className="h-3 w-3 text-primary" />
+                      {stats.completed}
+                    </span>
+                  )}
+                  {stats.running > 0 && (
+                    <span className="flex items-center gap-0.5 text-primary">
+                      <AlertCircle className="h-3 w-3" />
+                      {stats.running}
+                    </span>
+                  )}
+                  {stats.failed > 0 && (
+                    <span className="flex items-center gap-0.5 text-destructive">
+                      <XCircle className="h-3 w-3" />
+                      {stats.failed}
+                    </span>
+                  )}
+                </div>
+              )}
             </CardContent>
+
+            {/* Top-right actions (visible on hover) */}
+            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+              <Switch
+                checked={automation.is_active}
+                onCheckedChange={(checked) => 
+                  toggleAutomation.mutate({ id: automation.id, is_active: checked })
+                }
+                className="scale-75"
+              />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. A automação "{automation.name}" será excluída permanentemente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteAutomation.mutate(automation.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
+            {/* Status badge */}
+            <Badge 
+              variant={automation.is_active ? 'default' : 'secondary'} 
+              className="absolute top-2 left-2 text-[9px] px-1.5 py-0"
+            >
+              {automation.is_active ? 'Ativa' : 'Inativa'}
+            </Badge>
           </Card>
         );
       })}
