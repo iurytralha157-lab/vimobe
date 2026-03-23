@@ -193,41 +193,36 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       const flowNodes: Node[] = [];
       const flowEdges: Edge[] = [];
       
-      automation.nodes?.forEach((node) => {
+       automation.nodes?.forEach((node) => {
         const nodeConfig = node.config as Record<string, unknown> || {};
+        const pos = { x: node.position_x || 250, y: node.position_y || 180 };
         
         if (node.node_type === 'trigger') {
-          flowNodes.push({
-            id: node.id,
-            type: 'start',
-            position: { x: node.position_x || 250, y: node.position_y || 50 },
-            data: { trigger_type: automation.trigger_type },
-          });
-          // Get session_id from trigger node
-          if (nodeConfig.session_id) {
-            setSessionId(nodeConfig.session_id as string);
-          }
+          flowNodes.push({ id: node.id, type: 'start', position: { x: pos.x, y: node.position_y || 50 }, data: { trigger_type: automation.trigger_type } });
+          if (nodeConfig.session_id) setSessionId(nodeConfig.session_id as string);
         } else if (node.node_type === 'action' && node.action_type === 'send_whatsapp') {
-          flowNodes.push({
-            id: node.id,
-            type: 'message',
-            position: { x: node.position_x || 250, y: node.position_y || 180 },
-            data: { message: nodeConfig.message || '', day: nodeConfig.day || 1 },
-          });
-          // Get session_id from action node
-          if (nodeConfig.session_id && !sessionId) {
-            setSessionId(nodeConfig.session_id as string);
-          }
+          flowNodes.push({ id: node.id, type: 'message', position: pos, data: { message: nodeConfig.message || '', day: nodeConfig.day || 1 } });
+          if (nodeConfig.session_id && !sessionId) setSessionId(nodeConfig.session_id as string);
+        } else if (node.node_type === 'action' && node.action_type === 'send_image') {
+          flowNodes.push({ id: node.id, type: 'image', position: pos, data: { image_url: nodeConfig.image_url || '', caption: nodeConfig.caption || '' } });
+        } else if (node.node_type === 'action' && node.action_type === 'send_audio') {
+          flowNodes.push({ id: node.id, type: 'audio', position: pos, data: { audio_url: nodeConfig.audio_url || '' } });
+        } else if (node.node_type === 'action' && node.action_type === 'send_video') {
+          flowNodes.push({ id: node.id, type: 'video', position: pos, data: { video_url: nodeConfig.video_url || '' } });
+        } else if (node.node_type === 'action' && node.action_type === 'collect_input') {
+          flowNodes.push({ id: node.id, type: 'input', position: pos, data: { ...nodeConfig } });
+        } else if (node.node_type === 'action' && node.action_type === 'webhook') {
+          flowNodes.push({ id: node.id, type: 'webhook', position: pos, data: { webhook_url: nodeConfig.webhook_url || '', method: nodeConfig.method || 'POST' } });
+        } else if (node.node_type === 'action' && node.action_type === 'redirect') {
+          flowNodes.push({ id: node.id, type: 'redirect', position: pos, data: { redirect_url: nodeConfig.redirect_url || '' } });
+        } else if (node.node_type === 'action' && node.action_type === 'set_variable') {
+          flowNodes.push({ id: node.id, type: 'variable', position: pos, data: { variable_name: nodeConfig.variable_name || '', variable_value: nodeConfig.variable_value || '' } });
+        } else if (node.node_type === 'condition' && nodeConfig.nodeType === 'abtest') {
+          flowNodes.push({ id: node.id, type: 'abtest', position: pos, data: { split_a: nodeConfig.split_a || 50 } });
+        } else if (node.node_type === 'condition') {
+          flowNodes.push({ id: node.id, type: 'condition', position: pos, data: { variable: nodeConfig.variable || '', operator: nodeConfig.operator || 'equals', value: nodeConfig.value || '' } });
         } else if (node.node_type === 'delay') {
-          flowNodes.push({
-            id: node.id,
-            type: 'wait',
-            position: { x: node.position_x || 250, y: node.position_y || 300 },
-            data: { 
-              wait_type: nodeConfig.delay_type || 'days', 
-              wait_value: nodeConfig.delay_value || 1 
-            },
-          });
+          flowNodes.push({ id: node.id, type: 'wait', position: pos, data: { wait_type: nodeConfig.delay_type || 'days', wait_value: nodeConfig.delay_value || 1 } });
         }
       });
       
