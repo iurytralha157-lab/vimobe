@@ -621,7 +621,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
 
         {/* Inline Node Config Panel */}
         {selectedNode && (
-          <div className="absolute z-50" style={{ pointerEvents: 'auto' }}>
             <NodeConfigPanel
               selectedNode={selectedNode}
               onClose={() => setSelectedNode(null)}
@@ -640,8 +639,13 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               stageId={stageId}
               setStageId={setStageId}
               position={panelPosition || undefined}
+              sessions={sessions || []}
+              sessionId={sessionId}
+              setSessionId={setSessionId}
+              users={users || []}
+              filterUserId={filterUserId}
+              setFilterUserId={setFilterUserId}
             />
-          </div>
         )}
       </div>
     </div>
