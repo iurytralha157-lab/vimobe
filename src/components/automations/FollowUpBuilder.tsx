@@ -532,111 +532,71 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
       {/* Main Content */}
       <div className="flex-1 flex min-h-0">
-        {/* Left Panel - Config */}
-        <div className="w-72 border-r bg-muted/30 flex flex-col">
+        {/* Left Panel - Typebot-style Node Palette */}
+        <div className="w-64 border-r bg-card/50 flex flex-col">
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-6">
-              {/* Session */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Sessão WhatsApp
-                </Label>
-                <Select value={sessionId} onValueChange={setSessionId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {connectedSessions.map((session) => (
-                      <SelectItem key={session.id} value={session.id}>
-                        {session.display_name || session.instance_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="p-3 space-y-1">
+              {/* Config Toggle */}
+              <button 
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground"
+                onClick={() => setShowConfig(!showConfig)}
+              >
+                {showConfig ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                ⚙️ Configurações
+              </button>
 
-              {/* Trigger */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Disparar quando
-                </Label>
-                <Select value={triggerType} onValueChange={(v: TriggerType) => setTriggerType(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tag_added">Tag adicionada</SelectItem>
-                    <SelectItem value="lead_created">Lead criado</SelectItem>
-                    <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
-                    <SelectItem value="manual">Manual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {triggerType === 'tag_added' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Tag específica
-                  </Label>
-                  <Select value={tagId} onValueChange={setTagId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a tag..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tags?.map((tag) => (
-                        <SelectItem key={tag.id} value={tag.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: tag.color || '#888' }}
-                            />
-                            {tag.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {triggerType === 'lead_stage_changed' && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Pipeline
+              {showConfig && (
+                <div className="px-3 py-2 space-y-4 border rounded-xl bg-muted/20 mb-3">
+                  {/* Session */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
+                      Sessão WhatsApp
                     </Label>
-                    <Select value={pipelineId} onValueChange={setPipelineId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a pipeline..." />
+                    <Select value={sessionId} onValueChange={setSessionId}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {pipelines?.map((pipeline) => (
-                          <SelectItem key={pipeline.id} value={pipeline.id}>
-                            {pipeline.name}
+                        {connectedSessions.map((session) => (
+                          <SelectItem key={session.id} value={session.id}>
+                            {session.display_name || session.instance_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {pipelineId && (
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                        Etapa específica
-                      </Label>
-                      <Select value={stageId} onValueChange={setStageId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a etapa..." />
+                  {/* Trigger */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
+                      Disparar quando
+                    </Label>
+                    <Select value={triggerType} onValueChange={(v: TriggerType) => setTriggerType(v)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tag_added">Tag adicionada</SelectItem>
+                        <SelectItem value="lead_created">Lead criado</SelectItem>
+                        <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
+                        <SelectItem value="manual">Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {triggerType === 'tag_added' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Tag</Label>
+                      <Select value={tagId} onValueChange={setTagId}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {stages?.map((stage) => (
-                            <SelectItem key={stage.id} value={stage.id}>
+                          {tags?.map((tag) => (
+                            <SelectItem key={tag.id} value={tag.id}>
                               <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full" 
-                                  style={{ backgroundColor: stage.color || '#888' }}
-                                />
-                                {stage.name}
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color || '#888' }} />
+                                {tag.name}
                               </div>
                             </SelectItem>
                           ))}
@@ -644,152 +604,144 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                       </Select>
                     </div>
                   )}
-                </>
-              )}
 
-              {/* User Filter */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Filtrar por usuário
-                </Label>
-                <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os usuários" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">Todos os usuários</SelectItem>
-                    <SelectItem value="__me__">Apenas meus leads</SelectItem>
-                    {users?.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Dispara apenas para leads do usuário selecionado
-                </p>
-              </div>
-
-              {/* Stop on Reply */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="stop-on-reply"
-                    checked={stopOnReply} 
-                    onCheckedChange={(checked) => setStopOnReply(checked === true)} 
-                  />
-                  <Label htmlFor="stop-on-reply" className="text-sm cursor-pointer">
-                    Parar follow-up se lead responder
-                  </Label>
-                </div>
-                
-                {stopOnReply && (
-                  <div className="space-y-4 ml-6">
-                    {pipelineId && (
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">
-                          Ao responder, mover para:
-                        </Label>
-                        <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Não mover (apenas parar)" />
+                  {triggerType === 'lead_stage_changed' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Pipeline</Label>
+                        <Select value={pipelineId} onValueChange={setPipelineId}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">Não mover (apenas parar)</SelectItem>
-                            {/* Fallback: show loading item if stage is selected but not yet in list */}
-                            {onReplyStageId && 
-                             onReplyStageId !== "__none__" && 
-                             !stages?.find(s => s.id === onReplyStageId) && (
-                              <SelectItem value={onReplyStageId} disabled>
-                                Carregando etapa...
-                              </SelectItem>
-                            )}
-                            {stages?.map((stage) => (
-                              <SelectItem key={stage.id} value={stage.id}>
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="w-3 h-3 rounded-full" 
-                                    style={{ backgroundColor: stage.color || '#888' }}
-                                  />
-                                  {stage.name}
-                                </div>
-                              </SelectItem>
+                            {pipelines?.map((pipeline) => (
+                              <SelectItem key={pipeline.id} value={pipeline.id}>{pipeline.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+                      {pipelineId && (
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Etapa</Label>
+                          <Select value={stageId} onValueChange={setStageId}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {stages?.map((stage) => (
+                                <SelectItem key={stage.id} value={stage.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color || '#888' }} />
+                                    {stage.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* User Filter */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Filtrar por usuário</Label>
+                    <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todos os usuários</SelectItem>
+                        <SelectItem value="__me__">Apenas meus leads</SelectItem>
+                        {users?.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>{user.name || user.email}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Stop on Reply */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="stop-on-reply" checked={stopOnReply} onCheckedChange={(c) => setStopOnReply(c === true)} />
+                      <Label htmlFor="stop-on-reply" className="text-xs cursor-pointer">Parar se lead responder</Label>
+                    </div>
+                    {stopOnReply && pipelineId && (
+                      <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Mover para..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Não mover</SelectItem>
+                          {stages?.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
-                    
-                    {/* Auto-reply message */}
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Mensagem automática ao responder:
-                      </Label>
+                    {stopOnReply && (
                       <Textarea
                         value={onReplyMessage}
                         onChange={(e) => setOnReplyMessage(e.target.value)}
-                        placeholder="Ex: Que bom que você se interessou! Nossa equipe entrará em contato..."
-                        className="min-h-[80px] text-sm"
+                        placeholder="Mensagem automática ao responder..."
+                        className="min-h-[60px] text-xs"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Enviar esta mensagem automaticamente quando o lead responder
-                      </p>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Node Palette */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Adicionar ao fluxo
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {NODE_PALETTE.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Button
-                        key={item.type}
-                        variant="outline"
-                        className="h-auto py-3 flex-col gap-1"
-                        onClick={() => handleAddNode(item.type as 'message' | 'wait')}
-                      >
-                        <div className={`p-1.5 rounded ${item.color}`}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs">{item.label}</span>
-                      </Button>
-                    );
-                  })}
                 </div>
-              </div>
+              )}
 
-              {/* Variables Help - Expanded */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Variáveis disponíveis
-                </Label>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p className="font-medium text-foreground">Lead:</p>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.name}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.phone}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.email}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.source}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{lead.message}}'}</code>
-                  
-                  <p className="font-medium text-foreground pt-2">Telecom:</p>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.address}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.city}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.neighborhood}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.cep}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{customer.plan_value}}'}</code>
-                  
-                  <p className="font-medium text-foreground pt-2">Outros:</p>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{organization.name}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{date}}'}</code>
-                  <code className="block bg-muted px-2 py-1 rounded">{'{{time}}'}</code>
-                </div>
+              {/* Node Categories - Typebot Style */}
+              {(['bubbles', 'inputs', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
+                const items = NODE_PALETTE.filter(item => item.category === category);
+                const isExpanded = expandedCategories[category];
+                
+                return (
+                  <div key={category}>
+                    <button 
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors"
+                      onClick={() => setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }))}
+                    >
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      <span className={CATEGORY_COLORS[category]}>{CATEGORY_LABELS[category]}</span>
+                    </button>
+                    
+                    {isExpanded && (
+                      <div className="grid grid-cols-2 gap-1.5 px-2 pb-2">
+                        {items.map((item, idx) => {
+                          const Icon = item.icon;
+                          return (
+                            <button
+                              key={`${item.type}-${item.label}-${idx}`}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border/50 bg-background hover:bg-muted/50 hover:border-primary/30 transition-all text-left group cursor-pointer"
+                              onClick={() => handleAddNode(item)}
+                            >
+                              <div className={`p-1 rounded-lg ${item.color}`}>
+                                <Icon className="h-3.5 w-3.5" />
+                              </div>
+                              <span className="text-xs font-medium truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Variables Help */}
+              <button 
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground"
+                onClick={() => {}}
+              >
+                📋 Variáveis
+              </button>
+              <div className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.name}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.phone}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.email}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{organization.name}}'}</code>
+                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{date}}'}</code>
               </div>
             </div>
           </ScrollArea>
