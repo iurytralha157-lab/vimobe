@@ -1058,118 +1058,120 @@ ${getWorkerCode()}`;
                   </div>
 
                   {site?.watermark_enabled && (
-                    <>
-                      <div className="grid sm:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label>Opacidade</Label>
-                            <span className="text-sm font-medium text-muted-foreground">{site?.watermark_opacity || 20}%</span>
-                          </div>
-                          <Slider
-                            value={[site?.watermark_opacity || 20]}
-                            onValueChange={(value) => updateSite.mutate({ watermark_opacity: value[0] })}
-                            min={5}
-                            max={50}
-                            step={5}
-                            className="w-full"
-                            disabled={!isAdmin}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Valores menores = mais sutil. Recomendado: 15-25%
-                          </p>
-                        </div>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Label>Tamanho (largura)</Label>
-                            <span className="text-sm font-medium text-muted-foreground">{site?.watermark_size || 80}px</span>
-                          </div>
-                          <Slider
-                            value={[site?.watermark_size || 80]}
-                            onValueChange={(value) => updateSite.mutate({ watermark_size: value[0] })}
-                            min={40}
-                            max={200}
-                            step={10}
-                            className="w-full"
-                            disabled={!isAdmin}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Ajuste o tamanho da logo na exibição
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label>Posição da marca d'água</Label>
-                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                          {[
-                            { value: 'top-left', label: '↖ Sup. Esq.' },
-                            { value: 'top-right', label: '↗ Sup. Dir.' },
-                            { value: 'center', label: '⊕ Centro' },
-                            { value: 'bottom-left', label: '↙ Inf. Esq.' },
-                            { value: 'bottom-right', label: '↘ Inf. Dir.' },
-                          ].map(({ value, label }) => (
-                            <Button
-                              key={value}
-                              variant={(site?.watermark_position || 'bottom-right') === value ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => updateSite.mutate({ watermark_position: value })}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Left: Settings */}
+                      <div className="space-y-6">
+                        <div className="grid sm:grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label>Opacidade</Label>
+                              <span className="text-sm font-medium text-muted-foreground">{site?.watermark_opacity || 20}%</span>
+                            </div>
+                            <Slider
+                              value={[site?.watermark_opacity || 20]}
+                              onValueChange={(value) => updateSite.mutate({ watermark_opacity: value[0] })}
+                              min={5}
+                              max={50}
+                              step={5}
+                              className="w-full"
                               disabled={!isAdmin}
-                              className="text-xs"
-                            >
-                              {label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label>Logo da marca d'água</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Deixe em branco para usar a logo principal do site
-                        </p>
-                        {site?.watermark_logo_url ? (
-                          <div className="border rounded-lg p-4 bg-muted flex items-center justify-between">
-                            <img src={site.watermark_logo_url} alt="Watermark" className="h-10 object-contain" />
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => updateSite.mutate({ watermark_logo_url: null })}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Valores menores = mais sutil. Recomendado: 15-25%
+                            </p>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label>Tamanho (largura)</Label>
+                              <span className="text-sm font-medium text-muted-foreground">{site?.watermark_size || 80}px</span>
+                            </div>
+                            <Slider
+                              value={[site?.watermark_size || 80]}
+                              onValueChange={(value) => updateSite.mutate({ watermark_size: value[0] })}
+                              min={40}
+                              max={200}
+                              step={10}
+                              className="w-full"
                               disabled={!isAdmin}
-                            >
-                              Remover
-                            </Button>
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Ajuste o tamanho da logo na exibição
+                            </p>
                           </div>
-                        ) : (
-                          <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground text-sm">
-                            Usando logo principal: {site?.logo_url ? '✓ Configurada' : '⚠️ Não configurada'}
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label>Posição da marca d'água</Label>
+                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                            {[
+                              { value: 'top-left', label: '↖ Sup. Esq.' },
+                              { value: 'top-right', label: '↗ Sup. Dir.' },
+                              { value: 'center', label: '⊕ Centro' },
+                              { value: 'bottom-left', label: '↙ Inf. Esq.' },
+                              { value: 'bottom-right', label: '↘ Inf. Dir.' },
+                            ].map(({ value, label }) => (
+                              <Button
+                                key={value}
+                                variant={(site?.watermark_position || 'bottom-right') === value ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => updateSite.mutate({ watermark_position: value })}
+                                disabled={!isAdmin}
+                                className="text-xs"
+                              >
+                                {label}
+                              </Button>
+                            ))}
                           </div>
-                        )}
-                        <div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileUpload(e, 'watermark')}
-                            className="hidden"
-                            id="watermark-upload"
-                            disabled={!isAdmin}
-                          />
-                          <label htmlFor="watermark-upload">
-                            <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                              <span>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Enviar Logo Alternativa
-                              </span>
-                            </Button>
-                          </label>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label>Logo da marca d'água</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Deixe em branco para usar a logo principal do site
+                          </p>
+                          {site?.watermark_logo_url ? (
+                            <div className="border rounded-lg p-4 bg-muted flex items-center justify-between">
+                              <img src={site.watermark_logo_url} alt="Watermark" className="h-10 object-contain" />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => updateSite.mutate({ watermark_logo_url: null })}
+                                disabled={!isAdmin}
+                              >
+                                Remover
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground text-sm">
+                              Usando logo principal: {site?.logo_url ? '✓ Configurada' : '⚠️ Não configurada'}
+                            </div>
+                          )}
+                          <div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleFileUpload(e, 'watermark')}
+                              className="hidden"
+                              id="watermark-upload"
+                              disabled={!isAdmin}
+                            />
+                            <label htmlFor="watermark-upload">
+                              <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
+                                <span>
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Enviar Logo Alternativa
+                                </span>
+                              </Button>
+                            </label>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Preview */}
+                      {/* Right: Preview */}
                       {(site?.watermark_logo_url || site?.logo_url) && (
-                        <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                        <div className="p-4 bg-muted/50 rounded-lg flex flex-col">
                           <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização (como aparece no site)</Label>
-                          <div className="relative h-40 bg-gradient-to-br from-gray-300 to-gray-400 rounded overflow-hidden">
+                          <div className="relative flex-1 min-h-[200px] bg-gradient-to-br from-gray-300 to-gray-400 rounded overflow-hidden">
                             <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
                               Foto do Imóvel
                             </div>
@@ -1199,7 +1201,7 @@ ${getWorkerCode()}`;
                           </p>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
