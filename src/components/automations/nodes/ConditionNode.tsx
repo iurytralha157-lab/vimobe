@@ -24,7 +24,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Condição</span>
           {variable ? (
-            <p className="text-xs text-white/60 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {variable} {operatorLabels[operator] || operator} {value}
             </p>
           ) : (
