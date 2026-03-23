@@ -106,7 +106,56 @@ const queryClient = new QueryClient({
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="animate-pulse text-muted-foreground">Carregando...</div>
+    <div className="flex flex-col items-center gap-4">
+      {/* Animated logo/spinner */}
+      <div className="relative w-14 h-14">
+        <div
+          className="absolute inset-0 rounded-xl bg-primary/20"
+          style={{
+            animation: 'loader-pulse 1.8s cubic-bezier(0.4,0,0.6,1) infinite',
+          }}
+        />
+        <div
+          className="absolute inset-1 rounded-lg bg-primary/30"
+          style={{
+            animation: 'loader-pulse 1.8s cubic-bezier(0.4,0,0.6,1) infinite 0.2s',
+          }}
+        />
+        <div
+          className="absolute inset-2 rounded-md bg-primary flex items-center justify-center"
+          style={{
+            animation: 'loader-pulse 1.8s cubic-bezier(0.4,0,0.6,1) infinite 0.4s',
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+          </svg>
+        </div>
+      </div>
+      {/* Animated dots */}
+      <div className="flex items-center gap-1.5">
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-primary/60"
+            style={{
+              animation: 'loader-bounce 1.2s ease-in-out infinite',
+              animationDelay: `${i * 0.15}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+    <style>{`
+      @keyframes loader-pulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.08); }
+      }
+      @keyframes loader-bounce {
+        0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+        40% { opacity: 1; transform: scale(1.3); }
+      }
+    `}</style>
   </div>
 );
 
