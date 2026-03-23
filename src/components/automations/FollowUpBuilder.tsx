@@ -111,6 +111,7 @@ interface PaletteItem {
 
 const NODE_PALETTE: PaletteItem[] = [
   // Bubbles (mensagens de saída)
+  { type: 'start', label: 'Início', icon: Play, color: 'text-orange-600 bg-orange-500/10', category: 'actions', defaultData: { trigger_type: 'manual' } },
   { type: 'message', label: 'Texto', icon: MessageSquare, color: 'text-green-600 bg-green-500/10', category: 'bubbles', defaultData: { message: 'Nova mensagem...', day: 1 } },
   { type: 'image', label: 'Imagem', icon: Image, color: 'text-blue-600 bg-blue-500/10', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
   { type: 'video', label: 'Vídeo', icon: Video, color: 'text-rose-600 bg-rose-500/10', category: 'bubbles', defaultData: { video_url: '' } },
