@@ -400,55 +400,55 @@ export function WebhooksTab() {
             </p>
           </div>
           <Separator />
-          <div className="space-y-2">
-            <h4 className="font-medium">Campos aceitos</h4>
-            <p className="text-xs text-muted-foreground mb-3">Campos básicos do lead</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {[
-                { field: 'name', required: true },
-                { field: 'phone', required: false },
-                { field: 'email', required: false },
-                { field: 'message', required: false },
-                { field: 'property_id', required: false },
-                { field: 'plan_id', required: false },
-              ].map(({ field, required }) => (
-                <div key={field} className="bg-muted rounded px-3 py-2 text-sm font-mono">
-                  {field}{required && <span className="text-destructive">*</span>}
-                </div>
-              ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <h4 className="font-medium">Campos aceitos</h4>
+              <p className="text-xs text-muted-foreground mb-3">Campos básicos do lead</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { field: 'name', required: true },
+                  { field: 'phone', required: false },
+                  { field: 'email', required: false },
+                  { field: 'message', required: false },
+                  { field: 'property_id', required: false },
+                  { field: 'plan_id', required: false },
+                ].map(({ field, required }) => (
+                  <div key={field} className="bg-muted rounded px-3 py-2 text-sm font-mono">
+                    {field}{required && <span className="text-destructive">*</span>}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">* Campo obrigatório</p>
             </div>
-            <p className="text-xs text-muted-foreground">* Campo obrigatório</p>
-          </div>
 
-          <Separator />
-
-          <div className="space-y-2">
-            <h4 className="font-medium">Campos de rastreamento (opcionais)</h4>
-            <p className="text-xs text-muted-foreground mb-3">Dados de campanha, anúncio e UTM</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {[
-                'campaign_id',
-                'campaign_name',
-                'adset_id',
-                'adset_name',
-                'ad_id',
-                'ad_name',
-                'form_name',
-                'utm_source',
-                'utm_medium',
-                'utm_campaign',
-                'utm_content',
-                'utm_term',
-                'contact_notes',
-              ].map((field) => (
-                <div key={field} className="bg-primary/5 border border-primary/10 rounded px-3 py-2 text-sm font-mono text-primary">
-                  {field}
-                </div>
-              ))}
+            <div className="space-y-2">
+              <h4 className="font-medium">Campos de rastreamento (opcionais)</h4>
+              <p className="text-xs text-muted-foreground mb-3">Dados de campanha, anúncio e UTM</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  'campaign_id',
+                  'campaign_name',
+                  'adset_id',
+                  'adset_name',
+                  'ad_id',
+                  'ad_name',
+                  'form_name',
+                  'utm_source',
+                  'utm_medium',
+                  'utm_campaign',
+                  'utm_content',
+                  'utm_term',
+                  'contact_notes',
+                ].map((field) => (
+                  <div key={field} className="bg-primary/5 border border-primary/10 rounded px-3 py-2 text-sm font-mono text-primary">
+                    {field}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Esses campos são salvos automaticamente e exibidos na aba "Contato" do lead.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Esses campos são salvos automaticamente e exibidos na aba "Contato" do lead.
-            </p>
           </div>
           <Separator />
           <div className="space-y-2">
