@@ -39,7 +39,7 @@ export const InputNode = memo(({ data, selected }: NodeProps) => {
             {prompt || 'Clique para configurar...'}
           </p>
           {variable && (
-            <code className="text-[10px] text-cyan-300 bg-cyan-500/15 px-1 rounded mt-1 inline-block">
+            <code className="text-[10px] text-cyan-700 dark:text-cyan-300 bg-cyan-500/15 px-1 rounded mt-1 inline-block">
               {`{{${variable}}}`}
             </code>
           )}

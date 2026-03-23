@@ -15,7 +15,7 @@ export const VideoNode = memo(({ data, selected }: NodeProps) => {
           <Video className="h-5 w-5 text-white" />
         </div>
         <div>
-          <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Vídeo</span>
+          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Vídeo</span>
           <p className="text-xs text-muted-foreground mt-0.5">
             {url ? 'Vídeo configurado' : 'Clique para configurar...'}
           </p>
