@@ -34,11 +34,37 @@ import {
   GripVertical,
   Play,
   X,
+  Image,
+  Headphones,
+  Video,
+  Type,
+  Hash,
+  AtSign,
+  Globe,
+  Phone,
+  Calendar,
+  MousePointerClick,
+  GitBranch,
+  Webhook,
+  FlipHorizontal,
+  ExternalLink,
+  PenLine,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { MessageNode } from './nodes/MessageNode';
 import { DEFAULT_ON_REPLY_MESSAGE } from './FollowUpTemplates';
 import { WaitNode } from './nodes/WaitNode';
 import { StartNode } from './nodes/StartNode';
+import { ImageNode } from './nodes/ImageNode';
+import { AudioNode } from './nodes/AudioNode';
+import { VideoNode } from './nodes/VideoNode';
+import { InputNode } from './nodes/InputNode';
+import { ConditionNode } from './nodes/ConditionNode';
+import { WebhookNode } from './nodes/WebhookNode';
+import { ABTestNode } from './nodes/ABTestNode';
+import { RedirectNode } from './nodes/RedirectNode';
+import { VariableNode } from './nodes/VariableNode';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
@@ -51,6 +77,15 @@ const nodeTypes = {
   start: StartNode,
   message: MessageNode,
   wait: WaitNode,
+  image: ImageNode,
+  audio: AudioNode,
+  video: VideoNode,
+  input: InputNode,
+  condition: ConditionNode,
+  webhook: WebhookNode,
+  abtest: ABTestNode,
+  redirect: RedirectNode,
+  variable: VariableNode,
 };
 
 interface FollowUpBuilderProps {
