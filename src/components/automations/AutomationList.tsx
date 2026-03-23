@@ -41,8 +41,7 @@ import {
 } from '@/hooks/use-automations';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useTags } from '@/hooks/use-tags';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, format } from 'date-fns';
 
 interface AutomationListProps {
   onEdit: (automationId: string) => void;
@@ -189,12 +188,12 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
 
               <h3 className="font-semibold text-sm mb-1 truncate max-w-full">{automation.name}</h3>
               
-              <span className="text-[11px] text-muted-foreground mb-2">
+              <span className="text-[11px] text-muted-foreground mb-1">
                 {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
               </span>
 
               {hasStats && (
-                <div className="flex items-center gap-2 text-[10px]">
+                <div className="flex items-center gap-2 text-[10px] mb-1">
                   {stats.completed > 0 && (
                     <span className="flex items-center gap-0.5 text-muted-foreground">
                       <CheckCircle2 className="h-3 w-3 text-primary" />
@@ -214,6 +213,12 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
                     </span>
                   )}
                 </div>
+              )}
+
+              {automation.created_at && (
+                <span className="text-[10px] text-muted-foreground/60">
+                  {format(new Date(automation.created_at), "dd/MM/yyyy")}
+                </span>
               )}
             </CardContent>
 
@@ -255,7 +260,7 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
             {/* Status badge */}
             <Badge 
               variant={automation.is_active ? 'default' : 'secondary'} 
-              className="absolute top-2 left-2 text-[9px] px-1.5 py-0"
+              className="absolute top-2.5 left-2.5 text-[11px] px-2.5 py-0.5 font-medium"
             >
               {automation.is_active ? 'Ativa' : 'Inativa'}
             </Badge>
