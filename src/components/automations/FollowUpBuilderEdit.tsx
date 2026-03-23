@@ -168,6 +168,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [onReplyMessage, setOnReplyMessage] = useState<string>('');
+  const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
+    bubbles: true, inputs: true, conditionals: true, actions: true,
+  });
+  const [showConfig, setShowConfig] = useState(true);
 
   const connectedSessions = sessions?.filter(s => s.status === 'connected') || [];
 
