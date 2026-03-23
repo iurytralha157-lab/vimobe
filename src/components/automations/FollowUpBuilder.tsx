@@ -774,77 +774,215 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           <SheetContent className="w-[400px] sm:w-[400px]">
             <SheetHeader>
               <SheetTitle className="flex items-center gap-2">
-                {selectedNode?.type === 'message' && (
-                  <>
-                    <MessageSquare className="h-5 w-5 text-green-600" />
-                    Editar Mensagem
-                  </>
-                )}
-                {selectedNode?.type === 'wait' && (
-                  <>
-                    <Timer className="h-5 w-5 text-purple-600" />
-                    Configurar Espera
-                  </>
-                )}
+                {selectedNode?.type === 'message' && <><MessageSquare className="h-5 w-5 text-green-600" /> Editar Mensagem</>}
+                {selectedNode?.type === 'wait' && <><Timer className="h-5 w-5 text-purple-600" /> Configurar Espera</>}
+                {selectedNode?.type === 'image' && <><Image className="h-5 w-5 text-blue-600" /> Configurar Imagem</>}
+                {selectedNode?.type === 'audio' && <><Headphones className="h-5 w-5 text-amber-600" /> Configurar Áudio</>}
+                {selectedNode?.type === 'video' && <><Video className="h-5 w-5 text-rose-600" /> Configurar Vídeo</>}
+                {selectedNode?.type === 'input' && <><Type className="h-5 w-5 text-cyan-600" /> Configurar Input</>}
+                {selectedNode?.type === 'condition' && <><GitBranch className="h-5 w-5 text-yellow-600" /> Configurar Condição</>}
+                {selectedNode?.type === 'webhook' && <><Webhook className="h-5 w-5 text-indigo-600" /> Configurar Webhook</>}
+                {selectedNode?.type === 'abtest' && <><FlipHorizontal className="h-5 w-5 text-pink-600" /> Teste AB</>}
+                {selectedNode?.type === 'redirect' && <><ExternalLink className="h-5 w-5 text-teal-600" /> Redirecionar</>}
+                {selectedNode?.type === 'variable' && <><PenLine className="h-5 w-5 text-yellow-600" /> Variável</>}
               </SheetTitle>
             </SheetHeader>
 
             <div className="mt-6 space-y-4">
               {selectedNode?.type === 'message' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Mensagem</Label>
-                    <Textarea
-                      value={selectedNode.data.message || ''}
-                      onChange={(e) => handleNodeDataChange(selectedNode.id, { message: e.target.value })}
-                      rows={8}
-                      placeholder="Digite a mensagem..."
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Use variáveis como {'{{lead.name}}'} para personalizar
-                    </p>
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label>Mensagem</Label>
+                  <Textarea
+                    value={selectedNode.data.message || ''}
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { message: e.target.value })}
+                    rows={8}
+                    placeholder="Digite a mensagem..."
+                  />
+                  <p className="text-xs text-muted-foreground">Use variáveis como {'{{lead.name}}'}</p>
+                </div>
               )}
 
               {selectedNode?.type === 'wait' && (
+                <div className="space-y-2">
+                  <Label>Tempo de espera</Label>
+                  <div className="flex gap-2">
+                    <Input type="number" min={1} value={selectedNode.data.wait_value || 1}
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { wait_value: parseInt(e.target.value) || 1 })}
+                      className="w-24" />
+                    <Select value={selectedNode.data.wait_type || 'days'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { wait_type: v })}>
+                      <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minutes">Minutos</SelectItem>
+                        <SelectItem value="hours">Horas</SelectItem>
+                        <SelectItem value="days">Dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'image' && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Tempo de espera</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min={1}
-                        value={selectedNode.data.wait_value || 1}
-                        onChange={(e) => handleNodeDataChange(selectedNode.id, { 
-                          wait_value: parseInt(e.target.value) || 1 
-                        })}
-                        className="w-24"
-                      />
-                      <Select
-                        value={selectedNode.data.wait_type || 'days'}
-                        onValueChange={(v) => handleNodeDataChange(selectedNode.id, { wait_type: v })}
-                      >
-                        <SelectTrigger className="flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="minutes">Minutos</SelectItem>
-                          <SelectItem value="hours">Horas</SelectItem>
-                          <SelectItem value="days">Dias</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <Label>URL da Imagem</Label>
+                    <Input value={selectedNode.data.image_url || ''} placeholder="https://..."
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { image_url: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Legenda (opcional)</Label>
+                    <Input value={selectedNode.data.caption || ''} placeholder="Legenda da imagem"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { caption: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'audio' && (
+                <div className="space-y-2">
+                  <Label>URL do Áudio</Label>
+                  <Input value={selectedNode.data.audio_url || ''} placeholder="https://..."
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { audio_url: e.target.value })} />
+                </div>
+              )}
+
+              {selectedNode?.type === 'video' && (
+                <div className="space-y-2">
+                  <Label>URL do Vídeo</Label>
+                  <Input value={selectedNode.data.video_url || ''} placeholder="https://..."
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { video_url: e.target.value })} />
+                </div>
+              )}
+
+              {selectedNode?.type === 'input' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Input</Label>
+                    <Select value={selectedNode.data.input_type || 'text'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { input_type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Texto</SelectItem>
+                        <SelectItem value="number">Número</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="phone">Telefone</SelectItem>
+                        <SelectItem value="website">Website</SelectItem>
+                        <SelectItem value="date">Data</SelectItem>
+                        <SelectItem value="button">Botão</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Pergunta / Prompt</Label>
+                    <Textarea value={selectedNode.data.prompt || ''} rows={3} placeholder="Ex: Qual seu nome?"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { prompt: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Salvar em variável</Label>
+                    <Input value={selectedNode.data.variable_name || ''} placeholder="ex: nome_cliente"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable_name: e.target.value })} />
+                  </div>
+                  {selectedNode.data.input_type === 'button' && (
+                    <div className="space-y-2">
+                      <Label>Opções (uma por linha)</Label>
+                      <Textarea value={(selectedNode.data.buttons || []).join('\n')} rows={4}
+                        placeholder="Opção 1\nOpção 2\nOpção 3"
+                        onChange={(e) => handleNodeDataChange(selectedNode.id, { buttons: e.target.value.split('\n').filter(Boolean) })} />
                     </div>
+                  )}
+                </div>
+              )}
+
+              {selectedNode?.type === 'condition' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Variável</Label>
+                    <Input value={selectedNode.data.variable || ''} placeholder="ex: lead.source"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Operador</Label>
+                    <Select value={selectedNode.data.operator || 'equals'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { operator: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="equals">Igual a</SelectItem>
+                        <SelectItem value="not_equals">Diferente de</SelectItem>
+                        <SelectItem value="contains">Contém</SelectItem>
+                        <SelectItem value="not_contains">Não contém</SelectItem>
+                        <SelectItem value="greater_than">Maior que</SelectItem>
+                        <SelectItem value="less_than">Menor que</SelectItem>
+                        <SelectItem value="is_set">Existe</SelectItem>
+                        <SelectItem value="is_not_set">Não existe</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor</Label>
+                    <Input value={selectedNode.data.value || ''} placeholder="valor esperado"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { value: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'webhook' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>URL do Webhook</Label>
+                    <Input value={selectedNode.data.webhook_url || ''} placeholder="https://..."
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { webhook_url: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Método</Label>
+                    <Select value={selectedNode.data.method || 'POST'}
+                      onValueChange={(v) => handleNodeDataChange(selectedNode.id, { method: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GET">GET</SelectItem>
+                        <SelectItem value="POST">POST</SelectItem>
+                        <SelectItem value="PUT">PUT</SelectItem>
+                        <SelectItem value="PATCH">PATCH</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {selectedNode?.type === 'abtest' && (
+                <div className="space-y-2">
+                  <Label>Distribuição A (%)</Label>
+                  <Input type="number" min={1} max={99} value={selectedNode.data.split_a || 50}
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { split_a: parseInt(e.target.value) || 50 })} />
+                  <p className="text-xs text-muted-foreground">
+                    A: {selectedNode.data.split_a || 50}% / B: {100 - (selectedNode.data.split_a || 50)}%
+                  </p>
+                </div>
+              )}
+
+              {selectedNode?.type === 'redirect' && (
+                <div className="space-y-2">
+                  <Label>URL de Redirecionamento</Label>
+                  <Input value={selectedNode.data.redirect_url || ''} placeholder="https://..."
+                    onChange={(e) => handleNodeDataChange(selectedNode.id, { redirect_url: e.target.value })} />
+                </div>
+              )}
+
+              {selectedNode?.type === 'variable' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nome da variável</Label>
+                    <Input value={selectedNode.data.variable_name || ''} placeholder="ex: pontuacao"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable_name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor</Label>
+                    <Input value={selectedNode.data.variable_value || ''} placeholder="ex: 100"
+                      onChange={(e) => handleNodeDataChange(selectedNode.id, { variable_value: e.target.value })} />
                   </div>
                 </div>
               )}
 
               <div className="pt-4 border-t">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDeleteNode(selectedNode!.id)}
-                >
+                <Button variant="destructive" size="sm" onClick={() => handleDeleteNode(selectedNode!.id)}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Remover nó
                 </Button>
