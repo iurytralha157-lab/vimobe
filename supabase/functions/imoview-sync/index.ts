@@ -82,7 +82,11 @@ function extractPhotos(obj: any): string[] {
 
 function extractMainImage(obj: any): string {
   if (!obj || typeof obj !== "object") return "";
-  const fields = ["fotoPrincipal", "imagemPrincipal", "foto_principal", "imagem_principal", "mainImage", "thumbnail", "capa"];
+  const fields = [
+    "fotoPrincipal", "FotoPrincipal", "imagemPrincipal", "ImagemPrincipal",
+    "foto_principal", "imagem_principal", "mainImage", "MainImage",
+    "thumbnail", "Thumbnail", "capa", "Capa", "urlFotoPrincipal", "UrlFotoPrincipal",
+  ];
   for (const f of fields) {
     if (obj[f] && typeof obj[f] === "string" && obj[f].startsWith("http")) return obj[f];
   }
