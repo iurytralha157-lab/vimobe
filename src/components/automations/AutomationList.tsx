@@ -260,7 +260,7 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
             {/* Status badge */}
             <Badge 
               variant={automation.is_active ? 'default' : 'secondary'} 
-              className="absolute top-2 left-2 text-[9px] px-1.5 py-0"
+              className="absolute top-2.5 left-2.5 text-[11px] px-2.5 py-0.5 font-medium"
             >
               {automation.is_active ? 'Ativa' : 'Inativa'}
             </Badge>
