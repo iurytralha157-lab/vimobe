@@ -767,7 +767,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
               {/* Variables Help */}
               <button 
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-white/5 transition-colors text-white/50"
                 onClick={() => {}}
               >
                 📋 Variáveis
