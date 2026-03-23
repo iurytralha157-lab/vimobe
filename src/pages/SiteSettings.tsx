@@ -679,45 +679,47 @@ ${getWorkerCode()}`;
                     Ajuste as dimensões da logo exibida no site público (em pixels)
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="px-4 md:px-6 pb-5 space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>Largura Máxima</Label>
-                        <span className="text-sm font-medium text-muted-foreground">{site?.logo_width || 160}px</span>
+                <CardContent className="px-4 md:px-6 pb-5">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left: Sliders */}
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label>Largura Máxima</Label>
+                          <span className="text-sm font-medium text-muted-foreground">{site?.logo_width || 160}px</span>
+                        </div>
+                        <Slider
+                          value={[site?.logo_width || 160]}
+                          onValueChange={(value) => updateSite.mutate({ logo_width: value[0] })}
+                          min={60}
+                          max={500}
+                          step={10}
+                          className="w-full"
+                          disabled={!isAdmin}
+                        />
                       </div>
-                      <Slider
-                        value={[site?.logo_width || 160]}
-                        onValueChange={(value) => updateSite.mutate({ logo_width: value[0] })}
-                        min={60}
-                        max={500}
-                        step={10}
-                        className="w-full"
-                        disabled={!isAdmin}
-                      />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label>Altura Máxima</Label>
+                          <span className="text-sm font-medium text-muted-foreground">{site?.logo_height || 50}px</span>
+                        </div>
+                        <Slider
+                          value={[site?.logo_height || 50]}
+                          onValueChange={(value) => updateSite.mutate({ logo_height: value[0] })}
+                          min={20}
+                          max={120}
+                          step={5}
+                          className="w-full"
+                          disabled={!isAdmin}
+                        />
+                      </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label>Altura Máxima</Label>
-                        <span className="text-sm font-medium text-muted-foreground">{site?.logo_height || 50}px</span>
-                      </div>
-                      <Slider
-                        value={[site?.logo_height || 50]}
-                        onValueChange={(value) => updateSite.mutate({ logo_height: value[0] })}
-                        min={20}
-                        max={120}
-                        step={5}
-                        className="w-full"
-                        disabled={!isAdmin}
-                      />
-                    </div>
-
-                    {/* Preview */}
+                    {/* Right: Preview */}
                     {site?.logo_url && (
-                      <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                      <div className="p-4 bg-muted/50 rounded-lg flex flex-col">
                         <Label className="text-xs text-muted-foreground mb-2 block">Pré-visualização</Label>
-                        <div className="flex items-center justify-center h-24 bg-background rounded border">
+                        <div className="flex items-center justify-center flex-1 min-h-[80px] bg-background rounded border">
                           <img 
                             src={site.logo_url} 
                             alt="Preview" 
