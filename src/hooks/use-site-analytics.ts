@@ -109,7 +109,7 @@ export async function trackConversion(organizationId: string) {
   else if (width <= 1024) deviceType = 'tablet';
 
   try {
-    await supabase.from('site_analytics_events').insert({
+    await (supabase.from('site_analytics_events') as any).insert({
       organization_id: organizationId,
       session_id: sessionId,
       event_type: 'conversion',
@@ -118,7 +118,7 @@ export async function trackConversion(organizationId: string) {
       device_type: deviceType,
       screen_width: window.screen.width,
       screen_height: window.screen.height,
-    } as any);
+    });
   } catch (e) {
     console.warn('Analytics conversion tracking failed:', e);
   }
