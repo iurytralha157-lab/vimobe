@@ -188,12 +188,12 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
 
               <h3 className="font-semibold text-sm mb-1 truncate max-w-full">{automation.name}</h3>
               
-              <span className="text-[11px] text-muted-foreground mb-2">
+              <span className="text-[11px] text-muted-foreground mb-1">
                 {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
               </span>
 
               {hasStats && (
-                <div className="flex items-center gap-2 text-[10px]">
+                <div className="flex items-center gap-2 text-[10px] mb-1">
                   {stats.completed > 0 && (
                     <span className="flex items-center gap-0.5 text-muted-foreground">
                       <CheckCircle2 className="h-3 w-3 text-primary" />
@@ -213,6 +213,12 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
                     </span>
                   )}
                 </div>
+              )}
+
+              {automation.created_at && (
+                <span className="text-[10px] text-muted-foreground/60">
+                  {format(new Date(automation.created_at), "dd/MM/yyyy")}
+                </span>
               )}
             </CardContent>
 
