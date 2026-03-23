@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 
 // Lazy imports - heavy pages
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Signup = lazy(() => import("./pages/Signup"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Contacts = lazy(() => import("./pages/Contacts"));
@@ -159,6 +160,7 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={renderAuthRoute()} />
+            <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
             <Route path="/onboarding" element={renderOnboardingRoute()} />
             
             {/* Super Admin Routes */}
