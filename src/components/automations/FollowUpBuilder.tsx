@@ -269,8 +269,17 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     [setEdges]
   );
 
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
+
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
+    // Position the panel near the click, offset a bit to the right
+    const rect = (event.currentTarget as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+    if (rect) {
+      const x = event.clientX - rect.left + 20;
+      const y = event.clientY - rect.top - 20;
+      setPanelPosition({ x: Math.min(x, rect.width - 320), y: Math.max(0, Math.min(y, rect.height - 300)) });
+    }
   }, []);
 
   const onPaneClick = useCallback(() => {
@@ -702,12 +711,13 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
         {/* Inline Node Config Panel */}
         {selectedNode && (
-          <div className="absolute top-16 right-4 z-50">
+          <div className="absolute z-50" style={{ pointerEvents: 'auto' }}>
             <NodeConfigPanel
               selectedNode={selectedNode}
               onClose={() => setSelectedNode(null)}
               onNodeDataChange={handleNodeDataChange}
               onDeleteNode={handleDeleteNode}
+              onSaveNode={() => { toast.success('Configuração do nó guardada'); setSelectedNode(null); }}
               triggerType={triggerType}
               setTriggerType={setTriggerType}
               tags={tags || []}
@@ -719,6 +729,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               stages={stages || []}
               stageId={stageId}
               setStageId={setStageId}
+              position={panelPosition || undefined}
             />
           </div>
         )}

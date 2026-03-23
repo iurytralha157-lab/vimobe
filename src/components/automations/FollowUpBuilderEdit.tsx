@@ -283,9 +283,15 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
     [setEdges]
   );
 
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (node.type !== 'start') {
-      setSelectedNode(node);
+  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null);
+
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    setSelectedNode(node);
+    const rect = (event.currentTarget as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+    if (rect) {
+      const x = event.clientX - rect.left + 20;
+      const y = event.clientY - rect.top - 20;
+      setPanelPosition({ x: Math.min(x, rect.width - 320), y: Math.max(0, Math.min(y, rect.height - 300)) });
     }
   }, []);
 
@@ -553,50 +559,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Disparar quando</Label>
-                    <Select value={triggerType} onValueChange={(v: TriggerType) => setTriggerType(v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tag_added">Tag adicionada</SelectItem>
-                        <SelectItem value="lead_created">Lead criado</SelectItem>
-                        <SelectItem value="lead_stage_changed">Mudou de etapa</SelectItem>
-                        <SelectItem value="manual">Manual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {triggerType === 'tag_added' && (
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Tag</Label>
-                      <Select value={tagId} onValueChange={setTagId}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>{tags?.map((tag) => <SelectItem key={tag.id} value={tag.id}><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color || '#888' }} />{tag.name}</div></SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  {triggerType === 'lead_stage_changed' && (
-                    <>
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Pipeline</Label>
-                        <Select value={pipelineId} onValueChange={setPipelineId}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                          <SelectContent>{pipelines?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                      {pipelineId && (
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Etapa</Label>
-                          <Select value={stageId} onValueChange={setStageId}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>
-                              {stageId && !stages?.find(s => s.id === stageId) && <SelectItem value={stageId} disabled>Carregando...</SelectItem>}
-                              {stages?.map((s) => <SelectItem key={s.id} value={s.id}><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color || '#888' }} />{s.name}</div></SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <div className="space-y-1.5">
                     <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Filtrar por usuário</Label>
                     <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
@@ -694,12 +656,13 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
 
         {/* Inline Node Config Panel */}
         {selectedNode && (
-          <div className="absolute top-16 right-4 z-50">
+          <div className="absolute z-50" style={{ pointerEvents: 'auto' }}>
             <NodeConfigPanel
               selectedNode={selectedNode}
               onClose={() => setSelectedNode(null)}
               onNodeDataChange={handleNodeDataChange}
               onDeleteNode={handleDeleteNode}
+              onSaveNode={() => { toast.success('Configuração do nó guardada'); setSelectedNode(null); }}
               triggerType={triggerType}
               setTriggerType={setTriggerType}
               tags={tags || []}
@@ -711,6 +674,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               stages={stages || []}
               stageId={stageId}
               setStageId={setStageId}
+              position={panelPosition || undefined}
             />
           </div>
         )}
