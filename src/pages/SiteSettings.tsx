@@ -740,195 +740,200 @@ ${getWorkerCode()}`;
                   <CardDescription>Personalize o tema e as cores do seu site</CardDescription>
                 </CardHeader>
                 <CardContent className="px-4 md:px-6 pb-5 space-y-6">
-                  {/* Theme Selector */}
-                  <div className="space-y-3">
-                    <Label>Tema do Site</Label>
-                    <div className="flex gap-3">
-                      <Button
-                        type="button"
-                        variant={formData.site_theme === 'dark' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            site_theme: 'dark',
-                            background_color: '#0D0D0D',
-                            text_color: '#FFFFFF',
-                          });
-                        }}
-                        disabled={!isAdmin}
-                        className="flex-1"
-                      >
-                        🌙 Escuro
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={formData.site_theme === 'light' ? 'default' : 'outline'}
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            site_theme: 'light',
-                            background_color: '#FFFFFF',
-                            text_color: '#1A1A1A',
-                          });
-                        }}
-                        disabled={!isAdmin}
-                        className="flex-1"
-                      >
-                        ☀️ Claro
-                      </Button>
-                    </div>
-                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left: Settings */}
+                    <div className="space-y-6">
+                      {/* Theme Selector */}
+                      <div className="space-y-3">
+                        <Label>Tema do Site</Label>
+                        <div className="flex gap-3">
+                          <Button
+                            type="button"
+                            variant={formData.site_theme === 'dark' ? 'default' : 'outline'}
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                site_theme: 'dark',
+                                background_color: '#0D0D0D',
+                                text_color: '#FFFFFF',
+                              });
+                            }}
+                            disabled={!isAdmin}
+                            className="flex-1"
+                          >
+                            🌙 Escuro
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={formData.site_theme === 'light' ? 'default' : 'outline'}
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                site_theme: 'light',
+                                background_color: '#FFFFFF',
+                                text_color: '#1A1A1A',
+                              });
+                            }}
+                            disabled={!isAdmin}
+                            className="flex-1"
+                          >
+                            ☀️ Claro
+                          </Button>
+                        </div>
+                      </div>
 
-                  {/* Background & Text Colors */}
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label>Cor de Fundo</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={formData.background_color}
-                          onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                          disabled={!isAdmin}
-                        />
-                        <Input
-                          value={formData.background_color}
-                          onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
-                          className="flex-1"
-                          disabled={!isAdmin}
-                        />
+                      {/* Background & Text Colors */}
+                      <div className="grid sm:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label>Cor de Fundo</Label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={formData.background_color}
+                              onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
+                              className="w-12 h-10 rounded border cursor-pointer"
+                              disabled={!isAdmin}
+                            />
+                            <Input
+                              value={formData.background_color}
+                              onChange={(e) => setFormData({ ...formData, background_color: e.target.value })}
+                              className="flex-1"
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Cor da Fonte</Label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={formData.text_color}
+                              onChange={(e) => setFormData({ ...formData, text_color: e.target.value })}
+                              className="w-12 h-10 rounded border cursor-pointer"
+                              disabled={!isAdmin}
+                            />
+                            <Input
+                              value={formData.text_color}
+                              onChange={(e) => setFormData({ ...formData, text_color: e.target.value })}
+                              className="flex-1"
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Cor da Fonte</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={formData.text_color}
-                          onChange={(e) => setFormData({ ...formData, text_color: e.target.value })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                          disabled={!isAdmin}
-                        />
-                        <Input
-                          value={formData.text_color}
-                          onChange={(e) => setFormData({ ...formData, text_color: e.target.value })}
-                          className="flex-1"
-                          disabled={!isAdmin}
-                        />
+                      <div className="space-y-2">
+                        <Label>Cor dos Cards</Label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={formData.card_color}
+                            onChange={(e) => setFormData({ ...formData, card_color: e.target.value })}
+                            className="w-12 h-10 rounded border cursor-pointer"
+                            disabled={!isAdmin}
+                          />
+                          <Input
+                            value={formData.card_color}
+                            onChange={(e) => setFormData({ ...formData, card_color: e.target.value })}
+                            className="flex-1"
+                            disabled={!isAdmin}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Cor dos Cards</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={formData.card_color}
-                          onChange={(e) => setFormData({ ...formData, card_color: e.target.value })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                          disabled={!isAdmin}
-                        />
-                        <Input
-                          value={formData.card_color}
-                          onChange={(e) => setFormData({ ...formData, card_color: e.target.value })}
-                          className="flex-1"
-                          disabled={!isAdmin}
-                        />
+
+                      {/* Brand Colors */}
+                      <div className="grid sm:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Cor Principal</Label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={formData.primary_color}
+                              onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                              className="w-12 h-10 rounded border cursor-pointer"
+                              disabled={!isAdmin}
+                            />
+                            <Input
+                              value={formData.primary_color}
+                              onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
+                              className="flex-1"
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Cor Secundária</Label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={formData.secondary_color}
+                              onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
+                              className="w-12 h-10 rounded border cursor-pointer"
+                              disabled={!isAdmin}
+                            />
+                            <Input
+                              value={formData.secondary_color}
+                              onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
+                              className="flex-1"
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Cor de Destaque</Label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={formData.accent_color}
+                              onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
+                              className="w-12 h-10 rounded border cursor-pointer"
+                              disabled={!isAdmin}
+                            />
+                            <Input
+                              value={formData.accent_color}
+                              onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
+                              className="flex-1"
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                  {/* Brand Colors */}
-                  <div className="grid sm:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label>Cor Principal</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={formData.primary_color}
-                          onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                          disabled={!isAdmin}
-                        />
-                        <Input
-                          value={formData.primary_color}
-                          onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
-                          className="flex-1"
-                          disabled={!isAdmin}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Cor Secundária</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={formData.secondary_color}
-                          onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                          disabled={!isAdmin}
-                        />
-                        <Input
-                          value={formData.secondary_color}
-                          onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
-                          className="flex-1"
-                          disabled={!isAdmin}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Cor de Destaque</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={formData.accent_color}
-                          onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
-                          className="w-12 h-10 rounded border cursor-pointer"
-                          disabled={!isAdmin}
-                        />
-                        <Input
-                          value={formData.accent_color}
-                          onChange={(e) => setFormData({ ...formData, accent_color: e.target.value })}
-                          className="flex-1"
-                          disabled={!isAdmin}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Preview */}
-                  <div className="p-4 border rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-3">Pré-visualização:</p>
-                    <div 
-                      className="p-6 rounded-lg"
-                      style={{ backgroundColor: formData.background_color, color: formData.text_color }}
-                    >
-                      <p className="text-lg font-semibold mb-2">Texto do site</p>
-                      <p className="text-sm opacity-70 mb-4">Subtítulo ou descrição do conteúdo</p>
+                    {/* Right: Preview */}
+                    <div className="p-4 bg-muted/50 rounded-lg flex flex-col">
+                      <p className="text-sm text-muted-foreground mb-3">Pré-visualização:</p>
                       <div 
-                        className="p-4 rounded-xl mb-4"
-                        style={{ backgroundColor: formData.card_color }}
+                        className="p-6 rounded-lg flex-1"
+                        style={{ backgroundColor: formData.background_color, color: formData.text_color }}
                       >
-                        <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Exemplo de Card</p>
-                        <p className="text-xs mt-1" style={{ color: '#6B7280' }}>Conteúdo dentro do card</p>
-                      </div>
-                      <div className="flex gap-3 flex-wrap">
+                        <p className="text-lg font-semibold mb-2">Texto do site</p>
+                        <p className="text-sm opacity-70 mb-4">Subtítulo ou descrição do conteúdo</p>
                         <div 
-                          className="px-4 py-2 rounded-full text-white text-sm font-medium"
-                          style={{ backgroundColor: formData.primary_color }}
+                          className="p-4 rounded-xl mb-4"
+                          style={{ backgroundColor: formData.card_color }}
                         >
-                          Botão Principal
+                          <p className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>Exemplo de Card</p>
+                          <p className="text-xs mt-1" style={{ color: '#6B7280' }}>Conteúdo dentro do card</p>
                         </div>
-                        <div 
-                          className="px-4 py-2 rounded-full text-white text-sm font-medium"
-                          style={{ backgroundColor: formData.secondary_color }}
-                        >
-                          Secundário
-                        </div>
-                        <div 
-                          className="px-4 py-2 rounded-full text-white text-sm font-medium"
-                          style={{ backgroundColor: formData.accent_color }}
-                        >
-                          Destaque
+                        <div className="flex gap-3 flex-wrap">
+                          <div 
+                            className="px-4 py-2 rounded-full text-white text-sm font-medium"
+                            style={{ backgroundColor: formData.primary_color }}
+                          >
+                            Botão Principal
+                          </div>
+                          <div 
+                            className="px-4 py-2 rounded-full text-white text-sm font-medium"
+                            style={{ backgroundColor: formData.secondary_color }}
+                          >
+                            Secundário
+                          </div>
+                          <div 
+                            className="px-4 py-2 rounded-full text-white text-sm font-medium"
+                            style={{ backgroundColor: formData.accent_color }}
+                          >
+                            Destaque
+                          </div>
                         </div>
                       </div>
                     </div>
