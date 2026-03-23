@@ -245,10 +245,8 @@ export function AboutTab({ formData, setFormData, site, isAdmin, handleFileUploa
           </CardContent>
         </Card>
       </div>
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+
+
 
       {/* Cards de Diferenciais */}
       <Card>
