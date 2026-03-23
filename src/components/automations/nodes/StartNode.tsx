@@ -34,8 +34,8 @@ export const StartNode = memo(({ data, selected }: NodeProps) => {
       selected ? 'ring-2 ring-orange-400/60' : ''
     }`} style={{ '--node-accent': '#f97316' } as React.CSSProperties}>
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-orange-500/20 shrink-0">
-          <Icon className="h-5 w-5 text-orange-400" />
+        <div className="p-2 rounded-lg bg-orange-500 shrink-0">
+          <Icon className="h-5 w-5 text-white" />
         </div>
         <div>
           <div className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Início</div>

@@ -12,8 +12,8 @@ export const ImageNode = memo(({ data, selected }: NodeProps) => {
     }`} style={{ '--node-accent': '#3b82f6' } as React.CSSProperties}>
       <Handle type="target" position={Position.Left} className="!bg-blue-400 !w-3 !h-3 !border-2 !border-blue-500/50" />
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-blue-500/20 shrink-0">
-          <Image className="h-5 w-5 text-blue-400" />
+        <div className="p-2 rounded-lg bg-blue-500 shrink-0">
+          <Image className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Imagem</span>

@@ -11,8 +11,8 @@ export const RedirectNode = memo(({ data, selected }: NodeProps) => {
     }`} style={{ '--node-accent': '#14b8a6' } as React.CSSProperties}>
       <Handle type="target" position={Position.Left} className="!bg-teal-400 !w-3 !h-3 !border-2 !border-teal-500/50" />
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-teal-500/20 shrink-0">
-          <ExternalLink className="h-5 w-5 text-teal-400" />
+        <div className="p-2 rounded-lg bg-teal-500 shrink-0">
+          <ExternalLink className="h-5 w-5 text-white" />
         </div>
         <div>
           <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">Redirecionar</span>

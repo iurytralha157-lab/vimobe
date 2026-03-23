@@ -16,8 +16,8 @@ export const WaitNode = memo(({ data, selected }: NodeProps) => {
     }`} style={{ '--node-accent': '#a855f7' } as React.CSSProperties}>
       <Handle type="target" position={Position.Left} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-500/50" />
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-purple-500/20 shrink-0">
-          <Timer className="h-5 w-5 text-purple-400" />
+        <div className="p-2 rounded-lg bg-purple-500 shrink-0">
+          <Timer className="h-5 w-5 text-white" />
         </div>
         <div>
           <div className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Aguardar</div>
