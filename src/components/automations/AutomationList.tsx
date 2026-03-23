@@ -43,8 +43,7 @@ import {
 } from '@/hooks/use-automations';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useTags } from '@/hooks/use-tags';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatDistanceToNow, format } from 'date-fns';
 
 interface AutomationListProps {
   onEdit: (automationId: string) => void;
