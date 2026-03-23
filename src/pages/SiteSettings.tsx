@@ -942,84 +942,90 @@ ${getWorkerCode()}`;
                   <CardDescription>Configure a imagem e textos da página inicial</CardDescription>
                 </CardHeader>
                 <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-                  <div className="space-y-3">
-                    <Label>Imagem do Hero (Tela Inicial)</Label>
-                    {site?.hero_image_url ? (
-                      <div className="border rounded-lg p-4 bg-muted">
-                        <img src={site.hero_image_url} alt="Hero" className="h-32 w-full object-cover rounded" />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Hero Image */}
+                    <div className="space-y-3">
+                      <Label>Imagem do Hero (Tela Inicial)</Label>
+                      {site?.hero_image_url ? (
+                        <div className="border rounded-lg p-4 bg-muted">
+                          <img src={site.hero_image_url} alt="Hero" className="h-32 w-full object-cover rounded" />
+                        </div>
+                      ) : (
+                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground h-32 flex items-center justify-center">
+                          Nenhuma imagem do hero enviada
+                        </div>
+                      )}
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e, 'hero')}
+                          className="hidden"
+                          id="hero-upload"
+                          disabled={!isAdmin}
+                        />
+                        <label htmlFor="hero-upload">
+                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
+                            <span>
+                              <Upload className="w-4 h-4 mr-2" />
+                              Enviar Imagem Hero
+                            </span>
+                          </Button>
+                        </label>
                       </div>
-                    ) : (
-                      <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
-                        Nenhuma imagem do hero enviada
+                    </div>
+
+                    {/* Banner Image */}
+                    <div className="space-y-3">
+                      <Label>Banner das Páginas Internas</Label>
+                      {site?.page_banner_url ? (
+                        <div className="border rounded-lg p-4 bg-muted">
+                          <img src={site.page_banner_url} alt="Banner" className="h-32 w-full object-cover rounded" />
+                        </div>
+                      ) : (
+                        <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground h-32 flex items-center justify-center">
+                          Nenhum banner enviado
+                        </div>
+                      )}
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload(e, 'banner')}
+                          className="hidden"
+                          id="banner-upload"
+                          disabled={!isAdmin}
+                        />
+                        <label htmlFor="banner-upload">
+                          <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
+                            <span>
+                              <Upload className="w-4 h-4 mr-2" />
+                              Enviar Banner
+                            </span>
+                          </Button>
+                        </label>
                       </div>
-                    )}
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e, 'hero')}
-                        className="hidden"
-                        id="hero-upload"
-                        disabled={!isAdmin}
-                      />
-                      <label htmlFor="hero-upload">
-                        <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                          <span>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Enviar Imagem Hero
-                          </span>
-                        </Button>
-                      </label>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Título do Hero</Label>
-                    <Input
-                      placeholder="Transformando seus sonhos em realidade!"
-                      value={formData.hero_title}
-                      onChange={(e) => setFormData({ ...formData, hero_title: e.target.value })}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Subtítulo do Hero</Label>
-                    <Input
-                      placeholder="Encontre o imóvel perfeito para você"
-                      value={formData.hero_subtitle}
-                      onChange={(e) => setFormData({ ...formData, hero_subtitle: e.target.value })}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-
-                  <div className="border-t pt-4 mt-4 space-y-3">
-                    <Label>Banner das Páginas Internas</Label>
-                    {site?.page_banner_url ? (
-                      <div className="border rounded-lg p-4 bg-muted">
-                        <img src={site.page_banner_url} alt="Banner" className="h-24 w-full object-cover rounded" />
-                      </div>
-                    ) : (
-                      <div className="border rounded-lg p-4 bg-muted text-center text-muted-foreground">
-                        Nenhum banner enviado
-                      </div>
-                    )}
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e, 'banner')}
-                        className="hidden"
-                        id="banner-upload"
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Título do Hero</Label>
+                      <Input
+                        placeholder="Transformando seus sonhos em realidade!"
+                        value={formData.hero_title}
+                        onChange={(e) => setFormData({ ...formData, hero_title: e.target.value })}
                         disabled={!isAdmin}
                       />
-                      <label htmlFor="banner-upload">
-                        <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                          <span>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Enviar Banner
-                          </span>
-                        </Button>
-                      </label>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Subtítulo do Hero</Label>
+                      <Input
+                        placeholder="Encontre o imóvel perfeito para você"
+                        value={formData.hero_subtitle}
+                        onChange={(e) => setFormData({ ...formData, hero_subtitle: e.target.value })}
+                        disabled={!isAdmin}
+                      />
                     </div>
                   </div>
                 </CardContent>
