@@ -155,6 +155,13 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
     );
   }
 
+  const getNodeCount = (automation: Automation) => {
+    const flow = automation.flow_definition as Record<string, unknown> | null;
+    if (!flow) return 0;
+    const nodes = flow.nodes as unknown[] | undefined;
+    return nodes?.length || 0;
+  };
+
   return (
     <div className="grid gap-3">
       {automations.map((automation) => {
