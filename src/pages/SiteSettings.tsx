@@ -568,6 +568,7 @@ ${getWorkerCode()}`;
                   </div>
                 </CardContent>
               </Card>
+              </div>
 
               <Card>
                 <CardHeader>
