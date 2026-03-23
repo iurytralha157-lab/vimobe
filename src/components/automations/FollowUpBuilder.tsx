@@ -415,7 +415,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       const dbNodes: {
         id: string;
         node_type: 'trigger' | 'action' | 'delay' | 'condition';
-        action_type: string | null;
+        action_type: import('@/hooks/use-automations').ActionType | null;
         config: Record<string, unknown>;
         position_x: number;
         position_y: number;
