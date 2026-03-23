@@ -39,7 +39,7 @@ export const StartNode = memo(({ data, selected }: NodeProps) => {
         </div>
         <div>
           <div className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Início</div>
-          <div className="text-sm font-semibold text-white/90">{getTriggerLabel(data.trigger_type)}</div>
+          <div className="text-sm font-semibold text-foreground">{getTriggerLabel(data.trigger_type)}</div>
         </div>
       </div>
       <Handle type="source" position={Position.Right} className="!bg-orange-400 !w-3 !h-3 !border-2 !border-orange-500/50" />

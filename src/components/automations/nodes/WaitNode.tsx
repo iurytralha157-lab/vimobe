@@ -21,7 +21,7 @@ export const WaitNode = memo(({ data, selected }: NodeProps) => {
         </div>
         <div>
           <div className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Aguardar</div>
-          <div className="text-sm font-semibold text-white/90">{getValue()}</div>
+          <div className="text-sm font-semibold text-foreground">{getValue()}</div>
         </div>
       </div>
       <Handle type="source" position={Position.Right} className="!bg-purple-400 !w-3 !h-3 !border-2 !border-purple-500/50" />

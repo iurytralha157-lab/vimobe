@@ -22,7 +22,7 @@ export const VariableNode = memo(({ data, selected }: NodeProps) => {
               <code className="bg-white/10 px-1 rounded text-yellow-300">{variableName}</code> = {variableValue || '...'}
             </p>
           ) : (
-            <p className="text-xs text-white/60 mt-1">Clique para configurar...</p>
+            <p className="text-xs text-muted-foreground mt-1">Clique para configurar...</p>
           )}
         </div>
       </div>

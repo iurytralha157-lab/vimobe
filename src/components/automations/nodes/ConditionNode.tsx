@@ -28,7 +28,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
               {variable} {operatorLabels[operator] || operator} {value}
             </p>
           ) : (
-            <p className="text-xs text-white/60 mt-1">Clique para configurar...</p>
+            <p className="text-xs text-muted-foreground mt-1">Clique para configurar...</p>
           )}
         </div>
       </div>

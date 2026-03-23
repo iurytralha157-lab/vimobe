@@ -18,7 +18,7 @@ export const ABTestNode = memo(({ data, selected }: NodeProps) => {
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Teste AB</span>
           <div className="flex items-center gap-2 mt-1">
-            <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
               <div className="h-full bg-blue-400 rounded-full" style={{ width: `${splitA}%` }} />
             </div>
             <span className="text-[10px] text-muted-foreground">{splitA}/{splitB}</span>
