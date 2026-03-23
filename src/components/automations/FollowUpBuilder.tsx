@@ -297,9 +297,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (node.type !== 'start') {
-      setSelectedNode(node);
-    }
+    setSelectedNode(node);
   }, []);
 
   const onPaneClick = useCallback(() => {
