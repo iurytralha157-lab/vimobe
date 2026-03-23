@@ -79,7 +79,7 @@ export async function trackPageView(params: {
   else if (ua.includes('Edg')) browser = 'edge';
 
   try {
-    await supabase.from('site_analytics_events').insert({
+    await (supabase.from('site_analytics_events') as any).insert({
       organization_id: params.organizationId,
       session_id: sessionId,
       event_type: 'pageview',
@@ -93,7 +93,7 @@ export async function trackPageView(params: {
       browser,
       screen_width: window.screen.width,
       screen_height: window.screen.height,
-    } as any);
+    });
   } catch (e) {
     // Silent fail - don't break the site
     console.warn('Analytics tracking failed:', e);
