@@ -551,42 +551,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               </button>
               {showConfig && (
                 <div className="px-3 py-2 space-y-4 border border-border rounded-xl bg-card mb-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Sessão WhatsApp</Label>
-                    <Select value={sessionId} onValueChange={setSessionId}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>{connectedSessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.display_name || s.instance_name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Filtrar por usuário</Label>
-                    <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todos os usuários</SelectItem>
-                        <SelectItem value="__me__">Apenas meus leads</SelectItem>
-                        {users?.map((u) => <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="stop-on-reply-edit" checked={stopOnReply} onCheckedChange={(c) => setStopOnReply(c === true)} />
-                      <Label htmlFor="stop-on-reply-edit" className="text-xs cursor-pointer">Parar se lead responder</Label>
-                    </div>
-                    {stopOnReply && pipelineId && (
-                      <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Mover para..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Não mover</SelectItem>
-                          {stages?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {stopOnReply && (
-                      <Textarea value={onReplyMessage} onChange={(e) => setOnReplyMessage(e.target.value)} placeholder="Mensagem ao responder..." className="min-h-[60px] text-xs" />
-                    )}
-                  </div>
+                  <p className="text-[10px] text-muted-foreground">Clique no nó de Início para configurar sessão, gatilho e filtros.</p>
                 </div>
               )}
 
