@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Play, Tag, UserPlus, ArrowRightLeft, Hand } from 'lucide-react';
+import { Play, Tag, UserPlus, ArrowRightLeft, Hand, MessageSquareText, Clock } from 'lucide-react';
 
 const getTriggerIcon = (triggerType?: string) => {
   switch (triggerType) {
@@ -8,6 +8,8 @@ const getTriggerIcon = (triggerType?: string) => {
     case 'lead_created': return UserPlus;
     case 'lead_stage_changed': return ArrowRightLeft;
     case 'manual': return Hand;
+    case 'message_received': return MessageSquareText;
+    case 'inactivity': return Clock;
     default: return Play;
   }
 };
@@ -18,7 +20,9 @@ const getTriggerLabel = (triggerType?: string) => {
     case 'lead_created': return 'Lead criado';
     case 'lead_stage_changed': return 'Mudou de etapa';
     case 'manual': return 'Disparo manual';
-    default: return 'Início';
+    case 'message_received': return 'Mensagem recebida';
+    case 'inactivity': return 'Inatividade';
+    default: return 'Clique para configurar';
   }
 };
 
@@ -26,7 +30,7 @@ export const StartNode = memo(({ data, selected }: NodeProps) => {
   const Icon = getTriggerIcon(data.trigger_type);
 
   return (
-    <div className={`automation-node px-4 py-3 rounded-xl min-w-[180px] ${
+    <div className={`automation-node px-4 py-3 rounded-xl min-w-[180px] cursor-pointer ${
       selected ? 'ring-2 ring-orange-400/60' : ''
     }`} style={{ '--node-accent': '#f97316' } as React.CSSProperties}>
       <div className="flex items-center gap-3">
