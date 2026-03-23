@@ -173,6 +173,13 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
+    bubbles: true,
+    inputs: true,
+    conditionals: true,
+    actions: true,
+  });
+  const [showConfig, setShowConfig] = useState(false);
   const [onReplyMessage, setOnReplyMessage] = useState<string>(initialTemplate?.onReplyMessage || DEFAULT_ON_REPLY_MESSAGE);
 
   const connectedSessions = sessions?.filter(s => s.status === 'connected') || [];
