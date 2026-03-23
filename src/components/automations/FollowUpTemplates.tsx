@@ -1,7 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Clock, Calendar, Plus, Sparkles, Building2 } from 'lucide-react';
+import { MessageSquare, Clock, Calendar, Plus, Building2 } from 'lucide-react';
 
 export interface FollowUpTemplate {
   id: string;
@@ -83,35 +82,45 @@ interface FollowUpTemplatesProps {
 export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) {
   return (
     <div className="space-y-8">
-      {/* Grid style Typebot */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {/* Create from scratch - prominent card */}
-        <Card 
-          className="bg-primary hover:bg-primary/90 border-none rounded-2xl cursor-pointer transition-all duration-200 group aspect-[4/3] flex items-center justify-center"
+        {/* Create from scratch */}
+        <div
+          className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,72,42,0.15), rgba(255,72,42,0.05))',
+            border: '1px solid rgba(255,72,42,0.3)',
+          }}
           onClick={() => onSelectTemplate(null)}
         >
-          <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-            <div className="p-3 rounded-xl bg-primary-foreground/20 mb-3 group-hover:bg-primary-foreground/30 transition-colors">
-              <Plus className="h-8 w-8 text-primary-foreground" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex flex-col items-center justify-center p-6 text-center relative z-10">
+            <div className="p-3 rounded-xl bg-primary/20 mb-3 group-hover:bg-primary/30 transition-colors group-hover:scale-110 duration-300">
+              <Plus className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="font-semibold text-primary-foreground text-sm">
+            <h3 className="font-semibold text-foreground text-sm">
               Criar uma automação
             </h3>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Template cards as folder-style */}
+        {/* Template cards */}
         {FOLLOW_UP_TEMPLATES.map((template) => (
-          <Card
+          <div
             key={template.id}
-            className="cursor-pointer rounded-2xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/40 transition-all duration-200 group aspect-[4/3] flex items-center justify-center relative"
+            className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center relative transition-all duration-300 group overflow-hidden"
+            style={{
+              background: 'rgba(15, 15, 20, 0.6)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+            }}
             onClick={() => onSelectTemplate(template)}
           >
-            <CardContent className="flex flex-col items-center justify-center p-5 text-center">
-              <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex flex-col items-center justify-center p-5 text-center relative z-10">
+              <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-all duration-300 mb-3 group-hover:scale-110">
                 <MessageSquare className="h-7 w-7 text-primary" />
               </div>
-              <h3 className="font-semibold text-sm mb-1">{template.name}</h3>
+              <h3 className="font-semibold text-sm mb-1 text-foreground">{template.name}</h3>
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
@@ -122,12 +131,12 @@ export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) 
                   {template.messages.length} msgs
                 </span>
               </div>
-            </CardContent>
-            <Badge variant="secondary" className="absolute top-3 right-3 text-[9px] px-1.5 py-0">
+            </div>
+            <Badge variant="secondary" className="absolute top-3 right-3 text-[9px] px-1.5 py-0 bg-white/10 text-white/60 border-white/10">
               <Building2 className="h-2.5 w-2.5 mr-0.5" />
               Imob.
             </Badge>
-          </Card>
+          </div>
         ))}
       </div>
     </div>
