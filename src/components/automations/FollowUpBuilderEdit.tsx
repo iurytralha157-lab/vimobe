@@ -558,12 +558,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                       <SelectContent>{connectedSessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.display_name || s.instance_name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </>
-                  )}
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Filtrar por usuário</Label>
                     <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
