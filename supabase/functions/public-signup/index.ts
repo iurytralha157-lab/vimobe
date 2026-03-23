@@ -160,8 +160,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 7. Create meta integration placeholder
-    await supabaseAdmin.from('meta_integrations').insert({ organization_id: org.id });
+    // Meta integration NOT created for self-signup accounts
 
     return new Response(JSON.stringify({
       success: true,
