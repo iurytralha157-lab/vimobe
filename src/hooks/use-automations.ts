@@ -19,12 +19,18 @@ export type ActionType =
   | 'send_whatsapp' 
   | 'send_whatsapp_template' 
   | 'send_email' 
+  | 'send_image'
+  | 'send_audio'
+  | 'send_video'
+  | 'collect_input'
   | 'move_lead' 
   | 'add_tag' 
   | 'remove_tag' 
   | 'create_task' 
   | 'assign_user' 
-  | 'webhook';
+  | 'webhook'
+  | 'redirect'
+  | 'set_variable';
 
 // JSON flow definition types (n8n-style)
 export interface FlowNode {
