@@ -88,61 +88,73 @@ export function AboutTab({ formData, setFormData, site, isAdmin, handleFileUploa
           <CardDescription>Título, subtítulo, texto e imagem da página Sobre</CardDescription>
         </CardHeader>
         <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-          <div className="space-y-2">
-            <Label>Título da Página</Label>
-            <Input
-              placeholder="Sobre a Nossa Imobiliária"
-              value={formData.about_title}
-              onChange={(e) => setFormData({ ...formData, about_title: e.target.value })}
-              disabled={!isAdmin}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Subtítulo</Label>
-            <Input
-              placeholder="Transformando sonhos em realidade desde o início"
-              value={formData.about_subtitle}
-              onChange={(e) => setFormData({ ...formData, about_subtitle: e.target.value })}
-              disabled={!isAdmin}
-            />
-            <p className="text-xs text-muted-foreground">Aparece acima do texto descritivo</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Texto Descritivo</Label>
-            <Textarea
-              placeholder="Conte a história da sua imobiliária..."
-              value={formData.about_text}
-              onChange={(e) => setFormData({ ...formData, about_text: e.target.value })}
-              rows={6}
-              disabled={!isAdmin}
-            />
-          </div>
-          <div className="space-y-3">
-            <Label>Imagem</Label>
-            {site?.about_image_url ? (
-              <div className="border rounded-lg p-4 bg-muted">
-                <img src={site.about_image_url} alt="Sobre" className="h-32 object-cover rounded" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Text fields */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Título da Página</Label>
+                <Input
+                  placeholder="Sobre a Nossa Imobiliária"
+                  value={formData.about_title}
+                  onChange={(e) => setFormData({ ...formData, about_title: e.target.value })}
+                  disabled={!isAdmin}
+                />
               </div>
-            ) : null}
-            <div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileUpload(e, 'about')}
-                className="hidden"
-                id="about-upload"
-                disabled={!isAdmin}
-              />
-              <label htmlFor="about-upload">
-                <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
-                  <span>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Enviar Imagem
-                  </span>
-                </Button>
-              </label>
+              <div className="space-y-2">
+                <Label>Subtítulo</Label>
+                <Input
+                  placeholder="Transformando sonhos em realidade desde o início"
+                  value={formData.about_subtitle}
+                  onChange={(e) => setFormData({ ...formData, about_subtitle: e.target.value })}
+                  disabled={!isAdmin}
+                />
+                <p className="text-xs text-muted-foreground">Aparece acima do texto descritivo</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Texto Descritivo</Label>
+                <Textarea
+                  placeholder="Conte a história da sua imobiliária..."
+                  value={formData.about_text}
+                  onChange={(e) => setFormData({ ...formData, about_text: e.target.value })}
+                  rows={6}
+                  disabled={!isAdmin}
+                />
+              </div>
+            </div>
+
+            {/* Right: Image */}
+            <div className="space-y-3 flex flex-col">
+              <Label>Imagem</Label>
+              {site?.about_image_url ? (
+                <div className="border rounded-lg p-4 bg-muted flex-1 flex items-center justify-center">
+                  <img src={site.about_image_url} alt="Sobre" className="max-h-48 object-cover rounded" />
+                </div>
+              ) : (
+                <div className="border rounded-lg p-4 bg-muted flex-1 flex items-center justify-center text-muted-foreground text-sm">
+                  Nenhuma imagem enviada
+                </div>
+              )}
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'about')}
+                  className="hidden"
+                  id="about-upload"
+                  disabled={!isAdmin}
+                />
+                <label htmlFor="about-upload">
+                  <Button variant="outline" size="sm" asChild disabled={!isAdmin}>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Enviar Imagem
+                    </span>
+                  </Button>
+                </label>
+              </div>
             </div>
           </div>
+
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="space-y-0.5">
               <Label>Exibir seção Sobre na Home</Label>
