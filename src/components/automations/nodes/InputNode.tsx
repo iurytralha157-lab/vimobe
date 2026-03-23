@@ -25,8 +25,8 @@ export const InputNode = memo(({ data, selected }: NodeProps) => {
     }`} style={{ '--node-accent': '#06b6d4' } as React.CSSProperties}>
       <Handle type="target" position={Position.Left} className="!bg-cyan-400 !w-3 !h-3 !border-2 !border-cyan-500/50" />
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-cyan-500/20 shrink-0">
-          <Icon className="h-5 w-5 text-cyan-400" />
+        <div className="p-2 rounded-lg bg-cyan-500 shrink-0">
+          <Icon className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">

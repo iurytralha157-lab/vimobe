@@ -18,8 +18,8 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
     }`} style={{ '--node-accent': '#eab308' } as React.CSSProperties}>
       <Handle type="target" position={Position.Left} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-yellow-500/20 shrink-0">
-          <GitBranch className="h-5 w-5 text-yellow-400" />
+        <div className="p-2 rounded-lg bg-yellow-500 shrink-0">
+          <GitBranch className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Condição</span>
