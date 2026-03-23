@@ -564,70 +564,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
               {showConfig && (
                 <div className="px-3 py-2 space-y-4 border border-border rounded-xl bg-card mb-3">
-                  {/* Session */}
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
-                      Sessão WhatsApp
-                    </Label>
-                    <Select value={sessionId} onValueChange={setSessionId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {connectedSessions.map((session) => (
-                          <SelectItem key={session.id} value={session.id}>
-                            {session.display_name || session.instance_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* User Filter */}
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Filtrar por usuário</Label>
-                    <Select value={filterUserId || "__all__"} onValueChange={(v) => setFilterUserId(v === "__all__" ? "" : v)}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todos os usuários</SelectItem>
-                        <SelectItem value="__me__">Apenas meus leads</SelectItem>
-                        {users?.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>{user.name || user.email}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Stop on Reply */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="stop-on-reply" checked={stopOnReply} onCheckedChange={(c) => setStopOnReply(c === true)} />
-                      <Label htmlFor="stop-on-reply" className="text-xs cursor-pointer">Parar se lead responder</Label>
-                    </div>
-                    {stopOnReply && pipelineId && (
-                      <Select value={onReplyStageId || "__none__"} onValueChange={(v) => setOnReplyStageId(v === "__none__" ? "" : v)}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Mover para..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Não mover</SelectItem>
-                          {stages?.map((stage) => (
-                            <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {stopOnReply && (
-                      <Textarea
-                        value={onReplyMessage}
-                        onChange={(e) => setOnReplyMessage(e.target.value)}
-                        placeholder="Mensagem automática ao responder..."
-                        className="min-h-[60px] text-xs"
-                      />
-                    )}
-                  </div>
+                  <p className="text-[10px] text-muted-foreground">Clique no nó de Início para configurar sessão, gatilho e filtros.</p>
                 </div>
               )}
 
@@ -711,7 +648,6 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
         {/* Inline Node Config Panel */}
         {selectedNode && (
-          <div className="absolute z-50" style={{ pointerEvents: 'auto' }}>
             <NodeConfigPanel
               selectedNode={selectedNode}
               onClose={() => setSelectedNode(null)}
@@ -730,8 +666,13 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               stageId={stageId}
               setStageId={setStageId}
               position={panelPosition || undefined}
+              sessions={sessions || []}
+              sessionId={sessionId}
+              setSessionId={setSessionId}
+              users={users || []}
+              filterUserId={filterUserId}
+              setFilterUserId={setFilterUserId}
             />
-          </div>
         )}
       </div>
     </div>
