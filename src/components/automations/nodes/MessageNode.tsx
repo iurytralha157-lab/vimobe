@@ -23,7 +23,7 @@ export const MessageNode = memo(({ data, selected }: NodeProps) => {
               Dia {day}
             </span>
           </div>
-          <p className="text-xs text-white/60 line-clamp-2 whitespace-pre-wrap">
+          <p className="text-xs text-muted-foreground line-clamp-2 whitespace-pre-wrap">
             {preview}
           </p>
         </div>

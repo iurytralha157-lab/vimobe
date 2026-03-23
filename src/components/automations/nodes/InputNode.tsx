@@ -35,7 +35,7 @@ export const InputNode = memo(({ data, selected }: NodeProps) => {
               {config.label}
             </span>
           </div>
-          <p className="text-xs text-white/60 line-clamp-1">
+          <p className="text-xs text-muted-foreground line-clamp-1">
             {prompt || 'Clique para configurar...'}
           </p>
           {variable && (

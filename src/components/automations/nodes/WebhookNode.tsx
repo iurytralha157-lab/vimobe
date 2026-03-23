@@ -22,7 +22,7 @@ export const WebhookNode = memo(({ data, selected }: NodeProps) => {
               {method}
             </span>
           </div>
-          <p className="text-xs text-white/60 line-clamp-1">
+          <p className="text-xs text-muted-foreground line-clamp-1">
             {url || 'Clique para configurar...'}
           </p>
         </div>
