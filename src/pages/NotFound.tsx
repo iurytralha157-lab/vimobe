@@ -14,12 +14,11 @@ const NotFound = () => {
 
   useEffect(() => {
     supabase
-      .from("system_settings")
+      .from("system_settings" as any)
       .select("login_bg_url")
       .single()
-      .then(({ data }) => {
-        const settings = data as Record<string, unknown> | null;
-        if (settings?.login_bg_url) setBgUrl(settings.login_bg_url as string);
+      .then(({ data }: any) => {
+        if (data?.login_bg_url) setBgUrl(data.login_bg_url);
       });
   }, []);
 
