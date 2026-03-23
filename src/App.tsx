@@ -105,57 +105,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-6">
-      {/* Logo with glow animation */}
-      <div className="relative">
-        <div
-          className="absolute inset-0 rounded-full bg-primary/20 blur-xl"
-          style={{
-            animation: 'logo-glow 2s ease-in-out infinite',
-          }}
-        />
-        <img
-          src={logoWhite}
-          alt="Vimob"
-          className="relative w-32 h-auto"
-          style={{
-            animation: 'logo-float 2.5s ease-in-out infinite, logo-fade-in 0.6s ease-out forwards',
-          }}
-        />
-      </div>
-      {/* Animated progress bar */}
-      <div className="w-24 h-1 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary"
-          style={{
-            animation: 'loader-progress 1.5s ease-in-out infinite',
-          }}
-        />
-      </div>
-    </div>
-    <style>{`
-      @keyframes logo-glow {
-        0%, 100% { opacity: 0.3; transform: scale(0.95); }
-        50% { opacity: 0.7; transform: scale(1.1); }
-      }
-      @keyframes logo-float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-6px); }
-      }
-      @keyframes logo-fade-in {
-        from { opacity: 0; transform: scale(0.9) translateY(10px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
-      }
-      @keyframes loader-progress {
-        0% { width: 0%; margin-left: 0; }
-        50% { width: 70%; margin-left: 15%; }
-        100% { width: 0%; margin-left: 100%; }
-      }
-    `}</style>
-  </div>
-);
+const PageLoader = () => null;
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization } = useAuth();
