@@ -738,7 +738,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-white/5 transition-colors"
                       onClick={() => setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }))}
                     >
-                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      {isExpanded ? <ChevronDown className="h-4 w-4 text-white/40" /> : <ChevronRight className="h-4 w-4 text-white/40" />}
                       <span className={CATEGORY_COLORS[category]}>{CATEGORY_LABELS[category]}</span>
                     </button>
                     
