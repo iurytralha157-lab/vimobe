@@ -657,14 +657,14 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                 );
               })}
 
-              <button className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground">
+              <button className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-white/5 transition-colors text-white/50">
                 📋 Variáveis
               </button>
-              <div className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.name}}'}</code>
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.phone}}'}</code>
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.email}}'}</code>
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{organization.name}}'}</code>
+              <div className="px-3 pb-2 text-xs text-white/40 space-y-0.5">
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{lead.name}}'}</code>
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{lead.phone}}'}</code>
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{lead.email}}'}</code>
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{organization.name}}'}</code>
               </div>
             </div>
           </ScrollArea>
