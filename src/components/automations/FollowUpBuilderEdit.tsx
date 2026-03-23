@@ -700,12 +700,13 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
 
         {/* Inline Node Config Panel */}
         {selectedNode && (
-          <div className="absolute top-16 right-4 z-50">
+          <div className="absolute z-50" style={{ pointerEvents: 'auto' }}>
             <NodeConfigPanel
               selectedNode={selectedNode}
               onClose={() => setSelectedNode(null)}
               onNodeDataChange={handleNodeDataChange}
               onDeleteNode={handleDeleteNode}
+              onSaveNode={() => { toast.success('Configuração do nó guardada'); setSelectedNode(null); }}
               triggerType={triggerType}
               setTriggerType={setTriggerType}
               tags={tags || []}
@@ -717,6 +718,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               stages={stages || []}
               stageId={stageId}
               setStageId={setStageId}
+              position={panelPosition || undefined}
             />
           </div>
         )}
