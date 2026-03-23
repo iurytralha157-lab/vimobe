@@ -22,7 +22,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
           <GitBranch className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Condição</span>
+          <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Condição</span>
           {variable ? (
             <p className="text-xs text-muted-foreground mt-1">
               {variable} {operatorLabels[operator] || operator} {value}
