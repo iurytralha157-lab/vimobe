@@ -289,32 +289,28 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
     setSelectedNode(null);
   }, []);
 
-  const handleAddNode = useCallback((type: 'message' | 'wait') => {
+  const handleAddNode = useCallback((paletteItem: PaletteItem) => {
     const lastNode = nodes[nodes.length - 1];
     const newY = lastNode ? lastNode.position.y + 140 : 200;
-    
-    const newNodeId = `${type}-${Date.now()}`;
+    const newNodeId = `${paletteItem.type}-${Date.now()}`;
     const newNode: Node = {
       id: newNodeId,
-      type,
+      type: paletteItem.type,
       position: { x: 250, y: newY },
-      data: type === 'message' 
-        ? { message: 'Nova mensagem...', day: nodes.filter(n => n.type === 'message').length + 1 }
-        : { wait_type: 'days', wait_value: 1 },
+      data: { ...paletteItem.defaultData },
     };
-
+    if (paletteItem.type === 'message') {
+      newNode.data.day = nodes.filter(n => n.type === 'message').length + 1;
+    }
     setNodes((nds) => [...nds, newNode]);
-
-    // Auto-connect to last node if exists
     if (lastNode && lastNode.type !== 'start') {
-      const newEdge: Edge = {
+      setEdges((eds) => [...eds, {
         id: `e-${lastNode.id}-${newNodeId}`,
         source: lastNode.id,
         target: newNodeId,
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { strokeWidth: 2 },
-      };
-      setEdges((eds) => [...eds, newEdge]);
+      }]);
     }
   }, [nodes, setNodes, setEdges]);
 
