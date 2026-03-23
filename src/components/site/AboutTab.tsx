@@ -171,78 +171,82 @@ export function AboutTab({ formData, setFormData, site, isAdmin, handleFileUploa
         </CardContent>
       </Card>
 
-      {/* Estatísticas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Estatísticas</CardTitle>
-          <CardDescription>Números em destaque exibidos no topo da página Sobre</CardDescription>
-        </CardHeader>
-        <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-          {formData.about_stats.map((stat: AboutStat, index: number) => (
-            <div key={index} className="flex items-center gap-3">
-              <div className="flex-1 grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="500+"
-                  value={stat.value}
-                  onChange={(e) => updateStat(index, 'value', e.target.value)}
-                  disabled={!isAdmin}
-                />
-                <Input
-                  placeholder="Imóveis Vendidos"
-                  value={stat.label}
-                  onChange={(e) => updateStat(index, 'label', e.target.value)}
-                  disabled={!isAdmin}
-                />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Estatísticas */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Estatísticas</CardTitle>
+            <CardDescription>Números em destaque exibidos no topo da página Sobre</CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 md:px-6 pb-5 space-y-4">
+            {formData.about_stats.map((stat: AboutStat, index: number) => (
+              <div key={index} className="flex items-center gap-3">
+                <div className="flex-1 grid grid-cols-2 gap-3">
+                  <Input
+                    placeholder="500+"
+                    value={stat.value}
+                    onChange={(e) => updateStat(index, 'value', e.target.value)}
+                    disabled={!isAdmin}
+                  />
+                  <Input
+                    placeholder="Imóveis Vendidos"
+                    value={stat.label}
+                    onChange={(e) => updateStat(index, 'label', e.target.value)}
+                    disabled={!isAdmin}
+                  />
+                </div>
+                {isAdmin && formData.about_stats.length > 1 && (
+                  <Button variant="ghost" size="icon" onClick={() => removeStat(index)} className="text-destructive hover:text-destructive shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
-              {isAdmin && formData.about_stats.length > 1 && (
-                <Button variant="ghost" size="icon" onClick={() => removeStat(index)} className="text-destructive hover:text-destructive shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          ))}
-          {isAdmin && formData.about_stats.length < 6 && (
-            <Button variant="outline" size="sm" onClick={addStat} className="w-full">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Estatística
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+            ))}
+            {isAdmin && formData.about_stats.length < 6 && (
+              <Button variant="outline" size="sm" onClick={addStat} className="w-full">
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Estatística
+              </Button>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Checkmarks */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Destaques</CardTitle>
-          <CardDescription>Itens com check exibidos abaixo do texto descritivo</CardDescription>
-        </CardHeader>
-        <CardContent className="px-4 md:px-6 pb-5 space-y-4">
-          {formData.about_checkmarks.map((item: string, index: number) => (
-            <div key={index} className="flex items-center gap-3">
-              <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0" style={{ borderColor: 'hsl(var(--primary))' }}>
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--primary))' }} />
+        {/* Checkmarks */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Destaques</CardTitle>
+            <CardDescription>Itens com check exibidos abaixo do texto descritivo</CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 md:px-6 pb-5 space-y-4">
+            {formData.about_checkmarks.map((item: string, index: number) => (
+              <div key={index} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0" style={{ borderColor: 'hsl(var(--primary))' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'hsl(var(--primary))' }} />
+                </div>
+                <Input
+                  value={item}
+                  onChange={(e) => updateCheckmark(index, e.target.value)}
+                  disabled={!isAdmin}
+                  className="flex-1"
+                />
+                {isAdmin && formData.about_checkmarks.length > 1 && (
+                  <Button variant="ghost" size="icon" onClick={() => removeCheckmark(index)} className="text-destructive hover:text-destructive shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
-              <Input
-                value={item}
-                onChange={(e) => updateCheckmark(index, e.target.value)}
-                disabled={!isAdmin}
-                className="flex-1"
-              />
-              {isAdmin && formData.about_checkmarks.length > 1 && (
-                <Button variant="ghost" size="icon" onClick={() => removeCheckmark(index)} className="text-destructive hover:text-destructive shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          ))}
-          {isAdmin && formData.about_checkmarks.length < 6 && (
-            <Button variant="outline" size="sm" onClick={addCheckmark} className="w-full">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Destaque
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+            ))}
+            {isAdmin && formData.about_checkmarks.length < 6 && (
+              <Button variant="outline" size="sm" onClick={addCheckmark} className="w-full">
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Destaque
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+
 
       {/* Cards de Diferenciais */}
       <Card>
