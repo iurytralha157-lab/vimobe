@@ -18,7 +18,8 @@ const NotFound = () => {
       .select("login_bg_url")
       .single()
       .then(({ data }) => {
-        if (data?.login_bg_url) setBgUrl(data.login_bg_url);
+        const settings = data as Record<string, unknown> | null;
+        if (settings?.login_bg_url) setBgUrl(settings.login_bg_url as string);
       });
   }, []);
 
