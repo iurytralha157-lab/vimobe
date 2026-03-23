@@ -345,7 +345,7 @@
   }
 
   .automation-canvas .react-flow__background {
-    opacity: 0.4;
+    opacity: 1;
   }
 
   .automation-canvas .react-flow__edge-path {
