@@ -44,9 +44,9 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
-import { MessageNode } from './nodes';
+import { MessageSquare, Timer } from 'lucide-react';
+import { MessageNode, WaitNode, StartNode, ImageNode, AudioNode, VideoNode, InputNode, ConditionNode, WebhookNode, ABTestNode, RedirectNode, VariableNode } from './nodes';
 import { DEFAULT_ON_REPLY_MESSAGE } from './FollowUpTemplates';
-import { WaitNode, StartNode, ImageNode, AudioNode, VideoNode, InputNode, ConditionNode, WebhookNode, ABTestNode, RedirectNode, VariableNode } from './nodes';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
