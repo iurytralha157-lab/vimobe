@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu, Info } from "lucide-react";
+import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu, Info, BarChart3 } from "lucide-react";
+import { SiteAnalyticsTab } from "@/components/site/SiteAnalyticsTab";
 import { AnimatedIcon } from "@/components/icons/AnimatedIcon";
 import GLOBE_JSON from "@/components/icons/globe-icon.json";
 import { MenuTab } from "@/components/site/MenuTab";
@@ -361,10 +362,14 @@ ${getWorkerCode()}`;
 
         {site && (
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="general" className="flex items-center gap-2">
                 <AnimatedIcon icon={GLOBE_JSON} size={20} trigger="hover" />
                 <span className="hidden sm:inline">Geral</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Analytics</span>
               </TabsTrigger>
               <TabsTrigger value="appearance" className="flex items-center gap-2">
                 <Palette className="w-4 h-4" />
@@ -1377,6 +1382,10 @@ ${getWorkerCode()}`;
                 isAdmin={isAdmin}
                 handleFileUpload={handleFileUpload}
               />
+            </TabsContent>
+
+            <TabsContent value="analytics" className="space-y-6">
+              <SiteAnalyticsTab />
             </TabsContent>
 
             {isAdmin && (

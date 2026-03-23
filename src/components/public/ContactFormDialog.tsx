@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { trackConversion } from '@/hooks/use-site-analytics';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +81,11 @@ export function ContactFormDialog({
 
       setIsSuccess(true);
       toast.success('Mensagem enviada com sucesso!');
+      
+      // Track conversion for analytics
+      if (organizationId) {
+        trackConversion(organizationId);
+      }
       
     } catch (error) {
       console.error('Error submitting contact form:', error);

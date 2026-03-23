@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { trackPageView } from "@/hooks/use-site-analytics";
 import { Phone, Mail, MapPin, Instagram, Facebook, Youtube, Linkedin, Menu, MessageCircle, Heart } from "lucide-react";
 import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,20 @@ export default function PublicSiteLayout() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Track page views
+  useEffect(() => {
+    if (!organizationId) return;
+    const params = new URLSearchParams(location.search);
+    trackPageView({
+      organizationId,
+      pagePath: location.pathname,
+      referrer: document.referrer,
+      utmSource: params.get('utm_source') || undefined,
+      utmMedium: params.get('utm_medium') || undefined,
+      utmCampaign: params.get('utm_campaign') || undefined,
+    });
+  }, [location.pathname, organizationId]);
 
   // Use dynamic menu if configured, otherwise fallback to defaults
   const hasDynamicMenu = dynamicMenuItems.length > 0;
