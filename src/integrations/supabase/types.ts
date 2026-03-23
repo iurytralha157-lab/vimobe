@@ -4407,6 +4407,71 @@ export type Database = {
           },
         ]
       }
+      site_analytics_events: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_type: string | null
+          duration_seconds: number | null
+          event_type: string
+          id: string
+          organization_id: string
+          page_path: string
+          page_title: string | null
+          referrer: string | null
+          screen_height: number | null
+          screen_width: number | null
+          session_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          event_type?: string
+          id?: string
+          organization_id: string
+          page_path: string
+          page_title?: string | null
+          referrer?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          session_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          duration_seconds?: number | null
+          event_type?: string
+          id?: string
+          organization_id?: string
+          page_path?: string
+          page_title?: string | null
+          referrer?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          session_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_analytics_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_menu_items: {
         Row: {
           created_at: string | null
@@ -5761,6 +5826,14 @@ export type Database = {
         }[]
       }
       get_session_owner: { Args: { p_session_id: string }; Returns: string }
+      get_site_analytics_summary: {
+        Args: {
+          p_date_from?: string
+          p_date_to?: string
+          p_organization_id: string
+        }
+        Returns: Json
+      }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {
         Args: {
