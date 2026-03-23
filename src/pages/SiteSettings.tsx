@@ -362,38 +362,38 @@ ${getWorkerCode()}`;
 
         {site && (
           <Tabs defaultValue="general" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8">
-              <TabsTrigger value="general" className="flex items-center gap-2">
+            <TabsList className="flex-wrap h-auto gap-1">
+              <TabsTrigger value="general" className="gap-2">
                 <AnimatedIcon icon={GLOBE_JSON} size={20} trigger="hover" />
-                <span className="hidden sm:inline">Geral</span>
+                <span>Geral</span>
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <TabsTrigger value="analytics" className="gap-2">
                 <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Analytics</span>
+                <span>Analytics</span>
               </TabsTrigger>
-              <TabsTrigger value="appearance" className="flex items-center gap-2">
+              <TabsTrigger value="appearance" className="gap-2">
                 <Palette className="w-4 h-4" />
-                <span className="hidden sm:inline">Aparência</span>
+                <span>Aparência</span>
               </TabsTrigger>
-              <TabsTrigger value="menu" className="flex items-center gap-2">
+              <TabsTrigger value="menu" className="gap-2">
                 <Menu className="w-4 h-4" />
-                <span className="hidden sm:inline">Menu</span>
+                <span>Menu</span>
               </TabsTrigger>
-              <TabsTrigger value="about" className="flex items-center gap-2">
+              <TabsTrigger value="about" className="gap-2">
                 <Info className="w-4 h-4" />
-                <span className="hidden sm:inline">Sobre</span>
+                <span>Sobre</span>
               </TabsTrigger>
-              <TabsTrigger value="contact" className="flex items-center gap-2">
+              <TabsTrigger value="contact" className="gap-2">
                 <Phone className="w-4 h-4" />
-                <span className="hidden sm:inline">Contato</span>
+                <span>Contato</span>
               </TabsTrigger>
-              <TabsTrigger value="social" className="flex items-center gap-2">
+              <TabsTrigger value="social" className="gap-2">
                 <Share2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Social</span>
+                <span>Social</span>
               </TabsTrigger>
-              <TabsTrigger value="seo" className="flex items-center gap-2">
+              <TabsTrigger value="seo" className="gap-2">
                 <Search className="w-4 h-4" />
-                <span className="hidden sm:inline">SEO</span>
+                <span>SEO</span>
               </TabsTrigger>
             </TabsList>
 
