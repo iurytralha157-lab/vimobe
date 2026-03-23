@@ -227,23 +227,34 @@ Deno.serve(async (req) => {
             let fotos: string[] = extractPhotos(item);
             let imagemPrincipal = extractMainImage(item);
 
-            // If no photos from listing, try detail endpoint
-            if (fotos.length === 0) {
-              try {
-                const detailRes = await fetch(
-                  `${IMOVIEW_BASE}/Imovel/RetornarDetalhesImovelDisponivel?codigoImovel=${codigo}`,
-                  { method: "GET", headers: { "chave": apiKey } }
-                );
-                if (detailRes.ok) {
-                  const detail = await detailRes.json();
-                  fotos = extractPhotos(detail);
+            // Always try detail endpoint for complete gallery
+            try {
+              const detailRes = await fetch(
+                `${IMOVIEW_BASE}/Imovel/RetornarDetalhesImovelDisponivel?codigoImovel=${codigo}`,
+                { method: "GET", headers: { "chave": apiKey } }
+              );
+              if (detailRes.ok) {
+                const detailText = await detailRes.text();
+                // Log first detail response for debugging
+                if (totalSynced === 0 && fotos.length === 0) {
+                  console.log(`[imoview-sync] Detail response for ${codigo} (first 3000 chars):`, detailText.substring(0, 3000));
+                }
+                try {
+                  const detail = JSON.parse(detailText);
+                  const detailPhotos = extractPhotos(detail);
+                  if (detailPhotos.length > fotos.length) {
+                    console.log(`[imoview-sync] ${codigo}: listing had ${fotos.length} photos, detail has ${detailPhotos.length}`);
+                    fotos = detailPhotos;
+                  }
                   if (!imagemPrincipal) {
                     imagemPrincipal = extractMainImage(detail);
                   }
-                }
-              } catch {
-                // continue without detail photos
+                } catch { /* invalid json */ }
               }
+              // Small delay to avoid rate limiting
+              await new Promise(r => setTimeout(r, 150));
+            } catch {
+              // continue without detail photos
             }
 
             if (!imagemPrincipal && fotos.length > 0) {
