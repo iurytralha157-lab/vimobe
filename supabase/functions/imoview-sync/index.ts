@@ -11,20 +11,72 @@ const IMOVIEW_BASE = "https://api.imoview.com.br";
 function extractPhotos(obj: any): string[] {
   if (!obj || typeof obj !== "object") return [];
   const photos: string[] = [];
-  const photoFields = ["fotos", "imagens", "urlFotos", "galeria", "galerias", "photos", "images", "midia", "midias"];
+  const seen = new Set<string>();
+
+  const photoFields = [
+    "fotos", "Fotos", "imagens", "Imagens", "urlFotos", "UrlFotos",
+    "galeria", "Galeria", "galerias", "Galerias", "photos", "Photos",
+    "images", "Images", "midia", "Midia", "midias", "Midias",
+    "FotoImovel", "fotoImovel", "fotosImovel", "FotosImovel",
+    "listaFotos", "ListaFotos", "arquivos", "Arquivos",
+  ];
+
+  function addUrl(url: string) {
+    if (url && typeof url === "string" && url.startsWith("http") && !seen.has(url)) {
+      seen.add(url);
+      photos.push(url);
+    }
+  }
+
+  function extractFromItem(item: any) {
+    if (typeof item === "string") {
+      addUrl(item);
+    } else if (item && typeof item === "object") {
+      const urlFields = [
+        "url", "Url", "URL", "urlFoto", "UrlFoto", "foto", "Foto",
+        "src", "Src", "link", "Link", "original", "Original",
+        "grande", "Grande", "media", "Media", "urlArquivo", "UrlArquivo",
+        "caminho", "Caminho", "urlImagem", "UrlImagem",
+      ];
+      for (const f of urlFields) {
+        if (item[f]) { addUrl(String(item[f])); break; }
+      }
+    }
+  }
+
+  // Search known fields
   for (const field of photoFields) {
     const val = obj[field];
     if (Array.isArray(val)) {
-      for (const item of val) {
-        if (typeof item === "string" && item.startsWith("http")) {
-          photos.push(item);
-        } else if (item && typeof item === "object") {
-          const url = item.url || item.urlFoto || item.foto || item.src || item.link || item.original || item.grande || item.media || "";
-          if (url && typeof url === "string" && url.startsWith("http")) photos.push(url);
+      for (const item of val) extractFromItem(item);
+    } else if (val && typeof val === "object" && !Array.isArray(val)) {
+      // Could be a nested object with photo arrays
+      for (const key of Object.keys(val)) {
+        const inner = val[key];
+        if (Array.isArray(inner)) {
+          for (const item of inner) extractFromItem(item);
         }
       }
     }
   }
+
+  // Deep scan: look for any array property containing objects with url-like fields
+  if (photos.length === 0) {
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (Array.isArray(val) && val.length > 0 && val[0] && typeof val[0] === "object") {
+        const first = val[0];
+        const hasUrlField = Object.keys(first).some(k =>
+          /url|foto|imagem|image|src|link|caminho|arquivo/i.test(k)
+        );
+        if (hasUrlField) {
+          console.log(`[extractPhotos] Found photo-like array in field "${key}" with ${val.length} items`);
+          for (const item of val) extractFromItem(item);
+        }
+      }
+    }
+  }
+
   return photos;
 }
 
