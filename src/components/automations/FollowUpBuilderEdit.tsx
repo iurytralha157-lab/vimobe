@@ -517,7 +517,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="text-lg font-semibold h-8 w-auto min-w-[200px] border-none focus-visible:ring-1"
+              className="text-lg font-semibold h-8 w-auto min-w-[200px] border-none focus-visible:ring-1 bg-transparent text-white placeholder:text-white/40"
               placeholder="Nome da automação"
             />
           </div>
