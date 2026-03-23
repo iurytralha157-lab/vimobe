@@ -7,26 +7,26 @@ export const VariableNode = memo(({ data, selected }: NodeProps) => {
   const variableValue = data.variable_value || '';
 
   return (
-    <div className={`px-4 py-3 rounded-lg border-2 bg-background shadow-md min-w-[220px] max-w-[280px] ${
-      selected ? 'border-primary ring-2 ring-primary/20' : 'border-yellow-600'
-    }`}>
-      <Handle type="target" position={Position.Top} className="!bg-yellow-600 !w-3 !h-3" />
+    <div className={`automation-node px-4 py-3 rounded-xl min-w-[220px] max-w-[280px] ${
+      selected ? 'ring-2 ring-yellow-400/60' : ''
+    }`} style={{ '--node-accent': '#eab308' } as React.CSSProperties}>
+      <Handle type="target" position={Position.Top} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-yellow-600/10 shrink-0">
-          <PenLine className="h-5 w-5 text-yellow-600" />
+        <div className="p-2 rounded-lg bg-yellow-500/20 shrink-0">
+          <PenLine className="h-5 w-5 text-yellow-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-bold text-yellow-600 uppercase">Variável</span>
+          <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Variável</span>
           {variableName ? (
-            <p className="text-xs text-muted-foreground mt-1">
-              <code className="bg-muted px-1 rounded">{variableName}</code> = {variableValue || '...'}
+            <p className="text-xs text-white/60 mt-1">
+              <code className="bg-white/10 px-1 rounded text-yellow-300">{variableName}</code> = {variableValue || '...'}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground mt-1">Clique para configurar...</p>
+            <p className="text-xs text-white/60 mt-1">Clique para configurar...</p>
           )}
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-yellow-600 !w-3 !h-3" />
+      <Handle type="source" position={Position.Bottom} className="!bg-yellow-400 !w-3 !h-3 !border-2 !border-yellow-500/50" />
     </div>
   );
 });

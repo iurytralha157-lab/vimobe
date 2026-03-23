@@ -540,18 +540,18 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#0a0a0f]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-background">
+      <div className="flex items-center justify-between p-4 border-b automation-header">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-white/70 hover:text-white hover:bg-white/10">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="text-lg font-semibold h-8 w-auto min-w-[200px] border-none focus-visible:ring-1"
+              className="text-lg font-semibold h-8 w-auto min-w-[200px] border-none focus-visible:ring-1 bg-transparent text-white placeholder:text-white/40"
               placeholder="Nome do follow-up"
             />
           </div>
@@ -569,12 +569,12 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       {/* Main Content */}
       <div className="flex-1 flex min-h-0">
         {/* Left Panel - Typebot-style Node Palette */}
-        <div className="w-64 border-r bg-card/50 flex flex-col">
+        <div className="w-64 border-r automation-sidebar flex flex-col">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-1">
               {/* Config Toggle */}
               <button 
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-white/5 transition-colors text-white/50"
                 onClick={() => setShowConfig(!showConfig)}
               >
                 {showConfig ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -582,10 +582,10 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               </button>
 
               {showConfig && (
-                <div className="px-3 py-2 space-y-4 border rounded-xl bg-muted/20 mb-3">
+                <div className="px-3 py-2 space-y-4 border border-white/5 rounded-xl bg-white/[0.02] mb-3">
                   {/* Session */}
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-semibold uppercase text-muted-foreground">
+                    <Label className="text-[10px] font-semibold uppercase text-white/40">
                       Sessão WhatsApp
                     </Label>
                     <Select value={sessionId} onValueChange={setSessionId}>
@@ -735,10 +735,10 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                 return (
                   <div key={category}>
                     <button 
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-white/5 transition-colors"
                       onClick={() => setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }))}
                     >
-                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      {isExpanded ? <ChevronDown className="h-4 w-4 text-white/40" /> : <ChevronRight className="h-4 w-4 text-white/40" />}
                       <span className={CATEGORY_COLORS[category]}>{CATEGORY_LABELS[category]}</span>
                     </button>
                     
@@ -749,13 +749,13 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                           return (
                             <button
                               key={`${item.type}-${item.label}-${idx}`}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border/50 bg-background hover:bg-muted/50 hover:border-primary/30 transition-all text-left group cursor-pointer"
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 transition-all text-left group cursor-pointer"
                               onClick={() => handleAddNode(item)}
                             >
                               <div className={`p-1 rounded-lg ${item.color}`}>
                                 <Icon className="h-3.5 w-3.5" />
                               </div>
-                              <span className="text-xs font-medium truncate">{item.label}</span>
+                              <span className="text-xs font-medium truncate text-white/70">{item.label}</span>
                             </button>
                           );
                         })}
@@ -767,17 +767,17 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
               {/* Variables Help */}
               <button 
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors text-muted-foreground"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-white/5 transition-colors text-white/50"
                 onClick={() => {}}
               >
                 📋 Variáveis
               </button>
-              <div className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.name}}'}</code>
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.phone}}'}</code>
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{lead.email}}'}</code>
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{organization.name}}'}</code>
-                <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px]">{'{{date}}'}</code>
+              <div className="px-3 pb-2 text-xs text-white/40 space-y-0.5">
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{lead.name}}'}</code>
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{lead.phone}}'}</code>
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{lead.email}}'}</code>
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{organization.name}}'}</code>
+                <code className="block bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/50">{'{{date}}'}</code>
               </div>
             </div>
           </ScrollArea>
@@ -795,11 +795,11 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
-            className="bg-muted/20"
+            className="automation-canvas"
           >
             <Controls />
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-            <Panel position="bottom-center" className="bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-muted-foreground shadow-lg border">
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(255,255,255,0.08)" />
+            <Panel position="bottom-center" className="!bg-[rgba(15,15,20,0.85)] backdrop-blur-xl rounded-xl px-4 py-2.5 text-xs text-white/40 shadow-lg border border-white/5">
               Arraste para conectar • Clique em um nó para editar
             </Panel>
           </ReactFlow>

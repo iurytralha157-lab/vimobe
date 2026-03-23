@@ -26,19 +26,19 @@ export const StartNode = memo(({ data, selected }: NodeProps) => {
   const Icon = getTriggerIcon(data.trigger_type);
 
   return (
-    <div className={`px-4 py-3 rounded-lg border-2 bg-background shadow-md min-w-[180px] ${
-      selected ? 'border-primary ring-2 ring-primary/20' : 'border-orange-500'
-    }`}>
+    <div className={`automation-node px-4 py-3 rounded-xl min-w-[180px] ${
+      selected ? 'ring-2 ring-orange-400/60' : ''
+    }`} style={{ '--node-accent': '#f97316' } as React.CSSProperties}>
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-orange-500/10 shrink-0">
-          <Icon className="h-5 w-5 text-orange-600" />
+        <div className="p-2 rounded-lg bg-orange-500/20 shrink-0">
+          <Icon className="h-5 w-5 text-orange-400" />
         </div>
         <div>
-          <div className="text-xs font-bold text-orange-600 uppercase">Início</div>
-          <div className="text-sm font-semibold">{getTriggerLabel(data.trigger_type)}</div>
+          <div className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">Início</div>
+          <div className="text-sm font-semibold text-white/90">{getTriggerLabel(data.trigger_type)}</div>
         </div>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-orange-500 !w-3 !h-3" />
+      <Handle type="source" position={Position.Bottom} className="!bg-orange-400 !w-3 !h-3 !border-2 !border-orange-500/50" />
     </div>
   );
 });
