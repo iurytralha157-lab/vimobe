@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,6 @@ import { Progress } from '@/components/ui/progress';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { seedDemoProperties } from '@/lib/demo-properties';
 
 const SEGMENTS = [
   { value: 'imobiliario', label: 'Imobiliário' },
@@ -24,31 +22,10 @@ const SEGMENTS = [
   { value: 'outros', label: 'Outros' },
 ];
 
-const ACCENT_COLORS = [
-  { value: 'orange', label: 'Laranja', class: 'bg-orange-500' },
-  { value: 'amber', label: 'Âmbar', class: 'bg-amber-500' },
-  { value: 'blue', label: 'Azul', class: 'bg-blue-500' },
-  { value: 'purple', label: 'Roxo', class: 'bg-purple-500' },
-  { value: 'pink', label: 'Rosa', class: 'bg-pink-500' },
-  { value: 'red', label: 'Vermelho', class: 'bg-red-500' },
-];
-
-const defaultStages = [
-  { name: 'Novo Lead', stage_key: 'new', position: 0, color: '#3b82f6' },
-  { name: 'Contactados', stage_key: 'contacted', position: 1, color: '#0891b2' },
-  { name: 'Conversa Ativa', stage_key: 'active', position: 2, color: '#22c55e' },
-  { name: 'Reunião Marcada', stage_key: 'meeting', position: 3, color: '#8b5cf6' },
-  { name: 'No-show', stage_key: 'noshow', position: 4, color: '#f59e0b' },
-  { name: 'Proposta em Negociação', stage_key: 'negotiation', position: 5, color: '#ec4899' },
-  { name: 'Fechado', stage_key: 'closed', position: 6, color: '#22c55e' },
-  { name: 'Perdido', stage_key: 'lost', position: 7, color: '#ef4444' },
-];
-
 const steps = [
   { id: 1, title: 'Conta' },
   { id: 2, title: 'Empresa' },
-  { id: 3, title: 'Personalizar' },
-  { id: 4, title: 'Pronto!' },
+  { id: 3, title: 'Confirmar' },
 ];
 
 export default function Signup() {
@@ -69,7 +46,6 @@ export default function Signup() {
   const [orgData, setOrgData] = useState({
     organizationName: '',
     segment: 'imobiliario',
-    accentColor: 'blue',
     teamSize: '1-5',
   });
 
@@ -83,8 +59,6 @@ export default function Signup() {
                accountData.password.length >= 8;
       case 2:
         return orgData.organizationName.trim().length >= 2;
-      case 3:
-        return orgData.segment && orgData.accentColor;
       default:
         return true;
     }
@@ -107,80 +81,28 @@ export default function Signup() {
     setStatus('creating');
 
     try {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: accountData.email,
-        password: accountData.password,
-        options: {
-          data: { name: accountData.name },
+      // Call edge function that uses service role (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('public-signup', {
+        body: {
+          name: accountData.name,
+          email: accountData.email,
+          password: accountData.password,
+          organizationName: orgData.organizationName,
+          segment: orgData.segment,
+          teamSize: orgData.teamSize,
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Erro ao criar usuário');
+      if (error) throw new Error(error.message || 'Erro ao criar conta');
+      if (data?.error) throw new Error(data.error);
 
-      const userId = authData.user.id;
+      // Now sign in the user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: accountData.email,
+        password: accountData.password,
+      });
 
-      // 2. Create organization
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: orgData.organizationName,
-          segment: orgData.segment,
-          accent_color: orgData.accentColor,
-          created_by: userId,
-        })
-        .select()
-        .single();
-
-      if (orgError) throw orgError;
-
-      // 3. Create/update user profile
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert({
-          id: userId,
-          organization_id: org.id,
-          name: accountData.name,
-          email: accountData.email,
-          role: 'admin',
-        });
-
-      if (userError) throw userError;
-
-      // 4. Create user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({ user_id: userId, role: 'admin' });
-
-      if (roleError) throw roleError;
-
-      // 5. Create default pipeline
-      const { data: pipeline, error: pipelineError } = await supabase
-        .from('pipelines')
-        .insert({
-          organization_id: org.id,
-          name: 'Pipeline Principal',
-          is_default: true,
-        })
-        .select()
-        .single();
-
-      if (pipelineError) throw pipelineError;
-
-      // 6. Create default stages
-      await supabase.from('stages').insert(
-        defaultStages.map((stage) => ({
-          pipeline_id: pipeline.id,
-          ...stage,
-        }))
-      );
-
-      // 7. Create meta integration placeholder
-      await supabase.from('meta_integrations').insert({ organization_id: org.id });
-
-      // 8. Seed demo properties
-      await seedDemoProperties(org.id);
+      if (signInError) throw signInError;
 
       setStatus('success');
 
@@ -260,7 +182,7 @@ export default function Signup() {
                 )}>
                   {step.id}
                 </div>
-                <span className="hidden sm:block">{step.title}</span>
+                <span className="hidden sm:block text-center">{step.title}</span>
               </div>
             ))}
           </div>
@@ -271,14 +193,12 @@ export default function Signup() {
             <CardTitle>
               {currentStep === 1 && 'Crie sua Conta'}
               {currentStep === 2 && 'Dados da Empresa'}
-              {currentStep === 3 && 'Personalize'}
-              {currentStep === 4 && 'Confirmar'}
+              {currentStep === 3 && 'Confirmar'}
             </CardTitle>
             <CardDescription>
               {currentStep === 1 && 'Preencha seus dados de acesso'}
               {currentStep === 2 && 'Informações da sua empresa'}
-              {currentStep === 3 && 'Escolha a aparência do seu CRM'}
-              {currentStep === 4 && 'Revise e finalize a criação da sua conta'}
+              {currentStep === 3 && 'Revise e finalize a criação da sua conta'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -376,31 +296,8 @@ export default function Signup() {
               </div>
             )}
 
-            {/* Step 3: Personalize */}
+            {/* Step 3: Confirm */}
             {currentStep === 3 && (
-              <div className="space-y-4">
-                <Label>Cor de Destaque</Label>
-                <div className="flex flex-wrap gap-3">
-                  {ACCENT_COLORS.map(color => (
-                    <button
-                      key={color.value}
-                      onClick={() => setOrgData({ ...orgData, accentColor: color.value })}
-                      className={cn(
-                        "w-12 h-12 rounded-lg transition-all",
-                        color.class,
-                        orgData.accentColor === color.value
-                          ? "ring-2 ring-offset-2 ring-primary scale-110"
-                          : "hover:scale-105"
-                      )}
-                      title={color.label}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Confirm */}
-            {currentStep === 4 && (
               <div className="space-y-4">
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                   <h4 className="font-medium">Resumo da sua conta:</h4>
@@ -415,9 +312,8 @@ export default function Signup() {
                   <h4 className="font-medium mb-2">O que será criado:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
                     <li>✓ Conta de administrador</li>
-                    <li>✓ Pipeline de vendas com 8 estágios</li>
-                    <li>✓ Configurações personalizadas</li>
-                    <li>✓ Imóveis de demonstração</li>
+                    <li>✓ Pipeline de vendas padrão</li>
+                    <li>✓ Módulos configurados por segmento</li>
                   </ul>
                 </div>
               </div>
@@ -430,7 +326,7 @@ export default function Signup() {
                 Voltar
               </Button>
 
-              {currentStep < 4 ? (
+              {currentStep < 3 ? (
                 <Button onClick={handleNext} disabled={!canProceed()}>
                   Próximo
                   <ArrowRight className="h-4 w-4 ml-2" />
