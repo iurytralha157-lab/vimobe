@@ -60,6 +60,20 @@ export default function PublicSiteLayout() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Track page views
+  useEffect(() => {
+    if (!organizationId) return;
+    const params = new URLSearchParams(location.search);
+    trackPageView({
+      organizationId,
+      pagePath: location.pathname,
+      referrer: document.referrer,
+      utmSource: params.get('utm_source') || undefined,
+      utmMedium: params.get('utm_medium') || undefined,
+      utmCampaign: params.get('utm_campaign') || undefined,
+    });
+  }, [location.pathname, organizationId]);
+
   // Use dynamic menu if configured, otherwise fallback to defaults
   const hasDynamicMenu = dynamicMenuItems.length > 0;
   
