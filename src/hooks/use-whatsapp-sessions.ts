@@ -203,15 +203,19 @@ export function useDeleteWhatsAppSession() {
 
   return useMutation({
     mutationFn: async (session: WhatsAppSession) => {
-      // Delete from Evolution API first
-      await supabase.functions.invoke("evolution-proxy", {
-        body: {
-          action: "deleteInstance",
-          instanceName: session.instance_name,
-        },
-      });
+      // Try to delete from Evolution API first (don't block on failure)
+      try {
+        await supabase.functions.invoke("evolution-proxy", {
+          body: {
+            action: "deleteInstance",
+            instanceName: session.instance_name,
+          },
+        });
+      } catch (e) {
+        console.warn("Evolution API delete failed (proceeding with DB delete):", e);
+      }
 
-      // Delete from database
+      // Always delete from database
       const { error } = await supabase
         .from("whatsapp_sessions")
         .delete()
