@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Trash2, Play, MessageSquare, Timer, Image, Headphones, Video, Type,
-  GitBranch, Webhook, FlipHorizontal, ExternalLink, PenLine, X, Save, GripHorizontal,
+  Trash2, Play, MessageSquare, Timer, Image, Headphones, Video,
+  GitBranch, Webhook, Tag, ArrowRightLeft, UserCheck, X, Save, GripHorizontal,
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
 import { useRef, useState, useCallback, useEffect } from 'react';
