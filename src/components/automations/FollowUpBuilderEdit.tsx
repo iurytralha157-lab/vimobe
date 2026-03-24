@@ -653,7 +653,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
                 </div>
               )}
 
-              {(['bubbles', 'inputs', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
+              {(['bubbles', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
                 const items = NODE_PALETTE.filter(item => item.category === category);
                 const isExpanded = expandedCategories[category];
                 return (
