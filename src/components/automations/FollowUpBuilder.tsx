@@ -596,21 +596,6 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         <div className="w-64 border-r automation-sidebar flex flex-col">
           <ScrollArea className="flex-1">
              <div className="p-3 space-y-1">
-              {/* Config Toggle */}
-              <button 
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-accent transition-colors text-muted-foreground"
-                onClick={() => setShowConfig(!showConfig)}
-              >
-                {showConfig ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                ⚙️ Configurações
-              </button>
-
-              {showConfig && (
-                <div className="px-3 py-2 space-y-4 border border-border rounded-xl bg-card mb-3">
-                  <p className="text-[10px] text-muted-foreground">Clique no nó de Início para configurar sessão, gatilho e filtros.</p>
-                </div>
-              )}
-
               {/* Node Categories - Typebot Style */}
               {(['bubbles', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
                 const items = NODE_PALETTE.filter(item => item.category === category);
