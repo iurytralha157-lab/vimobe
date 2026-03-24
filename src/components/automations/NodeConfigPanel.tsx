@@ -348,70 +348,95 @@ export function NodeConfigPanel({
             </div>
           )}
 
-          {selectedNode.type === 'input' && (
+          {selectedNode.type === 'tag' && (
             <div className="space-y-3">
-              <div className="space-y-1.5"><Label className="text-xs">Tipo</Label>
-                <Select value={selectedNode.data.input_type || 'text'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { input_type: v })}>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ação</Label>
+                <Select value={selectedNode.data.tag_action || 'add'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { tag_action: v })}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[200]"><SelectItem value="text">Texto</SelectItem><SelectItem value="number">Número</SelectItem><SelectItem value="email">Email</SelectItem><SelectItem value="phone">Telefone</SelectItem><SelectItem value="website">Website</SelectItem><SelectItem value="date">Data</SelectItem><SelectItem value="button">Botão</SelectItem></SelectContent>
-                </Select></div>
-              <div className="space-y-1.5"><Label className="text-xs">Pergunta</Label>
-                <Textarea value={selectedNode.data.prompt || ''} rows={2} placeholder="Ex: Qual seu nome?" onChange={(e) => onNodeDataChange(selectedNode.id, { prompt: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label className="text-xs">Salve a resposta em uma variável:</Label>
-                <Input value={selectedNode.data.variable_name || ''} placeholder="Selecione uma variável" className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { variable_name: e.target.value })} /></div>
-              {selectedNode.data.input_type === 'button' && (
-                <div className="space-y-1.5"><Label className="text-xs">Opções (uma por linha)</Label>
-                  <Textarea value={(selectedNode.data.buttons || []).join('\n')} rows={3} placeholder={'Opção 1\nOpção 2'} onChange={(e) => onNodeDataChange(selectedNode.id, { buttons: e.target.value.split('\n').filter(Boolean) })} /></div>
+                  <SelectContent className="z-[200]">
+                    <SelectItem value="add">Adicionar tag</SelectItem>
+                    <SelectItem value="remove">Remover tag</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {tags && tags.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tag</Label>
+                  <Select value={selectedNode.data.tag_id || ''} onValueChange={(v) => {
+                    const selectedTag = tags.find(t => t.id === v);
+                    onNodeDataChange(selectedNode.id, { tag_id: v, tag_name: selectedTag?.name || '' });
+                  }}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {tags.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color || '#888' }} />
+                            {t.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             </div>
           )}
 
-          {selectedNode.type === 'condition' && (
+          {selectedNode.type === 'move_stage' && (
             <div className="space-y-3">
-              <div className="space-y-1.5"><Label className="text-xs">Variável</Label>
-                <Input value={selectedNode.data.variable || ''} placeholder="ex: lead.source" className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { variable: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label className="text-xs">Operador</Label>
-                <Select value={selectedNode.data.operator || 'equals'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { operator: v })}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[200]"><SelectItem value="equals">Igual a</SelectItem><SelectItem value="not_equals">Diferente</SelectItem><SelectItem value="contains">Contém</SelectItem><SelectItem value="not_contains">Não contém</SelectItem><SelectItem value="greater_than">Maior que</SelectItem><SelectItem value="less_than">Menor que</SelectItem><SelectItem value="is_set">Existe</SelectItem><SelectItem value="is_not_set">Não existe</SelectItem></SelectContent>
-                </Select></div>
-              <div className="space-y-1.5"><Label className="text-xs">Valor</Label>
-                <Input value={selectedNode.data.value || ''} placeholder="valor esperado" className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { value: e.target.value })} /></div>
+              {pipelines && pipelines.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Pipeline</Label>
+                  <Select value={selectedNode.data.move_pipeline_id || ''} onValueChange={(v) => onNodeDataChange(selectedNode.id, { move_pipeline_id: v, move_stage_id: '' })}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {pipelines.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {selectedNode.data.move_pipeline_id && stages && stages.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Etapa</Label>
+                  <Select value={selectedNode.data.move_stage_id || ''} onValueChange={(v) => {
+                    const selectedStage = stages.find(s => s.id === v);
+                    onNodeDataChange(selectedNode.id, { move_stage_id: v, stage_name: selectedStage?.name || '' });
+                  }}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {stages.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color || '#888' }} />
+                            {s.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
-          {selectedNode.type === 'webhook' && (
+          {selectedNode.type === 'assign_user' && (
             <div className="space-y-3">
-              <div className="space-y-1.5"><Label className="text-xs">URL</Label>
-                <Input value={selectedNode.data.webhook_url || ''} placeholder="https://..." className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { webhook_url: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label className="text-xs">Método</Label>
-                <Select value={selectedNode.data.method || 'POST'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { method: v })}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[200]"><SelectItem value="GET">GET</SelectItem><SelectItem value="POST">POST</SelectItem><SelectItem value="PUT">PUT</SelectItem><SelectItem value="PATCH">PATCH</SelectItem></SelectContent>
-                </Select></div>
-            </div>
-          )}
-
-          {selectedNode.type === 'abtest' && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Distribuição A (%)</Label>
-              <Input type="number" min={1} max={99} value={selectedNode.data.split_a || 50} className="h-9"
-                onChange={(e) => onNodeDataChange(selectedNode.id, { split_a: parseInt(e.target.value) || 50 })} />
-              <p className="text-[11px] text-muted-foreground">A: {selectedNode.data.split_a || 50}% / B: {100 - (selectedNode.data.split_a || 50)}%</p>
-            </div>
-          )}
-
-          {selectedNode.type === 'redirect' && (
-            <div className="space-y-1.5"><Label className="text-xs">URL</Label>
-              <Input value={selectedNode.data.redirect_url || ''} placeholder="https://..." className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { redirect_url: e.target.value })} /></div>
-          )}
-
-          {selectedNode.type === 'variable' && (
-            <div className="space-y-3">
-              <div className="space-y-1.5"><Label className="text-xs">Nome da variável</Label>
-                <Input value={selectedNode.data.variable_name || ''} placeholder="ex: pontuacao" className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { variable_name: e.target.value })} /></div>
-              <div className="space-y-1.5"><Label className="text-xs">Valor</Label>
-                <Input value={selectedNode.data.variable_value || ''} placeholder="ex: 100" className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { variable_value: e.target.value })} /></div>
+              {users && users.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Novo responsável</Label>
+                  <Select value={selectedNode.data.assign_user_id || ''} onValueChange={(v) => {
+                    const selectedUser = users.find(u => u.id === v);
+                    onNodeDataChange(selectedNode.id, { assign_user_id: v, user_name: selectedUser?.name || selectedUser?.email || '' });
+                  }}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
