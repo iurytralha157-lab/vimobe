@@ -855,9 +855,184 @@ async function processActionNode(
       console.log(`Notification sent to user ${notifyUserId}`);
       break;
 
+    case "send_audio":
+      await sendMediaMessage(supabase, execution, config, "audio", evolutionApiUrl, evolutionApiKey);
+      break;
+
+    case "send_image":
+      await sendMediaMessage(supabase, execution, config, "image", evolutionApiUrl, evolutionApiKey);
+      break;
+
+    case "send_video":
+      await sendMediaMessage(supabase, execution, config, "video", evolutionApiUrl, evolutionApiKey);
+      break;
+
     default:
       console.log(`Unknown action type: ${actionType}`);
   }
+}
+
+// deno-lint-ignore no-explicit-any
+async function sendMediaMessage(
+  supabase: any,
+  execution: { lead_id?: string; conversation_id?: string; organization_id: string },
+  config: Record<string, unknown>,
+  mediaType: "audio" | "image" | "video",
+  evolutionApiUrl?: string,
+  evolutionApiKey?: string,
+) {
+  if (!evolutionApiUrl || !evolutionApiKey) {
+    console.log("Evolution API not configured for media send");
+    return;
+  }
+
+  // Find session
+  const sessionId = config.session_id as string;
+  if (!sessionId) {
+    console.log("No session_id for media send");
+    return;
+  }
+
+  const { data: session } = await supabase
+    .from("whatsapp_sessions")
+    .select("*")
+    .eq("id", sessionId)
+    .single();
+
+  if (!session) {
+    console.log("Session not found:", sessionId);
+    return;
+  }
+
+  if (!execution.lead_id) {
+    console.log("No lead_id for media send");
+    return;
+  }
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("phone, name")
+    .eq("id", execution.lead_id)
+    .single();
+
+  if (!lead?.phone) {
+    console.log("Lead has no phone");
+    return;
+  }
+
+  const normalizedPhone = normalizePhoneNumber(lead.phone);
+  const number = normalizedPhone;
+
+  let endpoint = "";
+  let body: Record<string, unknown> = { number };
+  let messageContent = "";
+
+  if (mediaType === "audio") {
+    const audioUrl = config.audio_url as string;
+    if (!audioUrl) { console.log("No audio_url"); return; }
+    
+    // Send as WhatsApp voice message (PTT) so it appears as recorded audio
+    endpoint = `message/sendWhatsAppAudio/${session.instance_name}`;
+    body = { number, audio: audioUrl };
+    messageContent = "🎤 Áudio";
+  } else if (mediaType === "image") {
+    const imageUrl = config.image_url as string;
+    const caption = config.caption as string || "";
+    if (!imageUrl) { console.log("No image_url"); return; }
+
+    endpoint = `message/sendMedia/${session.instance_name}`;
+    body = { number, media: imageUrl, mediatype: "image", caption };
+    messageContent = caption || "📷 Imagem";
+  } else if (mediaType === "video") {
+    const videoUrl = config.video_url as string;
+    if (!videoUrl) { console.log("No video_url"); return; }
+
+    endpoint = `message/sendMedia/${session.instance_name}`;
+    body = { number, media: videoUrl, mediatype: "video", caption: "" };
+    messageContent = "🎥 Vídeo";
+  }
+
+  console.log(`Sending ${mediaType} via ${endpoint}`);
+
+  const response = await fetch(`${evolutionApiUrl}/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: evolutionApiKey },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Error sending ${mediaType}:`, errorText);
+    throw new Error(`Failed to send ${mediaType}: ${errorText}`);
+  }
+
+  const result = await response.json();
+  const sentMsgId = result?.key?.id || result?.messageId || crypto.randomUUID();
+  console.log(`${mediaType} sent, messageId:`, sentMsgId);
+
+  // Save to DB
+  const remoteJid = `${normalizedPhone}@s.whatsapp.net`;
+  let { data: conv } = await supabase
+    .from("whatsapp_conversations")
+    .select("id")
+    .eq("session_id", sessionId)
+    .eq("contact_phone", normalizedPhone)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!conv && execution.lead_id) {
+    const { data: convByLead } = await supabase
+      .from("whatsapp_conversations")
+      .select("id")
+      .eq("lead_id", execution.lead_id)
+      .is("deleted_at", null)
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    conv = convByLead;
+  }
+
+  if (!conv) {
+    const { data: newConv } = await supabase
+      .from("whatsapp_conversations")
+      .insert({
+        session_id: sessionId,
+        remote_jid: remoteJid,
+        contact_phone: normalizedPhone,
+        contact_name: lead.name || normalizedPhone,
+        lead_id: execution.lead_id,
+        is_group: false,
+        last_message: messageContent,
+        last_message_at: new Date().toISOString(),
+        unread_count: 0,
+      })
+      .select("id")
+      .single();
+    conv = newConv;
+  }
+
+  if (conv) {
+    await supabase.from("whatsapp_messages").upsert({
+      conversation_id: conv.id,
+      session_id: sessionId,
+      message_id: sentMsgId,
+      from_me: true,
+      content: messageContent,
+      message_type: mediaType,
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      sender_name: "Automação",
+    }, { onConflict: "session_id,message_id" });
+
+    await supabase
+      .from("whatsapp_conversations")
+      .update({ last_message: messageContent, last_message_at: new Date().toISOString(), lead_id: execution.lead_id })
+      .eq("id", conv.id);
+  }
+
+  await logAutomationActivity(supabase, execution.lead_id, "automation_message", messageContent, {
+    channel: "whatsapp", automation_action: `send_${mediaType}`, session_id: sessionId,
+  });
 }
 
 function evaluateCondition(

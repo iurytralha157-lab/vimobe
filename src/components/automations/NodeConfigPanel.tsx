@@ -13,6 +13,7 @@ import {
 import { TriggerType } from '@/hooks/use-automations';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { AutomationMediaGallery } from './AutomationMediaGallery';
+import { AudioRecorderInline } from './AudioRecorderInline';
 
 interface NodeConfigPanelProps {
   selectedNode: Node;
@@ -312,6 +313,12 @@ export function NodeConfigPanel({
 
           {selectedNode.type === 'audio' && (
             <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Gravar Áudio</Label>
+                <AudioRecorderInline
+                  onUploaded={(url) => onNodeDataChange(selectedNode.id, { audio_url: url, audio_type: 'voice' })}
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Galeria de Áudios</Label>
                 <AutomationMediaGallery
