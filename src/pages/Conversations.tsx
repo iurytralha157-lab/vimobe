@@ -46,7 +46,8 @@ export default function Conversations() {
   const previousMessagesLengthRef = useRef<number>(0);
   const isUserScrollingRef = useRef<boolean>(false);
   const {
-    data: sessions
+    data: sessions,
+    isLoading: loadingSessions,
   } = useAccessibleSessions();
   
   // Extract accessible session IDs for filtering
@@ -58,7 +59,7 @@ export default function Conversations() {
   } = useWhatsAppConversations(
     selectedSessionId === "all" ? undefined : selectedSessionId, 
     { hideGroups, showArchived },
-    selectedSessionId === "all" ? accessibleSessionIds : undefined
+    selectedSessionId === "all" ? (loadingSessions ? undefined : accessibleSessionIds) : undefined
   );
   const {
     data: messages,

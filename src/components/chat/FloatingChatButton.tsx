@@ -2,15 +2,20 @@ import { useFloatingChat } from "@/contexts/FloatingChatContext";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { useWhatsAppConversations, useWhatsAppRealtimeConversations } from "@/hooks/use-whatsapp-conversations";
-import { useWhatsAppSessions } from "@/hooks/use-whatsapp-sessions";
+import { useAccessibleSessions } from "@/hooks/use-accessible-sessions";
 import { useLocation } from "react-router-dom";
 import { useHasWhatsAppAccess } from "@/hooks/use-whatsapp-access";
 import { useState, useRef, useCallback, useEffect } from "react";
 
 export function FloatingChatButton() {
   const { state, toggleChat } = useFloatingChat();
-  const { data: sessions } = useWhatsAppSessions();
-  const { data: conversations } = useWhatsAppConversations(undefined, { hideGroups: true });
+  const { data: sessions, isLoading: loadingSessions } = useAccessibleSessions();
+  const accessibleSessionIds = sessions?.map((s) => s.id) || [];
+  const { data: conversations } = useWhatsAppConversations(
+    undefined,
+    { hideGroups: true },
+    loadingSessions ? undefined : accessibleSessionIds,
+  );
   const location = useLocation();
   const { data: hasWhatsAppAccess, isLoading: loadingWhatsAppAccess } = useHasWhatsAppAccess();
   
