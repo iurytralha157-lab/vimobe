@@ -371,25 +371,66 @@ export function NodeConfigPanel({
                   </SelectContent>
                 </Select>
               </div>
-              {tags && tags.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Tag</Label>
-                  <Select value={selectedNode.data.tag_id || ''} onValueChange={(v) => {
-                    const selectedTag = tags.find(t => t.id === v);
-                    onNodeDataChange(selectedNode.id, { tag_id: v, tag_name: selectedTag?.name || '' });
-                  }}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent className="z-[200]">
-                      {tags.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color || '#888' }} />
-                            {t.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tag</Label>
+                <Select value={selectedNode.data.tag_id || ''} onValueChange={(v) => {
+                  const selectedTag = tags?.find(t => t.id === v);
+                  onNodeDataChange(selectedNode.id, { tag_id: v, tag_name: selectedTag?.name || '' });
+                }}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    {(tags || []).map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color || '#888' }} />
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Inline tag creation */}
+              {!isCreatingTag ? (
+                <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => setIsCreatingTag(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Criar nova tag
+                </Button>
+              ) : (
+                <div className="space-y-2 p-2 rounded-lg border border-border bg-muted/30">
+                  <Input
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Nome da tag..."
+                    className="h-8 text-xs"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-7 text-xs"
+                      onClick={() => { setIsCreatingTag(false); setNewTagName(''); }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 h-7 text-xs"
+                      disabled={!newTagName.trim() || createTag.isPending}
+                      onClick={async () => {
+                        try {
+                          const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+                          const created = await createTag.mutateAsync({ name: newTagName.trim(), color: randomColor });
+                          onNodeDataChange(selectedNode.id, { tag_id: created.id, tag_name: created.name });
+                          setNewTagName('');
+                          setIsCreatingTag(false);
+                        } catch {}
+                      }}
+                    >
+                      Criar
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
