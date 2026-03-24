@@ -166,6 +166,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const { data: tags } = useTags();
   const { data: pipelines } = usePipelines();
   const { data: users } = useUsers();
+  const { data: properties } = useProperties();
   const [pipelineId, setPipelineId] = useState<string>('');
   const { data: stages } = useStages(pipelineId || undefined);
   const updateAutomation = useUpdateAutomation();
