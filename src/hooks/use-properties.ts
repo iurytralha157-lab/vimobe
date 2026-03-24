@@ -164,6 +164,20 @@ export function useUpdateProperty() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Property> & { id: string }) => {
+      // Se o tipo de imóvel mudou, regenerar o código
+      if (updates.tipo_de_imovel) {
+        const { data: current } = await supabase
+          .from('properties')
+          .select('tipo_de_imovel, organization_id')
+          .eq('id', id)
+          .single();
+        
+        if (current && current.tipo_de_imovel !== updates.tipo_de_imovel && current.organization_id) {
+          const newCode = await generatePropertyCode(current.organization_id, updates.tipo_de_imovel);
+          updates.code = newCode;
+        }
+      }
+
       const { data, error } = await supabase
         .from('properties')
         .update(updates)

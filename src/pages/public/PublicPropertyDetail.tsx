@@ -1,4 +1,5 @@
 import { useParams, Link, useLocation, useSearchParams } from "react-router-dom";
+import { getDisplayPropertyType } from "@/lib/property-display-utils";
 import { usePublicProperty } from "@/hooks/use-public-site";
 import { MapPin, ArrowLeft, Building, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -124,7 +125,7 @@ export default function PublicPropertyDetail() {
                   className="px-4 py-1.5 text-sm font-semibold text-white rounded-full"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  {property.tipo_imovel || (property as any).tipo_de_imovel}
+                  {getDisplayPropertyType(property.tipo_imovel || (property as any).tipo_de_imovel)}
                 </span>
                 <span className="px-4 py-1.5 text-sm font-medium rounded-full" style={{ backgroundColor: `${textColor}10`, color: textColor }}>
                   Cód: {property.codigo || (property as any).code}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { getDisplayPropertyType } from '@/lib/property-display-utils';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { MapPin, Bed, Bath, Car, Maximize } from 'lucide-react';
@@ -123,7 +124,7 @@ export default function RelatedProperties({
                 
                 {property.tipo_de_imovel && (
                   <span className="absolute top-3 right-3 px-2.5 py-1 text-xs font-semibold bg-white/95 text-gray-800 rounded-full shadow">
-                    {property.tipo_de_imovel}
+                    {getDisplayPropertyType(property.tipo_de_imovel)}
                   </span>
                 )}
 
