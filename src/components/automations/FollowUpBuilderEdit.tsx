@@ -39,6 +39,8 @@ import {
   UserCheck,
   ChevronDown,
   ChevronRight,
+  Home,
+  CircleDot,
 } from 'lucide-react';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import { MessageNode } from './nodes/MessageNode';
