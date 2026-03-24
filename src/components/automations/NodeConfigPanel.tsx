@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Trash2, Play, MessageSquare, Timer, Image, Headphones, Video,
   GitBranch, Webhook, Tag, ArrowRightLeft, UserCheck, X, Save, GripHorizontal,
+  Home, CircleDot,
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
 import { useRef, useState, useCallback, useEffect } from 'react';
@@ -40,6 +41,7 @@ interface NodeConfigPanelProps {
   users?: Array<{ id: string; name: string | null; email: string }>;
   filterUserId?: string;
   setFilterUserId?: (id: string) => void;
+  properties?: Array<{ id: string; title: string; code?: string | null }>;
 }
 
 const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
@@ -54,6 +56,8 @@ const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: stri
   tag: { icon: Tag, label: 'Tag', color: 'text-teal-600 dark:text-teal-400' },
   move_stage: { icon: ArrowRightLeft, label: 'Mudar Etapa', color: 'text-violet-600 dark:text-violet-400' },
   assign_user: { icon: UserCheck, label: 'Responsável', color: 'text-sky-600 dark:text-sky-400' },
+  property_interest: { icon: Home, label: 'Imóvel Interesse', color: 'text-emerald-600 dark:text-emerald-400' },
+  deal_status: { icon: CircleDot, label: 'Status', color: 'text-pink-600 dark:text-pink-400' },
 };
 
 export function NodeConfigPanel({
@@ -63,6 +67,7 @@ export function NodeConfigPanel({
   position,
   sessions, sessionId, setSessionId,
   users, filterUserId, setFilterUserId,
+  properties,
 }: NodeConfigPanelProps) {
   const nodeInfo = NODE_TITLES[selectedNode.type || ''] || { icon: Play, label: 'Nó', color: 'text-foreground' };
   const Icon = nodeInfo.icon;
@@ -437,6 +442,63 @@ export function NodeConfigPanel({
                   </Select>
                 </div>
               )}
+            </div>
+          )}
+
+          {selectedNode.type === 'property_interest' && (
+            <div className="space-y-3">
+              {properties && properties.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Imóvel de interesse</Label>
+                  <Select value={selectedNode.data.property_id || ''} onValueChange={(v) => {
+                    const prop = properties.find(p => p.id === v);
+                    onNodeDataChange(selectedNode.id, { property_id: v, property_name: prop ? `${prop.code ? prop.code + ' - ' : ''}${prop.title}` : '' });
+                  }}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione um imóvel..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {properties.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.code ? `${p.code} - ` : ''}{p.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {(!properties || properties.length === 0) && (
+                <p className="text-xs text-muted-foreground">Nenhum imóvel cadastrado.</p>
+              )}
+            </div>
+          )}
+
+          {selectedNode.type === 'deal_status' && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Novo status do lead</Label>
+                <Select value={selectedNode.data.deal_status || ''} onValueChange={(v) => onNodeDataChange(selectedNode.id, { deal_status: v })}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    <SelectItem value="open">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        Em aberto
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="won">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                        Ganho
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="lost">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        Perdido
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 

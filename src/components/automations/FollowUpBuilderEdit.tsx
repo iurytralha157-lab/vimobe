@@ -39,6 +39,8 @@ import {
   UserCheck,
   ChevronDown,
   ChevronRight,
+  Home,
+  CircleDot,
 } from 'lucide-react';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import { MessageNode } from './nodes/MessageNode';
@@ -52,6 +54,8 @@ import { WebhookNode } from './nodes/WebhookNode';
 import { TagNode } from './nodes/TagNode';
 import { MoveStageNode } from './nodes/MoveStageNode';
 import { AssignUserNode } from './nodes/AssignUserNode';
+import { PropertyInterestNode } from './nodes/PropertyInterestNode';
+import { DealStatusNode } from './nodes/DealStatusNode';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
@@ -63,6 +67,7 @@ import {
   ActionType,
 } from '@/hooks/use-automations';
 import { useUsers } from '@/hooks/use-users';
+import { useProperties } from '@/hooks/use-properties';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import DeletableEdge from './edges/DeletableEdge';
@@ -83,6 +88,8 @@ const nodeTypes = {
   tag: TagNode,
   move_stage: MoveStageNode,
   assign_user: AssignUserNode,
+  property_interest: PropertyInterestNode,
+  deal_status: DealStatusNode,
 };
 
 type NodeCategory = 'bubbles' | 'conditionals' | 'actions';
@@ -108,6 +115,8 @@ const NODE_PALETTE: PaletteItem[] = [
   { type: 'tag', label: 'Tag', icon: Tag, color: 'bg-teal-500 text-white', category: 'actions', defaultData: { tag_id: '', tag_action: 'add' } },
   { type: 'move_stage', label: 'Mudar Etapa', icon: ArrowRightLeft, color: 'bg-violet-500 text-white', category: 'actions', defaultData: { move_pipeline_id: '', move_stage_id: '' } },
   { type: 'assign_user', label: 'Responsável', icon: UserCheck, color: 'bg-sky-500 text-white', category: 'actions', defaultData: { assign_user_id: '' } },
+  { type: 'property_interest', label: 'Imóvel Interesse', icon: Home, color: 'bg-emerald-500 text-white', category: 'actions', defaultData: { property_id: '', property_name: '' } },
+  { type: 'deal_status', label: 'Status', icon: CircleDot, color: 'bg-pink-500 text-white', category: 'actions', defaultData: { deal_status: '' } },
 ];
 
 const CATEGORY_LABELS: Record<NodeCategory, string> = {
@@ -157,6 +166,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const { data: tags } = useTags();
   const { data: pipelines } = usePipelines();
   const { data: users } = useUsers();
+  const { data: properties } = useProperties();
   const [pipelineId, setPipelineId] = useState<string>('');
   const { data: stages } = useStages(pipelineId || undefined);
   const updateAutomation = useUpdateAutomation();
@@ -813,6 +823,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               users={users || []}
               filterUserId={filterUserId}
               setFilterUserId={setFilterUserId}
+              properties={(properties || []).map(p => ({ id: p.id, title: p.title, code: p.code }))}
             />
         )}
       </div>
