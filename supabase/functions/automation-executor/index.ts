@@ -210,17 +210,19 @@ Deno.serve(async (req) => {
               // Wait inline
               await new Promise(resolve => setTimeout(resolve, totalDelayMs));
               
-              // Check if execution was cancelled during wait (e.g., lead replied)
+              // Check if execution was cancelled/redirected during wait (e.g., lead replied)
               const { data: checkExec } = await supabase
                 .from("automation_executions")
-                .select("status")
+                .select("status, current_node_id")
                 .eq("id", execution_id)
                 .single();
               
-              if (checkExec?.status === "cancelled" || checkExec?.status === "replied") {
-                console.log(`Execution ${execution_id} was ${checkExec.status} during inline wait`);
+              // If status changed to cancelled/replied, OR if current_node_id changed (reply branch redirected it)
+              const wasRedirected = checkExec?.current_node_id && checkExec.current_node_id !== delayConnection.target_node_id;
+              if (checkExec?.status === "cancelled" || checkExec?.status === "replied" || checkExec?.status === "completed" || wasRedirected) {
+                console.log(`Execution ${execution_id} was redirected/cancelled during inline wait (status: ${checkExec?.status}, node changed: ${wasRedirected})`);
                 return new Response(
-                  JSON.stringify({ success: true, message: `Execution ${checkExec.status} during wait` }),
+                  JSON.stringify({ success: true, message: `Execution redirected during wait` }),
                   { headers: { ...corsHeaders, "Content-Type": "application/json" } }
                 );
               }
