@@ -1,4 +1,4 @@
-import { memo, useRef, useState, useCallback } from 'react';
+import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Image as ImageIcon } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export const ImageNode = memo(({ data, selected }: NodeProps) => {
           <img
             src={url}
             alt={caption || 'Preview'}
-            className="w-full h-24 object-cover"
+            className="w-full object-contain max-h-[160px]"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         </div>
