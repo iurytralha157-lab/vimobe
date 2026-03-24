@@ -61,12 +61,11 @@ const nodeTypes = {
   image: ImageNode,
   audio: AudioNode,
   video: VideoNode,
-  input: InputNode,
   condition: ConditionNode,
   webhook: WebhookNode,
-  abtest: ABTestNode,
-  redirect: RedirectNode,
-  variable: VariableNode,
+  tag: TagNode,
+  move_stage: MoveStageNode,
+  assign_user: AssignUserNode,
 };
 
 interface FollowUpBuilderProps {
