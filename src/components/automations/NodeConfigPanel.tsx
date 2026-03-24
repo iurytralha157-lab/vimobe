@@ -43,7 +43,6 @@ interface NodeConfigPanelProps {
   setFilterUserId?: (id: string) => void;
   properties?: Array<{ id: string; title: string; code?: string | null }>;
 }
-}
 
 const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
   start: { icon: Play, label: 'Início', color: 'text-orange-500' },
