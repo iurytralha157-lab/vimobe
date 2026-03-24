@@ -244,6 +244,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           flowNodes.push({ id: node.id, type: 'move_stage', position: pos, data: { move_pipeline_id: nodeConfig.pipeline_id || '', move_stage_id: nodeConfig.stage_id || '', stage_name: nodeConfig.stage_name || '' } });
         } else if (node.node_type === 'action' && node.action_type === 'assign_user') {
           flowNodes.push({ id: node.id, type: 'assign_user', position: pos, data: { assign_user_id: nodeConfig.user_id || '', user_name: nodeConfig.user_name || '' } });
+        } else if (node.node_type === 'action' && nodeConfig.actionType === 'property_interest') {
+          flowNodes.push({ id: node.id, type: 'property_interest', position: pos, data: { property_id: nodeConfig.property_id || '', property_name: nodeConfig.property_name || '' } });
+        } else if (node.node_type === 'action' && nodeConfig.actionType === 'deal_status') {
+          flowNodes.push({ id: node.id, type: 'deal_status', position: pos, data: { deal_status: nodeConfig.deal_status || '' } });
         } else if (node.node_type === 'condition') {
           flowNodes.push({ id: node.id, type: 'condition', position: pos, data: { variable: nodeConfig.variable || '', operator: nodeConfig.operator || 'equals', value: nodeConfig.value || '' } });
         } else if (node.node_type === 'delay') {
