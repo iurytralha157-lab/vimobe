@@ -49,12 +49,11 @@ const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: stri
   image: { icon: Image, label: 'Imagem', color: 'text-blue-600 dark:text-blue-400' },
   audio: { icon: Headphones, label: 'Áudio', color: 'text-amber-600 dark:text-amber-400' },
   video: { icon: Video, label: 'Vídeo', color: 'text-rose-600 dark:text-rose-400' },
-  input: { icon: Type, label: 'Input', color: 'text-cyan-600 dark:text-cyan-400' },
   condition: { icon: GitBranch, label: 'Condição', color: 'text-yellow-600 dark:text-yellow-400' },
   webhook: { icon: Webhook, label: 'Webhook', color: 'text-indigo-600 dark:text-indigo-400' },
-  abtest: { icon: FlipHorizontal, label: 'Teste AB', color: 'text-pink-600 dark:text-pink-400' },
-  redirect: { icon: ExternalLink, label: 'Redirecionar', color: 'text-teal-600 dark:text-teal-400' },
-  variable: { icon: PenLine, label: 'Variável', color: 'text-yellow-600 dark:text-yellow-400' },
+  tag: { icon: Tag, label: 'Tag', color: 'text-teal-600 dark:text-teal-400' },
+  move_stage: { icon: ArrowRightLeft, label: 'Mudar Etapa', color: 'text-violet-600 dark:text-violet-400' },
+  assign_user: { icon: UserCheck, label: 'Responsável', color: 'text-sky-600 dark:text-sky-400' },
 };
 
 export function NodeConfigPanel({
