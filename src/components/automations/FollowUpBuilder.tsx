@@ -55,6 +55,11 @@ import { useCreateAutomation, useSaveAutomationFlow, TriggerType } from '@/hooks
 import { useUsers } from '@/hooks/use-users';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import DeletableEdge from './edges/DeletableEdge';
+
+const edgeTypes = {
+  deletable: DeletableEdge,
+};
 
 const nodeTypes = {
   start: StartNode,
@@ -258,10 +263,24 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     setStageId('');
   }, [pipelineId]);
 
+  const handleDeleteEdge = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+  }, [setEdges]);
+
+  const edgesWithDelete = useMemo(() => 
+    edges.map((e) => ({
+      ...e,
+      type: 'deletable',
+      data: { ...e.data, onDelete: handleDeleteEdge },
+    })),
+    [edges, handleDeleteEdge]
+  );
+
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => addEdge({
         ...params,
+        type: 'deletable',
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { strokeWidth: 2 },
       }, eds));
@@ -629,13 +648,14 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         <div className="flex-1 relative">
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={edgesWithDelete}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             fitView
             className="automation-canvas"
           >
