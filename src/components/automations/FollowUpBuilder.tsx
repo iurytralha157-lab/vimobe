@@ -47,7 +47,7 @@ import { NodeConfigPanel } from './NodeConfigPanel';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
-import { useCreateAutomation, useSaveAutomationFlow, TriggerType } from '@/hooks/use-automations';
+import { useCreateAutomation, useSaveAutomationFlow, TriggerType, ActionType } from '@/hooks/use-automations';
 import { useUsers } from '@/hooks/use-users';
 import { useProperties } from '@/hooks/use-properties';
 import { Checkbox } from '@/components/ui/checkbox';
