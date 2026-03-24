@@ -54,6 +54,8 @@ import { WebhookNode } from './nodes/WebhookNode';
 import { TagNode } from './nodes/TagNode';
 import { MoveStageNode } from './nodes/MoveStageNode';
 import { AssignUserNode } from './nodes/AssignUserNode';
+import { PropertyInterestNode } from './nodes/PropertyInterestNode';
+import { DealStatusNode } from './nodes/DealStatusNode';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
