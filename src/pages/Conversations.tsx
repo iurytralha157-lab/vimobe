@@ -592,6 +592,11 @@ export default function Conversations() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
+                  {selectedConversation?.lead?.id && (
+                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setShowAutomationDialog(true)} title="Iniciar Automação">
+                      <Zap className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Textarea 
                     placeholder="Digite sua mensagem..." 
                     value={messageText} 
