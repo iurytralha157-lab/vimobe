@@ -294,7 +294,16 @@ export function NodeConfigPanel({
 
           {selectedNode.type === 'image' && (
             <div className="space-y-3">
-              <div className="space-y-1.5"><Label className="text-xs">URL da Imagem</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Galeria de Imagens</Label>
+                <AutomationMediaGallery
+                  mediaType="image"
+                  accept="image/*"
+                  selectedUrl={selectedNode.data.image_url || ''}
+                  onSelect={(url) => onNodeDataChange(selectedNode.id, { image_url: url })}
+                />
+              </div>
+              <div className="space-y-1.5"><Label className="text-xs">Ou cole uma URL</Label>
                 <Input value={selectedNode.data.image_url || ''} placeholder="https://..." className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { image_url: e.target.value })} /></div>
               <div className="space-y-1.5"><Label className="text-xs">Legenda</Label>
                 <Input value={selectedNode.data.caption || ''} placeholder="Legenda" className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { caption: e.target.value })} /></div>
@@ -302,13 +311,35 @@ export function NodeConfigPanel({
           )}
 
           {selectedNode.type === 'audio' && (
-            <div className="space-y-1.5"><Label className="text-xs">URL do Áudio</Label>
-              <Input value={selectedNode.data.audio_url || ''} placeholder="https://..." className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { audio_url: e.target.value })} /></div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Galeria de Áudios</Label>
+                <AutomationMediaGallery
+                  mediaType="audio"
+                  accept="audio/*"
+                  selectedUrl={selectedNode.data.audio_url || ''}
+                  onSelect={(url) => onNodeDataChange(selectedNode.id, { audio_url: url })}
+                />
+              </div>
+              <div className="space-y-1.5"><Label className="text-xs">Ou cole uma URL</Label>
+                <Input value={selectedNode.data.audio_url || ''} placeholder="https://..." className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { audio_url: e.target.value })} /></div>
+            </div>
           )}
 
           {selectedNode.type === 'video' && (
-            <div className="space-y-1.5"><Label className="text-xs">URL do Vídeo</Label>
-              <Input value={selectedNode.data.video_url || ''} placeholder="https://..." className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { video_url: e.target.value })} /></div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Galeria de Vídeos</Label>
+                <AutomationMediaGallery
+                  mediaType="video"
+                  accept="video/*"
+                  selectedUrl={selectedNode.data.video_url || ''}
+                  onSelect={(url) => onNodeDataChange(selectedNode.id, { video_url: url })}
+                />
+              </div>
+              <div className="space-y-1.5"><Label className="text-xs">Ou cole uma URL</Label>
+                <Input value={selectedNode.data.video_url || ''} placeholder="https://..." className="h-9" onChange={(e) => onNodeDataChange(selectedNode.id, { video_url: e.target.value })} /></div>
+            </div>
           )}
 
           {selectedNode.type === 'input' && (
