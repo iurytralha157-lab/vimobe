@@ -124,8 +124,8 @@ export function ExecutionHistory({ automationId: initialAutomationId }: Executio
   }
 
   const runningExecutions = executions.filter(e => e.status === 'running' || e.status === 'waiting');
-  const completedExecutions = executions.filter(e => e.status === 'completed');
-  const failedExecutions = executions.filter(e => e.status === 'failed');
+  const completedExecutions = executions.filter(e => e.status === 'completed' || e.status === 'replied');
+  const failedExecutions = executions.filter(e => e.status === 'failed' || e.status === 'cancelled');
 
   return (
     <div className="space-y-6">
