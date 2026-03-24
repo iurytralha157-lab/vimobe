@@ -231,7 +231,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         } else if (node.node_type === 'condition') {
           flowNodes.push({ id: node.id, type: 'condition', position: pos, data: { variable: nodeConfig.variable || '', operator: nodeConfig.operator || 'equals', value: nodeConfig.value || '' } });
         } else if (node.node_type === 'delay') {
-          flowNodes.push({ id: node.id, type: 'wait', position: pos, data: { wait_type: nodeConfig.delay_type || 'days', wait_value: nodeConfig.delay_value || 1 } });
+          flowNodes.push({ id: node.id, type: 'wait', position: pos, data: { wait_type: nodeConfig.delay_type || 'days', wait_value: nodeConfig.delay_value || 1, stop_on_reply: nodeConfig.stop_on_reply || false } });
         }
       });
       
