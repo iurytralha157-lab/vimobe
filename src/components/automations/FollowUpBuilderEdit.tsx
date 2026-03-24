@@ -823,6 +823,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               users={users || []}
               filterUserId={filterUserId}
               setFilterUserId={setFilterUserId}
+              properties={(properties || []).map(p => ({ id: p.id, title: p.title, code: p.code }))}
             />
         )}
       </div>
