@@ -75,6 +75,7 @@ export function ConversationHeader({
   pipelineName,
   stageName,
   stageColor,
+  conversationId,
   onArchive,
   onDelete,
   onCreateLead,
@@ -82,6 +83,7 @@ export function ConversationHeader({
   showLeadPanel,
   className
 }: ConversationHeaderProps) {
+  const [showAutomationDialog, setShowAutomationDialog] = useState(false);
   const displayName = contactName && contactName !== contactPhone 
     ? contactName 
     : formatPhoneForDisplay(contactPhone || "");
