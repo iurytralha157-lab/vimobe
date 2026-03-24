@@ -6,10 +6,9 @@ import { WhatsAppSession } from "./use-whatsapp-sessions";
 /**
  * Hook to get only WhatsApp sessions that the current user can access conversations for.
  * 
- * - Admins see all sessions in their organization
- * - Non-admins see only:
+ * - All users see only:
  *   - Sessions they own (owner_user_id)
- *   - Sessions they have explicit access to via whatsapp_session_access
+ *   - Sessions they have explicit access to via whatsapp_session_access (can_view=true)
  *
  * NOTE: The whatsapp_session_access RLS has a circular dependency with whatsapp_sessions.
  * To work around this, we use two separate queries for regular users:
@@ -37,21 +36,7 @@ export function useAccessibleSessions() {
         role: profile.role
       });
 
-      // Admins see ALL sessions in the organization
-      if (profile.role === 'admin' || profile.role === 'super_admin') {
-        const { data, error } = await supabase
-          .from("whatsapp_sessions")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          console.error("Error fetching all org sessions for admin:", error);
-          return [];
-        }
-        return (data || []) as WhatsAppSession[];
-      }
-
-      // Regular users: fetch owned sessions first
+      // Fetch owned sessions first
       const { data: ownedSessions, error: ownedError } = await supabase
         .from("whatsapp_sessions")
         .select("*")
@@ -90,6 +75,7 @@ export function useAccessibleSessions() {
           const { data: grantedSessions, error: gsError } = await supabase
             .from("whatsapp_sessions")
             .select("*")
+            .eq("organization_id", profile.organization_id)
             .in("id", grantedSessionIds);
 
           if (gsError) {
