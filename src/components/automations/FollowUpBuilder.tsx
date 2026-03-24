@@ -12,6 +12,7 @@ import ReactFlow, {
   Panel,
   MarkerType,
   ReactFlowProvider,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
@@ -90,20 +91,17 @@ interface PaletteItem {
 }
 
 const NODE_PALETTE: PaletteItem[] = [
-  // Bubbles (mensagens de saída)
-  { type: 'start', label: 'Início', icon: Play, color: 'text-orange-600 bg-orange-500/10', category: 'actions', defaultData: { trigger_type: 'manual' } },
-  { type: 'message', label: 'Texto', icon: MessageSquare, color: 'text-green-600 bg-green-500/10', category: 'bubbles', defaultData: { message: 'Nova mensagem...', day: 1 } },
-  { type: 'image', label: 'Imagem', icon: Image, color: 'text-blue-600 bg-blue-500/10', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
-  { type: 'video', label: 'Vídeo', icon: Video, color: 'text-rose-600 bg-rose-500/10', category: 'bubbles', defaultData: { video_url: '' } },
-  { type: 'audio', label: 'Áudio', icon: Headphones, color: 'text-amber-600 bg-amber-500/10', category: 'bubbles', defaultData: { audio_url: '' } },
-  // Condicionais
-  { type: 'condition', label: 'Condição', icon: GitBranch, color: 'text-yellow-600 bg-yellow-500/10', category: 'conditionals', defaultData: { variable: '', operator: 'equals', value: '' } },
-  // Ações
-  { type: 'wait', label: 'Espera', icon: Timer, color: 'text-purple-600 bg-purple-500/10', category: 'actions', defaultData: { wait_type: 'days', wait_value: 1 } },
-  { type: 'webhook', label: 'Webhook', icon: Webhook, color: 'text-indigo-600 bg-indigo-500/10', category: 'actions', defaultData: { webhook_url: '', method: 'POST' } },
-  { type: 'tag', label: 'Tag', icon: Tag, color: 'text-teal-600 bg-teal-500/10', category: 'actions', defaultData: { tag_id: '', tag_action: 'add' } },
-  { type: 'move_stage', label: 'Mudar Etapa', icon: ArrowRightLeft, color: 'text-violet-600 bg-violet-500/10', category: 'actions', defaultData: { move_pipeline_id: '', move_stage_id: '' } },
-  { type: 'assign_user', label: 'Responsável', icon: UserCheck, color: 'text-sky-600 bg-sky-500/10', category: 'actions', defaultData: { assign_user_id: '' } },
+  { type: 'start', label: 'Início', icon: Play, color: 'bg-orange-500 text-white', category: 'actions', defaultData: { trigger_type: 'manual' } },
+  { type: 'message', label: 'Texto', icon: MessageSquare, color: 'bg-green-500 text-white', category: 'bubbles', defaultData: { message: 'Nova mensagem...', day: 1 } },
+  { type: 'image', label: 'Imagem', icon: Image, color: 'bg-blue-500 text-white', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
+  { type: 'video', label: 'Vídeo', icon: Video, color: 'bg-rose-500 text-white', category: 'bubbles', defaultData: { video_url: '' } },
+  { type: 'audio', label: 'Áudio', icon: Headphones, color: 'bg-amber-500 text-white', category: 'bubbles', defaultData: { audio_url: '' } },
+  { type: 'condition', label: 'Condição', icon: GitBranch, color: 'bg-yellow-500 text-white', category: 'conditionals', defaultData: { variable: '', operator: 'equals', value: '' } },
+  { type: 'wait', label: 'Espera', icon: Timer, color: 'bg-purple-500 text-white', category: 'actions', defaultData: { wait_type: 'days', wait_value: 1 } },
+  { type: 'webhook', label: 'Webhook', icon: Webhook, color: 'bg-indigo-500 text-white', category: 'actions', defaultData: { webhook_url: '', method: 'POST' } },
+  { type: 'tag', label: 'Tag', icon: Tag, color: 'bg-teal-500 text-white', category: 'actions', defaultData: { tag_id: '', tag_action: 'add' } },
+  { type: 'move_stage', label: 'Mudar Etapa', icon: ArrowRightLeft, color: 'bg-violet-500 text-white', category: 'actions', defaultData: { move_pipeline_id: '', move_stage_id: '' } },
+  { type: 'assign_user', label: 'Responsável', icon: UserCheck, color: 'bg-sky-500 text-white', category: 'actions', defaultData: { assign_user_id: '' } },
 ];
 
 const CATEGORY_LABELS: Record<NodeCategory, string> = {
@@ -141,6 +139,7 @@ function getWaitReplyConfig(flowNodes: Node[]) {
 }
 
 function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpBuilderProps) {
+  const reactFlowInstance = useReactFlow();
   const { data: sessions } = useWhatsAppSessions();
   const { data: tags } = useTags();
   const { data: pipelines } = usePipelines();
@@ -362,11 +361,26 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     );
   }, [setNodes]);
 
-  // Ctrl+C / Ctrl+V clipboard for nodes
+  // Undo history
+  const undoStackRef = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const isUndoingRef = useRef(false);
+
+  // Save state to undo stack on meaningful changes
+  useEffect(() => {
+    if (isUndoingRef.current) { isUndoingRef.current = false; return; }
+    if (nodes.length > 0 || edges.length > 0) {
+      undoStackRef.current = [...undoStackRef.current.slice(-30), { nodes: nodes.map(n => ({ ...n })), edges: edges.map(e => ({ ...e })) }];
+    }
+  }, [nodes, edges]);
+
+  // Ctrl+C / Ctrl+V / Ctrl+Z
   const clipboardRef = useRef<Node[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         const selected = nodes.filter(n => n.selected);
         if (selected.length > 0) {
@@ -387,10 +401,49 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           toast.success(`${newNodes.length} nó(s) colado(s)`);
         }
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (undoStackRef.current.length > 1) {
+          undoStackRef.current.pop(); // remove current
+          const prev = undoStackRef.current[undoStackRef.current.length - 1];
+          if (prev) {
+            isUndoingRef.current = true;
+            setNodes(prev.nodes);
+            setEdges(prev.edges);
+            toast.success('Ação desfeita');
+          }
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, setNodes]);
+  }, [nodes, edges, setNodes, setEdges]);
+
+  // Drag & drop from palette
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('application/reactflow-type');
+    const dataStr = e.dataTransfer.getData('application/reactflow-data');
+    if (!type) return;
+
+    const position = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    const defaultData = dataStr ? JSON.parse(dataStr) : {};
+    const newNode: Node = {
+      id: `${type}-${Date.now()}`,
+      type,
+      position,
+      data: { ...defaultData },
+    };
+    if (type === 'message') {
+      newNode.data.day = nodes.filter(n => n.type === 'message').length + 1;
+    }
+    setNodes(nds => [...nds, newNode]);
+  }, [reactFlowInstance, nodes, setNodes]);
 
   const handleSave = async () => {
     if (!sessionId) {
@@ -646,16 +699,22 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                         {items.map((item, idx) => {
                           const Icon = item.icon;
                           return (
-                            <button
+                            <div
                               key={`${item.type}-${item.label}-${idx}`}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card hover:bg-accent hover:border-border transition-all text-left group cursor-pointer"
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('application/reactflow-type', item.type);
+                                e.dataTransfer.setData('application/reactflow-data', JSON.stringify(item.defaultData));
+                                e.dataTransfer.effectAllowed = 'move';
+                              }}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all text-left group cursor-grab active:cursor-grabbing"
                               onClick={() => handleAddNode(item)}
                             >
                               <div className={`p-1 rounded-lg ${item.color}`}>
                                 <Icon className="h-3.5 w-3.5" />
                               </div>
-                              <span className="text-xs font-medium truncate text-foreground">{item.label}</span>
-                            </button>
+                              <span className="text-xs font-medium truncate text-foreground group-hover:text-white">{item.label}</span>
+                            </div>
                           );
                         })}
                       </div>
@@ -692,6 +751,8 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
