@@ -114,7 +114,6 @@ const CATEGORY_LABELS: Record<NodeCategory, string> = {
 
 const CATEGORY_COLORS: Record<NodeCategory, string> = {
   bubbles: 'text-green-500',
-  inputs: 'text-cyan-500',
   conditionals: 'text-yellow-500',
   actions: 'text-purple-500',
 };
