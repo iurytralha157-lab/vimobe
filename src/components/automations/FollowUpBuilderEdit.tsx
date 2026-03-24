@@ -178,7 +178,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [onReplyMessage, setOnReplyMessage] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
-    bubbles: true, inputs: true, conditionals: true, actions: true,
+    bubbles: true, conditionals: true, actions: true,
   });
   const [showConfig, setShowConfig] = useState(true);
 
