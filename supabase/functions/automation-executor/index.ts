@@ -870,6 +870,78 @@ async function processActionNode(
       await sendMediaMessage(supabase, execution, config, "video", evolutionApiUrl, evolutionApiKey);
       break;
 
+    case "set_variable": {
+      // Handle sub-action types stored in config.actionType
+      const subAction = config.actionType as string;
+      console.log(`set_variable sub-action: ${subAction}`, config);
+
+      if (subAction === "deal_status") {
+        if (!execution.lead_id) {
+          console.log("No lead_id, skipping deal_status change");
+          return;
+        }
+        const newStatus = config.deal_status as string;
+        if (!newStatus || !["open", "won", "lost"].includes(newStatus)) {
+          console.log("Invalid deal_status:", newStatus);
+          return;
+        }
+        const statusUpdate: Record<string, unknown> = { deal_status: newStatus };
+        if (newStatus === "won") {
+          statusUpdate.won_at = new Date().toISOString();
+          statusUpdate.lost_at = null;
+          statusUpdate.lost_reason = null;
+        } else if (newStatus === "lost") {
+          statusUpdate.lost_at = new Date().toISOString();
+          statusUpdate.won_at = null;
+        } else {
+          statusUpdate.won_at = null;
+          statusUpdate.lost_at = null;
+          statusUpdate.lost_reason = null;
+        }
+        await supabase
+          .from("leads")
+          .update(statusUpdate)
+          .eq("id", execution.lead_id);
+
+        await logAutomationActivity(
+          supabase,
+          execution.lead_id,
+          "status_change",
+          `Status alterado para "${newStatus}" via automação`,
+          { new_status: newStatus, automation_action: "deal_status" }
+        );
+        console.log(`Lead ${execution.lead_id} deal_status changed to ${newStatus}`);
+
+      } else if (subAction === "property_interest") {
+        if (!execution.lead_id) {
+          console.log("No lead_id, skipping property_interest");
+          return;
+        }
+        const propertyId = config.property_id as string;
+        if (!propertyId) {
+          console.log("No property_id configured");
+          return;
+        }
+        await supabase
+          .from("leads")
+          .update({ property_id: propertyId })
+          .eq("id", execution.lead_id);
+
+        await logAutomationActivity(
+          supabase,
+          execution.lead_id,
+          "property_linked",
+          `Imóvel de interesse vinculado via automação`,
+          { property_id: propertyId, automation_action: "property_interest" }
+        );
+        console.log(`Lead ${execution.lead_id} linked to property ${propertyId}`);
+
+      } else {
+        console.log(`Unknown set_variable sub-action: ${subAction}`);
+      }
+      break;
+    }
+
     default:
       console.log(`Unknown action type: ${actionType}`);
   }
