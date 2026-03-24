@@ -381,6 +381,36 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
     );
   }, [setNodes]);
 
+  // Ctrl+C / Ctrl+V clipboard for nodes
+  const clipboardRef = useRef<Node[]>([]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length > 0) {
+          clipboardRef.current = selected;
+          toast.success(`${selected.length} nó(s) copiado(s)`);
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboardRef.current.length > 0) {
+          const newNodes: Node[] = clipboardRef.current.map(n => ({
+            ...n,
+            id: `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            position: { x: n.position.x + 50, y: n.position.y + 80 },
+            selected: false,
+            data: { ...n.data },
+          }));
+          setNodes(nds => [...nds, ...newNodes]);
+          toast.success(`${newNodes.length} nó(s) colado(s)`);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nodes, setNodes]);
+
   const handleSave = async () => {
     if (!sessionId) {
       toast.error('Selecione uma sessão WhatsApp');
