@@ -25,8 +25,11 @@ import {
   UserPlus,
   ArrowRight,
   PanelRightOpen,
-  PanelRightClose
+  PanelRightClose,
+  Zap
 } from "lucide-react";
+import { useState } from "react";
+import { StartAutomationDialog } from "./StartAutomationDialog";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { cn } from "@/lib/utils";
@@ -51,6 +54,7 @@ interface ConversationHeaderProps {
   pipelineName?: string | null;
   stageName?: string | null;
   stageColor?: string | null;
+  conversationId?: string | null;
   onArchive?: () => void;
   onDelete?: () => void;
   onCreateLead?: () => void;
@@ -71,6 +75,7 @@ export function ConversationHeader({
   pipelineName,
   stageName,
   stageColor,
+  conversationId,
   onArchive,
   onDelete,
   onCreateLead,
@@ -78,6 +83,7 @@ export function ConversationHeader({
   showLeadPanel,
   className
 }: ConversationHeaderProps) {
+  const [showAutomationDialog, setShowAutomationDialog] = useState(false);
   const displayName = contactName && contactName !== contactPhone 
     ? contactName 
     : formatPhoneForDisplay(contactPhone || "");
@@ -250,6 +256,19 @@ export function ConversationHeader({
           </Button>
         )}
 
+        {leadId && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowAutomationDialog(true)}>
+                  <Zap className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Iniciar Automação</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Phone className="w-4 h-4" />
         </Button>
@@ -281,6 +300,16 @@ export function ConversationHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {leadId && (
+        <StartAutomationDialog
+          open={showAutomationDialog}
+          onOpenChange={setShowAutomationDialog}
+          leadId={leadId}
+          conversationId={conversationId || undefined}
+          contactName={contactName || undefined}
+        />
+      )}
     </header>
   );
 }
