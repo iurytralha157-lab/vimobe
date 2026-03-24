@@ -751,6 +751,8 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
