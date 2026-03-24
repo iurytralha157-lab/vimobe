@@ -445,6 +445,63 @@ export function NodeConfigPanel({
             </div>
           )}
 
+          {selectedNode.type === 'property_interest' && (
+            <div className="space-y-3">
+              {properties && properties.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Imóvel de interesse</Label>
+                  <Select value={selectedNode.data.property_id || ''} onValueChange={(v) => {
+                    const prop = properties.find(p => p.id === v);
+                    onNodeDataChange(selectedNode.id, { property_id: v, property_name: prop ? `${prop.code ? prop.code + ' - ' : ''}${prop.title}` : '' });
+                  }}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione um imóvel..." /></SelectTrigger>
+                    <SelectContent className="z-[200]">
+                      {properties.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.code ? `${p.code} - ` : ''}{p.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {(!properties || properties.length === 0) && (
+                <p className="text-xs text-muted-foreground">Nenhum imóvel cadastrado.</p>
+              )}
+            </div>
+          )}
+
+          {selectedNode.type === 'deal_status' && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Novo status do lead</Label>
+                <Select value={selectedNode.data.deal_status || ''} onValueChange={(v) => onNodeDataChange(selectedNode.id, { deal_status: v })}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    <SelectItem value="open">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        Em aberto
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="won">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                        Ganho
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="lost">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        Perdido
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           <div className="pt-3 border-t border-border space-y-2">
             {onSaveNode && (
               <Button size="sm" className="w-full h-8 text-xs" onClick={onSaveNode}>
