@@ -74,6 +74,9 @@ export function NodeConfigPanel({
 }: NodeConfigPanelProps) {
   const nodeInfo = NODE_TITLES[selectedNode.type || ''] || { icon: Play, label: 'Nó', color: 'text-foreground' };
   const Icon = nodeInfo.icon;
+  const createTag = useCreateTag();
+  const [newTagName, setNewTagName] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
 
   // Dragging logic
   const panelRef = useRef<HTMLDivElement>(null);
