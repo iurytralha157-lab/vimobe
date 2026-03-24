@@ -25,8 +25,11 @@ import {
   UserPlus,
   ArrowRight,
   PanelRightOpen,
-  PanelRightClose
+  PanelRightClose,
+  Zap
 } from "lucide-react";
+import { useState } from "react";
+import { StartAutomationDialog } from "./StartAutomationDialog";
 import { Link } from "react-router-dom";
 import { formatPhoneForDisplay } from "@/lib/phone-utils";
 import { cn } from "@/lib/utils";
