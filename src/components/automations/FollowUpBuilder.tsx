@@ -139,6 +139,7 @@ function getWaitReplyConfig(flowNodes: Node[]) {
 }
 
 function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpBuilderProps) {
+  const reactFlowInstance = useReactFlow();
   const { data: sessions } = useWhatsAppSessions();
   const { data: tags } = useTags();
   const { data: pipelines } = usePipelines();
