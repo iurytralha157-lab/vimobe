@@ -2158,118 +2158,227 @@ async function handleStopFollowUpOnReply(
         continue;
       }
       
-      console.log(`Cancelling execution ${exec.id} for automation "${exec.automation?.name}" due to lead reply`);
+      console.log(`Lead replied during automation "${exec.automation?.name}" - checking for replied branch`);
       
-      // Cancel the execution
-      const { error: updateError } = await supabase
-        .from("automation_executions")
-        .update({
-          status: "cancelled",
-          completed_at: new Date().toISOString(),
-          error_message: "Cancelado: lead respondeu",
-        })
-        .eq("id", exec.id);
+      // ===== KEY FIX: Instead of cancelling, check if there's a "replied" branch to continue =====
+      // Fetch the full automation with nodes and connections to find the replied branch
+      const { data: fullAutomation } = await supabase
+        .from("automations")
+        .select(`
+          id, name, trigger_config,
+          nodes:automation_nodes(*),
+          connections:automation_connections(*)
+        `)
+        .eq("id", exec.automation?.id)
+        .single();
       
-      if (updateError) {
-        console.error(`Error cancelling execution ${exec.id}:`, updateError);
-        continue;
-      }
+      let continuedViaReplyBranch = false;
       
-      console.log(`Execution ${exec.id} cancelled successfully`);
-      
-      // ===== SEND AUTO-REPLY MESSAGE IF CONFIGURED =====
-      const onReplyMessage = triggerConfig.on_reply_message;
-      if (onReplyMessage && leadInfo?.phone) {
-        try {
-          console.log(`Sending auto-reply message for automation "${exec.automation?.name}"`);
+      if (fullAutomation) {
+        // Find the current node (should be a delay/wait node)
+        // The execution's current_node_id points to the NEXT node after the wait
+        // But we need to find the delay node that has a "replied" handle
+        // So we look for delay nodes that connect to the current_node_id via "no_reply" handle
+        
+        // First, get the execution's current state
+        const { data: execState } = await supabase
+          .from("automation_executions")
+          .select("current_node_id")
+          .eq("id", exec.id)
+          .single();
+        
+        const currentNodeId = execState?.current_node_id;
+        
+        if (currentNodeId && fullAutomation.connections && fullAutomation.nodes) {
+          // Find which delay node leads to current_node_id via "no_reply"
+          // The delay node is the one that has a connection with source_handle "no_reply" pointing to currentNodeId
+          const noReplyConn = fullAutomation.connections.find(
+            (c: any) => c.target_node_id === currentNodeId && 
+                         (c.source_handle === "no_reply" || c.source_handle === "default")
+          );
           
-          // Replace variables in message
-          let messageText = onReplyMessage
-            .replace(/\{\{lead\.name\}\}/gi, leadInfo.name || "")
-            .replace(/\{\{lead\.phone\}\}/gi, leadInfo.phone || "");
+          let delayNodeId = noReplyConn?.source_node_id;
           
-          // Get session to send message
-          const { data: sessions } = await supabase
-            .from("whatsapp_sessions")
-            .select("id, instance_name, status")
-            .eq("organization_id", exec.organization_id)
-            .eq("status", "connected")
-            .limit(1);
+          // If we didn't find via no_reply, maybe currentNodeId IS the delay node
+          // (execution might be waiting AT the delay node itself)
+          if (!delayNodeId) {
+            const currentNode = fullAutomation.nodes.find((n: any) => n.id === currentNodeId);
+            if (currentNode && (currentNode.node_type === "delay")) {
+              delayNodeId = currentNodeId;
+            }
+          }
           
-          if (sessions && sessions.length > 0) {
-            const session = sessions[0];
-            const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
-            const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
-            
-            if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
-              const formattedPhone = leadInfo.phone.replace(/\D/g, '');
-              const phoneWithCode = formattedPhone.startsWith("55") ? formattedPhone : `55${formattedPhone}`;
-              
-              const sendResponse = await fetch(`${EVOLUTION_API_URL}/message/sendText/${session.instance_name}`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "apikey": EVOLUTION_API_KEY,
-                },
-                body: JSON.stringify({
-                  number: phoneWithCode,
-                  text: messageText,
-                }),
-              });
-              
-              if (sendResponse.ok) {
-                const sendData = await sendResponse.json();
-                const sentMsgId = sendData?.key?.id || sendData?.messageId || crypto.randomUUID();
-                console.log(`Auto-reply message sent successfully to ${phoneWithCode}, msgId: ${sentMsgId}`);
-                
-                // ===== PERSIST auto-reply to whatsapp_messages =====
-                // Find conversation for this lead+session
-                let replyConvId = conversationId;
-                if (!replyConvId) {
-                  const { data: replyConv } = await supabase
-                    .from("whatsapp_conversations")
-                    .select("id")
-                    .eq("lead_id", leadId)
-                    .is("deleted_at", null)
-                    .order("last_message_at", { ascending: false, nullsFirst: false })
-                    .limit(1)
-                    .maybeSingle();
-                  replyConvId = replyConv?.id;
-                }
-                
-                if (replyConvId) {
-                  await supabase.from("whatsapp_messages").upsert({
-                    conversation_id: replyConvId,
-                    session_id: session.id,
-                    message_id: sentMsgId,
-                    from_me: true,
-                    content: messageText,
-                    message_type: "text",
-                    status: "sent",
-                    sent_at: new Date().toISOString(),
-                    sender_name: "Automação",
-                  }, { onConflict: "session_id,message_id" });
-                  
-                  // Update conversation last message
-                  await supabase
-                    .from("whatsapp_conversations")
-                    .update({
-                      last_message: messageText,
-                      last_message_at: new Date().toISOString(),
-                    })
-                    .eq("id", replyConvId);
-                  
-                  console.log(`Auto-reply message persisted to conversation ${replyConvId}`);
-                } else {
-                  console.warn("No conversation found to persist auto-reply message");
-                }
-              } else {
-                console.error(`Failed to send auto-reply: ${await sendResponse.text()}`);
+          // Also check: maybe current_node_id is the target of the delay (the node AFTER delay)
+          // In that case, find the delay node that connects to it
+          if (!delayNodeId) {
+            const anyConn = fullAutomation.connections.find(
+              (c: any) => c.target_node_id === currentNodeId
+            );
+            if (anyConn) {
+              const sourceNode = fullAutomation.nodes.find((n: any) => n.id === anyConn.source_node_id);
+              if (sourceNode && sourceNode.node_type === "delay") {
+                delayNodeId = sourceNode.id;
               }
             }
           }
-        } catch (msgError) {
-          console.error("Error sending auto-reply message:", msgError);
+          
+          if (delayNodeId) {
+            // Now find the "replied" branch connection from this delay node
+            const repliedConn = fullAutomation.connections.find(
+              (c: any) => c.source_node_id === delayNodeId && c.source_handle === "replied"
+            );
+            
+            if (repliedConn && repliedConn.target_node_id) {
+              console.log(`✅ Found "replied" branch! Continuing flow to node ${repliedConn.target_node_id}`);
+              
+              // Update execution to continue along the replied branch (NOT cancel!)
+              const { error: updateError } = await supabase
+                .from("automation_executions")
+                .update({
+                  status: "running",
+                  current_node_id: repliedConn.target_node_id,
+                  next_execution_at: null,
+                  error_message: null,
+                })
+                .eq("id", exec.id);
+              
+              if (!updateError) {
+                continuedViaReplyBranch = true;
+                
+                // Invoke executor to process the next node in the replied branch
+                const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+                const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+                
+                const execResponse = await fetch(`${SUPABASE_URL}/functions/v1/automation-executor`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  },
+                  body: JSON.stringify({ execution_id: exec.id }),
+                });
+                
+                console.log(`Executor invoked for replied branch: ${execResponse.status}`);
+              } else {
+                console.error(`Error updating execution for replied branch:`, updateError);
+              }
+            } else {
+              console.log(`No "replied" branch found for delay node ${delayNodeId}`);
+            }
+          } else {
+            console.log(`Could not find delay node for current_node_id ${currentNodeId}`);
+          }
+        }
+      }
+      
+      // If we didn't continue via reply branch, fall back to cancel + legacy behavior
+      if (!continuedViaReplyBranch) {
+        console.log(`Falling back to cancel behavior for execution ${exec.id}`);
+        
+        // Cancel the execution
+        const { error: updateError } = await supabase
+          .from("automation_executions")
+          .update({
+            status: "cancelled",
+            completed_at: new Date().toISOString(),
+            error_message: "Cancelado: lead respondeu",
+          })
+          .eq("id", exec.id);
+        
+        if (updateError) {
+          console.error(`Error cancelling execution ${exec.id}:`, updateError);
+          continue;
+        }
+        
+        // ===== SEND AUTO-REPLY MESSAGE IF CONFIGURED (legacy trigger_config) =====
+        const onReplyMessage = triggerConfig.on_reply_message;
+        if (onReplyMessage && leadInfo?.phone) {
+          try {
+            let messageText = onReplyMessage
+              .replace(/\{\{lead\.name\}\}/gi, leadInfo.name || "")
+              .replace(/\{\{lead\.phone\}\}/gi, leadInfo.phone || "");
+            
+            const { data: sessions } = await supabase
+              .from("whatsapp_sessions")
+              .select("id, instance_name, status")
+              .eq("organization_id", exec.organization_id)
+              .eq("status", "connected")
+              .limit(1);
+            
+            if (sessions && sessions.length > 0) {
+              const session = sessions[0];
+              const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL");
+              const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY");
+              
+              if (EVOLUTION_API_URL && EVOLUTION_API_KEY) {
+                const formattedPhone = leadInfo.phone.replace(/\D/g, '');
+                const phoneWithCode = formattedPhone.startsWith("55") ? formattedPhone : `55${formattedPhone}`;
+                
+                const sendResponse = await fetch(`${EVOLUTION_API_URL}/message/sendText/${session.instance_name}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "apikey": EVOLUTION_API_KEY },
+                  body: JSON.stringify({ number: phoneWithCode, text: messageText }),
+                });
+                
+                if (sendResponse.ok) {
+                  const sendData = await sendResponse.json();
+                  const sentMsgId = sendData?.key?.id || sendData?.messageId || crypto.randomUUID();
+                  
+                  let replyConvId = conversationId;
+                  if (!replyConvId) {
+                    const { data: replyConv } = await supabase
+                      .from("whatsapp_conversations")
+                      .select("id")
+                      .eq("lead_id", leadId)
+                      .is("deleted_at", null)
+                      .order("last_message_at", { ascending: false, nullsFirst: false })
+                      .limit(1)
+                      .maybeSingle();
+                    replyConvId = replyConv?.id;
+                  }
+                  
+                  if (replyConvId) {
+                    await supabase.from("whatsapp_messages").upsert({
+                      conversation_id: replyConvId,
+                      session_id: session.id,
+                      message_id: sentMsgId,
+                      from_me: true,
+                      content: messageText,
+                      message_type: "text",
+                      status: "sent",
+                      sent_at: new Date().toISOString(),
+                      sender_name: "Automação",
+                    }, { onConflict: "session_id,message_id" });
+                    
+                    await supabase.from("whatsapp_conversations").update({
+                      last_message: messageText,
+                      last_message_at: new Date().toISOString(),
+                    }).eq("id", replyConvId);
+                  }
+                }
+              }
+            }
+          } catch (msgError) {
+            console.error("Error sending auto-reply message:", msgError);
+          }
+        }
+        
+        // Move lead to configured stage if specified (legacy)
+        const onReplyStageId = triggerConfig.on_reply_move_to_stage_id;
+        if (onReplyStageId && leadId) {
+          const { error: moveError } = await supabase
+            .from("leads")
+            .update({ stage_id: onReplyStageId, stage_entered_at: new Date().toISOString() })
+            .eq("id", leadId);
+          
+          if (!moveError) {
+            await supabase.from("activities").insert({
+              lead_id: leadId,
+              type: "stage_change",
+              content: "Lead movido automaticamente (respondeu follow-up)",
+              metadata: { reason: "stop_on_reply", new_stage_id: onReplyStageId, automation_id: exec.automation?.id },
+            });
+          }
         }
       }
       
@@ -2289,43 +2398,9 @@ async function handleStopFollowUpOnReply(
             lead_id: leadId,
             is_read: false,
           });
-          
-          console.log(`Notification "Lead Recuperado" sent to user ${notifyUserId}`);
         }
       } catch (notifError) {
         console.error("Error sending lead recovered notification:", notifError);
-      }
-      
-      // Move lead to configured stage if specified
-      const onReplyStageId = triggerConfig.on_reply_move_to_stage_id;
-      if (onReplyStageId && leadId) {
-        console.log(`Moving lead ${leadId} to stage ${onReplyStageId} as configured`);
-        
-        const { error: moveError } = await supabase
-          .from("leads")
-          .update({
-            stage_id: onReplyStageId,
-            stage_entered_at: new Date().toISOString(),
-          })
-          .eq("id", leadId);
-        
-        if (moveError) {
-          console.error(`Error moving lead to stage:`, moveError);
-        } else {
-          console.log(`Lead ${leadId} moved to stage ${onReplyStageId}`);
-          
-          // Log the stage change in activities
-          await supabase.from("activities").insert({
-            lead_id: leadId,
-            type: "stage_change",
-            content: "Lead movido automaticamente (respondeu follow-up)",
-            metadata: {
-              reason: "stop_on_reply",
-              new_stage_id: onReplyStageId,
-              automation_id: exec.automation?.id,
-            },
-          });
-        }
       }
     }
   } catch (error) {
