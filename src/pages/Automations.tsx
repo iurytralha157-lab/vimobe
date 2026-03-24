@@ -56,8 +56,8 @@ export default function Automations() {
 
   if (viewMode === 'build-followup') {
     return (
-      <AppLayout title={undefined}>
-        <div className="-m-6 h-[calc(100%+48px)]">
+      <AppLayout title={undefined} disableMainScroll>
+        <div className="-m-6 h-[calc(100%+48px)] overflow-hidden">
           <FollowUpBuilder
             onBack={handleBack}
             onComplete={handleComplete}
