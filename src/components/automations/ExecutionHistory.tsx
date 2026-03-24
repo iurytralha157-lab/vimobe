@@ -28,15 +28,19 @@ interface ExecutionHistoryProps {
 const getStatusConfig = (status: string) => {
   switch (status) {
     case 'completed':
-      return { label: 'Concluída', icon: CheckCircle2, variant: 'default' as const, dotColor: 'bg-primary' };
+      return { label: 'Concluído', icon: CheckCircle2, variant: 'outline' as const, dotColor: 'bg-orange-500', badgeClass: 'border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-400' };
+    case 'replied':
+      return { label: 'Concluído', icon: CheckCircle2, variant: 'outline' as const, dotColor: 'bg-green-500', badgeClass: 'border-green-300 text-green-700 dark:border-green-700 dark:text-green-400' };
     case 'running':
-      return { label: 'Executando', icon: Play, variant: 'default' as const, dotColor: 'bg-accent' };
+      return { label: 'Executando', icon: Play, variant: 'default' as const, dotColor: 'bg-accent', badgeClass: '' };
     case 'waiting':
-      return { label: 'Aguardando', icon: Clock, variant: 'secondary' as const, dotColor: 'bg-secondary' };
+      return { label: 'Aguardando', icon: Clock, variant: 'secondary' as const, dotColor: 'bg-secondary', badgeClass: '' };
     case 'failed':
-      return { label: 'Falhou', icon: XCircle, variant: 'destructive' as const, dotColor: 'bg-destructive' };
+      return { label: 'Falhou', icon: XCircle, variant: 'destructive' as const, dotColor: 'bg-destructive', badgeClass: '' };
+    case 'cancelled':
+      return { label: 'Cancelado', icon: StopCircle, variant: 'outline' as const, dotColor: 'bg-red-500', badgeClass: 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-400' };
     default:
-      return { label: status, icon: AlertTriangle, variant: 'outline' as const, dotColor: 'bg-muted' };
+      return { label: status, icon: AlertTriangle, variant: 'outline' as const, dotColor: 'bg-muted', badgeClass: '' };
   }
 };
 
