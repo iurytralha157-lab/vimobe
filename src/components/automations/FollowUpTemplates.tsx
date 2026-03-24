@@ -85,17 +85,14 @@ export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {/* Create from scratch */}
         <div
-          className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center transition-all duration-200 group relative overflow-hidden border border-orange-500/30 hover:bg-orange-500 hover:border-orange-500"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,72,42,0.1), rgba(255,72,42,0.03))',
-          }}
+          className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center transition-all duration-200 group relative overflow-hidden border-0 bg-orange-500 hover:bg-orange-600"
           onClick={() => onSelectTemplate(null)}
         >
           <div className="flex flex-col items-center justify-center p-4 text-center relative z-10">
-            <div className="p-2.5 rounded-xl bg-orange-500/20 mb-2 group-hover:bg-white/20 transition-all duration-200 group-hover:scale-110">
-              <Plus className="h-6 w-6 text-orange-500 group-hover:text-white" />
+            <div className="p-2.5 rounded-xl bg-white/20 mb-2 transition-all duration-200 group-hover:scale-110">
+              <Plus className="h-6 w-6 text-white" />
             </div>
-            <h3 className="font-semibold text-foreground text-xs group-hover:text-white">
+            <h3 className="font-semibold text-white text-xs">
               Criar uma automação
             </h3>
           </div>
