@@ -341,7 +341,7 @@
 
   /* Automation canvas */
   .automation-canvas {
-    background: hsl(var(--muted)) !important;
+    background: hsl(var(--background)) !important;
   }
 
   .automation-canvas .react-flow__background {
