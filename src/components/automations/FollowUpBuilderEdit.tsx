@@ -621,13 +621,14 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         <div className="flex-1 relative">
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={edgesWithDelete}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             fitView
             className="automation-canvas"
           >
