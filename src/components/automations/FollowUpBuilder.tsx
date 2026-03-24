@@ -667,7 +667,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   };
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground">
+    <div className="flex flex-col h-full overflow-hidden bg-background text-foreground">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b automation-header">
         <div className="flex items-center gap-4">
