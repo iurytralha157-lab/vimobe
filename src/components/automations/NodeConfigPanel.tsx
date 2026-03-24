@@ -67,6 +67,7 @@ export function NodeConfigPanel({
   position,
   sessions, sessionId, setSessionId,
   users, filterUserId, setFilterUserId,
+  properties,
 }: NodeConfigPanelProps) {
   const nodeInfo = NODE_TITLES[selectedNode.type || ''] || { icon: Play, label: 'Nó', color: 'text-foreground' };
   const Icon = nodeInfo.icon;
