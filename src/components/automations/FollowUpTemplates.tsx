@@ -82,22 +82,20 @@ interface FollowUpTemplatesProps {
 export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) {
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {/* Create from scratch */}
         <div
-          className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center transition-all duration-300 group relative overflow-hidden"
+          className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center transition-all duration-200 group relative overflow-hidden border border-orange-500/30 hover:bg-orange-500 hover:border-orange-500"
           style={{
-            background: 'linear-gradient(135deg, rgba(255,72,42,0.15), rgba(255,72,42,0.05))',
-            border: '1px solid rgba(255,72,42,0.3)',
+            background: 'linear-gradient(135deg, rgba(255,72,42,0.1), rgba(255,72,42,0.03))',
           }}
           onClick={() => onSelectTemplate(null)}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex flex-col items-center justify-center p-6 text-center relative z-10">
-            <div className="p-3 rounded-xl bg-primary/20 mb-3 group-hover:bg-primary/30 transition-colors group-hover:scale-110 duration-300">
-              <Plus className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center justify-center p-4 text-center relative z-10">
+            <div className="p-2.5 rounded-xl bg-orange-500/20 mb-2 group-hover:bg-white/20 transition-all duration-200 group-hover:scale-110">
+              <Plus className="h-6 w-6 text-orange-500 group-hover:text-white" />
             </div>
-            <h3 className="font-semibold text-foreground text-sm">
+            <h3 className="font-semibold text-foreground text-xs group-hover:text-white">
               Criar uma automação
             </h3>
           </div>
@@ -107,28 +105,26 @@ export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) 
         {FOLLOW_UP_TEMPLATES.map((template) => (
           <div
             key={template.id}
-            className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center relative transition-all duration-300 group overflow-hidden"
-            style={{ border: '1px solid hsl(var(--border))' }}
+            className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center relative transition-all duration-200 group overflow-hidden border border-border hover:bg-orange-500 hover:border-orange-500"
             onClick={() => onSelectTemplate(template)}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="flex flex-col items-center justify-center p-5 text-center relative z-10">
-              <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-all duration-300 mb-3 group-hover:scale-110">
-                <MessageSquare className="h-7 w-7 text-primary" />
+            <div className="flex flex-col items-center justify-center p-4 text-center relative z-10">
+              <div className="p-2.5 rounded-xl bg-primary/10 group-hover:bg-white/20 transition-all duration-200 mb-2 group-hover:scale-110">
+                <Zap className="h-6 w-6 text-primary group-hover:text-white" />
               </div>
-              <h3 className="font-semibold text-sm mb-1 text-foreground">{template.name}</h3>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
+              <h3 className="font-semibold text-xs mb-0.5 text-foreground group-hover:text-white">{template.name}</h3>
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground group-hover:text-white/70">
+                <span className="flex items-center gap-0.5">
+                  <Calendar className="h-2.5 w-2.5" />
                   {template.days}d
                 </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
+                <span className="flex items-center gap-0.5">
+                  <Clock className="h-2.5 w-2.5" />
                   {template.messages.length} msgs
                 </span>
               </div>
             </div>
-            <Badge variant="secondary" className="absolute top-3 right-3 text-[9px] px-1.5 py-0">
+            <Badge className="absolute top-1.5 right-1.5 text-[9px] px-1.5 py-0 bg-muted text-muted-foreground border-0 group-hover:bg-white/20 group-hover:text-white">
               <Building2 className="h-2.5 w-2.5 mr-0.5" />
               Imob.
             </Badge>
