@@ -108,7 +108,6 @@ const NODE_PALETTE: PaletteItem[] = [
 
 const CATEGORY_LABELS: Record<NodeCategory, string> = {
   bubbles: 'Bubbles',
-  inputs: 'Inputs',
   conditionals: 'Condicionais',
   actions: 'Ações',
 };
