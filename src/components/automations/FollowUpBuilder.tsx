@@ -288,13 +288,14 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
   const handleAddNode = useCallback((paletteItem: PaletteItem) => {
     const lastNode = nodes[nodes.length - 1];
-    const newY = lastNode ? lastNode.position.y + 140 : 200;
+    const newX = lastNode ? lastNode.position.x + 300 : 250;
+    const newY = lastNode ? lastNode.position.y : 200;
     
     const newNodeId = `${paletteItem.type}-${Date.now()}`;
     const newNode: Node = {
       id: newNodeId,
       type: paletteItem.type,
-      position: { x: 250, y: newY },
+      position: { x: newX, y: newY },
       data: { ...paletteItem.defaultData },
     };
 
