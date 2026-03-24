@@ -779,7 +779,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             className="automation-canvas"
           >
             <Controls />
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--muted-foreground) / 0.25)" />
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--muted-foreground) / 0.15)" />
             <Panel position="bottom-center" className="!bg-card rounded-xl px-4 py-2.5 text-xs text-muted-foreground border border-border">
               Arraste para conectar • Clique para editar • Ctrl+C/V para copiar/colar
             </Panel>
