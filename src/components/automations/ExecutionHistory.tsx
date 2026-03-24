@@ -200,7 +200,7 @@ function ExecutionTimelineItem({ execution, isLast }: { execution: AutomationExe
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium truncate">{leadName}</span>
-                <Badge variant={statusConfig.variant} className="text-[10px] px-1.5 py-0">
+                <Badge variant={statusConfig.variant} className={`text-[10px] px-1.5 py-0 ${statusConfig.badgeClass || ''}`}>
                   {statusConfig.label}
                 </Badge>
               </div>
