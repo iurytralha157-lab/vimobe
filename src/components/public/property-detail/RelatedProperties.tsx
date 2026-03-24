@@ -1,4 +1,5 @@
 import React from 'react';
+import { getDisplayPropertyType } from '@/lib/property-display-utils';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { MapPin, Bed, Bath, Car, Maximize } from 'lucide-react';
