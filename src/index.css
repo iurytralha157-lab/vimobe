@@ -386,12 +386,12 @@
 
   /* Sidebar for automations */
   .automation-sidebar {
-    background: hsl(var(--secondary));
+    background: hsl(var(--card));
     border-color: hsl(var(--border));
   }
 
   .automation-header {
-    background: hsl(var(--secondary));
+    background: hsl(var(--card));
     border-color: hsl(var(--border));
   }
 }
