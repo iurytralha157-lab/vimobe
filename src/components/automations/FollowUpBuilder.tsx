@@ -361,11 +361,26 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     );
   }, [setNodes]);
 
-  // Ctrl+C / Ctrl+V clipboard for nodes
+  // Undo history
+  const undoStackRef = useRef<{ nodes: Node[]; edges: Edge[] }[]>([]);
+  const isUndoingRef = useRef(false);
+
+  // Save state to undo stack on meaningful changes
+  useEffect(() => {
+    if (isUndoingRef.current) { isUndoingRef.current = false; return; }
+    if (nodes.length > 0 || edges.length > 0) {
+      undoStackRef.current = [...undoStackRef.current.slice(-30), { nodes: nodes.map(n => ({ ...n })), edges: edges.map(e => ({ ...e })) }];
+    }
+  }, [nodes, edges]);
+
+  // Ctrl+C / Ctrl+V / Ctrl+Z
   const clipboardRef = useRef<Node[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         const selected = nodes.filter(n => n.selected);
         if (selected.length > 0) {
@@ -386,10 +401,49 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           toast.success(`${newNodes.length} nó(s) colado(s)`);
         }
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (undoStackRef.current.length > 1) {
+          undoStackRef.current.pop(); // remove current
+          const prev = undoStackRef.current[undoStackRef.current.length - 1];
+          if (prev) {
+            isUndoingRef.current = true;
+            setNodes(prev.nodes);
+            setEdges(prev.edges);
+            toast.success('Ação desfeita');
+          }
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nodes, setNodes]);
+  }, [nodes, edges, setNodes, setEdges]);
+
+  // Drag & drop from palette
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('application/reactflow-type');
+    const dataStr = e.dataTransfer.getData('application/reactflow-data');
+    if (!type) return;
+
+    const position = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    const defaultData = dataStr ? JSON.parse(dataStr) : {};
+    const newNode: Node = {
+      id: `${type}-${Date.now()}`,
+      type,
+      position,
+      data: { ...defaultData },
+    };
+    if (type === 'message') {
+      newNode.data.day = nodes.filter(n => n.type === 'message').length + 1;
+    }
+    setNodes(nds => [...nds, newNode]);
+  }, [reactFlowInstance, nodes, setNodes]);
 
   const handleSave = async () => {
     if (!sessionId) {
