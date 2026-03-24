@@ -151,6 +151,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const { data: tags } = useTags();
   const { data: pipelines } = usePipelines();
   const { data: users } = useUsers();
+  const { data: properties } = useProperties();
   const [pipelineId, setPipelineId] = useState<string>('');
   const { data: stages } = useStages(pipelineId || undefined);
   const createAutomation = useCreateAutomation();
