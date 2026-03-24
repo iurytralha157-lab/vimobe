@@ -151,6 +151,7 @@ interface FollowUpBuilderEditProps {
 }
 
 function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUpBuilderEditProps) {
+  const reactFlowInstance = useReactFlow();
   const { data: automation, isLoading: isLoadingAutomation } = useAutomation(automationId);
   const { data: sessions } = useWhatsAppSessions();
   const { data: tags } = useTags();
