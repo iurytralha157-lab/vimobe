@@ -1,6 +1,6 @@
-import { memo } from 'react';
+import { memo, useRef, useState, useCallback } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Image } from 'lucide-react';
+import { Image as ImageIcon } from 'lucide-react';
 
 export const ImageNode = memo(({ data, selected }: NodeProps) => {
   const url = data.image_url || '';
@@ -13,7 +13,7 @@ export const ImageNode = memo(({ data, selected }: NodeProps) => {
       <Handle type="target" position={Position.Left} className="!bg-blue-400 !w-3 !h-3 !border-2 !border-blue-500/50" />
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-blue-500 shrink-0">
-          <Image className="h-5 w-5 text-white" />
+          <ImageIcon className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Imagem</span>
@@ -22,6 +22,16 @@ export const ImageNode = memo(({ data, selected }: NodeProps) => {
           </p>
         </div>
       </div>
+      {url && (
+        <div className="mt-2 rounded-lg overflow-hidden border border-blue-500/20">
+          <img
+            src={url}
+            alt={caption || 'Preview'}
+            className="w-full h-24 object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+      )}
       <Handle type="source" position={Position.Right} className="!bg-blue-400 !w-3 !h-3 !border-2 !border-blue-500/50" />
     </div>
   );
