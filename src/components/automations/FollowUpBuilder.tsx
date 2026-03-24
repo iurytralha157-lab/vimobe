@@ -29,23 +29,16 @@ import {
   Image,
   Headphones,
   Video,
-  Type,
-  Hash,
-  AtSign,
-  Globe,
-  Phone,
-  Calendar,
-  MousePointerClick,
   GitBranch,
   Webhook,
-  FlipHorizontal,
-  ExternalLink,
-  PenLine,
+  Tag,
+  ArrowRightLeft,
+  UserCheck,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
 import { MessageSquare, Timer } from 'lucide-react';
-import { MessageNode, WaitNode, StartNode, ImageNode, AudioNode, VideoNode, InputNode, ConditionNode, WebhookNode, ABTestNode, RedirectNode, VariableNode } from './nodes';
+import { MessageNode, WaitNode, StartNode, ImageNode, AudioNode, VideoNode, ConditionNode, WebhookNode, TagNode, MoveStageNode, AssignUserNode } from './nodes';
 import { DEFAULT_ON_REPLY_MESSAGE } from './FollowUpTemplates';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
