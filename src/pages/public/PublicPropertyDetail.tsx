@@ -1,4 +1,5 @@
 import { useParams, Link, useLocation, useSearchParams } from "react-router-dom";
+import { getDisplayPropertyType } from "@/lib/property-display-utils";
 import { usePublicProperty } from "@/hooks/use-public-site";
 import { MapPin, ArrowLeft, Building, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
