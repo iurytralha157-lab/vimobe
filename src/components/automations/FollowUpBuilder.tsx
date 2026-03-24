@@ -643,16 +643,22 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
                         {items.map((item, idx) => {
                           const Icon = item.icon;
                           return (
-                            <button
+                            <div
                               key={`${item.type}-${item.label}-${idx}`}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card hover:bg-accent hover:border-border transition-all text-left group cursor-pointer"
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('application/reactflow-type', item.type);
+                                e.dataTransfer.setData('application/reactflow-data', JSON.stringify(item.defaultData));
+                                e.dataTransfer.effectAllowed = 'move';
+                              }}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all text-left group cursor-grab active:cursor-grabbing"
                               onClick={() => handleAddNode(item)}
                             >
                               <div className={`p-1 rounded-lg ${item.color}`}>
                                 <Icon className="h-3.5 w-3.5" />
                               </div>
-                              <span className="text-xs font-medium truncate text-foreground">{item.label}</span>
-                            </button>
+                              <span className="text-xs font-medium truncate text-foreground group-hover:text-white">{item.label}</span>
+                            </div>
                           );
                         })}
                       </div>
