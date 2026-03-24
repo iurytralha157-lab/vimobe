@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
           nextNodeId = branchConnection?.target_node_id || null;
           break;
 
-        case "delay":
+        case "delay": {
           // Calculate delay - support both old format (delay_minutes/hours/days) and new format (delay_type + delay_value)
           let totalDelayMs = 0;
           
@@ -179,17 +179,65 @@ Deno.serve(async (req) => {
 
           console.log(`Delay calculated: ${totalDelayMs}ms (type: ${delayType}, value: ${delayValue})`);
 
-          if (totalDelayMs > 0) {
-            const nextExecutionAt = new Date(Date.now() + totalDelayMs).toISOString();
-            console.log(`Scheduling next execution at: ${nextExecutionAt}`);
+          // Find next node connection (check for source_handle to support branching)
+          const delayConnection = automation.connections?.find(
+            (c: { source_node_id: string; source_handle?: string }) => 
+              c.source_node_id === currentNodeId && 
+              (!c.source_handle || c.source_handle === "no_reply" || c.source_handle === "default")
+          ) || automation.connections?.find(
+            (c: { source_node_id: string }) => c.source_node_id === currentNodeId
+          );
+
+          if (totalDelayMs > 0 && delayConnection) {
+            // SHORT DELAYS (≤ 2 minutes): wait inline for precision
+            // Edge functions have a max timeout, so we cap inline waits at 120s
+            const TWO_MINUTES_MS = 2 * 60 * 1000;
             
-            // Find next node
-            const delayConnection = automation.connections?.find(
-              (c: { source_node_id: string }) => c.source_node_id === currentNodeId
-            );
-            
-            if (delayConnection) {
-              // Update execution to wait
+            if (totalDelayMs <= TWO_MINUTES_MS) {
+              console.log(`⚡ Short delay (${totalDelayMs}ms) - waiting inline for precision`);
+              
+              // Mark as waiting so UI shows correct status
+              await supabase
+                .from("automation_executions")
+                .update({
+                  status: "waiting",
+                  current_node_id: delayConnection.target_node_id,
+                  next_execution_at: new Date(Date.now() + totalDelayMs).toISOString(),
+                  execution_data: executionData,
+                })
+                .eq("id", execution_id);
+              
+              // Wait inline
+              await new Promise(resolve => setTimeout(resolve, totalDelayMs));
+              
+              // Check if execution was cancelled during wait (e.g., lead replied)
+              const { data: checkExec } = await supabase
+                .from("automation_executions")
+                .select("status")
+                .eq("id", execution_id)
+                .single();
+              
+              if (checkExec?.status === "cancelled" || checkExec?.status === "replied") {
+                console.log(`Execution ${execution_id} was ${checkExec.status} during inline wait`);
+                return new Response(
+                  JSON.stringify({ success: true, message: `Execution ${checkExec.status} during wait` }),
+                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+              
+              // Update to running and continue
+              await supabase
+                .from("automation_executions")
+                .update({ status: "running", next_execution_at: null })
+                .eq("id", execution_id);
+              
+              // Continue to next node
+              nextNodeId = delayConnection.target_node_id;
+            } else {
+              // LONG DELAYS (> 2 minutes): use cron-based approach
+              const nextExecutionAt = new Date(Date.now() + totalDelayMs).toISOString();
+              console.log(`🕐 Long delay - scheduling via cron at: ${nextExecutionAt}`);
+              
               await supabase
                 .from("automation_executions")
                 .update({
@@ -203,14 +251,14 @@ Deno.serve(async (req) => {
               return new Response(
                 JSON.stringify({ 
                   success: true, 
-                  message: "Waiting for delay",
+                  message: "Waiting for delay (cron)",
                   delay_ms: totalDelayMs,
                   next_execution_at: nextExecutionAt 
                 }),
                 { headers: { ...corsHeaders, "Content-Type": "application/json" } }
               );
             }
-          } else {
+          } else if (totalDelayMs <= 0) {
             // No delay, continue immediately
             const delayConn = automation.connections?.find(
               (c: { source_node_id: string }) => c.source_node_id === currentNodeId
@@ -218,6 +266,7 @@ Deno.serve(async (req) => {
             nextNodeId = delayConn?.target_node_id || null;
           }
           break;
+        }
 
         default:
           console.log(`Unknown node type: ${currentNode.node_type}`);
