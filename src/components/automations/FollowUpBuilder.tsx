@@ -812,7 +812,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               users={users || []}
               filterUserId={filterUserId}
               setFilterUserId={setFilterUserId}
-              properties={(properties || []).map(p => ({ id: p.id, title: p.title, code: p.code }))}
+              properties={properties || []}
             />
         )}
       </div>
