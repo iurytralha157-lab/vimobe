@@ -78,7 +78,7 @@ interface FollowUpBuilderProps {
   } | null;
 }
 
-type NodeCategory = 'bubbles' | 'inputs' | 'conditionals' | 'actions';
+type NodeCategory = 'bubbles' | 'conditionals' | 'actions';
 
 interface PaletteItem {
   type: string;
@@ -96,22 +96,14 @@ const NODE_PALETTE: PaletteItem[] = [
   { type: 'image', label: 'Imagem', icon: Image, color: 'text-blue-600 bg-blue-500/10', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
   { type: 'video', label: 'Vídeo', icon: Video, color: 'text-rose-600 bg-rose-500/10', category: 'bubbles', defaultData: { video_url: '' } },
   { type: 'audio', label: 'Áudio', icon: Headphones, color: 'text-amber-600 bg-amber-500/10', category: 'bubbles', defaultData: { audio_url: '' } },
-  // Inputs (captura de dados)
-  { type: 'input', label: 'Texto', icon: Type, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'text', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Número', icon: Hash, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'number', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Email', icon: AtSign, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'email', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Website', icon: Globe, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'website', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Telefone', icon: Phone, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'phone', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Data', icon: Calendar, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'date', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Botão', icon: MousePointerClick, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'button', prompt: '', buttons: ['Opção 1', 'Opção 2'], variable_name: '' } },
   // Condicionais
-  { type: 'variable', label: 'Variável', icon: PenLine, color: 'text-yellow-600 bg-yellow-600/10', category: 'conditionals', defaultData: { variable_name: '', variable_value: '' } },
   { type: 'condition', label: 'Condição', icon: GitBranch, color: 'text-yellow-600 bg-yellow-500/10', category: 'conditionals', defaultData: { variable: '', operator: 'equals', value: '' } },
-  { type: 'redirect', label: 'Redirecionar', icon: ExternalLink, color: 'text-teal-600 bg-teal-500/10', category: 'conditionals', defaultData: { redirect_url: '' } },
-  { type: 'abtest', label: 'Teste AB', icon: FlipHorizontal, color: 'text-pink-600 bg-pink-500/10', category: 'conditionals', defaultData: { split_a: 50 } },
   // Ações
   { type: 'wait', label: 'Espera', icon: Timer, color: 'text-purple-600 bg-purple-500/10', category: 'actions', defaultData: { wait_type: 'days', wait_value: 1 } },
   { type: 'webhook', label: 'Webhook', icon: Webhook, color: 'text-indigo-600 bg-indigo-500/10', category: 'actions', defaultData: { webhook_url: '', method: 'POST' } },
+  { type: 'tag', label: 'Tag', icon: Tag, color: 'text-teal-600 bg-teal-500/10', category: 'actions', defaultData: { tag_id: '', tag_action: 'add' } },
+  { type: 'move_stage', label: 'Mudar Etapa', icon: ArrowRightLeft, color: 'text-violet-600 bg-violet-500/10', category: 'actions', defaultData: { move_pipeline_id: '', move_stage_id: '' } },
+  { type: 'assign_user', label: 'Responsável', icon: UserCheck, color: 'text-sky-600 bg-sky-500/10', category: 'actions', defaultData: { assign_user_id: '' } },
 ];
 
 const CATEGORY_LABELS: Record<NodeCategory, string> = {
