@@ -506,11 +506,12 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         }
       });
 
-      // Build connections
+      // Build connections - preserve source_handle for conditional branching
       const dbConnections = edges.map((edge) => ({
         source_node_id: edge.source,
         target_node_id: edge.target,
-        condition_branch: 'default',
+        source_handle: edge.sourceHandle || null,
+        condition_branch: edge.sourceHandle || 'default',
       }));
 
       await saveFlow.mutateAsync({
