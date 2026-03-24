@@ -209,7 +209,22 @@ export function WhatsAppTab() {
   const handleOpenQRDialog = async (session: WhatsAppSession) => {
     setSelectedSession(session);
     setQrDialogOpen(true);
-    await refreshQRCode(session.instance_name);
+    try {
+      await refreshQRCode(session.instance_name);
+    } catch {
+      // If QR fails (instance may not exist), try recreating the instance first
+      try {
+        await supabase.functions.invoke("evolution-proxy", {
+          body: { action: "createInstance", instanceName: session.instance_name },
+        });
+        // Wait a moment for the instance to be ready
+        await new Promise(r => setTimeout(r, 2000));
+        await refreshQRCode(session.instance_name);
+      } catch (e) {
+        console.error("Failed to recreate instance:", e);
+        toast({ title: "Erro", description: "Não foi possível reconectar. Tente excluir e criar uma nova conexão.", variant: "destructive" });
+      }
+    }
   };
 
   const handleOpenAccessDialog = (session: WhatsAppSession) => {
