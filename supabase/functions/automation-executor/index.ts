@@ -721,6 +721,7 @@ async function processActionNode(
       break;
 
     case "move_stage":
+    case "move_lead":
       if (!execution.lead_id) {
         console.log("No lead_id, skipping stage move");
         return;

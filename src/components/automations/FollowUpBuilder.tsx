@@ -29,23 +29,16 @@ import {
   Image,
   Headphones,
   Video,
-  Type,
-  Hash,
-  AtSign,
-  Globe,
-  Phone,
-  Calendar,
-  MousePointerClick,
   GitBranch,
   Webhook,
-  FlipHorizontal,
-  ExternalLink,
-  PenLine,
+  Tag,
+  ArrowRightLeft,
+  UserCheck,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
 import { MessageSquare, Timer } from 'lucide-react';
-import { MessageNode, WaitNode, StartNode, ImageNode, AudioNode, VideoNode, InputNode, ConditionNode, WebhookNode, ABTestNode, RedirectNode, VariableNode } from './nodes';
+import { MessageNode, WaitNode, StartNode, ImageNode, AudioNode, VideoNode, ConditionNode, WebhookNode, TagNode, MoveStageNode, AssignUserNode } from './nodes';
 import { DEFAULT_ON_REPLY_MESSAGE } from './FollowUpTemplates';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
@@ -68,12 +61,11 @@ const nodeTypes = {
   image: ImageNode,
   audio: AudioNode,
   video: VideoNode,
-  input: InputNode,
   condition: ConditionNode,
   webhook: WebhookNode,
-  abtest: ABTestNode,
-  redirect: RedirectNode,
-  variable: VariableNode,
+  tag: TagNode,
+  move_stage: MoveStageNode,
+  assign_user: AssignUserNode,
 };
 
 interface FollowUpBuilderProps {
@@ -86,7 +78,7 @@ interface FollowUpBuilderProps {
   } | null;
 }
 
-type NodeCategory = 'bubbles' | 'inputs' | 'conditionals' | 'actions';
+type NodeCategory = 'bubbles' | 'conditionals' | 'actions';
 
 interface PaletteItem {
   type: string;
@@ -104,34 +96,24 @@ const NODE_PALETTE: PaletteItem[] = [
   { type: 'image', label: 'Imagem', icon: Image, color: 'text-blue-600 bg-blue-500/10', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
   { type: 'video', label: 'Vídeo', icon: Video, color: 'text-rose-600 bg-rose-500/10', category: 'bubbles', defaultData: { video_url: '' } },
   { type: 'audio', label: 'Áudio', icon: Headphones, color: 'text-amber-600 bg-amber-500/10', category: 'bubbles', defaultData: { audio_url: '' } },
-  // Inputs (captura de dados)
-  { type: 'input', label: 'Texto', icon: Type, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'text', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Número', icon: Hash, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'number', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Email', icon: AtSign, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'email', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Website', icon: Globe, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'website', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Telefone', icon: Phone, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'phone', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Data', icon: Calendar, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'date', prompt: '', variable_name: '' } },
-  { type: 'input', label: 'Botão', icon: MousePointerClick, color: 'text-cyan-600 bg-cyan-500/10', category: 'inputs', defaultData: { input_type: 'button', prompt: '', buttons: ['Opção 1', 'Opção 2'], variable_name: '' } },
   // Condicionais
-  { type: 'variable', label: 'Variável', icon: PenLine, color: 'text-yellow-600 bg-yellow-600/10', category: 'conditionals', defaultData: { variable_name: '', variable_value: '' } },
   { type: 'condition', label: 'Condição', icon: GitBranch, color: 'text-yellow-600 bg-yellow-500/10', category: 'conditionals', defaultData: { variable: '', operator: 'equals', value: '' } },
-  { type: 'redirect', label: 'Redirecionar', icon: ExternalLink, color: 'text-teal-600 bg-teal-500/10', category: 'conditionals', defaultData: { redirect_url: '' } },
-  { type: 'abtest', label: 'Teste AB', icon: FlipHorizontal, color: 'text-pink-600 bg-pink-500/10', category: 'conditionals', defaultData: { split_a: 50 } },
   // Ações
   { type: 'wait', label: 'Espera', icon: Timer, color: 'text-purple-600 bg-purple-500/10', category: 'actions', defaultData: { wait_type: 'days', wait_value: 1 } },
   { type: 'webhook', label: 'Webhook', icon: Webhook, color: 'text-indigo-600 bg-indigo-500/10', category: 'actions', defaultData: { webhook_url: '', method: 'POST' } },
+  { type: 'tag', label: 'Tag', icon: Tag, color: 'text-teal-600 bg-teal-500/10', category: 'actions', defaultData: { tag_id: '', tag_action: 'add' } },
+  { type: 'move_stage', label: 'Mudar Etapa', icon: ArrowRightLeft, color: 'text-violet-600 bg-violet-500/10', category: 'actions', defaultData: { move_pipeline_id: '', move_stage_id: '' } },
+  { type: 'assign_user', label: 'Responsável', icon: UserCheck, color: 'text-sky-600 bg-sky-500/10', category: 'actions', defaultData: { assign_user_id: '' } },
 ];
 
 const CATEGORY_LABELS: Record<NodeCategory, string> = {
   bubbles: 'Bubbles',
-  inputs: 'Inputs',
   conditionals: 'Condicionais',
   actions: 'Ações',
 };
 
 const CATEGORY_COLORS: Record<NodeCategory, string> = {
   bubbles: 'text-green-500',
-  inputs: 'text-cyan-500',
   conditionals: 'text-yellow-500',
   actions: 'text-purple-500',
 };
@@ -186,7 +168,6 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true,
-    inputs: true,
     conditionals: true,
     actions: true,
   });
@@ -492,12 +473,6 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             config: { session_id: sessionId, video_url: node.data.video_url, actionType: 'send_video' },
             ...pos,
           });
-        } else if (node.type === 'input') {
-          dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'collect_input',
-            config: { ...node.data, actionType: 'collect_input' },
-            ...pos,
-          });
         } else if (node.type === 'wait') {
           const waitRawStageId = node.data.on_reply_stage_id || node.data.on_reply_move_to_stage_id;
           const waitStageId = typeof waitRawStageId === 'string' && waitRawStageId && waitRawStageId !== '__none__'
@@ -526,28 +501,28 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             config: { variable: node.data.variable, operator: node.data.operator, value: node.data.value, nodeType: 'condition' },
             ...pos,
           });
-        } else if (node.type === 'abtest') {
-          dbNodes.push({
-            id: node.id, node_type: 'condition', action_type: null,
-            config: { split_a: node.data.split_a, nodeType: 'abtest' },
-            ...pos,
-          });
         } else if (node.type === 'webhook') {
           dbNodes.push({
             id: node.id, node_type: 'action', action_type: 'webhook',
             config: { webhook_url: node.data.webhook_url, method: node.data.method, actionType: 'webhook' },
             ...pos,
           });
-        } else if (node.type === 'redirect') {
+        } else if (node.type === 'tag') {
           dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'redirect',
-            config: { redirect_url: node.data.redirect_url, actionType: 'redirect' },
+            id: node.id, node_type: 'action', action_type: 'add_tag',
+            config: { tag_id: node.data.tag_id, tag_action: node.data.tag_action || 'add', actionType: node.data.tag_action === 'remove' ? 'remove_tag' : 'add_tag' },
             ...pos,
           });
-        } else if (node.type === 'variable') {
+        } else if (node.type === 'move_stage') {
           dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'set_variable',
-            config: { variable_name: node.data.variable_name, variable_value: node.data.variable_value, actionType: 'set_variable' },
+            id: node.id, node_type: 'action', action_type: 'move_lead',
+            config: { pipeline_id: node.data.move_pipeline_id, stage_id: node.data.move_stage_id, actionType: 'move_stage' },
+            ...pos,
+          });
+        } else if (node.type === 'assign_user') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'assign_user',
+            config: { user_id: node.data.assign_user_id, actionType: 'assign_user' },
             ...pos,
           });
         }
@@ -637,7 +612,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               )}
 
               {/* Node Categories - Typebot Style */}
-              {(['bubbles', 'inputs', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
+              {(['bubbles', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
                 const items = NODE_PALETTE.filter(item => item.category === category);
                 const isExpanded = expandedCategories[category];
                 
