@@ -237,7 +237,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         } else if (node.node_type === 'action' && node.action_type === 'send_image') {
           flowNodes.push({ id: node.id, type: 'image', position: pos, data: { image_url: nodeConfig.image_url || '', caption: nodeConfig.caption || '' } });
         } else if (node.node_type === 'action' && node.action_type === 'send_audio') {
-          flowNodes.push({ id: node.id, type: 'audio', position: pos, data: { audio_url: nodeConfig.audio_url || '' } });
+          flowNodes.push({ id: node.id, type: 'audio', position: pos, data: { audio_url: nodeConfig.audio_url || '', audio_type: nodeConfig.audio_type || 'file' } });
         } else if (node.node_type === 'action' && node.action_type === 'send_video') {
           flowNodes.push({ id: node.id, type: 'video', position: pos, data: { video_url: nodeConfig.video_url || '' } });
         } else if (node.node_type === 'action' && node.action_type === 'collect_input') {
