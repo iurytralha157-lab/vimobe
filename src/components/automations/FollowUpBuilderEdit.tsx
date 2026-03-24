@@ -772,6 +772,8 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
