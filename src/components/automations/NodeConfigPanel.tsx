@@ -12,9 +12,12 @@ import {
   Home, CircleDot,
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
+import { useCreateTag } from '@/hooks/use-tags';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { AutomationMediaGallery } from './AutomationMediaGallery';
 import { AudioRecorderInline } from './AudioRecorderInline';
+import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
+import { Plus } from 'lucide-react';
 
 interface NodeConfigPanelProps {
   selectedNode: Node;
