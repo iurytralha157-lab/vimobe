@@ -54,6 +54,7 @@ interface ConversationHeaderProps {
   pipelineName?: string | null;
   stageName?: string | null;
   stageColor?: string | null;
+  conversationId?: string | null;
   onArchive?: () => void;
   onDelete?: () => void;
   onCreateLead?: () => void;
