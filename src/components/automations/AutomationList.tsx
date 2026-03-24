@@ -148,7 +148,7 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
         return (
           <div 
             key={automation.id} 
-            className={`group rounded-2xl cursor-pointer relative aspect-[4/3] flex items-center justify-center transition-all duration-200 overflow-hidden border border-border hover:bg-orange-500 hover:border-orange-500 ${
+            className={`group rounded-2xl cursor-pointer relative aspect-[4/3] flex items-center justify-center transition-all duration-200 overflow-hidden border border-border bg-secondary hover:bg-orange-500 hover:border-orange-500 ${
               !automation.is_active ? 'opacity-50' : ''
             }`}
             onClick={() => onEdit(automation.id)}

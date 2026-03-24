@@ -102,7 +102,7 @@ export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) 
         {FOLLOW_UP_TEMPLATES.map((template) => (
           <div
             key={template.id}
-            className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center relative transition-all duration-200 group overflow-hidden border border-border hover:bg-orange-500 hover:border-orange-500"
+            className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center relative transition-all duration-200 group overflow-hidden border border-border bg-secondary hover:bg-orange-500 hover:border-orange-500"
             onClick={() => onSelectTemplate(template)}
           >
             <div className="flex flex-col items-center justify-center p-4 text-center relative z-10">
