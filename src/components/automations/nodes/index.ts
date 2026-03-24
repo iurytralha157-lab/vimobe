@@ -9,3 +9,5 @@ export { WebhookNode } from './WebhookNode';
 export { TagNode } from './TagNode';
 export { MoveStageNode } from './MoveStageNode';
 export { AssignUserNode } from './AssignUserNode';
+export { PropertyInterestNode } from './PropertyInterestNode';
+export { DealStatusNode } from './DealStatusNode';
