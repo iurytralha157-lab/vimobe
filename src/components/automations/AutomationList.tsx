@@ -86,23 +86,18 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
     try {
       if (!profile?.organization_id) return;
 
-      const insertData: Record<string, unknown> = {
-        organization_id: profile.organization_id,
-        name: `${automation.name} (cópia)`,
-        description: automation.description || null,
-        trigger_type: automation.trigger_type,
-        trigger_config: automation.trigger_config as Json,
-        created_by: profile.id,
-        is_active: false,
-      };
-
-      if (automation.flow_definition) {
-        insertData.flow_definition = automation.flow_definition as unknown as Json;
-      }
-
-      const { data: newAutomation, error } = await supabase
+      const { error } = await supabase
         .from('automations')
-        .insert([insertData])
+        .insert([{
+          organization_id: profile.organization_id,
+          name: `${automation.name} (cópia)`,
+          description: automation.description || null,
+          trigger_type: automation.trigger_type,
+          trigger_config: automation.trigger_config as Json,
+          flow_definition: (automation.flow_definition || null) as unknown as Json,
+          created_by: profile.id,
+          is_active: false,
+        }])
         .select()
         .single();
 
