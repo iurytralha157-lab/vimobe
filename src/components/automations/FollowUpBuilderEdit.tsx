@@ -27,6 +27,7 @@ import {
   MessageSquare, 
   Timer, 
   Trash2,
+  Play,
   Image,
   Headphones,
   Video,
