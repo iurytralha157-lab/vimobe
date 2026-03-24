@@ -28,17 +28,17 @@ interface ExecutionHistoryProps {
 const getStatusConfig = (status: string) => {
   switch (status) {
     case 'completed':
-      return { label: 'Concluído', icon: CheckCircle2, variant: 'outline' as const, dotColor: 'bg-orange-500', badgeClass: 'border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-400' };
+      return { label: 'Concluído', icon: CheckCircle2, variant: 'default' as const, dotColor: 'bg-orange-500', badgeClass: 'bg-orange-500 text-white border-0 hover:bg-orange-500' };
     case 'replied':
-      return { label: 'Concluído', icon: CheckCircle2, variant: 'outline' as const, dotColor: 'bg-green-500', badgeClass: 'border-green-300 text-green-700 dark:border-green-700 dark:text-green-400' };
+      return { label: 'Concluído', icon: CheckCircle2, variant: 'default' as const, dotColor: 'bg-green-500', badgeClass: 'bg-green-500 text-white border-0 hover:bg-green-500' };
     case 'running':
-      return { label: 'Executando', icon: Play, variant: 'default' as const, dotColor: 'bg-accent', badgeClass: '' };
+      return { label: 'Executando', icon: Play, variant: 'default' as const, dotColor: 'bg-accent', badgeClass: 'bg-primary text-primary-foreground border-0' };
     case 'waiting':
       return { label: 'Aguardando', icon: Clock, variant: 'secondary' as const, dotColor: 'bg-secondary', badgeClass: '' };
     case 'failed':
       return { label: 'Falhou', icon: XCircle, variant: 'destructive' as const, dotColor: 'bg-destructive', badgeClass: '' };
     case 'cancelled':
-      return { label: 'Cancelado', icon: StopCircle, variant: 'outline' as const, dotColor: 'bg-red-500', badgeClass: 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-400' };
+      return { label: 'Cancelado', icon: StopCircle, variant: 'default' as const, dotColor: 'bg-red-500', badgeClass: 'bg-red-500 text-white border-0 hover:bg-red-500' };
     default:
       return { label: status, icon: AlertTriangle, variant: 'outline' as const, dotColor: 'bg-muted', badgeClass: '' };
   }
