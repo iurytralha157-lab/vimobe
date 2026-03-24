@@ -300,6 +300,16 @@ export function ConversationHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {leadId && (
+        <StartAutomationDialog
+          open={showAutomationDialog}
+          onOpenChange={setShowAutomationDialog}
+          leadId={leadId}
+          conversationId={conversationId || undefined}
+          contactName={contactName || undefined}
+        />
+      )}
     </header>
   );
 }
