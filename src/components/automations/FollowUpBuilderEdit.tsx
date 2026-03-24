@@ -240,6 +240,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           id: conn.id,
           source: conn.source_node_id,
           target: conn.target_node_id,
+          sourceHandle: conn.source_handle || undefined,
           markerEnd: { type: MarkerType.ArrowClosed },
           style: { strokeWidth: 2 },
         });
