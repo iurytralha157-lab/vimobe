@@ -621,12 +621,12 @@ export default function Pipelines() {
           {/* Top Row: Pipeline Selector + New Button (mobile) */}
           <div className="flex items-center justify-between sm:justify-start gap-2">
             {/* Pipeline Selector */}
-            <div className="flex items-center gap-1 sm:gap-2 border border-primary rounded-lg px-2 sm:px-3 py-1.5 bg-primary shadow-sm shadow-primary/20">
-              <Settings className="h-4 w-4 text-primary-foreground hidden sm:block" />
-              <span className="text-xs text-primary-foreground/90 font-medium hidden sm:inline">Pipeline</span>
+            <div className="flex items-center gap-1 sm:gap-2 border border-border rounded-lg px-2 sm:px-3 py-1.5 bg-muted shadow-sm">
+              <Settings className="h-4 w-4 text-foreground hidden sm:block" />
+              <span className="text-xs text-foreground/90 font-medium hidden sm:inline">Pipeline</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-primary-foreground hover:bg-primary-foreground/20">
+                  <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
                     {currentPipeline?.name || 'Selecionar'}
                     <ChevronDown className="h-3 w-3" />
                   </Button>
