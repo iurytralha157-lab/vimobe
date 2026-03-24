@@ -40,6 +40,7 @@ export default function Conversations() {
     return localStorage.getItem("whatsapp-hide-groups") === "true";
   });
   const [showArchived, setShowArchived] = useState(false);
+  const [showAutomationDialog, setShowAutomationDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previousMessagesLengthRef = useRef<number>(0);
