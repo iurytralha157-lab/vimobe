@@ -502,7 +502,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         } else if (node.type === 'audio') {
           dbNodes.push({
             id: node.id, node_type: 'action', action_type: 'send_audio',
-            config: { session_id: sessionId, audio_url: node.data.audio_url, actionType: 'send_audio' },
+            config: { session_id: sessionId, audio_url: node.data.audio_url, audio_type: node.data.audio_type || 'file', actionType: 'send_audio' },
             ...pos,
           });
         } else if (node.type === 'video') {
