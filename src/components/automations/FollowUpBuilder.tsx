@@ -49,6 +49,7 @@ import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
 import { useCreateAutomation, useSaveAutomationFlow, TriggerType } from '@/hooks/use-automations';
 import { useUsers } from '@/hooks/use-users';
+import { useProperties } from '@/hooks/use-properties';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import DeletableEdge from './edges/DeletableEdge';
