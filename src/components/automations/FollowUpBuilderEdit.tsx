@@ -491,12 +491,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             config: { session_id: sessionId, video_url: node.data.video_url, actionType: 'send_video' },
             ...pos,
           });
-        } else if (node.type === 'input') {
-          dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'collect_input',
-            config: { ...node.data, actionType: 'collect_input' },
-            ...pos,
-          });
         } else if (node.type === 'wait') {
           const waitRawStageId = node.data.on_reply_stage_id || node.data.on_reply_move_to_stage_id;
           const waitStageId = typeof waitRawStageId === 'string' && waitRawStageId && waitRawStageId !== '__none__'
@@ -525,28 +519,31 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             config: { variable: node.data.variable, operator: node.data.operator, value: node.data.value, nodeType: 'condition' },
             ...pos,
           });
-        } else if (node.type === 'abtest') {
-          dbNodes.push({
-            id: node.id, node_type: 'condition', action_type: null,
-            config: { split_a: node.data.split_a, nodeType: 'abtest' },
-            ...pos,
-          });
         } else if (node.type === 'webhook') {
           dbNodes.push({
             id: node.id, node_type: 'action', action_type: 'webhook',
             config: { webhook_url: node.data.webhook_url, method: node.data.method, actionType: 'webhook' },
             ...pos,
           });
-        } else if (node.type === 'redirect') {
+        } else if (node.type === 'tag') {
+          const selectedTag = tags?.find(t => t.id === node.data.tag_id);
           dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'redirect',
-            config: { redirect_url: node.data.redirect_url, actionType: 'redirect' },
+            id: node.id, node_type: 'action', action_type: node.data.tag_action === 'remove' ? 'remove_tag' : 'add_tag',
+            config: { tag_id: node.data.tag_id, tag_action: node.data.tag_action || 'add', tag_name: selectedTag?.name || '', actionType: node.data.tag_action === 'remove' ? 'remove_tag' : 'add_tag' },
             ...pos,
           });
-        } else if (node.type === 'variable') {
+        } else if (node.type === 'move_stage') {
+          const selectedStage = stages?.find(s => s.id === node.data.move_stage_id);
           dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'set_variable',
-            config: { variable_name: node.data.variable_name, variable_value: node.data.variable_value, actionType: 'set_variable' },
+            id: node.id, node_type: 'action', action_type: 'move_lead',
+            config: { pipeline_id: node.data.move_pipeline_id, stage_id: node.data.move_stage_id, stage_name: selectedStage?.name || '', actionType: 'move_lead' },
+            ...pos,
+          });
+        } else if (node.type === 'assign_user') {
+          const selectedUser = users?.find(u => u.id === node.data.assign_user_id);
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'assign_user',
+            config: { user_id: node.data.assign_user_id, user_name: selectedUser?.name || selectedUser?.email || '', actionType: 'assign_user' },
             ...pos,
           });
         }
