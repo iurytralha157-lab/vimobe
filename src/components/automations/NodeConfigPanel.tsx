@@ -44,7 +44,7 @@ interface NodeConfigPanelProps {
   users?: Array<{ id: string; name: string | null; email: string }>;
   filterUserId?: string;
   setFilterUserId?: (id: string) => void;
-  properties?: Array<{ id: string; title: string; code?: string | null }>;
+  properties?: Array<{ id: string; title: string; code?: string | null; bairro?: string | null; cidade?: string | null; preco?: number | null; imagem_principal?: string | null; tipo_de_imovel?: string | null; tipo_de_negocio?: string | null; commission_percentage?: number | null }>;
 }
 
 const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
