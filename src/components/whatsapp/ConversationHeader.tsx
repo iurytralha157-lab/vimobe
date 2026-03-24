@@ -256,18 +256,6 @@ export function ConversationHeader({
           </Button>
         )}
 
-        {leadId && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowAutomationDialog(true)}>
-                  <Zap className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Iniciar Automação</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
 
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Phone className="w-4 h-4" />

@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink } from "lucide-react";
+import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap } from "lucide-react";
+import { StartAutomationDialog } from "@/components/whatsapp/StartAutomationDialog";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { DateSeparator, shouldShowDateSeparator } from "@/components/whatsapp/DateSeparator";
@@ -39,6 +40,7 @@ export default function Conversations() {
     return localStorage.getItem("whatsapp-hide-groups") === "true";
   });
   const [showArchived, setShowArchived] = useState(false);
+  const [showAutomationDialog, setShowAutomationDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previousMessagesLengthRef = useRef<number>(0);
@@ -375,6 +377,11 @@ export default function Conversations() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
+                  {selectedConversation?.lead?.id && (
+                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setShowAutomationDialog(true)} title="Iniciar Automação">
+                      <Zap className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Textarea placeholder="Digite sua mensagem..." value={messageText} onChange={e => { setMessageText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'; }} onKeyDown={handleKeyPress} className="flex-1 min-h-[40px] max-h-[160px] resize-none py-2 overflow-y-auto" rows={1} />
                   <Button onClick={handleSendMessage} disabled={!messageText.trim() || sendMessage.isPending} size="icon" className="h-10 w-10 shrink-0">
                     {sendMessage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -442,6 +449,15 @@ export default function Conversations() {
         </div>
 
         <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />
+        {selectedConversation?.lead?.id && (
+          <StartAutomationDialog
+            open={showAutomationDialog}
+            onOpenChange={setShowAutomationDialog}
+            leadId={selectedConversation.lead.id}
+            conversationId={selectedConversation.id}
+            contactName={selectedConversation.lead?.name || selectedConversation.contact_name || undefined}
+          />
+        )}
       </AppLayout>;
   }
 
@@ -585,6 +601,11 @@ export default function Conversations() {
                   <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </Button>
+                  {selectedConversation?.lead?.id && (
+                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setShowAutomationDialog(true)} title="Iniciar Automação">
+                      <Zap className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Textarea 
                     placeholder="Digite sua mensagem..." 
                     value={messageText} 
@@ -624,6 +645,15 @@ export default function Conversations() {
       </div>
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />
+      {selectedConversation?.lead?.id && (
+        <StartAutomationDialog
+          open={showAutomationDialog}
+          onOpenChange={setShowAutomationDialog}
+          leadId={selectedConversation.lead.id}
+          conversationId={selectedConversation.id}
+          contactName={selectedConversation.lead?.name || selectedConversation.contact_name || undefined}
+        />
+      )}
     </AppLayout>;
 }
 function ConversationItem({
