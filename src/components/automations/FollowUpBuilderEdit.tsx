@@ -87,6 +87,8 @@ const nodeTypes = {
   tag: TagNode,
   move_stage: MoveStageNode,
   assign_user: AssignUserNode,
+  property_interest: PropertyInterestNode,
+  deal_status: DealStatusNode,
 };
 
 type NodeCategory = 'bubbles' | 'conditionals' | 'actions';
