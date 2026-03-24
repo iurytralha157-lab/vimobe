@@ -203,6 +203,23 @@ Deno.serve(async (req) => {
           }
         }
 
+        // ===== GUARD: Don't start a new execution if lead already has running/waiting one for this automation =====
+        if (data.lead_id) {
+          const { data: existingExec } = await supabaseAdmin
+            .from("automation_executions")
+            .select("id")
+            .eq("automation_id", automation.id)
+            .eq("lead_id", data.lead_id as string)
+            .in("status", ["running", "waiting"])
+            .limit(1)
+            .maybeSingle();
+          
+          if (existingExec) {
+            console.log(`⚠️ Lead ${data.lead_id} already has active execution ${existingExec.id} for automation ${automation.id}, skipping`);
+            continue;
+          }
+        }
+
         // Create execution record
         const { data: execution, error: execError } = await supabaseAdmin
           .from("automation_executions")
