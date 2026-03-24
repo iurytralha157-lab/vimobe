@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Clock, Calendar, Plus, Building2 } from 'lucide-react';
+import { MessageSquare, Clock, Calendar, Plus, Building2, Zap } from 'lucide-react';
 
 export interface FollowUpTemplate {
   id: string;
