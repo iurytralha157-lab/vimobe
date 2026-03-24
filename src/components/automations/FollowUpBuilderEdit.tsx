@@ -633,6 +633,18 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             config: { user_id: node.data.assign_user_id, user_name: selectedUser?.name || selectedUser?.email || '', actionType: 'assign_user' },
             ...pos,
           });
+        } else if (node.type === 'property_interest') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable' as ActionType,
+            config: { property_id: node.data.property_id, property_name: node.data.property_name || '', actionType: 'property_interest' },
+            ...pos,
+          });
+        } else if (node.type === 'deal_status') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable' as ActionType,
+            config: { deal_status: node.data.deal_status, actionType: 'deal_status' },
+            ...pos,
+          });
         }
       });
 
