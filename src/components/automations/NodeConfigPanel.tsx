@@ -13,6 +13,7 @@ import {
 import { TriggerType } from '@/hooks/use-automations';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { AutomationMediaGallery } from './AutomationMediaGallery';
+import { AudioRecorderInline } from './AudioRecorderInline';
 
 interface NodeConfigPanelProps {
   selectedNode: Node;
