@@ -263,10 +263,24 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     setStageId('');
   }, [pipelineId]);
 
+  const handleDeleteEdge = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+  }, [setEdges]);
+
+  const edgesWithDelete = useMemo(() => 
+    edges.map((e) => ({
+      ...e,
+      type: 'deletable',
+      data: { ...e.data, onDelete: handleDeleteEdge },
+    })),
+    [edges, handleDeleteEdge]
+  );
+
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => addEdge({
         ...params,
+        type: 'deletable',
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { strokeWidth: 2 },
       }, eds));
