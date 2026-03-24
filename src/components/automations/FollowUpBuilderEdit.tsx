@@ -71,6 +71,11 @@ import {
 import { useUsers } from '@/hooks/use-users';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import DeletableEdge from './edges/DeletableEdge';
+
+const edgeTypes = {
+  deletable: DeletableEdge,
+};
 
 const nodeTypes = {
   start: StartNode,
