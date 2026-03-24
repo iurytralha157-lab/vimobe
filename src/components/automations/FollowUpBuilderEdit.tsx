@@ -422,66 +422,108 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       // Build nodes for database
       const dbNodes: {
         id: string;
-        node_type: 'trigger' | 'action' | 'delay';
-        action_type: 'send_whatsapp' | null;
+        node_type: 'trigger' | 'action' | 'delay' | 'condition';
+        action_type: import('@/hooks/use-automations').ActionType | null;
         config: Record<string, unknown>;
         position_x: number;
         position_y: number;
       }[] = [];
 
       nodes.forEach((node) => {
+        const pos = { position_x: Math.round(node.position.x), position_y: Math.round(node.position.y) };
+        
         if (node.type === 'start') {
           dbNodes.push({
-            id: node.id,
-            node_type: 'trigger',
-            action_type: null,
+            id: node.id, node_type: 'trigger', action_type: null,
             config: { 
-              trigger_type: triggerType, 
-              tag_id: tagId, 
-              pipeline_id: pipelineId, 
-              to_stage_id: stageId,
+              trigger_type: triggerType, tag_id: tagId, pipeline_id: pipelineId, to_stage_id: stageId,
               filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
               stop_on_reply: stopOnReply,
               on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
               on_reply_message: stopOnReply && onReplyMessage?.trim() ? onReplyMessage.trim() : null,
             },
-            position_x: Math.round(node.position.x),
-            position_y: Math.round(node.position.y),
+            ...pos,
           });
         } else if (node.type === 'message') {
           dbNodes.push({
-            id: node.id,
-            node_type: 'action',
-            action_type: 'send_whatsapp',
-            config: {
-              session_id: sessionId,
-              message: node.data.message,
-              actionType: 'send_whatsapp',
-            },
-            position_x: Math.round(node.position.x),
-            position_y: Math.round(node.position.y),
+            id: node.id, node_type: 'action', action_type: 'send_whatsapp',
+            config: { session_id: sessionId, message: node.data.message, actionType: 'send_whatsapp' },
+            ...pos,
+          });
+        } else if (node.type === 'image') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'send_image',
+            config: { session_id: sessionId, image_url: node.data.image_url, caption: node.data.caption, actionType: 'send_image' },
+            ...pos,
+          });
+        } else if (node.type === 'audio') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'send_audio',
+            config: { session_id: sessionId, audio_url: node.data.audio_url, actionType: 'send_audio' },
+            ...pos,
+          });
+        } else if (node.type === 'video') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'send_video',
+            config: { session_id: sessionId, video_url: node.data.video_url, actionType: 'send_video' },
+            ...pos,
+          });
+        } else if (node.type === 'input') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'collect_input',
+            config: { ...node.data, actionType: 'collect_input' },
+            ...pos,
           });
         } else if (node.type === 'wait') {
           dbNodes.push({
-            id: node.id,
-            node_type: 'delay',
-            action_type: null,
+            id: node.id, node_type: 'delay', action_type: null,
             config: {
               delay_type: node.data.wait_type || 'days',
               delay_value: node.data.wait_value || 1,
+              stop_on_reply: node.data.stop_on_reply || false,
               nodeType: 'delay',
             },
-            position_x: Math.round(node.position.x),
-            position_y: Math.round(node.position.y),
+            ...pos,
+          });
+        } else if (node.type === 'condition') {
+          dbNodes.push({
+            id: node.id, node_type: 'condition', action_type: null,
+            config: { variable: node.data.variable, operator: node.data.operator, value: node.data.value, nodeType: 'condition' },
+            ...pos,
+          });
+        } else if (node.type === 'abtest') {
+          dbNodes.push({
+            id: node.id, node_type: 'condition', action_type: null,
+            config: { split_a: node.data.split_a, nodeType: 'abtest' },
+            ...pos,
+          });
+        } else if (node.type === 'webhook') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'webhook',
+            config: { webhook_url: node.data.webhook_url, method: node.data.method, actionType: 'webhook' },
+            ...pos,
+          });
+        } else if (node.type === 'redirect') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'redirect',
+            config: { redirect_url: node.data.redirect_url, actionType: 'redirect' },
+            ...pos,
+          });
+        } else if (node.type === 'variable') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable',
+            config: { variable_name: node.data.variable_name, variable_value: node.data.variable_value, actionType: 'set_variable' },
+            ...pos,
           });
         }
       });
 
-      // Build connections
+      // Build connections - preserve source_handle for conditional branching
       const dbConnections = edges.map((edge) => ({
         source_node_id: edge.source,
         target_node_id: edge.target,
-        condition_branch: 'default',
+        source_handle: edge.sourceHandle || null,
+        condition_branch: edge.sourceHandle || 'default',
       }));
 
       await saveFlow.mutateAsync({
