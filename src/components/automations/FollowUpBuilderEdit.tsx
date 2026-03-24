@@ -729,7 +729,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             <Controls />
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--muted-foreground) / 0.25)" />
             <Panel position="bottom-center" className="!bg-card rounded-xl px-4 py-2.5 text-xs text-muted-foreground border border-border">
-              Arraste para conectar • Clique em um nó para editar
+              Arraste para conectar • Clique para editar • Ctrl+C/V para copiar/colar
             </Panel>
           </ReactFlow>
         </div>
