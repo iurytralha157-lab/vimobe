@@ -40,17 +40,64 @@ export function StartAutomationDialog({ open, onOpenChange, leadId, conversation
     setStarting(automationId);
 
     try {
-      const { error } = await supabase.from('automation_executions').insert({
+      // 1. Fetch automation nodes and connections to find the first actionable node
+      const { data: nodes, error: nodesError } = await supabase
+        .from('automation_nodes')
+        .select('id, node_type, action_type, position_x, position_y')
+        .eq('automation_id', automationId);
+
+      if (nodesError) throw nodesError;
+
+      const { data: connections, error: connError } = await supabase
+        .from('automation_connections')
+        .select('id, source_node_id, target_node_id, source_handle')
+        .eq('automation_id', automationId);
+
+      if (connError) throw connError;
+
+      // 2. Find the trigger (start) node
+      const triggerNode = nodes?.find(n => n.node_type === 'trigger');
+      if (!triggerNode) {
+        toast.error("Automação sem nó de início configurado");
+        return;
+      }
+
+      // 3. Find the first node after trigger
+      const firstConnection = connections?.find(c => c.source_node_id === triggerNode.id);
+      if (!firstConnection) {
+        toast.error("Automação sem conexão após o início");
+        return;
+      }
+
+      const firstNodeId = firstConnection.target_node_id;
+
+      // 4. Create execution record with the correct current_node_id
+      const { data: execution, error } = await supabase.from('automation_executions').insert({
         automation_id: automationId,
         lead_id: leadId,
         conversation_id: conversationId || null,
         organization_id: profile.organization_id,
+        current_node_id: firstNodeId,
         status: 'running',
         started_at: new Date().toISOString(),
-        execution_data: {},
-      });
+        execution_data: {
+          trigger_data: { lead_id: leadId, conversation_id: conversationId },
+          variables: {},
+        },
+      }).select('id').single();
 
       if (error) throw error;
+
+      // 5. Immediately call the executor to start processing
+      supabase.functions.invoke('automation-executor', {
+        body: { execution_id: execution.id },
+      }).then(res => {
+        if (res.error) {
+          console.error('Executor error:', res.error);
+        } else {
+          console.log('Automation executor started:', res.data);
+        }
+      });
 
       toast.success(`Automação "${automationName}" iniciada!`);
       onOpenChange(false);
