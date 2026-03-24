@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    VitePWA({
+    mode !== 'development' && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'logo-white.png', 'logo-black.png', 'sounds/notification.mp3', 'offline.html'],
       manifest: {
