@@ -12,9 +12,12 @@ import {
   Home, CircleDot,
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
+import { useCreateTag } from '@/hooks/use-tags';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { AutomationMediaGallery } from './AutomationMediaGallery';
 import { AudioRecorderInline } from './AudioRecorderInline';
+import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
+import { Plus } from 'lucide-react';
 
 interface NodeConfigPanelProps {
   selectedNode: Node;
@@ -41,7 +44,7 @@ interface NodeConfigPanelProps {
   users?: Array<{ id: string; name: string | null; email: string }>;
   filterUserId?: string;
   setFilterUserId?: (id: string) => void;
-  properties?: Array<{ id: string; title: string; code?: string | null }>;
+  properties?: Array<{ id: string; title: string; code?: string | null; bairro?: string | null; cidade?: string | null; preco?: number | null; imagem_principal?: string | null; tipo_de_imovel?: string | null; tipo_de_negocio?: string | null; commission_percentage?: number | null }>;
 }
 
 const NODE_TITLES: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string; color: string }> = {
@@ -71,6 +74,9 @@ export function NodeConfigPanel({
 }: NodeConfigPanelProps) {
   const nodeInfo = NODE_TITLES[selectedNode.type || ''] || { icon: Play, label: 'Nó', color: 'text-foreground' };
   const Icon = nodeInfo.icon;
+  const createTag = useCreateTag();
+  const [newTagName, setNewTagName] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
 
   // Dragging logic
   const panelRef = useRef<HTMLDivElement>(null);
@@ -365,25 +371,66 @@ export function NodeConfigPanel({
                   </SelectContent>
                 </Select>
               </div>
-              {tags && tags.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Tag</Label>
-                  <Select value={selectedNode.data.tag_id || ''} onValueChange={(v) => {
-                    const selectedTag = tags.find(t => t.id === v);
-                    onNodeDataChange(selectedNode.id, { tag_id: v, tag_name: selectedTag?.name || '' });
-                  }}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent className="z-[200]">
-                      {tags.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color || '#888' }} />
-                            {t.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tag</Label>
+                <Select value={selectedNode.data.tag_id || ''} onValueChange={(v) => {
+                  const selectedTag = tags?.find(t => t.id === v);
+                  onNodeDataChange(selectedNode.id, { tag_id: v, tag_name: selectedTag?.name || '' });
+                }}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    {(tags || []).map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color || '#888' }} />
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Inline tag creation */}
+              {!isCreatingTag ? (
+                <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => setIsCreatingTag(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Criar nova tag
+                </Button>
+              ) : (
+                <div className="space-y-2 p-2 rounded-lg border border-border bg-muted/30">
+                  <Input
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Nome da tag..."
+                    className="h-8 text-xs"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-7 text-xs"
+                      onClick={() => { setIsCreatingTag(false); setNewTagName(''); }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 h-7 text-xs"
+                      disabled={!newTagName.trim() || createTag.isPending}
+                      onClick={async () => {
+                        try {
+                          const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+                          const created = await createTag.mutateAsync({ name: newTagName.trim(), color: randomColor });
+                          onNodeDataChange(selectedNode.id, { tag_id: created.id, tag_name: created.name });
+                          setNewTagName('');
+                          setIsCreatingTag(false);
+                        } catch {}
+                      }}
+                    >
+                      Criar
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -447,27 +494,26 @@ export function NodeConfigPanel({
 
           {selectedNode.type === 'property_interest' && (
             <div className="space-y-3">
-              {properties && properties.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Imóvel de interesse</Label>
-                  <Select value={selectedNode.data.property_id || ''} onValueChange={(v) => {
-                    const prop = properties.find(p => p.id === v);
-                    onNodeDataChange(selectedNode.id, { property_id: v, property_name: prop ? `${prop.code ? prop.code + ' - ' : ''}${prop.title}` : '' });
-                  }}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione um imóvel..." /></SelectTrigger>
-                    <SelectContent className="z-[200]">
-                      {properties.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.code ? `${p.code} - ` : ''}{p.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <Label className="text-xs">Imóvel de interesse</Label>
+              {selectedNode.data.property_name && (
+                <p className="text-xs text-foreground font-medium">{selectedNode.data.property_name}</p>
               )}
-              {(!properties || properties.length === 0) && (
-                <p className="text-xs text-muted-foreground">Nenhum imóvel cadastrado.</p>
-              )}
+              <PropertyPickerDialog
+                properties={(properties || []).map(p => ({ id: p.id, code: p.code, title: p.title, bairro: p.bairro, cidade: p.cidade, preco: p.preco, imagem_principal: p.imagem_principal, tipo_de_imovel: p.tipo_de_imovel, tipo_de_negocio: p.tipo_de_negocio, commission_percentage: p.commission_percentage }))}
+                selectedPropertyId={selectedNode.data.property_id || null}
+                onSelect={(prop) => {
+                  onNodeDataChange(selectedNode.id, {
+                    property_id: prop.id,
+                    property_name: `${prop.code ? prop.code + ' - ' : ''}${prop.title || 'Sem título'}`,
+                  });
+                }}
+                trigger={
+                  <Button variant="outline" size="sm" className="w-full h-9 text-xs">
+                    <Home className="h-3.5 w-3.5 mr-1.5" />
+                    {selectedNode.data.property_id ? 'Trocar imóvel' : 'Selecionar imóvel'}
+                  </Button>
+                }
+              />
             </div>
           )}
 

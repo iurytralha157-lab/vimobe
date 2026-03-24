@@ -244,6 +244,10 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           flowNodes.push({ id: node.id, type: 'move_stage', position: pos, data: { move_pipeline_id: nodeConfig.pipeline_id || '', move_stage_id: nodeConfig.stage_id || '', stage_name: nodeConfig.stage_name || '' } });
         } else if (node.node_type === 'action' && node.action_type === 'assign_user') {
           flowNodes.push({ id: node.id, type: 'assign_user', position: pos, data: { assign_user_id: nodeConfig.user_id || '', user_name: nodeConfig.user_name || '' } });
+        } else if (node.node_type === 'action' && nodeConfig.actionType === 'property_interest') {
+          flowNodes.push({ id: node.id, type: 'property_interest', position: pos, data: { property_id: nodeConfig.property_id || '', property_name: nodeConfig.property_name || '' } });
+        } else if (node.node_type === 'action' && nodeConfig.actionType === 'deal_status') {
+          flowNodes.push({ id: node.id, type: 'deal_status', position: pos, data: { deal_status: nodeConfig.deal_status || '' } });
         } else if (node.node_type === 'condition') {
           flowNodes.push({ id: node.id, type: 'condition', position: pos, data: { variable: nodeConfig.variable || '', operator: nodeConfig.operator || 'equals', value: nodeConfig.value || '' } });
         } else if (node.node_type === 'delay') {
@@ -633,6 +637,18 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             config: { user_id: node.data.assign_user_id, user_name: selectedUser?.name || selectedUser?.email || '', actionType: 'assign_user' },
             ...pos,
           });
+        } else if (node.type === 'property_interest') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable' as ActionType,
+            config: { property_id: node.data.property_id, property_name: node.data.property_name || '', actionType: 'property_interest' },
+            ...pos,
+          });
+        } else if (node.type === 'deal_status') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable' as ActionType,
+            config: { deal_status: node.data.deal_status, actionType: 'deal_status' },
+            ...pos,
+          });
         }
       });
 
@@ -823,7 +839,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
               users={users || []}
               filterUserId={filterUserId}
               setFilterUserId={setFilterUserId}
-              properties={(properties || []).map(p => ({ id: p.id, title: p.title, code: p.code }))}
+              properties={properties || []}
             />
         )}
       </div>

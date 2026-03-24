@@ -47,7 +47,7 @@ import { NodeConfigPanel } from './NodeConfigPanel';
 import { useWhatsAppSessions } from '@/hooks/use-whatsapp-sessions';
 import { useTags } from '@/hooks/use-tags';
 import { useStages, usePipelines } from '@/hooks/use-stages';
-import { useCreateAutomation, useSaveAutomationFlow, TriggerType } from '@/hooks/use-automations';
+import { useCreateAutomation, useSaveAutomationFlow, TriggerType, ActionType } from '@/hooks/use-automations';
 import { useUsers } from '@/hooks/use-users';
 import { useProperties } from '@/hooks/use-properties';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -616,6 +616,18 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             config: { user_id: node.data.assign_user_id, actionType: 'assign_user' },
             ...pos,
           });
+        } else if (node.type === 'property_interest') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable' as ActionType,
+            config: { property_id: node.data.property_id, property_name: node.data.property_name || '', actionType: 'property_interest' },
+            ...pos,
+          });
+        } else if (node.type === 'deal_status') {
+          dbNodes.push({
+            id: node.id, node_type: 'action', action_type: 'set_variable' as ActionType,
+            config: { deal_status: node.data.deal_status, actionType: 'deal_status' },
+            ...pos,
+          });
         }
       });
 
@@ -800,7 +812,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
               users={users || []}
               filterUserId={filterUserId}
               setFilterUserId={setFilterUserId}
-              properties={(properties || []).map(p => ({ id: p.id, title: p.title, code: p.code }))}
+              properties={properties || []}
             />
         )}
       </div>
