@@ -2218,7 +2218,51 @@ async function handleStopFollowUpOnReply(
               });
               
               if (sendResponse.ok) {
-                console.log(`Auto-reply message sent successfully to ${phoneWithCode}`);
+                const sendData = await sendResponse.json();
+                const sentMsgId = sendData?.key?.id || sendData?.messageId || crypto.randomUUID();
+                console.log(`Auto-reply message sent successfully to ${phoneWithCode}, msgId: ${sentMsgId}`);
+                
+                // ===== PERSIST auto-reply to whatsapp_messages =====
+                // Find conversation for this lead+session
+                let replyConvId = conversationId;
+                if (!replyConvId) {
+                  const { data: replyConv } = await supabase
+                    .from("whatsapp_conversations")
+                    .select("id")
+                    .eq("lead_id", leadId)
+                    .is("deleted_at", null)
+                    .order("last_message_at", { ascending: false, nullsFirst: false })
+                    .limit(1)
+                    .maybeSingle();
+                  replyConvId = replyConv?.id;
+                }
+                
+                if (replyConvId) {
+                  await supabase.from("whatsapp_messages").upsert({
+                    conversation_id: replyConvId,
+                    session_id: session.id,
+                    message_id: sentMsgId,
+                    from_me: true,
+                    content: messageText,
+                    message_type: "text",
+                    status: "sent",
+                    sent_at: new Date().toISOString(),
+                    sender_name: "Automação",
+                  }, { onConflict: "session_id,message_id" });
+                  
+                  // Update conversation last message
+                  await supabase
+                    .from("whatsapp_conversations")
+                    .update({
+                      last_message: messageText,
+                      last_message_at: new Date().toISOString(),
+                    })
+                    .eq("id", replyConvId);
+                  
+                  console.log(`Auto-reply message persisted to conversation ${replyConvId}`);
+                } else {
+                  console.warn("No conversation found to persist auto-reply message");
+                }
               } else {
                 console.error(`Failed to send auto-reply: ${await sendResponse.text()}`);
               }
