@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { TriggerType } from '@/hooks/use-automations';
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { AutomationMediaGallery } from './AutomationMediaGallery';
 
 interface NodeConfigPanelProps {
   selectedNode: Node;
