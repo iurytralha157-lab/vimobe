@@ -222,16 +222,14 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           flowNodes.push({ id: node.id, type: 'audio', position: pos, data: { audio_url: nodeConfig.audio_url || '', audio_type: nodeConfig.audio_type || 'file' } });
         } else if (node.node_type === 'action' && node.action_type === 'send_video') {
           flowNodes.push({ id: node.id, type: 'video', position: pos, data: { video_url: nodeConfig.video_url || '' } });
-        } else if (node.node_type === 'action' && node.action_type === 'collect_input') {
-          flowNodes.push({ id: node.id, type: 'input', position: pos, data: { ...nodeConfig } });
         } else if (node.node_type === 'action' && node.action_type === 'webhook') {
           flowNodes.push({ id: node.id, type: 'webhook', position: pos, data: { webhook_url: nodeConfig.webhook_url || '', method: nodeConfig.method || 'POST' } });
-        } else if (node.node_type === 'action' && node.action_type === 'redirect') {
-          flowNodes.push({ id: node.id, type: 'redirect', position: pos, data: { redirect_url: nodeConfig.redirect_url || '' } });
-        } else if (node.node_type === 'action' && node.action_type === 'set_variable') {
-          flowNodes.push({ id: node.id, type: 'variable', position: pos, data: { variable_name: nodeConfig.variable_name || '', variable_value: nodeConfig.variable_value || '' } });
-        } else if (node.node_type === 'condition' && nodeConfig.nodeType === 'abtest') {
-          flowNodes.push({ id: node.id, type: 'abtest', position: pos, data: { split_a: nodeConfig.split_a || 50 } });
+        } else if (node.node_type === 'action' && (node.action_type === 'add_tag' || node.action_type === 'remove_tag')) {
+          flowNodes.push({ id: node.id, type: 'tag', position: pos, data: { tag_id: nodeConfig.tag_id || '', tag_action: nodeConfig.tag_action || 'add', tag_name: nodeConfig.tag_name || '' } });
+        } else if (node.node_type === 'action' && node.action_type === 'move_lead') {
+          flowNodes.push({ id: node.id, type: 'move_stage', position: pos, data: { move_pipeline_id: nodeConfig.pipeline_id || '', move_stage_id: nodeConfig.stage_id || '', stage_name: nodeConfig.stage_name || '' } });
+        } else if (node.node_type === 'action' && node.action_type === 'assign_user') {
+          flowNodes.push({ id: node.id, type: 'assign_user', position: pos, data: { assign_user_id: nodeConfig.user_id || '', user_name: nodeConfig.user_name || '' } });
         } else if (node.node_type === 'condition') {
           flowNodes.push({ id: node.id, type: 'condition', position: pos, data: { variable: nodeConfig.variable || '', operator: nodeConfig.operator || 'equals', value: nodeConfig.value || '' } });
         } else if (node.node_type === 'delay') {
