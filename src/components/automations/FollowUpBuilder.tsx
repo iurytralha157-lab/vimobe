@@ -136,6 +136,28 @@ const CATEGORY_COLORS: Record<NodeCategory, string> = {
   actions: 'text-purple-500',
 };
 
+function getWaitReplyConfig(flowNodes: Node[]) {
+  const waitNodes = flowNodes.filter((node) => node.type === 'wait');
+  const waitNodeWithReply = waitNodes.find((node) => node.data?.stop_on_reply === true);
+
+  const rawStageId = waitNodeWithReply?.data?.on_reply_stage_id || waitNodeWithReply?.data?.on_reply_move_to_stage_id;
+  const normalizedStageId = typeof rawStageId === 'string' && rawStageId && rawStageId !== '__none__'
+    ? rawStageId
+    : null;
+
+  const rawMessage = waitNodeWithReply?.data?.on_reply_message;
+  const normalizedMessage = typeof rawMessage === 'string' && rawMessage.trim()
+    ? rawMessage.trim()
+    : null;
+
+  return {
+    hasWaitNodes: waitNodes.length > 0,
+    stopOnReply: Boolean(waitNodeWithReply),
+    onReplyMoveToStageId: normalizedStageId,
+    onReplyMessage: normalizedMessage,
+  };
+}
+
 function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpBuilderProps) {
   const { data: sessions } = useWhatsAppSessions();
   const { data: tags } = useTags();
@@ -394,6 +416,15 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     setIsSaving(true);
 
     try {
+      const waitReplyConfig = getWaitReplyConfig(nodes);
+      const shouldStopOnReply = waitReplyConfig.hasWaitNodes ? waitReplyConfig.stopOnReply : stopOnReply;
+      const resolvedOnReplyStageId = shouldStopOnReply
+        ? (waitReplyConfig.onReplyMoveToStageId ?? (onReplyStageId && onReplyStageId !== '__none__' ? onReplyStageId : null))
+        : null;
+      const resolvedOnReplyMessage = shouldStopOnReply
+        ? (waitReplyConfig.onReplyMessage ?? (onReplyMessage?.trim() ? onReplyMessage.trim() : null))
+        : null;
+
       // Create automation
       const automation = await createAutomation.mutateAsync({
         name,
@@ -406,9 +437,9 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             to_stage_id: stageId 
           } : {}),
           filter_user_id: filterUserId && filterUserId !== "__all__" ? filterUserId : null,
-          stop_on_reply: stopOnReply,
-          on_reply_move_to_stage_id: stopOnReply && onReplyStageId && onReplyStageId !== "__none__" ? onReplyStageId : null,
-          on_reply_message: stopOnReply && onReplyMessage?.trim() ? onReplyMessage.trim() : null,
+          stop_on_reply: shouldStopOnReply,
+          on_reply_move_to_stage_id: resolvedOnReplyStageId,
+          on_reply_message: resolvedOnReplyMessage,
         },
       });
 
@@ -468,9 +499,25 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             ...pos,
           });
         } else if (node.type === 'wait') {
+          const waitRawStageId = node.data.on_reply_stage_id || node.data.on_reply_move_to_stage_id;
+          const waitStageId = typeof waitRawStageId === 'string' && waitRawStageId && waitRawStageId !== '__none__'
+            ? waitRawStageId
+            : null;
+          const waitReplyMessage = typeof node.data.on_reply_message === 'string' && node.data.on_reply_message.trim()
+            ? node.data.on_reply_message.trim()
+            : null;
+
           dbNodes.push({
             id: node.id, node_type: 'delay', action_type: null,
-            config: { delay_type: node.data.wait_type || 'days', delay_value: node.data.wait_value || 1, stop_on_reply: node.data.stop_on_reply || false, nodeType: 'delay' },
+            config: {
+              delay_type: node.data.wait_type || 'days',
+              delay_value: node.data.wait_value || 1,
+              stop_on_reply: node.data.stop_on_reply || false,
+              on_reply_message: waitReplyMessage,
+              on_reply_stage_id: waitStageId,
+              on_reply_move_to_stage_id: waitStageId,
+              nodeType: 'delay',
+            },
             ...pos,
           });
         } else if (node.type === 'condition') {
