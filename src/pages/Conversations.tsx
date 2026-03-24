@@ -645,6 +645,15 @@ export default function Conversations() {
       </div>
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} contactPhone={createLeadContact.phone} contactName={createLeadContact.name} />
+      {selectedConversation?.lead?.id && (
+        <StartAutomationDialog
+          open={showAutomationDialog}
+          onOpenChange={setShowAutomationDialog}
+          leadId={selectedConversation.lead.id}
+          conversationId={selectedConversation.id}
+          contactName={selectedConversation.lead?.name || selectedConversation.contact_name || undefined}
+        />
+      )}
     </AppLayout>;
 }
 function ConversationItem({
