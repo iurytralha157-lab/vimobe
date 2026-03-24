@@ -494,27 +494,26 @@ export function NodeConfigPanel({
 
           {selectedNode.type === 'property_interest' && (
             <div className="space-y-3">
-              {properties && properties.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Imóvel de interesse</Label>
-                  <Select value={selectedNode.data.property_id || ''} onValueChange={(v) => {
-                    const prop = properties.find(p => p.id === v);
-                    onNodeDataChange(selectedNode.id, { property_id: v, property_name: prop ? `${prop.code ? prop.code + ' - ' : ''}${prop.title}` : '' });
-                  }}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione um imóvel..." /></SelectTrigger>
-                    <SelectContent className="z-[200]">
-                      {properties.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.code ? `${p.code} - ` : ''}{p.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <Label className="text-xs">Imóvel de interesse</Label>
+              {selectedNode.data.property_name && (
+                <p className="text-xs text-foreground font-medium">{selectedNode.data.property_name}</p>
               )}
-              {(!properties || properties.length === 0) && (
-                <p className="text-xs text-muted-foreground">Nenhum imóvel cadastrado.</p>
-              )}
+              <PropertyPickerDialog
+                properties={(properties || []).map(p => ({ id: p.id, code: p.code, title: p.title, bairro: p.bairro, cidade: p.cidade, preco: p.preco, imagem_principal: p.imagem_principal, tipo_de_imovel: p.tipo_de_imovel, tipo_de_negocio: p.tipo_de_negocio, commission_percentage: p.commission_percentage }))}
+                selectedPropertyId={selectedNode.data.property_id || null}
+                onSelect={(prop) => {
+                  onNodeDataChange(selectedNode.id, {
+                    property_id: prop.id,
+                    property_name: `${prop.code ? prop.code + ' - ' : ''}${prop.title || 'Sem título'}`,
+                  });
+                }}
+                trigger={
+                  <Button variant="outline" size="sm" className="w-full h-9 text-xs">
+                    <Home className="h-3.5 w-3.5 mr-1.5" />
+                    {selectedNode.data.property_id ? 'Trocar imóvel' : 'Selecionar imóvel'}
+                  </Button>
+                }
+              />
             </div>
           )}
 
