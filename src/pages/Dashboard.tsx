@@ -19,7 +19,7 @@ import { useTelecomDashboardStats, useTelecomEvolutionData } from '@/hooks/use-t
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CampaignPerformanceWidget } from '@/components/dashboard/CampaignPerformanceWidget';
-import { LeadSourcesChart } from '@/components/dashboard/LeadSourcesChart';
+
 
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
