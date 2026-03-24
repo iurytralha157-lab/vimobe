@@ -678,7 +678,7 @@ export default function Pipelines() {
                         onClick={() => setStagesEditorOpen(true)}
                         disabled={!selectedPipelineId}
                       >
-                        <Settings className="h-4 w-4 text-primary-foreground/80 hover:text-primary-foreground" />
+                        <Settings className="h-4 w-4 text-foreground/80 hover:text-foreground" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Gerenciar Colunas</TooltipContent>
@@ -692,7 +692,7 @@ export default function Pipelines() {
                   className="h-6 w-6"
                   onClick={() => setNewPipelineDialogOpen(true)}
                 >
-                  <Plus className="h-4 w-4 text-primary-foreground" />
+                  <Plus className="h-4 w-4 text-foreground" />
                 </Button>
               )}
             </div>
