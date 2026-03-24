@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -362,6 +362,36 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     );
   }, [setNodes]);
 
+  // Ctrl+C / Ctrl+V clipboard for nodes
+  const clipboardRef = useRef<Node[]>([]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length > 0) {
+          clipboardRef.current = selected;
+          toast.success(`${selected.length} nó(s) copiado(s)`);
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboardRef.current.length > 0) {
+          const newNodes: Node[] = clipboardRef.current.map(n => ({
+            ...n,
+            id: `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            position: { x: n.position.x + 50, y: n.position.y + 80 },
+            selected: false,
+            data: { ...n.data },
+          }));
+          setNodes(nds => [...nds, ...newNodes]);
+          toast.success(`${newNodes.length} nó(s) colado(s)`);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nodes, setNodes]);
+
   const handleSave = async () => {
     if (!sessionId) {
       toast.error('Selecione uma sessão WhatsApp');
@@ -596,21 +626,6 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         <div className="w-64 border-r automation-sidebar flex flex-col">
           <ScrollArea className="flex-1">
              <div className="p-3 space-y-1">
-              {/* Config Toggle */}
-              <button 
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-accent transition-colors text-muted-foreground"
-                onClick={() => setShowConfig(!showConfig)}
-              >
-                {showConfig ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                ⚙️ Configurações
-              </button>
-
-              {showConfig && (
-                <div className="px-3 py-2 space-y-4 border border-border rounded-xl bg-card mb-3">
-                  <p className="text-[10px] text-muted-foreground">Clique no nó de Início para configurar sessão, gatilho e filtros.</p>
-                </div>
-              )}
-
               {/* Node Categories - Typebot Style */}
               {(['bubbles', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
                 const items = NODE_PALETTE.filter(item => item.category === category);
@@ -685,7 +700,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             <Controls />
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--muted-foreground) / 0.25)" />
             <Panel position="bottom-center" className="!bg-card rounded-xl px-4 py-2.5 text-xs text-muted-foreground border border-border">
-              Arraste para conectar • Clique em um nó para editar
+              Arraste para conectar • Clique para editar • Ctrl+C/V para copiar/colar
             </Panel>
           </ReactFlow>
         </div>

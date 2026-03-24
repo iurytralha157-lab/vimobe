@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -27,6 +27,7 @@ import {
   MessageSquare, 
   Timer, 
   Trash2,
+  Play,
   Image,
   Headphones,
   Video,
@@ -95,6 +96,7 @@ interface PaletteItem {
 }
 
 const NODE_PALETTE: PaletteItem[] = [
+  { type: 'start', label: 'Início', icon: Play, color: 'text-orange-600 bg-orange-500/10', category: 'actions', defaultData: { trigger_type: 'manual' } },
   { type: 'message', label: 'Texto', icon: MessageSquare, color: 'text-green-600 bg-green-500/10', category: 'bubbles', defaultData: { message: 'Nova mensagem...', day: 1 } },
   { type: 'image', label: 'Imagem', icon: Image, color: 'text-blue-600 bg-blue-500/10', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
   { type: 'video', label: 'Vídeo', icon: Video, color: 'text-rose-600 bg-rose-500/10', category: 'bubbles', defaultData: { video_url: '' } },
@@ -379,6 +381,36 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
     );
   }, [setNodes]);
 
+  // Ctrl+C / Ctrl+V clipboard for nodes
+  const clipboardRef = useRef<Node[]>([]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length > 0) {
+          clipboardRef.current = selected;
+          toast.success(`${selected.length} nó(s) copiado(s)`);
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboardRef.current.length > 0) {
+          const newNodes: Node[] = clipboardRef.current.map(n => ({
+            ...n,
+            id: `${n.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            position: { x: n.position.x + 50, y: n.position.y + 80 },
+            selected: false,
+            data: { ...n.data },
+          }));
+          setNodes(nds => [...nds, ...newNodes]);
+          toast.success(`${newNodes.length} nó(s) colado(s)`);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nodes, setNodes]);
+
   const handleSave = async () => {
     if (!sessionId) {
       toast.error('Selecione uma sessão WhatsApp');
@@ -637,17 +669,6 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         <div className="w-64 border-r automation-sidebar flex flex-col">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-1">
-              <button className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-accent transition-colors text-muted-foreground"
-                onClick={() => setShowConfig(!showConfig)}>
-                {showConfig ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                ⚙️ Configurações
-              </button>
-              {showConfig && (
-                <div className="px-3 py-2 space-y-4 border border-border rounded-xl bg-card mb-3">
-                  <p className="text-[10px] text-muted-foreground">Clique no nó de Início para configurar sessão, gatilho e filtros.</p>
-                </div>
-              )}
-
               {(['bubbles', 'conditionals', 'actions'] as NodeCategory[]).map((category) => {
                 const items = NODE_PALETTE.filter(item => item.category === category);
                 const isExpanded = expandedCategories[category];
@@ -708,7 +729,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             <Controls />
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--muted-foreground) / 0.25)" />
             <Panel position="bottom-center" className="!bg-card rounded-xl px-4 py-2.5 text-xs text-muted-foreground border border-border">
-              Arraste para conectar • Clique em um nó para editar
+              Arraste para conectar • Clique para editar • Ctrl+C/V para copiar/colar
             </Panel>
           </ReactFlow>
         </div>
