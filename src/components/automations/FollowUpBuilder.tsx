@@ -515,7 +515,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           });
         } else if (node.type === 'move_stage') {
           dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'move_stage',
+            id: node.id, node_type: 'action', action_type: 'move_lead',
             config: { pipeline_id: node.data.move_pipeline_id, stage_id: node.data.move_stage_id, actionType: 'move_stage' },
             ...pos,
           });

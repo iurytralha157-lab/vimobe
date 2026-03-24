@@ -535,7 +535,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         } else if (node.type === 'move_stage') {
           const selectedStage = stages?.find(s => s.id === node.data.move_stage_id);
           dbNodes.push({
-            id: node.id, node_type: 'action', action_type: 'move_stage',
+            id: node.id, node_type: 'action', action_type: 'move_lead',
             config: { pipeline_id: node.data.move_pipeline_id, stage_id: node.data.move_stage_id, stage_name: selectedStage?.name || '', actionType: 'move_stage' },
             ...pos,
           });
