@@ -470,7 +470,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         } else if (node.type === 'wait') {
           dbNodes.push({
             id: node.id, node_type: 'delay', action_type: null,
-            config: { delay_type: node.data.wait_type || 'days', delay_value: node.data.wait_value || 1, nodeType: 'delay' },
+            config: { delay_type: node.data.wait_type || 'days', delay_value: node.data.wait_value || 1, stop_on_reply: node.data.stop_on_reply || false, nodeType: 'delay' },
             ...pos,
           });
         } else if (node.type === 'condition') {
