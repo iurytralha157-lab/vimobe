@@ -168,7 +168,6 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true,
-    inputs: true,
     conditionals: true,
     actions: true,
   });
