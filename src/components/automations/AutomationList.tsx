@@ -3,7 +3,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { 
   Edit2, Trash2, Play, MessageSquare, Clock, GitBranch, Tag, UserPlus,
-  Zap, Loader2, CheckCircle2, XCircle, AlertCircle, History, MapPin,
+  Zap, Loader2, CheckCircle2, XCircle, AlertCircle, History, MapPin, Copy,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -11,29 +11,22 @@ import {
 } from '@/components/ui/alert-dialog';
 import { 
   useAutomations, useDeleteAutomation, useToggleAutomation, useAutomationExecutions,
-  TRIGGER_TYPE_LABELS, TriggerType, Automation,
+  useCreateAutomation,
+  TRIGGER_TYPE_LABELS, TriggerType, Automation, FlowDefinition,
 } from '@/hooks/use-automations';
 import { usePipelines, useStages } from '@/hooks/use-stages';
 import { useTags } from '@/hooks/use-tags';
 import { formatDistanceToNow, format } from 'date-fns';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface AutomationListProps {
   onEdit: (automationId: string) => void;
   onViewHistory?: (automationId: string) => void;
 }
-
-const getTriggerIcon = (triggerType: TriggerType) => {
-  switch (triggerType) {
-    case 'message_received': return MessageSquare;
-    case 'scheduled': return Clock;
-    case 'lead_stage_changed': return GitBranch;
-    case 'tag_added': return Tag;
-    case 'lead_created': return UserPlus;
-    case 'inactivity': return Clock;
-    case 'manual': return Play;
-    default: return Zap;
-  }
-};
 
 function TriggerContext({ automation }: { automation: Automation }) {
   const config = automation.trigger_config as Record<string, unknown> || {};
@@ -75,6 +68,8 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
   const { data: executions } = useAutomationExecutions();
   const deleteAutomation = useDeleteAutomation();
   const toggleAutomation = useToggleAutomation();
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
 
   const getExecutionStats = (automationId: string) => {
     const automationExecutions = executions?.filter(e => e.automation_id === automationId) || [];
@@ -84,6 +79,40 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
       failed: automationExecutions.filter(e => e.status === 'failed').length,
       lastRun: automationExecutions.length > 0 ? new Date(automationExecutions[0].started_at) : null,
     };
+  };
+
+  const handleDuplicate = async (automation: Automation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (!profile?.organization_id) return;
+
+      const insertData: Record<string, unknown> = {
+        organization_id: profile.organization_id,
+        name: `${automation.name} (cópia)`,
+        description: automation.description || null,
+        trigger_type: automation.trigger_type,
+        trigger_config: automation.trigger_config as Json,
+        created_by: profile.id,
+        is_active: false,
+      };
+
+      if (automation.flow_definition) {
+        insertData.flow_definition = automation.flow_definition as unknown as Json;
+      }
+
+      const { data: newAutomation, error } = await supabase
+        .from('automations')
+        .insert([insertData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      queryClient.invalidateQueries({ queryKey: ['automations'] });
+      toast.success('Automação duplicada com sucesso!');
+    } catch (err: any) {
+      toast.error(`Erro ao duplicar: ${err.message}`);
+    }
   };
 
   if (isLoading) {
@@ -116,56 +145,52 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
   };
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
       {automations.map((automation) => {
-        const TriggerIcon = getTriggerIcon(automation.trigger_type as TriggerType);
         const stats = getExecutionStats(automation.id);
         const hasStats = stats.running > 0 || stats.completed > 0 || stats.failed > 0;
         
         return (
           <div 
             key={automation.id} 
-            className={`group rounded-2xl cursor-pointer relative aspect-[4/3] flex items-center justify-center transition-all duration-300 overflow-hidden ${
+            className={`group rounded-2xl cursor-pointer relative aspect-[4/3] flex items-center justify-center transition-all duration-200 overflow-hidden border border-border hover:bg-orange-500 hover:border-orange-500 ${
               !automation.is_active ? 'opacity-50' : ''
             }`}
-            style={{ border: '1px solid hsl(var(--border))' }}
             onClick={() => onEdit(automation.id)}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            
-            <div className="flex flex-col items-center justify-center p-5 text-center w-full relative z-10">
-              <div className="relative mb-3">
-                <div className={`p-3 rounded-xl transition-all duration-300 group-hover:scale-110 ${automation.is_active ? 'bg-primary/15' : 'bg-muted'}`}>
-                  <TriggerIcon className={`h-7 w-7 ${automation.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
+            <div className="flex flex-col items-center justify-center p-4 text-center w-full relative z-10">
+              <div className="relative mb-2">
+                <div className={`p-2.5 rounded-xl transition-all duration-200 group-hover:scale-110 group-hover:bg-white/20 ${automation.is_active ? 'bg-primary/15' : 'bg-muted'}`}>
+                  <Zap className={`h-6 w-6 group-hover:text-white ${automation.is_active ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
                 {stats.running > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full animate-pulse" />
                 )}
               </div>
 
-              <h3 className="font-semibold text-sm mb-1 truncate max-w-full text-foreground">{automation.name}</h3>
+              <h3 className="font-semibold text-xs mb-0.5 truncate max-w-full text-foreground group-hover:text-white">{automation.name}</h3>
               
-              <span className="text-[11px] text-muted-foreground mb-1">
+              <span className="text-[10px] text-muted-foreground group-hover:text-white/70 mb-0.5">
                 {TRIGGER_TYPE_LABELS[automation.trigger_type as TriggerType] || automation.trigger_type}
               </span>
 
               {hasStats && (
-                <div className="flex items-center gap-2 text-[10px] mb-1">
+                <div className="flex items-center gap-1.5 text-[10px] mb-0.5">
                   {stats.completed > 0 && (
-                    <span className="flex items-center gap-0.5 text-muted-foreground">
-                      <CheckCircle2 className="h-3 w-3 text-green-400" />
+                    <span className="flex items-center gap-0.5 text-muted-foreground group-hover:text-white/80">
+                      <CheckCircle2 className="h-2.5 w-2.5 text-green-400 group-hover:text-white/80" />
                       {stats.completed}
                     </span>
                   )}
                   {stats.running > 0 && (
-                    <span className="flex items-center gap-0.5 text-primary">
-                      <AlertCircle className="h-3 w-3" />
+                    <span className="flex items-center gap-0.5 text-primary group-hover:text-white/80">
+                      <AlertCircle className="h-2.5 w-2.5" />
                       {stats.running}
                     </span>
                   )}
                   {stats.failed > 0 && (
-                    <span className="flex items-center gap-0.5 text-red-400">
-                      <XCircle className="h-3 w-3" />
+                    <span className="flex items-center gap-0.5 text-red-400 group-hover:text-white/80">
+                      <XCircle className="h-2.5 w-2.5" />
                       {stats.failed}
                     </span>
                   )}
@@ -173,25 +198,27 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
               )}
 
               {automation.created_at && (
-                <span className="text-[10px] text-muted-foreground/60">
+                <span className="text-[9px] text-muted-foreground/60 group-hover:text-white/50">
                   {format(new Date(automation.created_at), "dd/MM/yyyy")}
                 </span>
               )}
             </div>
 
             {/* Top-right actions (visible on hover) */}
-            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20" onClick={(e) => e.stopPropagation()}>
-              <Switch
-                checked={automation.is_active}
-                onCheckedChange={(checked) => 
-                  toggleAutomation.mutate({ id: automation.id, is_active: checked })
-                }
-                className="scale-75"
-              />
+            <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20" onClick={(e) => e.stopPropagation()}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 text-white/80 hover:text-white hover:bg-white/20"
+                onClick={(e) => handleDuplicate(automation, e)}
+                title="Duplicar"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                    <Trash2 className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:text-white hover:bg-white/20">
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -214,15 +241,18 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
               </AlertDialog>
             </div>
 
-            {/* Status badge */}
+            {/* Status badge - green solid for active */}
             <Badge 
-              className={`absolute top-2.5 left-2.5 text-[11px] px-2.5 py-0.5 font-medium border ${
+              className={`absolute top-1.5 left-1.5 text-[10px] px-2 py-0.5 font-medium border-0 ${
                 automation.is_active 
-                  ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/20' 
-                  : 'bg-muted text-muted-foreground border-border'
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-muted text-muted-foreground group-hover:bg-white/20 group-hover:text-white'
               }`}
             >
-              {automation.is_active ? 'Ativa' : 'Inativa'}
+              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${
+                automation.is_active ? 'bg-white' : 'bg-muted-foreground'
+              }`} />
+              {automation.is_active ? 'Ativo' : 'Inativo'}
             </Badge>
           </div>
         );
