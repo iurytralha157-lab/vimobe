@@ -311,8 +311,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
   const bottomKpis = [
     { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
     { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-1' },
-    { title: 'Automações', value: runningAutomations ?? 0, icon: Zap, tooltip: 'Automações em andamento', format: 'number', color: 'chart-2' },
-    { title: 'Recuperados', value: recoveredLeads ?? 0, icon: RefreshCw, tooltip: 'Leads recuperados (redistribuídos)', format: 'number', color: 'chart-3' },
+    { title: 'Automações', value: runningAutomations ?? 0, icon: Zap, tooltip: 'Automações em andamento (running + aguardando)', format: 'number', color: 'chart-2' },
   ];
 
   const renderKPI = (kpi: any) => {
