@@ -184,7 +184,7 @@ export default function PublicSiteLayout() {
                     src={siteConfig.logo_url} 
                     alt={siteConfig.site_title} 
                     style={{ 
-                      maxWidth: Math.min(siteConfig.logo_width || 200, 320), 
+                      maxWidth: Math.min(siteConfig.logo_width || 200, 500), 
                       maxHeight: Math.min(siteConfig.logo_height || 55, 70)
                     }}
                     className="w-auto object-contain"
