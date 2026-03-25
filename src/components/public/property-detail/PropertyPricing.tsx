@@ -120,7 +120,7 @@ export default function PropertyPricing({
             ))}
             
             {/* Total Monthly for Rent */}
-            {isRent && totalMonthlyCost && (
+            {(isRent || hasRentalOption) && totalMonthlyCost && (
               <div className="flex justify-between items-center pt-3" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
                 <span className="font-semibold" style={{ color: textColor, opacity: 0.8 }}>Total Mensal</span>
                 <span 
