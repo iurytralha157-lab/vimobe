@@ -4,21 +4,17 @@ import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
-import { TopBrokersWidget } from '@/components/dashboard/TopBrokersWidget';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
 import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
 import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionChart';
-import { DashboardCalendarFilter } from '@/components/dashboard/DashboardCalendarFilter';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
-  useTopBrokers,
   useDealsEvolutionData,
 } from '@/hooks/use-dashboard-stats';
 import { useTelecomDashboardStats, useTelecomEvolutionData } from '@/hooks/use-telecom-dashboard-stats';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CampaignPerformanceWidget } from '@/components/dashboard/CampaignPerformanceWidget';
 
 
 export default function Dashboard() {
@@ -44,9 +40,6 @@ export default function Dashboard() {
 
   // Data hooks - Imobiliário
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
-  const { data: topBrokersData, isLoading: brokersLoading } = useTopBrokers(filters);
-  const topBrokers = topBrokersData?.brokers || [];
-  const isBrokersFallback = topBrokersData?.isFallbackMode || false;
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
 
   // Data hooks - Telecom
@@ -107,12 +100,9 @@ export default function Dashboard() {
           hasActiveFilters={hasActiveFilters}
         />
 
-        {/* ===== NEW GRID LAYOUT ===== */}
-        {/* Desktop: Complex grid | Mobile: stacked */}
-
-        {/* Desktop Layout */}
+        {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-4">
-          {/* Row 1+2 Left: KPI Cards (4 cards in 2x2 grid) */}
+          {/* Left column (col 1-8): KPIs + Sources + Evolution */}
           <div className="col-span-8 grid grid-cols-2 gap-4">
             {isTelecom ? (
               <div className="col-span-2">
@@ -123,14 +113,11 @@ export default function Dashboard() {
                 />
               </div>
             ) : (
-              <>
-                {/* 4 KPI cards in 2x2 */}
-                <KPICardsGrid data={kpiData} isLoading={statsLoading} periodLabel={periodLabel} />
-              </>
+              <KPICardsGrid data={kpiData} isLoading={statsLoading} periodLabel={periodLabel} />
             )}
 
-            {/* Row 2: 2 medium widgets */}
-            <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} isFallbackMode={isBrokersFallback} />
+            {/* Row 2: Lead Sources + Evolution */}
+            {sourcesComponent}
             {isTelecom ? (
               <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
             ) : (
@@ -138,40 +125,14 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Row 1+2 Right: Calendar (spans both rows) */}
-          <div className="col-span-4 row-span-1">
-            <DashboardCalendarFilter
-              datePreset={datePreset}
-              onDatePresetChange={setDatePreset}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={setCustomDateRange}
-            />
+          {/* Right column (col 9-12): Sales Funnel */}
+          <div className="col-span-4">
+            {funnelComponent}
           </div>
         </div>
-
-        {/* Row 3: Full width - Funnel + Sources */}
-        <div className="hidden lg:grid lg:grid-cols-2 gap-4">
-          {funnelComponent}
-          {sourcesComponent}
-        </div>
-
-        {/* Campaign Performance */}
-        {!isTelecom && (
-          <div className="hidden lg:block">
-            <CampaignPerformanceWidget filters={filters} />
-          </div>
-        )}
 
         {/* ===== MOBILE LAYOUT ===== */}
         <div className="lg:hidden space-y-4">
-          {/* Calendar */}
-          <DashboardCalendarFilter
-            datePreset={datePreset}
-            onDatePresetChange={setDatePreset}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-          />
-
           {/* KPIs */}
           {isTelecom ? (
             <TelecomKPICards 
@@ -189,12 +150,16 @@ export default function Dashboard() {
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
-            <TabsList className="w-full grid grid-cols-2">
+            <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
+              <TabsTrigger value="sources" className="text-xs">Origens</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
               {funnelComponent}
+            </TabsContent>
+            <TabsContent value="sources" className="mt-3">
+              {sourcesComponent}
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
               {isTelecom ? (
@@ -204,13 +169,6 @@ export default function Dashboard() {
               )}
             </TabsContent>
           </Tabs>
-
-          {/* Brokers + Sources */}
-          <TopBrokersWidget brokers={topBrokers} isLoading={brokersLoading} isFallbackMode={isBrokersFallback} />
-          {sourcesComponent}
-
-          {/* Campaign */}
-          {!isTelecom && <CampaignPerformanceWidget filters={filters} />}
         </div>
       </div>
     </AppLayout>
@@ -222,7 +180,6 @@ import {
   Users, 
   Target, 
   CheckCircle2, 
-  Clock,
   DollarSign,
   TrendingUp,
   TrendingDown,
