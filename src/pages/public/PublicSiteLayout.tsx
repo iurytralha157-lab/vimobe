@@ -27,15 +27,17 @@ export default function PublicSiteLayout() {
   const textColor = siteConfig?.text_color || '#FFFFFF';
   const isDarkTheme = siteConfig?.site_theme !== 'light';
 
-  // Dynamic document title & favicon based on site config
+  // Dynamic document title, favicon & OG meta tags based on site config
   useEffect(() => {
     if (!siteConfig) return;
 
     const originalTitle = document.title;
     const originalFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href;
 
+    // Update title
     document.title = siteConfig.seo_title || siteConfig.site_title || 'Site Imobiliário';
 
+    // Update favicon
     if (siteConfig.favicon_url) {
       let faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (!faviconLink) {
@@ -46,11 +48,53 @@ export default function PublicSiteLayout() {
       faviconLink.href = siteConfig.favicon_url;
     }
 
+    // Update OG meta tags so shared links show client's info
+    const ogTitle = siteConfig.seo_title || siteConfig.site_title || '';
+    const ogDescription = siteConfig.seo_description || siteConfig.site_description || '';
+    const ogImage = siteConfig.logo_url || siteConfig.favicon_url || '';
+
+    const metaUpdates: Record<string, string> = {
+      'meta[property="og:title"]': ogTitle,
+      'meta[name="twitter:title"]': ogTitle,
+      'meta[name="description"]': ogDescription,
+      'meta[property="og:description"]': ogDescription,
+      'meta[name="twitter:description"]': ogDescription,
+      'meta[property="og:image"]': ogImage,
+      'meta[name="twitter:image"]': ogImage,
+    };
+
+    const originalMeta: Record<string, string | null> = {};
+    for (const [selector, value] of Object.entries(metaUpdates)) {
+      let el = document.querySelector<HTMLMetaElement>(selector);
+      if (!el) {
+        el = document.createElement('meta');
+        const attrMatch = selector.match(/\[(\w+)="([^"]+)"\]/);
+        if (attrMatch) el.setAttribute(attrMatch[1], attrMatch[2]);
+        document.head.appendChild(el);
+      }
+      originalMeta[selector] = el.getAttribute('content');
+      if (value) el.setAttribute('content', value);
+    }
+
+    // Update OG URL
+    let ogUrl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+    if (!ogUrl) {
+      ogUrl = document.createElement('meta');
+      ogUrl.setAttribute('property', 'og:url');
+      document.head.appendChild(ogUrl);
+    }
+    ogUrl.setAttribute('content', window.location.href);
+
     return () => {
       document.title = originalTitle;
       if (originalFavicon) {
         const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
         if (link) link.href = originalFavicon;
+      }
+      // Restore original meta tags
+      for (const [selector, value] of Object.entries(originalMeta)) {
+        const el = document.querySelector<HTMLMetaElement>(selector);
+        if (el && value !== null) el.setAttribute('content', value);
       }
     };
   }, [siteConfig]);

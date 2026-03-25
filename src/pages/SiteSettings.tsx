@@ -371,7 +371,7 @@ ${getWorkerCode()}`;
 
               <div className="flex items-center gap-2">
                 <a 
-                  href={`/site/preview?org=${profile?.organization_id}`} 
+                  href={getPublishedSiteUrl() || `/site/preview?org=${profile?.organization_id}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                 >
