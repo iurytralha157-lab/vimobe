@@ -228,11 +228,11 @@ function formatKPIValue(value: string | number, format: string): string {
   }
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel }: { data: any; isLoading?: boolean; periodLabel: string }) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount }: { data: any; isLoading?: boolean; periodLabel: string; propertyCount?: number }) {
   if (isLoading) {
     return (
       <>
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
@@ -250,65 +250,78 @@ function KPICardsGrid({ data, isLoading, periodLabel }: { data: any; isLoading?:
     );
   }
 
-  const kpis = [
+  const topKpis = [
     { title: 'Leads', value: data.totalLeads, trend: data.leadsTrend, icon: Users, tooltip: `Total de leads - ${periodLabel}`, format: 'number', color: 'primary' },
     { title: 'Conversão', value: data.conversionRate, trend: data.conversionTrend, icon: Target, tooltip: 'Taxa de conversão', format: 'percent', color: 'chart-2' },
     { title: 'Ganhos', value: data.closedLeads, trend: data.closedTrend, icon: CheckCircle2, tooltip: `Leads convertidos - ${periodLabel}`, format: 'number', color: 'chart-3' },
-    { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
   ];
+
+  const bottomKpis = [
+    { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
+    { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-4' },
+  ];
+
+  const renderKPI = (kpi: any) => {
+    const Icon = kpi.icon;
+    const hasTrend = kpi.trend !== undefined && kpi.trend !== 0;
+    const isPositive = (kpi.trend ?? 0) >= 0;
+
+    return (
+      <TooltipProvider key={kpi.title}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="card-hover cursor-default">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">{kpi.title}</p>
+                    <p className="text-lg sm:text-2xl font-bold mt-0.5">
+                      {formatKPIValue(kpi.value, kpi.format)}
+                    </p>
+                    {hasTrend && (
+                      <div className="flex items-center gap-0.5 mt-1">
+                        {isPositive ? (
+                          <TrendingUp className="h-3 w-3 text-emerald-500" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-destructive" />
+                        )}
+                        <span className={cn(
+                          "text-[10px] sm:text-xs font-medium",
+                          isPositive ? "text-emerald-500" : "text-destructive"
+                        )}>
+                          {kpi.trend! > 0 ? '+' : ''}{kpi.trend}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.1)` }}
+                  >
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: `hsl(var(--${kpi.color}))` }} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">{kpi.tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   return (
     <>
-      {kpis.map((kpi) => {
-        const Icon = kpi.icon;
-        const hasTrend = kpi.trend !== undefined && kpi.trend !== 0;
-        const isPositive = (kpi.trend ?? 0) >= 0;
-
-        return (
-          <TooltipProvider key={kpi.title}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="card-hover cursor-default">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">{kpi.title}</p>
-                        <p className="text-lg sm:text-2xl font-bold mt-0.5">
-                          {formatKPIValue(kpi.value, kpi.format)}
-                        </p>
-                        {hasTrend && (
-                          <div className="flex items-center gap-0.5 mt-1">
-                            {isPositive ? (
-                              <TrendingUp className="h-3 w-3 text-emerald-500" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3 text-destructive" />
-                            )}
-                            <span className={cn(
-                              "text-[10px] sm:text-xs font-medium",
-                              isPositive ? "text-emerald-500" : "text-destructive"
-                            )}>
-                              {kpi.trend! > 0 ? '+' : ''}{kpi.trend}%
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div
-                        className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.1)` }}
-                      >
-                        <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: `hsl(var(--${kpi.color}))` }} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">{kpi.tooltip}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      })}
+      {/* Row 1: 3 KPIs */}
+      <div className="col-span-2 grid grid-cols-3 gap-3">
+        {topKpis.map(renderKPI)}
+      </div>
+      {/* Row 2: 2 KPIs */}
+      <div className="col-span-2 grid grid-cols-2 gap-3">
+        {bottomKpis.map(renderKPI)}
+      </div>
     </>
   );
 }
