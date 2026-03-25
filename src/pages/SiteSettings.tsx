@@ -694,8 +694,8 @@ ${getWorkerCode()}`;
                           value={[site?.logo_width || 160]}
                           onValueChange={(value) => updateSite.mutate({ logo_width: value[0] })}
                           min={60}
-                          max={500}
-                          step={10}
+                           max={800}
+                           step={10}
                           className="w-full"
                           disabled={!isAdmin}
                         />
@@ -709,8 +709,8 @@ ${getWorkerCode()}`;
                           value={[site?.logo_height || 50]}
                           onValueChange={(value) => updateSite.mutate({ logo_height: value[0] })}
                           min={20}
-                          max={120}
-                          step={5}
+                           max={200}
+                           step={5}
                           className="w-full"
                           disabled={!isAdmin}
                         />
