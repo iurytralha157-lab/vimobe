@@ -130,7 +130,7 @@ export default function Dashboard() {
                 />
               </div>
             ) : (
-              <KPICardsGrid data={kpiData} isLoading={statsLoading} periodLabel={periodLabel} />
+              <KPICardsGrid data={kpiData} isLoading={statsLoading} periodLabel={periodLabel} propertyCount={propertyCount} />
             )}
 
             {/* Row 2: Lead Sources + Evolution */}
