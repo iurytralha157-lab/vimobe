@@ -40,7 +40,7 @@ export default function Dashboard() {
     enabled: !!organization?.id,
   });
 
-  // Running automations count
+  // Running automations count (same logic as ExecutionHistory: running + waiting)
   const { data: runningAutomations = 0 } = useQuery({
     queryKey: ['dashboard-running-automations', organization?.id],
     queryFn: async () => {
@@ -49,23 +49,7 @@ export default function Dashboard() {
         .from('automation_executions')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', organization.id)
-        .eq('status', 'running');
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!organization?.id,
-  });
-
-  // Recovered leads count (redistributed leads)
-  const { data: recoveredLeads = 0 } = useQuery({
-    queryKey: ['dashboard-recovered-leads', organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return 0;
-      const { count, error } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organization.id)
-        .gt('redistribution_count', 0);
+        .in('status', ['running', 'waiting']);
       if (error) throw error;
       return count || 0;
     },
@@ -169,7 +153,6 @@ export default function Dashboard() {
                 periodLabel={periodLabel} 
                 propertyCount={propertyCount}
                 runningAutomations={runningAutomations}
-                recoveredLeads={recoveredLeads}
               />
             )}
 
@@ -241,7 +224,6 @@ import {
   Building2,
   Clock,
   Zap,
-  RefreshCw,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
@@ -278,10 +260,9 @@ interface KPICardsGridProps {
   periodLabel: string;
   propertyCount?: number;
   runningAutomations?: number;
-  recoveredLeads?: number;
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAutomations, recoveredLeads }: KPICardsGridProps) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAutomations }: KPICardsGridProps) {
   if (isLoading) {
     return (
       <>
@@ -300,8 +281,8 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
             </Card>
           ))}
         </div>
-        <div className="col-span-2 grid grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="col-span-2 grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Card key={`bot-${i}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
@@ -329,8 +310,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
   const bottomKpis = [
     { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
     { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-1' },
-    { title: 'Automações', value: runningAutomations ?? 0, icon: Zap, tooltip: 'Automações em andamento', format: 'number', color: 'chart-2' },
-    { title: 'Recuperados', value: recoveredLeads ?? 0, icon: RefreshCw, tooltip: 'Leads recuperados (redistribuídos)', format: 'number', color: 'chart-3' },
+    { title: 'Automações', value: runningAutomations ?? 0, icon: Zap, tooltip: 'Automações em andamento (running + aguardando)', format: 'number', color: 'chart-2' },
   ];
 
   const renderKPI = (kpi: any) => {
@@ -390,8 +370,8 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
       <div className="col-span-2 grid grid-cols-4 gap-3">
         {topKpis.map(renderKPI)}
       </div>
-      {/* Row 2: 4 KPIs */}
-      <div className="col-span-2 grid grid-cols-4 gap-3">
+      {/* Row 2: 3 KPIs */}
+      <div className="col-span-2 grid grid-cols-3 gap-3">
         {bottomKpis.map(renderKPI)}
       </div>
     </>
