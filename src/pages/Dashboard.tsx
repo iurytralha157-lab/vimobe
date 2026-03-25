@@ -261,10 +261,9 @@ interface KPICardsGridProps {
   periodLabel: string;
   propertyCount?: number;
   runningAutomations?: number;
-  recoveredLeads?: number;
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAutomations, recoveredLeads }: KPICardsGridProps) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAutomations }: KPICardsGridProps) {
   if (isLoading) {
     return (
       <>
