@@ -21,8 +21,23 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const isTelecom = organization?.segment === 'telecom';
+
+  // Property count query
+  const { data: propertyCount = 0 } = useQuery({
+    queryKey: ['dashboard-property-count', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
+      const { count, error } = await supabase
+        .from('properties')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organization.id);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id,
+  });
 
   const {
     filters,
