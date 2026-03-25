@@ -81,14 +81,14 @@ export default function PropertyPricing({
         {preco && (
           <div>
             <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
-              {isBoth ? 'Valor de Venda' : isRent ? 'Aluguel' : 'Valor'}
+              {isBoth || hasRentalOption ? 'Valor de Venda' : isRent ? 'Aluguel' : 'Valor'}
             </p>
             <p 
               className="text-3xl md:text-4xl font-bold"
               style={{ color: primaryColor }}
             >
               {formatPrice(preco)}
-              {isRent && <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>}
+              {isRent && !hasRentalOption && <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>}
             </p>
           </div>
         )}
