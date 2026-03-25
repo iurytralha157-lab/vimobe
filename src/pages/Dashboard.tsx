@@ -198,6 +198,7 @@ import {
   Target, 
   CheckCircle2, 
   DollarSign,
+  Building2,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
