@@ -47,6 +47,7 @@ interface PropertyFormData {
   andar: string;
   ano_construcao: string;
   preco: string;
+  valor_locacao: string;
   condominio: string;
   iptu: string;
   seguro_incendio: string;
@@ -122,9 +123,9 @@ interface PropertyFormData {
 const initialFormData: PropertyFormData = {
   title: '', tipo_de_imovel: 'Apartamento', tipo_de_negocio: 'Venda', status: 'ativo',
   destaque: false, endereco: '', numero: '', complemento: '', bairro: '', cidade: '',
-  uf: '', cep: '', quartos: '', suites: '', banheiros: '', vagas: '', area_util: '',
+   uf: '', cep: '', quartos: '', suites: '', banheiros: '', vagas: '', area_util: '',
   area_total: '', mobilia: '', regra_pet: false, andar: '', ano_construcao: '', preco: '',
-  condominio: '', iptu: '', seguro_incendio: '', taxa_de_servico: '', commission_percentage: '',
+  valor_locacao: '', condominio: '', iptu: '', seguro_incendio: '', taxa_de_servico: '', commission_percentage: '',
   descricao: '', imagem_principal: '', fotos: [], video_imovel: '', detalhes_extras: [],
   proximidades: [],
   owner_name: '', owner_phone_residential: '', owner_phone_commercial: '', owner_cellphone: '',
@@ -236,6 +237,7 @@ export default function PropertyForm() {
         area_total: p.area_total?.toString() || '', mobilia: p.mobilia || '',
         regra_pet: p.regra_pet || false, andar: p.andar?.toString() || '',
         ano_construcao: p.ano_construcao?.toString() || '', preco: p.preco?.toString() || '',
+        valor_locacao: p.valor_locacao?.toString() || '',
         condominio: p.condominio?.toString() || '', iptu: p.iptu?.toString() || '',
         seguro_incendio: p.seguro_incendio?.toString() || '',
         taxa_de_servico: p.taxa_de_servico?.toString() || '',
@@ -294,7 +296,8 @@ export default function PropertyForm() {
       area_util: parseNum(formData.area_util), area_total: parseNum(formData.area_total),
       mobilia: formData.mobilia || null, regra_pet: formData.regra_pet,
       andar: parseInt2(formData.andar), ano_construcao: parseInt2(formData.ano_construcao),
-      preco: parseNum(formData.preco), condominio: parseNum(formData.condominio),
+      preco: parseNum(formData.preco), valor_locacao: parseNum(formData.valor_locacao),
+      condominio: parseNum(formData.condominio),
       iptu: parseNum(formData.iptu), seguro_incendio: parseNum(formData.seguro_incendio),
       taxa_de_servico: parseNum(formData.taxa_de_servico),
       commission_percentage: formData.commission_percentage ? parseFloat(formData.commission_percentage) : null,
@@ -910,9 +913,16 @@ export default function PropertyForm() {
             <Card>
               <CardHeader><CardTitle className="text-lg">Valores</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Preço (R$) *</Label>
-                  <Input value={formatCurrencyDisplay(formData.preco)} onChange={e => set('preco', parseCurrencyInput(e.target.value))} placeholder="500.000" className="text-lg font-semibold" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Preço (R$) *</Label>
+                    <Input value={formatCurrencyDisplay(formData.preco)} onChange={e => set('preco', parseCurrencyInput(e.target.value))} placeholder="500.000" className="text-lg font-semibold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor de Locação (R$)</Label>
+                    <Input value={formatCurrencyDisplay(formData.valor_locacao)} onChange={e => set('valor_locacao', parseCurrencyInput(e.target.value))} placeholder="2.500" />
+                    <p className="text-xs text-muted-foreground">Preencha se o imóvel também aceita locação</p>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">

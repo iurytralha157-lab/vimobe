@@ -218,6 +218,7 @@ export default function PublicPropertyDetail() {
           <div className="lg:col-span-1">
             <PropertyPricing
               preco={property.valor_venda || (property as any).preco}
+              valorLocacao={(property as any).valor_locacao}
               tipoNegocio={(property as any).tipo_de_negocio}
               condominio={(property as any).condominio}
               iptu={(property as any).iptu}

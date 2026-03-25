@@ -6,6 +6,7 @@ import { ContactFormDialog } from '@/components/public/ContactFormDialog';
 
 interface PropertyPricingProps {
   preco?: number | null;
+  valorLocacao?: number | null;
   tipoNegocio?: string | null;
   condominio?: number | null;
   iptu?: number | null;
@@ -24,6 +25,7 @@ interface PropertyPricingProps {
 
 export default function PropertyPricing({
   preco,
+  valorLocacao,
   tipoNegocio,
   condominio,
   iptu,
@@ -85,6 +87,22 @@ export default function PropertyPricing({
             >
               {formatPrice(preco)}
               {isRent && <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>}
+            </p>
+          </div>
+        )}
+
+        {/* Rental Value for sale properties */}
+        {valorLocacao && (
+          <div className="pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
+            <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
+              Valor de Locação
+            </p>
+            <p 
+              className="text-xl font-bold"
+              style={{ color: primaryColor, opacity: 0.85 }}
+            >
+              {formatPrice(valorLocacao)}
+              <span className="text-sm font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>
             </p>
           </div>
         )}
