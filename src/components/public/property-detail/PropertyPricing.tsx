@@ -6,6 +6,7 @@ import { ContactFormDialog } from '@/components/public/ContactFormDialog';
 
 interface PropertyPricingProps {
   preco?: number | null;
+  valorLocacao?: number | null;
   tipoNegocio?: string | null;
   condominio?: number | null;
   iptu?: number | null;
@@ -24,6 +25,7 @@ interface PropertyPricingProps {
 
 export default function PropertyPricing({
   preco,
+  valorLocacao,
   tipoNegocio,
   condominio,
   iptu,
