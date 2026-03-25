@@ -3471,6 +3471,7 @@ export type Database = {
           usou_fgts: boolean | null
           vagas: number | null
           valor_itr: number | null
+          valor_locacao: number | null
           valor_locacao_avaliado: number | null
           valor_seguro_fianca: number | null
           valor_venda_avaliado: number | null
@@ -3569,6 +3570,7 @@ export type Database = {
           usou_fgts?: boolean | null
           vagas?: number | null
           valor_itr?: number | null
+          valor_locacao?: number | null
           valor_locacao_avaliado?: number | null
           valor_seguro_fianca?: number | null
           valor_venda_avaliado?: number | null
@@ -3667,6 +3669,7 @@ export type Database = {
           usou_fgts?: boolean | null
           vagas?: number | null
           valor_itr?: number | null
+          valor_locacao?: number | null
           valor_locacao_avaliado?: number | null
           valor_seguro_fianca?: number | null
           valor_venda_avaliado?: number | null
