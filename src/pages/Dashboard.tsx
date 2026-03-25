@@ -322,23 +322,23 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
       <TooltipProvider key={kpi.title}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card className="card-hover cursor-default">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between gap-2">
+            <Card className="card-hover cursor-default h-full">
+              <CardContent className="p-3 sm:p-4 h-full flex items-center">
+                <div className="flex items-center justify-between gap-2 w-full">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] text-muted-foreground truncate">{kpi.title}</p>
-                    <p className="text-base sm:text-lg font-bold mt-0.5 truncate">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{kpi.title}</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-0.5 truncate">
                       {formatKPIValue(kpi.value, kpi.format)}
                     </p>
                     {hasTrend && (
                       <div className="flex items-center gap-0.5 mt-0.5">
                         {isPositive ? (
-                          <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />
+                          <TrendingUp className="h-3 w-3 text-emerald-500" />
                         ) : (
-                          <TrendingDown className="h-2.5 w-2.5 text-destructive" />
+                          <TrendingDown className="h-3 w-3 text-destructive" />
                         )}
                         <span className={cn(
-                          "text-[10px] font-medium",
+                          "text-[11px] sm:text-xs font-medium",
                           isPositive ? "text-emerald-500" : "text-destructive"
                         )}>
                           {kpi.trend! > 0 ? '+' : ''}{kpi.trend}%
@@ -347,10 +347,10 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
                     )}
                   </div>
                   <div
-                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.1)` }}
                   >
-                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: `hsl(var(--${kpi.color}))` }} />
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: `hsl(var(--${kpi.color}))` }} />
                   </div>
                 </div>
               </CardContent>
