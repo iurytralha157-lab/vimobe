@@ -54,6 +54,7 @@ export default function Dashboard() {
       return count || 0;
     },
     enabled: !!organization?.id,
+    refetchInterval: 10000,
   });
 
   const {
