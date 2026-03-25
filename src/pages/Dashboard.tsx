@@ -281,8 +281,8 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
             </Card>
           ))}
         </div>
-        <div className="col-span-2 grid grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="col-span-2 grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Card key={`bot-${i}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
