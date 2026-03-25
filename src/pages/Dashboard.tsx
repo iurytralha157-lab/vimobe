@@ -153,7 +153,6 @@ export default function Dashboard() {
                 periodLabel={periodLabel} 
                 propertyCount={propertyCount}
                 runningAutomations={runningAutomations}
-                recoveredLeads={recoveredLeads}
               />
             )}
 
