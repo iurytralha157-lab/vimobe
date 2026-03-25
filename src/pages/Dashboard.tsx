@@ -370,8 +370,8 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
       <div className="col-span-2 grid grid-cols-4 gap-3">
         {topKpis.map(renderKPI)}
       </div>
-      {/* Row 2: 4 KPIs */}
-      <div className="col-span-2 grid grid-cols-4 gap-3">
+      {/* Row 2: 3 KPIs */}
+      <div className="col-span-2 grid grid-cols-3 gap-3">
         {bottomKpis.map(renderKPI)}
       </div>
     </>
