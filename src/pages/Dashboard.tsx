@@ -224,7 +224,6 @@ import {
   Building2,
   Clock,
   Zap,
-  RefreshCw,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
