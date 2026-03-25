@@ -176,7 +176,7 @@ export default function PublicSiteLayout() {
             className="backdrop-blur-xl rounded-2xl px-8 pl-4"
             style={{ backgroundColor: 'rgba(0,0,0,0.4)', border: 'none' }}
           >
-            <div className="flex justify-between items-center h-[70px]">
+            <div className="flex justify-between items-center h-[80px]">
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
                 {siteConfig.logo_url ? (
@@ -184,8 +184,8 @@ export default function PublicSiteLayout() {
                     src={siteConfig.logo_url} 
                     alt={siteConfig.site_title} 
                     style={{ 
-                      maxWidth: Math.min(siteConfig.logo_width || 200, 260), 
-                      maxHeight: Math.min(siteConfig.logo_height || 55, 55) 
+                      maxWidth: Math.min(siteConfig.logo_width || 200, 320), 
+                      maxHeight: Math.min(siteConfig.logo_height || 55, 70)
                     }}
                     className="w-auto object-contain"
                   />
@@ -304,7 +304,7 @@ export default function PublicSiteLayout() {
                         alt={siteConfig.site_title} 
                         style={{ 
                           maxWidth: Math.min(siteConfig.logo_width || 160, 200), 
-                          maxHeight: Math.min(siteConfig.logo_height || 50, 40) 
+                          maxHeight: Math.min(siteConfig.logo_height || 50, 55) 
                         }}
                         className="w-auto object-contain"
                       />
