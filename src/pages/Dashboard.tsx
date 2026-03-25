@@ -80,7 +80,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Dashboard" disableMainScroll>
-      <div className="space-y-3 animate-fade-in h-full overflow-hidden">
+      <div className="flex flex-col gap-3 animate-fade-in h-full overflow-hidden">
         {/* Onboarding */}
         <OnboardingChecklist />
 
