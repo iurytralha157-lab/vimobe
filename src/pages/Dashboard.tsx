@@ -40,7 +40,7 @@ export default function Dashboard() {
     enabled: !!organization?.id,
   });
 
-  // Running automations count
+  // Running automations count (same logic as ExecutionHistory: running + waiting)
   const { data: runningAutomations = 0 } = useQuery({
     queryKey: ['dashboard-running-automations', organization?.id],
     queryFn: async () => {
@@ -49,23 +49,7 @@ export default function Dashboard() {
         .from('automation_executions')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', organization.id)
-        .eq('status', 'running');
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!organization?.id,
-  });
-
-  // Recovered leads count (redistributed leads)
-  const { data: recoveredLeads = 0 } = useQuery({
-    queryKey: ['dashboard-recovered-leads', organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return 0;
-      const { count, error } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organization.id)
-        .gt('redistribution_count', 0);
+        .in('status', ['running', 'waiting']);
       if (error) throw error;
       return count || 0;
     },
