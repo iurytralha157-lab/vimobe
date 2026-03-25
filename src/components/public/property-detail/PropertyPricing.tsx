@@ -53,6 +53,7 @@ export default function PropertyPricing({
   const isRent = tipoNegocio?.toLowerCase().includes('aluguel');
   const isSale = tipoNegocio?.toLowerCase().includes('venda');
   const isBoth = tipoNegocio?.toLowerCase().includes('venda e aluguel');
+  const hasRentalOption = !!valorLocacao;
 
   // Calculate total monthly cost for rent
   const additionalCosts = [
@@ -62,8 +63,9 @@ export default function PropertyPricing({
     { label: 'Taxa de Serviço', value: taxaServico },
   ].filter(c => c.value);
 
-  const totalMonthlyCost = isRent 
-    ? (preco || 0) + additionalCosts.reduce((sum, c) => sum + (c.value || 0), 0)
+  const rentalBase = isRent ? (preco || 0) : (valorLocacao || 0);
+  const totalMonthlyCost = (isRent || hasRentalOption)
+    ? rentalBase + additionalCosts.reduce((sum, c) => sum + (c.value || 0), 0)
     : null;
 
   const whatsappUrl = whatsappNumber 
@@ -79,14 +81,14 @@ export default function PropertyPricing({
         {preco && (
           <div>
             <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
-              {isBoth ? 'Valor de Venda' : isRent ? 'Aluguel' : 'Valor'}
+              {isBoth || hasRentalOption ? 'Valor de Venda' : isRent ? 'Aluguel' : 'Valor'}
             </p>
             <p 
               className="text-3xl md:text-4xl font-bold"
               style={{ color: primaryColor }}
             >
               {formatPrice(preco)}
-              {isRent && <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>}
+              {isRent && !hasRentalOption && <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>}
             </p>
           </div>
         )}
@@ -118,7 +120,7 @@ export default function PropertyPricing({
             ))}
             
             {/* Total Monthly for Rent */}
-            {isRent && totalMonthlyCost && (
+            {(isRent || hasRentalOption) && totalMonthlyCost && (
               <div className="flex justify-between items-center pt-3" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
                 <span className="font-semibold" style={{ color: textColor, opacity: 0.8 }}>Total Mensal</span>
                 <span 
