@@ -91,6 +91,22 @@ export default function PropertyPricing({
           </div>
         )}
 
+        {/* Rental Value for sale properties */}
+        {valorLocacao && (
+          <div className="pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
+            <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
+              Valor de Locação
+            </p>
+            <p 
+              className="text-xl font-bold"
+              style={{ color: primaryColor, opacity: 0.85 }}
+            >
+              {formatPrice(valorLocacao)}
+              <span className="text-sm font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>
+            </p>
+          </div>
+        )}
+
         {/* Additional Costs */}
         {additionalCosts.length > 0 && (
           <div className="space-y-3 pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
