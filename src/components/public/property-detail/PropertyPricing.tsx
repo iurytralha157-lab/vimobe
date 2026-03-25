@@ -53,6 +53,7 @@ export default function PropertyPricing({
   const isRent = tipoNegocio?.toLowerCase().includes('aluguel');
   const isSale = tipoNegocio?.toLowerCase().includes('venda');
   const isBoth = tipoNegocio?.toLowerCase().includes('venda e aluguel');
+  const hasRentalOption = !!valorLocacao;
 
   // Calculate total monthly cost for rent
   const additionalCosts = [
@@ -62,8 +63,9 @@ export default function PropertyPricing({
     { label: 'Taxa de Serviço', value: taxaServico },
   ].filter(c => c.value);
 
-  const totalMonthlyCost = isRent 
-    ? (preco || 0) + additionalCosts.reduce((sum, c) => sum + (c.value || 0), 0)
+  const rentalBase = isRent ? (preco || 0) : (valorLocacao || 0);
+  const totalMonthlyCost = (isRent || hasRentalOption)
+    ? rentalBase + additionalCosts.reduce((sum, c) => sum + (c.value || 0), 0)
     : null;
 
   const whatsappUrl = whatsappNumber 
