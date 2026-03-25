@@ -7,6 +7,7 @@ import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithP
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
 import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
 import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionChart';
+import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
@@ -39,6 +40,38 @@ export default function Dashboard() {
     enabled: !!organization?.id,
   });
 
+  // Running automations count
+  const { data: runningAutomations = 0 } = useQuery({
+    queryKey: ['dashboard-running-automations', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
+      const { count, error } = await supabase
+        .from('automation_executions')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organization.id)
+        .eq('status', 'running');
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id,
+  });
+
+  // Recovered leads count (redistributed leads)
+  const { data: recoveredLeads = 0 } = useQuery({
+    queryKey: ['dashboard-recovered-leads', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
+      const { count, error } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organization.id)
+        .gt('redistribution_count', 0);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id,
+  });
+
   const {
     filters,
     datePreset,
@@ -64,7 +97,7 @@ export default function Dashboard() {
   const { data: telecomEvolutionData = [], isLoading: telecomEvolutionLoading } = useTelecomEvolutionData(filters);
 
   // Funnel with pipeline selector
-  const { funnelComponent, sourcesComponent } = SalesFunnelWithPipeline({ filters });
+  const { funnelComponent } = SalesFunnelWithPipeline({ filters });
 
   const periodLabel = datePresetOptions.find(o => o.value === datePreset)?.label || 'Período selecionado';
 
@@ -119,7 +152,7 @@ export default function Dashboard() {
 
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-3 flex-1 min-h-0">
-          {/* Left column (col 1-8): KPIs + Sources + Evolution */}
+          {/* Left column (col 1-8): KPIs + Activities + Evolution */}
           <div className="col-span-8 grid grid-cols-2 gap-3 auto-rows-min">
             {isTelecom ? (
               <div className="col-span-2">
@@ -130,11 +163,18 @@ export default function Dashboard() {
                 />
               </div>
             ) : (
-              <KPICardsGrid data={kpiData} isLoading={statsLoading} periodLabel={periodLabel} propertyCount={propertyCount} />
+              <KPICardsGrid 
+                data={kpiData} 
+                isLoading={statsLoading} 
+                periodLabel={periodLabel} 
+                propertyCount={propertyCount}
+                runningAutomations={runningAutomations}
+                recoveredLeads={recoveredLeads}
+              />
             )}
 
-            {/* Row 2: Lead Sources + Evolution */}
-            {sourcesComponent}
+            {/* Row 3: Recent Activities + Evolution */}
+            <RecentActivities />
             {isTelecom ? (
               <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
             ) : (
@@ -169,14 +209,14 @@ export default function Dashboard() {
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
             <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
-              <TabsTrigger value="sources" className="text-xs">Origens</TabsTrigger>
+              <TabsTrigger value="activities" className="text-xs">Atividades</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
               {funnelComponent}
             </TabsContent>
-            <TabsContent value="sources" className="mt-3">
-              {sourcesComponent}
+            <TabsContent value="activities" className="mt-3">
+              <RecentActivities />
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
               {isTelecom ? (
@@ -192,13 +232,16 @@ export default function Dashboard() {
   );
 }
 
-// Separate KPI grid component for the 2x2 desktop layout
+// Separate KPI grid component for the 4+4 desktop layout
 import { 
   Users, 
   Target, 
   CheckCircle2, 
   DollarSign,
   Building2,
+  Clock,
+  Zap,
+  RefreshCw,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
@@ -229,24 +272,49 @@ function formatKPIValue(value: string | number, format: string): string {
   }
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount }: { data: any; isLoading?: boolean; periodLabel: string; propertyCount?: number }) {
+interface KPICardsGridProps {
+  data: any;
+  isLoading?: boolean;
+  periodLabel: string;
+  propertyCount?: number;
+  runningAutomations?: number;
+  recoveredLeads?: number;
+}
+
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAutomations, recoveredLeads }: KPICardsGridProps) {
   if (isLoading) {
     return (
       <>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-6 w-12" />
-                  <Skeleton className="h-3 w-10" />
+        <div className="col-span-2 grid grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={`top-${i}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-lg" />
                 </div>
-                <Skeleton className="h-9 w-9 rounded-lg" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="col-span-2 grid grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={`bot-${i}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-6 w-12" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </>
     );
   }
@@ -255,11 +323,14 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount }: { data: a
     { title: 'Leads', value: data.totalLeads, trend: data.leadsTrend, icon: Users, tooltip: `Total de leads - ${periodLabel}`, format: 'number', color: 'primary' },
     { title: 'Conversão', value: data.conversionRate, trend: data.conversionTrend, icon: Target, tooltip: 'Taxa de conversão', format: 'percent', color: 'chart-2' },
     { title: 'Ganhos', value: data.closedLeads, trend: data.closedTrend, icon: CheckCircle2, tooltip: `Leads convertidos - ${periodLabel}`, format: 'number', color: 'chart-3' },
+    { title: 'Tempo Resp.', value: data.avgResponseTime, icon: Clock, tooltip: 'Tempo médio de primeira resposta', format: 'time', color: 'chart-4' },
   ];
 
   const bottomKpis = [
     { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
-    { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-4' },
+    { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-1' },
+    { title: 'Automações', value: runningAutomations ?? 0, icon: Zap, tooltip: 'Automações em andamento', format: 'number', color: 'chart-2' },
+    { title: 'Recuperados', value: recoveredLeads ?? 0, icon: RefreshCw, tooltip: 'Leads recuperados (redistribuídos)', format: 'number', color: 'chart-3' },
   ];
 
   const renderKPI = (kpi: any) => {
@@ -272,22 +343,22 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount }: { data: a
         <Tooltip>
           <TooltipTrigger asChild>
             <Card className="card-hover cursor-default">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-3">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">{kpi.title}</p>
-                    <p className="text-lg sm:text-2xl font-bold mt-0.5">
+                    <p className="text-[10px] text-muted-foreground truncate">{kpi.title}</p>
+                    <p className="text-base sm:text-lg font-bold mt-0.5 truncate">
                       {formatKPIValue(kpi.value, kpi.format)}
                     </p>
                     {hasTrend && (
-                      <div className="flex items-center gap-0.5 mt-1">
+                      <div className="flex items-center gap-0.5 mt-0.5">
                         {isPositive ? (
-                          <TrendingUp className="h-3 w-3 text-emerald-500" />
+                          <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />
                         ) : (
-                          <TrendingDown className="h-3 w-3 text-destructive" />
+                          <TrendingDown className="h-2.5 w-2.5 text-destructive" />
                         )}
                         <span className={cn(
-                          "text-[10px] sm:text-xs font-medium",
+                          "text-[10px] font-medium",
                           isPositive ? "text-emerald-500" : "text-destructive"
                         )}>
                           {kpi.trend! > 0 ? '+' : ''}{kpi.trend}%
@@ -296,10 +367,10 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount }: { data: a
                     )}
                   </div>
                   <div
-                    className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.1)` }}
                   >
-                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: `hsl(var(--${kpi.color}))` }} />
+                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: `hsl(var(--${kpi.color}))` }} />
                   </div>
                 </div>
               </CardContent>
@@ -315,12 +386,12 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount }: { data: a
 
   return (
     <>
-      {/* Row 1: 3 KPIs */}
-      <div className="col-span-2 grid grid-cols-3 gap-3">
+      {/* Row 1: 4 KPIs */}
+      <div className="col-span-2 grid grid-cols-4 gap-3">
         {topKpis.map(renderKPI)}
       </div>
-      {/* Row 2: 2 KPIs */}
-      <div className="col-span-2 grid grid-cols-2 gap-3">
+      {/* Row 2: 4 KPIs */}
+      <div className="col-span-2 grid grid-cols-4 gap-3">
         {bottomKpis.map(renderKPI)}
       </div>
     </>
