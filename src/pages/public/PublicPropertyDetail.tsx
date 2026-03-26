@@ -26,7 +26,17 @@ export default function PublicPropertyDetail() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Get base path for preview mode
+  // Track property-specific pageview when property loads
+  useEffect(() => {
+    if (property?.id && organizationId) {
+      trackPageView({
+        organizationId,
+        pagePath: location.pathname,
+        propertyId: property.id,
+      });
+    }
+  }, [property?.id, organizationId, location.pathname]);
+
   const isPreviewMode = location.pathname.includes('/site/preview');
   const orgParam = searchParams.get('org');
   
