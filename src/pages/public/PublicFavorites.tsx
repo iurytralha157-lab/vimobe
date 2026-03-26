@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function PublicFavorites() {
   const { organizationId, siteConfig } = usePublicContext();
-  const { favorites, count, toggleFavorite, isFavorite } = usePublicFavorites();
+  const { favorites, count, toggleFavorite, isFavorite } = usePublicFavorites(organizationId);
   const location = useLocation();
   const primaryColor = siteConfig?.primary_color || '#C4A052';
   const secondaryColor = siteConfig?.secondary_color || '#0D0D0D';
