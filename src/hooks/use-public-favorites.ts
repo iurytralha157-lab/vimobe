@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { trackFavorite } from '@/hooks/use-site-analytics';
 
 const STORAGE_KEY = 'public_site_favorites';
 const SYNC_EVENT = 'public_favorites_changed';
@@ -8,7 +9,6 @@ function getFavorites(): string[] {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
     const parsed = JSON.parse(stored);
-    // Ensure it's a valid array of strings
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((id: unknown) => typeof id === 'string' && id.length > 0);
   } catch {
@@ -18,14 +18,12 @@ function getFavorites(): string[] {
 
 function saveFavorites(ids: string[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  // Dispatch custom event for same-tab sync between hook instances
   window.dispatchEvent(new CustomEvent(SYNC_EVENT));
 }
 
-export function usePublicFavorites() {
+export function usePublicFavorites(organizationId?: string) {
   const [favorites, setFavorites] = useState<string[]>(getFavorites);
 
-  // Sync across tabs (StorageEvent) AND within the same tab (custom event)
   useEffect(() => {
     const syncFromStorage = () => {
       setFavorites(getFavorites());
@@ -44,13 +42,19 @@ export function usePublicFavorites() {
   }, []);
 
   const toggleFavorite = useCallback((propertyId: string) => {
-    const current = getFavorites(); // Read fresh from localStorage
-    const next = current.includes(propertyId)
-      ? current.filter(id => id !== propertyId)
-      : [...current, propertyId];
+    const current = getFavorites();
+    const isAdding = !current.includes(propertyId);
+    const next = isAdding
+      ? [...current, propertyId]
+      : current.filter(id => id !== propertyId);
     saveFavorites(next);
     setFavorites(next);
-  }, []);
+
+    // Track favorite event for analytics (only when adding)
+    if (isAdding && organizationId) {
+      trackFavorite(organizationId, propertyId);
+    }
+  }, [organizationId]);
 
   const isFavorite = useCallback((propertyId: string) => {
     return favorites.includes(propertyId);

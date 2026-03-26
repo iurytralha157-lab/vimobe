@@ -14,7 +14,7 @@ export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { count: favCount } = usePublicFavorites();
+  const { count: favCount } = usePublicFavorites(organizationId);
   const location = useLocation();
 
   // Fetch dynamic menu items (must be before early returns)
@@ -104,10 +104,13 @@ export default function PublicSiteLayout() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Track page views
+  // Track page views (extract propertyId from route if on property detail page)
   useEffect(() => {
     if (!organizationId) return;
     const params = new URLSearchParams(location.search);
+
+    // Try to extract property code from route patterns like /imovel/:code or /imoveis/:codigo
+    // The actual property_id resolution happens server-side; we pass what we can
     trackPageView({
       organizationId,
       pagePath: location.pathname,

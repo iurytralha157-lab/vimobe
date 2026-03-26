@@ -1,10 +1,12 @@
 import { useParams, Link, useLocation, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
 import { getDisplayPropertyType } from "@/lib/property-display-utils";
 import { usePublicProperty } from "@/hooks/use-public-site";
 import { MapPin, ArrowLeft, Building, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { usePublicContext } from "./usePublicContext";
+import { trackPageView } from "@/hooks/use-site-analytics";
 import {
   PropertyGallery,
   PropertyFeatures,
@@ -24,7 +26,17 @@ export default function PublicPropertyDetail() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Get base path for preview mode
+  // Track property-specific pageview when property loads
+  useEffect(() => {
+    if (property?.id && organizationId) {
+      trackPageView({
+        organizationId,
+        pagePath: location.pathname,
+        propertyId: property.id,
+      });
+    }
+  }, [property?.id, organizationId, location.pathname]);
+
   const isPreviewMode = location.pathname.includes('/site/preview');
   const orgParam = searchParams.get('org');
   

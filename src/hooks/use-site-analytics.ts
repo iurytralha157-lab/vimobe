@@ -25,6 +25,16 @@ export interface SiteAnalyticsSummary {
   prevConversions: number;
 }
 
+export interface SiteAnalyticsDetailed {
+  topProperties: { property_id: string; title: string; code: string; views: number; favorites: number }[];
+  topPages: { page_path: string; views: number }[];
+  dailyViews: { date: string; views: number }[];
+  conversionRate: number;
+  totalSessions: number;
+  totalConversions: number;
+  siteLeads: number;
+}
+
 export function useSiteAnalytics(dateFrom?: Date, dateTo?: Date) {
   const { organization } = useAuth();
 
@@ -39,7 +49,6 @@ export function useSiteAnalytics(dateFrom?: Date, dateTo?: Date) {
 
       if (error) {
         console.error('Site analytics RPC error:', error);
-        // Return empty data instead of throwing so the tab still renders
         return {
           totalViews: 0, totalPages: 0, uniquePages: 0, uniqueSessions: 0,
           avgDuration: 0, desktopPct: 0, mobilePct: 0, tabletPct: 0,
@@ -49,7 +58,6 @@ export function useSiteAnalytics(dateFrom?: Date, dateTo?: Date) {
         };
       }
       
-      // RPC returns the JSON directly
       const result = data || {};
       return {
         totalViews: result.totalViews ?? 0,
@@ -78,6 +86,41 @@ export function useSiteAnalytics(dateFrom?: Date, dateTo?: Date) {
   });
 }
 
+export function useSiteAnalyticsDetailed(dateFrom?: Date, dateTo?: Date) {
+  const { organization } = useAuth();
+
+  return useQuery({
+    queryKey: ['site-analytics-detailed', organization?.id, dateFrom?.toISOString(), dateTo?.toISOString()],
+    queryFn: async (): Promise<SiteAnalyticsDetailed> => {
+      const { data, error } = await (supabase.rpc as any)('get_site_analytics_detailed', {
+        p_organization_id: organization!.id,
+        p_date_from: (dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).toISOString(),
+        p_date_to: (dateTo || new Date()).toISOString(),
+      });
+
+      if (error) {
+        console.error('Site analytics detailed RPC error:', error);
+        return {
+          topProperties: [], topPages: [], dailyViews: [],
+          conversionRate: 0, totalSessions: 0, totalConversions: 0, siteLeads: 0,
+        };
+      }
+
+      const result = data || {};
+      return {
+        topProperties: result.topProperties ?? [],
+        topPages: result.topPages ?? [],
+        dailyViews: result.dailyViews ?? [],
+        conversionRate: result.conversionRate ?? 0,
+        totalSessions: result.totalSessions ?? 0,
+        totalConversions: result.totalConversions ?? 0,
+        siteLeads: result.siteLeads ?? 0,
+      };
+    },
+    enabled: !!organization?.id,
+  });
+}
+
 // Track a pageview from the public site
 export async function trackPageView(params: {
   organizationId: string;
@@ -87,21 +130,19 @@ export async function trackPageView(params: {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  propertyId?: string;
 }) {
-  // Generate or retrieve session ID
   let sessionId = sessionStorage.getItem('_vimobe_sid');
   if (!sessionId) {
     sessionId = crypto.randomUUID();
     sessionStorage.setItem('_vimobe_sid', sessionId);
   }
 
-  // Detect device type
   const width = window.innerWidth;
   let deviceType = 'desktop';
   if (width <= 768) deviceType = 'mobile';
   else if (width <= 1024) deviceType = 'tablet';
 
-  // Get browser name
   const ua = navigator.userAgent;
   let browser = 'other';
   if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'chrome';
@@ -124,10 +165,35 @@ export async function trackPageView(params: {
       browser,
       screen_width: window.screen.width,
       screen_height: window.screen.height,
+      property_id: params.propertyId || null,
     });
   } catch (e) {
-    // Silent fail - don't break the site
     console.warn('Analytics tracking failed:', e);
+  }
+}
+
+export async function trackFavorite(organizationId: string, propertyId: string) {
+  let sessionId = sessionStorage.getItem('_vimobe_sid') || crypto.randomUUID();
+
+  const width = window.innerWidth;
+  let deviceType = 'desktop';
+  if (width <= 768) deviceType = 'mobile';
+  else if (width <= 1024) deviceType = 'tablet';
+
+  try {
+    await (supabase.from('site_analytics_events') as any).insert({
+      organization_id: organizationId,
+      session_id: sessionId,
+      event_type: 'favorite',
+      page_path: window.location.pathname,
+      page_title: document.title,
+      device_type: deviceType,
+      screen_width: window.screen.width,
+      screen_height: window.screen.height,
+      property_id: propertyId,
+    });
+  } catch (e) {
+    console.warn('Analytics favorite tracking failed:', e);
   }
 }
 

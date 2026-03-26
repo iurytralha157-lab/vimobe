@@ -14,7 +14,7 @@ import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
-  const { isFavorite, toggleFavorite } = usePublicFavorites();
+  const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
   const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
   const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
   const allProperties = allPropertiesData?.properties || [];

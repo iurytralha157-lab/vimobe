@@ -14,7 +14,7 @@ import { usePublicFavorites } from "@/hooks/use-public-favorites";
 
 export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicContext();
-  const { isFavorite, toggleFavorite } = usePublicFavorites();
+  const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [showMoreFilters, setShowMoreFilters] = useState(false);
