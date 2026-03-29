@@ -51,7 +51,7 @@ export function TrialExpiredModal() {
 
   const whatsappNumber = systemSettings?.contact_whatsapp || systemSettings?.default_whatsapp || '5511999999999';
   const whatsappMessage = encodeURIComponent(
-    `Olá! Meu período de teste no sistema expirou e gostaria de continuar utilizando. Organização: ${organization?.name}`
+    `Olá! Meu período de avaliação no sistema expirou e gostaria de continuar utilizando. Organização: ${organization?.name}`
   );
   const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${whatsappMessage}`;
 
