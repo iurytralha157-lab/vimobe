@@ -82,7 +82,7 @@ export function DnsVerificationStatus({
             Verifique se o Cloudflare Worker está ativo e a rota está configurada corretamente para o domínio.
           </p>
           <p className="text-xs text-muted-foreground">
-            Teste em{' '}
+            Testar em{' '}
             <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="text-primary underline">
               {domain}
             </a>
