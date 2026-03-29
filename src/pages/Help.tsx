@@ -96,8 +96,8 @@ const helpSections = [
         answer: 'O botão verde no canto inferior direito abre o chat flutuante. Ele permite responder mensagens rapidamente sem sair da tela atual. Você vê a lista de conversas recentes e pode trocar entre elas.'
       },
       {
-        question: 'Como enviar arquivos e imagens?',
-        answer: 'No chat, clique no ícone de anexo ao lado do campo de texto. Você pode enviar fotos, documentos PDF e outros arquivos. Eles serão entregues via WhatsApp para o cliente.'
+        question: 'Me manda como está funcionando hoje o sistema para receber imagens e audios no wpp?',
+        answer: 'O sistema recebe automaticamente imagens e áudios enviados pelos seus clientes no WhatsApp. Você pode visualizá-los e ouvi-los diretamente no chat do CRM. Para enviar arquivos, use o ícone de anexo no chat.',
       },
     ]
   },
