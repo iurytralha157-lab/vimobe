@@ -66,7 +66,7 @@ export function TrialExpiredModal() {
           <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
             <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
           </div>
-          <DialogTitle className="text-xl">Seu período de teste expirou</DialogTitle>
+          <DialogTitle className="text-xl">Seu período de avaliação expirou</DialogTitle>
           <DialogDescription className="text-base pt-2">
             O período de avaliação gratuita do sistema chegou ao fim. 
             Para continuar utilizando todas as funcionalidades, entre em contato conosco.
