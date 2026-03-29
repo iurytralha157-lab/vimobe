@@ -155,7 +155,7 @@ export default function AdminDashboard() {
                 {trialsExpiringSoon > 0 && (
                   <span className="text-orange-600">{trialsExpiringSoon} expirando</span>
                 )}
-                {trialsExpiringSoon === 0 && 'período de teste'}
+                {trialsExpiringSoon === 0 && 'período de avaliação'}
               </p>
             </CardContent>
           </Card>
