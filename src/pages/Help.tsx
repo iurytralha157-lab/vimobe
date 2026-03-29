@@ -92,7 +92,7 @@ const helpSections = [
         answer: 'Acesse o menu "Conversas" para ver todas as conversas ativas. Clique em uma conversa para abrir o chat e enviar mensagens. Você também pode iniciar uma conversa clicando no botão de WhatsApp no card do lead.'
       },
       {
-        question: 'Como funciona o chat flutuante?',
+        question: 'Quer que eu explique como está funcionando o chat?',
         answer: 'O botão verde no canto inferior direito abre o chat flutuante. Ele permite responder mensagens rapidamente sem sair da tela atual. Você vê a lista de conversas recentes e pode trocar entre elas.'
       },
       {
