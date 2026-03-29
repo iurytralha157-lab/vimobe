@@ -364,15 +364,14 @@ export default function Auth() {
 
                   <div className="flex items-center justify-between mt-3 px-1">
                     <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         id="remember-me"
                         checked={rememberMe}
-                        onChange={(e) => {
-                          setRememberMe(e.target.checked);
-                          localStorage.setItem('remember_me', e.target.checked.toString());
+                        onCheckedChange={(checked) => {
+                          const isChecked = checked === true;
+                          setRememberMe(isChecked);
+                          localStorage.setItem('remember_me', isChecked.toString());
                         }}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
                       <label htmlFor="remember-me" className="text-xs text-muted-foreground cursor-pointer select-none">
                         Lembrar-me
