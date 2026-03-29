@@ -96,7 +96,7 @@ const helpSections = [
         answer: 'O botão verde no canto inferior direito abre o chat flutuante. Ele permite responder mensagens rapidamente sem sair da tela atual. Você vê a lista de conversas recentes e pode trocar entre elas.'
       },
       {
-        question: 'Me manda como está funcionando hoje o sistema para receber imagens e audios no wpp?',
+        question: 'Quer que eu explique como está funcionando o chat?',
         answer: 'O sistema recebe automaticamente imagens e áudios enviados pelos seus clientes no WhatsApp. Você pode visualizá-los e ouvi-los diretamente no chat do CRM. Para enviar arquivos, use o ícone de anexo no chat.',
       },
     ]
