@@ -9,6 +9,7 @@ import { useLoginAttempts } from "@/hooks/use-login-attempts";
 import { usePasswordStrength, type PasswordStrength } from "@/hooks/use-password-strength";
 import { useSecurityLogger } from "@/hooks/use-security-logger";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
