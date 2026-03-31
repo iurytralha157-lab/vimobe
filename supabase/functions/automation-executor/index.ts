@@ -129,9 +129,9 @@ Deno.serve(async (req) => {
           nextNodeId = actionConnection?.target_node_id || null;
           break;
 
-        case "condition":
-          // Evaluate condition
-          const conditionResult = evaluateCondition(nodeConfig, execution, executionData);
+        case "condition": {
+          // Evaluate condition (now async for response_sentiment)
+          const conditionResult = await evaluateCondition(supabase, nodeConfig, execution, executionData);
           console.log(`Condition evaluated to: ${conditionResult}`);
           
           // Find connection for this branch
@@ -141,6 +141,7 @@ Deno.serve(async (req) => {
               c.condition_branch === (conditionResult ? "true" : "false")
           );
           nextNodeId = branchConnection?.target_node_id || null;
+        }
           break;
 
         case "delay": {
