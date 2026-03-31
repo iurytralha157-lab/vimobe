@@ -1111,15 +1111,15 @@ async function sendMediaMessage(
   });
 }
 
-function evaluateCondition(
+// deno-lint-ignore no-explicit-any
+async function evaluateCondition(
+  supabase: any,
   config: Record<string, unknown>,
   execution: { lead_id?: string; conversation_id?: string },
   _executionData: Record<string, unknown>
-): boolean {
+): Promise<boolean> {
   const conditionType = config.condition_type || config.type;
-  const conditionValue = config.condition_value || config.value;
 
-  // For now, simple conditions - can be expanded
   switch (conditionType) {
     case "has_lead":
       return !!execution.lead_id;
@@ -1129,6 +1129,78 @@ function evaluateCondition(
       return true;
     case "always_false":
       return false;
+
+    case "response_sentiment": {
+      // Fetch the last incoming message from the lead's conversation
+      if (!execution.lead_id) {
+        console.log("response_sentiment: no lead_id, returning false");
+        return false;
+      }
+
+      // Find conversations for this lead
+      const { data: conversations } = await supabase
+        .from("whatsapp_conversations")
+        .select("id")
+        .eq("lead_id", execution.lead_id)
+        .is("deleted_at", null);
+
+      if (!conversations || conversations.length === 0) {
+        console.log("response_sentiment: no conversations found for lead");
+        return false;
+      }
+
+      const convIds = conversations.map((c: { id: string }) => c.id);
+
+      // Get the last incoming message
+      const { data: lastMsg } = await supabase
+        .from("whatsapp_messages")
+        .select("content")
+        .in("conversation_id", convIds)
+        .eq("from_me", false)
+        .order("sent_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!lastMsg?.content) {
+        console.log("response_sentiment: no incoming message found");
+        return false;
+      }
+
+      const messageText = lastMsg.content.trim().toLowerCase();
+      console.log(`response_sentiment: analyzing message "${messageText}"`);
+
+      // Parse keyword lists from config
+      const defaultPositive = "sim, claro, quero, pode, beleza, bora, vamos, aceito, ok, com certeza, fechado, top, pode ser, show, perfeito, ótimo, massa, interessado";
+      const defaultNegative = "não, nao, nope, sem interesse, desculpa, obrigado mas não, talvez não, deixa pra lá, não quero, não preciso, dispenso, valeu mas não";
+
+      const positiveKeywords = ((config.positive_keywords as string) || defaultPositive)
+        .split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean);
+      const negativeKeywords = ((config.negative_keywords as string) || defaultNegative)
+        .split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean);
+
+      // Check if message matches any positive keyword
+      const isPositive = positiveKeywords.some((kw: string) => messageText.includes(kw));
+      const isNegative = negativeKeywords.some((kw: string) => messageText.includes(kw));
+
+      console.log(`response_sentiment: positive=${isPositive}, negative=${isNegative}`);
+
+      // If both match, prioritize exact/shorter matches; if only positive, true; otherwise false
+      if (isPositive && !isNegative) return true;
+      if (isNegative && !isPositive) return false;
+      if (isPositive && isNegative) {
+        // Both matched - check which keyword is a closer match (longer keyword = more specific)
+        const bestPositive = positiveKeywords.filter((kw: string) => messageText.includes(kw))
+          .sort((a: string, b: string) => b.length - a.length)[0] || "";
+        const bestNegative = negativeKeywords.filter((kw: string) => messageText.includes(kw))
+          .sort((a: string, b: string) => b.length - a.length)[0] || "";
+        return bestPositive.length >= bestNegative.length;
+      }
+
+      // No match found - default to false (unrecognized)
+      console.log("response_sentiment: no keyword match, returning false");
+      return false;
+    }
+
     default:
       // Default to true for unknown conditions
       return true;

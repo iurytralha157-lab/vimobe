@@ -548,6 +548,80 @@ export function NodeConfigPanel({
             </div>
           )}
 
+          {selectedNode.type === 'condition' && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tipo de condição</Label>
+                <Select value={selectedNode.data.condition_type || 'custom'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { condition_type: v })}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent className="z-[200]">
+                    <SelectItem value="response_sentiment">Resposta do lead (positiva/negativa)</SelectItem>
+                    <SelectItem value="custom">Variável personalizada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(selectedNode.data.condition_type || 'custom') === 'response_sentiment' && (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-muted-foreground">
+                    Analisa a última mensagem recebida do lead e classifica como positiva ou negativa.
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-green-600 dark:text-green-400">Palavras positivas</Label>
+                    <Textarea
+                      value={selectedNode.data.positive_keywords || 'sim, claro, quero, pode, beleza, bora, vamos, aceito, ok, com certeza, fechado, top, pode ser, show, perfeito, ótimo, massa, interessado'}
+                      onChange={(e) => onNodeDataChange(selectedNode.id, { positive_keywords: e.target.value })}
+                      rows={3}
+                      className="text-xs"
+                      placeholder="sim, claro, quero, pode..."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-red-600 dark:text-red-400">Palavras negativas</Label>
+                    <Textarea
+                      value={selectedNode.data.negative_keywords || 'não, nao, nope, sem interesse, desculpa, obrigado mas não, talvez não, deixa pra lá, não quero, não preciso, dispenso, valeu mas não'}
+                      onChange={(e) => onNodeDataChange(selectedNode.id, { negative_keywords: e.target.value })}
+                      rows={3}
+                      className="text-xs"
+                      placeholder="não, nao, sem interesse..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(selectedNode.data.condition_type || 'custom') === 'custom' && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Variável</Label>
+                    <Input value={selectedNode.data.variable || ''} placeholder="Ex: lead.source" className="h-9"
+                      onChange={(e) => onNodeDataChange(selectedNode.id, { variable: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Operador</Label>
+                    <Select value={selectedNode.data.operator || 'equals'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { operator: v })}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent className="z-[200]">
+                        <SelectItem value="equals">Igual a</SelectItem>
+                        <SelectItem value="not_equals">Diferente de</SelectItem>
+                        <SelectItem value="contains">Contém</SelectItem>
+                        <SelectItem value="not_contains">Não contém</SelectItem>
+                        <SelectItem value="greater_than">Maior que</SelectItem>
+                        <SelectItem value="less_than">Menor que</SelectItem>
+                        <SelectItem value="is_set">Existe</SelectItem>
+                        <SelectItem value="is_not_set">Não existe</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Valor</Label>
+                    <Input value={selectedNode.data.value || ''} placeholder="Valor esperado" className="h-9"
+                      onChange={(e) => onNodeDataChange(selectedNode.id, { value: e.target.value })} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="pt-3 border-t border-border space-y-2">
             {onSaveNode && (
               <Button size="sm" className="w-full h-8 text-xs" onClick={onSaveNode}>
