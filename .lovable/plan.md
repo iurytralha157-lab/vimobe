@@ -1,49 +1,32 @@
 
 
-# Nó "Resposta Positiva/Negativa" nas Automações
+# Fix: Condições não salvando nas automações
 
 ## Problema
-Hoje o nó de **Condição** existe mas funciona com variáveis genéricas e operadores lógicos simples. Não existe uma forma prática de avaliar se a resposta do lead no WhatsApp foi **positiva** (sim, claro, pode ser, etc.) ou **negativa** (não, não quero, sem interesse, etc.).
+Quando o usuário configura o nó de Condição (tanto "Resposta do lead" quanto "Variável personalizada"), os dados não persistem. Ao reabrir o painel, tudo volta ao estado inicial.
+
+**Causa raiz**: Os campos usam valores fallback no JSX (ex: `selectedNode.data.positive_keywords || 'sim, claro...'`), mas esses defaults nunca são escritos no `node.data`. Quando o usuário seleciona "Resposta do lead" sem editar as palavras-chave, nada é salvo. Além disso, ao trocar o tipo de condição, apenas `condition_type` é persistido — os campos associados não são inicializados.
 
 ## Solução
-Criar um novo tipo de condição chamado **"Análise de Resposta"** (`response_sentiment`) dentro do nó de Condição existente. Ele analisa a última mensagem recebida do lead e classifica como positiva ou negativa usando uma lista de palavras-chave (sem necessidade de IA).
 
-## Como vai funcionar
+### Arquivo: `src/components/automations/NodeConfigPanel.tsx`
 
-```text
-[Mensagem] → [Espera (se responder)] → [Condição: Resposta Positiva?]
-                                            ├── Sim → [Continua fluxo]
-                                            └── Não → [Outra ação]
-```
+1. **Ao trocar `condition_type` para `response_sentiment`**: escrever imediatamente os defaults das keywords no `node.data`
+2. **Ao trocar `condition_type` para `custom`**: limpar os campos de sentiment e inicializar os campos de variável
+3. **Remover os fallbacks inline** dos `value` das textareas/inputs — usar apenas o que está em `node.data`
 
-O usuário seleciona no painel do nó de Condição o tipo **"Resposta do lead"**, e o sistema automaticamente avalia a última mensagem recebida.
+Mudanças concretas no `onValueChange` do Select de tipo de condição (linha ~555):
+- Quando `response_sentiment`: chamar `onNodeDataChange` com `condition_type`, `positive_keywords` (default), `negative_keywords` (default)
+- Quando `custom`: chamar `onNodeDataChange` com `condition_type`, `variable: ''`, `operator: 'equals'`, `value: ''`
 
-## Detalhes Técnicos
+Nos campos de textarea (linhas ~572, ~582):
+- Trocar `selectedNode.data.positive_keywords || 'sim, claro...'` por apenas `selectedNode.data.positive_keywords ?? ''`
+- Idem para `negative_keywords`
 
-### 1. Atualizar o ConditionNode visual (sem mudanças de layout)
-- Exibir "Resposta positiva?" como label quando o tipo for `response_sentiment`
+Isso garante que ao selecionar o tipo, os defaults são gravados no estado do nó, e qualquer edição subsequente também persiste corretamente.
 
-### 2. Atualizar o NodeConfigPanel (nó condition)
-- Adicionar um seletor de tipo de condição: **"Resposta do lead"** (response_sentiment) e **"Variável personalizada"** (custom)
-- Quando `response_sentiment`: mostrar campo editável com palavras positivas (default: sim, claro, quero, pode, beleza, bora, vamos, aceito, ok, com certeza, fechado, top) e palavras negativas (default: não, nao, nope, sem interesse, desculpa, obrigado, talvez não, deixa pra lá)
-- Quando `custom`: manter o comportamento atual (variável + operador + valor)
-
-### 3. Atualizar `evaluateCondition` no automation-executor
-- Quando `condition_type === 'response_sentiment'`:
-  - Buscar a última mensagem recebida (`direction = 'incoming'`) da conversa do lead
-  - Comparar o texto com as listas de palavras positivas/negativas configuradas
-  - Retornar `true` se positiva, `false` se negativa ou não reconhecida
-
-### 4. Arquivos a modificar
+## Arquivos modificados
 | Arquivo | Mudança |
 |---|---|
-| `src/components/automations/nodes/ConditionNode.tsx` | Mostrar label contextual baseado no tipo |
-| `src/components/automations/NodeConfigPanel.tsx` | Adicionar config de tipo de condição + listas de palavras |
-| `supabase/functions/automation-executor/index.ts` | Expandir `evaluateCondition` para buscar última mensagem e classificar sentimento |
-
-### 5. Listas de palavras default (editáveis pelo usuário)
-- **Positivas**: sim, claro, quero, pode, beleza, bora, vamos, aceito, ok, com certeza, fechado, top, pode ser, show, perfeito, ótimo, massa, interessado
-- **Negativas**: não, nao, nope, sem interesse, desculpa, obrigado mas não, talvez não, deixa pra lá, não quero, não preciso, dispenso, valeu mas não
-
-O matching será case-insensitive e com trim, verificando se a mensagem contém qualquer uma das palavras/frases da lista.
+| `src/components/automations/NodeConfigPanel.tsx` | Inicializar defaults ao trocar tipo de condição; remover fallbacks inline |
 
