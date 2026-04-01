@@ -227,7 +227,7 @@ export default function AdminRequests() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={config.variant}>
+                            <Badge variant={config.variant} className={(config as any).className}>
                               <StatusIcon className="h-3 w-3 mr-1" />
                               {config.label}
                             </Badge>
