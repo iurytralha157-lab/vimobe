@@ -45,8 +45,8 @@ import { ptBR } from 'date-fns/locale';
 const STATUS_CONFIG = {
   pending: { label: 'Pendente', variant: 'secondary' as const, icon: Clock },
   analyzing: { label: 'Em Análise', variant: 'default' as const, icon: Search },
-  approved: { label: 'Aprovado', variant: 'default' as const, icon: CheckCircle2 },
-  rejected: { label: 'Não Aprovado', variant: 'destructive' as const, icon: XCircle },
+  approved: { label: 'Aprovada', variant: 'default' as const, icon: CheckCircle2, className: "bg-green-500 hover:bg-green-600 text-white border-transparent" },
+  rejected: { label: 'Não Aprovada', variant: 'destructive' as const, icon: XCircle },
 };
 
 type RequestStatus = keyof typeof STATUS_CONFIG;
