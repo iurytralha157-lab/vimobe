@@ -4,12 +4,13 @@ import { useMyFeatureRequests } from '@/hooks/use-feature-requests';
 import { FileText, Clock, CheckCircle2, XCircle, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pendente', variant: 'secondary' as const, icon: Clock },
   analyzing: { label: 'Em Análise', variant: 'default' as const, icon: Search },
-  approved: { label: 'Aprovado', variant: 'default' as const, icon: CheckCircle2 },
-  rejected: { label: 'Não Aprovado', variant: 'destructive' as const, icon: XCircle },
+  approved: { label: 'Aprovada', variant: 'default' as const, icon: CheckCircle2, className: "bg-green-500 hover:bg-green-600 text-white border-transparent" },
+  rejected: { label: 'Não Aprovada', variant: 'destructive' as const, icon: XCircle },
 };
 
 export function MyRequestsList() {
@@ -56,7 +57,7 @@ export function MyRequestsList() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium text-sm">{request.title}</h4>
-                    <Badge variant={config.variant} className="text-xs">
+                    <Badge variant={config.variant} className={cn("text-xs", (config as any).className)}>
                       <StatusIcon className="h-3 w-3 mr-1" />
                       {config.label}
                     </Badge>

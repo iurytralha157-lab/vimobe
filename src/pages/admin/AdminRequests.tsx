@@ -45,8 +45,8 @@ import { ptBR } from 'date-fns/locale';
 const STATUS_CONFIG = {
   pending: { label: 'Pendente', variant: 'secondary' as const, icon: Clock },
   analyzing: { label: 'Em Análise', variant: 'default' as const, icon: Search },
-  approved: { label: 'Aprovado', variant: 'default' as const, icon: CheckCircle2 },
-  rejected: { label: 'Não Aprovado', variant: 'destructive' as const, icon: XCircle },
+  approved: { label: 'Aprovada', variant: 'default' as const, icon: CheckCircle2, className: "bg-green-500 hover:bg-green-600 text-white border-transparent" },
+  rejected: { label: 'Não Aprovada', variant: 'destructive' as const, icon: XCircle },
 };
 
 type RequestStatus = keyof typeof STATUS_CONFIG;
@@ -160,7 +160,7 @@ export default function AdminRequests() {
                   <SelectItem value="pending">Pendentes</SelectItem>
                   <SelectItem value="analyzing">Em Análise</SelectItem>
                   <SelectItem value="approved">Aprovadas</SelectItem>
-                  <SelectItem value="rejected">Rejeitadas</SelectItem>
+                  <SelectItem value="rejected">Não Aprovadas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -227,7 +227,7 @@ export default function AdminRequests() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={config.variant}>
+                            <Badge variant={config.variant} className={(config as any).className}>
                               <StatusIcon className="h-3 w-3 mr-1" />
                               {config.label}
                             </Badge>
@@ -293,8 +293,8 @@ export default function AdminRequests() {
                     <SelectContent>
                       <SelectItem value="pending">Pendente</SelectItem>
                       <SelectItem value="analyzing">Em Análise</SelectItem>
-                      <SelectItem value="approved">Aprovado</SelectItem>
-                      <SelectItem value="rejected">Não Aprovado</SelectItem>
+                      <SelectItem value="approved">Aprovada</SelectItem>
+                      <SelectItem value="rejected">Não Aprovada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
