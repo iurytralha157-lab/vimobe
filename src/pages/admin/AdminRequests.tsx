@@ -293,8 +293,8 @@ export default function AdminRequests() {
                     <SelectContent>
                       <SelectItem value="pending">Pendente</SelectItem>
                       <SelectItem value="analyzing">Em Análise</SelectItem>
-                      <SelectItem value="approved">Aprovado</SelectItem>
-                      <SelectItem value="rejected">Não Aprovado</SelectItem>
+                      <SelectItem value="approved">Aprovada</SelectItem>
+                      <SelectItem value="rejected">Não Aprovada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

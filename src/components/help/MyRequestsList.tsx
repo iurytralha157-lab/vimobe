@@ -56,7 +56,7 @@ export function MyRequestsList() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium text-sm">{request.title}</h4>
-                    <Badge variant={config.variant} className="text-xs">
+                    <Badge variant={config.variant} className={cn("text-xs", (config as any).className)}>
                       <StatusIcon className="h-3 w-3 mr-1" />
                       {config.label}
                     </Badge>
