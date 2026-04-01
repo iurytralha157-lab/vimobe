@@ -4,6 +4,7 @@ import { useMyFeatureRequests } from '@/hooks/use-feature-requests';
 import { FileText, Clock, CheckCircle2, XCircle, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pendente', variant: 'secondary' as const, icon: Clock },
