@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { SuperAdminRoute } from "@/components/guards/SuperAdminRoute";
 import { AdminRoute } from "@/components/guards/AdminRoute";
+import { PermissionGuard } from "@/components/guards/PermissionGuard";
 import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { useForceRefreshListener } from "@/hooks/use-force-refresh";
