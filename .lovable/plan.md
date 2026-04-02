@@ -1,32 +1,28 @@
 
 
-# Fix: Condições não salvando nas automações
+# Adicionar Permissões de Automações nas Funções
 
 ## Problema
-Quando o usuário configura o nó de Condição (tanto "Resposta do lead" quanto "Variável personalizada"), os dados não persistem. Ao reabrir o painel, tudo volta ao estado inicial.
-
-**Causa raiz**: Os campos usam valores fallback no JSX (ex: `selectedNode.data.positive_keywords || 'sim, claro...'`), mas esses defaults nunca são escritos no `node.data`. Quando o usuário seleciona "Resposta do lead" sem editar as palavras-chave, nada é salvo. Além disso, ao trocar o tipo de condição, apenas `condition_type` é persistido — os campos associados não são inicializados.
+No painel de Funções e Permissões, a opção "Automações" não aparece porque as entradas `automations_view` e `automations_edit` não existem na tabela `available_permissions` do banco de dados. O código frontend já tem o grupo mapeado, só faltam os registros no banco.
 
 ## Solução
+Criar uma migration que insere os dois registros de permissão na tabela `available_permissions`:
 
-### Arquivo: `src/components/automations/NodeConfigPanel.tsx`
+- **`automations_view`** — "Visualizar Automações" (categoria: modules)
+- **`automations_edit`** — "Editar Automações" (categoria: modules)
 
-1. **Ao trocar `condition_type` para `response_sentiment`**: escrever imediatamente os defaults das keywords no `node.data`
-2. **Ao trocar `condition_type` para `custom`**: limpar os campos de sentiment e inicializar os campos de variável
-3. **Remover os fallbacks inline** dos `value` das textareas/inputs — usar apenas o que está em `node.data`
+## Detalhes técnicos
 
-Mudanças concretas no `onValueChange` do Select de tipo de condição (linha ~555):
-- Quando `response_sentiment`: chamar `onNodeDataChange` com `condition_type`, `positive_keywords` (default), `negative_keywords` (default)
-- Quando `custom`: chamar `onNodeDataChange` com `condition_type`, `variable: ''`, `operator: 'equals'`, `value: ''`
+### Migration SQL
+Inserir na tabela `available_permissions`:
+```sql
+INSERT INTO available_permissions (key, name, description, category) VALUES
+  ('automations_view', 'Visualizar Automações', 'Permite visualizar a lista de automações e seus fluxos', 'modules'),
+  ('automations_edit', 'Editar Automações', 'Permite criar, editar e excluir automações', 'modules');
+```
 
-Nos campos de textarea (linhas ~572, ~582):
-- Trocar `selectedNode.data.positive_keywords || 'sim, claro...'` por apenas `selectedNode.data.positive_keywords ?? ''`
-- Idem para `negative_keywords`
+### Aplicar guard na página de Automações
+Envolver a rota `/automations` com `PermissionGuard` usando a permissão `automations_view`, garantindo que usuários sem acesso sejam redirecionados.
 
-Isso garante que ao selecionar o tipo, os defaults são gravados no estado do nó, e qualquer edição subsequente também persiste corretamente.
-
-## Arquivos modificados
-| Arquivo | Mudança |
-|---|---|
-| `src/components/automations/NodeConfigPanel.tsx` | Inicializar defaults ao trocar tipo de condição; remover fallbacks inline |
+Nenhuma alteração de frontend no RolesTab é necessária — o grupo `automations` já está configurado nas linhas 77 do componente.
 
