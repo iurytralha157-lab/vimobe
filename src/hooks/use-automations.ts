@@ -150,15 +150,23 @@ export const TRIGGER_TYPE_DESCRIPTIONS: Record<TriggerType, string> = {
 
 // Fetch all automations for the organization
 export function useAutomations() {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
 
   return useQuery({
-    queryKey: ['automations', profile?.organization_id],
+    queryKey: ['automations', profile?.organization_id, profile?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('automations')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Regular users only see their own automations
+      const isAdmin = isSuperAdmin || profile?.role === 'admin';
+      if (!isAdmin && profile?.id) {
+        query = query.eq('created_by', profile.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return (data as any[]).map(d => ({
