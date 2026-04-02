@@ -211,7 +211,7 @@ function AppRoutes() {
             <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
             
             {/* Automations */}
-            <Route path="/automations" element={<ProtectedRoute><AdminRoute><Automations /></AdminRoute></ProtectedRoute>} />
+            <Route path="/automations" element={<ProtectedRoute><PermissionGuard permission="automations_view"><Automations /></PermissionGuard></ProtectedRoute>} />
             
             {/* Public Site Preview */}
             <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />
