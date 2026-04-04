@@ -80,6 +80,9 @@ export function useAvailablePermissions() {
 
       return data as AvailablePermission[];
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 }
 
