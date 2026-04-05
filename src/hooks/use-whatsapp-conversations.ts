@@ -230,33 +230,50 @@ export function useWhatsAppConversation(conversationId: string | null) {
   });
 }
 
-export function useWhatsAppMessages(conversationId: string | null) {
+export function useWhatsAppMessages(conversationId: string | null, leadId?: string | null) {
   const queryClient = useQueryClient();
+  const messageQueryKey = ["whatsapp-messages", conversationId, leadId];
 
   const query = useQuery({
-    queryKey: ["whatsapp-messages", conversationId],
+    queryKey: messageQueryKey,
     queryFn: async () => {
-      if (!conversationId) return [];
+      if (!conversationId && !leadId) return [];
 
-      const { data, error } = await supabase
-        .from("whatsapp_messages")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .order("sent_at", { ascending: true });
+      if (conversationId) {
+        const { data, error } = await supabase
+          .from("whatsapp_messages")
+          .select("*")
+          .eq("conversation_id", conversationId)
+          .order("sent_at", { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          return data as WhatsAppMessage[];
+        }
+
+        if (error && !leadId) {
+          throw error;
+        }
+
+        if (!leadId) {
+          return (data || []) as WhatsAppMessage[];
+        }
+      }
+
+      const { data, error } = await supabase.functions.invoke("whatsapp-history-access", {
+        body: { conversationId, leadId },
+      });
 
       if (error) throw error;
-      return data as WhatsAppMessage[];
+      return (data?.messages || []) as WhatsAppMessage[];
     },
-    enabled: !!conversationId,
-    // Fallback polling: refetch every 10s if realtime fails
+    enabled: !!conversationId || !!leadId,
     refetchInterval: 10000,
     refetchIntervalInBackground: false,
-    staleTime: 0, // Always consider data stale to ensure freshness
+    staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
 
-  // Subscribe to realtime updates with INCREMENTAL updates (not full refetch)
   useEffect(() => {
     if (!conversationId) return;
 
@@ -272,31 +289,27 @@ export function useWhatsAppMessages(conversationId: string | null) {
         },
         (payload) => {
           const newMessage = payload.new as WhatsAppMessage;
-          
-          // Incremental insert - add to cache without full refetch
+
           queryClient.setQueryData(
-            ["whatsapp-messages", conversationId],
+            messageQueryKey,
             (old: WhatsAppMessage[] | undefined) => {
               if (!old) return [newMessage];
-              
-              // Check if message already exists (by id or client_message_id)
+
               const newClientMsgId = (newMessage as any).client_message_id;
-              const exists = old.some((m: any) => 
-                m.id === newMessage.id || 
+              const exists = old.some((m: any) =>
+                m.id === newMessage.id ||
                 (m.client_message_id && newClientMsgId && m.client_message_id === newClientMsgId)
               );
-              
+
               if (exists) {
-                // Update existing message
                 return old.map((msg: any) =>
-                  (msg.id === newMessage.id || 
+                  (msg.id === newMessage.id ||
                    (msg.client_message_id && newClientMsgId && msg.client_message_id === newClientMsgId))
                     ? { ...msg, ...newMessage }
                     : msg
                 );
               }
-              
-              // Add new message at the end (chronological order)
+
               return [...old, newMessage];
             }
           );
@@ -313,14 +326,13 @@ export function useWhatsAppMessages(conversationId: string | null) {
         (payload) => {
           const updatedMessage = payload.new as WhatsAppMessage;
           const updatedClientMsgId = (updatedMessage as any).client_message_id;
-          
-          // Update message in cache
+
           queryClient.setQueryData(
-            ["whatsapp-messages", conversationId],
+            messageQueryKey,
             (old: WhatsAppMessage[] | undefined) => {
               if (!old) return old;
               return old.map((msg: any) =>
-                msg.id === updatedMessage.id || 
+                msg.id === updatedMessage.id ||
                 (msg.client_message_id && updatedClientMsgId && msg.client_message_id === updatedClientMsgId)
                   ? { ...msg, ...updatedMessage }
                   : msg
@@ -334,7 +346,7 @@ export function useWhatsAppMessages(conversationId: string | null) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, queryClient]);
+  }, [conversationId, leadId, queryClient]);
 
   return query;
 }
