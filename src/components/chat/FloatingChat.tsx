@@ -815,7 +815,7 @@ export function FloatingChat() {
                     <p className="text-xs text-muted-foreground truncate flex-1 min-w-0" style={{
                 maxWidth: '240px'
               }}>
-                      {conv.last_message || "Sem mensagens"}
+                      {formatLastMessage(conv.last_message)}
                     </p>
                     {conv.unread_count > 0 && <Badge className="h-5 min-w-5 flex items-center justify-center p-0 text-[10px] shrink-0">
                         {conv.unread_count}
