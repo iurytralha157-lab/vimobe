@@ -78,7 +78,10 @@ export function FloatingChat() {
   const {
     data: messages,
     isLoading: loadingMessages
-  } = useWhatsAppMessages(activeConversation?.id || null);
+  } = useWhatsAppMessages(
+    activeConversation?.id || null,
+    activeConversation?.lead_id || activeConversation?.lead?.id || null
+  );
   const sendMessage = useSendWhatsAppMessage();
   const markAsRead = useMarkConversationAsRead();
   const startConversation = useStartConversation();
@@ -86,33 +89,27 @@ export function FloatingChat() {
   const { data: hasWhatsAppAccess, isLoading: loadingWhatsAppAccess } = useHasWhatsAppAccess();
   const navigate = useNavigate();
 
-  // Enable realtime
   useWhatsAppRealtimeConversations();
 
-  // Sync activeConversation with latest data from hook (including phone fallback leads)
   useEffect(() => {
     if (activeConversation && conversations) {
       const updatedConv = conversations.find(c => c.id === activeConversation.id);
       if (updatedConv && updatedConv.lead && !activeConversation.lead) {
-        // Lead foi encontrado via fallback - atualizar o contexto
         openConversation(updatedConv);
       }
     }
   }, [conversations, activeConversation?.id, activeConversation?.lead, openConversation]);
 
- // Track user scrolling to avoid auto-scroll interference
  const handleScrollArea = (e: React.UIEvent<HTMLDivElement>) => {
    const target = e.currentTarget;
    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
    isUserScrollingRef.current = !isAtBottom;
  };
 
-  // Save hide groups preference
   useEffect(() => {
     localStorage.setItem("whatsapp-hide-groups-floating", String(hideGroups));
   }, [hideGroups]);
 
-  // Auto-selecionar primeira sessão conectada
   useEffect(() => {
     if (!selectedSessionId && sessions?.length) {
       const connectedSession = sessions.find(s => s.status === "connected");
@@ -124,40 +121,45 @@ export function FloatingChat() {
     }
   }, [sessions, selectedSessionId]);
 
-  // Handle pending phone (abrir nova conversa)
   useEffect(() => {
-    if (pendingPhone && sessions?.length) {
-      const connected = sessions.filter(s => s.status === "connected");
-      
-      if (connected.length === 0) {
-        toast({
-          title: "Nenhuma sessão conectada",
-          description: "Conecte um WhatsApp em Configurações → WhatsApp",
-          variant: "destructive"
-        });
+    if (!pendingPhone) return;
+
+    const openPendingConversation = async () => {
+      const connected = sessions?.filter(s => s.status === "connected") || [];
+
+      if (connected.length === 1) {
+        setSelectedSessionId(connected[0].id);
+        await handleStartConversationWithSession(pendingPhone, connected[0].id, pendingLeadName || undefined, pendingLeadId || undefined);
         return;
       }
-      
-      if (connected.length === 1) {
-        // Apenas uma sessão conectada: selecionar automaticamente
-        setSelectedSessionId(connected[0].id);
-        handleStartConversation(pendingPhone, pendingLeadName || undefined, pendingLeadId || undefined);
-      } else {
-        // Múltiplas sessões conectadas: mostrar diálogo de seleção
+
+      if (connected.length > 1) {
         setPendingStartData({ phone: pendingPhone, leadName: pendingLeadName || undefined, leadId: pendingLeadId || undefined });
         setShowSessionSelector(true);
+        return;
       }
-    }
+
+      if (pendingLeadId) {
+        await handleStartConversationWithSession(pendingPhone, undefined, pendingLeadName || undefined, pendingLeadId || undefined);
+        return;
+      }
+
+      toast({
+        title: "Nenhuma sessão conectada",
+        description: "Conecte um WhatsApp em Configurações → WhatsApp",
+        variant: "destructive"
+      });
+    };
+
+    openPendingConversation();
   }, [pendingPhone, pendingLeadName, pendingLeadId, sessions]);
 
-  // Scroll to bottom only when new messages arrive
   useEffect(() => {
     const currentLength = messages?.length || 0;
     const previousLength = previousMessagesLengthRef.current;
-    
+
     if (currentLength > previousLength || previousLength === 0) {
       const isFirstLoad = previousLength === 0;
-      // On first load, ALWAYS scroll (ignore isUserScrollingRef)
       if (isFirstLoad || !isUserScrollingRef.current) {
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({
@@ -168,12 +170,11 @@ export function FloatingChat() {
           }
         }, 50);
       }
-    }
-    
+      }
+
     previousMessagesLengthRef.current = currentLength;
   }, [messages?.length]);
 
-  // Reset scroll state when changing conversations
   useEffect(() => {
     previousMessagesLengthRef.current = 0;
     isUserScrollingRef.current = false;
@@ -182,7 +183,6 @@ export function FloatingChat() {
     }, 80);
   }, [activeConversation?.id]);
 
-  // Pre-fill message from pendingMessage when conversation is active
   useEffect(() => {
     if (pendingMessage && activeConversation) {
       setMessageText(pendingMessage);
@@ -190,7 +190,6 @@ export function FloatingChat() {
     }
   }, [activeConversation, pendingMessage, clearPendingMessage]);
 
-  // Mark as read
   useEffect(() => {
     if (activeConversation && activeConversation.unread_count > 0) {
       markAsRead.mutate({
@@ -212,7 +211,7 @@ export function FloatingChat() {
   };
 
   const handleStartConversation = async (phone: string, leadName?: string, leadId?: string) => {
-    if (!selectedSessionId) {
+    if (!selectedSessionId && !leadId) {
       toast({
         title: "Nenhuma sessão WhatsApp",
         description: "Configure uma sessão WhatsApp primeiro",
@@ -220,34 +219,51 @@ export function FloatingChat() {
       });
       return;
     }
-    await handleStartConversationWithSession(phone, selectedSessionId, leadName, leadId);
+    await handleStartConversationWithSession(phone, selectedSessionId || undefined, leadName, leadId);
   };
 
-  const handleStartConversationWithSession = async (phone: string, sessionId: string, leadName?: string, leadId?: string) => {
+  const handleStartConversationWithSession = async (phone: string, sessionId?: string, leadName?: string, leadId?: string) => {
     try {
-      // Buscar conversa existente NA SESSÃO SELECIONADA
-      const existing = await findConversation.mutateAsync({ phone, leadId, sessionId });
-      if (existing) {
-        if (leadId && existing.lead_id !== leadId) {
-          await supabase
-            .from("whatsapp_conversations")
-            .update({ lead_id: leadId })
-            .eq("id", existing.id);
+      if (sessionId) {
+        const existing = await findConversation.mutateAsync({ phone, leadId, sessionId });
+        if (existing) {
+          if (leadId && existing.lead_id !== leadId) {
+            await supabase
+              .from("whatsapp_conversations")
+              .update({ lead_id: leadId })
+              .eq("id", existing.id);
+          }
+          openConversation(existing);
+          return;
         }
-        openConversation(existing);
-        return;
       }
 
-      // Se não encontrou na sessão selecionada, buscar em QUALQUER sessão (para admins vendo leads de outros)
       if (leadId) {
         const anyExisting = await findConversation.mutateAsync({ phone, leadId });
         if (anyExisting) {
           openConversation(anyExisting);
           return;
         }
+
+        const { data: restrictedData, error: restrictedError } = await supabase.functions.invoke("whatsapp-history-access", {
+          body: { leadId },
+        });
+
+        if (!restrictedError && restrictedData?.conversation) {
+          openConversation(restrictedData.conversation);
+          return;
+        }
       }
 
-      // Se não existe em nenhuma sessão, criar nova
+      if (!sessionId) {
+        toast({
+          title: "Histórico não encontrado",
+          description: "Não há conversa existente visível para este lead.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const newConversation = await startConversation.mutateAsync({
         phone,
         sessionId,
