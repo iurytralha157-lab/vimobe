@@ -309,23 +309,10 @@ export function LeadCard({
                   </TooltipContent>
                 </Tooltip>}
 
-              {/* Primeira Resposta Badge */}
-              {lead.first_response_seconds !== null && lead.first_response_seconds !== undefined ? <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 text-[10px] font-medium text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/50 px-1.5 py-0.5 rounded">
-                      <Zap className="h-3 w-3" />
-                      <span>{formatResponseTime(lead.first_response_seconds)}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    1ª resposta: {formatResponseTime(lead.first_response_seconds)}
-                    {lead.first_response_is_automation && ' (automação)'}
-                  </TooltipContent>
-                </Tooltip> : lead.assigned_user_id ? <>
-                  {/* SLA Badge - shows warning/overdue status */}
-                  <SlaBadge slaStatus={lead.sla_status} slaSecondsElapsed={lead.sla_seconds_elapsed} firstResponseAt={lead.first_response_at} />
-                  
-                </> : null}
+              {/* SLA Badge - shows warning/overdue status */}
+              {lead.assigned_user_id && !lead.first_response_seconds && (
+                <SlaBadge slaStatus={lead.sla_status} slaSecondsElapsed={lead.sla_seconds_elapsed} firstResponseAt={lead.first_response_at} />
+              )}
 
 
               {/* Tempo no estágio */}
