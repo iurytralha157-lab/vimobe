@@ -270,7 +270,7 @@ export function LeadCard({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  {hasPhone ? 'Enviar WhatsApp' : 'Sem telefone'}
+                  {hasPhone ? (lead.has_whatsapp_messages ? 'Ver Mensagens' : 'Enviar WhatsApp') : 'Sem telefone'}
                 </TooltipContent>
               </Tooltip>
 
