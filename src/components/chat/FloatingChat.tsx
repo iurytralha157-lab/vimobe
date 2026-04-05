@@ -225,10 +225,9 @@ export function FloatingChat() {
 
   const handleStartConversationWithSession = async (phone: string, sessionId: string, leadName?: string, leadId?: string) => {
     try {
-      // Buscar conversa existente NA SESSÃO SELECIONADA (evita abrir conversa de outra sessão)
+      // Buscar conversa existente NA SESSÃO SELECIONADA
       const existing = await findConversation.mutateAsync({ phone, leadId, sessionId });
       if (existing) {
-        // Vincular lead se necessário
         if (leadId && existing.lead_id !== leadId) {
           await supabase
             .from("whatsapp_conversations")
@@ -239,7 +238,16 @@ export function FloatingChat() {
         return;
       }
 
-      // Se não existe na sessão selecionada, criar nova
+      // Se não encontrou na sessão selecionada, buscar em QUALQUER sessão (para admins vendo leads de outros)
+      if (leadId) {
+        const anyExisting = await findConversation.mutateAsync({ phone, leadId });
+        if (anyExisting) {
+          openConversation(anyExisting);
+          return;
+        }
+      }
+
+      // Se não existe em nenhuma sessão, criar nova
       const newConversation = await startConversation.mutateAsync({
         phone,
         sessionId,
