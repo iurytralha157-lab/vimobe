@@ -14,9 +14,10 @@ const LEADS_PER_STAGE = 100;
 const LEAD_PIPELINE_FIELDS = `
   id, name, phone, email, source, created_at, 
   stage_id, assigned_user_id, pipeline_id, message,
-  stage_entered_at,
+  stage_entered_at, organization_id,
   deal_status, valor_interesse, property_id, lost_reason, won_at, lost_at,
   interest_property_id, interest_plan_id,
+  first_response_at, first_response_seconds, first_response_is_automation,
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price)
@@ -146,7 +147,7 @@ export function useStagesWithLeads(pipelineId?: string) {
       
       // Buscar fotos e unread_count do WhatsApp para leads com telefone
       const leadsWithPhone = leads.filter((l: any) => l.phone);
-      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
+      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number; has_messages: boolean }> = new Map();
       
       if (leadsWithPhone.length > 0) {
         // Collect phone numbers in both normalized and with-55 formats for DB matching
@@ -170,12 +171,12 @@ export function useStagesWithLeads(pipelineId?: string) {
         const { data: conversations } = uniquePhones.length > 0
           ? await supabase
               .from('whatsapp_conversations')
-              .select('contact_phone, contact_picture, unread_count')
+              .select('contact_phone, contact_picture, unread_count, last_message_at')
               .in('contact_phone', uniquePhones)
               .is('deleted_at', null)
           : { data: [] };
         
-        // Criar mapa telefone normalizado → { foto, unread_count }
+        // Criar mapa telefone normalizado → { foto, unread_count, has_messages }
         (conversations || []).forEach(c => {
           if (c.contact_phone) {
             const normalized = normalizePhone(c.contact_phone);
@@ -184,6 +185,7 @@ export function useStagesWithLeads(pipelineId?: string) {
               phoneToWhatsApp.set(normalized, {
                 picture: c.contact_picture || existing?.picture || null,
                 unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
+                has_messages: existing?.has_messages || !!c.last_message_at,
               });
             }
           }
@@ -221,11 +223,13 @@ export function useStagesWithLeads(pipelineId?: string) {
         enrichedLeadsByStage[stageId] = leadsByStageRaw[stageId].map((lead: any) => {
           let whatsapp_picture: string | null = null;
           let unread_count = 0;
+          let has_whatsapp_messages = false;
           if (lead.phone) {
             const normalizedPhone = normalizePhone(lead.phone);
             const whatsappData = phoneToWhatsApp.get(normalizedPhone);
             whatsapp_picture = whatsappData?.picture || null;
             unread_count = whatsappData?.unread_count || 0;
+            has_whatsapp_messages = whatsappData?.has_messages || false;
           }
           
           return {
@@ -235,6 +239,7 @@ export function useStagesWithLeads(pipelineId?: string) {
             stage: stagesById[stageId] || null,
             whatsapp_picture,
             unread_count,
+            has_whatsapp_messages,
           };
         });
       }
