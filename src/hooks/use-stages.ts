@@ -147,7 +147,7 @@ export function useStagesWithLeads(pipelineId?: string) {
       
       // Buscar fotos e unread_count do WhatsApp para leads com telefone
       const leadsWithPhone = leads.filter((l: any) => l.phone);
-      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
+      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number; has_messages: boolean }> = new Map();
       
       if (leadsWithPhone.length > 0) {
         // Collect phone numbers in both normalized and with-55 formats for DB matching
@@ -171,12 +171,12 @@ export function useStagesWithLeads(pipelineId?: string) {
         const { data: conversations } = uniquePhones.length > 0
           ? await supabase
               .from('whatsapp_conversations')
-              .select('contact_phone, contact_picture, unread_count')
+              .select('contact_phone, contact_picture, unread_count, last_message_at')
               .in('contact_phone', uniquePhones)
               .is('deleted_at', null)
           : { data: [] };
         
-        // Criar mapa telefone normalizado → { foto, unread_count }
+        // Criar mapa telefone normalizado → { foto, unread_count, has_messages }
         (conversations || []).forEach(c => {
           if (c.contact_phone) {
             const normalized = normalizePhone(c.contact_phone);
@@ -185,6 +185,7 @@ export function useStagesWithLeads(pipelineId?: string) {
               phoneToWhatsApp.set(normalized, {
                 picture: c.contact_picture || existing?.picture || null,
                 unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
+                has_messages: existing?.has_messages || !!c.last_message_at,
               });
             }
           }
