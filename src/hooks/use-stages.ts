@@ -14,9 +14,10 @@ const LEADS_PER_STAGE = 100;
 const LEAD_PIPELINE_FIELDS = `
   id, name, phone, email, source, created_at, 
   stage_id, assigned_user_id, pipeline_id, message,
-  stage_entered_at,
+  stage_entered_at, organization_id,
   deal_status, valor_interesse, property_id, lost_reason, won_at, lost_at,
   interest_property_id, interest_plan_id,
+  first_response_at, first_response_seconds, first_response_is_automation,
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price)

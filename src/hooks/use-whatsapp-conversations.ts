@@ -532,6 +532,22 @@ export function useSendWhatsAppMessage() {
             instance_name: session.instance_name
           }
         });
+
+        // Record first response time via edge function (non-blocking)
+        try {
+          await supabase.functions.invoke('calculate-first-response', {
+            body: {
+              lead_id: conversation.lead_id,
+              organization_id: session.organization_id,
+              channel: 'whatsapp',
+              actor_user_id: profile?.id || null,
+              is_automation: false,
+            },
+          });
+          console.log("[useSendWhatsAppMessage] First response recorded for lead", conversation.lead_id);
+        } catch (frErr) {
+          console.error("[useSendWhatsAppMessage] First response recording failed (non-blocking):", frErr);
+        }
       }
 
       if (insertError) {
