@@ -364,6 +364,22 @@ export function FloatingChat() {
       fileInputRef.current.value = "";
     }
   };
+  const formatLastMessage = (msg: string | null): string => {
+    if (!msg) return "Sem mensagens";
+    // Detect file-like messages (UUIDs, file extensions, raw media)
+    const isFilePattern = /^[a-f0-9-]{36}\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|opus|pdf|doc|docx|xls|xlsx|csv|avi|mov|aac|m4a|wav|heic)$/i;
+    const isExtOnly = /^\S+\.(png|jpg|jpeg|gif|webp|mp4|mp3|ogg|opus|pdf|doc|docx|xls|xlsx|csv|avi|mov|aac|m4a|wav|heic)$/i;
+    
+    if (isFilePattern.test(msg.trim()) || isExtOnly.test(msg.trim())) {
+      const ext = msg.trim().split('.').pop()?.toLowerCase() || '';
+      if (['png','jpg','jpeg','gif','webp','heic'].includes(ext)) return '📷 Foto';
+      if (['mp4','avi','mov'].includes(ext)) return '📹 Vídeo';
+      if (['mp3','ogg','opus','aac','m4a','wav'].includes(ext)) return '🎵 Áudio';
+      return '📄 Documento';
+    }
+    return msg;
+  };
+
   const formatConversationTime = (date: string | null) => {
     if (!date) return "";
     const d = new Date(date);
