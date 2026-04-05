@@ -621,7 +621,7 @@ export default function Pipelines() {
           {/* Top Row: Pipeline Selector + New Button (mobile) */}
           <div className="flex items-center justify-between sm:justify-start gap-2">
             {/* Pipeline Selector */}
-            <div className="flex items-center gap-1 sm:gap-2 border border-border rounded-lg px-2 sm:px-3 py-1.5 bg-muted shadow-sm">
+            <div <div className="flex items-center gap-1 sm:gap-2 border border-border rounded-lg px-2 sm:px-3 py-1.5 bg-muted">>
               <Settings className="h-4 w-4 text-foreground hidden sm:block" />
               <span className="text-xs text-foreground/90 font-medium hidden sm:inline">Pipeline</span>
               <DropdownMenu>
