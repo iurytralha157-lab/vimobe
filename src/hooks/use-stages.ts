@@ -223,11 +223,13 @@ export function useStagesWithLeads(pipelineId?: string) {
         enrichedLeadsByStage[stageId] = leadsByStageRaw[stageId].map((lead: any) => {
           let whatsapp_picture: string | null = null;
           let unread_count = 0;
+          let has_whatsapp_messages = false;
           if (lead.phone) {
             const normalizedPhone = normalizePhone(lead.phone);
             const whatsappData = phoneToWhatsApp.get(normalizedPhone);
             whatsapp_picture = whatsappData?.picture || null;
             unread_count = whatsappData?.unread_count || 0;
+            has_whatsapp_messages = whatsappData?.has_messages || false;
           }
           
           return {
@@ -237,6 +239,7 @@ export function useStagesWithLeads(pipelineId?: string) {
             stage: stagesById[stageId] || null,
             whatsapp_picture,
             unread_count,
+            has_whatsapp_messages,
           };
         });
       }
