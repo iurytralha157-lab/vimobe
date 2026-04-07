@@ -249,7 +249,14 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         } else if (node.node_type === 'action' && nodeConfig.actionType === 'deal_status') {
           flowNodes.push({ id: node.id, type: 'deal_status', position: pos, data: { deal_status: nodeConfig.deal_status || '' } });
         } else if (node.node_type === 'condition') {
-          flowNodes.push({ id: node.id, type: 'condition', position: pos, data: { variable: nodeConfig.variable || '', operator: nodeConfig.operator || 'equals', value: nodeConfig.value || '' } });
+          flowNodes.push({ id: node.id, type: 'condition', position: pos, data: { 
+            condition_type: nodeConfig.condition_type || 'custom',
+            variable: nodeConfig.variable || '', 
+            operator: nodeConfig.operator || 'equals', 
+            value: nodeConfig.value || '',
+            positive_keywords: nodeConfig.positive_keywords || '',
+            negative_keywords: nodeConfig.negative_keywords || '',
+          } });
         } else if (node.node_type === 'delay') {
           flowNodes.push({
             id: node.id,
@@ -607,7 +614,15 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         } else if (node.type === 'condition') {
           dbNodes.push({
             id: node.id, node_type: 'condition', action_type: null,
-            config: { variable: node.data.variable, operator: node.data.operator, value: node.data.value, nodeType: 'condition' },
+            config: { 
+              condition_type: node.data.condition_type || 'custom',
+              variable: node.data.variable, 
+              operator: node.data.operator, 
+              value: node.data.value, 
+              positive_keywords: node.data.positive_keywords || '',
+              negative_keywords: node.data.negative_keywords || '',
+              nodeType: 'condition',
+            },
             ...pos,
           });
         } else if (node.type === 'webhook') {

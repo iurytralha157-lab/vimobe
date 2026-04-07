@@ -101,7 +101,7 @@ const NODE_PALETTE: PaletteItem[] = [
   { type: 'image', label: 'Imagem', icon: Image, color: 'bg-blue-500 text-white', category: 'bubbles', defaultData: { image_url: '', caption: '' } },
   { type: 'video', label: 'Vídeo', icon: Video, color: 'bg-rose-500 text-white', category: 'bubbles', defaultData: { video_url: '' } },
   { type: 'audio', label: 'Áudio', icon: Headphones, color: 'bg-amber-500 text-white', category: 'bubbles', defaultData: { audio_url: '' } },
-  { type: 'condition', label: 'Condição', icon: GitBranch, color: 'bg-yellow-500 text-white', category: 'conditionals', defaultData: { variable: '', operator: 'equals', value: '' } },
+  { type: 'condition', label: 'Condição', icon: GitBranch, color: 'bg-yellow-500 text-white', category: 'conditionals', defaultData: { condition_type: 'custom', variable: '', operator: 'equals', value: '' } },
   { type: 'wait', label: 'Espera', icon: Timer, color: 'bg-purple-500 text-white', category: 'actions', defaultData: { wait_type: 'days', wait_value: 1 } },
   { type: 'webhook', label: 'Webhook', icon: Webhook, color: 'bg-indigo-500 text-white', category: 'actions', defaultData: { webhook_url: '', method: 'POST' } },
   { type: 'tag', label: 'Tag', icon: Tag, color: 'bg-teal-500 text-white', category: 'actions', defaultData: { tag_id: '', tag_action: 'add' } },
@@ -589,7 +589,15 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
         } else if (node.type === 'condition') {
           dbNodes.push({
             id: node.id, node_type: 'condition', action_type: null,
-            config: { variable: node.data.variable, operator: node.data.operator, value: node.data.value, nodeType: 'condition' },
+            config: { 
+              condition_type: node.data.condition_type || 'custom',
+              variable: node.data.variable, 
+              operator: node.data.operator, 
+              value: node.data.value, 
+              positive_keywords: node.data.positive_keywords || '',
+              negative_keywords: node.data.negative_keywords || '',
+              nodeType: 'condition',
+            },
             ...pos,
           });
         } else if (node.type === 'webhook') {

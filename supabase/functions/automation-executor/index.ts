@@ -1201,8 +1201,51 @@ async function evaluateCondition(
       return false;
     }
 
+    case "custom": {
+      // Evaluate custom variable condition against lead data
+      if (!execution.lead_id) {
+        console.log("custom condition: no lead_id, returning false");
+        return false;
+      }
+
+      const variable = (config.variable as string) || "";
+      const operator = (config.operator as string) || "equals";
+      const expectedValue = (config.value as string) || "";
+
+      // Fetch lead data
+      const { data: leadData } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", execution.lead_id)
+        .single();
+
+      if (!leadData) {
+        console.log("custom condition: lead not found");
+        return false;
+      }
+
+      // Resolve variable value - support dot notation like "lead.source"
+      const varParts = variable.replace(/^lead\./, "").trim();
+      const actualValue = String(leadData[varParts] ?? "");
+
+      console.log(`custom condition: ${variable} (${actualValue}) ${operator} ${expectedValue}`);
+
+      switch (operator) {
+        case "equals": return actualValue.toLowerCase() === expectedValue.toLowerCase();
+        case "not_equals": return actualValue.toLowerCase() !== expectedValue.toLowerCase();
+        case "contains": return actualValue.toLowerCase().includes(expectedValue.toLowerCase());
+        case "not_contains": return !actualValue.toLowerCase().includes(expectedValue.toLowerCase());
+        case "greater_than": return Number(actualValue) > Number(expectedValue);
+        case "less_than": return Number(actualValue) < Number(expectedValue);
+        case "is_set": return actualValue !== "" && actualValue !== "null" && actualValue !== "undefined";
+        case "is_not_set": return actualValue === "" || actualValue === "null" || actualValue === "undefined";
+        default: return true;
+      }
+    }
+
     default:
       // Default to true for unknown conditions
+      console.log(`Unknown condition type: ${conditionType}, defaulting to true`);
       return true;
   }
 }
