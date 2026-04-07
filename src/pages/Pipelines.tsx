@@ -442,6 +442,18 @@ export default function Pipelines() {
         toast.success(`Lead movido para ${newStage?.name}`);
       }
       
+      // Disparar automações de fluxo (automations table) para mudança de etapa
+      supabase.functions.invoke('automation-trigger', {
+        body: {
+          event_type: 'lead_stage_changed',
+          data: {
+            lead_id: draggableId,
+            old_stage_id: oldStageId,
+            new_stage_id: newStageId,
+          },
+        },
+      }).catch(err => console.error('Erro ao disparar automação de etapa:', err));
+      
       // Notificar partes interessadas para Telecom
       if (isTelecom && profile?.organization_id && selectedPipelineId) {
         // Buscar dados do lead para obter nome e assigned_user_id
