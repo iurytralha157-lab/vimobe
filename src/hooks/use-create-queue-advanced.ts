@@ -2,6 +2,60 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Validates that no condition values (meta_form, webhook, whatsapp_session, etc.) are already used in other queues
+async function validateUniqueConditions(conditions: RuleCondition[], excludeRoundRobinId?: string) {
+  const typesToCheck = ['meta_form', 'webhook', 'whatsapp_session'] as const;
+  const conditionsToCheck = conditions.filter(c => typesToCheck.includes(c.type as any) && c.values.length > 0);
+
+  if (conditionsToCheck.length === 0) return;
+
+  // Fetch all existing rules for these match types
+  let query = supabase
+    .from('round_robin_rules')
+    .select('match_type, match_value, round_robin_id, round_robins!inner(name)')
+    .in('match_type', conditionsToCheck.map(c => c.type))
+    .eq('is_active', true);
+
+  if (excludeRoundRobinId) {
+    query = query.neq('round_robin_id', excludeRoundRobinId);
+  }
+
+  const { data: existingRules } = await query;
+  if (!existingRules || existingRules.length === 0) return;
+
+  // Build a map of existing values per type
+  const existingMap = new Map<string, { value: string; queueName: string }[]>();
+  for (const rule of existingRules) {
+    const values = (rule.match_value || '').split(',').filter(Boolean);
+    const queueName = (rule as any).round_robins?.name || 'outra fila';
+    for (const v of values) {
+      const key = `${rule.match_type}::${v}`;
+      if (!existingMap.has(key)) existingMap.set(key, []);
+      existingMap.get(key)!.push({ value: v, queueName });
+    }
+  }
+
+  // Check for conflicts
+  const typeLabels: Record<string, string> = {
+    meta_form: 'Formulário Meta',
+    webhook: 'Webhook',
+    whatsapp_session: 'Sessão WhatsApp',
+  };
+
+  for (const condition of conditionsToCheck) {
+    for (const val of condition.values) {
+      const key = `${condition.type}::${val}`;
+      const conflicts = existingMap.get(key);
+      if (conflicts && conflicts.length > 0) {
+        const queueNames = [...new Set(conflicts.map(c => c.queueName))].join(', ');
+        throw new Error(
+          `${typeLabels[condition.type] || condition.type} já está configurado na fila "${queueNames}". Remova-o da outra fila antes de usar aqui.`
+        );
+      }
+    }
+  }
+}
+
 interface ScheduleDay {
   day: number;
   enabled: boolean;
@@ -60,6 +114,9 @@ export function useCreateQueueAdvanced() {
         .single();
       
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
+      
+      // Validate no duplicate conditions across queues
+      await validateUniqueConditions(input.conditions);
       
       // Combine settings with schedule
       const fullSettings = {
@@ -228,6 +285,9 @@ export function useUpdateQueueAdvanced() {
   
   return useMutation({
     mutationFn: async ({ id, ...input }: CreateQueueInput & { id: string }) => {
+      // Validate no duplicate conditions across queues (exclude current queue)
+      await validateUniqueConditions(input.conditions, id);
+      
       // Combine settings with schedule
       const fullSettings = {
         ...input.settings,
