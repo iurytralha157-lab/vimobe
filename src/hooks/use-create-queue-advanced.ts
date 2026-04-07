@@ -115,6 +115,9 @@ export function useCreateQueueAdvanced() {
       
       if (!profile?.organization_id) throw new Error('Organização não encontrada');
       
+      // Validate no duplicate conditions across queues
+      await validateUniqueConditions(input.conditions);
+      
       // Combine settings with schedule
       const fullSettings = {
         ...input.settings,
@@ -282,6 +285,9 @@ export function useUpdateQueueAdvanced() {
   
   return useMutation({
     mutationFn: async ({ id, ...input }: CreateQueueInput & { id: string }) => {
+      // Validate no duplicate conditions across queues (exclude current queue)
+      await validateUniqueConditions(input.conditions, id);
+      
       // Combine settings with schedule
       const fullSettings = {
         ...input.settings,
