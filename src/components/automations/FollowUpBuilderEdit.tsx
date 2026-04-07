@@ -607,7 +607,15 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
         } else if (node.type === 'condition') {
           dbNodes.push({
             id: node.id, node_type: 'condition', action_type: null,
-            config: { variable: node.data.variable, operator: node.data.operator, value: node.data.value, nodeType: 'condition' },
+            config: { 
+              condition_type: node.data.condition_type || 'custom',
+              variable: node.data.variable, 
+              operator: node.data.operator, 
+              value: node.data.value, 
+              positive_keywords: node.data.positive_keywords || '',
+              negative_keywords: node.data.negative_keywords || '',
+              nodeType: 'condition',
+            },
             ...pos,
           });
         } else if (node.type === 'webhook') {
