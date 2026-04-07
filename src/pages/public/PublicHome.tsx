@@ -63,12 +63,9 @@ export default function PublicHome() {
     if (selectedType && selectedType !== "all") params.set("tipo", selectedType);
     if (selectedFinalidade && selectedFinalidade !== "all") params.set("finalidade", selectedFinalidade);
     
-    if (isPreviewMode && orgParam) {
-      params.set("org", orgParam);
-      navigate(`/site/preview/imoveis?${params.toString()}`);
-    } else {
-      navigate(`/imoveis?${params.toString()}`);
-    }
+    const queryString = params.toString();
+    const basePath = getHref(queryString ? `imoveis?${queryString}` : 'imoveis');
+    navigate(basePath);
   };
 
   const formatPrice = (value: number | null) => {

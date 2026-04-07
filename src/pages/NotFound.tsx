@@ -35,21 +35,21 @@ const NotFound = () => {
 
       {/* Content */}
       <div className="relative z-10 text-center space-y-6 px-6">
-        <p className="text-8xl font-black text-white tracking-tighter">404</p>
+        <p className="text-[10rem] md:text-[14rem] font-black text-white tracking-tighter leading-none">404</p>
         <p className="text-xl text-white/70 max-w-md mx-auto">
           A página que você está procurando não existe ou foi movida.
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <Button
             variant="outline"
-            className="border-white/20 text-white hover:bg-white/10"
+            className="border-white/30 text-white bg-white/10 hover:bg-white/20"
             onClick={() => window.history.back()}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
           <Button asChild className="bg-primary hover:bg-primary/90">
-            <Link to="/">
+            <Link to="/dashboard">
               <Home className="h-4 w-4 mr-2" />
               Início
             </Link>
