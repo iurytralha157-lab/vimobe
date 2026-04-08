@@ -113,11 +113,12 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   if (!profile && !isSuperAdmin) return <PageLoader />;
+  if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
   

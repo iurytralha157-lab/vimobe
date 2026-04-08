@@ -264,6 +264,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Log successful login (async to avoid blocking)
     if (!error && data.user) {
+      // Check multi-org in background
+      checkMultiOrg(data.user.id).catch(console.error);
+      
       setTimeout(() => {
         logAuditAction('login', 'session', data.user.id, undefined, {
           email,
