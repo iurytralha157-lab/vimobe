@@ -143,17 +143,16 @@ export function FlowSimulator({ nodes, edges, onClose }: FlowSimulatorProps) {
         const labels: Record<string, string> = { minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
         const stopOnReply = node.data.stop_on_reply === true;
 
-        addSystemMessage(`⏳ Aguardando ${value} ${labels[type] || type}...`);
+        addSystemMessage(`⏳ Aguardando ${value} ${labels[type] || type} (preview: 1 min)...`);
 
         if (stopOnReply) {
-          addSystemMessage('💬 Simulação: aguardando sua resposta. Digite algo ou espere 3s para seguir pelo timeout.');
-          setWaitingForReply(true);
-          setCurrentWaitNodeId(node.id);
-          return; // Stop processing, wait for user input or timeout
+          addSystemMessage('💬 Digite algo para responder ou aguarde 1 minuto para o timeout.');
         } else {
-          await delay(1500);
+          addSystemMessage('💬 Digite algo para pular a espera ou aguarde 1 minuto.');
         }
-        break;
+        setWaitingForReply(true);
+        setCurrentWaitNodeId(node.id);
+        return;
       }
 
       case 'condition': {
