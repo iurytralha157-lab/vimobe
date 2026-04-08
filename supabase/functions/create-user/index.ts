@@ -273,6 +273,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 3. Create organization_members entry
+    const { error: memberError } = await supabaseAdmin
+      .from('organization_members')
+      .upsert({
+        user_id: authData.user.id,
+        organization_id: targetOrgId,
+        role: role as 'admin' | 'user',
+        is_active: true,
+      }, { onConflict: 'user_id,organization_id' });
+
+    if (memberError) {
+      console.error('Error creating organization member:', memberError);
+      // Non-fatal - user was created successfully
+    }
+
     console.log(`User created successfully: ${email} in org ${org.name}`);
 
     return new Response(JSON.stringify({ 
