@@ -741,14 +741,24 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             />
           </div>
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Salvar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant={showSimulator ? "default" : "outline"} 
+            onClick={() => setShowSimulator(!showSimulator)}
+            className="gap-2"
+          >
+            <Play className="h-4 w-4" />
+            Preview
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Salvar
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}
