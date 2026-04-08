@@ -209,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session.user);
 
       await fetchProfile(session.user.id);
+      await checkMultiOrg(session.user.id);
       setLoading(false);
     });
 
