@@ -117,8 +117,8 @@ Deno.serve(async (req) => {
           .from("whatsapp_messages")
           .select("id, content, from_me, message_type, media_url, media_mime_type, media_status, sent_at, status, sender_name, sender_jid, conversation_id, session_id")
           .in("conversation_id", conversationIds)
-          .order("sent_at", { ascending: true })
-          .limit(500),
+          .order("sent_at", { ascending: false })
+          .limit(1000),
         supabase
           .from("whatsapp_sessions")
           .select("id, instance_name, owner_user_id")
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       );
 
       // Enrich messages
-      const messages = (messagesResult.data || []).map((msg: any) => {
+      const enriched = (messagesResult.data || []).map((msg: any) => {
         const session = sessionMap[msg.session_id];
         return {
           ...msg,
@@ -159,6 +159,11 @@ Deno.serve(async (req) => {
           session_instance_name: session?.instance_name || null,
         };
       });
+
+      // Re-sort ascending for display (we fetched desc to get the most recent 1000)
+      const messages = enriched.sort((a: any, b: any) => 
+        new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+      );
 
       return new Response(JSON.stringify({ messages }), {
         status: 200,
