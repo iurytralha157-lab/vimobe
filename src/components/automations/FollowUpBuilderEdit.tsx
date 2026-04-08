@@ -744,7 +744,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b automation-header">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground hover:bg-accent">
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground hover:text-foreground hover:bg-muted">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
