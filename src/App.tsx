@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 // Lazy imports - heavy pages
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Signup = lazy(() => import("./pages/Signup"));
+const SelectOrganization = lazy(() => import("./pages/SelectOrganization"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Contacts = lazy(() => import("./pages/Contacts"));
