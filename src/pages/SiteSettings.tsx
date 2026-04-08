@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu, Info, BarChart3 } from "lucide-react";
 import { SiteAnalyticsTab } from "@/components/site/SiteAnalyticsTab";
 import { AnimatedIcon } from "@/components/icons/AnimatedIcon";
@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DnsVerificationStatus } from "@/components/site/DnsVerificationStatus";
+import { AnimatedTabNav, AnimatedTabItem } from "@/components/ui/animated-tab-nav";
 
 export default function SiteSettings() {
   const { profile, organization } = useAuth();
