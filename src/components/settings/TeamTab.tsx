@@ -143,7 +143,12 @@ export function TeamTab() {
         }
       });
       if (error) throw new Error(error.message || 'Erro ao criar usuário');
-      toast.success(`Usuário criado! Senha padrão: ${result.defaultPassword}`);
+      
+      if (result.wasMultiOrg) {
+        toast.success(result.message || `Usuário vinculado à organização! Acesso com senha existente.`);
+      } else {
+        toast.success(`Usuário criado! Senha padrão: ${result.defaultPassword}`);
+      }
       queryClient.invalidateQueries({ queryKey: ['organization-users'] });
       setUserDialogOpen(false);
       resetNewUserForm();
