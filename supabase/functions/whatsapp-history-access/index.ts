@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       );
 
       // Enrich messages
-      const messages = (messagesResult.data || []).map((msg: any) => {
+      const enriched = (messagesResult.data || []).map((msg: any) => {
         const session = sessionMap[msg.session_id];
         return {
           ...msg,
@@ -159,6 +159,11 @@ Deno.serve(async (req) => {
           session_instance_name: session?.instance_name || null,
         };
       });
+
+      // Re-sort ascending for display (we fetched desc to get the most recent 1000)
+      const messages = enriched.sort((a: any, b: any) => 
+        new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+      );
 
       return new Response(JSON.stringify({ messages }), {
         status: 200,
