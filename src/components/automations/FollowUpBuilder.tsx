@@ -823,7 +823,8 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           <FlowSimulator 
             nodes={nodes} 
             edges={edges} 
-            onClose={() => setShowSimulator(false)} 
+            onClose={() => { setShowSimulator(false); handleHighlightNode(null); }} 
+            onHighlightNode={handleHighlightNode}
           />
         )}
 

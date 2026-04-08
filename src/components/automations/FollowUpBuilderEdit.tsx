@@ -856,7 +856,8 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           <FlowSimulator 
             nodes={nodes} 
             edges={edges} 
-            onClose={() => setShowSimulator(false)} 
+            onClose={() => { setShowSimulator(false); handleHighlightNode(null); }} 
+            onHighlightNode={handleHighlightNode}
           />
         )}
 
