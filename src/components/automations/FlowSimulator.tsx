@@ -36,6 +36,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track visited nodes for persistent highlighting
   const visitedNodesRef = useRef<Set<string>>(new Set());
+  const processedNodesRef = useRef<Set<string>>(new Set());
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
