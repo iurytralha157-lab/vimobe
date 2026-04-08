@@ -650,8 +650,8 @@ export default function Pipelines() {
             if (leadStatus !== filterDealStatus) return false;
           }
           
-          // Date filter
-          if (lead.created_at) {
+          // Date filter — skip when user is actively searching
+          if (!deferredSearch && lead.created_at) {
             const leadDate = parseISO(lead.created_at);
             if (!isWithinInterval(leadDate, { start: dateRange.from, end: dateRange.to })) {
               return false;
