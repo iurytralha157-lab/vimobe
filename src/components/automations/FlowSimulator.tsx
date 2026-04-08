@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Node, Edge } from 'reactflow';
 import { X, RotateCcw, Send, Globe, Image, Headphones, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { MessageBox } from '@/components/ui/message-box';
 import { cn } from '@/lib/utils';
 
 interface SimMessage {
