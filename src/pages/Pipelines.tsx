@@ -1204,7 +1204,7 @@ export default function Pipelines() {
                           )}
                           
                           {/* Botão Carregar Mais */}
-                          {stage.has_more && (
+                          {stages.find((s: any) => s.id === stage.id)?.has_more && (
                             <Button
                               variant="ghost"
                               size="sm"
