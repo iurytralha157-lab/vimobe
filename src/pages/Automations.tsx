@@ -57,7 +57,7 @@ export default function Automations() {
   if (viewMode === 'build-followup') {
     return (
       <AppLayout title={undefined} disableMainScroll>
-        <div className="-m-6 h-[calc(100%+48px)] overflow-hidden">
+        <div className="absolute inset-0 p-1.5 pt-0">
           <FollowUpBuilder
             onBack={handleBack}
             onComplete={handleComplete}
@@ -75,7 +75,7 @@ export default function Automations() {
   if (viewMode === 'edit-existing' && editingAutomationId) {
     return (
       <AppLayout title={undefined} disableMainScroll>
-        <div className="-m-6 h-[calc(100%+48px)] overflow-hidden">
+        <div className="absolute inset-0 p-1.5 pt-0">
           <FollowUpBuilderEdit
             automationId={editingAutomationId}
             onBack={handleBack}
