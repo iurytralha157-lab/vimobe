@@ -113,6 +113,7 @@ export default function Pipelines() {
   const [filterUser, setFilterUser] = useState<string | undefined>(undefined);
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterDealStatus, setFilterDealStatus] = useState<string>('all');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [editingStageName, setEditingStageName] = useState('');
