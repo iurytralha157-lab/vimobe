@@ -211,6 +211,16 @@ Deno.serve(async (req) => {
           });
         }
 
+        // Also create organization_members entry
+        await supabaseAdmin
+          .from('organization_members')
+          .upsert({
+            user_id: existingUser.id,
+            organization_id: targetOrgId,
+            role: role as 'admin' | 'user',
+            is_active: true,
+          }, { onConflict: 'user_id,organization_id' });
+
         console.log(`Orphan user ${email} added to org ${org.name}`);
         return new Response(JSON.stringify({ 
           success: true, 
@@ -229,14 +239,54 @@ Deno.serve(async (req) => {
 
       // User already belongs to an organization
       if (existingUser.organization_id === targetOrgId) {
-        return new Response(JSON.stringify({ error: 'Este usuário já pertence a esta organização' }), {
-          status: 409,
+        // Check if already in organization_members
+        const { data: existingMember } = await supabaseAdmin
+          .from('organization_members')
+          .select('id')
+          .eq('user_id', existingUser.id)
+          .eq('organization_id', targetOrgId)
+          .maybeSingle();
+
+        if (existingMember) {
+          return new Response(JSON.stringify({ error: 'Este usuário já pertence a esta organização' }), {
+            status: 409,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      // Multi-org: Add user to new organization via organization_members
+      // (user keeps their primary org in users.organization_id, but gains access to new org)
+      const { error: memberError } = await supabaseAdmin
+        .from('organization_members')
+        .upsert({
+          user_id: existingUser.id,
+          organization_id: targetOrgId,
+          role: role as 'admin' | 'user',
+          is_active: true,
+        }, { onConflict: 'user_id,organization_id' });
+
+      if (memberError) {
+        console.error('Error adding user to organization:', memberError);
+        return new Response(JSON.stringify({ error: memberError.message }), {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      return new Response(JSON.stringify({ error: 'Este usuário já pertence a outra organização' }), {
-        status: 409,
+      console.log(`User ${email} added to org ${org.name} (multi-org)`);
+      return new Response(JSON.stringify({ 
+        success: true, 
+        user: {
+          id: existingUser.id,
+          email,
+          name: existingUser.name,
+          role,
+        },
+        wasMultiOrg: true,
+        message: `Usuário adicionado à organização ${org.name}. O acesso será feito com a senha existente.`,
+      }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
