@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { MessageBox } from "@/components/ui/message-box";
 import { useFloatingChat } from "@/contexts/FloatingChatContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -751,32 +752,29 @@ export function FloatingChat() {
   );
   const renderMessageInput = (mobile = false) => (
     <div className={cn("p-3 border-t shrink-0 bg-card", mobile && "pb-2")}>
-      <div className="flex items-center gap-2">
-        <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" />
-        <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => fileInputRef.current?.click()}>
-          <Paperclip className="h-5 w-5" />
-        </Button>
-        <Textarea 
-          ref={messageInputRef}
-          placeholder="Digite sua mensagem..." 
-          value={messageText} 
-          onChange={(e) => { setMessageText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px'; }} 
-          onKeyDown={handleKeyPress} 
-          className={cn("flex-1 min-h-[40px] max-h-[160px] resize-none py-2 overflow-y-auto", mobile ? "min-h-[44px]" : "")}
-          rows={1}
-          autoComplete="off"
-        />
-        {messageText.trim() ? (
-          <Button size="icon" className="h-10 w-10" onClick={handleSendMessage} disabled={sendMessage.isPending}>
-            {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
-        ) : (
+      <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" />
+      <MessageBox
+        value={messageText}
+        onChange={setMessageText}
+        onSend={handleSendMessage}
+        onKeyDown={handleKeyPress}
+        placeholder="Digite sua mensagem..."
+        isSending={sendMessage.isPending}
+        multiline
+        inputRef={messageInputRef}
+        showRightActionsWhenEmpty
+        leftActions={
+          <button type="button" onClick={() => fileInputRef.current?.click()}>
+            <Paperclip className="w-5 h-5" />
+          </button>
+        }
+        rightActions={
           <AudioRecorderButton 
             onSend={handleSendAudio}
             disabled={sendMessage.isPending}
           />
-        )}
-      </div>
+        }
+      />
     </div>
   );
   const ConversationFilters = () => <div className="p-4 space-y-3 border-b shrink-0 bg-card">
