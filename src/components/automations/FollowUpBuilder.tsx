@@ -183,7 +183,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
     setNodes((nds) =>
       nds.map((n) => ({
         ...n,
-        data: { ...n.data, _simActive: n.id === nodeId, _simVisited: n.id === nodeId ? true : n.data._simVisited },
+        className: n.id === nodeId ? 'sim-active-node' : (n.className === 'sim-active-node' ? 'sim-visited-node' : n.className),
       }))
     );
   }, [setNodes]);
