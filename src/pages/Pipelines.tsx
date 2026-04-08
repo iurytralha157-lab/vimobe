@@ -125,7 +125,7 @@ export default function Pipelines() {
   const [newStageColor, setNewStageColor] = useState('#6b7280');
   const [slaSettingsOpen, setSlaSettingsOpen] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
-  const [datePreset, setDatePreset] = useState<DatePreset>('thisYear');
+  const [datePreset, setDatePreset] = useState<DatePreset>('last7days');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
