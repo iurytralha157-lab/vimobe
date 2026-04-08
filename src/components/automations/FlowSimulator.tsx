@@ -143,17 +143,16 @@ export function FlowSimulator({ nodes, edges, onClose }: FlowSimulatorProps) {
         const labels: Record<string, string> = { minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
         const stopOnReply = node.data.stop_on_reply === true;
 
-        addSystemMessage(`⏳ Aguardando ${value} ${labels[type] || type}...`);
+        addSystemMessage(`⏳ Aguardando ${value} ${labels[type] || type} (preview: 1 min)...`);
 
         if (stopOnReply) {
-          addSystemMessage('💬 Simulação: aguardando sua resposta. Digite algo ou espere 3s para seguir pelo timeout.');
-          setWaitingForReply(true);
-          setCurrentWaitNodeId(node.id);
-          return; // Stop processing, wait for user input or timeout
+          addSystemMessage('💬 Digite algo para responder ou aguarde 1 minuto para o timeout.');
         } else {
-          await delay(1500);
+          addSystemMessage('💬 Digite algo para pular a espera ou aguarde 1 minuto.');
         }
-        break;
+        setWaitingForReply(true);
+        setCurrentWaitNodeId(node.id);
+        return;
       }
 
       case 'condition': {
@@ -273,6 +272,13 @@ export function FlowSimulator({ nodes, edges, onClose }: FlowSimulatorProps) {
       } else {
         addSystemMessage('ℹ️ Nenhum caminho conectado para "Respondeu".');
       }
+    } else if (node.type === 'wait' && !node.data.stop_on_reply) {
+      // Non-stop_on_reply wait: user skipped, continue default path
+      addSystemMessage('⏩ Espera pulada. Continuando fluxo...');
+      const nextNodes = getNextNodes(nodeId);
+      for (const next of nextNodes) {
+        await processNode(next);
+      }
     } else if (node.type === 'condition') {
       // Sentiment analysis simulation
       const positiveWords = ['sim', 'quero', 'interesse', 'gostei', 'ok', 'ótimo', 'bom', 'claro', 'aceito', 'vamos'];
@@ -308,20 +314,28 @@ export function FlowSimulator({ nodes, edges, onClose }: FlowSimulatorProps) {
       const nodeId = currentWaitNodeId;
       setCurrentWaitNodeId(null);
 
-      addSystemMessage('⏰ Timeout! Lead não respondeu. Seguindo caminho "Timeout"...');
-      const timeoutNodes = getNextNodes(nodeId, 'no_reply');
-      if (timeoutNodes.length > 0) {
-        for (const next of timeoutNodes) {
-          await processNode(next);
+      if (node.data.stop_on_reply) {
+        addSystemMessage('⏰ Timeout! Lead não respondeu. Seguindo caminho "Timeout"...');
+        const timeoutNodes = getNextNodes(nodeId, 'no_reply');
+        if (timeoutNodes.length > 0) {
+          for (const next of timeoutNodes) {
+            await processNode(next);
+          }
+        } else {
+          addSystemMessage('ℹ️ Nenhum caminho conectado para "Timeout".');
         }
       } else {
-        addSystemMessage('ℹ️ Nenhum caminho conectado para "Timeout".');
+        addSystemMessage('⏰ Tempo de espera concluído. Continuando fluxo...');
+        const nextNodes = getNextNodes(nodeId);
+        for (const next of nextNodes) {
+          await processNode(next);
+        }
       }
       if (!abortRef.current) {
         addSystemMessage('✅ Simulação concluída!');
         setIsRunning(false);
       }
-    }, 5000);
+    }, 60000); // 1 minute in preview
 
     return () => clearTimeout(timer);
   }, [waitingForReply, currentWaitNodeId, nodes, getNextNodes, processNode, addSystemMessage]);
