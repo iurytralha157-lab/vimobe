@@ -272,6 +272,13 @@ export function FlowSimulator({ nodes, edges, onClose }: FlowSimulatorProps) {
       } else {
         addSystemMessage('ℹ️ Nenhum caminho conectado para "Respondeu".');
       }
+    } else if (node.type === 'wait' && !node.data.stop_on_reply) {
+      // Non-stop_on_reply wait: user skipped, continue default path
+      addSystemMessage('⏩ Espera pulada. Continuando fluxo...');
+      const nextNodes = getNextNodes(nodeId);
+      for (const next of nextNodes) {
+        await processNode(next);
+      }
     } else if (node.type === 'condition') {
       // Sentiment analysis simulation
       const positiveWords = ['sim', 'quero', 'interesse', 'gostei', 'ok', 'ótimo', 'bom', 'claro', 'aceito', 'vamos'];
