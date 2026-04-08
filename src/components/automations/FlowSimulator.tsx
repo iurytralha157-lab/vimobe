@@ -314,6 +314,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
     setIsTyping(false);
     stopCountdown();
     visitedNodesRef.current.clear();
+    processedNodesRef.current.clear();
 
     const startNodes = getStartNodes();
     if (startNodes.length === 0) {
@@ -395,6 +396,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
     setIsTyping(false);
     stopCountdown();
     visitedNodesRef.current.clear();
+    processedNodesRef.current.clear();
     clearHighlight();
     setTimeout(() => startSimulation(), 100);
   }, [startSimulation, stopCountdown, clearHighlight]);
