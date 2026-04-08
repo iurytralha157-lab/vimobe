@@ -340,6 +340,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const switchOrganization = async (orgId: string) => {
+    if (!user) return;
+
+    // Update users.organization_id to reflect active org
+    await supabase
+      .from('users')
+      .update({ organization_id: orgId })
+      .eq('id', user.id);
+
+    // Fetch the new org data
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .single();
+
+    if (orgData) {
+      setOrganization(orgData as Organization);
+    }
+
+    // Get user's role in this org from organization_members
+    const { data: memberData } = await supabase
+      .from('organization_members' as any)
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (memberData) {
+      // Update profile role to match org membership role
+      const newRole = (memberData as any).role;
+      await supabase
+        .from('users')
+        .update({ role: newRole })
+        .eq('id', user.id);
+
+      setProfile(prev => prev ? { ...prev, organization_id: orgId, role: newRole } : prev);
+    } else {
+      setProfile(prev => prev ? { ...prev, organization_id: orgId } : prev);
+    }
+
+    setNeedsOrgSelection(false);
+  };
+
+  // Check if user has multiple orgs after profile is loaded
+  const checkMultiOrg = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('organization_members' as any)
+        .select('organization_id')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      if (!error && data && data.length > 1) {
+        setNeedsOrgSelection(true);
+      } else {
+        setNeedsOrgSelection(false);
+      }
+    } catch {
+      setNeedsOrgSelection(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -349,13 +412,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       isSuperAdmin,
       impersonating,
+      needsOrgSelection,
       signIn,
       signUp,
       signOut,
       resetPassword,
       refreshProfile,
       startImpersonate,
-      stopImpersonate
+      stopImpersonate,
+      switchOrganization,
     }}>
       {children}
     </AuthContext.Provider>
