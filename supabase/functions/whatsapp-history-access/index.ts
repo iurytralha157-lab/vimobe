@@ -109,27 +109,39 @@ Deno.serve(async (req) => {
       }
 
       const conversationIds = conversations.map((c: any) => c.id);
-      const sessionIds = [...new Set(conversations.map((c: any) => c.session_id))];
 
-      // Get messages + sessions in parallel
-      const [messagesResult, sessionsResult] = await Promise.all([
-        supabase
-          .from("whatsapp_messages")
-          .select("id, content, from_me, message_type, media_url, media_mime_type, media_status, sent_at, status, sender_name, sender_jid, conversation_id, session_id")
-          .in("conversation_id", conversationIds)
-          .order("sent_at", { ascending: false })
-          .limit(1000),
-        supabase
-          .from("whatsapp_sessions")
-          .select("id, instance_name, owner_user_id")
-          .in("id", sessionIds),
-      ]);
+      // First get messages
+      const messagesResult = await supabase
+        .from("whatsapp_messages")
+        .select("id, content, from_me, message_type, media_url, media_mime_type, media_status, sent_at, status, sender_name, sender_jid, conversation_id, session_id")
+        .in("conversation_id", conversationIds)
+        .order("sent_at", { ascending: false })
+        .limit(1000);
 
       if (messagesResult.error) throw messagesResult.error;
 
+      // Collect ALL session_ids from both conversations AND messages
+      const allSessionIds = [...new Set([
+        ...conversations.map((c: any) => c.session_id),
+        ...(messagesResult.data || []).map((m: any) => m.session_id).filter(Boolean),
+      ])];
+
+      // Get sessions
+      let sessionMap: Record<string, any> = {};
+      if (allSessionIds.length > 0) {
+        const { data: sessions } = await supabase
+          .from("whatsapp_sessions")
+          .select("id, instance_name, owner_user_id")
+          .in("id", allSessionIds);
+
+        if (sessions) {
+          sessionMap = Object.fromEntries(sessions.map((s: any) => [s.id, s]));
+        }
+      }
+
       // Get owner names
       const ownerIds = [...new Set(
-        (sessionsResult.data || [])
+        Object.values(sessionMap)
           .map((s: any) => s.owner_user_id)
           .filter(Boolean)
       )];
@@ -144,11 +156,6 @@ Deno.serve(async (req) => {
           ownerMap = Object.fromEntries(owners.map((o: any) => [o.id, o.name]));
         }
       }
-
-      // Build session lookup
-      const sessionMap = Object.fromEntries(
-        (sessionsResult.data || []).map((s: any) => [s.id, s])
-      );
 
       // Enrich messages
       const enriched = (messagesResult.data || []).map((msg: any) => {
