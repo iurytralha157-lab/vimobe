@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 // Lazy imports - heavy pages
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Signup = lazy(() => import("./pages/Signup"));
+const SelectOrganization = lazy(() => import("./pages/SelectOrganization"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Contacts = lazy(() => import("./pages/Contacts"));
@@ -113,11 +114,12 @@ const PageLoader = () => (
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, profile, isSuperAdmin, impersonating, organization } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   if (!profile && !isSuperAdmin) return <PageLoader />;
+  if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
   
@@ -125,11 +127,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading, profile, isSuperAdmin, impersonating } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection } = useAuth();
   
   useForceRefreshListener();
 
   const getDefaultRedirect = () => {
+    if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
     return "/dashboard";
   };
@@ -163,6 +166,10 @@ function AppRoutes() {
             <Route path="/auth" element={renderAuthRoute()} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
             <Route path="/onboarding" element={renderOnboardingRoute()} />
+            <Route path="/select-organization" element={
+              loading ? <PageLoader /> : !user ? <Navigate to="/auth" replace /> : 
+              <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
+            } />
             
             {/* Super Admin Routes */}
             <Route path="/admin" element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />

@@ -54,6 +54,8 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   startImpersonate: (orgId: string, orgName: string) => Promise<void>;
   stopImpersonate: () => Promise<void>;
+  switchOrganization: (orgId: string) => Promise<void>;
+  needsOrgSelection: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
     const stored = localStorage.getItem('impersonating');
     return stored ? JSON.parse(stored) : null;
@@ -206,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session.user);
 
       await fetchProfile(session.user.id);
+      await checkMultiOrg(session.user.id);
       setLoading(false);
     });
 
@@ -260,6 +264,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Log successful login (async to avoid blocking)
     if (!error && data.user) {
+      // Check multi-org in background
+      checkMultiOrg(data.user.id).catch(console.error);
+      
       setTimeout(() => {
         logAuditAction('login', 'session', data.user.id, undefined, {
           email,
@@ -337,6 +344,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const switchOrganization = async (orgId: string) => {
+    if (!user) return;
+
+    // Update users.organization_id to reflect active org
+    await supabase
+      .from('users')
+      .update({ organization_id: orgId })
+      .eq('id', user.id);
+
+    // Fetch the new org data
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .single();
+
+    if (orgData) {
+      setOrganization(orgData as Organization);
+    }
+
+    // Get user's role in this org from organization_members
+    const { data: memberData } = await supabase
+      .from('organization_members' as any)
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (memberData) {
+      // Update profile role to match org membership role
+      const newRole = (memberData as any).role;
+      await supabase
+        .from('users')
+        .update({ role: newRole })
+        .eq('id', user.id);
+
+      setProfile(prev => prev ? { ...prev, organization_id: orgId, role: newRole } : prev);
+    } else {
+      setProfile(prev => prev ? { ...prev, organization_id: orgId } : prev);
+    }
+
+    setNeedsOrgSelection(false);
+  };
+
+  // Check if user has multiple orgs after profile is loaded
+  const checkMultiOrg = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('organization_members' as any)
+        .select('organization_id')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      if (!error && data && data.length > 1) {
+        setNeedsOrgSelection(true);
+      } else {
+        setNeedsOrgSelection(false);
+      }
+    } catch {
+      setNeedsOrgSelection(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -346,13 +416,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       isSuperAdmin,
       impersonating,
+      needsOrgSelection,
       signIn,
       signUp,
       signOut,
       resetPassword,
       refreshProfile,
       startImpersonate,
-      stopImpersonate
+      stopImpersonate,
+      switchOrganization,
     }}>
       {children}
     </AuthContext.Provider>

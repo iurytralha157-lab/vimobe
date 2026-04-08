@@ -1,8 +1,9 @@
-import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield } from 'lucide-react';
+import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Building2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { useNotifications, useUnreadNotificationsCount, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/use-notifications';
+import { useUserOrganizations } from '@/hooks/use-user-organizations';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,7 +30,10 @@ export function AppHeader({
   const {
     profile,
     signOut,
-    isSuperAdmin
+    isSuperAdmin,
+    organization,
+    switchOrganization,
+    user,
   } = useAuth();
   const {
     theme,
@@ -47,6 +51,16 @@ export function AppHeader({
   } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const { data: userOrganizations = [] } = useUserOrganizations(user?.id);
+  
+  const hasMultipleOrgs = userOrganizations.length > 1;
+
+  const handleSwitchOrg = async (orgId: string) => {
+    await switchOrganization(orgId);
+    navigate('/dashboard', { replace: true });
+    // Force reload to reset all queries
+    window.location.reload();
+  };
 
   const handleNotificationClick = (notification: any) => {
     markRead.mutate(notification.id);
@@ -70,6 +84,54 @@ export function AppHeader({
 
       {/* Right side actions - Capsule style redesign */}
       <div className="flex items-center gap-3 ml-auto">
+        {/* Org switcher */}
+        {hasMultipleOrgs && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-10 gap-2 px-3 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
+              >
+                <Building2 className="h-4 w-4 text-primary" />
+                {!isMobile && (
+                  <span className="text-xs font-medium truncate max-w-[120px]">
+                    {organization?.name || 'Organização'}
+                  </span>
+                )}
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={12} className="w-64 bg-popover/95 backdrop-blur-md rounded-2xl p-1 border-border/50">
+              <div className="px-3 py-2 border-b border-border/40">
+                <p className="text-xs font-semibold text-muted-foreground">Trocar organização</p>
+              </div>
+              {userOrganizations.map((org) => (
+                <DropdownMenuItem
+                  key={org.organization_id}
+                  onClick={() => handleSwitchOrg(org.organization_id)}
+                  className="cursor-pointer rounded-xl m-1 px-3 py-2.5 gap-3"
+                >
+                  <Avatar className="h-8 w-8 rounded-lg border border-border/40">
+                    <AvatarImage src={org.organization_logo || undefined} />
+                    <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-bold">
+                      {org.organization_name?.charAt(0)?.toUpperCase() || 'O'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{org.organization_name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {org.member_role === 'admin' ? 'Administrador' : 'Usuário'}
+                    </p>
+                  </div>
+                  {organization?.id === org.organization_id && (
+                    <Check className="h-4 w-4 text-primary shrink-0" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         {/* Theme toggle circle */}
         <Button 
           variant="ghost" 
