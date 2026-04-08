@@ -1,8 +1,9 @@
 import postgres from 'https://deno.land/x/postgresjs@v3.4.5/mod.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-migration-key',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 Deno.serve(async (req) => {
@@ -12,32 +13,63 @@ Deno.serve(async (req) => {
 
   try {
     const dbUrl = Deno.env.get('SUPABASE_DB_URL');
-
     if (!dbUrl) {
-      return new Response(JSON.stringify({ error: 'SUPABASE_DB_URL not available in edge function environment' }), {
+      return new Response(JSON.stringify({ error: 'SUPABASE_DB_URL not available' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { sql: sqlStatements, key } = await req.json();
-    
-    // Simple shared secret check - the key is the SUPABASE_SERVICE_ROLE_KEY
+    // Verify caller is super_admin via service role
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    if (key !== serviceRoleKey) {
-      // Also accept if the Authorization header has the service role key
-      const authHeader = req.headers.get('Authorization') || '';
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
-      if (token !== serviceRoleKey) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+      
+      if (user) {
+        // Check if super admin
+        const { data: saRole } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'super_admin')
+          .maybeSingle();
+
+        const { data: saUser } = await supabaseAdmin
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .eq('role', 'super_admin')
+          .maybeSingle();
+
+        if (!saRole && !saUser) {
+          return new Response(JSON.stringify({ error: 'Only super_admin' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } else {
+        return new Response(JSON.stringify({ error: 'Invalid auth' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+    } else {
+      return new Response(JSON.stringify({ error: 'No auth header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
+    const { sql: sqlStatements } = await req.json();
     if (!sqlStatements || !Array.isArray(sqlStatements)) {
-      return new Response(JSON.stringify({ error: 'Provide sql as array of statements' }), {
+      return new Response(JSON.stringify({ error: 'Provide sql as array' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -61,7 +93,6 @@ Deno.serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
