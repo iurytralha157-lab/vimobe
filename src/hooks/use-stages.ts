@@ -329,7 +329,8 @@ export function useFilteredStageCounts({
             query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
           }
 
-          if (dateRange) {
+          // Skip date filter when user is actively searching
+          if (dateRange && !normalizedSearch) {
             query = query
               .gte('created_at', dateRange.from.toISOString())
               .lte('created_at', dateRange.to.toISOString());
