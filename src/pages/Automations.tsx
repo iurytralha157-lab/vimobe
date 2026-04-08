@@ -59,7 +59,7 @@ export default function Automations() {
       <AppLayout title={undefined} disableMainScroll>
         <div className="absolute inset-0 p-1.5 pt-0">
           <FollowUpBuilder
-            template={selectedTemplate}
+            initialTemplate={selectedTemplate}
             onBack={handleBack}
             onComplete={handleComplete}
           />
