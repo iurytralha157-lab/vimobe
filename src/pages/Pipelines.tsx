@@ -843,8 +843,8 @@ export default function Pipelines() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Buscar..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="h-8 w-40 pl-8 text-xs"
               />
             </div>
@@ -888,8 +888,8 @@ export default function Pipelines() {
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                           placeholder="Buscar..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          value={searchInput}
+                          onChange={(e) => setSearchInput(e.target.value)}
                           className="h-9 w-full pl-8 text-xs"
                         />
                       </div>
@@ -986,6 +986,7 @@ export default function Pipelines() {
                           setFilterUser(isAdmin || hasLeadViewAll ? 'all' : profile?.id);
                           setFilterTag('all');
                           setFilterDealStatus('all');
+                          setSearchInput('');
                           setSearchQuery('');
                         }}
                       >
