@@ -36,6 +36,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track visited nodes for persistent highlighting
   const visitedNodesRef = useRef<Set<string>>(new Set());
+  const processedNodesRef = useRef<Set<string>>(new Set());
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -140,6 +141,9 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
 
   const processNode = useCallback(async (node: Node): Promise<void> => {
     if (abortRef.current) return;
+    // Skip already-processed nodes to avoid duplicates
+    if (processedNodesRef.current.has(node.id)) return;
+    processedNodesRef.current.add(node.id);
 
     // Highlight the node on canvas
     highlightNode(node.id);
@@ -310,6 +314,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
     setIsTyping(false);
     stopCountdown();
     visitedNodesRef.current.clear();
+    processedNodesRef.current.clear();
 
     const startNodes = getStartNodes();
     if (startNodes.length === 0) {
@@ -391,6 +396,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
     setIsTyping(false);
     stopCountdown();
     visitedNodesRef.current.clear();
+    processedNodesRef.current.clear();
     clearHighlight();
     setTimeout(() => startSimulation(), 100);
   }, [startSimulation, stopCountdown, clearHighlight]);
