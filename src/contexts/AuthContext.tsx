@@ -54,6 +54,8 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   startImpersonate: (orgId: string, orgName: string) => Promise<void>;
   stopImpersonate: () => Promise<void>;
+  switchOrganization: (orgId: string) => Promise<void>;
+  needsOrgSelection: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
