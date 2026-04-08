@@ -30,7 +30,10 @@ export function AppHeader({
   const {
     profile,
     signOut,
-    isSuperAdmin
+    isSuperAdmin,
+    organization,
+    switchOrganization,
+    user,
   } = useAuth();
   const {
     theme,
@@ -48,6 +51,16 @@ export function AppHeader({
   } = useUnreadNotificationsCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const { data: userOrganizations = [] } = useUserOrganizations(user?.id);
+  
+  const hasMultipleOrgs = userOrganizations.length > 1;
+
+  const handleSwitchOrg = async (orgId: string) => {
+    await switchOrganization(orgId);
+    navigate('/dashboard', { replace: true });
+    // Force reload to reset all queries
+    window.location.reload();
+  };
 
   const handleNotificationClick = (notification: any) => {
     markRead.mutate(notification.id);
