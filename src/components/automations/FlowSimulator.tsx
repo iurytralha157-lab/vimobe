@@ -141,6 +141,9 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
 
   const processNode = useCallback(async (node: Node): Promise<void> => {
     if (abortRef.current) return;
+    // Skip already-processed nodes to avoid duplicates
+    if (processedNodesRef.current.has(node.id)) return;
+    processedNodesRef.current.add(node.id);
 
     // Highlight the node on canvas
     highlightNode(node.id);
