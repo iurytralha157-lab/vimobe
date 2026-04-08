@@ -71,6 +71,7 @@ import { useProperties } from '@/hooks/use-properties';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import DeletableEdge from './edges/DeletableEdge';
+import { FlowSimulator } from './FlowSimulator';
 
 const edgeTypes = {
   deletable: DeletableEdge,
@@ -190,6 +191,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  const [showSimulator, setShowSimulator] = useState(false);
   const [onReplyMessage, setOnReplyMessage] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true, conditionals: true, actions: true,
@@ -739,14 +741,24 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             />
           </div>
         </div>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Salvar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant={showSimulator ? "default" : "outline"} 
+            onClick={() => setShowSimulator(!showSimulator)}
+            className="gap-2"
+          >
+            <Play className="h-4 w-4" />
+            Preview
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Salvar
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -828,7 +840,15 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           </ReactFlow>
         </div>
 
-        {/* Inline Node Config Panel */}
+        {/* Flow Simulator */}
+        {showSimulator && (
+          <FlowSimulator 
+            nodes={nodes} 
+            edges={edges} 
+            onClose={() => setShowSimulator(false)} 
+          />
+        )}
+
         {selectedNode && (
             <NodeConfigPanel
               selectedNode={selectedNode}
