@@ -314,20 +314,28 @@ export function FlowSimulator({ nodes, edges, onClose }: FlowSimulatorProps) {
       const nodeId = currentWaitNodeId;
       setCurrentWaitNodeId(null);
 
-      addSystemMessage('⏰ Timeout! Lead não respondeu. Seguindo caminho "Timeout"...');
-      const timeoutNodes = getNextNodes(nodeId, 'no_reply');
-      if (timeoutNodes.length > 0) {
-        for (const next of timeoutNodes) {
-          await processNode(next);
+      if (node.data.stop_on_reply) {
+        addSystemMessage('⏰ Timeout! Lead não respondeu. Seguindo caminho "Timeout"...');
+        const timeoutNodes = getNextNodes(nodeId, 'no_reply');
+        if (timeoutNodes.length > 0) {
+          for (const next of timeoutNodes) {
+            await processNode(next);
+          }
+        } else {
+          addSystemMessage('ℹ️ Nenhum caminho conectado para "Timeout".');
         }
       } else {
-        addSystemMessage('ℹ️ Nenhum caminho conectado para "Timeout".');
+        addSystemMessage('⏰ Tempo de espera concluído. Continuando fluxo...');
+        const nextNodes = getNextNodes(nodeId);
+        for (const next of nextNodes) {
+          await processNode(next);
+        }
       }
       if (!abortRef.current) {
         addSystemMessage('✅ Simulação concluída!');
         setIsRunning(false);
       }
-    }, 5000);
+    }, 60000); // 1 minute in preview
 
     return () => clearTimeout(timer);
   }, [waitingForReply, currentWaitNodeId, nodes, getNextNodes, processNode, addSystemMessage]);
