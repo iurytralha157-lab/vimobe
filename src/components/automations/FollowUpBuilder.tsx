@@ -175,6 +175,23 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [showSimulator, setShowSimulator] = useState(false);
+  const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
+
+  // Apply visual highlight to the active node on canvas
+  const handleHighlightNode = useCallback((nodeId: string | null) => {
+    setSimulatorHighlightNodeId(nodeId);
+    if (nodeId === null) {
+      // Clear all simulation classes
+      setNodes((nds) => nds.map((n) => ({ ...n, className: undefined })));
+    } else {
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          className: n.id === nodeId ? 'sim-active-node' : (n.className === 'sim-active-node' ? 'sim-visited-node' : n.className),
+        }))
+      );
+    }
+  }, [setNodes]);
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true,
     conditionals: true,
@@ -811,7 +828,8 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           <FlowSimulator 
             nodes={nodes} 
             edges={edges} 
-            onClose={() => setShowSimulator(false)} 
+            onClose={() => { setShowSimulator(false); handleHighlightNode(null); }} 
+            onHighlightNode={handleHighlightNode}
           />
         )}
 

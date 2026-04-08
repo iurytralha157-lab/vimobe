@@ -192,6 +192,21 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [showSimulator, setShowSimulator] = useState(false);
+  const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
+
+  const handleHighlightNode = useCallback((nodeId: string | null) => {
+    setSimulatorHighlightNodeId(nodeId);
+    if (nodeId === null) {
+      setNodes((nds) => nds.map((n) => ({ ...n, className: undefined })));
+    } else {
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          className: n.id === nodeId ? 'sim-active-node' : (n.className === 'sim-active-node' ? 'sim-visited-node' : n.className),
+        }))
+      );
+    }
+  }, [setNodes]);
   const [onReplyMessage, setOnReplyMessage] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true, conditionals: true, actions: true,
@@ -845,7 +860,8 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           <FlowSimulator 
             nodes={nodes} 
             edges={edges} 
-            onClose={() => setShowSimulator(false)} 
+            onClose={() => { setShowSimulator(false); handleHighlightNode(null); }} 
+            onHighlightNode={handleHighlightNode}
           />
         )}
 
