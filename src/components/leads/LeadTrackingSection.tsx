@@ -110,6 +110,7 @@ export function LeadTrackingSection({ leadMeta, isLoading }: LeadTrackingSection
                 label="Anúncio"
                 value={leadMeta.ad_name || leadMeta.ad_id || ''}
                 subValue={leadMeta.ad_name && leadMeta.ad_id ? `ID: ${leadMeta.ad_id}` : undefined}
+                externalUrl={leadMeta.ad_id ? `https://business.facebook.com/ads/manager/manage/ads?selected_ad_ids=${leadMeta.ad_id}` : undefined}
               />
             )}
             
@@ -214,9 +215,10 @@ interface TrackingRowProps {
   label: string;
   value: string;
   subValue?: string;
+  externalUrl?: string;
 }
 
-function TrackingRow({ icon: Icon, label, value, subValue }: TrackingRowProps) {
+function TrackingRow({ icon: Icon, label, value, subValue, externalUrl }: TrackingRowProps) {
   return (
     <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
       <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -229,6 +231,17 @@ function TrackingRow({ icon: Icon, label, value, subValue }: TrackingRowProps) {
           <p className="text-xs text-muted-foreground truncate">{subValue}</p>
         )}
       </div>
+      {externalUrl && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={() => window.open(externalUrl, '_blank')}
+          title="Abrir no Meta Ads Manager"
+        >
+          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      )}
     </div>
   );
 }
