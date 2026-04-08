@@ -527,8 +527,13 @@ export default function Pipelines() {
     setEditingStageId(null);
   };
 
-  // Debounce da busca para performance
-  const deferredSearch = useDeferredValue(searchQuery);
+  // Debounce search input → searchQuery
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const deferredSearch = searchQuery;
   
   // Server-side search when there are stages with has_more and user is searching
   const hasMoreLeads = stages.some((s: any) => s.has_more);
