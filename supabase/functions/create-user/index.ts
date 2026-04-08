@@ -161,6 +161,16 @@ Deno.serve(async (req) => {
         if (updateError) {
           console.error('Error updating user profile:', updateError);
         }
+
+        // Create organization_members entry
+        await supabaseAdmin
+          .from('organization_members')
+          .upsert({
+            user_id: existingUser.id,
+            organization_id: existingUser.organization_id || targetOrgId,
+            role: role as 'admin' | 'user',
+            is_active: true,
+          }, { onConflict: 'user_id,organization_id' });
         
         console.log(`Auth entry created for orphan user: ${email}`);
         return new Response(JSON.stringify({ 
