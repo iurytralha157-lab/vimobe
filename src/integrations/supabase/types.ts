@@ -2850,6 +2850,47 @@ export type Database = {
           },
         ]
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          joined_at: string
+          organization_id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          organization_id: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          organization_id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_modules: {
         Row: {
           created_at: string | null
@@ -5889,6 +5930,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_member_available: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      is_super_admin_member_bypass: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       is_team_leader: { Args: { check_user_id?: string }; Returns: boolean }
       list_all_organizations_admin: {
         Args: never

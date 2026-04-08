@@ -39,6 +39,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const leadId = typeof body?.leadId === "string" ? body.leadId : null;
     const conversationId = typeof body?.conversationId === "string" ? body.conversationId : null;
+    // New: if true, return ALL messages from ALL conversations for this lead
+    const allMessages = body?.allMessages === true;
 
     if (!leadId && !conversationId) {
       return new Response(JSON.stringify({ error: "leadId or conversationId is required" }), {
@@ -47,6 +49,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get requester profile
     const { data: requester, error: requesterError } = await supabase
       .from("users")
       .select("id, role, organization_id")
@@ -60,6 +63,110 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ===== ALL MESSAGES MODE: return every message across all conversations for a lead =====
+    if (allMessages && leadId) {
+      // Check access
+      let canView = requester.role === "admin" || requester.role === "super_admin";
+
+      if (!canView) {
+        const [{ data: canAccessLead }, { data: canViewAll }] = await Promise.all([
+          supabase.rpc("can_access_lead", { p_lead_id: leadId, p_user_id: user.id }),
+          supabase.rpc("user_has_permission", { p_permission_key: "lead_view_all", p_user_id: user.id }),
+        ]);
+
+        if (canAccessLead) {
+          canView = true;
+        } else if (canViewAll) {
+          const { data: leadRow } = await supabase
+            .from("leads")
+            .select("organization_id")
+            .eq("id", leadId)
+            .maybeSingle();
+          canView = leadRow?.organization_id === requester.organization_id;
+        }
+      }
+
+      if (!canView) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get all conversations for this lead
+      const { data: conversations, error: convError } = await supabase
+        .from("whatsapp_conversations")
+        .select("id, session_id")
+        .eq("lead_id", leadId)
+        .is("deleted_at", null);
+
+      if (convError) throw convError;
+      if (!conversations || conversations.length === 0) {
+        return new Response(JSON.stringify({ messages: [] }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const conversationIds = conversations.map((c: any) => c.id);
+      const sessionIds = [...new Set(conversations.map((c: any) => c.session_id))];
+
+      // Get messages + sessions in parallel
+      const [messagesResult, sessionsResult] = await Promise.all([
+        supabase
+          .from("whatsapp_messages")
+          .select("id, content, from_me, message_type, media_url, media_mime_type, media_status, sent_at, status, sender_name, sender_jid, conversation_id, session_id")
+          .in("conversation_id", conversationIds)
+          .order("sent_at", { ascending: true })
+          .limit(500),
+        supabase
+          .from("whatsapp_sessions")
+          .select("id, instance_name, owner_user_id")
+          .in("id", sessionIds),
+      ]);
+
+      if (messagesResult.error) throw messagesResult.error;
+
+      // Get owner names
+      const ownerIds = [...new Set(
+        (sessionsResult.data || [])
+          .map((s: any) => s.owner_user_id)
+          .filter(Boolean)
+      )];
+
+      let ownerMap: Record<string, string> = {};
+      if (ownerIds.length > 0) {
+        const { data: owners } = await supabase
+          .from("users")
+          .select("id, name")
+          .in("id", ownerIds);
+        if (owners) {
+          ownerMap = Object.fromEntries(owners.map((o: any) => [o.id, o.name]));
+        }
+      }
+
+      // Build session lookup
+      const sessionMap = Object.fromEntries(
+        (sessionsResult.data || []).map((s: any) => [s.id, s])
+      );
+
+      // Enrich messages
+      const messages = (messagesResult.data || []).map((msg: any) => {
+        const session = sessionMap[msg.session_id];
+        return {
+          ...msg,
+          session_owner_name: session?.owner_user_id ? (ownerMap[session.owner_user_id] || null) : null,
+          session_instance_name: session?.instance_name || null,
+        };
+      });
+
+      return new Response(JSON.stringify({ messages }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ===== SINGLE CONVERSATION MODE (original behavior) =====
     let conversation: any = null;
 
     if (conversationId) {
