@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Users, Building2, Check, AlertCircle, Loader2, Settings2, ExternalLink, Smartphone, Webhook, User, Bot, LucideIcon, Facebook } from 'lucide-react';
+import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
@@ -26,12 +26,7 @@ import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
 import { AIAgentTab } from '@/components/settings/AIAgentTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-interface TabItem {
-  value: string;
-  label: string;
-  icon: any; // Allow LucideIcon or custom component
-}
+import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 
 export default function Settings() {
   const { profile, isSuperAdmin } = useAuth();
@@ -41,7 +36,6 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('account');
 
-  // Calcular métricas Meta
   const activeMetaPages = metaIntegrations.filter((i) => i.is_connected);
   const totalMetaLeadsReceived = metaIntegrations.reduce(
     (sum, integration) => sum + (integration.leads_received || 0),
@@ -52,12 +46,13 @@ export default function Settings() {
   const hasWebhooksModule = hasModule('webhooks');
   const hasAIAgentModule = hasModule('ai_agent');
 
-  // Build tabs list dynamically based on permissions and modules
-  const settingsTabs: TabItem[] = useMemo(() => {
-    const tabs: TabItem[] = [
-    { value: 'account', label: 'Conta', icon: User },
-    { value: 'team', label: 'Usuários', icon: Users }];
-
+  const settingsTabs: AnimatedTabItem[] = useMemo(() => {
+    const tabs: AnimatedTabItem[] = [
+      { value: 'account', label: 'Conta', icon: User,
+        renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> },
+      { value: 'team', label: 'Usuários', icon: Users,
+        renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> },
+    ];
 
     if (hasWebhooksModule) {
       tabs.push({ value: 'webhooks', label: 'Webhooks', icon: Webhook });
@@ -66,7 +61,8 @@ export default function Settings() {
     tabs.push({ value: 'meta', label: t.settings.meta, icon: Facebook });
 
     if (hasWhatsAppModule) {
-      tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: WhatsAppIcon });
+      tabs.push({ value: 'whatsapp', label: 'WhatsApp', icon: WhatsAppIcon,
+        renderIcon: () => <WhatsAppIcon size={18} variant="logo" trigger="hover" /> });
     }
 
     if (hasWhatsAppModule && hasAIAgentModule) {
@@ -83,79 +79,47 @@ export default function Settings() {
     <AppLayout title={t.settings.title}>
       <div className="animate-in">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {isMobile ?
-          <Select value={activeTab} onValueChange={setActiveTab}>
+          {isMobile ? (
+            <Select value={activeTab} onValueChange={setActiveTab}>
               <SelectTrigger className="w-full">
                 <SelectValue>
                   <div className="flex items-center gap-2">
-                    {CurrentIcon && (
-                      CurrentIcon === WhatsAppIcon ? (
-                        <WhatsAppIcon size={24} variant="logo" trigger="hover" />
-                      ) : (currentTab?.value === 'account' || currentTab?.value === 'team') ? (
-                        <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" />
-                      ) : (
-                        <CurrentIcon className="h-4 w-4" />
-                      )
-                    )}
+                    {currentTab?.renderIcon ? currentTab.renderIcon() : CurrentIcon && <CurrentIcon className="h-4 w-4" />}
                     <span>{currentTab?.label}</span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {settingsTabs.map((tab) =>
+                {settingsTabs.map((tab) => (
                   <SelectItem key={tab.value} value={tab.value}>
                     <div className="flex items-center gap-2">
-                      {tab.icon === WhatsAppIcon ? (
-                        <WhatsAppIcon size={24} variant="logo" trigger="hover" />
-                      ) : (tab.value === 'account' || tab.value === 'team') ? (
-                        <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" />
-                      ) : (
-                        <tab.icon className="h-4 w-4" />
-                      )}
+                      {tab.renderIcon ? tab.renderIcon() : <tab.icon className="h-4 w-4" />}
                       <span>{tab.label}</span>
                     </div>
                   </SelectItem>
-                )}
+                ))}
               </SelectContent>
-            </Select> :
+            </Select>
+          ) : (
+            <AnimatedTabNav tabs={settingsTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+          )}
 
-          <TabsList className="flex-wrap h-auto gap-1">
-              {settingsTabs.map((tab) =>
-            <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
-                  {tab.icon === WhatsAppIcon ? (
-                    <WhatsAppIcon size={24} variant="logo" trigger="hover" />
-                  ) : (tab.value === 'account' || tab.value === 'team') ? (
-                    <AnimatedIcon icon={AVATAR_JSON} size={24} trigger="hover" />
-                  ) : (
-                    <tab.icon className="h-4 w-4" />
-                  )}
-                  <span>{tab.label}</span>
-                </TabsTrigger>
-            )}
-            </TabsList>
-          }
-
-          {/* Account Tab (Profile + Organization) */}
           <TabsContent value="account">
             <AccountTab />
           </TabsContent>
 
-          {/* Team Tab (Users + Roles) */}
           <TabsContent value="team">
             <TeamTab />
           </TabsContent>
 
-          {/* Webhooks Tab */}
           <TabsContent value="webhooks">
             <WebhooksTab />
           </TabsContent>
 
-          {/* Meta Integration Tab */}
           <TabsContent value="meta">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  
                   {t.settings.integrations.meta.title}
                 </CardTitle>
                 <CardDescription>
@@ -163,13 +127,12 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4 md:px-6 pb-5 space-y-6">
-                {metaLoading ?
-                <div className="flex items-center justify-center py-8">
+                {metaLoading ? (
+                  <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div> :
-
-                <>
-                    {/* Status da Conexão */}
+                  </div>
+                ) : (
+                  <>
                     <div className={`p-4 rounded-lg border ${isMetaConnected ? 'border-success bg-success/5' : 'border-warning bg-warning/5'}`}>
                       <div className="flex items-center gap-3">
                         {isMetaConnected ? <Check className="h-5 w-5 text-success" /> : <AlertCircle className="h-5 w-5 text-warning" />}
@@ -178,17 +141,16 @@ export default function Settings() {
                             {isMetaConnected ? t.settings.integrations.meta.connected : t.settings.integrations.meta.notConnected}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {isMetaConnected ?
-                          `${activeMetaPages.length} ${t.settings.integrations.meta.activePage} ${metaIntegrations.length} ${t.settings.integrations.meta.pagesConnected}` :
-                          t.settings.integrations.meta.description}
+                            {isMetaConnected
+                              ? `${activeMetaPages.length} ${t.settings.integrations.meta.activePage} ${metaIntegrations.length} ${t.settings.integrations.meta.pagesConnected}`
+                              : t.settings.integrations.meta.description}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Resumo quando conectado */}
-                    {isMetaConnected &&
-                  <div className="grid grid-cols-2 gap-4">
+                    {isMetaConnected && (
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 rounded-lg border bg-muted/50">
                           <p className="text-2xl font-bold">{metaIntegrations.length}</p>
                           <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.pagesConnected}</p>
@@ -198,9 +160,8 @@ export default function Settings() {
                           <p className="text-sm text-muted-foreground">{t.settings.integrations.meta.leadsReceived}</p>
                         </div>
                       </div>
-                  }
+                    )}
 
-                    {/* Botão para página de configuração */}
                     <Button asChild className="w-full gap-2">
                       <Link to="/settings/integrations/meta">
                         <Settings2 className="h-4 w-4" />
@@ -209,25 +170,24 @@ export default function Settings() {
                       </Link>
                     </Button>
                   </>
-                }
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* WhatsApp Tab */}
-          {hasWhatsAppModule &&
-          <TabsContent value="whatsapp">
+          {hasWhatsAppModule && (
+            <TabsContent value="whatsapp">
               <WhatsAppTab />
             </TabsContent>
-          }
+          )}
 
-          {hasWhatsAppModule && hasAIAgentModule &&
-          <TabsContent value="ai-agent">
+          {hasWhatsAppModule && hasAIAgentModule && (
+            <TabsContent value="ai-agent">
               <AIAgentTab />
             </TabsContent>
-          }
+          )}
         </Tabs>
       </div>
-    </AppLayout>);
-
+    </AppLayout>
+  );
 }

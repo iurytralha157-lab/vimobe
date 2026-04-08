@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Globe, Palette, Phone, Share2, Search, Upload, ExternalLink, Copy, Check, Loader2, Maximize2, Droplets, Menu, Info, BarChart3 } from "lucide-react";
 import { SiteAnalyticsTab } from "@/components/site/SiteAnalyticsTab";
 import { AnimatedIcon } from "@/components/icons/AnimatedIcon";
@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DnsVerificationStatus } from "@/components/site/DnsVerificationStatus";
+import { AnimatedTabNav, AnimatedTabItem } from "@/components/ui/animated-tab-nav";
 
 export default function SiteSettings() {
   const { profile, organization } = useAuth();
@@ -79,6 +80,7 @@ export default function SiteSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedWorker, setCopiedWorker] = useState(false);
+  const [siteActiveTab, setSiteActiveTab] = useState('general');
 
   useEffect(() => {
     if (site) {
@@ -332,42 +334,22 @@ ${getWorkerCode()}`;
         )}
 
         {site && (
-          <Tabs defaultValue="general" className="space-y-6">
+          <Tabs value={siteActiveTab} onValueChange={setSiteActiveTab} className="space-y-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <TabsList className="flex-wrap h-auto gap-1">
-                <TabsTrigger value="general" className="gap-2">
-                  <AnimatedIcon icon={GLOBE_JSON} size={20} trigger="hover" />
-                  <span>Geral</span>
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  <span>Analytics</span>
-                </TabsTrigger>
-                <TabsTrigger value="appearance" className="gap-2">
-                  <Palette className="w-4 h-4" />
-                  <span>Aparência</span>
-                </TabsTrigger>
-                <TabsTrigger value="menu" className="gap-2">
-                  <Menu className="w-4 h-4" />
-                  <span>Menu</span>
-                </TabsTrigger>
-                <TabsTrigger value="about" className="gap-2">
-                  <Info className="w-4 h-4" />
-                  <span>Sobre</span>
-                </TabsTrigger>
-                <TabsTrigger value="contact" className="gap-2">
-                  <Phone className="w-4 h-4" />
-                  <span>Contato</span>
-                </TabsTrigger>
-                <TabsTrigger value="social" className="gap-2">
-                  <Share2 className="w-4 h-4" />
-                  <span>Social</span>
-                </TabsTrigger>
-                <TabsTrigger value="seo" className="gap-2">
-                  <Search className="w-4 h-4" />
-                  <span>SEO</span>
-                </TabsTrigger>
-              </TabsList>
+              <AnimatedTabNav
+                tabs={[
+                  { value: 'general', label: 'Geral', icon: Globe, renderIcon: () => <AnimatedIcon icon={GLOBE_JSON} size={18} trigger="hover" /> },
+                  { value: 'analytics', label: 'Analytics', icon: BarChart3 },
+                  { value: 'appearance', label: 'Aparência', icon: Palette },
+                  { value: 'menu', label: 'Menu', icon: Menu },
+                  { value: 'about', label: 'Sobre', icon: Info },
+                  { value: 'contact', label: 'Contato', icon: Phone },
+                  { value: 'social', label: 'Social', icon: Share2 },
+                  { value: 'seo', label: 'SEO', icon: Search },
+                ]}
+                activeTab={siteActiveTab}
+                onTabChange={setSiteActiveTab}
+              />
 
               <div className="flex items-center gap-2">
                 <a 
