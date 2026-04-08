@@ -333,9 +333,7 @@ ${getWorkerCode()}`;
         )}
 
         {site && (
-          <SiteSettingsTabs defaultTab="general" profile={profile} site={site} getPublishedSiteUrl={getPublishedSiteUrl} copyPublishedLink={copyPublishedLink} copied={copied}>
-            {(activeTab, setActiveTab) => (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value={siteActiveTab} onValueChange={setSiteActiveTab} className="space-y-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <AnimatedTabNav
                 tabs={[
@@ -348,8 +346,8 @@ ${getWorkerCode()}`;
                   { value: 'social', label: 'Social', icon: Share2 },
                   { value: 'seo', label: 'SEO', icon: Search },
                 ]}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
+                activeTab={siteActiveTab}
+                onTabChange={setSiteActiveTab}
               />
 
               <div className="flex items-center gap-2">
