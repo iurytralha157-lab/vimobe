@@ -806,7 +806,15 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
           </ReactFlow>
         </div>
 
-        {/* Inline Node Config Panel */}
+        {/* Flow Simulator */}
+        {showSimulator && (
+          <FlowSimulator 
+            nodes={nodes} 
+            edges={edges} 
+            onClose={() => setShowSimulator(false)} 
+          />
+        )}
+
         {selectedNode && (
             <NodeConfigPanel
               selectedNode={selectedNode}

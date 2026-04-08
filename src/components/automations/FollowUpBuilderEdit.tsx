@@ -840,7 +840,15 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
           </ReactFlow>
         </div>
 
-        {/* Inline Node Config Panel */}
+        {/* Flow Simulator */}
+        {showSimulator && (
+          <FlowSimulator 
+            nodes={nodes} 
+            edges={edges} 
+            onClose={() => setShowSimulator(false)} 
+          />
+        )}
+
         {selectedNode && (
             <NodeConfigPanel
               selectedNode={selectedNode}
