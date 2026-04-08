@@ -127,11 +127,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user, loading, profile, isSuperAdmin, impersonating } = useAuth();
+  const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection } = useAuth();
   
   useForceRefreshListener();
 
   const getDefaultRedirect = () => {
+    if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
     return "/dashboard";
   };
