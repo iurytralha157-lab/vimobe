@@ -185,7 +185,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
         await delay(600);
         if (abortRef.current) return;
         setIsTyping(false);
-        addMessage({ type: 'bot', content: '🎤 Áudio enviado', mediaType: 'audio' });
+        addMessage({ type: 'bot', content: '🎤 Áudio enviado', mediaType: 'audio', mediaUrl: node.data.audio_url });
         break;
       }
 
@@ -467,7 +467,12 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
                     <Image className="h-8 w-8 text-muted-foreground/50" />
                   </div>
                 )}
-                {msg.mediaType === 'audio' && (
+                {msg.mediaType === 'audio' && msg.mediaUrl && (
+                  <div className="mb-2 rounded-xl overflow-hidden bg-muted px-3 py-2">
+                    <audio controls src={msg.mediaUrl} className="w-full h-8" style={{ minWidth: 200 }} />
+                  </div>
+                )}
+                {msg.mediaType === 'audio' && !msg.mediaUrl && (
                   <div className="mb-2 flex items-center gap-2 bg-muted rounded-xl px-3 py-2">
                     <Headphones className="h-4 w-4 text-muted-foreground" />
                     <div className="flex-1 h-1 bg-muted-foreground/20 rounded-full">
