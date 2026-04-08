@@ -539,16 +539,15 @@
 
 .animated-tab-link {
   display: inline-flex;
-  justify-content: center;
   align-items: center;
-  width: 44px;
   height: 38px;
   border-radius: 8px;
   position: relative;
   z-index: 1;
   overflow: hidden;
-  transform-origin: center left;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
   color: hsl(var(--muted-foreground));
   cursor: pointer;
@@ -557,52 +556,34 @@
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
-}
-
-.animated-tab-link::before {
-  position: absolute;
-  z-index: -1;
-  content: "";
-  display: block;
-  border-radius: 8px;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  transform: translateX(100%);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: center right;
-  background-color: hsl(var(--background));
+  padding: 0 12px;
+  gap: 8px;
 }
 
 .animated-tab-link:hover,
 .animated-tab-link:focus-visible {
   outline: none;
-  width: 130px;
   color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
 }
 
-.animated-tab-link:hover::before,
-.animated-tab-link:focus-visible::before,
 .animated-tab-link:hover .animated-tab-title,
 .animated-tab-link:focus-visible .animated-tab-title {
-  transform: translateX(0);
+  max-width: 200px;
   opacity: 1;
+  margin-left: 0;
 }
 
 .animated-tab-link.active {
-  width: 130px;
   color: hsl(var(--foreground));
-}
-
-.animated-tab-link.active::before {
-  transform: translateX(0);
+  background-color: hsl(var(--background));
   box-shadow: 0 1px 3px 0 hsla(0, 0%, 0%, 0.1);
 }
 
 .animated-tab-link.active .animated-tab-title {
-  transform: translateX(0);
+  max-width: 200px;
   opacity: 1;
+  margin-left: 0;
 }
 
 .animated-tab-icon {
@@ -612,18 +593,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  position: absolute;
-  left: 12px;
 }
 
 .animated-tab-title {
-  transform: translateX(100%);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
-  transform-origin: center right;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease,
+              margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  text-align: center;
-  padding-left: 32px;
-  width: 100%;
-  opacity: 0;
+  white-space: nowrap;
 }
