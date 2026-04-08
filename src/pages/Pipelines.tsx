@@ -529,45 +529,128 @@ export default function Pipelines() {
   // Debounce da busca para performance
   const deferredSearch = useDeferredValue(searchQuery);
   
+  // Server-side search when there are stages with has_more and user is searching
+  const hasMoreLeads = stages.some((s: any) => s.has_more);
+  const [serverSearchResults, setServerSearchResults] = useState<any[]>([]);
+  const [isServerSearching, setIsServerSearching] = useState(false);
+  
+  useEffect(() => {
+    if (!deferredSearch || !hasMoreLeads || !selectedPipelineId) {
+      setServerSearchResults([]);
+      return;
+    }
+    
+    let cancelled = false;
+    const doSearch = async () => {
+      setIsServerSearching(true);
+      try {
+        // Search ALL leads in this pipeline matching the query
+        let query = (supabase as any)
+          .from('leads')
+          .select(`
+            id, name, phone, email, source, created_at,
+            stage_id, assigned_user_id, pipeline_id, message,
+            stage_entered_at, organization_id,
+            deal_status, valor_interesse, property_id, lost_reason, won_at, lost_at,
+            interest_property_id, interest_plan_id,
+            first_response_at, first_response_seconds, first_response_is_automation,
+            assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
+            interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
+            interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price)
+          `)
+          .eq('pipeline_id', selectedPipelineId)
+          .or(`name.ilike.%${deferredSearch}%,phone.ilike.%${deferredSearch}%`)
+          .limit(50);
+        
+        const { data, error } = await query;
+        if (error || cancelled) return;
+        
+        // Fetch tags for these leads
+        const leadIds = (data || []).map((l: any) => l.id);
+        let tagsByLead: Record<string, any[]> = {};
+        if (leadIds.length > 0) {
+          const { data: leadTags } = await supabase
+            .from('lead_tags')
+            .select('lead_id, tag:tags(id, name, color)')
+            .in('lead_id', leadIds);
+          tagsByLead = (leadTags || []).reduce((acc: any, lt: any) => {
+            if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
+            if (lt.tag) acc[lt.lead_id].push(lt.tag);
+            return acc;
+          }, {});
+        }
+        
+        if (!cancelled) {
+          setServerSearchResults((data || []).map((l: any) => ({
+            ...l,
+            tags: tagsByLead[l.id] || [],
+            tasks_count: { pending: 0, completed: 0 },
+          })));
+        }
+      } catch (err) {
+        console.error('Server search error:', err);
+      } finally {
+        if (!cancelled) setIsServerSearching(false);
+      }
+    };
+    
+    doSearch();
+    return () => { cancelled = true; };
+  }, [deferredSearch, hasMoreLeads, selectedPipelineId]);
+  
   // Get date range for filtering
   const dateRange = useMemo(() => {
     if (customDateRange) return customDateRange;
     return getDateRangeFromPreset(datePreset);
   }, [datePreset, customDateRange]);
   
-  // Filter leads com valor debounced
+  // Filter leads com valor debounced, merging server search results
   const filteredStages = useMemo(() => {
-    return stages.map(stage => ({
-      ...stage,
-      leads: (stage.leads || []).filter((lead: any) => {
-        if (filterUser && filterUser !== 'all' && lead.assigned_user_id !== filterUser) return false;
-        if (deferredSearch && !lead.name.toLowerCase().includes(deferredSearch.toLowerCase()) && 
-            !lead.phone?.includes(deferredSearch)) return false;
-        
-        // Tag filter - use lead.tags (populated by useStagesWithLeads)
-        if (filterTag && filterTag !== 'all') {
-          const leadTagIds = lead.tags?.map((t: any) => t.id) || [];
-          if (!leadTagIds.includes(filterTag)) return false;
-        }
-        
-        // Deal status filter
-        if (filterDealStatus && filterDealStatus !== 'all') {
-          const leadStatus = lead.deal_status || 'open';
-          if (leadStatus !== filterDealStatus) return false;
-        }
-        
-        // Date filter
-        if (lead.created_at) {
-          const leadDate = parseISO(lead.created_at);
-          if (!isWithinInterval(leadDate, { start: dateRange.from, end: dateRange.to })) {
-            return false;
+    return stages.map(stage => {
+      // Start with loaded leads
+      let stageLeads = [...(stage.leads || [])];
+      
+      // If searching and we have server results, merge leads not already loaded
+      if (deferredSearch && serverSearchResults.length > 0) {
+        const loadedIds = new Set(stageLeads.map((l: any) => l.id));
+        const extraLeads = serverSearchResults.filter(
+          (l: any) => l.stage_id === stage.id && !loadedIds.has(l.id)
+        );
+        stageLeads = [...stageLeads, ...extraLeads];
+      }
+      
+      return {
+        ...stage,
+        leads: stageLeads.filter((lead: any) => {
+          if (filterUser && filterUser !== 'all' && lead.assigned_user_id !== filterUser) return false;
+          if (deferredSearch && !lead.name.toLowerCase().includes(deferredSearch.toLowerCase()) && 
+              !lead.phone?.includes(deferredSearch)) return false;
+          
+          // Tag filter
+          if (filterTag && filterTag !== 'all') {
+            const leadTagIds = lead.tags?.map((t: any) => t.id) || [];
+            if (!leadTagIds.includes(filterTag)) return false;
           }
-        }
-        
-        return true;
-      }),
-    }));
-  }, [stages, filterUser, filterTag, filterDealStatus, deferredSearch, dateRange]);
+          
+          // Deal status filter
+          if (filterDealStatus && filterDealStatus !== 'all') {
+            const leadStatus = lead.deal_status || 'open';
+            if (leadStatus !== filterDealStatus) return false;
+          }
+          
+          // Date filter
+          if (lead.created_at) {
+            const leadDate = parseISO(lead.created_at);
+            if (!isWithinInterval(leadDate, { start: dateRange.from, end: dateRange.to })) {
+              return false;
+            }
+          }
+          
+          return true;
+        }),
+      };
+    });
+  }, [stages, filterUser, filterTag, filterDealStatus, deferredSearch, dateRange, serverSearchResults]);
 
   // Compute VGV from filteredStages so badge always matches visible leads
   const stageVGVMap = useMemo(() => {
