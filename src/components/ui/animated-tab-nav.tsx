@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 export interface AnimatedTabItem {
   value: string;
   label: string;
-  icon: React.ComponentType<{ className?: string; size?: number }>;
+  icon: any;
   badge?: number | string;
   /** Custom icon render (e.g. for WhatsAppIcon or AnimatedIcon) */
   renderIcon?: () => React.ReactNode;
