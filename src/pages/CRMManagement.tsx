@@ -1,22 +1,17 @@
 import { useState, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shuffle, Users, Tags, GitBranch, LucideIcon } from 'lucide-react';
 import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 
 // Tab components
 import { DistributionTab } from '@/components/crm-management/DistributionTab';
 import { TeamsTab } from '@/components/crm-management/TeamsTab';
 import { TagsTab } from '@/components/crm-management/TagsTab';
 import { TabIntroCard } from '@/components/crm-management/TabIntroCard';
-
-interface TabItem {
-  value: string;
-  label: string;
-  icon: LucideIcon;
-}
 
 // Intro card content for each tab
 const tabIntros: Record<string, { title: string; description: string; tips?: string[] }> = {
@@ -59,7 +54,7 @@ export default function CRMManagement() {
   const [activeTab, setActiveTab] = useState('teams');
   const isMobile = useIsMobile();
 
-  const managementTabs: TabItem[] = useMemo(() => [
+  const managementTabs: AnimatedTabItem[] = useMemo(() => [
     { value: 'teams', label: 'Equipes', icon: Users },
     { value: 'pipelines', label: 'Pipelines', icon: GitBranch },
     { value: 'distribution', label: 'Distribuição', icon: Shuffle },
@@ -96,18 +91,7 @@ export default function CRMManagement() {
               </SelectContent>
             </Select>
           ) : (
-            <TabsList className="inline-flex h-11 p-1 bg-muted/50 rounded-xl">
-              {managementTabs.map(tab => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="gap-2 px-5 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-                >
-                  <tab.icon className="h-4 w-4" />
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <AnimatedTabNav tabs={managementTabs} activeTab={activeTab} onTabChange={setActiveTab} />
           )}
 
           {/* Intro card for current tab */}
