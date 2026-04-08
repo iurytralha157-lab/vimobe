@@ -175,6 +175,18 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [showSimulator, setShowSimulator] = useState(false);
+  const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
+
+  // Apply visual highlight to the active node on canvas
+  const handleHighlightNode = useCallback((nodeId: string | null) => {
+    setSimulatorHighlightNodeId(nodeId);
+    setNodes((nds) =>
+      nds.map((n) => ({
+        ...n,
+        data: { ...n.data, _simActive: n.id === nodeId, _simVisited: n.id === nodeId ? true : n.data._simVisited },
+      }))
+    );
+  }, [setNodes]);
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true,
     conditionals: true,
