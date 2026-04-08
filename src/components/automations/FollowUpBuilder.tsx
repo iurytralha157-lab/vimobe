@@ -180,12 +180,17 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   // Apply visual highlight to the active node on canvas
   const handleHighlightNode = useCallback((nodeId: string | null) => {
     setSimulatorHighlightNodeId(nodeId);
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        className: n.id === nodeId ? 'sim-active-node' : (n.className === 'sim-active-node' ? 'sim-visited-node' : n.className),
-      }))
-    );
+    if (nodeId === null) {
+      // Clear all simulation classes
+      setNodes((nds) => nds.map((n) => ({ ...n, className: undefined })));
+    } else {
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          className: n.id === nodeId ? 'sim-active-node' : (n.className === 'sim-active-node' ? 'sim-visited-node' : n.className),
+        }))
+      );
+    }
   }, [setNodes]);
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
     bubbles: true,

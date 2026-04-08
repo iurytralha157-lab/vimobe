@@ -196,12 +196,16 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
 
   const handleHighlightNode = useCallback((nodeId: string | null) => {
     setSimulatorHighlightNodeId(nodeId);
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        className: n.id === nodeId ? 'sim-active-node' : (n.className === 'sim-active-node' ? 'sim-visited-node' : n.className),
-      }))
-    );
+    if (nodeId === null) {
+      setNodes((nds) => nds.map((n) => ({ ...n, className: undefined })));
+    } else {
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          className: n.id === nodeId ? 'sim-active-node' : (n.className === 'sim-active-node' ? 'sim-visited-node' : n.className),
+        }))
+      );
+    }
   }, [setNodes]);
   const [onReplyMessage, setOnReplyMessage] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Record<NodeCategory, boolean>>({
