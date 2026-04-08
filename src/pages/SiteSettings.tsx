@@ -333,42 +333,24 @@ ${getWorkerCode()}`;
         )}
 
         {site && (
-          <Tabs defaultValue="general" className="space-y-6">
+          <SiteSettingsTabs defaultTab="general" profile={profile} site={site} getPublishedSiteUrl={getPublishedSiteUrl} copyPublishedLink={copyPublishedLink} copied={copied}>
+            {(activeTab, setActiveTab) => (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <TabsList className="flex-wrap h-auto gap-1">
-                <TabsTrigger value="general" className="gap-2">
-                  <AnimatedIcon icon={GLOBE_JSON} size={20} trigger="hover" />
-                  <span>Geral</span>
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  <span>Analytics</span>
-                </TabsTrigger>
-                <TabsTrigger value="appearance" className="gap-2">
-                  <Palette className="w-4 h-4" />
-                  <span>Aparência</span>
-                </TabsTrigger>
-                <TabsTrigger value="menu" className="gap-2">
-                  <Menu className="w-4 h-4" />
-                  <span>Menu</span>
-                </TabsTrigger>
-                <TabsTrigger value="about" className="gap-2">
-                  <Info className="w-4 h-4" />
-                  <span>Sobre</span>
-                </TabsTrigger>
-                <TabsTrigger value="contact" className="gap-2">
-                  <Phone className="w-4 h-4" />
-                  <span>Contato</span>
-                </TabsTrigger>
-                <TabsTrigger value="social" className="gap-2">
-                  <Share2 className="w-4 h-4" />
-                  <span>Social</span>
-                </TabsTrigger>
-                <TabsTrigger value="seo" className="gap-2">
-                  <Search className="w-4 h-4" />
-                  <span>SEO</span>
-                </TabsTrigger>
-              </TabsList>
+              <AnimatedTabNav
+                tabs={[
+                  { value: 'general', label: 'Geral', icon: Globe, renderIcon: () => <AnimatedIcon icon={GLOBE_JSON} size={18} trigger="hover" /> },
+                  { value: 'analytics', label: 'Analytics', icon: BarChart3 },
+                  { value: 'appearance', label: 'Aparência', icon: Palette },
+                  { value: 'menu', label: 'Menu', icon: Menu },
+                  { value: 'about', label: 'Sobre', icon: Info },
+                  { value: 'contact', label: 'Contato', icon: Phone },
+                  { value: 'social', label: 'Social', icon: Share2 },
+                  { value: 'seo', label: 'SEO', icon: Search },
+                ]}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
 
               <div className="flex items-center gap-2">
                 <a 
