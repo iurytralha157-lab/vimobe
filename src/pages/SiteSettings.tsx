@@ -80,6 +80,7 @@ export default function SiteSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedWorker, setCopiedWorker] = useState(false);
+  const [siteActiveTab, setSiteActiveTab] = useState('general');
 
   useEffect(() => {
     if (site) {
