@@ -125,7 +125,7 @@ export default function Pipelines() {
   const [newStageColor, setNewStageColor] = useState('#6b7280');
   const [slaSettingsOpen, setSlaSettingsOpen] = useState(false);
   const [stagesEditorOpen, setStagesEditorOpen] = useState(false);
-  const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
+  const [datePreset, setDatePreset] = useState<DatePreset>('thisYear');
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -1217,7 +1217,11 @@ export default function Pipelines() {
                               ) : (
                                 <ChevronDown className="h-3 w-3 mr-1" />
                               )}
-                              Carregar mais ({stage.total_lead_count - (stage.leads?.length || 0)} restantes)
+                              Carregar mais ({(() => {
+                                const originalStage = stages.find((s: any) => s.id === stage.id);
+                                const loadedCount = originalStage?.leads?.length || 0;
+                                return stage.total_lead_count - loadedCount;
+                              })()} restantes)
                             </Button>
                           )}
                         </div>
