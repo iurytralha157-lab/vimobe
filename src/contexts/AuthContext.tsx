@@ -67,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
     const stored = localStorage.getItem('impersonating');
     return stored ? JSON.parse(stored) : null;
