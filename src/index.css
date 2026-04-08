@@ -411,4 +411,117 @@
     background: hsl(var(--card));
     border-color: hsl(var(--border));
   }
+
+  /* MessageBox - Uiverse.io inspired */
+  .message-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: hsl(var(--muted));
+    padding: 6px 10px;
+    border-radius: 10px;
+    width: 100%;
+  }
+
+  .message-box--compact {
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+
+  .message-box__left-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .message-box__left-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    color: hsl(var(--muted-foreground));
+    transition: color 0.2s;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .message-box__left-actions button:hover {
+    color: hsl(var(--foreground));
+  }
+
+  .message-box__left-actions button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .message-box__input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: hsl(var(--foreground));
+    font-size: 14px;
+    padding: 6px 4px;
+    font-family: inherit;
+    min-width: 0;
+  }
+
+  .message-box__input::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .message-box__input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .message-box__textarea {
+    resize: none;
+    min-height: 36px;
+    max-height: 160px;
+    overflow-y: auto;
+    line-height: 1.4;
+  }
+
+  .message-box__send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    color: hsl(var(--muted-foreground));
+    transition: color 0.2s, background-color 0.2s;
+  }
+
+  .message-box__send:hover:not(:disabled) {
+    color: hsl(var(--primary));
+  }
+
+  .message-box__send:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .message-box__send svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .message-box__right-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
 }
