@@ -110,7 +110,8 @@ export function LeadTrackingSection({ leadMeta, isLoading }: LeadTrackingSection
                 label="Anúncio"
                 value={leadMeta.ad_name || leadMeta.ad_id || ''}
                 subValue={leadMeta.ad_name && leadMeta.ad_id ? `ID: ${leadMeta.ad_id}` : undefined}
-                externalUrl={leadMeta.ad_id ? `https://business.facebook.com/ads/manager/manage/ads?selected_ad_ids=${leadMeta.ad_id}` : undefined}
+                externalUrl={leadMeta.creative_video_url || leadMeta.creative_url || undefined}
+                externalUrlLabel="Ver criativo"
               />
             )}
             
@@ -216,6 +217,7 @@ interface TrackingRowProps {
   value: string;
   subValue?: string;
   externalUrl?: string;
+  externalUrlLabel?: string;
 }
 
 function TrackingRow({ icon: Icon, label, value, subValue, externalUrl }: TrackingRowProps) {
