@@ -530,24 +530,14 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
 
       {/* Input */}
       <div className="p-3 border-t border-border bg-card">
-        <div className="flex items-center gap-2">
-          <Input
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={waitingForReply ? 'Digite sua resposta...' : 'Aguardando...'}
-            disabled={!waitingForReply}
-            className="flex-1 text-sm h-9 rounded-xl"
-          />
-          <Button
-            size="icon"
-            className="h-9 w-9 rounded-xl shrink-0"
-            onClick={handleSend}
-            disabled={!waitingForReply || !userInput.trim()}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+        <MessageBox
+          value={userInput}
+          onChange={setUserInput}
+          onSend={handleSend}
+          placeholder={waitingForReply ? 'Digite sua resposta...' : 'Aguardando...'}
+          disabled={!waitingForReply}
+          compact
+        />
       </div>
     </div>
   );
