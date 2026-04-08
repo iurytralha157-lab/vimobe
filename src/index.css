@@ -339,6 +339,23 @@
     border-color: hsl(var(--border) / 0.8);
   }
 
+  /* Simulator active node highlight */
+  .sim-active-node .automation-node {
+    border-color: hsl(142 76% 46%);
+    box-shadow: 0 0 12px 2px hsl(142 76% 46% / 0.35);
+    animation: sim-pulse 1.5s ease-in-out infinite;
+  }
+
+  .sim-visited-node .automation-node {
+    border-color: hsl(142 76% 46% / 0.4);
+    box-shadow: 0 0 6px 1px hsl(142 76% 46% / 0.15);
+  }
+
+  @keyframes sim-pulse {
+    0%, 100% { box-shadow: 0 0 12px 2px hsl(142 76% 46% / 0.35); }
+    50% { box-shadow: 0 0 18px 4px hsl(142 76% 46% / 0.5); }
+  }
+
   /* Automation canvas */
   .automation-canvas {
     background: hsl(var(--background)) !important;
