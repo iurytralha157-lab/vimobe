@@ -165,6 +165,10 @@ function AppRoutes() {
             <Route path="/auth" element={renderAuthRoute()} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
             <Route path="/onboarding" element={renderOnboardingRoute()} />
+            <Route path="/select-organization" element={
+              loading ? <PageLoader /> : !user ? <Navigate to="/auth" replace /> : 
+              <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
+            } />
             
             {/* Super Admin Routes */}
             <Route path="/admin" element={<SuperAdminRoute><AdminDashboard /></SuperAdminRoute>} />
