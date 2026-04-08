@@ -1,28 +1,35 @@
 
+## Sistema Multi-Contas
 
-# Adicionar Permissões de Automações nas Funções
+### Etapa 1: Banco de Dados
+- Criar tabela `organization_members` (user_id, organization_id, role, is_active, joined_at)
+- Migrar dados existentes de `users.organization_id` + `users.role` para `organization_members`
+- Manter `users.organization_id` como "última org ativa" (backward compatibility)
+- RLS: usuário vê apenas seus próprios memberships
 
-## Problema
-No painel de Funções e Permissões, a opção "Automações" não aparece porque as entradas `automations_view` e `automations_edit` não existem na tabela `available_permissions` do banco de dados. O código frontend já tem o grupo mapeado, só faltam os registros no banco.
+### Etapa 2: Hook e Contexto
+- Criar `use-user-organizations.ts` — busca todas as orgs do usuário via `organization_members`
+- Atualizar `AuthContext`:
+  - Após login, verificar quantas orgs o usuário tem
+  - Se 1 org → vai direto (comportamento atual)
+  - Se múltiplas → redireciona para `/select-organization`
+  - Adicionar `switchOrganization()` ao contexto
 
-## Solução
-Criar uma migration que insere os dois registros de permissão na tabela `available_permissions`:
+### Etapa 3: Tela de Seleção
+- Criar página `/select-organization` com cards das organizações
+- Mostrar nome, logo, role do usuário em cada org
+- Ao selecionar, atualizar `users.organization_id` e recarregar perfil
 
-- **`automations_view`** — "Visualizar Automações" (categoria: modules)
-- **`automations_edit`** — "Editar Automações" (categoria: modules)
+### Etapa 4: Dropdown no Header
+- Adicionar seletor de organização no `AppHeader`
+- Mostra org atual, permite trocar rapidamente
+- Só aparece se usuário tem 2+ orgs
 
-## Detalhes técnicos
+### Etapa 5: Ajustar Criação de Usuário
+- Edge function `create-user`: ao criar/adicionar, inserir também em `organization_members`
+- Se email já existe, criar apenas o vínculo em `organization_members`
 
-### Migration SQL
-Inserir na tabela `available_permissions`:
-```sql
-INSERT INTO available_permissions (key, name, description, category) VALUES
-  ('automations_view', 'Visualizar Automações', 'Permite visualizar a lista de automações e seus fluxos', 'modules'),
-  ('automations_edit', 'Editar Automações', 'Permite criar, editar e excluir automações', 'modules');
-```
-
-### Aplicar guard na página de Automações
-Envolver a rota `/automations` com `PermissionGuard` usando a permissão `automations_view`, garantindo que usuários sem acesso sejam redirecionados.
-
-Nenhuma alteração de frontend no RolesTab é necessária — o grupo `automations` já está configurado nas linhas 77 do componente.
-
+### Princípios de Segurança
+- Dados continuam isolados por `organization_id` (RLS existente não muda)
+- Role do usuário é POR organização (admin na org A, user na org B)
+- `users.organization_id` sempre reflete a org ativa atual
