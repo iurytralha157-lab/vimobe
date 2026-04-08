@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -113,6 +113,7 @@ export default function Pipelines() {
   const [filterUser, setFilterUser] = useState<string | undefined>(undefined);
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterDealStatus, setFilterDealStatus] = useState<string>('all');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
   const [editingStageName, setEditingStageName] = useState('');
@@ -526,8 +527,13 @@ export default function Pipelines() {
     setEditingStageId(null);
   };
 
-  // Debounce da busca para performance
-  const deferredSearch = useDeferredValue(searchQuery);
+  // Debounce search input → searchQuery
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const deferredSearch = searchQuery;
   
   // Server-side search when there are stages with has_more and user is searching
   const hasMoreLeads = stages.some((s: any) => s.has_more);
@@ -837,8 +843,8 @@ export default function Pipelines() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Buscar..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="h-8 w-40 pl-8 text-xs"
               />
             </div>
@@ -882,8 +888,8 @@ export default function Pipelines() {
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                           placeholder="Buscar..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          value={searchInput}
+                          onChange={(e) => setSearchInput(e.target.value)}
                           className="h-9 w-full pl-8 text-xs"
                         />
                       </div>
@@ -980,6 +986,7 @@ export default function Pipelines() {
                           setFilterUser(isAdmin || hasLeadViewAll ? 'all' : profile?.id);
                           setFilterTag('all');
                           setFilterDealStatus('all');
+                          setSearchInput('');
                           setSearchQuery('');
                         }}
                       >
