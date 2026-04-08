@@ -69,7 +69,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
-import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage } from '@/hooks/use-stages';
+import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts } from '@/hooks/use-stages';
 import { useLoadMoreLeads } from '@/hooks/use-stages';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
@@ -603,6 +603,18 @@ export default function Pipelines() {
     if (customDateRange) return customDateRange;
     return getDateRangeFromPreset(datePreset);
   }, [datePreset, customDateRange]);
+
+  const stageIds = useMemo(() => stages.map((stage: any) => stage.id), [stages]);
+
+  const { data: filteredStageCounts = {} } = useFilteredStageCounts({
+    pipelineId: selectedPipelineId || undefined,
+    stageIds,
+    filterUser,
+    filterTag,
+    filterDealStatus,
+    searchQuery: deferredSearch,
+    dateRange,
+  });
   
   // Filter leads com valor debounced, merging server search results
   const filteredStages = useMemo(() => {
@@ -666,6 +678,25 @@ export default function Pipelines() {
     }
     return map;
   }, [filteredStages]);
+
+  const stageCountMetaMap = useMemo(() => {
+    const map = new Map<string, { total: number; visible: number; remaining: number; canLoadMore: boolean }>();
+
+    for (const stage of filteredStages) {
+      const visible = stage.leads?.length || 0;
+      const total = filteredStageCounts[stage.id] ?? stage.total_lead_count ?? visible;
+      const remaining = Math.max(total - visible, 0);
+
+      map.set(stage.id, {
+        total,
+        visible,
+        remaining,
+        canLoadMore: remaining > 0,
+      });
+    }
+
+    return map;
+  }, [filteredStages, filteredStageCounts]);
 
   if (isLoading) {
     return (
@@ -1131,7 +1162,7 @@ export default function Pipelines() {
                         className="text-xs shrink-0"
                         style={{ backgroundColor: `${stage.color}20`, color: stage.color }}
                       >
-                      {stage.total_lead_count ?? stage.leads?.length ?? 0}
+                      {stageCountMetaMap.get(stage.id)?.total ?? stage.total_lead_count ?? stage.leads?.length ?? 0}
                       </Badge>
                       {/* VGV Badge */}
                       {stageVGVMap.get(stage.id)?.openVGV ? (
@@ -1197,14 +1228,14 @@ export default function Pipelines() {
                           {provided.placeholder}
                           
                           {/* Filter warning when has_more and filters active */}
-                          {stage.has_more && (filterUser && filterUser !== 'all' || filterTag !== 'all' || filterDealStatus !== 'all' || deferredSearch) && (
+                          {stageCountMetaMap.get(stage.id)?.canLoadMore && (filterUser && filterUser !== 'all' || filterTag !== 'all' || filterDealStatus !== 'all' || deferredSearch) && (
                             <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-2 py-1.5 mt-1 text-center">
                               ⚠️ Filtro ativo — alguns resultados podem não estar visíveis. Carregue mais para ver todos.
                             </div>
                           )}
                           
                           {/* Botão Carregar Mais */}
-                          {stages.find((s: any) => s.id === stage.id)?.has_more && (
+                          {stageCountMetaMap.get(stage.id)?.canLoadMore && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1217,11 +1248,7 @@ export default function Pipelines() {
                               ) : (
                                 <ChevronDown className="h-3 w-3 mr-1" />
                               )}
-                              Carregar mais ({(() => {
-                                const originalStage = stages.find((s: any) => s.id === stage.id);
-                                const loadedCount = originalStage?.leads?.length || 0;
-                                return stage.total_lead_count - loadedCount;
-                              })()} restantes)
+                              Carregar mais ({stageCountMetaMap.get(stage.id)?.remaining ?? 0} restantes)
                             </Button>
                           )}
                         </div>

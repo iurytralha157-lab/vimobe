@@ -7,6 +7,16 @@ export type Stage = Tables<'stages'> & {
   lead_count?: number;
 };
 
+interface FilteredStageCountsParams {
+  pipelineId?: string;
+  stageIds: string[];
+  filterUser?: string;
+  filterTag?: string;
+  filterDealStatus?: string;
+  searchQuery?: string;
+  dateRange?: { from: Date; to: Date } | null;
+}
+
 // Limite de leads por estágio para paginação
 const LEADS_PER_STAGE = 100;
 
@@ -250,6 +260,94 @@ export function useStagesWithLeads(pipelineId?: string) {
         total_lead_count: totalCountsByStage[stage.id] || 0,
         has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
       }));
+    },
+  });
+}
+
+export function useFilteredStageCounts({
+  pipelineId,
+  stageIds,
+  filterUser,
+  filterTag,
+  filterDealStatus,
+  searchQuery,
+  dateRange,
+}: FilteredStageCountsParams) {
+  return useQuery({
+    queryKey: [
+      'filtered-stage-counts',
+      pipelineId,
+      stageIds,
+      filterUser,
+      filterTag,
+      filterDealStatus,
+      searchQuery,
+      dateRange?.from.toISOString(),
+      dateRange?.to.toISOString(),
+    ],
+    enabled: !!pipelineId && stageIds.length > 0,
+    staleTime: 30_000,
+    queryFn: async () => {
+      if (!pipelineId || stageIds.length === 0) return {} as Record<string, number>;
+
+      let taggedLeadIds: string[] | null = null;
+
+      if (filterTag && filterTag !== 'all') {
+        const { data: taggedLeads, error: taggedLeadsError } = await supabase
+          .from('lead_tags')
+          .select('lead_id')
+          .eq('tag_id', filterTag);
+
+        if (taggedLeadsError) throw taggedLeadsError;
+
+        taggedLeadIds = [...new Set((taggedLeads || []).map((item) => item.lead_id).filter(Boolean))];
+
+        if (taggedLeadIds.length === 0) {
+          return Object.fromEntries(stageIds.map((stageId) => [stageId, 0]));
+        }
+      }
+
+      const normalizedSearch = searchQuery?.trim();
+
+      const counts = await Promise.all(
+        stageIds.map(async (stageId) => {
+          let query: any = supabase
+            .from('leads')
+            .select('id', { count: 'exact', head: true })
+            .eq('pipeline_id', pipelineId)
+            .eq('stage_id', stageId);
+
+          if (filterUser && filterUser !== 'all') {
+            query = query.eq('assigned_user_id', filterUser);
+          }
+
+          if (filterDealStatus && filterDealStatus !== 'all') {
+            query = query.eq('deal_status', filterDealStatus);
+          }
+
+          if (normalizedSearch) {
+            query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
+          }
+
+          if (dateRange) {
+            query = query
+              .gte('created_at', dateRange.from.toISOString())
+              .lte('created_at', dateRange.to.toISOString());
+          }
+
+          if (taggedLeadIds) {
+            query = query.in('id', taggedLeadIds);
+          }
+
+          const { count, error } = await query;
+
+          if (error) throw error;
+
+          return [stageId, count || 0] as const;
+        })
+      );
+
+      return Object.fromEntries(counts);
     },
   });
 }
