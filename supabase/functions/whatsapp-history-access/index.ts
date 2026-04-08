@@ -117,8 +117,8 @@ Deno.serve(async (req) => {
           .from("whatsapp_messages")
           .select("id, content, from_me, message_type, media_url, media_mime_type, media_status, sent_at, status, sender_name, sender_jid, conversation_id, session_id")
           .in("conversation_id", conversationIds)
-          .order("sent_at", { ascending: true })
-          .limit(500),
+          .order("sent_at", { ascending: false })
+          .limit(1000),
         supabase
           .from("whatsapp_sessions")
           .select("id, instance_name, owner_user_id")
