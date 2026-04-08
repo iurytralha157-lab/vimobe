@@ -146,8 +146,8 @@ export function StartAutomationDialog({ open, onOpenChange, leadId, conversation
                   disabled={!!starting}
                   className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-accent/50 transition-colors text-left disabled:opacity-50"
                 >
-                  <div className="p-2 rounded-lg bg-primary/20 shrink-0">
-                    <Icon className="h-4 w-4 text-primary" style={{ color: 'hsl(8, 100%, 58%)' }} />
+                  <div className="p-2.5 rounded-xl bg-primary/20 shrink-0">
+                    <Icon className="h-5 w-5 text-primary drop-shadow-sm" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{automation.name}</p>
