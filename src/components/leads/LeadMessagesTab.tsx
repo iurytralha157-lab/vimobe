@@ -1,6 +1,6 @@
 import { useLeadMessages, LeadMessage } from '@/hooks/use-lead-messages';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageCircle, Image, FileText, Mic, Video, Loader2, User } from 'lucide-react';
+import { MessageCircle, Image, FileText, Mic, Video, Loader2, User, LogIn } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,19 @@ function DateSeparator({ date }: { date: Date }) {
   );
 }
 
+function SessionJoinedBanner({ userName, time }: { userName: string; time: string }) {
+  return (
+    <div className="flex items-center justify-center gap-2 my-3">
+      <div className="flex items-center gap-1.5 bg-accent/50 text-accent-foreground/70 rounded-full px-3 py-1 text-[11px]">
+        <LogIn className="h-3 w-3" />
+        <span className="font-medium">{userName}</span>
+        <span>entrou na conversa</span>
+        <span className="text-[10px] opacity-60">· {format(new Date(time), 'HH:mm')}</span>
+      </div>
+    </div>
+  );
+}
+
 function MessageTypeIcon({ type }: { type: string | null }) {
   switch (type) {
     case 'image': return <Image className="h-3 w-3" />;
@@ -32,11 +45,20 @@ function MessageTypeIcon({ type }: { type: string | null }) {
   }
 }
 
+function getSenderDisplay(msg: LeadMessage): string {
+  if (msg.from_me) {
+    // If sender_name is set (e.g., "Automação", or the user's name typed in Evolution)
+    if (msg.sender_name) return msg.sender_name;
+    // Fallback to session owner name
+    if (msg.session_owner_name) return msg.session_owner_name;
+    return 'Enviada';
+  }
+  return '';
+}
+
 function MessageBubble({ msg, leadName }: { msg: LeadMessage; leadName: string }) {
   const isMedia = msg.message_type && msg.message_type !== 'text';
-  const senderLabel = msg.from_me
-    ? msg.session_owner_name || 'Enviada'
-    : leadName;
+  const senderLabel = msg.from_me ? getSenderDisplay(msg) : leadName;
 
   return (
     <div className={cn("flex mb-2", msg.from_me ? "justify-end" : "justify-start")}>
@@ -116,27 +138,45 @@ export function LeadMessagesTab({ leadId, leadName }: LeadMessagesTabProps) {
     );
   }
 
-  // Group messages by date for separators
+  // Pre-process: detect session changes for "joined conversation" banners
   let lastDate: Date | null = null;
+  let lastSessionId: string | null = null;
+  // Track which sessions already had their first from_me message
+  const sessionsSeen = new Set<string>();
+
+  const elements: React.ReactNode[] = [];
+
+  messages.forEach((msg) => {
+    const msgDate = new Date(msg.sent_at);
+
+    // Date separator
+    if (!lastDate || !isSameDay(lastDate, msgDate)) {
+      elements.push(<DateSeparator key={`date-${msg.id}`} date={msgDate} />);
+      lastDate = msgDate;
+    }
+
+    // Session join banner: only when from_me and session changes to a new one
+    if (msg.from_me && msg.session_id && msg.session_id !== lastSessionId) {
+      // Only show banner if this is NOT the first session (i.e., someone new joined)
+      if (sessionsSeen.size > 0 && !sessionsSeen.has(msg.session_id)) {
+        const joinName = msg.sender_name || msg.session_owner_name || msg.session_instance_name || 'Usuário';
+        elements.push(
+          <SessionJoinedBanner key={`join-${msg.id}`} userName={joinName} time={msg.sent_at} />
+        );
+      }
+      sessionsSeen.add(msg.session_id);
+      lastSessionId = msg.session_id;
+    }
+
+    elements.push(
+      <MessageBubble key={msg.id} msg={msg} leadName={leadName} />
+    );
+  });
 
   return (
     <ScrollArea className="h-[400px]">
       <div className="space-y-0 px-2 py-3">
-        {messages.map((msg) => {
-          const msgDate = new Date(msg.sent_at);
-          let showSeparator = false;
-          if (!lastDate || !isSameDay(lastDate, msgDate)) {
-            showSeparator = true;
-            lastDate = msgDate;
-          }
-
-          return (
-            <div key={msg.id}>
-              {showSeparator && <DateSeparator date={msgDate} />}
-              <MessageBubble msg={msg} leadName={leadName} />
-            </div>
-          );
-        })}
+        {elements}
       </div>
     </ScrollArea>
   );
