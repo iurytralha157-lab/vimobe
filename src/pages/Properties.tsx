@@ -234,21 +234,25 @@ export default function Properties() {
 
         {/* Properties Grid */}
         <div className={`grid ${getGridClasses()} gap-4`}>
-          {properties.map((property) => (
-            <PropertyCard
-              key={property.id}
-              property={property}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              onMarkSold={handleMarkSold}
-              onToggleVisibility={handleToggleVisibility}
-              onPreview={(p) => {
-                setPreviewProperty(p);
-                setPreviewOpen(true);
-              }}
-              formatPrice={formatPrice}
-            />
-          ))}
+          {properties.map((property) => {
+            const canEditProperty = isAdmin || (property as any).cadastrado_por === profile?.id;
+            return (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+                onMarkSold={handleMarkSold}
+                onToggleVisibility={handleToggleVisibility}
+                onPreview={(p) => {
+                  setPreviewProperty(p);
+                  setPreviewOpen(true);
+                }}
+                formatPrice={formatPrice}
+                canEdit={canEditProperty}
+              />
+            );
+          })}
         </div>
 
         {/* Preview Dialog */}
