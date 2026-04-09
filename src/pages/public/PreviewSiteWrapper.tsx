@@ -92,6 +92,11 @@ function PreviewSiteProvider({ children, organizationId }: { children: ReactNode
             about_stats: (data as any).about_stats || null,
             about_checkmarks: (data as any).about_checkmarks || null,
             about_features: (data as any).about_features || null,
+            gtm_id: (data as any).gtm_id || null,
+            meta_pixel_id: (data as any).meta_pixel_id || null,
+            google_ads_id: (data as any).google_ads_id || null,
+            head_scripts: (data as any).head_scripts || null,
+            body_scripts: (data as any).body_scripts || null,
           });
         }
       } catch (err) {
