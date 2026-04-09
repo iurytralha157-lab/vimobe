@@ -85,7 +85,6 @@ const allNavItems: NavItem[] = [{
   labelKey: 'properties',
   path: '/properties',
   module: 'properties',
-  adminOnly: true,
   children: [{
     icon: Building2,
     labelKey: 'propertiesAll',

@@ -35,6 +35,7 @@ interface PropertyCardProps {
   onMarkSold?: (id: string) => void;
   onToggleVisibility?: (id: string, isPublic: boolean) => void;
   formatPrice: (value: number | null, tipo: string | null) => string;
+  canEdit?: boolean;
 }
 
 export function PropertyCard({ 
@@ -44,7 +45,8 @@ export function PropertyCard({
   onPreview, 
   onMarkSold,
   onToggleVisibility,
-  formatPrice 
+  formatPrice,
+  canEdit = false,
 }: PropertyCardProps) {
   const isSold = property.status === 'vendido';
   const isPublic = property.status !== 'privado';
@@ -126,18 +128,20 @@ export function PropertyCard({
                 <Eye className="h-4 w-4 mr-2" />
                 Visualizar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(property)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {onMarkSold && !isSold && (
+              {canEdit && (
+                <DropdownMenuItem onClick={() => onEdit(property)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+              )}
+              {canEdit && <DropdownMenuSeparator />}
+              {canEdit && onMarkSold && !isSold && (
                 <DropdownMenuItem onClick={() => onMarkSold(property.id)}>
                   <CheckCircle className="h-4 w-4 mr-2 text-success" />
                   Marcar como Vendido
                 </DropdownMenuItem>
               )}
-              {onToggleVisibility && (
+              {canEdit && onToggleVisibility && (
                 <DropdownMenuItem onClick={() => onToggleVisibility(property.id, !isPublic)}>
                   {isPublic ? (
                     <>
@@ -152,14 +156,18 @@ export function PropertyCard({
                   )}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-destructive focus:text-destructive"
-                onClick={() => onDelete(property.id)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir
-              </DropdownMenuItem>
+              {canEdit && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => onDelete(property.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
