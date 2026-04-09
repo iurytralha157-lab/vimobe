@@ -289,6 +289,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           area_util: parseFloat(item.AreaPrivativa) || null,
           area_total: parseFloat(item.AreaTotal) || null,
           preco,
+          valor_locacao: valorLocacao,
           condominio: parseFloat(String(item.ValorCondominio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
           ano_construcao: parseInt(item.AnoConstrucao) || null,
           descricao: item.DescricaoWeb || null,
