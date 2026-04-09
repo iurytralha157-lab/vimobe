@@ -1416,7 +1416,7 @@ export function LeadDetailDialog({
                 {lead.first_response_seconds != null && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
                     <Zap className="h-3 w-3" />
-                    1ª: {formatResponseTime(lead.first_response_seconds)}
+                    Resp: {formatResponseTime(lead.first_response_seconds)}
                     {lead.first_response_is_automation && (
                       <span className="text-[9px] ml-0.5 opacity-70 flex items-center gap-0.5">
                         <Bot className="h-2.5 w-2.5" />

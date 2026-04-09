@@ -303,7 +303,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
     { title: 'Leads', value: data.totalLeads, trend: data.leadsTrend, icon: Users, tooltip: `Total de leads - ${periodLabel}`, format: 'number', color: 'primary' },
     { title: 'Conversão', value: data.conversionRate, trend: data.conversionTrend, icon: Target, tooltip: 'Taxa de conversão', format: 'percent', color: 'chart-2' },
     { title: 'Ganhos', value: data.closedLeads, trend: data.closedTrend, icon: CheckCircle2, tooltip: `Leads convertidos - ${periodLabel}`, format: 'number', color: 'chart-3' },
-    { title: 'Tempo Resp.', value: data.avgResponseTime, icon: Clock, tooltip: 'Tempo médio de primeira resposta', format: 'time', color: 'chart-4' },
+    { title: 'Tempo Resp.', value: data.avgResponseTime, icon: Clock, tooltip: 'Tempo médio de resposta', format: 'time', color: 'chart-4' },
   ];
 
   const bottomKpis = [

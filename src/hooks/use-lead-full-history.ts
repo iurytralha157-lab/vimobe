@@ -23,7 +23,7 @@ export interface UnifiedHistoryEvent {
 const timelineEventLabels: Record<string, string> = {
   lead_created: 'Lead criado',
   lead_assigned: 'Distribuído',
-  first_response: 'Primeira resposta',
+  first_response: 'Tempo de resposta',
   whatsapp_message_sent: 'Mensagem enviada',
   whatsapp_message_received: 'Mensagem recebida',
   call_initiated: 'Ligação iniciada',

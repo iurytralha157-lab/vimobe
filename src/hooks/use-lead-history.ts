@@ -90,7 +90,7 @@ function buildLabel(type: string, metadata: Record<string, any>, source: 'timeli
       return 'Estágio alterado';
     }
     case 'first_response':
-      return 'Primeira resposta';
+      return 'Tempo de resposta';
     case 'whatsapp_message_sent':
       return 'Mensagem enviada (WhatsApp)';
     case 'whatsapp_message_received':
