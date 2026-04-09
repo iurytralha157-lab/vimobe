@@ -43,7 +43,7 @@ const eventConfig: Record<string, {
   },
   first_response: {
     icon: Zap,
-    label: 'Primeira resposta',
+    label: 'Tempo de resposta',
     color: 'text-yellow-600 dark:text-yellow-400',
     bgColor: 'bg-yellow-100 dark:bg-yellow-900/50'
   },
@@ -177,7 +177,7 @@ export function LeadTimeline({ leadId }: LeadTimelineProps) {
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-              Primeira resposta em {formatResponseTime((firstResponseEvent.metadata as any)?.response_seconds || 0)}
+              Tempo de resposta: {formatResponseTime((firstResponseEvent.metadata as any)?.response_seconds || 0)}
             </span>
             {firstResponseEvent.is_automation && (
               <Badge variant="outline" className="text-xs gap-1">

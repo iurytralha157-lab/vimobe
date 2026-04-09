@@ -215,7 +215,7 @@ export function KPICards({ data, isLoading, periodLabel = 'Últimos 30 dias' }: 
       title: 'Tempo Resp.',
       value: data.avgResponseTime,
       icon: Clock,
-      tooltip: 'Tempo médio de primeira resposta',
+      tooltip: 'Tempo médio de resposta',
       format: 'time',
       accentColor: 'chart-4',
     },
