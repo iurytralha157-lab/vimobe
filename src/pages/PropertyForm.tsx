@@ -191,7 +191,7 @@ export default function PropertyForm() {
   const { data: features = [], isLoading: loadingFeatures } = usePropertyFeatures();
   const { data: proximities = [], isLoading: loadingProximities } = usePropertyProximities();
   const { data: users = [] } = useUsers();
-  const { user, profile } = useAuth();
+  const { user, profile, isSuperAdmin } = useAuth();
   const createPropertyType = useCreatePropertyType();
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
@@ -199,6 +199,18 @@ export default function PropertyForm() {
   const createProximity = useCreatePropertyProximity();
   const seedFeatures = useSeedDefaultFeatures();
   const seedProximities = useSeedDefaultProximities();
+
+  // Permission check: only admin or the creator can edit
+  const isAdmin = profile?.role === 'admin' || isSuperAdmin;
+  const isCreator = property && (property as any).cadastrado_por === user?.id;
+  const canEdit = !isEditing || isAdmin || isCreator;
+
+  useEffect(() => {
+    if (isEditing && property && !loadingProperty && !canEdit) {
+      toast.error('Você não tem permissão para editar este imóvel.');
+      navigate('/properties');
+    }
+  }, [isEditing, property, loadingProperty, canEdit, navigate]);
 
   useEffect(() => {
     if (!loadingFeatures && features.length === 0) seedFeatures.mutate();
