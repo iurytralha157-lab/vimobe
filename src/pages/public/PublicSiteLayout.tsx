@@ -172,7 +172,11 @@ export default function PublicSiteLayout() {
 
     return () => {
       for (const el of injectedElements) {
-        el.parentNode?.removeChild(el);
+        try {
+          el.parentNode?.removeChild(el);
+        } catch {
+          // Element may have been moved/removed by injected scripts (e.g. GTM)
+        }
       }
     };
   }, [siteConfig]);
