@@ -54,6 +54,11 @@ function mapSiteDataToConfig(data: any, orgName: string): PublicSiteConfig {
     about_stats: data.about_stats || null,
     about_checkmarks: data.about_checkmarks || null,
     about_features: data.about_features || null,
+    gtm_id: data.gtm_id || null,
+    meta_pixel_id: data.meta_pixel_id || null,
+    google_ads_id: data.google_ads_id || null,
+    head_scripts: data.head_scripts || null,
+    body_scripts: data.body_scripts || null,
   };
 }
 
