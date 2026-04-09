@@ -74,9 +74,11 @@ export default function PublicPropertyDetail() {
   const textColor = siteConfig?.text_color || '#FFFFFF';
   const backgroundColor = siteConfig?.background_color || '#0D0D0D';
 
-  // Build all images array
-  const allImages = property 
-    ? [property.imagem_principal, ...(property.fotos || [])].filter(Boolean) as string[]
+  // Build all images array – deduplicate so the main image doesn't appear twice
+  const allImages = property
+    ? Array.from(new Set(
+        [property.imagem_principal, ...(property.fotos || [])].filter(Boolean)
+      )) as string[]
     : [];
 
   if (isLoading) {
