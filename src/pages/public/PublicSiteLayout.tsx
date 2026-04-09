@@ -821,7 +821,7 @@ export default function PublicSiteLayout() {
                   rel="noopener noreferrer"
                   className="hover:opacity-80 transition-opacity inline-flex items-center"
                 >
-                  <img src="/logo-white.png" alt="VIMOB" className="h-6 w-auto opacity-60 hover:opacity-90 transition-opacity" />
+                  <img src="/logo-white.png" alt="VIMOB" className="h-10 w-auto opacity-60 hover:opacity-90 transition-opacity" />
                 </a>
               </p>
             </div>
