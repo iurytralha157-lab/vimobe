@@ -368,6 +368,15 @@ export default function PublicProperties() {
                     <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('vagas', '')} />
                   </Badge>
                 )}
+                {filters.mobilia && (
+                  <Badge 
+                    className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {filters.mobilia}
+                    <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('mobilia', '')} />
+                  </Badge>
+                )}
               </div>
             )}
 
