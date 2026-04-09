@@ -1411,7 +1411,21 @@ export function LeadDetailDialog({
             </div>
             
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-xl font-semibold truncate">{lead.name}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-xl font-semibold truncate">{lead.name}</DialogTitle>
+                {lead.first_response_seconds != null && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
+                    <Zap className="h-3 w-3" />
+                    1ª: {formatResponseTime(lead.first_response_seconds)}
+                    {lead.first_response_is_automation && (
+                      <span className="text-[9px] ml-0.5 opacity-70 flex items-center gap-0.5">
+                        <Bot className="h-2.5 w-2.5" />
+                        Auto
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 {lead.empresa && <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                     <Building2 className="h-3.5 w-3.5" />
