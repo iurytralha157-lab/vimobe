@@ -54,7 +54,7 @@ function escapeHtml(str: string): string {
 function buildHtml(site: any, orgName: string, requestUrl: string): string {
   const title = escapeHtml(site.seo_title || site.site_title || orgName || 'Site Imobiliário');
   const description = escapeHtml(site.seo_description || site.site_description || `${orgName} - Imóveis`);
-  const image = site.hero_image_url || site.logo_url || site.about_image_url || '';
+  const image = site.logo_url || site.favicon_url || site.about_image_url || site.hero_image_url || '';
   const favicon = site.favicon_url || site.logo_url || '';
   const siteName = escapeHtml(site.site_title || orgName || 'Site Imobiliário');
   const keywords = site.seo_keywords ? `<meta name="keywords" content="${escapeHtml(site.seo_keywords)}">` : '';
