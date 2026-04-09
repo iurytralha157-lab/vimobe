@@ -159,6 +159,7 @@ export default function PublicProperties() {
       tipo: '',
       finalidade: '',
       cidade: '',
+      bairro: '',
       quartos: '',
       suites: '',
       minPrice: '',
@@ -169,7 +170,7 @@ export default function PublicProperties() {
     });
   };
 
-  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.quartos || filters.suites || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
+  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.bairro || filters.quartos || filters.suites || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
   const activeFilterCount = [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas].filter(Boolean).length;
 
   const formatPrice = (value: number | null) => {
