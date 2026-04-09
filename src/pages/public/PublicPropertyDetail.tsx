@@ -239,6 +239,7 @@ export default function PublicPropertyDetail() {
               seguroIncendio={(property as any).seguro_incendio}
               taxaServico={(property as any).taxa_de_servico}
               codigo={property.codigo || (property as any).code}
+              codigoExterno={(property as any).vista_codigo || (property as any).imoview_codigo}
               titulo={property.titulo || (property as any).title}
               propertyId={property.id}
               organizationId={organizationId || ''}

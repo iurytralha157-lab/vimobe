@@ -163,10 +163,21 @@ export default function PropertyPricing({
           </p>
         </div>
 
-        {/* Property Code */}
-        <div className="text-center pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
-          <p className="text-xs" style={{ color: textColor, opacity: 0.4 }}>Código do imóvel</p>
-          <p className="font-mono font-semibold" style={{ color: textColor, opacity: 0.7 }}>{codigo}</p>
+        {/* Property Codes */}
+        <div className="pt-4 flex items-center justify-center gap-6" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
+          <div className="text-center">
+            <p className="text-xs" style={{ color: textColor, opacity: 0.4 }}>Código</p>
+            <p className="font-mono font-semibold text-sm" style={{ color: textColor, opacity: 0.7 }}>{codigo}</p>
+          </div>
+          {codigoExterno && (
+            <>
+              <div className="h-8 w-px" style={{ backgroundColor: textColor ? `${textColor}15` : '#e5e7eb' }} />
+              <div className="text-center">
+                <p className="text-xs" style={{ color: textColor, opacity: 0.4 }}>Cód. Externo</p>
+                <p className="font-mono font-semibold text-sm" style={{ color: textColor, opacity: 0.7 }}>{codigoExterno}</p>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
