@@ -251,68 +251,73 @@ export default function SiteSettings() {
   };
 
   const getWorkerCode = () => {
-    const siteTitle = (formData.site_title || organization?.name || 'Site Imobiliário').replace(/'/g, "\\'");
-    const siteDescription = (formData.site_description || 'Encontre o imóvel dos seus sonhos conosco.').replace(/'/g, "\\'");
-    const siteFavicon = (site?.favicon_url || '/favicon.png').replace(/'/g, "\\'");
+    return `const BOT_AGENTS = [
+  'facebookexternalhit', 'whatsapp', 'telegrambot', 'twitterbot',
+  'linkedinbot', 'googlebot', 'bingbot', 'slackbot', 'discordbot',
+  'pinterestbot', 'applebot', 'redditbot', 'embedly', 'quora',
+  'skypeuripreview', 'facebot', 'outbrain', 'vkshare', 'tumblr'
+];
 
-    return `export default {
-  async fetch(request) {
+function isBot(ua) {
+  const lower = (ua || '').toLowerCase();
+  return BOT_AGENTS.some(bot => lower.includes(bot));
+}
+
+export default {
+  async fetch(request, env) {
     const url = new URL(request.url);
-    const target = 'vimobe.lovable.app';
-    const targetUrl = 'https://' + target + url.pathname + url.search;
+    const hostname = url.hostname;
 
-    const blockedResponseHeaders = [
-      'content-encoding',
-      'transfer-encoding', 
-      'content-length',
-    ];
+    // 1. Resolve o domínio via get-worker-config
+    const configRes = await fetch(
+      'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/get-worker-config',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: hostname }),
+      }
+    );
 
-    const response = await fetch(targetUrl, {
+    if (!configRes.ok) {
+      return new Response('Site não encontrado', { status: 404 });
+    }
+
+    const config = await configRes.json();
+
+    // 2. Se for bot/crawler, retorna HTML com meta tags corretas (SSR)
+    const userAgent = request.headers.get('user-agent') || '';
+    if (isBot(userAgent)) {
+      const ssrUrl = \\\`https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-ssr?domain=\\\${encodeURIComponent(hostname)}&path=\\\${encodeURIComponent(url.pathname)}&url=\\\${encodeURIComponent(request.url)}\\\`;
+      const ssrResponse = await fetch(ssrUrl);
+      if (ssrResponse.ok) {
+        return new Response(ssrResponse.body, {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=300',
+          },
+        });
+      }
+    }
+
+    // 3. Para usuários reais, faz proxy para o target (vimobe.lovable.app)
+    const targetUrl = new URL(request.url);
+    targetUrl.hostname = config.target || 'vimobe.lovable.app';
+
+    const proxyRequest = new Request(targetUrl.toString(), {
       method: request.method,
-      headers: {
-        ...Object.fromEntries(request.headers),
-        'Host': target,
-      },
-      body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+      headers: request.headers,
+      body: request.body,
       redirect: 'follow',
     });
 
-    const newHeaders = new Headers();
-    for (const [key, value] of response.headers.entries()) {
-      if (!blockedResponseHeaders.includes(key.toLowerCase())) {
-        newHeaders.set(key, value);
-      }
-    }
-    
-    // Essencial: Evita iframe e CORS bloqueados (Página Branca)
-    newHeaders.delete('x-frame-options');
-    newHeaders.delete('content-security-policy');
-    newHeaders.set('access-control-allow-origin', '*');
+    proxyRequest.headers.set('X-Forwarded-Host', hostname);
 
-    let finalResponse = new Response(response.body, {
-      status: response.status,
-      headers: newHeaders,
-    });
-    
-    // Injeta as configurações da imobiliária no HTML para aparecer correto ao compartilhar no WhatsApp/Redes Sociais
-    const contentType = finalResponse.headers.get('content-type');
-    if (contentType && contentType.includes('text/html')) {
-      return new HTMLRewriter()
-        .on('title', { element(e) { e.setInnerContent('${siteTitle}'); } })
-        .on('meta[property="og:title"]', { element(e) { e.setAttribute('content', '${siteTitle}'); } })
-        .on('meta[name="twitter:title"]', { element(e) { e.setAttribute('content', '${siteTitle}'); } })
-        .on('meta[name="description"]', { element(e) { e.setAttribute('content', '${siteDescription}'); } })
-        .on('meta[property="og:description"]', { element(e) { e.setAttribute('content', '${siteDescription}'); } })
-        .on('meta[name="twitter:description"]', { element(e) { e.setAttribute('content', '${siteDescription}'); } })
-        .on('link[rel="icon"]', { element(e) { e.setAttribute('href', '${siteFavicon}'); } })
-        .on('link[rel="apple-touch-icon"]', { element(e) { e.setAttribute('href', '${siteFavicon}'); } })
-        .on('meta[property="og:image"]', { element(e) { e.setAttribute('content', '${siteFavicon}'); } })
-        .on('meta[name="twitter:image"]', { element(e) { e.setAttribute('content', '${siteFavicon}'); } })
-        .transform(finalResponse);
-    }
+    const response = await fetch(proxyRequest);
+    const newResponse = new Response(response.body, response);
+    newResponse.headers.set('X-Forwarded-Host', hostname);
 
-    return finalResponse;
-  }
+    return newResponse;
+  },
 };`;
   };
 

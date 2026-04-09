@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     const meta = siteData ? {
       title: siteData.seo_title || siteData.site_title || orgName || 'Site Imobiliário',
       description: siteData.seo_description || siteData.site_description || '',
-      image: siteData.hero_image_url || siteData.logo_url || siteData.about_image_url || '',
+      image: siteData.logo_url || siteData.favicon_url || siteData.about_image_url || siteData.hero_image_url || '',
       favicon: siteData.favicon_url || siteData.logo_url || '',
     } : null;
 
