@@ -128,9 +128,9 @@ Deno.serve(async (req) => {
           query = query.lte('area_util', parseFloat(maxArea));
         }
         
-        // Boolean filters
-        if (mobilia === 'true') {
-          query = query.eq('mobiliado', true);
+        // Furniture filter
+        if (mobilia) {
+          query = query.ilike('mobilia', `%${mobilia}%`);
         }
         if (pet === 'true') {
           query = query.eq('aceita_pet', true);

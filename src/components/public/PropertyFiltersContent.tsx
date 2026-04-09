@@ -17,6 +17,7 @@ interface FilterState {
   maxPrice: string;
   banheiros: string;
   vagas: string;
+  mobilia: string;
   page: number;
 }
 
