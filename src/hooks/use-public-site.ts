@@ -122,6 +122,7 @@ export function usePublicProperties(organizationId: string | null, filters?: {
   vagas?: number;
   cidade?: string;
   bairro?: string;
+  mobilia?: string;
 }) {
   return useQuery({
     queryKey: ['public-properties', organizationId, filters],
@@ -146,6 +147,7 @@ export function usePublicProperties(organizationId: string | null, filters?: {
       if (filters?.vagas) params.append('vagas', String(filters.vagas));
       if (filters?.cidade) params.append('cidade', filters.cidade);
       if (filters?.bairro) params.append('bairro', filters.bairro);
+      if (filters?.mobilia) params.append('mobilia', filters.mobilia);
 
       const { data, error } = await supabase.functions.invoke('public-site-data', {
         body: null,
