@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp } from 'lucide-react';
@@ -750,22 +751,19 @@ export function LeadDetailDialog({
         )}
       </div>
 
-      {/* Mobile Tabs - Scrollable */}
+      {/* Mobile Tabs - Animated */}
       <div className="border-b bg-background/95 backdrop-blur sticky top-0 z-10 overflow-hidden">
-        <div className="overflow-x-auto scrollbar-hide -mx-1 px-1">
-          <div className="flex items-center gap-1 px-3 py-2 w-max">
-            {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0", isActive ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
-                  <Icon className="h-3.5 w-3.5" />
-                  <span>{tab.label}</span>
-                  {tab.badge && <Badge variant={isActive ? "outline" : "secondary"} className={cn("h-4 px-1 text-[9px]", isActive && "border-primary-foreground/30 text-primary-foreground")}>
-                      {tab.badge}
-                    </Badge>}
-                </button>;
-          })}
-          </div>
+        <div className="overflow-x-auto scrollbar-hide px-3 py-2">
+          <AnimatedTabNav
+            tabs={tabs.map(tab => ({
+              value: tab.id,
+              label: tab.label,
+              icon: tab.icon,
+              badge: tab.badge || undefined,
+            }))}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </div>
       </div>
 
