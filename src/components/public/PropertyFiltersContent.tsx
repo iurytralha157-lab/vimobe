@@ -63,7 +63,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
     borderColor: `${textColor}20`,
   } : undefined;
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Basic Filters - Always visible */}
       <div>
         <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Buscar</label>
