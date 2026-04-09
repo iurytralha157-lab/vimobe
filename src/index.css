@@ -612,6 +612,7 @@
   padding: 0.2rem;
   background-color: hsl(var(--muted));
   display: inline-flex;
+  align-items: center;
   border-radius: 10px;
   gap: 1px;
   flex-wrap: nowrap;
@@ -620,6 +621,7 @@
 .stage-tab-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   height: 28px;
   border-radius: 6px;
   position: relative;
@@ -638,7 +640,7 @@
   padding: 0 8px;
   gap: 5px;
   min-width: 28px;
-  justify-content: center;
+  line-height: 1;
 }
 
 .stage-tab-link:hover,
@@ -671,12 +673,13 @@
 }
 
 .stage-tab-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .stage-tab-title {
@@ -685,7 +688,8 @@
   overflow: hidden;
   transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.2s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   white-space: nowrap;
+  line-height: 1;
 }
