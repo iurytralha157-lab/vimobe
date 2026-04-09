@@ -65,16 +65,27 @@ async function testConnection(apiUrl: string, apiKey: string) {
   return { success: true, message: "Conexão válida", sample: data };
 }
 
+function normalizeUrl(url: string): string {
+  return url.trim().replace(/\/+$/, "").split("?")[0];
+}
+
 function extractPhotosFromPayload(payload: any): string[] {
+  const seen = new Set<string>();
   const photos: string[] = [];
 
   const pushPhoto = (value: unknown) => {
-    if (typeof value === "string" && value.startsWith("http") && !photos.includes(value)) {
-      photos.push(value);
-    }
+    if (typeof value !== "string") return;
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("http")) return;
+    const key = normalizeUrl(trimmed);
+    if (seen.has(key)) return;
+    seen.add(key);
+    photos.push(trimmed);
   };
 
+  // Add FotoDestaque first
   pushPhoto(payload?.FotoDestaque);
+  pushPhoto(payload?.FotoDestaquePequena);
 
   const fotosData = payload?.Foto ?? payload?.fotos ?? payload?.Fotos;
   const entries = Array.isArray(fotosData)
@@ -85,8 +96,12 @@ function extractPhotosFromPayload(payload: any): string[] {
 
   for (const entry of entries) {
     if (!entry || typeof entry !== "object") continue;
+    // Prefer full-size photo
     pushPhoto((entry as any).Foto);
-    pushPhoto((entry as any).FotoPequena);
+    // Only add small version if full-size wasn't available
+    if (!(entry as any).Foto) {
+      pushPhoto((entry as any).FotoPequena);
+    }
   }
 
   return photos;
