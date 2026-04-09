@@ -476,7 +476,7 @@ export function MessageBubble({
           
           <audio
             ref={audioRef}
-            src={mediaUrl!}
+            src={blobUrl || mediaUrl!}
             preload="metadata"
             onEnded={() => {
               setIsPlaying(false);
