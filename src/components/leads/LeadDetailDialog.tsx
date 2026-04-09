@@ -1496,19 +1496,6 @@ export function LeadDetailDialog({
           </div>
         </DialogHeader>
 
-        {/* First Response Badge - Premium */}
-        {lead.first_response_seconds !== null && lead.first_response_seconds !== undefined && <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 shadow-sm mb-4">
-            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-inner">
-              <Zap className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="text-sm font-semibold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
-              1ª resposta: {formatResponseTime(lead.first_response_seconds)}
-            </span>
-            {lead.first_response_is_automation && <Badge variant="secondary" className="h-5 text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-0">
-                <Bot className="h-3 w-3 mr-1" />
-                Auto
-              </Badge>}
-          </div>}
 
         {/* Tags - Premium */}
         <div className="flex flex-wrap items-center gap-2">
