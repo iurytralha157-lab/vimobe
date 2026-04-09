@@ -180,7 +180,7 @@ export default function PublicProperties() {
 
   const formatPrice = (value: number | null) => {
     if (!value) return null;
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   if (!siteConfig) {
