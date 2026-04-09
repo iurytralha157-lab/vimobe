@@ -3011,6 +3011,7 @@ export type Database = {
           accent_color: string | null
           address: string | null
           background_color: string
+          body_scripts: string | null
           card_color: string
           city: string | null
           created_at: string
@@ -3023,6 +3024,7 @@ export type Database = {
           google_ads_id: string | null
           google_analytics_id: string | null
           gtm_id: string | null
+          head_scripts: string | null
           hero_image_url: string | null
           hero_subtitle: string | null
           hero_title: string | null
@@ -3067,6 +3069,7 @@ export type Database = {
           accent_color?: string | null
           address?: string | null
           background_color?: string
+          body_scripts?: string | null
           card_color?: string
           city?: string | null
           created_at?: string
@@ -3079,6 +3082,7 @@ export type Database = {
           google_ads_id?: string | null
           google_analytics_id?: string | null
           gtm_id?: string | null
+          head_scripts?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
@@ -3123,6 +3127,7 @@ export type Database = {
           accent_color?: string | null
           address?: string | null
           background_color?: string
+          body_scripts?: string | null
           card_color?: string
           city?: string | null
           created_at?: string
@@ -3135,6 +3140,7 @@ export type Database = {
           google_ads_id?: string | null
           google_analytics_id?: string | null
           gtm_id?: string | null
+          head_scripts?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
