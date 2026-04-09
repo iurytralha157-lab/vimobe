@@ -39,6 +39,7 @@ export default function PublicProperties() {
     maxPrice: searchParams.get('max_price') || '',
     banheiros: searchParams.get('banheiros') || '',
     vagas: searchParams.get('vagas') || '',
+    mobilia: searchParams.get('mobilia') || '',
     page: parseInt(searchParams.get('page') || '1'),
   }));
   
@@ -62,6 +63,7 @@ export default function PublicProperties() {
         maxPrice: newParams.get('max_price') || '',
         banheiros: newParams.get('banheiros') || '',
         vagas: newParams.get('vagas') || '',
+        mobilia: newParams.get('mobilia') || '',
         page: parseInt(newParams.get('page') || '1'),
       });
     }
@@ -98,6 +100,7 @@ export default function PublicProperties() {
     vagas: filters.vagas ? parseInt(filters.vagas) : undefined,
     minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
     maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
+    mobilia: filters.mobilia || undefined,
   });
 
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
@@ -138,6 +141,7 @@ export default function PublicProperties() {
     if (filters.maxPrice) params.set('max_price', filters.maxPrice);
     if (filters.banheiros) params.set('banheiros', filters.banheiros);
     if (filters.vagas) params.set('vagas', filters.vagas);
+    if (filters.mobilia) params.set('mobilia', filters.mobilia);
     if (filters.page > 1) params.set('page', String(filters.page));
     
     if (orgParam) params.set('org', orgParam);
@@ -147,7 +151,7 @@ export default function PublicProperties() {
     lastLocationSearch.current = newSearch;
     
     setSearchParams(params, { replace: true });
-  }, [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.page]);
+  }, [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.mobilia, filters.page]);
 
   const updateFilter = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -166,12 +170,13 @@ export default function PublicProperties() {
       maxPrice: '',
       banheiros: '',
       vagas: '',
+      mobilia: '',
       page: 1,
     });
   };
 
-  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.bairro || filters.quartos || filters.suites || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
-  const activeFilterCount = [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas].filter(Boolean).length;
+  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.bairro || filters.quartos || filters.suites || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas || filters.mobilia;
+  const activeFilterCount = [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas, filters.mobilia].filter(Boolean).length;
 
   const formatPrice = (value: number | null) => {
     if (!value) return null;
