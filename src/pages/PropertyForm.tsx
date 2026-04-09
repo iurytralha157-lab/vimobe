@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { AnimatedTabNav } from '@/components/ui/animated-tab-nav';
 import { Plus, Loader2, ArrowLeft, Save, User, MapPin, Home, Settings2, Image, Globe, Key, DollarSign, Lock, Tag } from 'lucide-react';
 import { useProperty, useCreateProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { usePropertyTypes, useCreatePropertyType } from '@/hooks/use-property-types';
@@ -447,14 +448,7 @@ export default function PropertyForm() {
               </SelectContent>
             </Select>
           ) : (
-            <TabsList className="flex-wrap h-auto gap-1 flex-shrink-0">
-              {tabs.map(tab => (
-                <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
-                  <tab.icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <AnimatedTabNav tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} className="flex-shrink-0" />
           )}
 
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-6">
