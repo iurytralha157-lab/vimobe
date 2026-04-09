@@ -63,7 +63,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
     borderColor: `${textColor}20`,
   } : undefined;
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Basic Filters - Always visible */}
       <div>
         <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Buscar</label>
@@ -141,7 +141,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
             <ChevronDown className={`w-5 h-5 transition-transform ${showMoreFilters ? 'rotate-180' : ''}`} />
           </Button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-6 pt-4">
+        <CollapsibleContent className="space-y-4 pt-3">
           <div>
             <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Tipo de Imóvel</label>
             <Select value={filters.tipo} onValueChange={(v) => updateFilter('tipo', v === 'all' ? '' : v)}>
@@ -252,7 +252,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
 
       {hasActiveFilters && (
         <Button 
-          variant="outline" 
+          variant="destructive" 
           className="w-full rounded-xl" 
           onClick={() => {
             clearFilters();
