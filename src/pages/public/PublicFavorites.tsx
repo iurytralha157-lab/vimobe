@@ -68,8 +68,8 @@ export default function PublicFavorites() {
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">
             Meus Favoritos
           </h1>
-          {count > 0 && (
-            <p className="text-white/60 mt-3">{count} {count === 1 ? 'imóvel salvo' : 'imóveis salvos'}</p>
+          {!isLoading && properties.length > 0 && (
+            <p className="text-white/60 mt-3">{properties.length} {properties.length === 1 ? 'imóvel salvo' : 'imóveis salvos'}</p>
           )}
         </div>
       </div>
