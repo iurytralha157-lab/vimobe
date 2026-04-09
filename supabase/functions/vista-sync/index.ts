@@ -68,7 +68,7 @@ function parseMobilia(value: unknown): string | null {
   if (!value) return null;
   const v = String(value).toLowerCase().trim();
   if (v === "sim" || v === "mobiliado" || v === "completo") return "Mobiliado";
-  if (v.includes("semi") || v === "parcial" || v === "parcialmente")) return "Semi-mobiliado";
+  if (v.includes("semi") || v === "parcial" || v === "parcialmente") return "Semi-mobiliado";
   if (v === "nao" || v === "não" || v === "nenhum" || v === "sem") return "Sem mobília";
   return null;
 }
