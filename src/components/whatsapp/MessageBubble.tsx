@@ -47,6 +47,13 @@ const checkOggOpusSupport = (): boolean => {
   }
 };
 
+// Fetch audio as blob URL to bypass format detection issues
+const fetchAsBlobUrl = async (url: string): Promise<string> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+};
+
 export function MessageBubble({
   content,
   messageType,
@@ -73,6 +80,8 @@ export function MessageBubble({
   const [audioReady, setAudioReady] = useState(false);
   const [mediaChecked, setMediaChecked] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobAttempted, setBlobAttempted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   
   // Waveform bars generated from mediaUrl or sentAt as seed
@@ -103,6 +112,13 @@ export function MessageBubble({
         });
     }
   }, [mediaUrl, messageType, mediaChecked]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [blobUrl]);
 
   const formatTime = (date: string) => {
     return format(new Date(date), "HH:mm");
@@ -194,7 +210,7 @@ export function MessageBubble({
     }
   };
 
-  const handleAudioError = (e: SyntheticEvent<HTMLAudioElement>) => {
+  const handleAudioError = async (e: SyntheticEvent<HTMLAudioElement>) => {
     const audio = e.currentTarget;
     const errorCode = audio.error?.code;
     const errorMsg = audio.error?.message;
@@ -205,8 +221,24 @@ export function MessageBubble({
       message: errorMsg,
       mimeType: mediaMimeType,
       networkState: audio.networkState,
-      readyState: audio.readyState
+      readyState: audio.readyState,
+      blobAttempted
     });
+    
+    // Try blob URL fallback before giving up (bypasses browser format sniffing)
+    if (!blobAttempted && mediaUrl && isValidMediaUrl(mediaUrl)) {
+      setBlobAttempted(true);
+      try {
+        console.log('[Audio] Trying blob URL fallback...');
+        const blob = await fetchAsBlobUrl(mediaUrl);
+        setBlobUrl(blob);
+        setAudioError(null);
+        // The audio element will re-render with the new blob src
+        return;
+      } catch (blobErr) {
+        console.error('[Audio Blob Fallback Failed]', blobErr);
+      }
+    }
     
     // Check if it's a format issue
     if (mediaMimeType?.includes('ogg') && !checkOggOpusSupport()) {
@@ -444,7 +476,7 @@ export function MessageBubble({
           
           <audio
             ref={audioRef}
-            src={mediaUrl!}
+            src={blobUrl || mediaUrl!}
             preload="metadata"
             onEnded={() => {
               setIsPlaying(false);

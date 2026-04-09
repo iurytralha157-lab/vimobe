@@ -90,13 +90,44 @@ function MessageBubble({ msg, leadName }: { msg: LeadMessage; leadName: string }
           />
         )}
 
-        {isMedia && msg.message_type !== 'image' && (
+        {isMedia && msg.media_url && msg.message_type === 'video' && (
+          <video
+            src={msg.media_url}
+            controls
+            className="rounded-lg max-h-48 w-full mb-1"
+            preload="metadata"
+          />
+        )}
+
+        {isMedia && msg.media_url && msg.message_type === 'audio' && (
+          <audio
+            src={msg.media_url}
+            controls
+            className="w-full mb-1 max-w-[250px]"
+            preload="metadata"
+          />
+        )}
+
+        {isMedia && msg.media_url && msg.message_type === 'document' && (
+          <div 
+            className={cn(
+              "flex items-center gap-1.5 mb-1 text-xs cursor-pointer hover:opacity-80",
+              msg.from_me ? "text-primary-foreground/80" : "text-muted-foreground"
+            )}
+            onClick={() => window.open(msg.media_url!, '_blank')}
+          >
+            <MessageTypeIcon type={msg.message_type} />
+            <span className="truncate">{msg.content || 'Documento'}</span>
+          </div>
+        )}
+
+        {isMedia && (!msg.media_url || !['image', 'video', 'audio', 'document'].includes(msg.message_type || '')) && (
           <div className={cn(
             "flex items-center gap-1.5 mb-1 text-xs",
             msg.from_me ? "text-primary-foreground/80" : "text-muted-foreground"
           )}>
             <MessageTypeIcon type={msg.message_type} />
-            <span>{msg.message_type === 'audio' ? 'Áudio' : msg.message_type === 'video' ? 'Vídeo' : 'Documento'}</span>
+            <span>{msg.message_type === 'audio' ? 'Áudio' : msg.message_type === 'video' ? 'Vídeo' : msg.message_type === 'sticker' ? 'Sticker' : 'Documento'}</span>
           </div>
         )}
 
