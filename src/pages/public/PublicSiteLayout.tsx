@@ -813,15 +813,16 @@ export default function PublicSiteLayout() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
               <p>© {new Date().getFullYear()} {siteConfig.organization_name}. Todos os direitos reservados.</p>
-              <p>
+              <p className="flex items-center gap-1.5">
                 Desenvolvido por{' '}
                 <a 
                   href="https://vimob.com.br" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors inline-flex items-center gap-1.5"
                   style={{ color: primaryColor }}
                 >
+                  <img src="/logo-white.png" alt="VIMOB" className="h-3.5 w-auto opacity-60" />
                   VIMOB
                 </a>
               </p>
