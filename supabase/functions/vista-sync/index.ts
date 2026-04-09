@@ -73,13 +73,15 @@ function extractPhotosFromItem(item: any): string[] {
     photos.push(item.FotoDestaque);
   }
 
-  // Parse nested fotos - Vista returns as object with numeric keys or "Foto" sub-objects
-  const fotosData = item.Foto || item.fotos || item.Fotos;
-  if (fotosData && typeof fotosData === "object") {
+  // Parse nested fotos - Vista can return under Foto, fotos, or Fotos key
+  // Each is an object with numeric keys containing {Foto: "url", FotoPequena: "url", ...}
+  for (const key of ["Foto", "fotos", "Fotos"]) {
+    const fotosData = item[key];
+    if (!fotosData || typeof fotosData !== "object") continue;
+    
     const entries = Array.isArray(fotosData) ? fotosData : Object.values(fotosData);
     for (const entry of entries) {
       if (!entry || typeof entry !== "object") continue;
-      // Each entry can have Foto (full size) or FotoPequena
       const url = (entry as any).Foto || (entry as any).FotoPequena;
       if (url && typeof url === "string" && url.startsWith("http") && !photos.includes(url)) {
         photos.push(url);
