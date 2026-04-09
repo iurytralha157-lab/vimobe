@@ -1529,11 +1529,11 @@ export function LeadDetailDialog({
           </Popover>
         </div>
 
-        {/* Pipeline Timeline - Animated Tab Style */}
-        <div className="mt-4 overflow-hidden">
+        {/* Pipeline Timeline - Stage Stepper */}
+        <div className="mt-3 overflow-hidden">
           <ScrollArea className="w-full" type="scroll">
             <TooltipProvider delayDuration={0}>
-              <nav className="animated-tab-nav">
+              <nav className="stage-tab-nav">
                 {stages.map((stage, idx) => {
                   const isActive = stage.id === lead.stage_id;
                   const isPast = idx < currentStageIndex;
@@ -1543,20 +1543,20 @@ export function LeadDetailDialog({
                         <button
                           onClick={() => handleMoveToStage(stage.id)}
                           className={cn(
-                            "animated-tab-link",
+                            "stage-tab-link",
                             isActive && "active",
-                            isPast && !isActive && "opacity-70"
+                            isPast && !isActive && "past"
                           )}
                           type="button"
                         >
-                          <span className="animated-tab-icon">
+                          <span className="stage-tab-icon">
                             {isPast && !isActive ? (
-                              <Check className="h-[18px] w-[18px]" />
+                              <Check className="h-3 w-3" />
                             ) : (
-                              <span className="text-xs font-bold">{idx + 1}</span>
+                              <span>{idx + 1}</span>
                             )}
                           </span>
-                          <span className="animated-tab-title">
+                          <span className="stage-tab-title">
                             {stage.name}
                           </span>
                         </button>

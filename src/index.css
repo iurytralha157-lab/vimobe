@@ -606,3 +606,86 @@
   align-items: center;
   white-space: nowrap;
 }
+
+/* Stage Stepper Nav - compact variant */
+.stage-tab-nav {
+  padding: 0.2rem;
+  background-color: hsl(var(--muted));
+  display: inline-flex;
+  border-radius: 10px;
+  gap: 1px;
+  flex-wrap: nowrap;
+}
+
+.stage-tab-link {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  border-radius: 6px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0 8px;
+  gap: 5px;
+  min-width: 28px;
+  justify-content: center;
+}
+
+.stage-tab-link:hover,
+.stage-tab-link:focus-visible {
+  outline: none;
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+}
+
+.stage-tab-link:hover .stage-tab-title,
+.stage-tab-link:focus-visible .stage-tab-title {
+  max-width: 160px;
+  opacity: 1;
+}
+
+.stage-tab-link.active {
+  color: #fff;
+  background-color: hsl(var(--primary));
+  box-shadow: 0 1px 4px 0 hsl(var(--primary) / 0.35);
+}
+
+.stage-tab-link.active .stage-tab-title {
+  max-width: 160px;
+  opacity: 1;
+}
+
+.stage-tab-link.past {
+  color: hsl(var(--primary));
+  opacity: 0.7;
+}
+
+.stage-tab-icon {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stage-tab-title {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
