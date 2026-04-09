@@ -324,6 +324,8 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           fotos: allPhotos,
           latitude: parseFloat(item.Latitude) || null,
           longitude: parseFloat(item.Longitude) || null,
+          mobilia: parseMobilia(item.Mobiliado),
+          seguro_incendio: parseFloat(String(item.SeguroIncendio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
         };
 
         let upsertError;
