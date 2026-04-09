@@ -13,6 +13,7 @@ import { SiteAnalyticsTab } from "@/components/site/SiteAnalyticsTab";
 import { AnimatedIcon } from "@/components/icons/AnimatedIcon";
 import GLOBE_JSON from "@/components/icons/globe-icon.json";
 import { MenuTab } from "@/components/site/MenuTab";
+import { SearchFiltersTab } from "@/components/site/SearchFiltersTab";
 import { AboutTab } from "@/components/site/AboutTab";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
@@ -1500,6 +1501,7 @@ ${getWorkerCode()}`;
 
             <TabsContent value="menu" className="space-y-6">
               <MenuTab />
+              <SearchFiltersTab />
             </TabsContent>
 
             <TabsContent value="about" className="space-y-6">
