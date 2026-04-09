@@ -21,6 +21,7 @@ import { PropertyPreviewDialog } from '@/components/properties/PropertyPreviewDi
 import { VistaImportDialog } from '@/components/properties/VistaImportDialog';
 import { ImoviewImportDialog } from '@/components/properties/ImoviewImportDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const formatPrice = (value: number | null, tipo: string | null) => {
