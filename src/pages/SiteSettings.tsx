@@ -252,72 +252,89 @@ export default function SiteSettings() {
 
   const getWorkerCode = () => {
     return `const BOT_AGENTS = [
-  'facebookexternalhit', 'whatsapp', 'telegrambot', 'twitterbot',
-  'linkedinbot', 'googlebot', 'bingbot', 'slackbot', 'discordbot',
-  'pinterestbot', 'applebot', 'redditbot', 'embedly', 'quora',
-  'skypeuripreview', 'facebot', 'outbrain', 'vkshare', 'tumblr'
+  'facebookexternalhit',
+  'whatsapp',
+  'telegrambot',
+  'twitterbot',
+  'linkedinbot',
+  'googlebot',
+  'bingbot',
+  'slackbot',
+  'discordbot',
+  'pinterestbot',
+  'applebot',
+  'redditbot',
+  'embedly',
+  'quora',
+  'skypeuripreview',
+  'facebot',
+  'outbrain',
+  'vkshare',
+  'tumblr'
 ];
 
-function isBot(ua) {
-  const lower = (ua || '').toLowerCase();
-  return BOT_AGENTS.some(bot => lower.includes(bot));
+function isBot(userAgent) {
+  const lower = (userAgent || '').toLowerCase();
+  return BOT_AGENTS.some((bot) => lower.includes(bot));
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request) {
     const url = new URL(request.url);
     const hostname = url.hostname;
 
-    // 1. Resolve o domínio via get-worker-config
-    const configRes = await fetch(
+    const configResponse = await fetch(
       'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/get-worker-config',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: hostname }),
+        body: JSON.stringify({ domain: hostname })
       }
     );
 
-    if (!configRes.ok) {
+    if (!configResponse.ok) {
       return new Response('Site não encontrado', { status: 404 });
     }
 
-    const config = await configRes.json();
-
-    // 2. Se for bot/crawler, retorna HTML com meta tags corretas (SSR)
+    const config = await configResponse.json();
     const userAgent = request.headers.get('user-agent') || '';
+
     if (isBot(userAgent)) {
-      const ssrUrl = \\\`https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-ssr?domain=\\\${encodeURIComponent(hostname)}&path=\\\${encodeURIComponent(url.pathname)}&url=\\\${encodeURIComponent(request.url)}\\\`;
+      const ssrUrl =
+        'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-ssr?domain=' +
+        encodeURIComponent(hostname) +
+        '&path=' +
+        encodeURIComponent(url.pathname + url.search) +
+        '&url=' +
+        encodeURIComponent(request.url);
+
       const ssrResponse = await fetch(ssrUrl);
+
       if (ssrResponse.ok) {
         return new Response(ssrResponse.body, {
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'public, max-age=300',
-          },
+            'Cache-Control': 'public, max-age=300'
+          }
         });
       }
     }
 
-    // 3. Para usuários reais, faz proxy para o target (vimobe.lovable.app)
     const targetUrl = new URL(request.url);
     targetUrl.hostname = config.target || 'vimobe.lovable.app';
 
+    const headers = new Headers(request.headers);
+    headers.set('X-Forwarded-Host', hostname);
+
     const proxyRequest = new Request(targetUrl.toString(), {
       method: request.method,
-      headers: request.headers,
-      body: request.body,
-      redirect: 'follow',
+      headers,
+      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+      redirect: 'follow'
     });
 
-    proxyRequest.headers.set('X-Forwarded-Host', hostname);
-
-    const response = await fetch(proxyRequest);
-    const newResponse = new Response(response.body, response);
-    newResponse.headers.set('X-Forwarded-Host', hostname);
-
-    return newResponse;
-  },
+    return fetch(proxyRequest);
+  }
 };`;
   };
 
@@ -549,7 +566,7 @@ ${getWorkerCode()}`;
                               <div className="flex-1">
                                 <p className="mb-2">Cole o código abaixo no editor do Worker:</p>
                                 <div className="relative">
-                                  <pre className="bg-background p-3 rounded text-xs overflow-x-auto max-h-48 border">{getWorkerCode()}</pre>
+                                  <pre className="bg-background p-3 rounded text-xs overflow-auto max-h-80 border text-left whitespace-pre">{getWorkerCode()}</pre>
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
