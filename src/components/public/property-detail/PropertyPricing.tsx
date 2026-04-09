@@ -13,6 +13,7 @@ interface PropertyPricingProps {
   seguroIncendio?: number | null;
   taxaServico?: number | null;
   codigo: string;
+  codigoExterno?: string | null;
   titulo: string;
   propertyId?: string;
   organizationId: string;
@@ -32,6 +33,7 @@ export default function PropertyPricing({
   seguroIncendio,
   taxaServico,
   codigo,
+  codigoExterno,
   titulo,
   propertyId,
   organizationId,
@@ -46,7 +48,8 @@ export default function PropertyPricing({
     return value.toLocaleString('pt-BR', { 
       style: 'currency', 
       currency: 'BRL', 
-      maximumFractionDigits: 0 
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2 
     });
   };
 
