@@ -57,6 +57,12 @@ export interface PublicSiteConfig {
   about_stats: { value: string; label: string }[] | null;
   about_checkmarks: string[] | null;
   about_features: { title: string; description: string; icon: string }[] | null;
+  // Tracking & scripts
+  gtm_id?: string | null;
+  meta_pixel_id?: string | null;
+  google_ads_id?: string | null;
+  head_scripts?: string | null;
+  body_scripts?: string | null;
 }
 
 export interface PublicProperty {
