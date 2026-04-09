@@ -64,6 +64,15 @@ function normalizeUrl(url: string): string {
   return url.trim().replace(/\/+$/, "").split("?")[0];
 }
 
+function parseMobilia(value: unknown): string | null {
+  if (!value) return null;
+  const v = String(value).toLowerCase().trim();
+  if (v === "sim" || v === "mobiliado" || v === "completo") return "Mobiliado";
+  if (v.includes("semi") || v === "parcial" || v === "parcialmente") return "Semi-mobiliado";
+  if (v === "nao" || v === "não" || v === "nenhum" || v === "sem") return "Sem mobília";
+  return null;
+}
+
 function extractPhotosFromPayload(payload: any): string[] {
   const seen = new Set<string>();
   const photos: string[] = [];
@@ -165,6 +174,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
     "DescricaoWeb", "FotoDestaque",
     "Latitude", "Longitude",
     "ValorCondominio", "ValorIptu", "AnoConstrucao", "TituloSite",
+    "Mobiliado", "AceitaPermuta", "SeguroIncendio",
   ];
 
   let page = 1;
@@ -323,6 +333,8 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           fotos: allPhotos,
           latitude: parseFloat(item.Latitude) || null,
           longitude: parseFloat(item.Longitude) || null,
+          mobilia: parseMobilia(item.Mobiliado),
+          seguro_incendio: parseFloat(String(item.SeguroIncendio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
         };
 
         let upsertError;
