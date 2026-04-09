@@ -113,6 +113,13 @@ export function MessageBubble({
     }
   }, [mediaUrl, messageType, mediaChecked]);
 
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [blobUrl]);
+
   const formatTime = (date: string) => {
     return format(new Date(date), "HH:mm");
   };
