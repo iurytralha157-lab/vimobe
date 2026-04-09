@@ -148,19 +148,16 @@ export default function SiteSettings() {
     setIsSaving(true);
     try {
       // Convert empty strings to null for unique-constrained fields
-      const { head_scripts, body_scripts, ...restFormData } = formData as any;
       const dataToSave: Record<string, any> = {
-        ...restFormData,
+        ...formData,
         subdomain: formData.subdomain?.trim() || null,
         custom_domain: formData.custom_domain?.trim() || null,
-        // Convert empty tracking IDs to null
         gtm_id: (formData as any).gtm_id?.trim() || null,
         meta_pixel_id: (formData as any).meta_pixel_id?.trim() || null,
         google_ads_id: (formData as any).google_ads_id?.trim() || null,
+        head_scripts: (formData as any).head_scripts?.trim() || null,
+        body_scripts: (formData as any).body_scripts?.trim() || null,
       };
-      // Only include head/body scripts if columns exist (added by migration)
-      if (head_scripts) dataToSave.head_scripts = head_scripts;
-      if (body_scripts) dataToSave.body_scripts = body_scripts;
 
       if (site) {
         await updateSite.mutateAsync(dataToSave);
@@ -168,12 +165,13 @@ export default function SiteSettings() {
         await createSite.mutateAsync(dataToSave);
       }
     } catch (error: any) {
-      // If error is about unknown columns, retry without those fields
-      if (error?.message?.includes('head_scripts') || error?.message?.includes('body_scripts')) {
+      // If error is about unknown columns, retry without those fields (migration not yet applied)
+      const errMsg = error?.message || '';
+      if (errMsg.includes('head_scripts') || errMsg.includes('body_scripts') || errMsg.includes('column')) {
         try {
-          const { head_scripts: _h, body_scripts: _b, ...safeData } = formData as any;
+          const { head_scripts: _h, body_scripts: _b, ...rest } = formData as any;
           const safeSave = {
-            ...safeData,
+            ...rest,
             subdomain: formData.subdomain?.trim() || null,
             custom_domain: formData.custom_domain?.trim() || null,
             gtm_id: (formData as any).gtm_id?.trim() || null,
