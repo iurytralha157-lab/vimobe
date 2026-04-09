@@ -65,35 +65,76 @@ async function testConnection(apiUrl: string, apiKey: string) {
   return { success: true, message: "Conexão válida", sample: data };
 }
 
-function extractPhotosFromItem(item: any): string[] {
+function extractPhotosFromPayload(payload: any): string[] {
   const photos: string[] = [];
 
-  // FotoDestaque first
-  if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
-    photos.push(item.FotoDestaque);
-  }
-
-  // Parse nested fotos - Vista can return under Foto, fotos, or Fotos key
-  // Each is an object with numeric keys containing {Foto: "url", FotoPequena: "url", ...}
-  for (const key of ["Foto", "fotos", "Fotos"]) {
-    const fotosData = item[key];
-    if (!fotosData || typeof fotosData !== "object") continue;
-    
-    const entries = Array.isArray(fotosData) ? fotosData : Object.values(fotosData);
-    for (const entry of entries) {
-      if (!entry || typeof entry !== "object") continue;
-      const url = (entry as any).Foto || (entry as any).FotoPequena;
-      if (url && typeof url === "string" && url.startsWith("http") && !photos.includes(url)) {
-        photos.push(url);
-      }
+  const pushPhoto = (value: unknown) => {
+    if (typeof value === "string" && value.startsWith("http") && !photos.includes(value)) {
+      photos.push(value);
     }
+  };
+
+  pushPhoto(payload?.FotoDestaque);
+
+  const fotosData = payload?.Foto ?? payload?.fotos ?? payload?.Fotos;
+  const entries = Array.isArray(fotosData)
+    ? fotosData
+    : fotosData && typeof fotosData === "object"
+      ? Object.values(fotosData)
+      : [];
+
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") continue;
+    pushPhoto((entry as any).Foto);
+    pushPhoto((entry as any).FotoPequena);
   }
 
   return photos;
 }
 
+async function fetchPropertyPhotos(apiUrl: string, apiKey: string, codigo: string, fallbackMainImage?: string | null): Promise<string[]> {
+  const fallbackPhotos = typeof fallbackMainImage === "string" && fallbackMainImage.startsWith("http")
+    ? [fallbackMainImage]
+    : [];
+
+  try {
+    const pesquisa = {
+      fields: [
+        "Codigo",
+        "FotoDestaque",
+        { Foto: ["Foto", "FotoPequena", "Destaque", "Tipo", "Descricao"] },
+      ],
+    };
+
+    const searchParams = new URLSearchParams();
+    searchParams.append("key", apiKey);
+    searchParams.append("pesquisa", JSON.stringify(pesquisa));
+    searchParams.append("imovel", codigo);
+
+    const res = await fetch(`${apiUrl}/imoveis/detalhes?${searchParams.toString()}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`Details fetch failed for ${codigo}: ${res.status} - ${errText}`);
+      return fallbackPhotos;
+    }
+
+    const data = await res.json();
+    const payload = Array.isArray(data) ? data[0] : data;
+    const photos = extractPhotosFromPayload(payload);
+
+    return photos.length > 0 ? photos : fallbackPhotos;
+  } catch (e) {
+    console.warn(`Details fetch error for ${codigo}: ${(e as Error).message}`);
+    return fallbackPhotos;
+  }
+}
+
 async function syncProperties(supabase: any, apiUrl: string, apiKey: string, organizationId: string, importInactive: boolean) {
-  const fields: any[] = [
+  const fields = [
     "Codigo", "Categoria", "Status", "Finalidade",
     "ValorVenda", "ValorLocacao", "Dormitorios", "Suites",
     "BanheiroSocialQtd", "Vagas", "AreaPrivativa", "AreaTotal",
@@ -101,7 +142,6 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
     "DescricaoWeb", "FotoDestaque",
     "Latitude", "Longitude",
     "ValorCondominio", "AnoConstrucao", "TituloSite",
-    { "Foto": ["Foto", "FotoPequena", "Destaque", "Tipo", "Descricao"] },
   ];
 
   let page = 1;
@@ -155,21 +195,6 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
       break;
     }
 
-    // Debug: log first item keys on page 1 to understand photo structure
-    if (page === 1 && items.length > 0) {
-      const sample = items[0] as any;
-      const photoKeys = Object.keys(sample).filter(k => 
-        k.toLowerCase().includes("foto") || k.toLowerCase().includes("image") || k.toLowerCase().includes("galeria")
-      );
-      console.log(`DEBUG first item keys related to photos: ${JSON.stringify(photoKeys)}`);
-      for (const pk of photoKeys) {
-        const val = sample[pk];
-        const preview = typeof val === "object" ? JSON.stringify(val).slice(0, 500) : String(val).slice(0, 200);
-        console.log(`DEBUG ${pk}: ${preview}`);
-      }
-    }
-
-    // Pre-fetch existing properties for this batch
     const codigos = (items as any[]).map((item: any) => String(item.Codigo));
     const { data: existingProps } = await supabase
       .from("properties")
@@ -194,11 +219,10 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           continue;
         }
 
-        // Extract photos from listing response (includes nested Foto)
-        const allPhotos = extractPhotosFromItem(item);
+        const allPhotos = await fetchPropertyPhotos(apiUrl, apiKey, codigo, item.FotoDestaque);
 
-        let fotos: string[] = allPhotos;
-        let imagemPrincipal = allPhotos.length > 0 ? allPhotos[0] : "";
+        const fotos: string[] = allPhotos;
+        const imagemPrincipal = allPhotos[0] || "";
 
         // Map finalidade
         let tipoNegocio = "Venda";
@@ -283,9 +307,6 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         } else {
           totalSynced++;
         }
-
-        // Small delay to not overwhelm the Vista API
-        await new Promise(r => setTimeout(r, 200));
       } catch (e) {
         const msg = (e as Error).message;
         console.error(`Process error:`, msg);
