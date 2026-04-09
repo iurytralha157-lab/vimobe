@@ -813,7 +813,7 @@ export default function PublicSiteLayout() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/40">
               <p>© {new Date().getFullYear()} {siteConfig.organization_name}. Todos os direitos reservados.</p>
-              <p className="flex items-center gap-1.5">
+              <p className="flex items-center gap-0.5">
                 Desenvolvido por{' '}
                 <a 
                   href="https://vimob.com.br" 
