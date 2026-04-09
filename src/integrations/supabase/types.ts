@@ -4566,6 +4566,44 @@ export type Database = {
           },
         ]
       }
+      site_search_filters: {
+        Row: {
+          created_at: string | null
+          filter_key: string
+          id: string
+          is_active: boolean
+          label: string
+          organization_id: string
+          position: number
+        }
+        Insert: {
+          created_at?: string | null
+          filter_key: string
+          id?: string
+          is_active?: boolean
+          label: string
+          organization_id: string
+          position?: number
+        }
+        Update: {
+          created_at?: string | null
+          filter_key?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          organization_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_search_filters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_automations: {
         Row: {
           action_config: Json | null
