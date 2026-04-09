@@ -64,6 +64,15 @@ function normalizeUrl(url: string): string {
   return url.trim().replace(/\/+$/, "").split("?")[0];
 }
 
+function parseMobilia(value: unknown): string | null {
+  if (!value) return null;
+  const v = String(value).toLowerCase().trim();
+  if (v === "sim" || v === "mobiliado" || v === "completo") return "Mobiliado";
+  if (v.includes("semi") || v === "parcial" || v === "parcialmente")) return "Semi-mobiliado";
+  if (v === "nao" || v === "não" || v === "nenhum" || v === "sem") return "Sem mobília";
+  return null;
+}
+
 function extractPhotosFromPayload(payload: any): string[] {
   const seen = new Set<string>();
   const photos: string[] = [];
