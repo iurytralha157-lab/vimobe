@@ -65,6 +65,74 @@ async function testConnection(apiUrl: string, apiKey: string) {
   return { success: true, message: "Conexão válida", sample: data };
 }
 
+async function fetchPropertyPhotos(apiUrl: string, apiKey: string, codigo: string): Promise<string[]> {
+  try {
+    const pesquisa = {
+      fields: [
+        "Codigo", "FotoDestaque",
+        { fotos: ["Foto", "FotoPequena", "Destaque"] },
+      ],
+    };
+
+    const searchParams = new URLSearchParams();
+    searchParams.append("key", apiKey);
+    searchParams.append("pesquisa", JSON.stringify(pesquisa));
+    searchParams.append("imovel", codigo);
+
+    const res = await fetch(`${apiUrl}/imoveis/detalhes?${searchParams.toString()}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      console.warn(`Details fetch failed for ${codigo}: ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    const photos: string[] = [];
+
+    // FotoDestaque from details
+    if (data.FotoDestaque && typeof data.FotoDestaque === "string" && data.FotoDestaque.startsWith("http")) {
+      photos.push(data.FotoDestaque);
+    }
+
+    // Parse fotos object - Vista returns fotos as an object with numeric keys
+    if (data.Foto && typeof data.Foto === "object") {
+      // Sometimes returned as data.Foto
+      for (const key of Object.keys(data.Foto)) {
+        const fotoObj = data.Foto[key];
+        if (fotoObj && typeof fotoObj === "object") {
+          const url = fotoObj.Foto || fotoObj.FotoPequena;
+          if (url && typeof url === "string" && url.startsWith("http")) {
+            if (!photos.includes(url)) photos.push(url);
+          }
+        }
+      }
+    }
+
+    // Also check nested "fotos" key (Vista varies the response structure)
+    const fotosData = data.fotos || data.Fotos;
+    if (fotosData && typeof fotosData === "object") {
+      const entries = Array.isArray(fotosData) ? fotosData : Object.values(fotosData);
+      for (const fotoObj of entries) {
+        if (fotoObj && typeof fotoObj === "object") {
+          const url = (fotoObj as any).Foto || (fotoObj as any).FotoPequena;
+          if (url && typeof url === "string" && url.startsWith("http")) {
+            if (!photos.includes(url)) photos.push(url);
+          }
+        }
+      }
+    }
+
+    console.log(`Property ${codigo}: found ${photos.length} photos from details`);
+    return photos;
+  } catch (e) {
+    console.error(`Error fetching details for ${codigo}:`, (e as Error).message);
+    return [];
+  }
+}
+
 async function syncProperties(supabase: any, apiUrl: string, apiKey: string, organizationId: string, importInactive: boolean) {
   const fields = [
     "Codigo", "Categoria", "Status", "Finalidade",
@@ -127,7 +195,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
       break;
     }
 
-    // Pre-fetch existing properties for this batch to reduce queries
+    // Pre-fetch existing properties for this batch
     const codigos = (items as any[]).map((item: any) => String(item.Codigo));
     const { data: existingProps } = await supabase
       .from("properties")
@@ -146,24 +214,28 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
       try {
         const codigo = String(item.Codigo);
 
-        // Skip inactive if not importing them
         const itemStatus = String(item.Status || "").toLowerCase();
         if (!importInactive && (itemStatus.includes("inativ") || itemStatus.includes("suspend"))) {
           totalSkipped++;
           continue;
         }
 
-        // Parse photos - only FotoDestaque available for this API method
+        // Fetch full photo gallery from /imoveis/detalhes
+        const allPhotos = await fetchPropertyPhotos(apiUrl, apiKey, codigo);
+
         let fotos: string[] = [];
         let imagemPrincipal = "";
 
-        // FotoDestaque as primary
-        if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
+        if (allPhotos.length > 0) {
+          imagemPrincipal = allPhotos[0];
+          fotos = allPhotos;
+        } else if (item.FotoDestaque && typeof item.FotoDestaque === "string" && item.FotoDestaque.startsWith("http")) {
+          // Fallback to FotoDestaque from listing
           imagemPrincipal = item.FotoDestaque;
           fotos.push(item.FotoDestaque);
         }
 
-        // Map finalidade to tipo_de_negocio
+        // Map finalidade
         let tipoNegocio = "Venda";
         const finalidade = String(item.Finalidade || "").toLowerCase();
         if (finalidade.includes("locac") || finalidade.includes("alugu")) {
@@ -173,7 +245,6 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           tipoNegocio = "Venda e Aluguel";
         }
 
-        // Price
         let preco: number | null = null;
         if (tipoNegocio === "Aluguel") {
           preco = parseFloat(String(item.ValorLocacao || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
@@ -182,7 +253,6 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           preco = parseFloat(String(item.ValorVenda || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
         }
 
-        // Map status
         let status = "ativo";
         if (itemStatus.includes("inativ") || itemStatus.includes("suspend")) {
           status = "inativo";
@@ -226,14 +296,12 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         let upsertError;
 
         if (existingId) {
-          // Update existing - no need for code
           const { error } = await supabase
             .from("properties")
             .update(propertyData)
             .eq("id", existingId);
           upsertError = error;
         } else {
-          // New property - generate code
           const prefix = getCategoryPrefix(categoria);
           const code = await generateCode(supabase, organizationId, prefix);
           propertyData.code = code;
@@ -250,6 +318,9 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         } else {
           totalSynced++;
         }
+
+        // Small delay to not overwhelm the Vista API
+        await new Promise(r => setTimeout(r, 200));
       } catch (e) {
         const msg = (e as Error).message;
         console.error(`Process error:`, msg);
