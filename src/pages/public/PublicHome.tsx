@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useFeaturedProperties, usePropertyTypes, usePublicProperties } from "@/hooks/use-public-site";
+import { useFeaturedProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
 import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle, CheckCircle2 } from "lucide-react";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { cn } from "@/lib/utils";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
+import { usePublicSearchFilters, DEFAULT_SEARCH_FILTERS } from "@/hooks/use-public-search-filters";
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
