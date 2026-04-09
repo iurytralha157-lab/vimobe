@@ -239,23 +239,24 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
         const fotos: string[] = allPhotos;
         const imagemPrincipal = allPhotos[0] || "";
 
+        // Parse both values
+        const valorVenda = parseFloat(String(item.ValorVenda || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
+        const valorLocacao = parseFloat(String(item.ValorLocacao || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
+
         // Map finalidade
         let tipoNegocio = "Venda";
         const finalidade = String(item.Finalidade || "").toLowerCase();
-        if (finalidade.includes("locac") || finalidade.includes("alugu")) {
+        const hasVenda = finalidade.includes("venda") || !!valorVenda;
+        const hasLocacao = finalidade.includes("locac") || finalidade.includes("alugu") || !!valorLocacao;
+
+        if (hasVenda && hasLocacao) {
+          tipoNegocio = "Venda e Aluguel";
+        } else if (hasLocacao) {
           tipoNegocio = "Aluguel";
         }
-        if (finalidade.includes("venda") && (finalidade.includes("locac") || finalidade.includes("alugu"))) {
-          tipoNegocio = "Venda e Aluguel";
-        }
 
-        let preco: number | null = null;
-        if (tipoNegocio === "Aluguel") {
-          preco = parseFloat(String(item.ValorLocacao || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
-        }
-        if (!preco) {
-          preco = parseFloat(String(item.ValorVenda || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
-        }
+        // preco = valor de venda (ou locação se não houver venda)
+        const preco = valorVenda || valorLocacao;
 
         let status = "ativo";
         if (itemStatus.includes("inativ") || itemStatus.includes("suspend")) {
