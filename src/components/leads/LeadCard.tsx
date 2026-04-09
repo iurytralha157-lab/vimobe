@@ -207,15 +207,7 @@ export function LeadCard({
                   </span>}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="font-semibold text-sm truncate text-foreground">{lead.name}</h4>
-                  {lead.first_response_seconds != null && (
-                    <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 to-orange-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap shrink-0">
-                      <Zap className="h-2.5 w-2.5" />
-                      1ª: {formatResponseTime(lead.first_response_seconds)}
-                    </span>
-                  )}
-                </div>
+                <h4 className="font-semibold text-sm truncate text-foreground">{lead.name}</h4>
                 {lead.phone && <p className="text-[11px] text-muted-foreground truncate">{formatPhoneForDisplay(lead.phone)}</p>}
               </div>
             </div>

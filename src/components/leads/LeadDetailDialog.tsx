@@ -1411,7 +1411,21 @@ export function LeadDetailDialog({
             </div>
             
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-xl font-semibold truncate">{lead.name}</DialogTitle>
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-xl font-semibold truncate">{lead.name}</DialogTitle>
+                {lead.first_response_seconds != null && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 text-amber-600 dark:text-amber-400 whitespace-nowrap shrink-0">
+                    <Zap className="h-3 w-3" />
+                    1ª: {formatResponseTime(lead.first_response_seconds)}
+                    {lead.first_response_is_automation && (
+                      <span className="text-[9px] ml-0.5 opacity-70 flex items-center gap-0.5">
+                        <Bot className="h-2.5 w-2.5" />
+                        Auto
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 {lead.empresa && <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                     <Building2 className="h-3.5 w-3.5" />
@@ -1482,19 +1496,6 @@ export function LeadDetailDialog({
           </div>
         </DialogHeader>
 
-        {/* First Response Badge - Premium */}
-        {lead.first_response_seconds !== null && lead.first_response_seconds !== undefined && <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-orange-500/10 border border-yellow-500/20 shadow-sm mb-4">
-            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-inner">
-              <Zap className="h-3.5 w-3.5 text-white" />
-            </div>
-            <span className="text-sm font-semibold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
-              1ª resposta: {formatResponseTime(lead.first_response_seconds)}
-            </span>
-            {lead.first_response_is_automation && <Badge variant="secondary" className="h-5 text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-0">
-                <Bot className="h-3 w-3 mr-1" />
-                Auto
-              </Badge>}
-          </div>}
 
         {/* Tags - Premium */}
         <div className="flex flex-wrap items-center gap-2">
