@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useFeaturedProperties, usePropertyTypes, usePublicProperties } from "@/hooks/use-public-site";
+import { useFeaturedProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
 import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle, CheckCircle2 } from "lucide-react";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { cn } from "@/lib/utils";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
+import { usePublicSearchFilters, DEFAULT_SEARCH_FILTERS } from "@/hooks/use-public-search-filters";
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
@@ -19,13 +20,31 @@ export default function PublicHome() {
   const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
   const allProperties = allPropertiesData?.properties || [];
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
+  const { data: configuredFilters } = usePublicSearchFilters(organizationId);
+  const { data: cities = [] } = usePublicCities(organizationId);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [selectedFinalidade, setSelectedFinalidade] = useState("");
+  const [selectedCidade, setSelectedCidade] = useState("");
+  const [selectedBairro, setSelectedBairro] = useState("");
+  const [selectedQuartos, setSelectedQuartos] = useState("");
+  const [selectedSuites, setSelectedSuites] = useState("");
+  const [selectedBanheiros, setSelectedBanheiros] = useState("");
+  const [selectedVagas, setSelectedVagas] = useState("");
+  const [selectedMobilia, setSelectedMobilia] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
+
+  const { data: neighborhoods = [] } = usePublicNeighborhoods(organizationId, selectedCidade || undefined);
+
+  // Use configured filters or defaults
+  const activeFilters = configuredFilters && configuredFilters.length > 0
+    ? configuredFilters
+    : DEFAULT_SEARCH_FILTERS;
 
   // Get colors from config with fallbacks
   const primaryColor = siteConfig?.primary_color || '#C4A052';
@@ -62,6 +81,15 @@ export default function PublicHome() {
     if (search) params.set("search", search);
     if (selectedType && selectedType !== "all") params.set("tipo", selectedType);
     if (selectedFinalidade && selectedFinalidade !== "all") params.set("finalidade", selectedFinalidade);
+    if (selectedCidade && selectedCidade !== "all") params.set("cidade", selectedCidade);
+    if (selectedBairro && selectedBairro !== "all") params.set("bairro", selectedBairro);
+    if (selectedQuartos && selectedQuartos !== "any") params.set("quartos", selectedQuartos);
+    if (selectedSuites && selectedSuites !== "any") params.set("suites", selectedSuites);
+    if (selectedBanheiros && selectedBanheiros !== "any") params.set("banheiros", selectedBanheiros);
+    if (selectedVagas && selectedVagas !== "any") params.set("vagas", selectedVagas);
+    if (selectedMobilia && selectedMobilia !== "all") params.set("mobilia", selectedMobilia);
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice) params.set("maxPrice", maxPrice);
     
     const queryString = params.toString();
     const basePath = getHref(queryString ? `imoveis?${queryString}` : 'imoveis');
@@ -119,41 +147,196 @@ export default function PublicHome() {
             </p>
           )}
 
-          {/* Search Bar - Glassmorphism igual ao header */}
+          {/* Search Bar - Dynamic filters */}
           <form 
             onSubmit={handleSearch} 
             className="bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4"
           >
-            <div className="flex-1 min-w-[200px]">
-              <Input
-                placeholder="Digite código, condomínio, região, bairro ou cidade"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-12 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"
-                style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
-              />
-            </div>
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-full md:w-48 h-12 bg-white/10 border-white/20 text-white rounded-xl">
-                <SelectValue placeholder="Tipo de Imóvel" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                {propertyTypes.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedFinalidade} onValueChange={setSelectedFinalidade}>
-              <SelectTrigger className="w-full md:w-40 h-12 bg-white/10 border-white/20 text-white rounded-xl">
-                <SelectValue placeholder="Finalidade..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="venda">Venda</SelectItem>
-                <SelectItem value="aluguel">Aluguel</SelectItem>
-              </SelectContent>
-            </Select>
+            {activeFilters.map((filter) => {
+              const key = filter.filter_key;
+              
+              if (key === 'search') {
+                return (
+                  <div key={key} className="flex-1 min-w-[200px]">
+                    <Input
+                      placeholder="Digite código, condomínio, região, bairro ou cidade"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="h-12 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"
+                      style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
+                    />
+                  </div>
+                );
+              }
+
+              if (key === 'tipo') {
+                return (
+                  <Select key={key} value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger className="w-full md:w-48 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Tipo de Imóvel"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      {propertyTypes.map((type) => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'finalidade') {
+                return (
+                  <Select key={key} value={selectedFinalidade} onValueChange={setSelectedFinalidade}>
+                    <SelectTrigger className="w-full md:w-40 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Finalidade"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="venda">Venda</SelectItem>
+                      <SelectItem value="aluguel">Aluguel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'cidade') {
+                return (
+                  <Select key={key} value={selectedCidade} onValueChange={(v) => { setSelectedCidade(v); setSelectedBairro(""); }}>
+                    <SelectTrigger className="w-full md:w-48 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Cidade"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as cidades</SelectItem>
+                      {cities.map((city) => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'bairro') {
+                return (
+                  <Select key={key} value={selectedBairro} onValueChange={setSelectedBairro}>
+                    <SelectTrigger className="w-full md:w-48 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Bairro"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os bairros</SelectItem>
+                      {neighborhoods.map((n) => (
+                        <SelectItem key={n} value={n}>{n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'quartos') {
+                return (
+                  <Select key={key} value={selectedQuartos} onValueChange={setSelectedQuartos}>
+                    <SelectTrigger className="w-full md:w-40 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Quartos"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Qualquer</SelectItem>
+                      <SelectItem value="1">1+ quarto</SelectItem>
+                      <SelectItem value="2">2+ quartos</SelectItem>
+                      <SelectItem value="3">3+ quartos</SelectItem>
+                      <SelectItem value="4">4+ quartos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'suites') {
+                return (
+                  <Select key={key} value={selectedSuites} onValueChange={setSelectedSuites}>
+                    <SelectTrigger className="w-full md:w-40 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Suítes"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Qualquer</SelectItem>
+                      <SelectItem value="1">1+ suíte</SelectItem>
+                      <SelectItem value="2">2+ suítes</SelectItem>
+                      <SelectItem value="3">3+ suítes</SelectItem>
+                      <SelectItem value="4">4+ suítes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'banheiros') {
+                return (
+                  <Select key={key} value={selectedBanheiros} onValueChange={setSelectedBanheiros}>
+                    <SelectTrigger className="w-full md:w-40 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Banheiros"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Qualquer</SelectItem>
+                      <SelectItem value="1">1+ banheiro</SelectItem>
+                      <SelectItem value="2">2+ banheiros</SelectItem>
+                      <SelectItem value="3">3+ banheiros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'vagas') {
+                return (
+                  <Select key={key} value={selectedVagas} onValueChange={setSelectedVagas}>
+                    <SelectTrigger className="w-full md:w-40 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Vagas"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Qualquer</SelectItem>
+                      <SelectItem value="1">1+ vaga</SelectItem>
+                      <SelectItem value="2">2+ vagas</SelectItem>
+                      <SelectItem value="3">3+ vagas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'mobilia') {
+                return (
+                  <Select key={key} value={selectedMobilia} onValueChange={setSelectedMobilia}>
+                    <SelectTrigger className="w-full md:w-40 h-12 bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectValue placeholder={filter.label || "Mobília"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Qualquer</SelectItem>
+                      <SelectItem value="mobiliado">Mobiliado</SelectItem>
+                      <SelectItem value="semi">Semi-mobiliado</SelectItem>
+                      <SelectItem value="sem">Sem mobília</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              }
+
+              if (key === 'preco') {
+                return (
+                  <div key={key} className="flex gap-2 w-full md:w-auto">
+                    <Input
+                      type="number"
+                      placeholder="Preço mín."
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
+                      className="h-12 w-full md:w-32 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Preço máx."
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      className="h-12 w-full md:w-32 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"
+                    />
+                  </div>
+                );
+              }
+
+              return null;
+            })}
             <Button 
               type="submit" 
               className="h-12 px-8 text-white font-medium rounded-xl"
