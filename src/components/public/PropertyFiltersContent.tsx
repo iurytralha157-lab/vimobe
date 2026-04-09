@@ -232,6 +232,21 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
               </SelectContent>
             </Select>
           </div>
+
+          <div>
+            <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Mobília</label>
+            <Select value={filters.mobilia} onValueChange={(v) => updateFilter('mobilia', v === 'all' ? '' : v)}>
+              <SelectTrigger className="rounded-xl" style={inputStyle}>
+                <SelectValue placeholder="Qualquer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Qualquer</SelectItem>
+                <SelectItem value="Mobiliado">Mobiliado</SelectItem>
+                <SelectItem value="Semi-mobiliado">Semi-mobiliado</SelectItem>
+                <SelectItem value="Sem mobília">Sem mobília</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CollapsibleContent>
       </Collapsible>
 
