@@ -128,9 +128,18 @@ Deno.serve(async (req) => {
           query = query.lte('area_util', parseFloat(maxArea));
         }
         
-        // Furniture filter
+        // Furniture filter - map simplified values to DB patterns
         if (mobilia) {
-          query = query.ilike('mobilia', `%${mobilia}%`);
+          if (mobilia === 'mobiliado') {
+            // Match "Mobiliado" but NOT "Semi-mobiliado"
+            query = query.eq('mobilia', 'Mobiliado');
+          } else if (mobilia === 'semi') {
+            query = query.ilike('mobilia', '%semi%');
+          } else if (mobilia === 'sem') {
+            query = query.ilike('mobilia', '%sem%');
+          } else {
+            query = query.ilike('mobilia', `%${mobilia}%`);
+          }
         }
         if (pet === 'true') {
           query = query.eq('aceita_pet', true);

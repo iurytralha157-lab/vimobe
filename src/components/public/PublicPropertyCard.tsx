@@ -41,7 +41,7 @@ interface PublicPropertyCardProps {
 export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardColor, textColor, isFavorited = false, onToggleFavorite, watermarkConfig }: PublicPropertyCardProps) {
   const formatPrice = (value: number | null | undefined) => {
     if (!value) return null;
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   // Support both field naming conventions (DB fields vs mapped fields)

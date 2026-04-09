@@ -180,7 +180,7 @@ export default function PublicProperties() {
 
   const formatPrice = (value: number | null) => {
     if (!value) return null;
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   if (!siteConfig) {
@@ -373,7 +373,7 @@ export default function PublicProperties() {
                     className="rounded-full px-3 py-1.5 gap-1 text-white border-0"
                     style={{ backgroundColor: primaryColor }}
                   >
-                    {filters.mobilia}
+                    {filters.mobilia === 'mobiliado' ? 'Mobiliado' : filters.mobilia === 'semi' ? 'Semi-mobiliado' : filters.mobilia === 'sem' ? 'Sem mobília' : filters.mobilia}
                     <X className="w-3 h-3 cursor-pointer hover:opacity-70" onClick={() => updateFilter('mobilia', '')} />
                   </Badge>
                 )}
