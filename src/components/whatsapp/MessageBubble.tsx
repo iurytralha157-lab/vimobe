@@ -80,6 +80,8 @@ export function MessageBubble({
   const [audioReady, setAudioReady] = useState(false);
   const [mediaChecked, setMediaChecked] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobAttempted, setBlobAttempted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   
   // Waveform bars generated from mediaUrl or sentAt as seed
