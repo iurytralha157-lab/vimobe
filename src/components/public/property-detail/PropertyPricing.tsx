@@ -50,12 +50,19 @@ export default function PropertyPricing({
     });
   };
 
-  const isRent = tipoNegocio?.toLowerCase().includes('aluguel');
-  const isSale = tipoNegocio?.toLowerCase().includes('venda');
-  const isBoth = tipoNegocio?.toLowerCase().includes('venda e aluguel');
-  const hasRentalOption = !!valorLocacao;
+  const tipo = tipoNegocio?.toLowerCase() || '';
+  const isRentOnly = tipo.includes('aluguel') && !tipo.includes('venda');
+  const isSaleOnly = tipo.includes('venda') && !tipo.includes('aluguel');
+  const isBoth = tipo.includes('venda') && tipo.includes('aluguel');
 
-  // Calculate total monthly cost for rent
+  // Determine the main price to show as rental for total calculation
+  // For rent-only: preco IS the rental value
+  // For sale+rent or when valorLocacao exists: valorLocacao is the rental value
+  const rentalValue = isRentOnly ? (preco || 0) : (valorLocacao || 0);
+  const saleValue = isRentOnly ? null : preco;
+  const hasRental = isRentOnly || !!valorLocacao || isBoth;
+
+  // Additional monthly costs
   const additionalCosts = [
     { label: 'Condomínio', value: condominio },
     { label: 'IPTU', value: iptu },
@@ -63,46 +70,44 @@ export default function PropertyPricing({
     { label: 'Taxa de Serviço', value: taxaServico },
   ].filter(c => c.value);
 
-  const rentalBase = isRent ? (preco || 0) : (valorLocacao || 0);
-  const totalMonthlyCost = (isRent || hasRentalOption)
-    ? rentalBase + additionalCosts.reduce((sum, c) => sum + (c.value || 0), 0)
-    : null;
-
-  const whatsappUrl = whatsappNumber 
-    ? `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(
-        `Olá! Tenho interesse no imóvel ${codigo} - ${titulo}`
-      )}`
+  const totalMonthlyCost = hasRental && rentalValue
+    ? rentalValue + additionalCosts.reduce((sum, c) => sum + (c.value || 0), 0)
     : null;
 
   return (
     <Card className="rounded-2xl sticky top-24" style={{ backgroundColor: cardColor, borderColor: textColor ? `${textColor}15` : undefined }}>
       <CardContent className="p-6 space-y-6">
-        {/* Price */}
-        {preco && (
+        {/* Main Price */}
+        {isRentOnly && preco ? (
+          /* Rental-only: show rental as main price */
           <div>
             <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
-              {isBoth || hasRentalOption ? 'Valor de Venda' : isRent ? 'Aluguel' : 'Valor'}
+              Valor de Locação
             </p>
-            <p 
-              className="text-3xl md:text-4xl font-bold"
-              style={{ color: primaryColor }}
-            >
+            <p className="text-3xl md:text-4xl font-bold" style={{ color: primaryColor }}>
               {formatPrice(preco)}
-              {isRent && !hasRentalOption && <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>}
+              <span className="text-lg font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>
             </p>
           </div>
-        )}
+        ) : saleValue ? (
+          /* Sale or Sale+Rent: show sale price on top */
+          <div>
+            <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
+              {isBoth || valorLocacao ? 'Valor de Venda' : 'Valor'}
+            </p>
+            <p className="text-3xl md:text-4xl font-bold" style={{ color: primaryColor }}>
+              {formatPrice(saleValue)}
+            </p>
+          </div>
+        ) : null}
 
-        {/* Rental Value for sale properties */}
-        {valorLocacao && (
+        {/* Rental Value below (for sale+rental properties) */}
+        {!isRentOnly && valorLocacao && (
           <div className="pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
             <p className="text-sm font-medium mb-1" style={{ color: textColor, opacity: 0.6 }}>
               Valor de Locação
             </p>
-            <p 
-              className="text-xl font-bold"
-              style={{ color: primaryColor, opacity: 0.85 }}
-            >
+            <p className="text-xl font-bold" style={{ color: primaryColor, opacity: 0.85 }}>
               {formatPrice(valorLocacao)}
               <span className="text-sm font-normal" style={{ color: textColor, opacity: 0.5 }}>/mês</span>
             </p>
@@ -120,13 +125,10 @@ export default function PropertyPricing({
             ))}
             
             {/* Total Monthly for Rent */}
-            {(isRent || hasRentalOption) && totalMonthlyCost && (
+            {hasRental && totalMonthlyCost && (
               <div className="flex justify-between items-center pt-3" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
                 <span className="font-semibold" style={{ color: textColor, opacity: 0.8 }}>Total Mensal</span>
-                <span 
-                  className="font-bold text-lg"
-                  style={{ color: primaryColor }}
-                >
+                <span className="font-bold text-lg" style={{ color: primaryColor }}>
                   {formatPrice(totalMonthlyCost)}
                 </span>
               </div>
@@ -134,7 +136,7 @@ export default function PropertyPricing({
           </div>
         )}
 
-        {/* Contact Form - OBRIGATÓRIO */}
+        {/* Contact Form */}
         <div className="pt-4" style={{ borderTopWidth: 1, borderTopColor: textColor ? `${textColor}15` : undefined }}>
           <ContactFormDialog
             organizationId={organizationId}

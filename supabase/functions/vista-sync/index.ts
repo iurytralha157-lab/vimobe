@@ -164,7 +164,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
     "Endereco", "Numero", "Complemento", "Bairro", "Cidade", "UF", "CEP",
     "DescricaoWeb", "FotoDestaque",
     "Latitude", "Longitude",
-    "ValorCondominio", "AnoConstrucao", "TituloSite",
+    "ValorCondominio", "ValorIptu", "AnoConstrucao", "TituloSite",
   ];
 
   let page = 1;
@@ -316,6 +316,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           preco,
           valor_locacao: valorLocacao,
           condominio: parseFloat(String(item.ValorCondominio || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
+          iptu: parseFloat(String(item.ValorIptu || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null,
           ano_construcao: parseInt(item.AnoConstrucao) || null,
           descricao: item.DescricaoWeb || null,
           imagem_principal: imagemPrincipal || null,
