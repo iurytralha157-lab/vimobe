@@ -756,9 +756,10 @@ export default function PublicSiteLayout() {
                     href={siteConfig.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = primaryColor; e.currentTarget.style.borderColor = primaryColor; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
                   >
                     <Instagram className="w-5 h-5" />
                   </a>
@@ -768,9 +769,10 @@ export default function PublicSiteLayout() {
                     href={siteConfig.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = primaryColor; e.currentTarget.style.borderColor = primaryColor; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
                   >
                     <Facebook className="w-5 h-5" />
                   </a>
@@ -780,9 +782,10 @@ export default function PublicSiteLayout() {
                     href={siteConfig.youtube}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = primaryColor; e.currentTarget.style.borderColor = primaryColor; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
                   >
                     <Youtube className="w-5 h-5" />
                   </a>
@@ -792,9 +795,10 @@ export default function PublicSiteLayout() {
                     href={siteConfig.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-colors"
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = primaryColor}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/30 hover:scale-110"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = primaryColor; e.currentTarget.style.borderColor = primaryColor; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
                   >
                     <Linkedin className="w-5 h-5" />
                   </a>
