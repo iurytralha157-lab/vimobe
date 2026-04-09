@@ -62,7 +62,9 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
           src={property.imagem_principal || '/placeholder.svg'}
-          alt={title}
+          alt={title || 'Imóvel'}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
         />
 
@@ -79,6 +81,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
         {/* Favorite */}
         <button 
           className="absolute top-3 right-3 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all group/heart"
+          aria-label={isFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

@@ -27,7 +27,7 @@ export default function PublicSiteLayout() {
   const textColor = siteConfig?.text_color || '#FFFFFF';
   const isDarkTheme = siteConfig?.site_theme !== 'light';
 
-  // Dynamic document title, favicon & OG meta tags based on site config
+  // Dynamic document title, favicon, OG meta & hero preload based on site config
   useEffect(() => {
     if (!siteConfig) return;
 
@@ -36,6 +36,16 @@ export default function PublicSiteLayout() {
 
     // Update title
     document.title = siteConfig.seo_title || siteConfig.site_title || 'Site Imobiliário';
+
+    // Update meta description
+    let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    const descContent = siteConfig.seo_description || siteConfig.site_description || '';
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.name = 'description';
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.content = descContent;
 
     // Update favicon
     if (siteConfig.favicon_url) {
@@ -48,6 +58,19 @@ export default function PublicSiteLayout() {
       faviconLink.href = siteConfig.favicon_url;
     }
 
+    // Preload hero image for LCP optimization
+    if (siteConfig.hero_image_url) {
+      const existingPreload = document.querySelector<HTMLLinkElement>('link[rel="preload"][as="image"][data-hero]');
+      if (!existingPreload) {
+        const preload = document.createElement('link');
+        preload.rel = 'preload';
+        preload.as = 'image';
+        preload.href = siteConfig.hero_image_url;
+        preload.setAttribute('data-hero', 'true');
+        document.head.appendChild(preload);
+      }
+    }
+
     // Update OG meta tags so shared links show client's info
     const ogTitle = siteConfig.seo_title || siteConfig.site_title || '';
     const ogDescription = siteConfig.seo_description || siteConfig.site_description || '';
@@ -56,7 +79,6 @@ export default function PublicSiteLayout() {
     const metaUpdates: Record<string, string> = {
       'meta[property="og:title"]': ogTitle,
       'meta[name="twitter:title"]': ogTitle,
-      'meta[name="description"]': ogDescription,
       'meta[property="og:description"]': ogDescription,
       'meta[name="twitter:description"]': ogDescription,
       'meta[property="og:image"]': ogImage,
@@ -91,6 +113,8 @@ export default function PublicSiteLayout() {
         const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
         if (link) link.href = originalFavicon;
       }
+      // Remove hero preload
+      document.querySelector('link[data-hero]')?.remove();
       // Restore original meta tags
       for (const [selector, value] of Object.entries(originalMeta)) {
         const el = document.querySelector<HTMLMetaElement>(selector);
@@ -297,9 +321,9 @@ export default function PublicSiteLayout() {
   const filterLinks = hasDynamicMenu ? [] : defaultFilterLinks;
 
   return (
-    <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }}>
+    <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }} role="document">
       {/* Header - Floating Glassmorphism */}
-      <header className="fixed top-0 left-0 right-0 z-50">
+      <header className="fixed top-0 left-0 right-0 z-50" role="banner">
         <div className="max-w-[1200px] mx-auto px-4 pt-4">
           <div 
             className="backdrop-blur-xl rounded-2xl px-8 pl-4"
@@ -326,7 +350,7 @@ export default function PublicSiteLayout() {
               </Link>
 
               {/* Desktop Navigation */}
-              <nav className="hidden lg:flex items-center gap-1">
+              <nav className="hidden lg:flex items-center gap-1" aria-label="Navegação principal">
                 {/* Dynamic menu items */}
                 {allNavItems ? allNavItems.map((item) => (
                   item.link_type === 'external' ? (
@@ -419,8 +443,8 @@ export default function PublicSiteLayout() {
               {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <button className="lg:hidden p-2" style={{ color: '#fff' }}>
-                  <Menu className="w-6 h-6" />
+                <button className="lg:hidden p-2" style={{ color: '#fff' }} aria-label="Abrir menu de navegação">
+                  <Menu className="w-6 h-6" aria-hidden="true" />
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 p-0 border-0" style={{ backgroundColor, borderColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
@@ -543,7 +567,7 @@ export default function PublicSiteLayout() {
       </header>
 
       {/* Main Content - Add padding for fixed header */}
-      <main className="flex-1">
+      <main className="flex-1" role="main">
         <Outlet />
       </main>
 
@@ -555,8 +579,8 @@ export default function PublicSiteLayout() {
             whatsappNumber={siteConfig.whatsapp}
             primaryColor={primaryColor}
             trigger={
-              <button className="w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors">
-                <MessageCircle className="w-7 h-7" />
+              <button className="w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors" aria-label="Fale conosco pelo WhatsApp">
+                <MessageCircle className="w-7 h-7" aria-hidden="true" />
               </button>
             }
           />
@@ -565,6 +589,7 @@ export default function PublicSiteLayout() {
 
       {/* Footer - Dark Style */}
       <footer 
+        role="contentinfo"
         style={{ backgroundColor: secondaryColor, color: textColor, borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
@@ -575,7 +600,11 @@ export default function PublicSiteLayout() {
                 {siteConfig.logo_url ? (
                   <img 
                     src={siteConfig.logo_url} 
-                    alt={siteConfig.site_title} 
+                    alt={siteConfig.site_title || 'Logo'} 
+                    loading="lazy"
+                    decoding="async"
+                    width={siteConfig.logo_width || 160}
+                    height={siteConfig.logo_height || 50}
                     style={{ 
                       maxWidth: siteConfig.logo_width || 160, 
                       maxHeight: siteConfig.logo_height || 50 
