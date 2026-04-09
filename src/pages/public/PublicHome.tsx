@@ -89,15 +89,22 @@ export default function PublicHome() {
     <div style={{ backgroundColor }}>
       {/* Hero Section - Fullscreen */}
       <section className="relative h-screen">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ 
-            backgroundImage: siteConfig.hero_image_url 
-              ? `url(${siteConfig.hero_image_url})` 
-              : `linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%)`
-          }}
-        >
+        {/* Background Image - LCP element */}
+        <div className="absolute inset-0">
+          {siteConfig.hero_image_url ? (
+            <img
+              src={siteConfig.hero_image_url}
+              alt=""
+              fetchPriority="high"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div 
+              className="absolute inset-0"
+              style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #0D0D0D 100%)' }}
+            />
+          )}
           <div className="absolute inset-0 bg-black/50" />
         </div>
 
@@ -308,7 +315,9 @@ export default function PublicHome() {
                 {siteConfig.about_image_url ? (
                   <img 
                     src={siteConfig.about_image_url} 
-                    alt="Sobre nós"
+                    alt={`Sobre ${siteConfig.organization_name || 'nós'}`}
+                    loading="lazy"
+                    decoding="async"
                     className="rounded-3xl shadow-2xl w-full h-auto"
                   />
                 ) : (
@@ -397,6 +406,8 @@ export default function PublicHome() {
               <img
                 src={cat.image}
                 alt={cat.name}
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
                 style={{ transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)' }}
               />
