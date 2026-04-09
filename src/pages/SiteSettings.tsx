@@ -71,6 +71,11 @@ export default function SiteSettings() {
     seo_description: '',
     seo_keywords: '',
     google_analytics_id: '',
+    gtm_id: '',
+    meta_pixel_id: '',
+    google_ads_id: '',
+    head_scripts: '',
+    body_scripts: '',
     // New hero fields
     hero_title: '',
     hero_subtitle: '',
@@ -127,6 +132,11 @@ export default function SiteSettings() {
         seo_description: site.seo_description || '',
         seo_keywords: site.seo_keywords || '',
         google_analytics_id: site.google_analytics_id || '',
+        gtm_id: (site as any).gtm_id || '',
+        meta_pixel_id: (site as any).meta_pixel_id || '',
+        google_ads_id: (site as any).google_ads_id || '',
+        head_scripts: (site as any).head_scripts || '',
+        body_scripts: (site as any).body_scripts || '',
         hero_title: site.hero_title || '',
         hero_subtitle: site.hero_subtitle || '',
         show_about_on_home: site.show_about_on_home ?? false,
@@ -1364,6 +1374,73 @@ ${getWorkerCode()}`;
                       onChange={(e) => setFormData({ ...formData, google_analytics_id: e.target.value })}
                       disabled={!isAdmin}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Google Tag Manager (GTM) ID</Label>
+                    <Input
+                      placeholder="GTM-XXXXXXXX"
+                      value={formData.gtm_id}
+                      onChange={(e) => setFormData({ ...formData, gtm_id: e.target.value })}
+                      disabled={!isAdmin}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Ex: GTM-TTH333RS
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Meta Pixel ID</Label>
+                    <Input
+                      placeholder="123456789012345"
+                      value={formData.meta_pixel_id}
+                      onChange={(e) => setFormData({ ...formData, meta_pixel_id: e.target.value })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Google Ads ID</Label>
+                    <Input
+                      placeholder="AW-XXXXXXXXX"
+                      value={formData.google_ads_id}
+                      onChange={(e) => setFormData({ ...formData, google_ads_id: e.target.value })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Scripts Personalizados</CardTitle>
+                  <CardDescription>Cole aqui scripts de rastreamento, chatbots, etc. que serão injetados no site</CardDescription>
+                </CardHeader>
+                <CardContent className="px-4 md:px-6 pb-5 space-y-4">
+                  <div className="space-y-2">
+                    <Label>Scripts no &lt;head&gt;</Label>
+                    <Textarea
+                      placeholder="Cole aqui scripts que devem ir no <head> do site (ex: GTM, pixels, etc.)"
+                      value={formData.head_scripts}
+                      onChange={(e) => setFormData({ ...formData, head_scripts: e.target.value })}
+                      rows={6}
+                      disabled={!isAdmin}
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Scripts JavaScript, tags de rastreamento, etc. que serão inseridos no &lt;head&gt;
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Scripts no &lt;body&gt;</Label>
+                    <Textarea
+                      placeholder="Cole aqui scripts que devem ir no <body> do site (ex: noscript do GTM, chatbots, etc.)"
+                      value={formData.body_scripts}
+                      onChange={(e) => setFormData({ ...formData, body_scripts: e.target.value })}
+                      rows={6}
+                      disabled={!isAdmin}
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tags &lt;noscript&gt;, chatbots, widgets, etc. que serão inseridos no &lt;body&gt;
+                    </p>
                   </div>
                 </CardContent>
               </Card>
