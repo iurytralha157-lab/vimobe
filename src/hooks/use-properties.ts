@@ -12,7 +12,7 @@ const PROPERTY_LIST_FIELDS = `
   status, destaque, bairro, cidade, uf,
   quartos, banheiros, vagas, area_util, preco, 
   imagem_principal, created_at, organization_id,
-  commission_percentage
+  commission_percentage, cadastrado_por
 `;
 
 export function useProperties(search?: string) {
