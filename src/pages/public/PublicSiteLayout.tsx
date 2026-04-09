@@ -297,7 +297,7 @@ export default function PublicSiteLayout() {
   const filterLinks = hasDynamicMenu ? [] : defaultFilterLinks;
 
   return (
-    <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }}>
+    <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }} role="document">
       {/* Header - Floating Glassmorphism */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="max-w-[1200px] mx-auto px-4 pt-4">
@@ -419,8 +419,8 @@ export default function PublicSiteLayout() {
               {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <button className="lg:hidden p-2" style={{ color: '#fff' }}>
-                  <Menu className="w-6 h-6" />
+                <button className="lg:hidden p-2" style={{ color: '#fff' }} aria-label="Abrir menu de navegação">
+                  <Menu className="w-6 h-6" aria-hidden="true" />
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 p-0 border-0" style={{ backgroundColor, borderColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
@@ -543,7 +543,7 @@ export default function PublicSiteLayout() {
       </header>
 
       {/* Main Content - Add padding for fixed header */}
-      <main className="flex-1">
+      <main className="flex-1" role="main">
         <Outlet />
       </main>
 
@@ -555,8 +555,8 @@ export default function PublicSiteLayout() {
             whatsappNumber={siteConfig.whatsapp}
             primaryColor={primaryColor}
             trigger={
-              <button className="w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors">
-                <MessageCircle className="w-7 h-7" />
+              <button className="w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg flex items-center justify-center hover:bg-[#20BD5A] transition-colors" aria-label="Fale conosco pelo WhatsApp">
+                <MessageCircle className="w-7 h-7" aria-hidden="true" />
               </button>
             }
           />
