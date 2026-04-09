@@ -1529,51 +1529,46 @@ export function LeadDetailDialog({
           </Popover>
         </div>
 
-        {/* Pipeline Timeline - Premium Stepper */}
+        {/* Pipeline Timeline - Animated Tab Style */}
         <div className="mt-4 overflow-hidden">
           <ScrollArea className="w-full" type="scroll">
-            <div className="flex items-center gap-0 pb-2 pr-4">
-              <TooltipProvider delayDuration={0}>
+            <TooltipProvider delayDuration={0}>
+              <nav className="animated-tab-nav">
                 {stages.map((stage, idx) => {
                   const isActive = stage.id === lead.stage_id;
                   const isPast = idx < currentStageIndex;
-                  const isFirst = idx === 0;
                   return (
-                    <div key={stage.id} className="flex items-center shrink-0">
-                      {!isFirst && <div className={cn("w-2 h-0.5 transition-colors", isPast ? "bg-primary" : isActive ? "bg-gradient-to-r from-primary to-border" : "bg-border/50")} />}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button 
-                            onClick={() => handleMoveToStage(stage.id)} 
-                            className={cn(
-                              "relative h-5 rounded-full text-[10px] font-normal transition-all whitespace-nowrap flex items-center justify-center gap-0.5", 
-                              isActive ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-2" : 
-                              isPast ? "bg-primary/15 text-primary hover:bg-primary/25 min-w-5 px-1" : 
-                              "text-muted-foreground hover:text-foreground hover:bg-accent/50 border border-transparent hover:border-border/50 min-w-5 px-1"
-                            )}
-                          >
-                            {isActive ? (
-                              <>
-                                <div className="h-1 w-1 rounded-full bg-primary-foreground animate-pulse" />
-                                {stage.name}
-                              </>
+                    <Tooltip key={stage.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleMoveToStage(stage.id)}
+                          className={cn(
+                            "animated-tab-link",
+                            isActive && "active",
+                            isPast && !isActive && "opacity-70"
+                          )}
+                          type="button"
+                        >
+                          <span className="animated-tab-icon">
+                            {isPast && !isActive ? (
+                              <Check className="h-[18px] w-[18px]" />
                             ) : (
-                              <>
-                                {isPast && <Check className="h-2 w-2" />}
-                                {idx + 1}
-                              </>
+                              <span className="text-xs font-bold">{idx + 1}</span>
                             )}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="bg-popover text-popover-foreground border shadow-md py-1.5 px-3 text-xs font-medium">
-                          <p>{stage.name}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
+                          </span>
+                          <span className="animated-tab-title">
+                            {stage.name}
+                          </span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs font-medium">
+                        {stage.name}
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
-              </TooltipProvider>
-            </div>
+              </nav>
+            </TooltipProvider>
             <ScrollBar orientation="horizontal" className="h-1.5" />
           </ScrollArea>
         </div>
@@ -1582,18 +1577,20 @@ export function LeadDetailDialog({
       {/* Content */}
       <ScrollArea className="flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Animated Tabs */}
-          <div className="px-6 py-3">
-            <AnimatedTabNav
-              tabs={tabs.map(tab => ({
-                value: tab.id,
-                label: tab.label,
-                icon: tab.icon,
-                badge: tab.badge || undefined,
-              }))}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
+          {/* Premium Tabs */}
+          <div className="border-b px-6 bg-muted">
+            <TabsList className="h-12 bg-transparent justify-start gap-1 -mb-px p-0">
+              {tabs.map(tab => {
+              const Icon = tab.icon;
+              return <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-t-lg rounded-b-none px-4 h-11 gap-2 transition-all">
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                    {tab.badge && <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                        {tab.badge}
+                      </Badge>}
+                  </TabsTrigger>;
+            })}
+            </TabsList>
           </div>
 
           {/* Atividades Tab */}
