@@ -203,7 +203,7 @@ export function MessageBubble({
     }
   };
 
-  const handleAudioError = (e: SyntheticEvent<HTMLAudioElement>) => {
+  const handleAudioError = async (e: SyntheticEvent<HTMLAudioElement>) => {
     const audio = e.currentTarget;
     const errorCode = audio.error?.code;
     const errorMsg = audio.error?.message;
@@ -214,8 +214,24 @@ export function MessageBubble({
       message: errorMsg,
       mimeType: mediaMimeType,
       networkState: audio.networkState,
-      readyState: audio.readyState
+      readyState: audio.readyState,
+      blobAttempted
     });
+    
+    // Try blob URL fallback before giving up (bypasses browser format sniffing)
+    if (!blobAttempted && mediaUrl && isValidMediaUrl(mediaUrl)) {
+      setBlobAttempted(true);
+      try {
+        console.log('[Audio] Trying blob URL fallback...');
+        const blob = await fetchAsBlobUrl(mediaUrl);
+        setBlobUrl(blob);
+        setAudioError(null);
+        // The audio element will re-render with the new blob src
+        return;
+      } catch (blobErr) {
+        console.error('[Audio Blob Fallback Failed]', blobErr);
+      }
+    }
     
     // Check if it's a format issue
     if (mediaMimeType?.includes('ogg') && !checkOggOpusSupport()) {
