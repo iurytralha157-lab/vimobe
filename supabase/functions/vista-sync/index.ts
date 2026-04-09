@@ -6,14 +6,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Map Vista category to code prefix
 function getCategoryPrefix(categoria: string): string {
   const cat = (categoria || "").toLowerCase();
   if (cat.includes("casa") || cat.includes("sobrado")) return "CA";
   if (cat.includes("cobertura")) return "CB";
   if (cat.includes("comercial") || cat.includes("sala") || cat.includes("loja") || cat.includes("galpao") || cat.includes("galpão")) return "CO";
   if (cat.includes("terreno") || cat.includes("lote")) return "TE";
-  return "AP"; // Default: Apartamento
+  return "AP";
 }
 
 async function generateCode(supabase: any, organizationId: string, prefix: string): Promise<string> {
@@ -25,7 +24,6 @@ async function generateCode(supabase: any, organizationId: string, prefix: strin
     .single();
 
   let nextNumber = 1;
-
   if (seq) {
     nextNumber = (seq.last_number || 0) + 1;
     await supabase
@@ -37,7 +35,6 @@ async function generateCode(supabase: any, organizationId: string, prefix: strin
       .from("property_sequences")
       .insert({ organization_id: organizationId, prefix, last_number: 1 });
   }
-
   return `${prefix}${String(nextNumber).padStart(4, "0")}`;
 }
 
@@ -46,7 +43,6 @@ async function testConnection(apiUrl: string, apiKey: string) {
     fields: ["Codigo"],
     paginacao: { pagina: 1, quantidade: 1 },
   };
-
   const searchParams = new URLSearchParams();
   searchParams.append("key", apiKey);
   searchParams.append("pesquisa", JSON.stringify(pesquisa));
@@ -60,7 +56,6 @@ async function testConnection(apiUrl: string, apiKey: string) {
     const text = await res.text();
     return { success: false, error: `API returned ${res.status}: ${text}` };
   }
-
   const data = await res.json();
   return { success: true, message: "Conexão válida", sample: data };
 }
@@ -83,7 +78,6 @@ function extractPhotosFromPayload(payload: any): string[] {
     photos.push(trimmed);
   };
 
-  // Add FotoDestaque first
   pushPhoto(payload?.FotoDestaque);
   pushPhoto(payload?.FotoDestaquePequena);
 
@@ -96,14 +90,11 @@ function extractPhotosFromPayload(payload: any): string[] {
 
   for (const entry of entries) {
     if (!entry || typeof entry !== "object") continue;
-    // Prefer full-size photo
     pushPhoto((entry as any).Foto);
-    // Only add small version if full-size wasn't available
     if (!(entry as any).Foto) {
       pushPhoto((entry as any).FotoPequena);
     }
   }
-
   return photos;
 }
 
@@ -115,37 +106,54 @@ async function fetchPropertyPhotos(apiUrl: string, apiKey: string, codigo: strin
   try {
     const pesquisa = {
       fields: [
-        "Codigo",
-        "FotoDestaque",
+        "Codigo", "FotoDestaque",
         { Foto: ["Foto", "FotoPequena", "Destaque", "Tipo", "Descricao"] },
       ],
     };
-
     const searchParams = new URLSearchParams();
     searchParams.append("key", apiKey);
     searchParams.append("pesquisa", JSON.stringify(pesquisa));
     searchParams.append("imovel", codigo);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
     const res = await fetch(`${apiUrl}/imoveis/detalhes?${searchParams.toString()}`, {
       method: "GET",
       headers: { Accept: "application/json" },
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!res.ok) {
-      const errText = await res.text();
-      console.warn(`Details fetch failed for ${codigo}: ${res.status} - ${errText}`);
+      await res.text();
       return fallbackPhotos;
     }
 
     const data = await res.json();
     const payload = Array.isArray(data) ? data[0] : data;
     const photos = extractPhotosFromPayload(payload);
-
     return photos.length > 0 ? photos : fallbackPhotos;
-  } catch (e) {
-    console.warn(`Details fetch error for ${codigo}: ${(e as Error).message}`);
+  } catch (_e) {
     return fallbackPhotos;
   }
+}
+
+// Parallel execution with concurrency limit
+async function parallelMap<T, R>(items: T[], fn: (item: T) => Promise<R>, concurrency: number): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let idx = 0;
+
+  async function worker() {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await fn(items[i]);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
 }
 
 async function syncProperties(supabase: any, apiUrl: string, apiKey: string, organizationId: string, importInactive: boolean) {
@@ -165,8 +173,17 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
   let totalSkipped = 0;
   let hasMore = true;
   const errors: string[] = [];
+  const startTime = Date.now();
+  const MAX_RUNTIME_MS = 140_000; // 140s safety margin (Supabase Pro = 150s)
 
   while (hasMore) {
+    // Time guard - stop before timeout
+    if (Date.now() - startTime > MAX_RUNTIME_MS) {
+      console.log(`Time limit reached at page ${page}. Synced ${totalSynced} so far.`);
+      errors.push(`Timeout: processou até página ${page - 1}. Sincronize novamente para continuar.`);
+      break;
+    }
+
     const pesquisa = {
       fields,
       paginacao: { pagina: page, quantidade: perPage },
@@ -201,7 +218,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
     const data = await res.json();
     const items = Object.values(data).filter(
       (v: any) => v && typeof v === "object" && v.Codigo
-    );
+    ) as any[];
 
     console.log(`Page ${page}: ${items.length} items found`);
 
@@ -210,7 +227,18 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
       break;
     }
 
-    const codigos = (items as any[]).map((item: any) => String(item.Codigo));
+    // Filter out inactive first
+    const activeItems = items.filter((item) => {
+      const itemStatus = String(item.Status || "").toLowerCase();
+      if (!importInactive && (itemStatus.includes("inativ") || itemStatus.includes("suspend"))) {
+        totalSkipped++;
+        return false;
+      }
+      return true;
+    });
+
+    // Check existing properties in batch
+    const codigos = activeItems.map((item) => String(item.Codigo));
     const { data: existingProps } = await supabase
       .from("properties")
       .select("id, vista_codigo")
@@ -224,26 +252,24 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
       }
     }
 
-    for (const item of items as any[]) {
+    // Fetch photos in parallel (10 concurrent requests)
+    const photosResults = await parallelMap(
+      activeItems,
+      (item) => fetchPropertyPhotos(apiUrl, apiKey, String(item.Codigo), item.FotoDestaque),
+      10
+    );
+
+    // Process items
+    for (let i = 0; i < activeItems.length; i++) {
+      const item = activeItems[i];
       try {
         const codigo = String(item.Codigo);
-
-        const itemStatus = String(item.Status || "").toLowerCase();
-        if (!importInactive && (itemStatus.includes("inativ") || itemStatus.includes("suspend"))) {
-          totalSkipped++;
-          continue;
-        }
-
-        const allPhotos = await fetchPropertyPhotos(apiUrl, apiKey, codigo, item.FotoDestaque);
-
-        const fotos: string[] = allPhotos;
+        const allPhotos = photosResults[i];
         const imagemPrincipal = allPhotos[0] || "";
 
-        // Parse both values
         const valorVenda = parseFloat(String(item.ValorVenda || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
         const valorLocacao = parseFloat(String(item.ValorLocacao || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || null;
 
-        // Map finalidade
         let tipoNegocio = "Venda";
         const finalidade = String(item.Finalidade || "").toLowerCase();
         const hasVenda = finalidade.includes("venda") || !!valorVenda;
@@ -255,9 +281,8 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           tipoNegocio = "Aluguel";
         }
 
-        // preco = valor de venda (ou locação se não houver venda)
         const preco = valorVenda || valorLocacao;
-
+        const itemStatus = String(item.Status || "").toLowerCase();
         let status = "ativo";
         if (itemStatus.includes("inativ") || itemStatus.includes("suspend")) {
           status = "inativo";
@@ -294,40 +319,30 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           ano_construcao: parseInt(item.AnoConstrucao) || null,
           descricao: item.DescricaoWeb || null,
           imagem_principal: imagemPrincipal || null,
-          fotos,
+          fotos: allPhotos,
           latitude: parseFloat(item.Latitude) || null,
           longitude: parseFloat(item.Longitude) || null,
         };
 
         let upsertError;
-
         if (existingId) {
-          const { error } = await supabase
-            .from("properties")
-            .update(propertyData)
-            .eq("id", existingId);
+          const { error } = await supabase.from("properties").update(propertyData).eq("id", existingId);
           upsertError = error;
         } else {
           const prefix = getCategoryPrefix(categoria);
           const code = await generateCode(supabase, organizationId, prefix);
           propertyData.code = code;
-
-          const { error } = await supabase
-            .from("properties")
-            .insert([propertyData]);
+          const { error } = await supabase.from("properties").insert([propertyData]);
           upsertError = error;
         }
 
         if (upsertError) {
-          console.error(`DB error for Vista ${codigo}: ${upsertError.message}`);
           errors.push(`DB error ${codigo}: ${upsertError.message}`);
         } else {
           totalSynced++;
         }
       } catch (e) {
-        const msg = (e as Error).message;
-        console.error(`Process error:`, msg);
-        errors.push(`Process error: ${msg}`);
+        errors.push(`Process error: ${(e as Error).message}`);
       }
     }
 
@@ -360,7 +375,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get integration config
     const { data: integration, error: intError } = await supabase
       .from("vista_integrations")
       .select("*")
@@ -380,7 +394,6 @@ Deno.serve(async (req) => {
     }
     const apiKey = integration.api_key;
 
-    // ---- TEST ----
     if (action === "test") {
       try {
         const result = await testConnection(apiUrl, apiKey);
@@ -396,13 +409,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---- SYNC ----
     if (action === "sync") {
       const { totalSynced, totalSkipped, errors } = await syncProperties(
         supabase, apiUrl, apiKey, organization_id, !!integration.import_inactive
       );
 
-      // Update integration stats
       await supabase
         .from("vista_integrations")
         .update({
