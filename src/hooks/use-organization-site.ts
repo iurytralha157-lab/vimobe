@@ -93,7 +93,7 @@ export function useCreateOrganizationSite() {
         .insert({
           organization_id: organization.id,
           ...data,
-        })
+        } as any)
         .select()
         .single();
 
@@ -134,7 +134,7 @@ export function useUpdateOrganizationSite() {
 
       const { data: site, error } = await supabase
         .from('organization_sites')
-        .update(data)
+        .update(data as any)
         .eq('organization_id', organization.id)
         .select()
         .single();
