@@ -155,6 +155,20 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
       break;
     }
 
+    // Debug: log first item keys on page 1 to understand photo structure
+    if (page === 1 && items.length > 0) {
+      const sample = items[0] as any;
+      const photoKeys = Object.keys(sample).filter(k => 
+        k.toLowerCase().includes("foto") || k.toLowerCase().includes("image") || k.toLowerCase().includes("galeria")
+      );
+      console.log(`DEBUG first item keys related to photos: ${JSON.stringify(photoKeys)}`);
+      for (const pk of photoKeys) {
+        const val = sample[pk];
+        const preview = typeof val === "object" ? JSON.stringify(val).slice(0, 500) : String(val).slice(0, 200);
+        console.log(`DEBUG ${pk}: ${preview}`);
+      }
+    }
+
     // Pre-fetch existing properties for this batch
     const codigos = (items as any[]).map((item: any) => String(item.Codigo));
     const { data: existingProps } = await supabase
