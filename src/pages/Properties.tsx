@@ -48,6 +48,8 @@ export default function Properties() {
   const [vistaOpen, setVistaOpen] = useState(false);
   const [imoviewOpen, setImoviewOpen] = useState(false);
   const isMobile = useIsMobile();
+  const { profile, isSuperAdmin } = useAuth();
+  const isAdmin = profile?.role === 'admin' || isSuperAdmin;
 
   const deferredSearch = useDeferredValue(search);
   
