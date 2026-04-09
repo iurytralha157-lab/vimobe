@@ -113,8 +113,18 @@ export function useCreateOrganizationSite() {
       await supabase.from('site_menu_items' as any).insert(
         defaults.map(d => ({ ...d, organization_id: organization!.id, open_in_new_tab: false, is_active: true }))
       );
+      // Seed default search filters
+      const defaultFilters = [
+        { filter_key: 'search', label: 'Buscar', position: 0 },
+        { filter_key: 'tipo', label: 'Tipo de Imóvel', position: 1 },
+        { filter_key: 'finalidade', label: 'Finalidade', position: 2 },
+      ];
+      await supabase.from('site_search_filters' as any).insert(
+        defaultFilters.map(f => ({ ...f, organization_id: organization!.id, is_active: true }))
+      );
       queryClient.invalidateQueries({ queryKey: ['organization-site'] });
       queryClient.invalidateQueries({ queryKey: ['site-menu-items'] });
+      queryClient.invalidateQueries({ queryKey: ['site-search-filters'] });
       toast.success('Site criado com sucesso!');
     },
     onError: (error) => {
