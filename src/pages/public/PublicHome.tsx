@@ -20,13 +20,31 @@ export default function PublicHome() {
   const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
   const allProperties = allPropertiesData?.properties || [];
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
+  const { data: configuredFilters } = usePublicSearchFilters(organizationId);
+  const { data: cities = [] } = usePublicCities(organizationId);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [selectedFinalidade, setSelectedFinalidade] = useState("");
+  const [selectedCidade, setSelectedCidade] = useState("");
+  const [selectedBairro, setSelectedBairro] = useState("");
+  const [selectedQuartos, setSelectedQuartos] = useState("");
+  const [selectedSuites, setSelectedSuites] = useState("");
+  const [selectedBanheiros, setSelectedBanheiros] = useState("");
+  const [selectedVagas, setSelectedVagas] = useState("");
+  const [selectedMobilia, setSelectedMobilia] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [hoveredCategory, setHoveredCategory] = useState<number | null>(null);
+
+  const { data: neighborhoods = [] } = usePublicNeighborhoods(organizationId, selectedCidade || undefined);
+
+  // Use configured filters or defaults
+  const activeFilters = configuredFilters && configuredFilters.length > 0
+    ? configuredFilters
+    : DEFAULT_SEARCH_FILTERS;
 
   // Get colors from config with fallbacks
   const primaryColor = siteConfig?.primary_color || '#C4A052';
