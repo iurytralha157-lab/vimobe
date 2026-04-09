@@ -1582,18 +1582,20 @@ export function LeadDetailDialog({
       {/* Content */}
       <ScrollArea className="flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Animated Tabs */}
-          <div className="px-6 py-3">
-            <AnimatedTabNav
-              tabs={tabs.map(tab => ({
-                value: tab.id,
-                label: tab.label,
-                icon: tab.icon,
-                badge: tab.badge || undefined,
-              }))}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
+          {/* Premium Tabs */}
+          <div className="border-b px-6 bg-muted">
+            <TabsList className="h-12 bg-transparent justify-start gap-1 -mb-px p-0">
+              {tabs.map(tab => {
+              const Icon = tab.icon;
+              return <TabsTrigger key={tab.id} value={tab.id} className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-t-lg rounded-b-none px-4 h-11 gap-2 transition-all">
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                    {tab.badge && <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
+                        {tab.badge}
+                      </Badge>}
+                  </TabsTrigger>;
+            })}
+            </TabsList>
           </div>
 
           {/* Atividades Tab */}
