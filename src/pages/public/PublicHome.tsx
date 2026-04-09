@@ -81,6 +81,15 @@ export default function PublicHome() {
     if (search) params.set("search", search);
     if (selectedType && selectedType !== "all") params.set("tipo", selectedType);
     if (selectedFinalidade && selectedFinalidade !== "all") params.set("finalidade", selectedFinalidade);
+    if (selectedCidade && selectedCidade !== "all") params.set("cidade", selectedCidade);
+    if (selectedBairro && selectedBairro !== "all") params.set("bairro", selectedBairro);
+    if (selectedQuartos && selectedQuartos !== "any") params.set("quartos", selectedQuartos);
+    if (selectedSuites && selectedSuites !== "any") params.set("suites", selectedSuites);
+    if (selectedBanheiros && selectedBanheiros !== "any") params.set("banheiros", selectedBanheiros);
+    if (selectedVagas && selectedVagas !== "any") params.set("vagas", selectedVagas);
+    if (selectedMobilia && selectedMobilia !== "all") params.set("mobilia", selectedMobilia);
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice) params.set("maxPrice", maxPrice);
     
     const queryString = params.toString();
     const basePath = getHref(queryString ? `imoveis?${queryString}` : 'imoveis');
