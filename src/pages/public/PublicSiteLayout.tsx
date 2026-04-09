@@ -299,7 +299,7 @@ export default function PublicSiteLayout() {
   return (
     <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }} role="document">
       {/* Header - Floating Glassmorphism */}
-      <header className="fixed top-0 left-0 right-0 z-50">
+      <header className="fixed top-0 left-0 right-0 z-50" role="banner">
         <div className="max-w-[1200px] mx-auto px-4 pt-4">
           <div 
             className="backdrop-blur-xl rounded-2xl px-8 pl-4"
@@ -326,7 +326,7 @@ export default function PublicSiteLayout() {
               </Link>
 
               {/* Desktop Navigation */}
-              <nav className="hidden lg:flex items-center gap-1">
+              <nav className="hidden lg:flex items-center gap-1" aria-label="Navegação principal">
                 {/* Dynamic menu items */}
                 {allNavItems ? allNavItems.map((item) => (
                   item.link_type === 'external' ? (
@@ -565,6 +565,7 @@ export default function PublicSiteLayout() {
 
       {/* Footer - Dark Style */}
       <footer 
+        role="contentinfo"
         style={{ backgroundColor: secondaryColor, color: textColor, borderTop: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
@@ -575,7 +576,11 @@ export default function PublicSiteLayout() {
                 {siteConfig.logo_url ? (
                   <img 
                     src={siteConfig.logo_url} 
-                    alt={siteConfig.site_title} 
+                    alt={siteConfig.site_title || 'Logo'} 
+                    loading="lazy"
+                    decoding="async"
+                    width={siteConfig.logo_width || 160}
+                    height={siteConfig.logo_height || 50}
                     style={{ 
                       maxWidth: siteConfig.logo_width || 160, 
                       maxHeight: siteConfig.logo_height || 50 
