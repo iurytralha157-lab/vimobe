@@ -936,14 +936,6 @@ export default function Pipelines() {
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
             </Button>
-
-            <div className="flex-1" />
-
-            {/* New Lead */}
-            <Button size="sm" onClick={() => openNewLeadDialog()} className="h-8 px-3 flex-shrink-0 rounded-full">
-              <Plus className="h-4 w-4 mr-1" />
-              <span className="text-xs">{isTelecom ? 'Novo' : 'Lead'}</span>
-            </Button>
           </div>
         ) : (
           /* Desktop: original two-row layout */
