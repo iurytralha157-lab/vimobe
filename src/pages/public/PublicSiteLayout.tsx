@@ -27,7 +27,7 @@ export default function PublicSiteLayout() {
   const textColor = siteConfig?.text_color || '#FFFFFF';
   const isDarkTheme = siteConfig?.site_theme !== 'light';
 
-  // Dynamic document title, favicon & OG meta tags based on site config
+  // Dynamic document title, favicon, OG meta & hero preload based on site config
   useEffect(() => {
     if (!siteConfig) return;
 
@@ -36,6 +36,16 @@ export default function PublicSiteLayout() {
 
     // Update title
     document.title = siteConfig.seo_title || siteConfig.site_title || 'Site Imobiliário';
+
+    // Update meta description
+    let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    const descContent = siteConfig.seo_description || siteConfig.site_description || '';
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.name = 'description';
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.content = descContent;
 
     // Update favicon
     if (siteConfig.favicon_url) {
@@ -48,6 +58,19 @@ export default function PublicSiteLayout() {
       faviconLink.href = siteConfig.favicon_url;
     }
 
+    // Preload hero image for LCP optimization
+    if (siteConfig.hero_image_url) {
+      const existingPreload = document.querySelector<HTMLLinkElement>('link[rel="preload"][as="image"][data-hero]');
+      if (!existingPreload) {
+        const preload = document.createElement('link');
+        preload.rel = 'preload';
+        preload.as = 'image';
+        preload.href = siteConfig.hero_image_url;
+        preload.setAttribute('data-hero', 'true');
+        document.head.appendChild(preload);
+      }
+    }
+
     // Update OG meta tags so shared links show client's info
     const ogTitle = siteConfig.seo_title || siteConfig.site_title || '';
     const ogDescription = siteConfig.seo_description || siteConfig.site_description || '';
@@ -56,7 +79,6 @@ export default function PublicSiteLayout() {
     const metaUpdates: Record<string, string> = {
       'meta[property="og:title"]': ogTitle,
       'meta[name="twitter:title"]': ogTitle,
-      'meta[name="description"]': ogDescription,
       'meta[property="og:description"]': ogDescription,
       'meta[name="twitter:description"]': ogDescription,
       'meta[property="og:image"]': ogImage,
@@ -91,6 +113,8 @@ export default function PublicSiteLayout() {
         const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
         if (link) link.href = originalFavicon;
       }
+      // Remove hero preload
+      document.querySelector('link[data-hero]')?.remove();
       // Restore original meta tags
       for (const [selector, value] of Object.entries(originalMeta)) {
         const el = document.querySelector<HTMLMetaElement>(selector);
