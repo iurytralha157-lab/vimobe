@@ -819,11 +819,9 @@ export default function PublicSiteLayout() {
                   href="https://vimob.com.br" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="hover:text-white transition-colors inline-flex items-center gap-1.5"
-                  style={{ color: primaryColor }}
+                  className="hover:opacity-80 transition-opacity inline-flex items-center"
                 >
-                  <img src="/logo-white.png" alt="VIMOB" className="h-3.5 w-auto opacity-60" />
-                  VIMOB
+                  <img src="/logo-white.png" alt="VIMOB" className="h-4 w-auto opacity-60 hover:opacity-90 transition-opacity" />
                 </a>
               </p>
             </div>
