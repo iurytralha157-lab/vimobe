@@ -1,5 +1,5 @@
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { usePublicProperties, usePropertyTypes, usePublicCities } from "@/hooks/use-public-site";
+import { usePublicProperties, usePropertyTypes, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
 import { Search, MapPin, Bed, Bath, Car, Maximize, X, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ export default function PublicProperties() {
     tipo: searchParams.get('tipo') || '',
     finalidade: searchParams.get('finalidade') || '',
     cidade: searchParams.get('cidade') || '',
+    bairro: searchParams.get('bairro') || '',
     quartos: searchParams.get('quartos') || '',
     suites: searchParams.get('suites') || '',
     minPrice: searchParams.get('min_price') || '',
@@ -54,6 +55,7 @@ export default function PublicProperties() {
         tipo: newParams.get('tipo') || '',
         finalidade: newParams.get('finalidade') || '',
         cidade: newParams.get('cidade') || '',
+        bairro: newParams.get('bairro') || '',
         quartos: newParams.get('quartos') || '',
         suites: newParams.get('suites') || '',
         minPrice: newParams.get('min_price') || '',
@@ -89,6 +91,7 @@ export default function PublicProperties() {
     tipo: filters.tipo,
     finalidade: filters.finalidade || undefined,
     cidade: filters.cidade,
+    bairro: filters.bairro,
     quartos: filters.quartos ? parseInt(filters.quartos) : undefined,
     suites: filters.suites ? parseInt(filters.suites) : undefined,
     banheiros: filters.banheiros ? parseInt(filters.banheiros) : undefined,
@@ -99,6 +102,7 @@ export default function PublicProperties() {
 
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
   const { data: cities = [] } = usePublicCities(organizationId);
+  const { data: neighborhoods = [] } = usePublicNeighborhoods(organizationId, filters.cidade);
 
   // Get base path for preview mode
   const isPreviewMode = location.pathname.includes('/site/preview') || location.pathname.includes('/site/previsualização');
@@ -155,6 +159,7 @@ export default function PublicProperties() {
       tipo: '',
       finalidade: '',
       cidade: '',
+      bairro: '',
       quartos: '',
       suites: '',
       minPrice: '',
@@ -165,7 +170,7 @@ export default function PublicProperties() {
     });
   };
 
-  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.quartos || filters.suites || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
+  const hasActiveFilters = filters.search || filters.tipo || filters.finalidade || filters.cidade || filters.bairro || filters.quartos || filters.suites || filters.minPrice || filters.maxPrice || filters.banheiros || filters.vagas;
   const activeFilterCount = [filters.search, filters.tipo, filters.finalidade, filters.cidade, filters.quartos, filters.suites, filters.minPrice, filters.maxPrice, filters.banheiros, filters.vagas].filter(Boolean).length;
 
   const formatPrice = (value: number | null) => {
@@ -229,6 +234,7 @@ export default function PublicProperties() {
                 clearFilters={clearFilters}
                 hasActiveFilters={!!hasActiveFilters}
                 cities={cities}
+                neighborhoods={neighborhoods}
                 propertyTypes={propertyTypes}
                 showMoreFilters={showMoreFilters}
                 setShowMoreFilters={handleSetShowMoreFilters}
@@ -272,6 +278,7 @@ export default function PublicProperties() {
                     clearFilters={clearFilters}
                     hasActiveFilters={!!hasActiveFilters}
                     cities={cities}
+                    neighborhoods={neighborhoods}
                     propertyTypes={propertyTypes}
                     showMoreFilters={showMoreFilters}
                     setShowMoreFilters={handleSetShowMoreFilters}

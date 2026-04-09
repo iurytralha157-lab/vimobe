@@ -126,7 +126,7 @@ export default function PublicHome() {
           >
             <div className="flex-1 min-w-[200px]">
               <Input
-                placeholder="Digite condomínio, região, bairro ou cidade"
+                placeholder="Digite código, condomínio, região, bairro ou cidade"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-12 bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"

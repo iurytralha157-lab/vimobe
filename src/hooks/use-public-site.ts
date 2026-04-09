@@ -121,6 +121,7 @@ export function usePublicProperties(organizationId: string | null, filters?: {
   banheiros?: number;
   vagas?: number;
   cidade?: string;
+  bairro?: string;
 }) {
   return useQuery({
     queryKey: ['public-properties', organizationId, filters],
@@ -144,6 +145,7 @@ export function usePublicProperties(organizationId: string | null, filters?: {
       if (filters?.banheiros) params.append('banheiros', String(filters.banheiros));
       if (filters?.vagas) params.append('vagas', String(filters.vagas));
       if (filters?.cidade) params.append('cidade', filters.cidade);
+      if (filters?.bairro) params.append('bairro', filters.bairro);
 
       const { data, error } = await supabase.functions.invoke('public-site-data', {
         body: null,
@@ -250,6 +252,30 @@ export function usePublicCities(organizationId: string | null) {
       if (!response.ok) return [];
       const data = await response.json();
       return data.cities as string[];
+    },
+    enabled: !!organizationId,
+  });
+}
+
+export function usePublicNeighborhoods(organizationId: string | null, cidade?: string) {
+  return useQuery({
+    queryKey: ['public-neighborhoods', organizationId, cidade],
+    queryFn: async () => {
+      if (!organizationId) return [];
+
+      const params = new URLSearchParams({
+        organization_id: organizationId,
+        endpoint: 'neighborhoods',
+      });
+      if (cidade) params.append('cidade', cidade);
+
+      const response = await fetch(
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-data?${params.toString()}`
+      );
+
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.neighborhoods as string[];
     },
     enabled: !!organizationId,
   });

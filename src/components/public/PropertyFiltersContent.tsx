@@ -10,6 +10,7 @@ interface FilterState {
   tipo: string;
   finalidade: string;
   cidade: string;
+  bairro: string;
   quartos: string;
   suites: string;
   minPrice: string;
@@ -28,6 +29,7 @@ interface PropertyFiltersContentProps {
   clearFilters: () => void;
   hasActiveFilters: boolean;
   cities: string[];
+  neighborhoods: string[];
   propertyTypes: string[];
   showMoreFilters: boolean;
   setShowMoreFilters: (value: boolean) => void;
@@ -45,6 +47,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
   clearFilters,
   hasActiveFilters,
   cities,
+  neighborhoods,
   propertyTypes,
   showMoreFilters,
   setShowMoreFilters,
@@ -66,7 +69,7 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Localização, bairro..."
+          placeholder="Código, localização, bairro..."
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
           className="flex h-10 w-full rounded-xl border px-4 py-2 text-base ring-offset-background placeholder:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
@@ -84,6 +87,21 @@ const PropertyFiltersContent = React.memo(function PropertyFiltersContent({
             <SelectItem value="all">Todas as cidades</SelectItem>
             {cities.map((city) => (
               <SelectItem key={city} value={city}>{city}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <label className="text-sm font-semibold mb-2 block" style={textColor ? { color: textColor } : undefined}>Bairro</label>
+        <Select value={filters.bairro} onValueChange={(v) => updateFilter('bairro', v === 'all' ? '' : v)}>
+          <SelectTrigger className="rounded-xl" style={inputStyle}>
+            <SelectValue placeholder="Todos os bairros" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os bairros</SelectItem>
+            {neighborhoods.map((n) => (
+              <SelectItem key={n} value={n}>{n}</SelectItem>
             ))}
           </SelectContent>
         </Select>
