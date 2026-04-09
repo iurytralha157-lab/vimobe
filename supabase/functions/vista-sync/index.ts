@@ -101,7 +101,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
     "DescricaoWeb", "FotoDestaque",
     "Latitude", "Longitude",
     "ValorCondominio", "AnoConstrucao", "TituloSite",
-    { "Foto": ["Foto", "FotoPequena", "Destaque", "Tipo"] },
+    { "Foto": ["Foto", "FotoPequena", "Destaque", "Tipo", "Descricao"] },
   ];
 
   let page = 1;
