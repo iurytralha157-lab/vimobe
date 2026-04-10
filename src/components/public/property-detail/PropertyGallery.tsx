@@ -256,7 +256,7 @@ export default function PropertyGallery({
 
       {/* Lightbox Dialog with Embla */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0">
+        <DialogContent className="max-w-[100vw] max-h-[100vh] sm:max-w-[95vw] sm:max-h-[95vh] w-screen h-screen sm:w-auto sm:h-auto p-0 bg-black/95 border-0 rounded-none sm:rounded-lg [&>button]:hidden">
           <button
             onClick={() => setLightboxOpen(false)}
             className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -265,12 +265,12 @@ export default function PropertyGallery({
             <X className="w-6 h-6" />
           </button>
 
-          <div className="relative w-full h-[90vh] flex flex-col items-center justify-center">
+          <div className="relative w-full h-[100dvh] sm:h-[90vh] flex flex-col items-center justify-center">
             {/* Lightbox Embla Carousel */}
             <div className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing" ref={lightboxEmblaRef}>
               <div className="flex h-full items-center">
                 {allMedia.map((img, index) => (
-                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-4 relative">
+                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-2 sm:p-4 relative">
                     <img
                       src={img}
                       alt={`${title} - Foto ${index + 1}`}
@@ -299,7 +299,7 @@ export default function PropertyGallery({
                     {/* Download Button */}
                     <button
                       onClick={() => handleDownload(img, index)}
-                      className="absolute bottom-20 left-8 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200 hover:scale-105"
+                      className="absolute bottom-20 left-4 sm:left-8 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200 hover:scale-105"
                       aria-label="Baixar imagem"
                     >
                       <Download className="w-5 h-5" />
@@ -313,15 +313,15 @@ export default function PropertyGallery({
               <>
                 <button
                   onClick={lightboxScrollPrev}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
                 >
-                  <ChevronLeft className="w-8 h-8" />
+                  <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
                 </button>
                 <button
                   onClick={lightboxScrollNext}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
                 >
-                  <ChevronRight className="w-8 h-8" />
+                  <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
                 </button>
               </>
             )}
