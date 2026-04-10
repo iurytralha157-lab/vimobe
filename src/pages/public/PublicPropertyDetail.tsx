@@ -161,7 +161,6 @@ export default function PublicPropertyDetail() {
                 <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
                 {[
                   property.endereco || (property as any).endereco,
-                  (property as any).numero,
                   property.bairro || (property as any).bairro,
                   property.cidade || (property as any).cidade,
                   property.estado || (property as any).uf,
@@ -215,7 +214,7 @@ export default function PublicPropertyDetail() {
               latitude={(property as any).latitude}
               longitude={(property as any).longitude}
               endereco={property.endereco || (property as any).endereco}
-              numero={(property as any).numero}
+              
               complemento={(property as any).complemento}
               bairro={property.bairro || (property as any).bairro}
               cidade={property.cidade || (property as any).cidade}

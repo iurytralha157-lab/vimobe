@@ -261,15 +261,13 @@ export default function PropertyLocation({
   const fullAddress = useMemo(() => {
     const addressParts = [
       endereco,
-      numero,
-      complemento,
       bairro,
       cidade,
       uf,
       cep,
     ].filter(Boolean);
     return addressParts.join(', ');
-  }, [endereco, numero, complemento, bairro, cidade, uf, cep]);
+  }, [endereco, bairro, cidade, uf, cep]);
 
   const hasExistingCoordinates = latitude !== null && longitude !== null && latitude !== undefined && longitude !== undefined;
 
@@ -282,39 +280,21 @@ export default function PropertyLocation({
     
     const loadCoordinates = async () => {
       try {
-        // Priority 1: Use existing exact coordinates
+        // Priority 1: Use existing coordinates (street precision to hide exact location)
         if (hasExistingCoordinates) {
           if (isMounted) {
             setLocation({ 
               lat: latitude!, 
               lon: longitude!, 
-              precision: 'exact' 
+              precision: 'street'
             });
             setGeocodeAttempted(true);
           }
           return;
         }
 
-        // Priority 2: Full address with number → structured search for exact pin
-        if (endereco && numero && cidade) {
-          // Try structured geocoding first (more accurate for Brazilian addresses)
-          let result = await geocodeStructured(endereco, numero, cidade, uf || '', 'exact');
-          
-          // Fallback to simple search if structured fails
-          if (!result) {
-            const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
-            result = await geocodeSimple(searchAddress, 'exact');
-          }
-          
-          if (result && isMounted) {
-            setLocation(result);
-            setGeocodeAttempted(true);
-            return;
-          }
-        }
-
-        // Priority 3: Street without number → street area
-        if (endereco && cidade && !numero) {
+        // Priority 2: Street geocoding (without number to protect exact location)
+        if (endereco && cidade) {
           let result = await geocodeStructured(endereco, null, cidade, uf || '', 'street');
           
           if (!result) {
