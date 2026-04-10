@@ -35,22 +35,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Ensure user_id is nullable and FK is dropped (idempotent)
-    try {
-      await supabaseAdmin.rpc('exec_sql_idempotent', { query: '' }); // no-op
-    } catch { /* ignore */ }
-
-    // Use raw SQL via postgrest rpc to make user_id nullable if needed
-    const alterRes = await fetch(`${supabaseUrl}/rest/v1/rpc/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': serviceRoleKey,
-        'Authorization': `Bearer ${serviceRoleKey}`,
-      },
-    }).catch(() => null);
-
-    // Insert without user_id (anonymous submission)
     const { data, error } = await supabaseAdmin
       .from('onboarding_requests')
       .insert({
@@ -86,20 +70,6 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error('Insert error:', error);
-      
-      // If FK constraint error, try to fix the schema and retry
-      if (error.message?.includes('foreign key') || error.message?.includes('user_id')) {
-        console.log('Attempting to fix schema - dropping FK and making user_id nullable...');
-        
-        // Direct SQL via PostgREST is not possible, inform user
-        return new Response(JSON.stringify({ 
-          error: 'É necessário executar uma alteração no banco de dados. Por favor, execute no SQL Editor do Supabase: ALTER TABLE public.onboarding_requests ALTER COLUMN user_id DROP NOT NULL; ALTER TABLE public.onboarding_requests DROP CONSTRAINT IF EXISTS onboarding_requests_user_id_fkey;' 
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
       return new Response(JSON.stringify({ error: 'Erro ao salvar solicitação: ' + error.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
