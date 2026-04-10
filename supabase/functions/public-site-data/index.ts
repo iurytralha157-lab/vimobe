@@ -212,6 +212,25 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case 'exclusive': {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('organization_id', organizationId)
+          .eq('status', 'ativo')
+          .eq('exclusividade', true)
+          .order('created_at', { ascending: false })
+          .limit(6);
+
+        if (error) {
+          console.error('Error fetching exclusive properties:', error);
+          throw error;
+        }
+
+        response = { properties: data || [] };
+        break;
+      }
+
       case 'property-types': {
         const { data, error } = await supabase
           .from('properties')
