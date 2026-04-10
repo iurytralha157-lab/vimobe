@@ -518,7 +518,11 @@ ${getWorkerCode()}`;
                     </div>
                     {formData.subdomain && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        URL: <span className="font-mono">{window.location.origin}/sites/{formData.subdomain}</span>
+                        URL: <span className="font-mono">
+                          {formData.custom_domain && site?.domain_verified
+                            ? `https://${formData.custom_domain}`
+                            : `https://vimobe.lovable.app/sites/${formData.subdomain}`}
+                        </span>
                       </p>
                     )}
                   </div>
