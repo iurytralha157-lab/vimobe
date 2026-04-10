@@ -228,7 +228,7 @@ export default function SiteSettings() {
       return `https://${formData.custom_domain}`;
     }
     if (formData.subdomain) {
-      return `https://vimobe.lovable.app/sites/${formData.subdomain}`;
+      return `https://vimob.vettercompany.com.br/sites/${formData.subdomain}`;
     }
     return null;
   };
@@ -238,7 +238,7 @@ export default function SiteSettings() {
       return `https://${formData.custom_domain}`;
     }
     if (formData.subdomain) {
-      return `https://vimobe.lovable.app/sites/${formData.subdomain}`;
+      return `https://vimob.vettercompany.com.br/sites/${formData.subdomain}`;
     }
     return null;
   };
