@@ -2888,7 +2888,7 @@ export type Database = {
           status: string
           team_size: string | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
           youtube: string | null
         }
         Insert: {
@@ -2928,7 +2928,7 @@ export type Database = {
           status?: string
           team_size?: string | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
           youtube?: string | null
         }
         Update: {
@@ -2968,7 +2968,7 @@ export type Database = {
           status?: string
           team_size?: string | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
           youtube?: string | null
         }
         Relationships: []
