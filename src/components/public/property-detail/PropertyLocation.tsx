@@ -261,15 +261,13 @@ export default function PropertyLocation({
   const fullAddress = useMemo(() => {
     const addressParts = [
       endereco,
-      numero,
-      complemento,
       bairro,
       cidade,
       uf,
       cep,
     ].filter(Boolean);
     return addressParts.join(', ');
-  }, [endereco, numero, complemento, bairro, cidade, uf, cep]);
+  }, [endereco, bairro, cidade, uf, cep]);
 
   const hasExistingCoordinates = latitude !== null && longitude !== null && latitude !== undefined && longitude !== undefined;
 
