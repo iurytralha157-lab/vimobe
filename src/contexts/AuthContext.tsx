@@ -106,6 +106,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const superAdmin = await checkSuperAdmin(userId);
         setIsSuperAdmin(superAdmin);
 
+        // Block inactive users (super_admins bypass this check)
+        if (!profileData.is_active && !superAdmin) {
+          console.warn('User is deactivated, signing out');
+          await supabase.auth.signOut();
+          alert('Sua conta foi desativada. Entre em contato com o administrador.');
+          return false;
+        }
+
         setProfile(profileData as UserProfile);
 
         // Ler do localStorage para garantir que o valor está atualizado,
@@ -125,6 +133,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
 
           if (orgData) {
+            // Block access if organization is inactive (super_admins bypass)
+            if (!orgData.is_active && !superAdmin && !activeImpersonation) {
+              console.warn('Organization is deactivated, signing out');
+              await supabase.auth.signOut();
+              alert('Sua organização foi desativada. Entre em contato com o suporte.');
+              return false;
+            }
             setOrganization(orgData as Organization);
           }
         }
