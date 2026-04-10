@@ -270,32 +270,6 @@ export default function Onboarding() {
                     />
                   </div>
 
-                  {!isLoggedIn && (
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Senha de acesso *</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="password" 
-                          type={showPassword ? 'text' : 'password'}
-                          required
-                          minLength={6}
-                          value={password} 
-                          onChange={e => setPassword(e.target.value)} 
-                          placeholder="Mínimo 6 caracteres"
-                          className="pl-10 pr-10"
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => setShowPassword(!showPassword)} 
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="space-y-2">
                     <Label htmlFor="responsible_cpf">CPF</Label>
                     <Input id="responsible_cpf" value={form.responsible_cpf} onChange={e => updateField('responsible_cpf', maskCPF(e.target.value))} placeholder="000.000.000-00" />
