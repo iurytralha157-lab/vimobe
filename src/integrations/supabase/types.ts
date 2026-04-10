@@ -2850,6 +2850,111 @@ export type Database = {
           },
         ]
       }
+      onboarding_requests: {
+        Row: {
+          about_text: string | null
+          admin_notes: string | null
+          banner_title: string | null
+          banner_url: string | null
+          cnpj: string | null
+          company_address: string | null
+          company_email: string | null
+          company_name: string
+          company_phone: string | null
+          company_whatsapp: string | null
+          created_at: string | null
+          facebook: string | null
+          id: string
+          instagram: string | null
+          linkedin: string | null
+          logo_url: string | null
+          primary_color: string | null
+          responsible_cpf: string | null
+          responsible_email: string
+          responsible_name: string
+          responsible_phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          secondary_color: string | null
+          segment: string | null
+          site_seo_description: string | null
+          site_title: string | null
+          status: string
+          team_size: string | null
+          updated_at: string | null
+          user_id: string
+          youtube: string | null
+        }
+        Insert: {
+          about_text?: string | null
+          admin_notes?: string | null
+          banner_title?: string | null
+          banner_url?: string | null
+          cnpj?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_name: string
+          company_phone?: string | null
+          company_whatsapp?: string | null
+          created_at?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          responsible_cpf?: string | null
+          responsible_email: string
+          responsible_name: string
+          responsible_phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          secondary_color?: string | null
+          segment?: string | null
+          site_seo_description?: string | null
+          site_title?: string | null
+          status?: string
+          team_size?: string | null
+          updated_at?: string | null
+          user_id: string
+          youtube?: string | null
+        }
+        Update: {
+          about_text?: string | null
+          admin_notes?: string | null
+          banner_title?: string | null
+          banner_url?: string | null
+          cnpj?: string | null
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string
+          company_phone?: string | null
+          company_whatsapp?: string | null
+          created_at?: string | null
+          facebook?: string | null
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          responsible_cpf?: string | null
+          responsible_email?: string
+          responsible_name?: string
+          responsible_phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          secondary_color?: string | null
+          segment?: string | null
+          site_seo_description?: string | null
+          site_title?: string | null
+          status?: string
+          team_size?: string | null
+          updated_at?: string | null
+          user_id?: string
+          youtube?: string | null
+        }
+        Relationships: []
+      }
       organization_members: {
         Row: {
           created_at: string
