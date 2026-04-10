@@ -14,7 +14,7 @@ import { Building2, User, Palette, Globe, Share2, Users, CheckCircle2, Upload, L
 import { useMyOnboardingRequest, useSubmitOnboardingRequest, OnboardingRequestData } from '@/hooks/use-onboarding-requests';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
-import { useMemo } from 'react';
+
 
 const SEGMENTS = [
   { value: 'imobiliario', label: 'Imobiliário' },
