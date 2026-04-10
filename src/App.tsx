@@ -65,6 +65,7 @@ const AdminPlans = lazy(() => import("./pages/admin/AdminPlans"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
 const AdminHelpEditor = lazy(() => import("./pages/admin/AdminHelpEditor"));
 const AdminDatabase = lazy(() => import("./pages/admin/AdminDatabase"));
+const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 
 // Public site pages
 const PublicSiteLayout = lazy(() => import("./pages/public/PublicSiteLayout"));
@@ -183,6 +184,7 @@ function AppRoutes() {
             <Route path="/admin/settings" element={<SuperAdminRoute><AdminSettings /></SuperAdminRoute>} />
             <Route path="/admin/requests" element={<SuperAdminRoute><AdminRequests /></SuperAdminRoute>} />
             <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
+            <Route path="/admin/onboarding" element={<SuperAdminRoute><AdminOnboarding /></SuperAdminRoute>} />
             
             {/* Regular Routes */}
             <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />

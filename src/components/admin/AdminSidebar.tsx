@@ -11,7 +11,8 @@ import {
   Package,
   Megaphone,
   HelpCircle,
-  Database
+  Database,
+  ClipboardList
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ const navItems = [
   { icon: Users, label: 'Usuários', path: '/admin/users' },
   { icon: Package, label: 'Planos', path: '/admin/plans' },
   { icon: Database, label: 'Banco de Dados', path: '/admin/database' },
+  { icon: ClipboardList, label: 'Onboarding', path: '/admin/onboarding' },
   { icon: Lightbulb, label: 'Solicitações', path: '/admin/requests' },
   { icon: Megaphone, label: 'Comunicados', path: '/admin/announcements' },
   { icon: HelpCircle, label: 'Central de Ajuda', path: '/admin/help-editor' },
