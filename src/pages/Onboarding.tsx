@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,11 +10,11 @@ import { Button } from '@/components/ui/button';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Building2, User, Palette, Globe, Share2, Users, CheckCircle2, Upload, Loader2 } from 'lucide-react';
-import { useMyOnboardingRequest, useSubmitOnboardingRequest, OnboardingRequestData } from '@/hooks/use-onboarding-requests';
+import { Building2, User, Palette, Globe, Share2, Users, CheckCircle2, Upload, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
+import { useMyOnboardingRequest, OnboardingRequestData } from '@/hooks/use-onboarding-requests';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
-
+import { toast } from 'sonner';
 
 const SEGMENTS = [
   { value: 'imobiliario', label: 'Imobiliário' },
@@ -26,16 +26,23 @@ const SEGMENTS = [
   { value: 'outros', label: 'Outros' },
 ];
 
+// Helper to get typed access to the table (not in generated types yet)
+const onboardingTable = () => (supabase as any).from('onboarding_requests');
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const { data: existingRequest, isLoading: loadingRequest } = useMyOnboardingRequest();
-  const submitMutation = useSubmitOnboardingRequest();
   const { data: systemSettings } = useSystemSettings();
   const { resolvedTheme } = useTheme();
   
   const [logoUploading, setLogoUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Auth fields for public visitors
+  const [password, setPassword] = useState('');
 
   const [form, setForm] = useState<OnboardingRequestData>({
     company_name: '',
@@ -64,6 +71,8 @@ export default function Onboarding() {
     team_size: '1-5',
   });
 
+  const isLoggedIn = !!user;
+
   const logoUrl = useMemo(() => {
     if (!systemSettings) return null;
     const preferredUrl = resolvedTheme === 'dark'
@@ -87,14 +96,16 @@ export default function Onboarding() {
     const setUploading = field === 'logo_url' ? setLogoUploading : setBannerUploading;
     setUploading(true);
     try {
+      const uniqueId = user?.id || crypto.randomUUID();
       const ext = file.name.split('.').pop();
-      const path = `onboarding/${user?.id}/${field}_${Date.now()}.${ext}`;
+      const path = `onboarding/${uniqueId}/${field}_${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from('logos').upload(path, file);
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       updateField(field, publicUrl);
     } catch (err: any) {
       console.error('Upload error:', err);
+      toast.error('Erro ao enviar arquivo');
     } finally {
       setUploading(false);
     }
@@ -102,11 +113,70 @@ export default function Onboarding() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.company_name.trim() || !form.responsible_name.trim() || !form.responsible_email.trim()) return;
-    await submitMutation.mutateAsync(form);
+    if (!form.company_name.trim() || !form.responsible_name.trim() || !form.responsible_email.trim()) {
+      toast.error('Preencha os campos obrigatórios');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let userId = user?.id;
+
+      // If not logged in, create account first
+      if (!isLoggedIn) {
+        if (!password || password.length < 6) {
+          toast.error('A senha deve ter pelo menos 6 caracteres');
+          setSubmitting(false);
+          return;
+        }
+
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: form.responsible_email.trim(),
+          password,
+          options: {
+            data: {
+              name: form.responsible_name,
+            },
+            emailRedirectTo: window.location.origin,
+          },
+        });
+
+        if (signUpError) {
+          if (signUpError.message.includes('already registered')) {
+            toast.error('Este e-mail já está cadastrado. Faça login primeiro.');
+          } else {
+            toast.error('Erro ao criar conta: ' + signUpError.message);
+          }
+          setSubmitting(false);
+          return;
+        }
+
+        userId = signUpData.user?.id;
+        if (!userId) {
+          toast.error('Erro ao criar conta. Tente novamente.');
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Submit onboarding request
+      const { error } = await onboardingTable()
+        .insert({ ...form, user_id: userId });
+      
+      if (error) throw error;
+
+      toast.success('Solicitação enviada com sucesso! Sua conta será analisada pela nossa equipe.');
+      
+      // Force refresh to show pending state
+      window.location.reload();
+    } catch (error: any) {
+      toast.error('Erro ao enviar solicitação: ' + error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  if (loadingRequest) {
+  if (loadingRequest && isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -229,7 +299,7 @@ export default function Onboarding() {
 
               <Separator />
 
-              {/* RESPONSÁVEL */}
+              {/* RESPONSÁVEL + CONTA */}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <User className="h-5 w-5 text-primary" />
@@ -242,8 +312,44 @@ export default function Onboarding() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="responsible_email">E-mail (será o login) *</Label>
-                    <Input id="responsible_email" type="email" required value={form.responsible_email} onChange={e => updateField('responsible_email', e.target.value)} placeholder="email@exemplo.com" />
+                    <Input 
+                      id="responsible_email" 
+                      type="email" 
+                      required 
+                      value={form.responsible_email} 
+                      onChange={e => updateField('responsible_email', e.target.value)} 
+                      placeholder="email@exemplo.com"
+                      disabled={isLoggedIn}
+                    />
                   </div>
+
+                  {/* Password field - only for public visitors */}
+                  {!isLoggedIn && (
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Senha de acesso *</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          id="password" 
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          minLength={6}
+                          value={password} 
+                          onChange={e => setPassword(e.target.value)} 
+                          placeholder="Mínimo 6 caracteres"
+                          className="pl-10 pr-10"
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => setShowPassword(!showPassword)} 
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="responsible_cpf">CPF</Label>
                     <Input id="responsible_cpf" value={form.responsible_cpf} onChange={e => updateField('responsible_cpf', e.target.value)} placeholder="000.000.000-00" />
@@ -407,9 +513,14 @@ export default function Onboarding() {
               <Separator />
 
               {/* Submit */}
-              <div className="flex justify-end">
-                <LoadingButton type="submit" loading={submitMutation.isPending} size="lg">
-                  Enviar Solicitação
+              <div className="flex flex-col items-end gap-2">
+                {!isLoggedIn && (
+                  <p className="text-xs text-muted-foreground">
+                    Ao enviar, uma conta será criada automaticamente com o e-mail e senha informados.
+                  </p>
+                )}
+                <LoadingButton type="submit" loading={submitting} size="lg">
+                  {isLoggedIn ? 'Enviar Solicitação' : 'Criar Conta e Enviar Solicitação'}
                 </LoadingButton>
               </div>
 

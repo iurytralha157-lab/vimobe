@@ -149,10 +149,12 @@ function AppRoutes() {
 
   const renderOnboardingRoute = () => {
     if (loading) return <PageLoader />;
-    if (user && profile && !profile.organization_id && !isSuperAdmin) {
-      return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
+    // If user is logged in and already has an org, redirect
+    if (user && profile && profile.organization_id) {
+      return <Navigate to={getDefaultRedirect()} replace />;
     }
-    return <Navigate to={getDefaultRedirect()} replace />;
+    // Otherwise show onboarding (works for both logged-in users without org AND public visitors)
+    return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
   };
 
   return (
