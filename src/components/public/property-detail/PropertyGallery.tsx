@@ -299,7 +299,7 @@ export default function PropertyGallery({
                     {/* Download Button */}
                     <button
                       onClick={() => handleDownload(img, index)}
-                      className="absolute bottom-20 left-8 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200 hover:scale-105"
+                      className="absolute bottom-20 left-4 sm:left-8 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200 hover:scale-105"
                       aria-label="Baixar imagem"
                     >
                       <Download className="w-5 h-5" />
