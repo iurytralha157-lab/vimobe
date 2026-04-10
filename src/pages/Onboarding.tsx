@@ -411,13 +411,8 @@ export default function Onboarding() {
 
               {/* Submit - Centralizado */}
               <div className="flex flex-col items-center gap-3 pt-2">
-                {!isLoggedIn && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Ao enviar, uma conta será criada automaticamente com o e-mail e senha informados.
-                  </p>
-                )}
                 <LoadingButton type="submit" loading={submitting} size="lg">
-                  {isLoggedIn ? 'Enviar Solicitação' : 'Criar Conta e Enviar Solicitação'}
+                  Enviar Solicitação
                 </LoadingButton>
               </div>
 
