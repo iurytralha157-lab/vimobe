@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, X, Images, Play, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Images, Play } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { downloadWithWatermark, getPositionClasses, WatermarkPosition } from '@/lib/watermark-utils';
+import { getPositionClasses, WatermarkPosition } from '@/lib/watermark-utils';
 
 interface PropertyGalleryProps {
   images: string[];
@@ -16,9 +16,9 @@ interface PropertyGalleryProps {
   watermarkPosition?: WatermarkPosition;
 }
 
-export default function PropertyGallery({ 
-  images, 
-  title, 
+export default function PropertyGallery({
+  images,
+  title,
   primaryColor = '#F97316',
   videoUrl,
   watermarkEnabled = false,
@@ -31,16 +31,15 @@ export default function PropertyGallery({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
-  // Embla carousel com transição suave e drag
-  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+  const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     dragFree: false,
     containScroll: 'trimSnaps',
     slidesToScroll: 1,
-    duration: 25, // Transição mais suave (maior = mais lento)
+    duration: 25,
   });
 
-  const [lightboxEmblaRef, lightboxEmblaApi] = useEmblaCarousel({ 
+  const [lightboxEmblaRef, lightboxEmblaApi] = useEmblaCarousel({
     loop: true,
     startIndex: currentIndex,
     duration: 20,
@@ -49,25 +48,22 @@ export default function PropertyGallery({
   const allMedia = images.filter(Boolean);
   const hasMultiple = allMedia.length > 1;
 
-  // Sync embla with currentIndex
   useEffect(() => {
-    if (emblaApi) {
-      emblaApi.on('select', () => {
-        setCurrentIndex(emblaApi.selectedScrollSnap());
-      });
-    }
+    if (!emblaApi) return;
+
+    const onSelect = () => setCurrentIndex(emblaApi.selectedScrollSnap());
+    emblaApi.on('select', onSelect);
+    onSelect();
   }, [emblaApi]);
 
-  // Sync lightbox embla
   useEffect(() => {
-    if (lightboxEmblaApi) {
-      lightboxEmblaApi.on('select', () => {
-        setCurrentIndex(lightboxEmblaApi.selectedScrollSnap());
-      });
-    }
+    if (!lightboxEmblaApi) return;
+
+    const onSelect = () => setCurrentIndex(lightboxEmblaApi.selectedScrollSnap());
+    lightboxEmblaApi.on('select', onSelect);
+    onSelect();
   }, [lightboxEmblaApi]);
 
-  // Scroll to index when lightbox opens
   useEffect(() => {
     if (lightboxOpen && lightboxEmblaApi) {
       lightboxEmblaApi.scrollTo(currentIndex, true);
@@ -75,22 +71,21 @@ export default function PropertyGallery({
   }, [lightboxOpen, lightboxEmblaApi, currentIndex]);
 
   const scrollPrev = useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
+    emblaApi?.scrollPrev();
   }, [emblaApi]);
 
   const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
+    emblaApi?.scrollNext();
   }, [emblaApi]);
 
   const lightboxScrollPrev = useCallback(() => {
-    if (lightboxEmblaApi) lightboxEmblaApi.scrollPrev();
+    lightboxEmblaApi?.scrollPrev();
   }, [lightboxEmblaApi]);
 
   const lightboxScrollNext = useCallback(() => {
-    if (lightboxEmblaApi) lightboxEmblaApi.scrollNext();
+    lightboxEmblaApi?.scrollNext();
   }, [lightboxEmblaApi]);
 
-  // Keyboard navigation
   useEffect(() => {
     if (!lightboxOpen) return;
 
@@ -104,7 +99,6 @@ export default function PropertyGallery({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxOpen, lightboxScrollPrev, lightboxScrollNext]);
 
-  // Extract YouTube video ID
   const getYouTubeId = (url: string) => {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/);
     return match ? match[1] : null;
@@ -112,86 +106,70 @@ export default function PropertyGallery({
 
   const youtubeId = videoUrl ? getYouTubeId(videoUrl) : null;
 
-  const handleDownload = async (imageUrl: string, index: number) => {
-    const filename = `${title.replace(/[^a-zA-Z0-9]/g, '-')}-${index + 1}.jpg`;
-    if (watermarkEnabled && watermarkUrl) {
-      await downloadWithWatermark(imageUrl, watermarkUrl, watermarkOpacity, filename, watermarkSize);
-    } else {
-      // Direct download without watermark
-      const a = document.createElement('a');
-      a.href = imageUrl;
-      a.download = filename;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  };
+  void primaryColor;
+
   if (allMedia.length === 0) {
     return (
-      <div className="w-full h-[300px] md:h-[400px] bg-gray-200 flex items-center justify-center">
-        <Images className="w-16 h-16 text-gray-400" />
+      <div className="flex h-[300px] w-full items-center justify-center bg-gray-200 md:h-[400px]">
+        <Images className="h-16 w-16 text-gray-400" />
       </div>
     );
   }
 
   return (
     <>
-      {/* Fullwidth Gallery Carousel with Embla */}
       <div className="relative w-full">
-        <div className="relative h-[300px] md:h-[450px] lg:h-[550px] overflow-hidden">
+        <div className="relative h-[300px] overflow-hidden md:h-[450px] lg:h-[550px]">
           {showVideo && youtubeId ? (
-            <div className="w-full h-full bg-black flex items-center justify-center">
+            <div className="flex h-full w-full items-center justify-center bg-black">
               <iframe
                 src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1`}
                 title="Video do imóvel"
-                className="w-full h-full max-w-4xl"
+                className="h-full w-full max-w-4xl"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
               <button
                 onClick={() => setShowVideo(false)}
-                className="absolute top-4 right-4 bg-black/70 hover:bg-black/90 text-white p-2 rounded-full shadow-lg transition-all z-10"
+                className="absolute right-4 top-4 z-10 rounded-full bg-black/70 p-2 text-white shadow-lg transition-all hover:bg-black/90"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           ) : (
             <>
-              {/* Embla Carousel */}
-              <div className="overflow-hidden h-full cursor-grab active:cursor-grabbing" ref={emblaRef}>
+              <div className="h-full overflow-hidden cursor-grab active:cursor-grabbing" ref={emblaRef}>
                 <div className="flex h-full">
                   {allMedia.map((img, index) => (
                     <div
                       key={index}
-                      className="flex-[0_0_50%] md:flex-[0_0_25%] min-w-0 h-full px-px"
+                      className="h-full min-w-0 flex-[0_0_50%] px-px md:flex-[0_0_25%]"
                     >
                       <button
                         onClick={() => {
                           setCurrentIndex(index);
                           setLightboxOpen(true);
                         }}
-                        className="w-full h-full cursor-zoom-in overflow-hidden relative group"
+                        className="group relative h-full w-full cursor-zoom-in overflow-hidden"
                       >
                         <img
                           src={img}
                           alt={`${title} - Foto ${index + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-                        
-                        {/* Watermark Overlay */}
+                        <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
+
                         {watermarkEnabled && watermarkUrl && (
-                          <div 
+                          <div
                             className={`absolute pointer-events-none select-none ${getPositionClasses(watermarkPosition)}`}
                             style={{ opacity: watermarkOpacity / 100 }}
                           >
-                            <img 
-                              src={watermarkUrl} 
+                            <img
+                              src={watermarkUrl}
                               alt=""
-                              style={{ 
+                              style={{
                                 maxHeight: `${Math.max(20, watermarkSize * 0.3)}px`,
-                                maxWidth: `${Math.max(40, watermarkSize * 0.8)}px`
+                                maxWidth: `${Math.max(40, watermarkSize * 0.8)}px`,
                               }}
                               className="object-contain drop-shadow-lg"
                               draggable={false}
@@ -204,48 +182,44 @@ export default function PropertyGallery({
                 </div>
               </div>
 
-              {/* Navigation Arrows */}
               {hasMultiple && (
                 <>
                   <button
                     onClick={scrollPrev}
-                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all duration-200 z-10 hover:scale-105 active:scale-95"
+                    className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-3 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-white active:scale-95 md:left-4 md:p-4"
                     aria-label="Fotos anteriores"
                   >
-                    <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
+                    <ChevronLeft className="h-5 w-5 text-gray-800 md:h-6 md:w-6" />
                   </button>
                   <button
                     onClick={scrollNext}
-                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-3 md:p-4 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all duration-200 z-10 hover:scale-105 active:scale-95"
+                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/90 p-3 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-white active:scale-95 md:right-4 md:p-4"
                     aria-label="Próximas fotos"
                   >
-                    <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
+                    <ChevronRight className="h-5 w-5 text-gray-800 md:h-6 md:w-6" />
                   </button>
                 </>
               )}
 
-              {/* Counter Badge */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm font-medium flex items-center gap-2">
-                <Images className="w-4 h-4" />
+              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                <Images className="h-4 w-4" />
                 {currentIndex + 1} / {allMedia.length}
               </div>
 
-              {/* View All Button */}
               <button
                 onClick={() => setLightboxOpen(true)}
-                className="absolute bottom-4 right-4 bg-white/95 hover:bg-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all duration-200 hover:scale-105"
+                className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-medium shadow-lg transition-all duration-200 hover:scale-105 hover:bg-white"
               >
-                <Images className="w-4 h-4" />
+                <Images className="h-4 w-4" />
                 Ver todas
               </button>
 
-              {/* Video Button */}
               {youtubeId && (
                 <button
                   onClick={() => setShowVideo(true)}
-                  className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-lg transition-all duration-200"
+                  className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:bg-red-700"
                 >
-                  <Play className="w-4 h-4" />
+                  <Play className="h-4 w-4" />
                   Ver Vídeo
                 </button>
               )}
@@ -254,94 +228,94 @@ export default function PropertyGallery({
         </div>
       </div>
 
-      {/* Lightbox Dialog with Embla */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-[100vw] max-h-[100vh] sm:max-w-[95vw] sm:max-h-[95vh] w-screen h-screen sm:w-auto sm:h-auto p-0 bg-black/95 border-0 rounded-none sm:rounded-lg [&>button]:hidden">
-          <button
-            onClick={() => setLightboxOpen(false)}
-            className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-            aria-label="Fechar"
-          >
-            <X className="w-6 h-6" />
-          </button>
+        <DialogContent className="!left-0 !top-0 !translate-x-0 !translate-y-0 h-[100dvh] w-screen max-h-none max-w-none overflow-hidden rounded-none border-0 bg-black/95 p-0 [&>button]:hidden sm:!left-1/2 sm:!top-1/2 sm:!h-[95vh] sm:!w-[95vw] sm:!max-h-[95vh] sm:!max-w-[95vw] sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-2xl">
+          <div className="relative flex h-full w-full flex-col overflow-hidden bg-black/95">
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute right-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
 
-          <div className="relative w-full h-[100dvh] sm:h-[90vh] flex flex-col items-center justify-center">
-            {/* Lightbox Embla Carousel */}
-            <div className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing" ref={lightboxEmblaRef}>
-              <div className="flex h-full items-center">
-                {allMedia.map((img, index) => (
-                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-2 sm:p-4 relative">
-                    <img
-                      src={img}
-                      alt={`${title} - Foto ${index + 1}`}
-                      className="max-w-full max-h-full object-contain"
-                    />
-                    
-                    {/* Watermark Overlay in Lightbox */}
-                    {watermarkEnabled && watermarkUrl && (
-                      <div 
-                        className={`absolute pointer-events-none select-none ${getPositionClasses(watermarkPosition)}`}
-                        style={{ opacity: watermarkOpacity / 100 }}
-                      >
-                        <img 
-                          src={watermarkUrl} 
-                          alt=""
-                          style={{ 
-                            maxHeight: `${Math.max(30, watermarkSize * 0.5)}px`,
-                            maxWidth: `${Math.max(60, watermarkSize * 1.2)}px`
-                          }}
-                          className="object-contain drop-shadow-lg"
-                          draggable={false}
-                        />
-                      </div>
-                    )}
-                    
-                    {/* Download Button */}
-                    <button
-                      onClick={() => handleDownload(img, index)}
-                      className="absolute bottom-20 left-4 sm:left-8 p-3 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all duration-200 hover:scale-105"
-                      aria-label="Baixar imagem"
-                    >
-                      <Download className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
+            <div className="relative flex-1 overflow-hidden px-3 pb-24 pt-14 sm:px-6 sm:pb-32 sm:pt-6">
+              <div className="h-full overflow-hidden" ref={lightboxEmblaRef}>
+                <div className="flex h-full items-center">
+                  {allMedia.map((img, index) => (
+                    <div key={index} className="relative flex h-full min-w-0 flex-[0_0_100%] items-center justify-center">
+                      <img
+                        src={img}
+                        alt={`${title} - Foto ${index + 1}`}
+                        className="max-h-full max-w-full object-contain"
+                      />
+
+                      {watermarkEnabled && watermarkUrl && (
+                        <div
+                          className={`absolute pointer-events-none select-none ${getPositionClasses(watermarkPosition)}`}
+                          style={{ opacity: watermarkOpacity / 100 }}
+                        >
+                          <img
+                            src={watermarkUrl}
+                            alt=""
+                            style={{
+                              maxHeight: `${Math.max(30, watermarkSize * 0.5)}px`,
+                              maxWidth: `${Math.max(60, watermarkSize * 1.2)}px`,
+                            }}
+                            className="object-contain drop-shadow-lg"
+                            draggable={false}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {hasMultiple && (
+                <>
+                  <button
+                    onClick={lightboxScrollPrev}
+                    className="absolute left-3 top-1/2 z-40 -translate-y-1/2 rounded-full bg-black/45 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60 sm:left-4 sm:p-3"
+                    aria-label="Imagem anterior"
+                  >
+                    <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                  <button
+                    onClick={lightboxScrollNext}
+                    className="absolute right-3 top-1/2 z-40 -translate-y-1/2 rounded-full bg-black/45 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60 sm:right-4 sm:p-3"
+                    aria-label="Próxima imagem"
+                  >
+                    <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                </>
+              )}
             </div>
 
-            {hasMultiple && (
-              <>
-                <button
-                  onClick={lightboxScrollPrev}
-                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
-                >
-                  <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
-                </button>
-                <button
-                  onClick={lightboxScrollNext}
-                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
-                >
-                  <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
-                </button>
-              </>
-            )}
+            <div className="absolute inset-x-0 bottom-0 z-40 flex flex-col gap-3 bg-gradient-to-t from-black via-black/92 to-transparent px-3 pb-4 pt-10 sm:px-4 sm:pb-5">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm sm:text-sm">
+                  {currentIndex + 1} / {allMedia.length}
+                </div>
+              </div>
 
-            {/* Thumbnail strip in lightbox */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-xl backdrop-blur-sm max-w-[90vw] overflow-x-auto">
-              {allMedia.map((img, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    lightboxEmblaApi?.scrollTo(index);
-                  }}
-                  className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden transition-all duration-200 ${
-                    index === currentIndex ? 'ring-2 ring-white scale-105' : 'opacity-50 hover:opacity-100'
-                  }`}
-                >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
+              <div className="mx-auto flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white/10 p-2 backdrop-blur-sm">
+                {allMedia.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setCurrentIndex(index);
+                      lightboxEmblaApi?.scrollTo(index);
+                    }}
+                    className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl transition-all duration-200 sm:h-16 sm:w-16 ${
+                      index === currentIndex ? 'opacity-100 ring-2 ring-white' : 'opacity-60'
+                    }`}
+                    aria-label={`Abrir foto ${index + 1}`}
+                  >
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </DialogContent>
