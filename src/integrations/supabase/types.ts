@@ -2858,12 +2858,18 @@ export type Database = {
           banner_url: string | null
           cnpj: string | null
           company_address: string | null
+          company_city: string | null
+          company_complement: string | null
           company_email: string | null
           company_name: string
+          company_neighborhood: string | null
+          company_number: string | null
           company_phone: string | null
           company_whatsapp: string | null
           created_at: string | null
+          custom_domain: string | null
           facebook: string | null
+          favicon_url: string | null
           id: string
           instagram: string | null
           linkedin: string | null
@@ -2892,12 +2898,18 @@ export type Database = {
           banner_url?: string | null
           cnpj?: string | null
           company_address?: string | null
+          company_city?: string | null
+          company_complement?: string | null
           company_email?: string | null
           company_name: string
+          company_neighborhood?: string | null
+          company_number?: string | null
           company_phone?: string | null
           company_whatsapp?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           facebook?: string | null
+          favicon_url?: string | null
           id?: string
           instagram?: string | null
           linkedin?: string | null
@@ -2926,12 +2938,18 @@ export type Database = {
           banner_url?: string | null
           cnpj?: string | null
           company_address?: string | null
+          company_city?: string | null
+          company_complement?: string | null
           company_email?: string | null
           company_name?: string
+          company_neighborhood?: string | null
+          company_number?: string | null
           company_phone?: string | null
           company_whatsapp?: string | null
           created_at?: string | null
+          custom_domain?: string | null
           facebook?: string | null
+          favicon_url?: string | null
           id?: string
           instagram?: string | null
           linkedin?: string | null
