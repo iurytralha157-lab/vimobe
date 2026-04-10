@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useFeaturedProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
+import { useFeaturedProperties, useExclusiveProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
 import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle, CheckCircle2 } from "lucide-react";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
   const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
+  const { data: exclusiveProperties = [] } = useExclusiveProperties(organizationId);
   const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
   const allProperties = allPropertiesData?.properties || [];
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
@@ -356,8 +357,8 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* Featured Properties Section */}
-      {featuredProperties.length > 0 && (
+      {/* Exclusive Properties Section */}
+      {exclusiveProperties.length > 0 && (
         <section className="py-20" style={{ backgroundColor: altBg }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -369,6 +370,72 @@ export default function PublicHome() {
               </span>
               <h2 className="text-3xl md:text-4xl font-light mt-2" style={{ color: sectionTextColor }}>
                 Descubra Imóveis que Definem o Conceito de Luxo
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {exclusiveProperties.map((property) => (
+                <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
+                  <PublicPropertyCard
+                    property={property}
+                    primaryColor={primaryColor}
+                    cardColor={siteConfig?.card_color}
+                    textColor={textColor}
+                    isFavorited={isFavorite(property.id)}
+                    onToggleFavorite={toggleFavorite}
+                    watermarkConfig={siteConfig?.watermark_enabled ? {
+                      enabled: true,
+                      logoUrl: siteConfig?.watermark_logo_url || siteConfig?.logo_url || undefined,
+                      position: siteConfig?.watermark_position,
+                      opacity: siteConfig?.watermark_opacity,
+                      size: siteConfig?.watermark_size,
+                    } : null}
+                  />
+                </Link>
+              ))}
+            </div>
+
+            <div className="text-center mt-12">
+              <Link to={getHref("imoveis")}>
+                <Button 
+                  variant="outline" 
+                  className="border-2 px-8 py-6 text-sm tracking-wider rounded-full"
+                  style={{ 
+                    borderColor: primaryColor, 
+                    color: primaryColor,
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = primaryColor;
+                    e.currentTarget.style.color = 'white';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = primaryColor;
+                  }}
+                >
+                  VER TODOS OS IMÓVEIS
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Featured Properties Section */}
+      {featuredProperties.length > 0 && (
+        <section className="py-20" style={{ backgroundColor: isDarkTheme ? backgroundColor : '#FFFFFF' }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <span 
+                className="text-sm font-semibold uppercase tracking-wider"
+                style={{ color: accentColor }}
+              >
+                Destaques
+              </span>
+              <h2 className="text-3xl md:text-4xl font-light mt-2" style={{ color: sectionTextColor }}>
+                Imóveis em Destaque
               </h2>
             </div>
 

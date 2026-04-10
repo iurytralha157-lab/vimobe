@@ -213,6 +213,29 @@ export function useFeaturedProperties(organizationId: string | null) {
   });
 }
 
+export function useExclusiveProperties(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['public-exclusive-properties', organizationId],
+    queryFn: async () => {
+      if (!organizationId) return [];
+
+      const params = new URLSearchParams({
+        organization_id: organizationId,
+        endpoint: 'exclusive',
+      });
+
+      const response = await fetch(
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-data?${params.toString()}`
+      );
+
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.properties as PublicProperty[];
+    },
+    enabled: !!organizationId,
+  });
+}
+
 export function usePropertyTypes(organizationId: string | null) {
   return useQuery({
     queryKey: ['public-property-types', organizationId],
