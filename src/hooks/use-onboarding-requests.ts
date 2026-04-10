@@ -41,6 +41,9 @@ export interface OnboardingRequest extends OnboardingRequestData {
   updated_at: string;
 }
 
+// Helper to get typed access to the table (not in generated types yet)
+const onboardingTable = () => (supabase as any).from('onboarding_requests');
+
 // Check if current user has a pending onboarding request
 export function useMyOnboardingRequest() {
   const { user } = useAuth();
@@ -48,8 +51,7 @@ export function useMyOnboardingRequest() {
     queryKey: ['my-onboarding-request', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data, error } = await supabase
-        .from('onboarding_requests')
+      const { data, error } = await onboardingTable()
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -70,8 +72,7 @@ export function useSubmitOnboardingRequest() {
   return useMutation({
     mutationFn: async (data: OnboardingRequestData) => {
       if (!user) throw new Error('Usuário não autenticado');
-      const { error } = await supabase
-        .from('onboarding_requests')
+      const { error } = await onboardingTable()
         .insert({ ...data, user_id: user.id });
       if (error) throw error;
     },
@@ -79,7 +80,7 @@ export function useSubmitOnboardingRequest() {
       toast.success('Solicitação enviada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['my-onboarding-request'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('Erro ao enviar solicitação: ' + error.message);
     },
   });
@@ -90,8 +91,7 @@ export function useAllOnboardingRequests() {
   return useQuery({
     queryKey: ['admin-onboarding-requests'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('onboarding_requests')
+      const { data, error } = await onboardingTable()
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -105,21 +105,20 @@ export function useUpdateOnboardingRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { id: string; status: string; admin_notes?: string }) => {
-      const { error } = await supabase
-        .from('onboarding_requests')
+    mutationFn: async (params: { id: string; status: string; admin_notes?: string }) => {
+      const { error } = await onboardingTable()
         .update({
-          status: data.status,
-          admin_notes: data.admin_notes,
+          status: params.status,
+          admin_notes: params.admin_notes,
           reviewed_at: new Date().toISOString(),
         })
-        .eq('id', data.id);
+        .eq('id', params.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-onboarding-requests'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('Erro: ' + error.message);
     },
   });
