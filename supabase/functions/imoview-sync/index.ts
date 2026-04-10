@@ -310,6 +310,7 @@ Deno.serve(async (req) => {
               fotos,
               latitude: parseFloat(item.latitude) || null,
               longitude: parseFloat(item.longitude) || null,
+              exclusividade: String(item.exclusividade || item.exclusivo || "").toLowerCase() === "sim" ? true : false,
             };
 
             const { error: upsertError } = await supabase
