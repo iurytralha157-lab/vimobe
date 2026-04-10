@@ -286,7 +286,7 @@ export default function PropertyLocation({
             setLocation({ 
               lat: latitude!, 
               lon: longitude!, 
-              precision: numero ? 'street' : 'street'
+              precision: 'street'
             });
             setGeocodeAttempted(true);
           }
