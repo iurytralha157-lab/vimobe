@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,10 +73,11 @@ export default function Onboarding() {
   }, [systemSettings, resolvedTheme]);
 
   // If user already has org, redirect
-  if (profile?.organization_id) {
-    navigate('/dashboard');
-    return null;
-  }
+  useEffect(() => {
+    if (profile?.organization_id) {
+      navigate('/dashboard');
+    }
+  }, [profile, navigate]);
 
   const updateField = (field: keyof OnboardingRequestData, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
