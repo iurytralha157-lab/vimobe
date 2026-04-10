@@ -5,28 +5,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Building2, User, Palette, Globe, Share2, Users, CheckCircle2, Upload, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
+import { Building2, User, Palette, Globe, Share2, CheckCircle2, Upload, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
 import { useMyOnboardingRequest, OnboardingRequestData } from '@/hooks/use-onboarding-requests';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
+import { maskCNPJ, maskCPF, maskPhone } from '@/lib/masks';
 
-const SEGMENTS = [
-  { value: 'imobiliario', label: 'Imobiliário' },
-  { value: 'vendas', label: 'Vendas' },
-  { value: 'servicos', label: 'Serviços' },
-  { value: 'tecnologia', label: 'Tecnologia' },
-  { value: 'saude', label: 'Saúde' },
-  { value: 'educacao', label: 'Educação' },
-  { value: 'outros', label: 'Outros' },
-];
-
-// Helper to get typed access to the table (not in generated types yet)
 const onboardingTable = () => (supabase as any).from('onboarding_requests');
 
 export default function Onboarding() {
@@ -37,17 +25,19 @@ export default function Onboarding() {
   const { resolvedTheme } = useTheme();
   
   const [logoUploading, setLogoUploading] = useState(false);
-  const [bannerUploading, setBannerUploading] = useState(false);
+  const [faviconUploading, setFaviconUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // Auth fields for public visitors
   const [password, setPassword] = useState('');
 
   const [form, setForm] = useState<OnboardingRequestData>({
     company_name: '',
     cnpj: '',
     company_address: '',
+    company_city: '',
+    company_neighborhood: '',
+    company_number: '',
+    company_complement: '',
     company_phone: '',
     company_whatsapp: '',
     company_email: '',
@@ -57,18 +47,15 @@ export default function Onboarding() {
     responsible_cpf: '',
     responsible_phone: '',
     logo_url: '',
+    favicon_url: '',
     primary_color: '#3b82f6',
     secondary_color: '',
     site_title: '',
-    site_seo_description: '',
-    about_text: '',
-    banner_url: '',
-    banner_title: '',
+    custom_domain: '',
     instagram: '',
     facebook: '',
     youtube: '',
     linkedin: '',
-    team_size: '1-5',
   });
 
   const isLoggedIn = !!user;
@@ -81,7 +68,6 @@ export default function Onboarding() {
     return preferredUrl || systemSettings.logo_url_light || systemSettings.logo_url_dark;
   }, [systemSettings, resolvedTheme]);
 
-  // If user already has org, redirect
   useEffect(() => {
     if (profile?.organization_id) {
       navigate('/dashboard');
@@ -92,8 +78,8 @@ export default function Onboarding() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = async (file: File, field: 'logo_url' | 'banner_url') => {
-    const setUploading = field === 'logo_url' ? setLogoUploading : setBannerUploading;
+  const handleFileUpload = async (file: File, field: 'logo_url' | 'favicon_url') => {
+    const setUploading = field === 'logo_url' ? setLogoUploading : setFaviconUploading;
     setUploading(true);
     try {
       const uniqueId = user?.id || crypto.randomUUID();
@@ -105,7 +91,7 @@ export default function Onboarding() {
       updateField(field, publicUrl);
     } catch (err: any) {
       console.error('Upload error:', err);
-      toast.error('Erro ao enviar arquivo');
+      toast.error('Erro ao enviar arquivo: ' + (err.message || 'tente novamente'));
     } finally {
       setUploading(false);
     }
@@ -122,7 +108,6 @@ export default function Onboarding() {
     try {
       let userId = user?.id;
 
-      // If not logged in, create account first
       if (!isLoggedIn) {
         if (!password || password.length < 6) {
           toast.error('A senha deve ter pelo menos 6 caracteres');
@@ -134,9 +119,7 @@ export default function Onboarding() {
           email: form.responsible_email.trim(),
           password,
           options: {
-            data: {
-              name: form.responsible_name,
-            },
+            data: { name: form.responsible_name },
             emailRedirectTo: window.location.origin,
           },
         });
@@ -159,15 +142,12 @@ export default function Onboarding() {
         }
       }
 
-      // Submit onboarding request
       const { error } = await onboardingTable()
         .insert({ ...form, user_id: userId });
       
       if (error) throw error;
 
       toast.success('Solicitação enviada com sucesso! Sua conta será analisada pela nossa equipe.');
-      
-      // Force refresh to show pending state
       window.location.reload();
     } catch (error: any) {
       toast.error('Erro ao enviar solicitação: ' + error.message);
@@ -184,11 +164,10 @@ export default function Onboarding() {
     );
   }
 
-  // If already submitted, show pending status
   if (existingRequest) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4">
-        <Card className="max-w-md w-full border-border/50 shadow-soft">
+        <Card className="max-w-md w-full border-border/50">
           <CardContent className="pt-8 pb-8 text-center">
             {existingRequest.status === 'pending' && (
               <>
@@ -197,7 +176,7 @@ export default function Onboarding() {
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Solicitação em Análise</h2>
                 <p className="text-muted-foreground">
-                  Sua solicitação de cadastro foi enviada e está sendo analisada pela nossa equipe. Você será notificado assim que for aprovada.
+                  Sua solicitação de cadastro foi enviada e está sendo analisada pela nossa equipe.
                 </p>
               </>
             )}
@@ -207,9 +186,7 @@ export default function Onboarding() {
                   <Building2 className="h-8 w-8 text-destructive" />
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Solicitação Não Aprovada</h2>
-                <p className="text-muted-foreground mb-2">
-                  Infelizmente sua solicitação não foi aprovada.
-                </p>
+                <p className="text-muted-foreground mb-2">Infelizmente sua solicitação não foi aprovada.</p>
                 {existingRequest.admin_notes && (
                   <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3 mt-3">
                     <strong>Observação:</strong> {existingRequest.admin_notes}
@@ -223,9 +200,7 @@ export default function Onboarding() {
                   <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Conta Aprovada!</h2>
-                <p className="text-muted-foreground mb-4">
-                  Sua conta foi aprovada. Redirecionando...
-                </p>
+                <p className="text-muted-foreground mb-4">Sua conta foi aprovada. Redirecionando...</p>
                 <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
               </>
             )}
@@ -243,7 +218,7 @@ export default function Onboarding() {
           {logoUrl ? (
             <img src={logoUrl} alt="Logo" className="h-10 object-contain" />
           ) : (
-            <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center shadow-glow">
+            <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center">
               <Building2 className="h-6 w-6 text-primary-foreground" />
             </div>
           )}
@@ -251,7 +226,7 @@ export default function Onboarding() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <Card className="border-border/50 shadow-soft">
+          <Card className="border-border/50">
             <CardContent className="p-6 md:p-8 space-y-8">
               
               {/* DADOS DA EMPRESA */}
@@ -267,32 +242,39 @@ export default function Onboarding() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cnpj">CNPJ</Label>
-                    <Input id="cnpj" value={form.cnpj} onChange={e => updateField('cnpj', e.target.value)} placeholder="00.000.000/0000-00" />
+                    <Input id="cnpj" value={form.cnpj} onChange={e => updateField('cnpj', maskCNPJ(e.target.value))} placeholder="12.345.678/0001-95" />
                   </div>
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="company_address">Endereço Completo</Label>
-                    <Input id="company_address" value={form.company_address} onChange={e => updateField('company_address', e.target.value)} placeholder="Rua, número, bairro, cidade - UF" />
+                    <Label htmlFor="company_address">Endereço (Rua/Avenida)</Label>
+                    <Input id="company_address" value={form.company_address} onChange={e => updateField('company_address', e.target.value)} placeholder="Rua, Avenida..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_number">Número</Label>
+                    <Input id="company_number" value={form.company_number} onChange={e => updateField('company_number', e.target.value)} placeholder="123" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_complement">Complemento</Label>
+                    <Input id="company_complement" value={form.company_complement} onChange={e => updateField('company_complement', e.target.value)} placeholder="Sala 01, Bloco A..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_neighborhood">Bairro</Label>
+                    <Input id="company_neighborhood" value={form.company_neighborhood} onChange={e => updateField('company_neighborhood', e.target.value)} placeholder="Bairro" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_city">Cidade / UF</Label>
+                    <Input id="company_city" value={form.company_city} onChange={e => updateField('company_city', e.target.value)} placeholder="São Paulo - SP" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="company_phone">Telefone Comercial</Label>
-                    <Input id="company_phone" value={form.company_phone} onChange={e => updateField('company_phone', e.target.value)} placeholder="(00) 0000-0000" />
+                    <Input id="company_phone" value={form.company_phone} onChange={e => updateField('company_phone', maskPhone(e.target.value))} placeholder="(00) 0000-0000" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="company_whatsapp">WhatsApp da Empresa</Label>
-                    <Input id="company_whatsapp" value={form.company_whatsapp} onChange={e => updateField('company_whatsapp', e.target.value)} placeholder="(00) 00000-0000" />
+                    <Input id="company_whatsapp" value={form.company_whatsapp} onChange={e => updateField('company_whatsapp', maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="company_email">E-mail Institucional</Label>
                     <Input id="company_email" type="email" value={form.company_email} onChange={e => updateField('company_email', e.target.value)} placeholder="contato@empresa.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="segment">Segmento de Atuação</Label>
-                    <Select value={form.segment} onValueChange={v => updateField('segment', v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {SEGMENTS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
               </section>
@@ -323,7 +305,6 @@ export default function Onboarding() {
                     />
                   </div>
 
-                  {/* Password field - only for public visitors */}
                   {!isLoggedIn && (
                     <div className="space-y-2">
                       <Label htmlFor="password">Senha de acesso *</Label>
@@ -352,59 +333,11 @@ export default function Onboarding() {
 
                   <div className="space-y-2">
                     <Label htmlFor="responsible_cpf">CPF</Label>
-                    <Input id="responsible_cpf" value={form.responsible_cpf} onChange={e => updateField('responsible_cpf', e.target.value)} placeholder="000.000.000-00" />
+                    <Input id="responsible_cpf" value={form.responsible_cpf} onChange={e => updateField('responsible_cpf', maskCPF(e.target.value))} placeholder="000.000.000-00" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="responsible_phone">Celular/WhatsApp</Label>
-                    <Input id="responsible_phone" value={form.responsible_phone} onChange={e => updateField('responsible_phone', e.target.value)} placeholder="(00) 00000-0000" />
-                  </div>
-                </div>
-              </section>
-
-              <Separator />
-
-              {/* IDENTIDADE VISUAL */}
-              <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <Palette className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold">Identidade Visual</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Logotipo (PNG, fundo transparente, mín. 500px)</Label>
-                    <div className="flex items-center gap-3">
-                      {form.logo_url ? (
-                        <img src={form.logo_url} alt="Logo" className="h-12 w-auto object-contain rounded border bg-muted p-1" />
-                      ) : (
-                        <div className="h-12 w-12 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center">
-                          <Upload className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-                      <label className="cursor-pointer">
-                        <Button type="button" variant="outline" size="sm" disabled={logoUploading} asChild>
-                          <span>
-                            {logoUploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : 'Enviar Logo'}
-                          </span>
-                        </Button>
-                        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'logo_url'); }} />
-                      </label>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="primary_color">Cor Principal da Marca</Label>
-                      <div className="flex items-center gap-2">
-                        <input type="color" value={form.primary_color} onChange={e => updateField('primary_color', e.target.value)} className="h-10 w-10 rounded cursor-pointer border-0 p-0" />
-                        <Input id="primary_color" value={form.primary_color} onChange={e => updateField('primary_color', e.target.value)} placeholder="#FF6600" className="flex-1" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="secondary_color">Cor Secundária (opcional)</Label>
-                      <div className="flex items-center gap-2">
-                        <input type="color" value={form.secondary_color || '#000000'} onChange={e => updateField('secondary_color', e.target.value)} className="h-10 w-10 rounded cursor-pointer border-0 p-0" />
-                        <Input id="secondary_color" value={form.secondary_color} onChange={e => updateField('secondary_color', e.target.value)} placeholder="#333333" className="flex-1" />
-                      </div>
-                    </div>
+                    <Input id="responsible_phone" value={form.responsible_phone} onChange={e => updateField('responsible_phone', maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
                   </div>
                 </div>
               </section>
@@ -423,36 +356,67 @@ export default function Onboarding() {
                     <Input id="site_title" value={form.site_title} onChange={e => updateField('site_title', e.target.value)} placeholder='Ex: "Imóveis Premium – Seu novo lar"' />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="banner_title">Título do Banner</Label>
-                    <Input id="banner_title" value={form.banner_title} onChange={e => updateField('banner_title', e.target.value)} placeholder='Ex: "Encontre o imóvel dos seus sonhos"' />
+                    <Label htmlFor="custom_domain">Domínio Próprio</Label>
+                    <Input id="custom_domain" value={form.custom_domain} onChange={e => updateField('custom_domain', e.target.value)} placeholder="www.suaempresa.com.br" />
                   </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="site_seo_description">Descrição para SEO (até 160 caracteres)</Label>
-                    <Input id="site_seo_description" maxLength={160} value={form.site_seo_description} onChange={e => updateField('site_seo_description', e.target.value)} placeholder="Breve descrição da empresa para mecanismos de busca" />
-                    <p className="text-xs text-muted-foreground text-right">{(form.site_seo_description || '').length}/160</p>
-                  </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="about_text">Texto "Sobre Nós"</Label>
-                    <Textarea id="about_text" rows={4} value={form.about_text} onChange={e => updateField('about_text', e.target.value)} placeholder="Conte um pouco sobre sua empresa..." />
-                  </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label>Imagem do Banner Principal (JPG, mín. 1920x800px)</Label>
+
+                  {/* Logo */}
+                  <div className="space-y-2">
+                    <Label>Logotipo (PNG, fundo transparente)</Label>
                     <div className="flex items-center gap-3">
-                      {form.banner_url ? (
-                        <img src={form.banner_url} alt="Banner" className="h-16 w-auto object-cover rounded border" />
+                      {form.logo_url ? (
+                        <img src={form.logo_url} alt="Logo" className="h-12 w-auto object-contain rounded border bg-muted p-1" />
                       ) : (
-                        <div className="h-16 w-24 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center">
                           <Upload className="h-5 w-5 text-muted-foreground" />
                         </div>
                       )}
                       <label className="cursor-pointer">
-                        <Button type="button" variant="outline" size="sm" disabled={bannerUploading} asChild>
+                        <Button type="button" variant="outline" size="sm" disabled={logoUploading} asChild>
                           <span>
-                            {bannerUploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : 'Enviar Banner'}
+                            {logoUploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : 'Enviar Logo'}
                           </span>
                         </Button>
-                        <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'banner_url'); }} />
+                        <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'logo_url'); }} />
                       </label>
+                    </div>
+                  </div>
+
+                  {/* Favicon */}
+                  <div className="space-y-2">
+                    <Label>Favicon (ícone do site, 32x32 ou 64x64)</Label>
+                    <div className="flex items-center gap-3">
+                      {form.favicon_url ? (
+                        <img src={form.favicon_url} alt="Favicon" className="h-8 w-8 object-contain rounded border bg-muted p-1" />
+                      ) : (
+                        <div className="h-8 w-8 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center">
+                          <Upload className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <label className="cursor-pointer">
+                        <Button type="button" variant="outline" size="sm" disabled={faviconUploading} asChild>
+                          <span>
+                            {faviconUploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : 'Enviar Favicon'}
+                          </span>
+                        </Button>
+                        <input type="file" accept="image/png,image/ico,image/x-icon,image/svg+xml" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'favicon_url'); }} />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Cores */}
+                  <div className="space-y-2">
+                    <Label htmlFor="primary_color">Cor Principal da Marca</Label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={form.primary_color} onChange={e => updateField('primary_color', e.target.value)} className="h-10 w-10 rounded cursor-pointer border-0 p-0" />
+                      <Input id="primary_color" value={form.primary_color} onChange={e => updateField('primary_color', e.target.value)} placeholder="#FF6600" className="flex-1" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="secondary_color">Cor Secundária (opcional)</Label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={form.secondary_color || '#000000'} onChange={e => updateField('secondary_color', e.target.value)} className="h-10 w-10 rounded cursor-pointer border-0 p-0" />
+                      <Input id="secondary_color" value={form.secondary_color} onChange={e => updateField('secondary_color', e.target.value)} placeholder="#333333" className="flex-1" />
                     </div>
                   </div>
                 </div>
@@ -488,34 +452,10 @@ export default function Onboarding() {
 
               <Separator />
 
-              {/* CONFIGURAÇÃO */}
-              <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <Users className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold">Configuração</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="team_size">Quantos usuários pretende utilizar?</Label>
-                    <Select value={form.team_size} onValueChange={v => updateField('team_size', v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1-5">1-5 pessoas</SelectItem>
-                        <SelectItem value="6-20">6-20 pessoas</SelectItem>
-                        <SelectItem value="21-50">21-50 pessoas</SelectItem>
-                        <SelectItem value="50+">Mais de 50 pessoas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </section>
-
-              <Separator />
-
-              {/* Submit */}
-              <div className="flex flex-col items-end gap-2">
+              {/* Submit - Centralizado */}
+              <div className="flex flex-col items-center gap-3 pt-2">
                 {!isLoggedIn && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground text-center">
                     Ao enviar, uma conta será criada automaticamente com o e-mail e senha informados.
                   </p>
                 )}
