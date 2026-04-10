@@ -335,6 +335,7 @@ async function syncProperties(supabase: any, apiUrl: string, apiKey: string, org
           longitude: parseFloat(item.Longitude) || null,
           mobilia: parseMobilia(item.Mobiliado),
           seguro_incendio: null,
+          exclusividade: String(item.Exclusividade || item.ExclusividadeVenda || "").toLowerCase() === "sim" ? true : false,
         };
 
         let upsertError;
