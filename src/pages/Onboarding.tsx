@@ -27,8 +27,7 @@ export default function Onboarding() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [faviconUploading, setFaviconUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [password, setPassword] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   const [form, setForm] = useState<OnboardingRequestData>({
     company_name: '',
