@@ -9,6 +9,13 @@ interface ExecutionPayload {
   execution_id: string;
 }
 
+interface EvolutionConnectionState {
+  isConnected: boolean;
+  state: string | null;
+  raw: unknown;
+  status: number;
+}
+
 // Normalize phone number to international format (Brazil default)
 function normalizePhoneNumber(phone: string): string {
   // Remove all non-digits
@@ -32,6 +39,134 @@ function normalizePhoneNumber(phone: string): string {
   console.log(`Phone format unknown, returning as-is: ${digits}`);
   // Return as-is for other formats
   return digits;
+}
+
+async function getEvolutionConnectionState(
+  evolutionApiUrl: string,
+  evolutionApiKey: string,
+  instanceName: string
+): Promise<EvolutionConnectionState> {
+  const response = await fetch(`${evolutionApiUrl}/instance/connectionState/${instanceName}`, {
+    method: "GET",
+    headers: {
+      apikey: evolutionApiKey,
+    },
+  });
+
+  const rawText = await response.text();
+  let raw: unknown = rawText;
+
+  try {
+    raw = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    raw = rawText;
+  }
+
+  const state = typeof raw === "object" && raw !== null
+    ? ((raw as Record<string, unknown>).instance as Record<string, unknown> | undefined)?.state as string | undefined
+      || (raw as Record<string, unknown>).state as string | undefined
+      || null
+    : null;
+
+  return {
+    isConnected: state === "open" || state === "connected",
+    state,
+    raw,
+    status: response.status,
+  };
+}
+
+async function sendWhatsAppTextWithRecovery(
+  evolutionApiUrl: string,
+  evolutionApiKey: string,
+  instanceName: string,
+  number: string,
+  text: string
+) {
+  const endpoint = `${evolutionApiUrl}/message/sendText/${instanceName}`;
+
+  const sendOnce = async () => {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: evolutionApiKey,
+      },
+      body: JSON.stringify({ number, text }),
+    });
+
+    const rawText = await response.text();
+    let parsed: unknown = rawText;
+
+    try {
+      parsed = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      parsed = rawText;
+    }
+
+    return { response, rawText, parsed };
+  };
+
+  const firstAttempt = await sendOnce();
+
+  if (firstAttempt.response.ok) {
+    return firstAttempt.parsed;
+  }
+
+  const firstPayload = typeof firstAttempt.parsed === "string"
+    ? firstAttempt.parsed
+    : JSON.stringify(firstAttempt.parsed);
+
+  if (!firstPayload.includes("Connection Closed")) {
+    throw new Error(`Failed to send WhatsApp: ${firstPayload}`);
+  }
+
+  console.warn(`Transient Connection Closed while sending via ${instanceName}. Checking live status before failing.`);
+
+  const liveState = await getEvolutionConnectionState(evolutionApiUrl, evolutionApiKey, instanceName);
+  console.log("Live connection state before retry:", {
+    instanceName,
+    state: liveState.state,
+    status: liveState.status,
+    isConnected: liveState.isConnected,
+  });
+
+  if (!liveState.isConnected) {
+    throw new Error(
+      `Failed to send WhatsApp: ${JSON.stringify({
+        status: firstAttempt.response.status,
+        error: firstAttempt.response.statusText,
+        response: firstAttempt.parsed,
+        instance_name: instanceName,
+        connection_state: liveState.state,
+      })}`
+    );
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+
+  const retryAttempt = await sendOnce();
+
+  if (retryAttempt.response.ok) {
+    console.log(`WhatsApp send recovered after retry for instance ${instanceName}`);
+    return retryAttempt.parsed;
+  }
+
+  const retryPayload = typeof retryAttempt.parsed === "string"
+    ? retryAttempt.parsed
+    : JSON.stringify(retryAttempt.parsed);
+
+  throw new Error(
+    `Failed to send WhatsApp: ${JSON.stringify({
+      status: retryAttempt.response.status,
+      error: retryAttempt.response.statusText,
+      response: retryAttempt.parsed,
+      instance_name: instanceName,
+      connection_state: liveState.state,
+      retried: true,
+      first_attempt: firstAttempt.parsed,
+    })}`
+  );
 }
 
 Deno.serve(async (req) => {
@@ -515,28 +650,13 @@ async function processActionNode(
               { contact_name: lead.name, contact_phone: lead.phone }
             );
 
-            const response = await fetch(
-              `${evolutionApiUrl}/message/sendText/${session.instance_name}`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  apikey: evolutionApiKey,
-                },
-                body: JSON.stringify({
-                  number: normalizePhoneNumber(lead.phone),
-                  text: messageContent,
-                }),
-              }
+            const sendResult = await sendWhatsAppTextWithRecovery(
+              evolutionApiUrl,
+              evolutionApiKey,
+              session.instance_name,
+              normalizePhoneNumber(lead.phone),
+              messageContent
             );
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error("Error sending WhatsApp message:", errorText);
-              throw new Error(`Failed to send WhatsApp: ${errorText}`);
-            }
-
-            const sendResult = await response.json();
             const sentMessageId = sendResult?.key?.id || sendResult?.messageId || crypto.randomUUID();
             console.log("WhatsApp message sent successfully via configured session, messageId:", sentMessageId);
             
@@ -659,28 +779,13 @@ async function processActionNode(
           conversation
         );
 
-        const response = await fetch(
-          `${evolutionApiUrl}/message/sendText/${conversation.session.instance_name}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: evolutionApiKey,
-            },
-            body: JSON.stringify({
-              number: normalizePhoneNumber(conversation.contact_phone),
-              text: messageContent,
-            }),
-          }
+        const convSendResult = await sendWhatsAppTextWithRecovery(
+          evolutionApiUrl,
+          evolutionApiKey,
+          conversation.session.instance_name,
+          normalizePhoneNumber(conversation.contact_phone),
+          messageContent
         );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Error sending WhatsApp message:", errorText);
-          throw new Error(`Failed to send WhatsApp: ${errorText}`);
-        }
-
-        const convSendResult = await response.json();
         const convSentMsgId = convSendResult?.key?.id || convSendResult?.messageId || crypto.randomUUID();
         console.log("WhatsApp message sent successfully, messageId:", convSentMsgId);
         
