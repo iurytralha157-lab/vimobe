@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { Separator } from '@/components/ui/separator';
-import { Building2, User, Palette, Globe, Share2, CheckCircle2, Upload, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
+import { Building2, User, Palette, Globe, Share2, CheckCircle2, Upload, Loader2 } from 'lucide-react';
 import { useMyOnboardingRequest, OnboardingRequestData } from '@/hooks/use-onboarding-requests';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
@@ -27,8 +27,7 @@ export default function Onboarding() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [faviconUploading, setFaviconUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [password, setPassword] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   const [form, setForm] = useState<OnboardingRequestData>({
     company_name: '',
@@ -106,54 +105,15 @@ export default function Onboarding() {
 
     setSubmitting(true);
     try {
-      let userId = user?.id;
+      const { data, error } = await supabase.functions.invoke('submit-onboarding', {
+        body: form,
+      });
 
-      if (!isLoggedIn) {
-        if (!password || password.length < 6) {
-          toast.error('A senha deve ter pelo menos 6 caracteres');
-          setSubmitting(false);
-          return;
-        }
-
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: form.responsible_email.trim(),
-          password,
-          options: {
-            data: { name: form.responsible_name },
-            emailRedirectTo: window.location.origin,
-          },
-        });
-
-        if (signUpError) {
-          if (signUpError.message.includes('already registered')) {
-            toast.error('Este e-mail já está cadastrado. Faça login primeiro.');
-          } else {
-            toast.error('Erro ao criar conta: ' + signUpError.message);
-          }
-          setSubmitting(false);
-          return;
-        }
-
-        // Detect fake/duplicate user (Supabase returns empty identities for existing emails)
-        if (!signUpData.user?.id || (signUpData.user?.identities && signUpData.user.identities.length === 0)) {
-          toast.error('Este e-mail já está cadastrado. Faça login primeiro.');
-          setSubmitting(false);
-          return;
-        }
-
-        userId = signUpData.user.id;
-
-        // Wait briefly for user to propagate in auth.users
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      const { error } = await onboardingTable()
-        .insert({ ...form, user_id: userId });
-      
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      toast.success('Solicitação enviada com sucesso! Sua conta será analisada pela nossa equipe.');
-      window.location.reload();
+      toast.success('Solicitação enviada com sucesso! Nossa equipe entrará em contato.');
+      setSubmitted(true);
     } catch (error: any) {
       toast.error('Erro ao enviar solicitação: ' + error.message);
     } finally {
@@ -165,6 +125,24 @@ export default function Onboarding() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4">
+        <Card className="max-w-md w-full border-border/50">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/20 mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Solicitação Enviada!</h2>
+            <p className="text-muted-foreground">
+              Recebemos seus dados. Nossa equipe irá analisar e entrar em contato pelo e-mail informado.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -310,32 +288,6 @@ export default function Onboarding() {
                     />
                   </div>
 
-                  {!isLoggedIn && (
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Senha de acesso *</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="password" 
-                          type={showPassword ? 'text' : 'password'}
-                          required
-                          minLength={6}
-                          value={password} 
-                          onChange={e => setPassword(e.target.value)} 
-                          placeholder="Mínimo 6 caracteres"
-                          className="pl-10 pr-10"
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => setShowPassword(!showPassword)} 
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="space-y-2">
                     <Label htmlFor="responsible_cpf">CPF</Label>
                     <Input id="responsible_cpf" value={form.responsible_cpf} onChange={e => updateField('responsible_cpf', maskCPF(e.target.value))} placeholder="000.000.000-00" />
@@ -459,13 +411,8 @@ export default function Onboarding() {
 
               {/* Submit - Centralizado */}
               <div className="flex flex-col items-center gap-3 pt-2">
-                {!isLoggedIn && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Ao enviar, uma conta será criada automaticamente com o e-mail e senha informados.
-                  </p>
-                )}
                 <LoadingButton type="submit" loading={submitting} size="lg">
-                  {isLoggedIn ? 'Enviar Solicitação' : 'Criar Conta e Enviar Solicitação'}
+                  Enviar Solicitação
                 </LoadingButton>
               </div>
 
