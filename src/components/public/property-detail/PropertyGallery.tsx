@@ -270,7 +270,7 @@ export default function PropertyGallery({
             <div className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing" ref={lightboxEmblaRef}>
               <div className="flex h-full items-center">
                 {allMedia.map((img, index) => (
-                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-4 relative">
+                  <div key={index} className="flex-[0_0_100%] min-w-0 h-full flex items-center justify-center p-2 sm:p-4 relative">
                     <img
                       src={img}
                       alt={`${title} - Foto ${index + 1}`}
