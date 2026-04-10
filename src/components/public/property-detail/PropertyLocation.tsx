@@ -293,26 +293,8 @@ export default function PropertyLocation({
           return;
         }
 
-        // Priority 2: Full address with number → structured search for exact pin
-        if (endereco && numero && cidade) {
-          // Try structured geocoding first (more accurate for Brazilian addresses)
-          let result = await geocodeStructured(endereco, numero, cidade, uf || '', 'exact');
-          
-          // Fallback to simple search if structured fails
-          if (!result) {
-            const searchAddress = [endereco, numero, bairro, cidade, uf, 'Brasil'].filter(Boolean).join(', ');
-            result = await geocodeSimple(searchAddress, 'exact');
-          }
-          
-          if (result && isMounted) {
-            setLocation(result);
-            setGeocodeAttempted(true);
-            return;
-          }
-        }
-
-        // Priority 3: Street without number → street area
-        if (endereco && cidade && !numero) {
+        // Priority 2: Street geocoding (without number to protect exact location)
+        if (endereco && cidade) {
           let result = await geocodeStructured(endereco, null, cidade, uf || '', 'street');
           
           if (!result) {
