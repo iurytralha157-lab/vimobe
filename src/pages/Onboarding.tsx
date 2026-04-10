@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { Separator } from '@/components/ui/separator';
-import { Building2, User, Palette, Globe, Share2, CheckCircle2, Upload, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
+import { Building2, User, Palette, Globe, Share2, CheckCircle2, Upload, Loader2 } from 'lucide-react';
 import { useMyOnboardingRequest, OnboardingRequestData } from '@/hooks/use-onboarding-requests';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
