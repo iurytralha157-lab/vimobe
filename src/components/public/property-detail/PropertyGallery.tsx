@@ -313,15 +313,15 @@ export default function PropertyGallery({
               <>
                 <button
                   onClick={lightboxScrollPrev}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
                 >
-                  <ChevronLeft className="w-8 h-8" />
+                  <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
                 </button>
                 <button
                   onClick={lightboxScrollNext}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all duration-200 hover:scale-105"
                 >
-                  <ChevronRight className="w-8 h-8" />
+                  <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
                 </button>
               </>
             )}
