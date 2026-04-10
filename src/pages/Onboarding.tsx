@@ -106,54 +106,15 @@ export default function Onboarding() {
 
     setSubmitting(true);
     try {
-      let userId = user?.id;
+      const { data, error } = await supabase.functions.invoke('submit-onboarding', {
+        body: form,
+      });
 
-      if (!isLoggedIn) {
-        if (!password || password.length < 6) {
-          toast.error('A senha deve ter pelo menos 6 caracteres');
-          setSubmitting(false);
-          return;
-        }
-
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: form.responsible_email.trim(),
-          password,
-          options: {
-            data: { name: form.responsible_name },
-            emailRedirectTo: window.location.origin,
-          },
-        });
-
-        if (signUpError) {
-          if (signUpError.message.includes('already registered')) {
-            toast.error('Este e-mail já está cadastrado. Faça login primeiro.');
-          } else {
-            toast.error('Erro ao criar conta: ' + signUpError.message);
-          }
-          setSubmitting(false);
-          return;
-        }
-
-        // Detect fake/duplicate user (Supabase returns empty identities for existing emails)
-        if (!signUpData.user?.id || (signUpData.user?.identities && signUpData.user.identities.length === 0)) {
-          toast.error('Este e-mail já está cadastrado. Faça login primeiro.');
-          setSubmitting(false);
-          return;
-        }
-
-        userId = signUpData.user.id;
-
-        // Wait briefly for user to propagate in auth.users
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      const { error } = await onboardingTable()
-        .insert({ ...form, user_id: userId });
-      
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      toast.success('Solicitação enviada com sucesso! Sua conta será analisada pela nossa equipe.');
-      window.location.reload();
+      toast.success('Solicitação enviada com sucesso! Nossa equipe entrará em contato.');
+      setSubmitted(true);
     } catch (error: any) {
       toast.error('Erro ao enviar solicitação: ' + error.message);
     } finally {
