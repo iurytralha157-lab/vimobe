@@ -521,7 +521,7 @@ ${getWorkerCode()}`;
                         URL: <span className="font-mono">
                           {formData.custom_domain && site?.domain_verified
                             ? `https://${formData.custom_domain}`
-                            : `https://vimobe.lovable.app/sites/${formData.subdomain}`}
+                            : `https://vimob.vettercompany.com.br/sites/${formData.subdomain}`}
                         </span>
                       </p>
                     )}
