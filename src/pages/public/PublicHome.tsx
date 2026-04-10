@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useFeaturedProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
+import { useFeaturedProperties, useExclusiveProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
 import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle, CheckCircle2 } from "lucide-react";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
