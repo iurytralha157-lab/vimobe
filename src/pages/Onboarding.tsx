@@ -129,6 +129,24 @@ export default function Onboarding() {
     );
   }
 
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4">
+        <Card className="max-w-md w-full border-border/50">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/20 mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Solicitação Enviada!</h2>
+            <p className="text-muted-foreground">
+              Recebemos seus dados. Nossa equipe irá analisar e entrar em contato pelo e-mail informado.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (existingRequest) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/20 p-4">
