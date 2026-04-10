@@ -17,6 +17,7 @@ export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
   const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
+  const { data: exclusiveProperties = [] } = useExclusiveProperties(organizationId);
   const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
   const allProperties = allPropertiesData?.properties || [];
   const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
