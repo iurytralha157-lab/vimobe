@@ -52,8 +52,6 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { seedDemoProperties } from '@/lib/demo-properties';
 
 const STATUS_CONFIG: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive'; className?: string }> = {
   pending: { label: 'Pendente', variant: 'secondary' },
