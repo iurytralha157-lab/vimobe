@@ -256,7 +256,7 @@ export default function PropertyGallery({
 
       {/* Lightbox Dialog with Embla */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-0">
+        <DialogContent className="max-w-[100vw] max-h-[100vh] sm:max-w-[95vw] sm:max-h-[95vh] w-screen h-screen sm:w-auto sm:h-auto p-0 bg-black/95 border-0 rounded-none sm:rounded-lg [&>button]:hidden">
           <button
             onClick={() => setLightboxOpen(false)}
             className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -265,7 +265,7 @@ export default function PropertyGallery({
             <X className="w-6 h-6" />
           </button>
 
-          <div className="relative w-full h-[90vh] flex flex-col items-center justify-center">
+          <div className="relative w-full h-[100dvh] sm:h-[90vh] flex flex-col items-center justify-center">
             {/* Lightbox Embla Carousel */}
             <div className="overflow-hidden w-full h-full cursor-grab active:cursor-grabbing" ref={lightboxEmblaRef}>
               <div className="flex h-full items-center">
