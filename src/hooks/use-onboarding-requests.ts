@@ -7,6 +7,10 @@ export interface OnboardingRequestData {
   company_name: string;
   cnpj?: string;
   company_address?: string;
+  company_city?: string;
+  company_neighborhood?: string;
+  company_number?: string;
+  company_complement?: string;
   company_phone?: string;
   company_whatsapp?: string;
   company_email?: string;
@@ -16,9 +20,11 @@ export interface OnboardingRequestData {
   responsible_cpf?: string;
   responsible_phone?: string;
   logo_url?: string;
+  favicon_url?: string;
   primary_color?: string;
   secondary_color?: string;
   site_title?: string;
+  custom_domain?: string;
   site_seo_description?: string;
   about_text?: string;
   banner_url?: string;
