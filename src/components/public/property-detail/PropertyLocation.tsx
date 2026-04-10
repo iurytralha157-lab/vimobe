@@ -282,13 +282,13 @@ export default function PropertyLocation({
     
     const loadCoordinates = async () => {
       try {
-        // Priority 1: Use existing exact coordinates
+        // Priority 1: Use existing coordinates (street precision to hide exact location)
         if (hasExistingCoordinates) {
           if (isMounted) {
             setLocation({ 
               lat: latitude!, 
               lon: longitude!, 
-              precision: 'exact' 
+              precision: numero ? 'street' : 'street'
             });
             setGeocodeAttempted(true);
           }
