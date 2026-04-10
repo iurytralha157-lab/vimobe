@@ -134,12 +134,17 @@ export default function Onboarding() {
           return;
         }
 
-        userId = signUpData.user?.id;
-        if (!userId) {
-          toast.error('Erro ao criar conta. Tente novamente.');
+        // Detect fake/duplicate user (Supabase returns empty identities for existing emails)
+        if (!signUpData.user?.id || (signUpData.user?.identities && signUpData.user.identities.length === 0)) {
+          toast.error('Este e-mail já está cadastrado. Faça login primeiro.');
           setSubmitting(false);
           return;
         }
+
+        userId = signUpData.user.id;
+
+        // Wait briefly for user to propagate in auth.users
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       const { error } = await onboardingTable()
