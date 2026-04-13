@@ -193,7 +193,7 @@ export function LeadDetailDialog({
         cep: lead.cep || '',
         valor_interesse: lead.valor_interesse?.toString() || '',
         commission_percentage: lead.commission_percentage?.toString() || '',
-        property_id: lead.property_id || '',
+        property_id: lead.interest_property_id || lead.property_id || '',
         message: lead.message || '',
         renda_familiar: lead.renda_familiar || '',
         trabalha: lead.trabalha || false,
@@ -2002,7 +2002,7 @@ export function LeadDetailDialog({
                     <Label className="text-xs text-muted-foreground mb-2 block">Imóvel de interesse</Label>
                     <PropertyPickerDialog
                       properties={properties}
-                      selectedPropertyId={editForm.property_id || null}
+                      selectedPropertyId={lead.interest_property_id || editForm.property_id || null}
                       onSelect={(p) => {
                         const propertyPrice = p.preco || null;
                         const propertyCommission = (p as any)?.commission_percentage || null;
@@ -2014,7 +2014,7 @@ export function LeadDetailDialog({
                         });
                         const updateData: any = {
                           id: lead.id,
-                          property_id: p.id
+                          interest_property_id: p.id
                         };
                         if (propertyPrice) {
                           updateData.valor_interesse = propertyPrice;
