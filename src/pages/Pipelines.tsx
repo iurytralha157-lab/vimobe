@@ -33,7 +33,7 @@ import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { LeadCard } from '@/components/leads/LeadCard';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
-import 'date-fns';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
