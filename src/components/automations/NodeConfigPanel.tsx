@@ -579,7 +579,7 @@ export function NodeConfigPanel({
                   <div className="space-y-1.5">
                     <Label className="text-xs text-red-600 dark:text-red-400">Palavras negativas</Label>
                     <Textarea
-                      value={selectedNode.data.negative_keywords || 'não, nao, nope, sem interesse, desculpa, obrigado mas não, talvez não, deixa pra lá, não quero, não preciso, dispenso, valeu mas não'}
+                      value={selectedNode.data.negative_keywords || 'não, nao, nope, sem interesse, desculpa, obrigado mas não, talvez não, deixa pra lá, não quero, não preciso, dispenso, valeu mas não, nunca, jamais, negativo'}
                       onChange={(e) => onNodeDataChange(selectedNode.id, { negative_keywords: e.target.value })}
                       rows={3}
                       className="text-xs"

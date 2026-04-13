@@ -1279,29 +1279,53 @@ async function evaluateCondition(
 
       // Parse keyword lists from config
       const defaultPositive = "sim, claro, quero, pode, beleza, bora, vamos, aceito, ok, com certeza, fechado, top, pode ser, show, perfeito, ótimo, massa, interessado";
-      const defaultNegative = "não, nao, nope, sem interesse, desculpa, obrigado mas não, talvez não, deixa pra lá, não quero, não preciso, dispenso, valeu mas não";
+      const defaultNegative = "não, nao, nope, sem interesse, desculpa, obrigado mas não, talvez não, deixa pra lá, não quero, não preciso, dispenso, valeu mas não, nunca, jamais, negativo";
 
       const positiveKeywords = ((config.positive_keywords as string) || defaultPositive)
         .split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean);
       const negativeKeywords = ((config.negative_keywords as string) || defaultNegative)
         .split(",").map((k: string) => k.trim().toLowerCase()).filter(Boolean);
 
-      // Check if message matches any positive keyword
-      const isPositive = positiveKeywords.some((kw: string) => messageText.includes(kw));
-      const isNegative = negativeKeywords.some((kw: string) => messageText.includes(kw));
+      // Sort both lists by length descending - longer (more specific) phrases match first
+      const sortedPositive = [...positiveKeywords].sort((a, b) => b.length - a.length);
+      const sortedNegative = [...negativeKeywords].sort((a, b) => b.length - a.length);
 
-      console.log(`response_sentiment: positive=${isPositive}, negative=${isNegative}`);
+      // Find the best (longest) matching keyword from each list
+      const bestPositiveMatch = sortedPositive.find((kw: string) => messageText.includes(kw)) || null;
+      const bestNegativeMatch = sortedNegative.find((kw: string) => messageText.includes(kw)) || null;
 
-      // If both match, prioritize exact/shorter matches; if only positive, true; otherwise false
-      if (isPositive && !isNegative) return true;
-      if (isNegative && !isPositive) return false;
-      if (isPositive && isNegative) {
-        // Both matched - check which keyword is a closer match (longer keyword = more specific)
-        const bestPositive = positiveKeywords.filter((kw: string) => messageText.includes(kw))
-          .sort((a: string, b: string) => b.length - a.length)[0] || "";
-        const bestNegative = negativeKeywords.filter((kw: string) => messageText.includes(kw))
-          .sort((a: string, b: string) => b.length - a.length)[0] || "";
-        return bestPositive.length >= bestNegative.length;
+      console.log(`response_sentiment: bestPositive="${bestPositiveMatch}", bestNegative="${bestNegativeMatch}"`);
+
+      // If the message is very short (1-3 words), also check for exact or near-exact match
+      const wordCount = messageText.split(/\s+/).length;
+
+      if (bestNegativeMatch && !bestPositiveMatch) {
+        console.log("response_sentiment: only negative match → false");
+        return false;
+      }
+      if (bestPositiveMatch && !bestNegativeMatch) {
+        console.log("response_sentiment: only positive match → true");
+        return true;
+      }
+      if (bestPositiveMatch && bestNegativeMatch) {
+        // Both matched - the longer (more specific) phrase wins
+        // e.g. "não quero" (10 chars, negative) beats "quero" (5 chars, positive)
+        if (bestNegativeMatch.length > bestPositiveMatch.length) {
+          console.log(`response_sentiment: negative phrase "${bestNegativeMatch}" is more specific → false`);
+          return false;
+        }
+        if (bestPositiveMatch.length > bestNegativeMatch.length) {
+          console.log(`response_sentiment: positive phrase "${bestPositiveMatch}" is more specific → true`);
+          return true;
+        }
+        // Same length - check if negative keyword is contained within the actual message context
+        // For short messages, default to negative (safer); for longer, default to positive
+        if (wordCount <= 3) {
+          console.log("response_sentiment: tie on short message → false (safer)");
+          return false;
+        }
+        console.log("response_sentiment: tie on longer message → true");
+        return true;
       }
 
       // No match found - default to false (unrecognized)
