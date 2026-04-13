@@ -159,52 +159,18 @@ export function useWhatsAppHealthMonitor() {
           `📡 Session "${state.displayName}" failed health check (${state.consecutiveFailures}/${ERROR_THRESHOLD})`
         );
 
-        // Only notify after threshold and if not already notified
+        // Only notify locally after threshold - do NOT update DB status
+        // The server-side health check (edge function) is responsible for DB status changes
         if (state.consecutiveFailures >= ERROR_THRESHOLD && !state.notificationSent) {
-          console.error(`🔴 Session "${state.displayName}" is disconnected!`);
+          console.error(`🔴 Session "${state.displayName}" appears disconnected (client-side detection)`);
           
-          // Show toast immediately
-          toast.error("WhatsApp Desconectado!", {
-            description: `A sessão "${state.displayName}" perdeu a conexão. Reconecte agora.`,
-            duration: 15000,
-            action: {
-              label: "Ver",
-              onClick: () => window.location.href = "/configuracoes/whatsapp",
-            },
+          // Show toast as warning only - don't change DB
+          toast.warning("Possível desconexão do WhatsApp", {
+            description: `A sessão "${state.displayName}" pode estar com problemas. Aguarde a verificação automática.`,
+            duration: 10000,
           });
 
-          // Create database notification
-          await createDisconnectionNotification(
-            state.displayName,
-            session.owner_user_id,
-            session.organization_id
-          );
-
-          // Send WhatsApp notification to session owner via another session
-          try {
-            await supabase.functions.invoke('whatsapp-notifier', {
-              body: {
-                organization_id: session.organization_id,
-                user_id: session.owner_user_id,
-                message: `⚠️ *WhatsApp Desconectado*\nA sessão '${state.displayName}' perdeu a conexão.\nAcesse as configurações para reconectar.`,
-              },
-            });
-          } catch (err) {
-            console.error('WhatsApp disconnect notification failed:', err);
-          }
-
-          // Update database status
-          await supabase
-            .from("whatsapp_sessions")
-            .update({ status: "disconnected" })
-            .eq("id", session.id);
-
-          // Invalidate queries
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-          queryClient.invalidateQueries({ queryKey: ["accessible-sessions"] });
-
           state.notificationSent = true;
-          state.lastKnownStatus = "disconnected";
         }
       }
 
