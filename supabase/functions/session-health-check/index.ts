@@ -5,6 +5,24 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function checkInstanceConnection(
+  evolutionApiUrl: string,
+  evolutionApiKey: string,
+  instanceName: string
+): Promise<{ isConnected: boolean; data: any }> {
+  const response = await fetch(
+    `${evolutionApiUrl}/instance/connectionState/${instanceName}`,
+    {
+      method: "GET",
+      headers: { "apikey": evolutionApiKey },
+    }
+  );
+  const data = await response.json();
+  const instanceState = (data?.instance?.state || data?.state || "").toLowerCase();
+  const isConnected = instanceState === "open" || instanceState === "connected" || instanceState === "connecting";
+  return { isConnected, data };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -26,9 +44,6 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch sessions that need health check
-    // - status = 'connected' (we want to verify they're still connected)
-    // - Limit to 20 per execution to avoid timeout
     const { data: sessions, error: sessionsError } = await supabase
       .from("whatsapp_sessions")
       .select("*")
@@ -50,109 +65,131 @@ Deno.serve(async (req) => {
 
     for (const session of sessions || []) {
       try {
-        // Check connection status with Evolution API
-        const response = await fetch(
-          `${EVOLUTION_API_URL}/instance/connectionState/${session.instance_name}`,
-          {
-            method: "GET",
-            headers: {
-              "apikey": EVOLUTION_API_KEY,
-            },
-          }
-        );
+        // First check
+        const firstCheck = await checkInstanceConnection(EVOLUTION_API_URL, EVOLUTION_API_KEY, session.instance_name);
+        console.log(`Health check #1 for ${session.instance_name}:`, firstCheck.data);
 
-        const data = await response.json();
-        console.log(`Health check for ${session.instance_name}:`, data);
-
-        // Treat transient "connecting" as healthy for already-connected sessions
-        const instanceState = (data?.instance?.state || data?.state || "").toLowerCase();
-        const isConnected = instanceState === "open" || instanceState === "connected" || instanceState === "connecting";
-        const realStatus = isConnected ? "connected" : "disconnected";
-
-        // Update session
         const updateData: any = {
           updated_at: new Date().toISOString(),
         };
 
-        if (realStatus === "connected" && session.status !== "connected") {
-          updateData.status = "connected";
-          updateData.last_connected_at = new Date().toISOString();
-        }
-
-        if (realStatus !== "connected") {
-          updateData.status = "disconnected";
-
-          // Create notification for disconnection
-          const displayName = session.display_name || session.instance_name;
-          
-          // Notify session owner
-          await supabase.from("notifications").insert({
-            user_id: session.owner_user_id,
-            organization_id: session.organization_id,
-            title: "⚠️ WhatsApp Desconectado!",
-            content: `A sessão "${displayName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
-            type: "warning",
-            is_read: false,
-          });
-
-          // Notify admins of the organization
-          const { data: admins } = await supabase
-            .from("users")
-            .select("id")
-            .eq("organization_id", session.organization_id)
-            .eq("role", "admin")
-            .neq("id", session.owner_user_id);
-
-          if (admins && admins.length > 0) {
-            const adminNotifications = admins.map((admin: any) => ({
-              user_id: admin.id,
-              organization_id: session.organization_id,
-              title: "⚠️ WhatsApp Desconectado!",
-              content: `A sessão "${displayName}" perdeu a conexão. O responsável foi notificado.`,
-              type: "warning",
-              is_read: false,
-            }));
-
-            await supabase.from("notifications").insert(adminNotifications);
+        if (firstCheck.isConnected) {
+          // Connected - just update timestamp and fix status if needed
+          if (session.status !== "connected") {
+            updateData.status = "connected";
+            updateData.last_connected_at = new Date().toISOString();
           }
 
-          console.log(`Disconnection notifications sent for session ${displayName}`);
-        }
+          await supabase
+            .from("whatsapp_sessions")
+            .update(updateData)
+            .eq("id", session.id);
 
-        await supabase
-          .from("whatsapp_sessions")
-          .update(updateData)
-          .eq("id", session.id);
+          results.push({
+            session_id: session.id,
+            instance_name: session.instance_name,
+            previous_status: session.status,
+            new_status: "connected",
+            success: true
+          });
+        } else {
+          // First check says NOT connected - wait 3 seconds and retry before concluding
+          console.log(`Session ${session.instance_name} failed first check, retrying in 3s...`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // Log status change
-        if (realStatus !== session.status) {
-          await supabase.from("audit_logs").insert({
-            action: `whatsapp.session_${realStatus}`,
-            entity_type: "whatsapp_session",
-            entity_id: session.id,
-            organization_id: session.organization_id,
-            new_data: { 
+          const secondCheck = await checkInstanceConnection(EVOLUTION_API_URL, EVOLUTION_API_KEY, session.instance_name);
+          console.log(`Health check #2 for ${session.instance_name}:`, secondCheck.data);
+
+          if (secondCheck.isConnected) {
+            // Second check passed - it was just a transient blip, keep connected
+            console.log(`Session ${session.instance_name} recovered on retry - keeping connected`);
+            
+            await supabase
+              .from("whatsapp_sessions")
+              .update(updateData)
+              .eq("id", session.id);
+
+            results.push({
+              session_id: session.id,
               instance_name: session.instance_name,
               previous_status: session.status,
-              new_status: realStatus,
-              evolution_response: data
-            }
-          });
-          
-          console.log(`Session ${session.instance_name} status changed: ${session.status} -> ${realStatus}`);
-        }
+              new_status: "connected",
+              retried: true,
+              success: true
+            });
+          } else {
+            // Both checks failed - NOW mark as disconnected
+            console.log(`Session ${session.instance_name} confirmed disconnected after retry`);
+            updateData.status = "disconnected";
 
-        results.push({
-          session_id: session.id,
-          instance_name: session.instance_name,
-          previous_status: session.status,
-          new_status: realStatus,
-          success: true
-        });
+            const displayName = session.display_name || session.instance_name;
+
+            // Notify session owner
+            await supabase.from("notifications").insert({
+              user_id: session.owner_user_id,
+              organization_id: session.organization_id,
+              title: "⚠️ WhatsApp Desconectado!",
+              content: `A sessão "${displayName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
+              type: "warning",
+              is_read: false,
+            });
+
+            // Notify admins
+            const { data: admins } = await supabase
+              .from("users")
+              .select("id")
+              .eq("organization_id", session.organization_id)
+              .eq("role", "admin")
+              .neq("id", session.owner_user_id);
+
+            if (admins && admins.length > 0) {
+              const adminNotifications = admins.map((admin: any) => ({
+                user_id: admin.id,
+                organization_id: session.organization_id,
+                title: "⚠️ WhatsApp Desconectado!",
+                content: `A sessão "${displayName}" perdeu a conexão. O responsável foi notificado.`,
+                type: "warning",
+                is_read: false,
+              }));
+              await supabase.from("notifications").insert(adminNotifications);
+            }
+
+            await supabase
+              .from("whatsapp_sessions")
+              .update(updateData)
+              .eq("id", session.id);
+
+            // Audit log
+            await supabase.from("audit_logs").insert({
+              action: "whatsapp.session_disconnected",
+              entity_type: "whatsapp_session",
+              entity_id: session.id,
+              organization_id: session.organization_id,
+              new_data: {
+                instance_name: session.instance_name,
+                previous_status: session.status,
+                new_status: "disconnected",
+                first_check: firstCheck.data,
+                second_check: secondCheck.data,
+              }
+            });
+
+            console.log(`Session ${session.instance_name} status changed: ${session.status} -> disconnected`);
+
+            results.push({
+              session_id: session.id,
+              instance_name: session.instance_name,
+              previous_status: session.status,
+              new_status: "disconnected",
+              retried: true,
+              success: true
+            });
+          }
+        }
 
       } catch (error) {
         console.error(`Error checking session ${session.instance_name}:`, error);
-        
+        // On error, do NOT change status - just log and move on
         results.push({
           session_id: session.id,
           instance_name: session.instance_name,
@@ -163,10 +200,10 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         processed: results.length,
-        results 
+        results
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
