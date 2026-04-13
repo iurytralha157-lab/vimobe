@@ -161,18 +161,21 @@ serve(async (req) => {
 
             console.log("Lead data received:", JSON.stringify(leadData, null, 2));
 
-            // Fetch creative URL and video URL if ad_id is available
+            // Fetch creative URL, video URL and Instagram permalink if ad_id is available
             let creativeUrl: string | null = null;
             let creativeVideoUrl: string | null = null;
+            let creativeInstagramUrl: string | null = null;
             if (leadData.ad_id) {
               try {
-                const creativeApiUrl = `https://graph.facebook.com/v19.0/${leadData.ad_id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${integration.access_token}`;
+                const creativeApiUrl = `https://graph.facebook.com/v19.0/${leadData.ad_id}?fields=creative{effective_image_url,thumbnail_url,video_id,instagram_permalink_url}&access_token=${integration.access_token}`;
                 const creativeResponse = await fetch(creativeApiUrl);
                 const creativeData = await creativeResponse.json();
                 
                 if (creativeData?.creative) {
                   creativeUrl = creativeData.creative.effective_image_url || creativeData.creative.thumbnail_url || null;
+                  creativeInstagramUrl = creativeData.creative.instagram_permalink_url || null;
                   console.log("Creative URL fetched:", creativeUrl ? "success" : "no image found");
+                  console.log("Instagram permalink:", creativeInstagramUrl || "not available");
                   
                   // Fetch video source URL if video_id exists
                   if (creativeData.creative.video_id) {
@@ -502,6 +505,7 @@ serve(async (req) => {
                 contact_notes: contactNotes,
                 creative_url: creativeUrl,
                 creative_video_url: creativeVideoUrl,
+                creative_instagram_url: creativeInstagramUrl,
                 raw_payload: JSON.stringify(leadData)
               });
             
