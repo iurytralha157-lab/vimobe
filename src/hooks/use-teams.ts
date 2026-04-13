@@ -134,18 +134,90 @@ export function useUpdateTeam() {
           
           await supabase.from('team_members').insert(membersToInsert);
         }
+
+        // Sync round_robin_members for queues that use this team
+        await syncRoundRobinWithTeam(id, memberIds);
       }
       
       return { id };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['round-robins'] });
       toast.success('Equipe atualizada!');
     },
     onError: (error) => {
       toast.error('Erro ao atualizar equipe: ' + error.message);
     },
   });
+}
+
+/**
+ * Sync round_robin_members when a team's membership changes.
+ * For queues configured by team, adds new members and removes old ones.
+ */
+async function syncRoundRobinWithTeam(teamId: string, newMemberIds: string[]) {
+  try {
+    // Find all round_robin_members linked to this team
+    const { data: existingRRMembers } = await supabase
+      .from('round_robin_members')
+      .select('id, round_robin_id, user_id, position, weight')
+      .eq('team_id', teamId);
+
+    if (!existingRRMembers || existingRRMembers.length === 0) {
+      // No queues use this team - nothing to sync
+      return;
+    }
+
+    // Group by round_robin_id
+    const byQueue = existingRRMembers.reduce((acc, m) => {
+      if (!acc[m.round_robin_id]) acc[m.round_robin_id] = [];
+      acc[m.round_robin_id].push(m);
+      return acc;
+    }, {} as Record<string, typeof existingRRMembers>);
+
+    for (const [roundRobinId, currentMembers] of Object.entries(byQueue)) {
+      const currentUserIds = currentMembers.map(m => m.user_id);
+      
+      // Users to add (in team but not in queue)
+      const toAdd = newMemberIds.filter(uid => !currentUserIds.includes(uid));
+      
+      // Users to remove (in queue but no longer in team)
+      const toRemove = currentMembers.filter(m => !newMemberIds.includes(m.user_id));
+
+      // Remove members no longer in team
+      if (toRemove.length > 0) {
+        await supabase
+          .from('round_robin_members')
+          .delete()
+          .in('id', toRemove.map(m => m.id));
+      }
+
+      // Add new members
+      if (toAdd.length > 0) {
+        // Get max position
+        const maxPos = Math.max(...currentMembers.map(m => m.position ?? 0), -1);
+        const defaultWeight = currentMembers[0]?.weight ?? 10;
+
+        const newMembers = toAdd.map((userId, idx) => ({
+          round_robin_id: roundRobinId,
+          user_id: userId,
+          team_id: teamId,
+          weight: defaultWeight,
+          position: maxPos + 1 + idx,
+        }));
+
+        await supabase.from('round_robin_members').insert(newMembers);
+      }
+
+      if (toAdd.length > 0 || toRemove.length > 0) {
+        console.log(`[sync] Queue ${roundRobinId}: added ${toAdd.length}, removed ${toRemove.length} members`);
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing round robin with team:', err);
+    // Non-blocking: don't fail the team update
+  }
 }
 
 export function useDeleteTeam() {
