@@ -89,7 +89,8 @@ export function WhatsAppTab() {
       result?.connected === true ||
       result?.status === true ||
       result?.state === "open" ||
-      result?.state === "connected";
+      result?.state === "connected" ||
+      result?.state === "connecting";
 
       if (isConnected) {
         await supabase.
@@ -115,12 +116,22 @@ export function WhatsAppTab() {
 
       if (connected === true) {
         toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
+      } else if (connected === null) {
+        toast({ title: "⚠️ Não foi possível verificar", description: "Tente novamente em alguns segundos" });
       } else {
-        await supabase.
-        from("whatsapp_sessions").
-        update({ status: "disconnected" }).
-        eq("id", session.id);
-        toast({ title: "⚠️ Desconectado", description: "WhatsApp não está conectado" });
+        // Retry once before marking disconnected
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const retryResult = await checkConnection(session.instance_name, session.id);
+        
+        if (retryResult === true) {
+          toast({ title: "✅ Conectado!", description: "WhatsApp está online" });
+        } else {
+          await supabase.
+          from("whatsapp_sessions").
+          update({ status: "disconnected" }).
+          eq("id", session.id);
+          toast({ title: "⚠️ Desconectado", description: "WhatsApp não está conectado" });
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
