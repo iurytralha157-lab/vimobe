@@ -638,10 +638,9 @@ export default function Pipelines() {
     dateRange,
   });
   
-  // Filter leads com valor debounced, merging server search results
+  // Filters are now applied server-side; only merge server search results client-side
   const filteredStages = useMemo(() => {
     return stages.map(stage => {
-      // Start with loaded leads
       let stageLeads = [...(stage.leads || [])];
       
       // If searching and we have server results, merge leads not already loaded
@@ -655,36 +654,10 @@ export default function Pipelines() {
       
       return {
         ...stage,
-        leads: stageLeads.filter((lead: any) => {
-          if (filterUser && filterUser !== 'all' && lead.assigned_user_id !== filterUser) return false;
-          if (deferredSearch && !lead.name.toLowerCase().includes(deferredSearch.toLowerCase()) && 
-              !lead.phone?.includes(deferredSearch)) return false;
-          
-          // Tag filter
-          if (filterTag && filterTag !== 'all') {
-            const leadTagIds = lead.tags?.map((t: any) => t.id) || [];
-            if (!leadTagIds.includes(filterTag)) return false;
-          }
-          
-          // Deal status filter
-          if (filterDealStatus && filterDealStatus !== 'all') {
-            const leadStatus = lead.deal_status || 'open';
-            if (leadStatus !== filterDealStatus) return false;
-          }
-          
-          // Date filter — skip when user is actively searching
-          if (!deferredSearch && lead.created_at) {
-            const leadDate = parseISO(lead.created_at);
-            if (!isWithinInterval(leadDate, { start: dateRange.from, end: dateRange.to })) {
-              return false;
-            }
-          }
-          
-          return true;
-        }),
+        leads: stageLeads,
       };
     });
-  }, [stages, filterUser, filterTag, filterDealStatus, deferredSearch, dateRange, serverSearchResults]);
+  }, [stages, deferredSearch, serverSearchResults]);
 
   // Compute VGV from filteredStages so badge always matches visible leads
   const stageVGVMap = useMemo(() => {
