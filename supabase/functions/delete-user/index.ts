@@ -107,7 +107,13 @@ Deno.serve(async (req) => {
 
     console.log(`Deleting user ${userId} (${targetUser.email}) by ${callerUser.id}`);
 
-    // First, unassign any leads from this user
+    // First, clear lead_tasks references
+    await supabaseAdmin
+      .from("lead_tasks")
+      .update({ done_by: null })
+      .eq("done_by", userId);
+
+    // Unassign any leads from this user
     await supabaseAdmin
       .from("leads")
       .update({ assigned_user_id: null })
