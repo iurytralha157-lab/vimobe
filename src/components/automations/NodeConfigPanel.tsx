@@ -250,7 +250,7 @@ export function NodeConfigPanel({
                     onChange={(e) => onNodeDataChange(selectedNode.id, { wait_value: parseInt(e.target.value) || 1 })} />
                   <Select value={selectedNode.data.wait_type || 'days'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { wait_type: v })}>
                     <SelectTrigger className="flex-1 h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent className="z-[200]"><SelectItem value="minutes">Minutos</SelectItem><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
+                    <SelectContent className="z-[200]"><SelectItem value="seconds">Segundos</SelectItem><SelectItem value="minutes">Minutos</SelectItem><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
                   </Select>
                 </div>
               </div>

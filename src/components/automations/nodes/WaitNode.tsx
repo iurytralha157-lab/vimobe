@@ -6,7 +6,7 @@ export const WaitNode = memo(({ data, selected }: NodeProps) => {
   const getValue = () => {
     const value = data.wait_value || data.delay_value || 1;
     const type = data.wait_type || data.delay_type || 'days';
-    const labels: Record<string, string> = { minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
+    const labels: Record<string, string> = { seconds: 'segundo(s)', minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
     return `${value} ${labels[type] || type}`;
   };
 
