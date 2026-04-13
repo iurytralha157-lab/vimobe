@@ -348,7 +348,13 @@ export default function Pipelines() {
     const newStage = stages.find(s => s.id === newStageId);
     
     // IMMEDIATE optimistic update - move card visually first
-    const queryKey = ['stages-with-leads', selectedPipelineId, filterUser];
+    // Cache key must match useStagesWithLeads queryKey
+    const dateFromISO = dateRange?.from?.toISOString();
+    const dateToISO = dateRange?.to?.toISOString();
+    const effectiveFilterTag = filterTag !== 'all' ? filterTag : undefined;
+    const effectiveFilterDealStatus = filterDealStatus !== 'all' ? filterDealStatus : undefined;
+    const effectiveSearchQuery = searchQuery || undefined;
+    const queryKey = ['stages-with-leads', selectedPipelineId, filterUser, dateFromISO, dateToISO, effectiveFilterTag, effectiveFilterDealStatus, effectiveSearchQuery];
     const previousData = queryClient.getQueryData(queryKey);
     
     queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
