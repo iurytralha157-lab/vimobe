@@ -31,7 +31,7 @@ const LEAD_PIPELINE_FIELDS = `
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
-  lead_meta(campaign_name)
+  lead_meta(campaign_name, platform)
 `;
 
 export function useStages(pipelineId?: string) {
