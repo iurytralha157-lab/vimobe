@@ -173,7 +173,22 @@ export default function Pipelines() {
     }
   }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading, isTeamLeader]);
   
-  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined, filterUser);
+  // Get date range for filtering (must be before useStagesWithLeads)
+  const dateRange = useMemo(() => {
+    if (customDateRange) return customDateRange;
+    return getDateRangeFromPreset(datePreset);
+  }, [datePreset, customDateRange]);
+
+  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(
+    selectedPipelineId || undefined, 
+    filterUser,
+    {
+      dateRange,
+      filterTag: filterTag !== 'all' ? filterTag : undefined,
+      filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
+      searchQuery: searchQuery || undefined,
+    }
+  );
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
   // createLead agora é gerenciado pelo CreateLeadDialog
