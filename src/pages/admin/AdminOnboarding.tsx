@@ -80,6 +80,7 @@ export default function AdminOnboarding() {
   const [selectedRequest, setSelectedRequest] = useState<OnboardingRequest | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [approving, setApproving] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
 
   const filteredRequests = requests.filter((req) => {
     const matchesSearch =
@@ -105,6 +106,7 @@ export default function AdminOnboarding() {
   const handleApprove = async () => {
     if (!selectedRequest) return;
     setApproving(true);
+    const generatedPassword = Math.random().toString(36).slice(-10) + 'A1!';
     try {
       // Create org via edge function
       await createOrganization.mutateAsync({
@@ -112,7 +114,7 @@ export default function AdminOnboarding() {
         segment: (selectedRequest.segment as any) || 'imobiliario',
         adminEmail: selectedRequest.responsible_email,
         adminName: selectedRequest.responsible_name,
-        adminPassword: Math.random().toString(36).slice(-10) + 'A1!',
+        adminPassword: generatedPassword,
       });
 
       // Update request status
@@ -124,6 +126,11 @@ export default function AdminOnboarding() {
 
       toast.success('Organização criada e solicitação aprovada!');
       setSelectedRequest(null);
+      // Show credentials dialog
+      setCreatedCredentials({
+        email: selectedRequest.responsible_email,
+        password: generatedPassword,
+      });
     } catch (err: any) {
       toast.error('Erro ao aprovar: ' + err.message);
     } finally {
