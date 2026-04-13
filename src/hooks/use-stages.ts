@@ -740,9 +740,13 @@ export function useLoadMoreLeads() {
       
       return { stageId, leads: enrichedLeads };
     },
-    onSuccess: ({ stageId, leads }, { pipelineId, filterUserId }) => {
+    onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
+      // Build matching cache key
+      const dateFromISO = filters?.dateRange?.from?.toISOString();
+      const dateToISO = filters?.dateRange?.to?.toISOString();
+      const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery];
       // Mesclar novos leads no cache existente
-      queryClient.setQueryData(['stages-with-leads', pipelineId, filterUserId], (old: any[] | undefined) => {
+      queryClient.setQueryData(cacheKey, (old: any[] | undefined) => {
         if (!old) return old;
         
         return old.map(stage => {
