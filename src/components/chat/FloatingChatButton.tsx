@@ -27,7 +27,7 @@ export function FloatingChatButton() {
   const btnRef = useRef<HTMLButtonElement>(null);
   const dragState = useRef({ startX: 0, startY: 0, moved: false, pointerId: -1 });
 
-  const hasConnectedSession = sessions?.some((s) => s.status === "connected");
+  const hasConnectedSession = sessions?.some((s) => s.status === "connected" || s.status === "connecting");
   
   const leadUnreadCount = conversations?.reduce((acc, c) => {
     if (c.lead_id) {

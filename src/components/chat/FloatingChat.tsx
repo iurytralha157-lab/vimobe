@@ -113,7 +113,7 @@ export function FloatingChat() {
 
   useEffect(() => {
     if (!selectedSessionId && sessions?.length) {
-      const connectedSession = sessions.find(s => s.status === "connected");
+      const connectedSession = sessions.find(s => s.status === "connected" || s.status === "connecting");
       if (connectedSession) {
         setSelectedSessionId(connectedSession.id);
       } else if (sessions[0]) {
@@ -126,7 +126,7 @@ export function FloatingChat() {
     if (!pendingPhone) return;
 
     const openPendingConversation = async () => {
-      const connected = sessions?.filter(s => s.status === "connected") || [];
+      const connected = sessions?.filter(s => s.status === "connected" || s.status === "connecting") || [];
 
       if (connected.length === 1) {
         setSelectedSessionId(connected[0].id);
@@ -413,7 +413,7 @@ export function FloatingChat() {
     return format(d, "dd/MM");
   };
   const unreadCount = conversations?.reduce((acc, c) => acc + (c.unread_count || 0), 0) || 0;
-  const connectedSessions = sessions?.filter(s => s.status === "connected") || [];
+  const connectedSessions = sessions?.filter(s => s.status === "connected" || s.status === "connecting") || [];
   const hasConnectedSession = loadingSessions || connectedSessions.length > 0;
 
   // Session Selector Dialog Component
