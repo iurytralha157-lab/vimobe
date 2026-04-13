@@ -505,6 +505,7 @@ serve(async (req) => {
                 contact_notes: contactNotes,
                 creative_url: creativeUrl,
                 creative_video_url: creativeVideoUrl,
+                creative_instagram_url: creativeInstagramUrl,
                 raw_payload: JSON.stringify(leadData)
               });
             
