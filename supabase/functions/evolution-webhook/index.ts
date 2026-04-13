@@ -179,13 +179,22 @@ async function handleConnectionUpdate(supabase: any, session: any, data: any) {
   const updateData: any = { 
     status,
     updated_at: new Date().toISOString(),
-    last_health_check: new Date().toISOString(),
-    health_check_failures: status === "connected" ? 0 : (session.health_check_failures || 0)
   };
 
-  // Extract phone number if available
-  if (data?.instance?.wuid) {
-    updateData.phone_number = data.instance.wuid.split("@")[0];
+  // Set last_connected_at when session becomes connected
+  if (status === "connected") {
+    updateData.last_connected_at = new Date().toISOString();
+  }
+
+  // Extract phone number and profile info if available
+  if (data?.instance?.wuid || data?.wuid) {
+    updateData.phone_number = (data.instance?.wuid || data.wuid).split("@")[0];
+  }
+  if (data?.profileName || data?.instance?.profileName) {
+    updateData.profile_name = data.profileName || data.instance.profileName;
+  }
+  if (data?.profilePictureUrl || data?.instance?.profilePictureUrl) {
+    updateData.profile_picture = data.profilePictureUrl || data.instance.profilePictureUrl;
   }
 
   await supabase

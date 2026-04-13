@@ -139,6 +139,17 @@ export function useWhatsAppHealthMonitor() {
         state.consecutiveFailures = 0;
         state.notificationSent = false;
         state.lastKnownStatus = "connected";
+
+        // If DB says not connected but API says connected, fix the DB
+        if (session.status !== "connected") {
+          console.log(`📡 Fixing stale DB status for "${state.displayName}": ${session.status} → connected`);
+          await supabase
+            .from("whatsapp_sessions")
+            .update({ status: "connected", updated_at: new Date().toISOString() })
+            .eq("id", session.id);
+          queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
+          queryClient.invalidateQueries({ queryKey: ["accessible-sessions"] });
+        }
       } else {
         // Increment failure count
         state.consecutiveFailures++;
