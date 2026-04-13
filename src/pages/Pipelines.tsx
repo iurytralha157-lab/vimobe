@@ -371,23 +371,28 @@ export default function Pipelines() {
     });
     
     try {
-      // Fetch automations in parallel with DB update for responsiveness
-      const [updateResult, automationsResult] = await Promise.all([
-        supabase
-          .from('leads')
-          .update({ 
-            stage_id: newStageId,
-            stage_entered_at: new Date().toISOString(),
-          })
-          .eq('id', draggableId),
-        supabase
+      // Update lead stage in database first
+      const updateResult = await supabase
+        .from('leads')
+        .update({ 
+          stage_id: newStageId,
+          stage_entered_at: new Date().toISOString(),
+        })
+        .eq('id', draggableId);
+      
+      if (updateResult.error) throw updateResult.error;
+      
+      // Fetch stage automations separately (don't block on failure)
+      let automationsResult: any = { data: [] };
+      try {
+        automationsResult = await supabase
           .from('stage_automations')
           .select('automation_type, action_config')
           .eq('stage_id', newStageId)
-          .eq('is_active', true),
-      ]);
-      
-      if (updateResult.error) throw updateResult.error;
+          .eq('is_active', true);
+      } catch (e) {
+        console.warn('Failed to fetch stage automations:', e);
+      }
       
       // Apply deal_status from automation as a SECOND optimistic update
       const statusAutomation = automationsResult.data?.find(
