@@ -209,14 +209,18 @@ export function LeadCard({
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-sm truncate text-foreground">{lead.name}</h4>
                 {lead.phone && <p className="text-[11px] text-muted-foreground truncate">{formatPhoneForDisplay(lead.phone)}</p>}
-                {lead.lead_meta?.[0]?.campaign_name && (
-                  <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
-                    📢 {lead.lead_meta[0].campaign_name}
-                  </p>
-                )}
               </div>
             </div>
           </div>
+
+          {/* Campaign name - aligned with avatar */}
+          {lead.lead_meta?.[0]?.campaign_name && (
+            <div className="flex items-center gap-1.5 -mt-1 mb-1">
+              <span className="text-[10px] text-muted-foreground/80 truncate leading-none">
+                🔖 {lead.lead_meta[0].campaign_name}
+              </span>
+            </div>
+          )}
 
           {/* Separador */}
           <div className="border-t border-border/50 my-2 -mx-3" />
