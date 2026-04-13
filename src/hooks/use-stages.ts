@@ -70,9 +70,9 @@ export function useStages(pipelineId?: string) {
   });
 }
 
-export function useStagesWithLeads(pipelineId?: string) {
+export function useStagesWithLeads(pipelineId?: string, filterUserId?: string) {
   return useQuery({
-    queryKey: ['stages-with-leads', pipelineId],
+    queryKey: ['stages-with-leads', pipelineId, filterUserId],
     queryFn: async () => {
       // Get default pipeline if not provided
       let targetPipelineId = pipelineId;
