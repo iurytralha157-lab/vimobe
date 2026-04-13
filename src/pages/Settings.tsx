@@ -50,9 +50,13 @@ export default function Settings() {
     const tabs: AnimatedTabItem[] = [
       { value: 'account', label: 'Conta', icon: User,
         renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> },
-      { value: 'team', label: 'Usuários', icon: Users,
-        renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> },
     ];
+
+    // Only admins and super admins can see the Users tab
+    if (profile?.role === 'admin' || isSuperAdmin) {
+      tabs.push({ value: 'team', label: 'Usuários', icon: Users,
+        renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> });
+    }
 
     if (hasWebhooksModule) {
       tabs.push({ value: 'webhooks', label: 'Webhooks', icon: Webhook });
