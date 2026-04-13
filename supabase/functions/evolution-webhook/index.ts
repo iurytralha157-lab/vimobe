@@ -179,9 +179,12 @@ async function handleConnectionUpdate(supabase: any, session: any, data: any) {
   const updateData: any = { 
     status,
     updated_at: new Date().toISOString(),
-    last_health_check: new Date().toISOString(),
-    health_check_failures: status === "connected" ? 0 : (session.health_check_failures || 0)
   };
+
+  // Set last_connected_at when session becomes connected
+  if (status === "connected") {
+    updateData.last_connected_at = new Date().toISOString();
+  }
 
   // Extract phone number if available
   if (data?.instance?.wuid) {
