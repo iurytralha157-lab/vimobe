@@ -122,21 +122,45 @@ export function useUpdateTeam() {
       }
       
       if (memberIds !== undefined) {
-        // Remove all current members
-        await supabase.from('team_members').delete().eq('team_id', id);
-        
-        // Add new members
-        if (memberIds.length > 0) {
-          const membersToInsert = memberIds.map(userId => ({
+        const normalizedMemberIds = Array.from(new Set(memberIds));
+
+        const { data: currentMembers, error: currentMembersError } = await supabase
+          .from('team_members')
+          .select('id, user_id')
+          .eq('team_id', id);
+
+        if (currentMembersError) throw currentMembersError;
+
+        const currentMemberIds = new Set((currentMembers || []).map(member => member.user_id));
+        const membersToRemove = (currentMembers || []).filter(
+          member => !normalizedMemberIds.includes(member.user_id)
+        );
+        const membersToAdd = normalizedMemberIds.filter(userId => !currentMemberIds.has(userId));
+
+        if (membersToRemove.length > 0) {
+          const { error: removeError } = await supabase
+            .from('team_members')
+            .delete()
+            .in('id', membersToRemove.map(member => member.id));
+
+          if (removeError) throw removeError;
+        }
+
+        if (membersToAdd.length > 0) {
+          const membersToInsert = membersToAdd.map(userId => ({
             team_id: id,
             user_id: userId,
           }));
-          
-          await supabase.from('team_members').insert(membersToInsert);
+
+          const { error: insertError } = await supabase
+            .from('team_members')
+            .insert(membersToInsert);
+
+          if (insertError) throw insertError;
         }
 
         // Sync round_robin_members for queues that use this team
-        await syncRoundRobinWithTeam(id, memberIds);
+        await syncRoundRobinWithTeam(id, normalizedMemberIds);
       }
       
       return { id };
