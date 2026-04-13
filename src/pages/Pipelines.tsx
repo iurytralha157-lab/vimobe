@@ -33,7 +33,7 @@ import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { LeadCard } from '@/components/leads/LeadCard';
 import { LeadDetailDialog } from '@/components/leads/LeadDetailDialog';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
-import { isWithinInterval, parseISO } from 'date-fns';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -173,7 +173,22 @@ export default function Pipelines() {
     }
   }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading, isTeamLeader]);
   
-  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined, filterUser);
+  // Get date range for filtering (must be before useStagesWithLeads)
+  const dateRange = useMemo(() => {
+    if (customDateRange) return customDateRange;
+    return getDateRangeFromPreset(datePreset);
+  }, [datePreset, customDateRange]);
+
+  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(
+    selectedPipelineId || undefined, 
+    filterUser,
+    {
+      dateRange,
+      filterTag: filterTag !== 'all' ? filterTag : undefined,
+      filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
+      searchQuery: searchQuery || undefined,
+    }
+  );
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
   // createLead agora é gerenciado pelo CreateLeadDialog
@@ -199,8 +214,14 @@ export default function Pipelines() {
       stageId,
       offset: currentCount,
       filterUserId: filterUser,
+      filters: {
+        dateRange,
+        filterTag: filterTag !== 'all' ? filterTag : undefined,
+        filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
+        searchQuery: searchQuery || undefined,
+      },
     });
-  }, [selectedPipelineId, stages, loadMoreLeads, filterUser]);
+  }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery]);
 
   // Real-time subscription for leads and tags updates
   useEffect(() => {
@@ -333,7 +354,13 @@ export default function Pipelines() {
     const newStage = stages.find(s => s.id === newStageId);
     
     // IMMEDIATE optimistic update - move card visually first
-    const queryKey = ['stages-with-leads', selectedPipelineId, filterUser];
+    // Cache key must match useStagesWithLeads queryKey
+    const dateFromISO = dateRange?.from?.toISOString();
+    const dateToISO = dateRange?.to?.toISOString();
+    const effectiveFilterTag = filterTag !== 'all' ? filterTag : undefined;
+    const effectiveFilterDealStatus = filterDealStatus !== 'all' ? filterDealStatus : undefined;
+    const effectiveSearchQuery = searchQuery || undefined;
+    const queryKey = ['stages-with-leads', selectedPipelineId, filterUser, dateFromISO, dateToISO, effectiveFilterTag, effectiveFilterDealStatus, effectiveSearchQuery];
     const previousData = queryClient.getQueryData(queryKey);
     
     queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
@@ -610,11 +637,6 @@ export default function Pipelines() {
     return () => { cancelled = true; };
   }, [deferredSearch, hasMoreLeads, selectedPipelineId]);
   
-  // Get date range for filtering
-  const dateRange = useMemo(() => {
-    if (customDateRange) return customDateRange;
-    return getDateRangeFromPreset(datePreset);
-  }, [datePreset, customDateRange]);
 
   const stageIds = useMemo(() => stages.map((stage: any) => stage.id), [stages]);
 
@@ -628,10 +650,9 @@ export default function Pipelines() {
     dateRange,
   });
   
-  // Filter leads com valor debounced, merging server search results
+  // Filters are now applied server-side; only merge server search results client-side
   const filteredStages = useMemo(() => {
     return stages.map(stage => {
-      // Start with loaded leads
       let stageLeads = [...(stage.leads || [])];
       
       // If searching and we have server results, merge leads not already loaded
@@ -645,36 +666,10 @@ export default function Pipelines() {
       
       return {
         ...stage,
-        leads: stageLeads.filter((lead: any) => {
-          if (filterUser && filterUser !== 'all' && lead.assigned_user_id !== filterUser) return false;
-          if (deferredSearch && !lead.name.toLowerCase().includes(deferredSearch.toLowerCase()) && 
-              !lead.phone?.includes(deferredSearch)) return false;
-          
-          // Tag filter
-          if (filterTag && filterTag !== 'all') {
-            const leadTagIds = lead.tags?.map((t: any) => t.id) || [];
-            if (!leadTagIds.includes(filterTag)) return false;
-          }
-          
-          // Deal status filter
-          if (filterDealStatus && filterDealStatus !== 'all') {
-            const leadStatus = lead.deal_status || 'open';
-            if (leadStatus !== filterDealStatus) return false;
-          }
-          
-          // Date filter — skip when user is actively searching
-          if (!deferredSearch && lead.created_at) {
-            const leadDate = parseISO(lead.created_at);
-            if (!isWithinInterval(leadDate, { start: dateRange.from, end: dateRange.to })) {
-              return false;
-            }
-          }
-          
-          return true;
-        }),
+        leads: stageLeads,
       };
     });
-  }, [stages, filterUser, filterTag, filterDealStatus, deferredSearch, dateRange, serverSearchResults]);
+  }, [stages, deferredSearch, serverSearchResults]);
 
   // Compute VGV from filteredStages so badge always matches visible leads
   const stageVGVMap = useMemo(() => {
@@ -1263,12 +1258,6 @@ export default function Pipelines() {
                           ))}
                           {provided.placeholder}
                           
-                          {/* Filter warning when has_more and filters active */}
-                          {stageCountMetaMap.get(stage.id)?.canLoadMore && (filterUser && filterUser !== 'all' || filterTag !== 'all' || filterDealStatus !== 'all' || deferredSearch) && (
-                            <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-2 py-1.5 mt-1 text-center">
-                              ⚠️ Filtro ativo — alguns resultados podem não estar visíveis. Carregue mais para ver todos.
-                            </div>
-                          )}
                           
                           {/* Botão Carregar Mais */}
                           {stageCountMetaMap.get(stage.id)?.canLoadMore && (
