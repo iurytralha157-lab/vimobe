@@ -658,9 +658,9 @@ export function useLoadMoreLeads() {
       
       return { stageId, leads: enrichedLeads };
     },
-    onSuccess: ({ stageId, leads }, { pipelineId }) => {
+    onSuccess: ({ stageId, leads }, { pipelineId, filterUserId }) => {
       // Mesclar novos leads no cache existente
-      queryClient.setQueryData(['stages-with-leads', pipelineId, variables.filterUserId], (old: any[] | undefined) => {
+      queryClient.setQueryData(['stages-with-leads', pipelineId, filterUserId], (old: any[] | undefined) => {
         if (!old) return old;
         
         return old.map(stage => {
