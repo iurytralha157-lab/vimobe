@@ -205,7 +205,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
       case 'wait': {
         const value = node.data.wait_value || node.data.delay_value || 1;
         const type = node.data.wait_type || node.data.delay_type || 'days';
-        const unitLabels: Record<string, string> = { minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
+        const unitLabels: Record<string, string> = { seconds: 'segundo(s)', minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
         const stopOnReply = node.data.stop_on_reply === true;
 
         addSystemMessage(`⏳ Aguardando ${value} ${unitLabels[type] || type} — preview: 1 min`);

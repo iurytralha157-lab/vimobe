@@ -289,6 +289,9 @@ Deno.serve(async (req) => {
           
           if (delayType && delayValue > 0) {
             switch (delayType) {
+              case "seconds":
+                totalDelayMs = delayValue * 1000;
+                break;
               case "minutes":
                 totalDelayMs = delayValue * 60 * 1000;
                 break;
