@@ -50,22 +50,21 @@ export function useStages(pipelineId?: string) {
       const { data, error } = await query;
       if (error) throw error;
       
-      // Query otimizada: contar leads agrupados por stage em uma única query
-      const { data: leadCounts } = await supabase
-        .from('leads')
-        .select('stage_id')
-        .not('stage_id', 'is', null);
+      const stages = data || [];
       
-      const countsByStage = (leadCounts || []).reduce((acc, l) => {
-        if (l.stage_id) {
-          acc[l.stage_id] = (acc[l.stage_id] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
+      // Count leads per stage using head:true (no data transfer, just count)
+      const countPromises = stages.map(stage =>
+        supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('stage_id', stage.id)
+      );
       
-      return (data || []).map(stage => ({
+      const countResults = await Promise.all(countPromises);
+      
+      return stages.map((stage, index) => ({
         ...stage,
-        lead_count: countsByStage[stage.id] || 0,
+        lead_count: countResults[index]?.count || 0,
       })) as Stage[];
     },
   });
