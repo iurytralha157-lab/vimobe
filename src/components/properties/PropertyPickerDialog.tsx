@@ -176,10 +176,10 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 {filteredProperties.map(p => (
-                  <button
+                  <div
                     key={p.id}
                     className={cn(
-                      'flex flex-col rounded-xl border overflow-hidden text-left transition-all hover:ring-2 hover:ring-primary/50',
+                      'flex flex-col rounded-xl border overflow-hidden text-left transition-all hover:ring-2 hover:ring-primary/50 cursor-pointer',
                       selectedPropertyId === p.id && 'ring-2 ring-primary'
                     )}
                     onClick={() => {
@@ -203,6 +203,18 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
                         <Badge className="absolute top-1.5 left-1.5 text-[9px] px-1.5 py-0 h-4 bg-[#ff482a] text-white backdrop-blur-sm border-0">
                           {p.code}
                         </Badge>
+                      )}
+                      {siteSubdomain && p.code && (
+                        <button
+                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+                          title="Ver no site"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`/sites/${siteSubdomain}/imovel/${p.code}`, '_blank');
+                          }}
+                        >
+                          <ExternalLink className="h-3 w-3 text-white" />
+                        </button>
                       )}
                     </div>
                     <div className="p-2 space-y-0.5">
