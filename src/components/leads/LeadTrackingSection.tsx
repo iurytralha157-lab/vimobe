@@ -152,15 +152,28 @@ export function LeadTrackingSection({ leadMeta, isLoading }: LeadTrackingSection
                   onClick={() => window.open(leadMeta.creative_url!, '_blank')}
                 />
               ) : null}
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full gap-2 text-xs"
-                onClick={() => window.open(leadMeta.creative_video_url || leadMeta.creative_url!, '_blank')}
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Ver Criativo
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 gap-2 text-xs"
+                  onClick={() => window.open(leadMeta.creative_video_url || leadMeta.creative_url!, '_blank')}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Ver Criativo
+                </Button>
+                {(leadMeta as any).creative_instagram_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-2 text-xs"
+                    onClick={() => window.open((leadMeta as any).creative_instagram_url, '_blank')}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Ver no Instagram
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>
