@@ -625,11 +625,6 @@ export default function Pipelines() {
     return () => { cancelled = true; };
   }, [deferredSearch, hasMoreLeads, selectedPipelineId]);
   
-  // Get date range for filtering
-  const dateRange = useMemo(() => {
-    if (customDateRange) return customDateRange;
-    return getDateRangeFromPreset(datePreset);
-  }, [datePreset, customDateRange]);
 
   const stageIds = useMemo(() => stages.map((stage: any) => stage.id), [stages]);
 
