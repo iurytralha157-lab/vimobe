@@ -588,12 +588,31 @@ export function useLoadMoreLeads() {
       stageId, 
       offset,
       filterUserId,
+      filters,
     }: { 
       pipelineId: string; 
       stageId: string; 
       offset: number;
       filterUserId?: string;
+      filters?: {
+        dateRange?: { from: Date; to: Date } | null;
+        filterTag?: string;
+        filterDealStatus?: string;
+        searchQuery?: string;
+      };
     }) => {
+      // Pre-fetch tagged lead IDs if tag filter is active
+      let taggedLeadIds: string[] | null = null;
+      if (filters?.filterTag && filters.filterTag !== 'all') {
+        const { data: taggedLeads } = await supabase
+          .from('lead_tags')
+          .select('lead_id')
+          .eq('tag_id', filters.filterTag);
+        taggedLeadIds = [...new Set((taggedLeads || []).map(item => item.lead_id).filter(Boolean))];
+      }
+
+      const normalizedSearch = filters?.searchQuery?.trim();
+
       let query = (supabase as any)
         .from('leads')
         .select(LEAD_PIPELINE_FIELDS)
@@ -604,6 +623,20 @@ export function useLoadMoreLeads() {
       
       if (filterUserId && filterUserId !== 'all') {
         query = query.eq('assigned_user_id', filterUserId);
+      }
+      if (filters?.filterDealStatus && filters.filterDealStatus !== 'all') {
+        query = query.eq('deal_status', filters.filterDealStatus);
+      }
+      if (normalizedSearch) {
+        query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
+      }
+      if (!normalizedSearch && filters?.dateRange) {
+        query = query
+          .gte('created_at', filters.dateRange.from.toISOString())
+          .lte('created_at', filters.dateRange.to.toISOString());
+      }
+      if (taggedLeadIds) {
+        query = query.in('id', taggedLeadIds);
       }
       
       const { data, error } = await query;
