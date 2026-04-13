@@ -28,15 +28,12 @@ Deno.serve(async (req) => {
 
     // Fetch sessions that need health check
     // - status = 'connected' (we want to verify they're still connected)
-    // - health_check_failures < 5 (backoff after too many failures)
-    // - last_health_check is old or null
     // - Limit to 20 per execution to avoid timeout
     const { data: sessions, error: sessionsError } = await supabase
       .from("whatsapp_sessions")
       .select("*")
       .eq("status", "connected")
-      .lt("health_check_failures", 5)
-      .order("last_health_check", { ascending: true, nullsFirst: true })
+      .order("updated_at", { ascending: true, nullsFirst: true })
       .limit(20);
 
     if (sessionsError) {
@@ -74,55 +71,47 @@ Deno.serve(async (req) => {
 
         // Update session
         const updateData: any = {
-          last_health_check: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
 
-        if (realStatus === "connected") {
-          // Reset failures on successful connection
-          updateData.health_check_failures = 0;
-        } else {
-          // Increment failures
-          const newFailures = (session.health_check_failures || 0) + 1;
-          updateData.health_check_failures = newFailures;
+        if (realStatus !== "connected") {
           updateData.status = "disconnected";
 
-          // Create notification if this is the 2nd consecutive failure (threshold)
-          if (newFailures === 2) {
-            const displayName = session.display_name || session.instance_name;
-            
-            // Notify session owner
-            await supabase.from("notifications").insert({
-              user_id: session.owner_user_id,
+          // Create notification for disconnection
+          const displayName = session.display_name || session.instance_name;
+          
+          // Notify session owner
+          await supabase.from("notifications").insert({
+            user_id: session.owner_user_id,
+            organization_id: session.organization_id,
+            title: "⚠️ WhatsApp Desconectado!",
+            content: `A sessão "${displayName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
+            type: "warning",
+            is_read: false,
+          });
+
+          // Notify admins of the organization
+          const { data: admins } = await supabase
+            .from("users")
+            .select("id")
+            .eq("organization_id", session.organization_id)
+            .eq("role", "admin")
+            .neq("id", session.owner_user_id);
+
+          if (admins && admins.length > 0) {
+            const adminNotifications = admins.map((admin: any) => ({
+              user_id: admin.id,
               organization_id: session.organization_id,
               title: "⚠️ WhatsApp Desconectado!",
-              content: `A sessão "${displayName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
+              content: `A sessão "${displayName}" perdeu a conexão. O responsável foi notificado.`,
               type: "warning",
               is_read: false,
-            });
+            }));
 
-            // Notify admins of the organization
-            const { data: admins } = await supabase
-              .from("users")
-              .select("id")
-              .eq("organization_id", session.organization_id)
-              .eq("role", "admin")
-              .neq("id", session.owner_user_id);
-
-            if (admins && admins.length > 0) {
-              const adminNotifications = admins.map((admin: any) => ({
-                user_id: admin.id,
-                organization_id: session.organization_id,
-                title: "⚠️ WhatsApp Desconectado!",
-                content: `A sessão "${displayName}" perdeu a conexão. O responsável foi notificado.`,
-                type: "warning",
-                is_read: false,
-              }));
-
-              await supabase.from("notifications").insert(adminNotifications);
-            }
-
-            console.log(`Disconnection notifications sent for session ${displayName}`);
+            await supabase.from("notifications").insert(adminNotifications);
           }
+
+          console.log(`Disconnection notifications sent for session ${displayName}`);
         }
 
         await supabase
@@ -159,15 +148,6 @@ Deno.serve(async (req) => {
       } catch (error) {
         console.error(`Error checking session ${session.instance_name}:`, error);
         
-        // Increment failures on error
-        await supabase
-          .from("whatsapp_sessions")
-          .update({
-            last_health_check: new Date().toISOString(),
-            health_check_failures: (session.health_check_failures || 0) + 1
-          })
-          .eq("id", session.id);
-
         results.push({
           session_id: session.id,
           instance_name: session.instance_name,
