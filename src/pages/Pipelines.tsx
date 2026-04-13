@@ -333,7 +333,7 @@ export default function Pipelines() {
     const newStage = stages.find(s => s.id === newStageId);
     
     // IMMEDIATE optimistic update - move card visually first
-    const queryKey = ['stages-with-leads', selectedPipelineId];
+    const queryKey = ['stages-with-leads', selectedPipelineId, filterUser];
     const previousData = queryClient.getQueryData(queryKey);
     
     queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
