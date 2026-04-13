@@ -38,20 +38,30 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
   const [filterLocation, setFilterLocation] = useState('');
   const { profile } = useAuth();
 
-  const { data: siteSubdomain } = useQuery({
-    queryKey: ['org-site-subdomain', profile?.organization_id],
+  const { data: siteInfo } = useQuery({
+    queryKey: ['org-site-info', profile?.organization_id],
     queryFn: async () => {
       if (!profile?.organization_id) return null;
       const { data } = await supabase
         .from('organization_sites')
-        .select('subdomain')
+        .select('subdomain, custom_domain, domain_verified')
         .eq('organization_id', profile.organization_id)
         .eq('is_active', true)
         .maybeSingle();
-      return data?.subdomain || null;
+      return data as { subdomain: string | null; custom_domain: string | null; domain_verified: boolean | null } | null;
     },
     enabled: !!profile?.organization_id && open,
   });
+
+  const getPropertySiteUrl = (code: string) => {
+    if (siteInfo?.custom_domain && siteInfo?.domain_verified) {
+      return `https://${siteInfo.custom_domain}/imovel/${code}`;
+    }
+    if (siteInfo?.subdomain) {
+      return `https://vimob.vettercompany.com.br/sites/${siteInfo.subdomain}/imovel/${code}`;
+    }
+    return null;
+  };
 
   const selectedProperty = (properties || []).find(p => p.id === selectedPropertyId);
 
