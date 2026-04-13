@@ -214,8 +214,14 @@ export default function Pipelines() {
       stageId,
       offset: currentCount,
       filterUserId: filterUser,
+      filters: {
+        dateRange,
+        filterTag: filterTag !== 'all' ? filterTag : undefined,
+        filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
+        searchQuery: searchQuery || undefined,
+      },
     });
-  }, [selectedPipelineId, stages, loadMoreLeads, filterUser]);
+  }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery]);
 
   // Real-time subscription for leads and tags updates
   useEffect(() => {
