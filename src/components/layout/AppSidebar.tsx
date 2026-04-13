@@ -136,8 +136,7 @@ const allNavItems: NavItem[] = [{
   icon: Zap,
   labelKey: 'automations',
   path: '/automations',
-  module: 'automations',
-  adminOnly: true
+  module: 'automations'
 }];
 const bottomItems: NavItem[] = [{
   icon: Globe,

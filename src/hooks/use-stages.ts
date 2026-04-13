@@ -70,9 +70,9 @@ export function useStages(pipelineId?: string) {
   });
 }
 
-export function useStagesWithLeads(pipelineId?: string) {
+export function useStagesWithLeads(pipelineId?: string, filterUserId?: string) {
   return useQuery({
-    queryKey: ['stages-with-leads', pipelineId],
+    queryKey: ['stages-with-leads', pipelineId, filterUserId],
     queryFn: async () => {
       // Get default pipeline if not provided
       let targetPipelineId = pipelineId;
@@ -101,24 +101,35 @@ export function useStagesWithLeads(pipelineId?: string) {
       const stages = stagesResult.data || [];
       
       // Buscar leads paginados por estágio E contagens em paralelo
-      const stageLeadsPromises = stages.map(stage =>
-        (supabase as any)
+      // Apply user filter server-side when filtering by specific user
+      const stageLeadsPromises = stages.map(stage => {
+        let query = (supabase as any)
           .from('leads')
           .select(LEAD_PIPELINE_FIELDS)
           .eq('pipeline_id', targetPipelineId)
           .eq('stage_id', stage.id)
           .order('stage_entered_at', { ascending: false })
-          .range(0, LEADS_PER_STAGE - 1)
-      );
+          .range(0, LEADS_PER_STAGE - 1);
+        
+        if (filterUserId && filterUserId !== 'all') {
+          query = query.eq('assigned_user_id', filterUserId);
+        }
+        return query;
+      });
       
       // Contagem total por estágio usando head:true (sem transferência de dados)
-      const stageCountPromises = stages.map(stage =>
-        supabase
+      const stageCountPromises = stages.map(stage => {
+        let query = supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
           .eq('pipeline_id', targetPipelineId)
-          .eq('stage_id', stage.id)
-      );
+          .eq('stage_id', stage.id);
+        
+        if (filterUserId && filterUserId !== 'all') {
+          query = query.eq('assigned_user_id', filterUserId);
+        }
+        return query;
+      });
       
       // Execute leads + counts in parallel
       const [stageLeadsResults, stageCountResults] = await Promise.all([
@@ -526,19 +537,27 @@ export function useLoadMoreLeads() {
     mutationFn: async ({ 
       pipelineId, 
       stageId, 
-      offset 
+      offset,
+      filterUserId,
     }: { 
       pipelineId: string; 
       stageId: string; 
       offset: number;
+      filterUserId?: string;
     }) => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from('leads')
         .select(LEAD_PIPELINE_FIELDS)
         .eq('pipeline_id', pipelineId)
         .eq('stage_id', stageId)
         .order('stage_entered_at', { ascending: false })
         .range(offset, offset + LEADS_PER_STAGE - 1);
+      
+      if (filterUserId && filterUserId !== 'all') {
+        query = query.eq('assigned_user_id', filterUserId);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -639,9 +658,9 @@ export function useLoadMoreLeads() {
       
       return { stageId, leads: enrichedLeads };
     },
-    onSuccess: ({ stageId, leads }, { pipelineId }) => {
+    onSuccess: ({ stageId, leads }, { pipelineId, filterUserId }) => {
       // Mesclar novos leads no cache existente
-      queryClient.setQueryData(['stages-with-leads', pipelineId], (old: any[] | undefined) => {
+      queryClient.setQueryData(['stages-with-leads', pipelineId, filterUserId], (old: any[] | undefined) => {
         if (!old) return old;
         
         return old.map(stage => {

@@ -173,7 +173,7 @@ export default function Pipelines() {
     }
   }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading, isTeamLeader]);
   
-  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined);
+  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined, filterUser);
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
   // createLead agora é gerenciado pelo CreateLeadDialog
@@ -198,8 +198,9 @@ export default function Pipelines() {
       pipelineId: selectedPipelineId,
       stageId,
       offset: currentCount,
+      filterUserId: filterUser,
     });
-  }, [selectedPipelineId, stages, loadMoreLeads]);
+  }, [selectedPipelineId, stages, loadMoreLeads, filterUser]);
 
   // Real-time subscription for leads and tags updates
   useEffect(() => {
@@ -332,7 +333,7 @@ export default function Pipelines() {
     const newStage = stages.find(s => s.id === newStageId);
     
     // IMMEDIATE optimistic update - move card visually first
-    const queryKey = ['stages-with-leads', selectedPipelineId];
+    const queryKey = ['stages-with-leads', selectedPipelineId, filterUser];
     const previousData = queryClient.getQueryData(queryKey);
     
     queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
@@ -370,23 +371,28 @@ export default function Pipelines() {
     });
     
     try {
-      // Fetch automations in parallel with DB update for responsiveness
-      const [updateResult, automationsResult] = await Promise.all([
-        supabase
-          .from('leads')
-          .update({ 
-            stage_id: newStageId,
-            stage_entered_at: new Date().toISOString(),
-          })
-          .eq('id', draggableId),
-        supabase
+      // Update lead stage in database first
+      const updateResult = await supabase
+        .from('leads')
+        .update({ 
+          stage_id: newStageId,
+          stage_entered_at: new Date().toISOString(),
+        })
+        .eq('id', draggableId);
+      
+      if (updateResult.error) throw updateResult.error;
+      
+      // Fetch stage automations separately (don't block on failure)
+      let automationsResult: any = { data: [] };
+      try {
+        automationsResult = await supabase
           .from('stage_automations')
           .select('automation_type, action_config')
           .eq('stage_id', newStageId)
-          .eq('is_active', true),
-      ]);
-      
-      if (updateResult.error) throw updateResult.error;
+          .eq('is_active', true);
+      } catch (e) {
+        console.warn('Failed to fetch stage automations:', e);
+      }
       
       // Apply deal_status from automation as a SECOND optimistic update
       const statusAutomation = automationsResult.data?.find(
