@@ -173,7 +173,7 @@ export default function Pipelines() {
     }
   }, [profile, isAdmin, filterUser, hasLeadViewAll, permissionLoading, isTeamLeader]);
   
-  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined);
+  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(selectedPipelineId || undefined, filterUser);
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
   // createLead agora é gerenciado pelo CreateLeadDialog
