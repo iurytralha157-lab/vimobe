@@ -4,7 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Building2, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { Building2, Search, SlidersHorizontal, ChevronRight, ExternalLink } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Property {
   id: string;
@@ -33,6 +36,22 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
   const [filterType, setFilterType] = useState('');
   const [filterPurpose, setFilterPurpose] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
+  const { profile } = useAuth();
+
+  const { data: siteSubdomain } = useQuery({
+    queryKey: ['org-site-subdomain', profile?.organization_id],
+    queryFn: async () => {
+      if (!profile?.organization_id) return null;
+      const { data } = await supabase
+        .from('organization_sites')
+        .select('subdomain')
+        .eq('organization_id', profile.organization_id)
+        .eq('is_active', true)
+        .maybeSingle();
+      return data?.subdomain || null;
+    },
+    enabled: !!profile?.organization_id && open,
+  });
 
   const selectedProperty = (properties || []).find(p => p.id === selectedPropertyId);
 
@@ -157,10 +176,10 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 {filteredProperties.map(p => (
-                  <button
+                  <div
                     key={p.id}
                     className={cn(
-                      'flex flex-col rounded-xl border overflow-hidden text-left transition-all hover:ring-2 hover:ring-primary/50',
+                      'flex flex-col rounded-xl border overflow-hidden text-left transition-all hover:ring-2 hover:ring-primary/50 cursor-pointer',
                       selectedPropertyId === p.id && 'ring-2 ring-primary'
                     )}
                     onClick={() => {
@@ -185,6 +204,18 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
                           {p.code}
                         </Badge>
                       )}
+                      {siteSubdomain && p.code && (
+                        <button
+                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+                          title="Ver no site"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`/sites/${siteSubdomain}/imovel/${p.code}`, '_blank');
+                          }}
+                        >
+                          <ExternalLink className="h-3 w-3 text-white" />
+                        </button>
+                      )}
                     </div>
                     <div className="p-2 space-y-0.5">
                       <p className="text-[11px] font-medium truncate">{p.title || 'Sem título'}</p>
@@ -199,7 +230,7 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
                         </p>
                       )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
