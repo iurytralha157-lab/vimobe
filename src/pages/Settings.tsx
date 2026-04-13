@@ -74,7 +74,7 @@ export default function Settings() {
     }
 
     return tabs;
-  }, [t, hasWebhooksModule, hasWhatsAppModule, hasAIAgentModule]);
+  }, [t, hasWebhooksModule, hasWhatsAppModule, hasAIAgentModule, profile?.role, isSuperAdmin]);
 
   const currentTab = settingsTabs.find((tab) => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
