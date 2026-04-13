@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Copy } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -365,6 +366,41 @@ export default function AdminOnboarding() {
                   </Button>
                 </>
               )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Credentials Dialog */}
+        <Dialog open={!!createdCredentials} onOpenChange={() => setCreatedCredentials(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Credenciais do Usuário Criado</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Anote as credenciais abaixo para enviar ao usuário. A senha não poderá ser recuperada depois.
+              </p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">E-mail</label>
+                <div className="flex items-center gap-2">
+                  <Input readOnly value={createdCredentials?.email || ''} />
+                  <Button size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(createdCredentials?.email || ''); toast.success('E-mail copiado!'); }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Senha</label>
+                <div className="flex items-center gap-2">
+                  <Input readOnly value={createdCredentials?.password || ''} />
+                  <Button size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(createdCredentials?.password || ''); toast.success('Senha copiada!'); }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setCreatedCredentials(null)}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
