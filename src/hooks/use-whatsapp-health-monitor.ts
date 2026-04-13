@@ -52,10 +52,12 @@ export function useWhatsAppHealthMonitor() {
         return false;
       }
 
+      const reportedState = (data?.data?.state || "").toLowerCase();
       const isConnected = data?.success && (
         data.data?.connected === true || 
-        data.data?.state === "open" ||
-        data.data?.status === true
+        reportedState === "open" ||
+        reportedState === "connected" ||
+        reportedState === "connecting"
       );
 
       return isConnected;

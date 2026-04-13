@@ -64,9 +64,9 @@ Deno.serve(async (req) => {
         const data = await response.json();
         console.log(`Health check for ${session.instance_name}:`, data);
 
-        // Determine real status
-        const instanceState = data?.instance?.state || data?.state;
-        const isConnected = instanceState === "open" || instanceState === "connected";
+        // Treat transient "connecting" as healthy for already-connected sessions
+        const instanceState = (data?.instance?.state || data?.state || "").toLowerCase();
+        const isConnected = instanceState === "open" || instanceState === "connected" || instanceState === "connecting";
         const realStatus = isConnected ? "connected" : "disconnected";
 
         // Update session

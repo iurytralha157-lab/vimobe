@@ -167,12 +167,16 @@ async function handleConnectionUpdate(supabase: any, session: any, data: any) {
   console.log(`Connection update for session ${session.id}: ${state}`, data);
 
   const previousStatus = session.status;
+  const normalizedState = typeof state === "string" ? state.toLowerCase() : "";
   let status = "disconnected";
-  if (state === "open" || state === "connected") {
+
+  if (normalizedState === "open" || normalizedState === "connected") {
     status = "connected";
-  } else if (state === "connecting" || state === "qrcode") {
+  } else if (normalizedState === "connecting") {
+    status = previousStatus === "connected" ? "connected" : "connecting";
+  } else if (normalizedState === "qrcode") {
     status = "connecting";
-  } else if (state === "close" || state === "disconnected") {
+  } else if (normalizedState === "close" || normalizedState === "disconnected" || normalizedState === "logout") {
     status = "disconnected";
   }
 
