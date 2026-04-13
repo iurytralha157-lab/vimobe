@@ -4,7 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Building2, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { Building2, Search, SlidersHorizontal, ChevronRight, ExternalLink } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Property {
   id: string;
