@@ -537,19 +537,27 @@ export function useLoadMoreLeads() {
     mutationFn: async ({ 
       pipelineId, 
       stageId, 
-      offset 
+      offset,
+      filterUserId,
     }: { 
       pipelineId: string; 
       stageId: string; 
       offset: number;
+      filterUserId?: string;
     }) => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from('leads')
         .select(LEAD_PIPELINE_FIELDS)
         .eq('pipeline_id', pipelineId)
         .eq('stage_id', stageId)
         .order('stage_entered_at', { ascending: false })
         .range(offset, offset + LEADS_PER_STAGE - 1);
+      
+      if (filterUserId && filterUserId !== 'all') {
+        query = query.eq('assigned_user_id', filterUserId);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -652,7 +660,7 @@ export function useLoadMoreLeads() {
     },
     onSuccess: ({ stageId, leads }, { pipelineId }) => {
       // Mesclar novos leads no cache existente
-      queryClient.setQueryData(['stages-with-leads', pipelineId], (old: any[] | undefined) => {
+      queryClient.setQueryData(['stages-with-leads', pipelineId, variables.filterUserId], (old: any[] | undefined) => {
         if (!old) return old;
         
         return old.map(stage => {
