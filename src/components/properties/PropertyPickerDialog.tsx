@@ -36,6 +36,22 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
   const [filterType, setFilterType] = useState('');
   const [filterPurpose, setFilterPurpose] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
+  const { profile } = useAuth();
+
+  const { data: siteSubdomain } = useQuery({
+    queryKey: ['org-site-subdomain', profile?.organization_id],
+    queryFn: async () => {
+      if (!profile?.organization_id) return null;
+      const { data } = await supabase
+        .from('organization_sites')
+        .select('subdomain')
+        .eq('organization_id', profile.organization_id)
+        .eq('is_active', true)
+        .maybeSingle();
+      return data?.subdomain || null;
+    },
+    enabled: !!profile?.organization_id && open,
+  });
 
   const selectedProperty = (properties || []).find(p => p.id === selectedPropertyId);
 
