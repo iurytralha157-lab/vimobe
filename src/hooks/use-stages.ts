@@ -30,7 +30,8 @@ const LEAD_PIPELINE_FIELDS = `
   first_response_at, first_response_seconds, first_response_is_automation,
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
-  interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price)
+  interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
+  lead_meta(campaign_name)
 `;
 
 export function useStages(pipelineId?: string) {
