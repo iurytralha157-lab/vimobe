@@ -85,6 +85,21 @@ Deno.serve(async (req) => {
         result = { success: true, message: 'User updated successfully' };
         break;
 
+      case 'reset_password':
+        // Reset user password via admin API
+        const { password } = data;
+        if (!password) {
+          throw new Error('Password is required for reset_password action');
+        }
+        const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          password,
+        });
+        if (resetError) {
+          throw new Error(`Failed to reset password: ${resetError.message}`);
+        }
+        result = { success: true, message: 'Password reset successfully' };
+        break;
+
       case 'change_organization':
         // Change user's organization
         const { organization_id } = data;
