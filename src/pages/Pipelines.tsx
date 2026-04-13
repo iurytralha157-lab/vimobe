@@ -1258,12 +1258,6 @@ export default function Pipelines() {
                           ))}
                           {provided.placeholder}
                           
-                          {/* Filter warning when has_more and filters active */}
-                          {stageCountMetaMap.get(stage.id)?.canLoadMore && (filterUser && filterUser !== 'all' || filterTag !== 'all' || filterDealStatus !== 'all' || deferredSearch) && (
-                            <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-2 py-1.5 mt-1 text-center">
-                              ⚠️ Filtro ativo — alguns resultados podem não estar visíveis. Carregue mais para ver todos.
-                            </div>
-                          )}
                           
                           {/* Botão Carregar Mais */}
                           {stageCountMetaMap.get(stage.id)?.canLoadMore && (
