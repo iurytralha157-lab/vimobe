@@ -214,18 +214,21 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
                           {p.code}
                         </Badge>
                       )}
-                      {siteSubdomain && p.code && (
-                        <button
-                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
-                          title="Ver no site"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(`/sites/${siteSubdomain}/imovel/${p.code}`, '_blank');
-                          }}
-                        >
-                          <ExternalLink className="h-3 w-3 text-white" />
-                        </button>
-                      )}
+                      {p.code && (() => {
+                        const url = getPropertySiteUrl(p.code!);
+                        return url ? (
+                          <button
+                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+                            title="Ver no site"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(url, '_blank');
+                            }}
+                          >
+                            <ExternalLink className="h-3 w-3 text-white" />
+                          </button>
+                        ) : null;
+                      })()}
                     </div>
                     <div className="p-2 space-y-0.5">
                       <p className="text-[11px] font-medium truncate">{p.title || 'Sem título'}</p>
