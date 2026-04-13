@@ -50,22 +50,21 @@ export function useStages(pipelineId?: string) {
       const { data, error } = await query;
       if (error) throw error;
       
-      // Query otimizada: contar leads agrupados por stage em uma única query
-      const { data: leadCounts } = await supabase
-        .from('leads')
-        .select('stage_id')
-        .not('stage_id', 'is', null);
+      const stages = data || [];
       
-      const countsByStage = (leadCounts || []).reduce((acc, l) => {
-        if (l.stage_id) {
-          acc[l.stage_id] = (acc[l.stage_id] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
+      // Count leads per stage using head:true (no data transfer, just count)
+      const countPromises = stages.map(stage =>
+        supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('stage_id', stage.id)
+      );
       
-      return (data || []).map(stage => ({
+      const countResults = await Promise.all(countPromises);
+      
+      return stages.map((stage, index) => ({
         ...stage,
-        lead_count: countsByStage[stage.id] || 0,
+        lead_count: countResults[index]?.count || 0,
       })) as Stage[];
     },
   });
@@ -101,7 +100,7 @@ export function useStagesWithLeads(pipelineId?: string) {
       if (stagesResult.error) throw stagesResult.error;
       const stages = stagesResult.data || [];
       
-      // Buscar leads paginados por estágio em paralelo
+      // Buscar leads paginados por estágio E contagens em paralelo
       const stageLeadsPromises = stages.map(stage =>
         (supabase as any)
           .from('leads')
@@ -112,14 +111,26 @@ export function useStagesWithLeads(pipelineId?: string) {
           .range(0, LEADS_PER_STAGE - 1)
       );
       
-      // Contagem total de leads por estágio
-      const leadCountsResult = await supabase
-        .from('leads')
-        .select('stage_id')
-        .eq('pipeline_id', targetPipelineId)
-        .not('stage_id', 'is', null);
+      // Contagem total por estágio usando head:true (sem transferência de dados)
+      const stageCountPromises = stages.map(stage =>
+        supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('pipeline_id', targetPipelineId)
+          .eq('stage_id', stage.id)
+      );
       
-      const stageLeadsResults = await Promise.all(stageLeadsPromises);
+      // Execute leads + counts in parallel
+      const [stageLeadsResults, stageCountResults] = await Promise.all([
+        Promise.all(stageLeadsPromises),
+        Promise.all(stageCountPromises),
+      ]);
+      
+      // Build total counts map
+      const totalCountsByStage: Record<string, number> = {};
+      stages.forEach((stage, index) => {
+        totalCountsByStage[stage.id] = stageCountResults[index]?.count || 0;
+      });
       
       // Combinar leads de todos os estágios em um array plano
       const leads: any[] = [];
@@ -131,101 +142,90 @@ export function useStagesWithLeads(pipelineId?: string) {
         leads.push(...stageLeads);
       });
       
-      // Contar leads por estágio para exibir total real no badge
-      const totalCountsByStage = (leadCountsResult.data || []).reduce((acc: Record<string, number>, l: any) => {
-        if (l.stage_id) {
-          acc[l.stage_id] = (acc[l.stage_id] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-      
-      // Buscar tags apenas se houver leads
       const leadIds = leads.map((l: any) => l.id);
-      let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
       
-      if (leadIds.length > 0) {
-        const { data: leadTags } = await supabase
-          .from('lead_tags')
-          .select('lead_id, tag:tags(id, name, color)')
-          .in('lead_id', leadIds);
-        
-        tagsByLead = (leadTags || []).reduce((acc, lt) => {
-          if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
-          if (lt.tag) acc[lt.lead_id].push(lt.tag as any);
-          return acc;
-        }, {} as Record<string, { id: string; name: string; color: string }[]>);
-      }
-      
-      // Buscar fotos e unread_count do WhatsApp para leads com telefone
-      const leadsWithPhone = leads.filter((l: any) => l.phone);
-      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number; has_messages: boolean }> = new Map();
-      
-      if (leadsWithPhone.length > 0) {
-        // Collect phone numbers in both normalized and with-55 formats for DB matching
-        const phoneNumbers: string[] = [];
-        leadsWithPhone.forEach((l: any) => {
-          const cleaned = l.phone.replace(/\D/g, '');
-          if (!cleaned) return;
-          // Add the cleaned version
-          phoneNumbers.push(cleaned);
-          // If it starts with 55, also add without 55
-          if (cleaned.startsWith('55') && cleaned.length >= 12) {
-            phoneNumbers.push(cleaned.substring(2));
-          } else {
-            // If it doesn't start with 55, also add with 55
-            phoneNumbers.push('55' + cleaned);
-          }
-        });
-        const uniquePhones = [...new Set(phoneNumbers.filter(Boolean))];
-        
-        // Filter by phone numbers to avoid fetching all conversations
-        const { data: conversations } = uniquePhones.length > 0
-          ? await supabase
-              .from('whatsapp_conversations')
-              .select('contact_phone, contact_picture, unread_count, last_message_at')
-              .in('contact_phone', uniquePhones)
-              .is('deleted_at', null)
-          : { data: [] };
-        
-        // Criar mapa telefone normalizado → { foto, unread_count, has_messages }
-        (conversations || []).forEach(c => {
-          if (c.contact_phone) {
-            const normalized = normalizePhone(c.contact_phone);
-            if (normalized) {
-              const existing = phoneToWhatsApp.get(normalized);
-              phoneToWhatsApp.set(normalized, {
-                picture: c.contact_picture || existing?.picture || null,
-                unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
-                has_messages: existing?.has_messages || !!c.last_message_at,
-              });
+      // Run ALL enrichment queries in parallel (tags, whatsapp, tasks)
+      const [tagsByLead, phoneToWhatsApp, tasksByLead] = await Promise.all([
+        // Tags
+        (async () => {
+          if (leadIds.length === 0) return {} as Record<string, { id: string; name: string; color: string }[]>;
+          const { data: leadTags } = await supabase
+            .from('lead_tags')
+            .select('lead_id, tag:tags(id, name, color)')
+            .in('lead_id', leadIds);
+          return (leadTags || []).reduce((acc, lt) => {
+            if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
+            if (lt.tag) acc[lt.lead_id].push(lt.tag as any);
+            return acc;
+          }, {} as Record<string, { id: string; name: string; color: string }[]>);
+        })(),
+        // WhatsApp conversations
+        (async () => {
+          const leadsWithPhone = leads.filter((l: any) => l.phone);
+          const result = new Map<string, { picture: string | null; unread_count: number; has_messages: boolean }>();
+          if (leadsWithPhone.length === 0) return result;
+          
+          const phoneNumbers: string[] = [];
+          leadsWithPhone.forEach((l: any) => {
+            const cleaned = l.phone.replace(/\D/g, '');
+            if (!cleaned) return;
+            phoneNumbers.push(cleaned);
+            if (cleaned.startsWith('55') && cleaned.length >= 12) {
+              phoneNumbers.push(cleaned.substring(2));
+            } else {
+              phoneNumbers.push('55' + cleaned);
             }
-          }
-        });
-      }
+          });
+          const uniquePhones = [...new Set(phoneNumbers.filter(Boolean))];
+          
+          if (uniquePhones.length === 0) return result;
+          
+          const { data: conversations } = await supabase
+            .from('whatsapp_conversations')
+            .select('contact_phone, contact_picture, unread_count, last_message_at')
+            .in('contact_phone', uniquePhones)
+            .is('deleted_at', null);
+          
+          (conversations || []).forEach(c => {
+            if (c.contact_phone) {
+              const normalized = normalizePhone(c.contact_phone);
+              if (normalized) {
+                const existing = result.get(normalized);
+                result.set(normalized, {
+                  picture: c.contact_picture || existing?.picture || null,
+                  unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
+                  has_messages: existing?.has_messages || !!c.last_message_at,
+                });
+              }
+            }
+          });
+          return result;
+        })(),
+        // Tasks
+        (async () => {
+          const result: Record<string, { pending: number; completed: number }> = {};
+          if (leadIds.length === 0) return result;
+          const { data: taskCounts } = await supabase
+            .from('lead_tasks')
+            .select('lead_id, is_done')
+            .in('lead_id', leadIds);
+          (taskCounts || []).forEach((t: any) => {
+            if (!result[t.lead_id]) result[t.lead_id] = { pending: 0, completed: 0 };
+            if (t.is_done) {
+              result[t.lead_id].completed++;
+            } else {
+              result[t.lead_id].pending++;
+            }
+          });
+          return result;
+        })(),
+      ]);
       
       // Map de stages para lookup rápido
       const stagesById = stages.reduce((acc, stage) => {
         acc[stage.id] = stage;
         return acc;
       }, {} as Record<string, any>);
-      
-      // Buscar tasks_count para todos os leads
-      let tasksByLead: Record<string, { pending: number; completed: number }> = {};
-      if (leadIds.length > 0) {
-        const { data: taskCounts } = await supabase
-          .from('lead_tasks')
-          .select('lead_id, is_done')
-          .in('lead_id', leadIds);
-        
-        (taskCounts || []).forEach((t: any) => {
-          if (!tasksByLead[t.lead_id]) tasksByLead[t.lead_id] = { pending: 0, completed: 0 };
-          if (t.is_done) {
-            tasksByLead[t.lead_id].completed++;
-          } else {
-            tasksByLead[t.lead_id].pending++;
-          }
-        });
-      }
       
       // Enriquecer leads por estágio
       const enrichedLeadsByStage: Record<string, any[]> = {};
