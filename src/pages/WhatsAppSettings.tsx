@@ -89,11 +89,14 @@ export default function WhatsAppSettings() {
       const result = data.data;
       console.log("checkConnection result:", result);
       
-      // Evolution API returns state: "open" when connected
+      // Evolution API returns state: "open" when connected, "connecting" is also healthy
       const isConnected = 
         result?.state === "open" ||
+        result?.state === "connected" ||
+        result?.state === "connecting" ||
         result?.connected === true ||
-        result?.instance?.state === "open";
+        result?.instance?.state === "open" ||
+        result?.instance?.state === "connecting";
       
       if (isConnected) {
         // Update status in database
@@ -132,16 +135,32 @@ export default function WhatsAppSettings() {
           title: "✅ Conectado!", 
           description: "WhatsApp está online" 
         });
-      } else {
-        // Atualizar para disconnected se não conectado
-        await supabase
-          .from("whatsapp_sessions")
-          .update({ status: "disconnected" })
-          .eq("id", session.id);
+      } else if (connected === null) {
+        // Error checking - don't change DB status
         toast({ 
-          title: "⚠️ Desconectado", 
-          description: "WhatsApp não está conectado" 
+          title: "⚠️ Não foi possível verificar", 
+          description: "Tente novamente em alguns segundos" 
         });
+      } else {
+        // Retry once before marking disconnected
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const retryResult = await checkConnection(session.instance_name, session.id);
+        
+        if (retryResult === true) {
+          toast({ 
+            title: "✅ Conectado!", 
+            description: "WhatsApp está online" 
+          });
+        } else {
+          await supabase
+            .from("whatsapp_sessions")
+            .update({ status: "disconnected" })
+            .eq("id", session.id);
+          toast({ 
+            title: "⚠️ Desconectado", 
+            description: "WhatsApp não está conectado" 
+          });
+        }
       }
       
       queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
