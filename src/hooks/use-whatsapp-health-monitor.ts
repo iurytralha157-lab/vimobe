@@ -52,10 +52,12 @@ export function useWhatsAppHealthMonitor() {
         return false;
       }
 
+      const reportedState = (data?.data?.state || "").toLowerCase();
       const isConnected = data?.success && (
         data.data?.connected === true || 
-        data.data?.state === "open" ||
-        data.data?.status === true
+        reportedState === "open" ||
+        reportedState === "connected" ||
+        reportedState === "connecting"
       );
 
       return isConnected;
@@ -115,7 +117,7 @@ export function useWhatsAppHealthMonitor() {
     }
 
     isPollingRef.current = true;
-    const connectedSessions = sessions.filter(s => s.status === "connected");
+    const connectedSessions = sessions.filter(s => s.status === "connected" || s.status === "connecting");
 
     for (const session of connectedSessions) {
       const state = healthStatesRef.current.get(session.id) || {
@@ -222,7 +224,7 @@ export function useWhatsAppHealthMonitor() {
 
     toast.promise(
       (async () => {
-        const connectedSessions = sessions.filter(s => s.status === "connected");
+        const connectedSessions = sessions.filter(s => s.status === "connected" || s.status === "connecting");
         if (connectedSessions.length === 0) {
           throw new Error("Nenhuma sessão conectada");
         }

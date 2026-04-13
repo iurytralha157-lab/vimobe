@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const { data: sessions, error: sessionsError } = await supabase
       .from("whatsapp_sessions")
       .select("*")
-      .eq("status", "connected")
+      .in("status", ["connected", "connecting"])
       .order("updated_at", { ascending: true, nullsFirst: true })
       .limit(20);
 
@@ -64,15 +64,20 @@ Deno.serve(async (req) => {
         const data = await response.json();
         console.log(`Health check for ${session.instance_name}:`, data);
 
-        // Determine real status
-        const instanceState = data?.instance?.state || data?.state;
-        const isConnected = instanceState === "open" || instanceState === "connected";
+        // Treat transient "connecting" as healthy for already-connected sessions
+        const instanceState = (data?.instance?.state || data?.state || "").toLowerCase();
+        const isConnected = instanceState === "open" || instanceState === "connected" || instanceState === "connecting";
         const realStatus = isConnected ? "connected" : "disconnected";
 
         // Update session
         const updateData: any = {
           updated_at: new Date().toISOString(),
         };
+
+        if (realStatus === "connected" && session.status !== "connected") {
+          updateData.status = "connected";
+          updateData.last_connected_at = new Date().toISOString();
+        }
 
         if (realStatus !== "connected") {
           updateData.status = "disconnected";
