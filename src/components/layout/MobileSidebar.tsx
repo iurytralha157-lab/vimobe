@@ -84,7 +84,7 @@ const allNavItems: NavItem[] = [
   // Admin modules
   { icon: Shuffle, labelKey: 'crmManagement', path: '/crm/management', module: 'crm', adminOnly: true },
   { icon: Calendar, labelKey: 'schedule', path: '/agenda', module: 'agenda' },
-  { icon: Zap, labelKey: 'automations', path: '/automations', module: 'automations', adminOnly: true },
+  { icon: Zap, labelKey: 'automations', path: '/automations', module: 'automations' },
 ];
 
 const bottomItems: NavItem[] = [
