@@ -230,7 +230,7 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
                         </p>
                       )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
