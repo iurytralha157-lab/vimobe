@@ -198,8 +198,9 @@ export default function Pipelines() {
       pipelineId: selectedPipelineId,
       stageId,
       offset: currentCount,
+      filterUserId: filterUser,
     });
-  }, [selectedPipelineId, stages, loadMoreLeads]);
+  }, [selectedPipelineId, stages, loadMoreLeads, filterUser]);
 
   // Real-time subscription for leads and tags updates
   useEffect(() => {
