@@ -186,9 +186,15 @@ async function handleConnectionUpdate(supabase: any, session: any, data: any) {
     updateData.last_connected_at = new Date().toISOString();
   }
 
-  // Extract phone number if available
-  if (data?.instance?.wuid) {
-    updateData.phone_number = data.instance.wuid.split("@")[0];
+  // Extract phone number and profile info if available
+  if (data?.instance?.wuid || data?.wuid) {
+    updateData.phone_number = (data.instance?.wuid || data.wuid).split("@")[0];
+  }
+  if (data?.profileName || data?.instance?.profileName) {
+    updateData.profile_name = data.profileName || data.instance.profileName;
+  }
+  if (data?.profilePictureUrl || data?.instance?.profilePictureUrl) {
+    updateData.profile_picture = data.profilePictureUrl || data.instance.profilePictureUrl;
   }
 
   await supabase
