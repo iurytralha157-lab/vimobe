@@ -83,7 +83,7 @@ export function SalesFunnelWithPipeline({ filters }: SalesFunnelWithPipelineProp
 
   return {
     funnelComponent: (
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden h-full flex flex-col">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
