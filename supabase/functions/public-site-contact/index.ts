@@ -183,14 +183,33 @@ Deno.serve(async (req) => {
         interest_property_id: property_id || null,
         valor_interesse: propertyPrice,
         commission_percentage: propertyCommission,
-        visitor_session_id: session_id || null,
       };
 
-      const { data: newLead, error: leadError } = await supabase
+      // Only include visitor_session_id if provided (column may not exist yet)
+      if (session_id) {
+        leadData.visitor_session_id = session_id;
+      }
+
+      let newLead;
+      let leadError;
+
+      // Try inserting with visitor_session_id first
+      ({ data: newLead, error: leadError } = await supabase
         .from('leads')
         .insert(leadData)
         .select('id')
-        .single();
+        .single());
+
+      // If it fails due to missing column, retry without visitor_session_id
+      if (leadError && session_id) {
+        console.log('Retrying lead insert without visitor_session_id (column may not exist yet)');
+        delete leadData.visitor_session_id;
+        ({ data: newLead, error: leadError } = await supabase
+          .from('leads')
+          .insert(leadData)
+          .select('id')
+          .single());
+      }
 
       if (leadError) {
         console.error('Error creating lead:', leadError);
