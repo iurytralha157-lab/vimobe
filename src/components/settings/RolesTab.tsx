@@ -241,22 +241,22 @@ export function RolesTab() {
             Crie funções personalizadas e defina o que cada cargo pode acessar
           </CardDescription>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={(open) => {
+        <Sheet open={createDialogOpen} onOpenChange={(open) => {
           setCreateDialogOpen(open);
           if (!open) resetForm();
         }}>
-          <DialogTrigger asChild>
+          <SheetTrigger asChild>
             <Button onClick={handleOpenCreate}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Função
             </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[90vh] overflow-hidden flex flex-col">
-            <DialogHeader>
-              <DialogTitle>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>
                 {editingRole ? 'Editar Função' : 'Nova Função'}
-              </DialogTitle>
-            </DialogHeader>
+              </SheetTitle>
+            </SheetHeader>
             
             <div className="flex-1 overflow-y-auto space-y-6 py-4">
               {/* Informações básicas */}
@@ -450,8 +450,8 @@ export function RolesTab() {
                 {editingRole ? 'Salvar Alterações' : 'Criar Função'}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       </CardHeader>
 
       <CardContent className="px-4 md:px-6 pb-5">
