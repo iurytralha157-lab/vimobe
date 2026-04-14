@@ -149,11 +149,6 @@ export function usePublicProperties(organizationId: string | null, filters?: {
       if (filters?.bairro) params.append('bairro', filters.bairro);
       if (filters?.mobilia) params.append('mobilia', filters.mobilia);
 
-      const { data, error } = await supabase.functions.invoke('public-site-data', {
-        body: null,
-        method: 'GET',
-      });
-
       // Fallback to fetch since invoke doesn't support GET params well
       const response = await fetch(
         `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-data?${params.toString()}`
