@@ -53,7 +53,7 @@ export async function trackEvent(params: TrackEventParams) {
   const sessionId = getSessionId();
 
   try {
-    await (supabase.from('lead_events') as any).insert({
+    await (supabase as any).from('lead_events').insert({
       session_id: sessionId,
       event_type: params.eventType,
       page_path: params.pagePath || window.location.pathname,
