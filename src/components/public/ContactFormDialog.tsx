@@ -69,6 +69,7 @@ export function ContactFormDialog({
             message: formData.message.trim() || null,
             property_id: propertyId || null,
             property_code: propertyCode || null,
+            session_id: localStorage.getItem('vimob_session_id') || null,
           }),
         }
       );

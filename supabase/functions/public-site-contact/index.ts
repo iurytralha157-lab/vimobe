@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
       phone, 
       message, 
       property_id,
-      property_code
+      property_code,
+      session_id
     } = await req.json();
 
     if (!organization_id || !name || !phone) {
@@ -182,6 +183,7 @@ Deno.serve(async (req) => {
         interest_property_id: property_id || null,
         valor_interesse: propertyPrice,
         commission_percentage: propertyCommission,
+        visitor_session_id: session_id || null,
       };
 
       const { data: newLead, error: leadError } = await supabase
