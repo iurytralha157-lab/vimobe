@@ -7,7 +7,6 @@ import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithP
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
 import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
 import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionChart';
-import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
