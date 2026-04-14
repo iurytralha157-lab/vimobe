@@ -155,13 +155,14 @@ export default function Dashboard() {
               />
             )}
 
-            {/* Row 3: Recent Activities + Evolution */}
-            <RecentActivities />
-            {isTelecom ? (
-              <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
-            ) : (
-              <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-            )}
+            {/* Row 3: Evolution (full width) */}
+            <div className="col-span-2">
+              {isTelecom ? (
+                <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
+              ) : (
+                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+              )}
+            </div>
           </div>
 
           {/* Right column (col 9-12): Sales Funnel */}
