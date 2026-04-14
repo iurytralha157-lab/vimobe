@@ -42,6 +42,22 @@ export interface LeadAnalyticsData {
   device_breakdown: DeviceBreakdown[];
 }
 
+function pickNumber(result: Record<string, any>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = result[key];
+    if (typeof value === 'number' && !Number.isNaN(value)) return value;
+  }
+  return 0;
+}
+
+function pickArray<T>(result: Record<string, any>, ...keys: string[]): T[] {
+  for (const key of keys) {
+    const value = result[key];
+    if (Array.isArray(value)) return value as T[];
+  }
+  return [];
+}
+
 export function useLeadAnalytics(dateFrom?: Date, dateTo?: Date) {
   const { organization } = useAuth();
 
@@ -63,15 +79,15 @@ export function useLeadAnalytics(dateFrom?: Date, dateTo?: Date) {
         };
       }
 
-      const result = data || {};
+      const result = (data || {}) as Record<string, any>;
       return {
-        journeys: result.journeys ?? [],
-        funnel: result.funnel ?? [],
-        top_pages: result.top_pages ?? [],
-        daily_views: result.daily_views ?? [],
-        total_sessions: result.total_sessions ?? 0,
-        total_conversions: result.total_conversions ?? 0,
-        device_breakdown: result.device_breakdown ?? [],
+        journeys: pickArray<LeadJourney>(result, 'journeys'),
+        funnel: pickArray<FunnelStep>(result, 'funnel'),
+        top_pages: pickArray<TopPage>(result, 'top_pages', 'topPages'),
+        daily_views: pickArray<DailyView>(result, 'daily_views', 'dailyViews'),
+        total_sessions: pickNumber(result, 'total_sessions', 'totalSessions'),
+        total_conversions: pickNumber(result, 'total_conversions', 'totalConversions'),
+        device_breakdown: pickArray<DeviceBreakdown>(result, 'device_breakdown', 'deviceBreakdown'),
       };
     },
     enabled: !!organization?.id,
@@ -133,29 +149,29 @@ export function useSiteAnalytics(dateFrom?: Date, dateTo?: Date) {
           prevAvgDuration: 0, prevDesktopPct: 0, prevMobilePct: 0, prevConversions: 0,
         };
       }
-      
-      const result = data || {};
+
+      const result = (data || {}) as Record<string, any>;
       return {
-        totalViews: result.totalViews ?? 0,
-        totalPages: result.totalPages ?? 0,
-        uniquePages: result.uniquePages ?? 0,
-        uniqueSessions: result.uniqueSessions ?? 0,
-        avgDuration: result.avgDuration ?? 0,
-        desktopPct: result.desktopPct ?? 0,
-        mobilePct: result.mobilePct ?? 0,
-        tabletPct: result.tabletPct ?? 0,
-        directPct: result.directPct ?? 0,
-        searchPct: result.searchPct ?? 0,
-        socialPct: result.socialPct ?? 0,
-        campaignPct: result.campaignPct ?? 0,
-        conversions: result.conversions ?? 0,
-        prevViews: result.prevViews ?? 0,
-        prevPages: result.prevPages ?? 0,
-        prevUniquePages: result.prevUniquePages ?? 0,
-        prevAvgDuration: result.prevAvgDuration ?? 0,
-        prevDesktopPct: result.prevDesktopPct ?? 0,
-        prevMobilePct: result.prevMobilePct ?? 0,
-        prevConversions: result.prevConversions ?? 0,
+        totalViews: pickNumber(result, 'totalViews', 'total_views'),
+        totalPages: pickNumber(result, 'totalPages', 'total_pages'),
+        uniquePages: pickNumber(result, 'uniquePages', 'unique_pages'),
+        uniqueSessions: pickNumber(result, 'uniqueSessions', 'unique_sessions', 'totalSessions', 'total_sessions'),
+        avgDuration: pickNumber(result, 'avgDuration', 'avg_duration'),
+        desktopPct: pickNumber(result, 'desktopPct', 'desktop_pct'),
+        mobilePct: pickNumber(result, 'mobilePct', 'mobile_pct'),
+        tabletPct: pickNumber(result, 'tabletPct', 'tablet_pct'),
+        directPct: pickNumber(result, 'directPct', 'direct_pct'),
+        searchPct: pickNumber(result, 'searchPct', 'search_pct'),
+        socialPct: pickNumber(result, 'socialPct', 'social_pct'),
+        campaignPct: pickNumber(result, 'campaignPct', 'campaign_pct'),
+        conversions: pickNumber(result, 'conversions', 'totalConversions', 'total_conversions'),
+        prevViews: pickNumber(result, 'prevViews', 'prev_views'),
+        prevPages: pickNumber(result, 'prevPages', 'prev_pages'),
+        prevUniquePages: pickNumber(result, 'prevUniquePages', 'prev_unique_pages'),
+        prevAvgDuration: pickNumber(result, 'prevAvgDuration', 'prev_avg_duration'),
+        prevDesktopPct: pickNumber(result, 'prevDesktopPct', 'prev_desktop_pct'),
+        prevMobilePct: pickNumber(result, 'prevMobilePct', 'prev_mobile_pct'),
+        prevConversions: pickNumber(result, 'prevConversions', 'prev_conversions'),
       };
     },
     enabled: !!organization?.id,
@@ -182,15 +198,15 @@ export function useSiteAnalyticsDetailed(dateFrom?: Date, dateTo?: Date) {
         };
       }
 
-      const result = data || {};
+      const result = (data || {}) as Record<string, any>;
       return {
-        topProperties: result.topProperties ?? [],
-        topPages: result.topPages ?? [],
-        dailyViews: result.dailyViews ?? [],
-        conversionRate: result.conversionRate ?? 0,
-        totalSessions: result.totalSessions ?? 0,
-        totalConversions: result.totalConversions ?? 0,
-        siteLeads: result.siteLeads ?? 0,
+        topProperties: pickArray(result, 'topProperties', 'top_properties'),
+        topPages: pickArray(result, 'topPages', 'top_pages'),
+        dailyViews: pickArray(result, 'dailyViews', 'daily_views'),
+        conversionRate: pickNumber(result, 'conversionRate', 'conversion_rate'),
+        totalSessions: pickNumber(result, 'totalSessions', 'total_sessions'),
+        totalConversions: pickNumber(result, 'totalConversions', 'total_conversions'),
+        siteLeads: pickNumber(result, 'siteLeads', 'site_leads'),
       };
     },
     enabled: !!organization?.id,

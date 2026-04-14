@@ -57,7 +57,7 @@ export function SiteAnalyticsTab() {
   }
 
   const stats = data || {
-    totalViews: 0, totalPages: 0, uniquePages: 0, avgDuration: 0,
+    totalViews: 0, totalPages: 0, uniquePages: 0, uniqueSessions: 0, avgDuration: 0,
     desktopPct: 0, mobilePct: 0, tabletPct: 0,
     directPct: 0, searchPct: 0, socialPct: 0, campaignPct: 0,
     conversions: 0,
@@ -65,7 +65,7 @@ export function SiteAnalyticsTab() {
     prevDesktopPct: 0, prevMobilePct: 0, prevConversions: 0,
   };
 
-  const hasData = stats.totalViews > 0;
+  const hasData = stats.uniqueSessions > 0 || stats.totalPages > 0 || (detailed?.totalSessions ?? 0) > 0;
 
   const chartData = (detailed?.dailyViews || []).map(d => ({
     date: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
@@ -130,7 +130,7 @@ export function SiteAnalyticsTab() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatBlock label="Sessões" current={stats.totalViews} previous={stats.prevViews} />
+            <StatBlock label="Sessões" current={stats.uniqueSessions} previous={stats.prevViews} />
             <StatBlock label="Páginas vistas" current={stats.totalPages} previous={stats.prevPages} />
             <StatBlock label="Páginas únicas" current={stats.uniquePages} previous={stats.prevUniquePages} />
             <StatBlock label="Tempo médio" current={stats.avgDuration} previous={stats.prevAvgDuration} suffix="s" />
