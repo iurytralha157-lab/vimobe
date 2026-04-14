@@ -1,6 +1,4 @@
-import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLeadAnalytics } from '@/hooks/use-lead-analytics';
@@ -10,8 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-type Period = 'day' | 'week' | 'month';
-
 const EVENT_LABELS: Record<string, string> = {
   pageview: 'Visualização',
   form_submit: 'Formulário',
@@ -20,23 +16,13 @@ const EVENT_LABELS: Record<string, string> = {
   favorite: 'Favorito',
 };
 
-export function LeadJourneyDashboard() {
-  const [period, setPeriod] = useState<Period>('week');
+interface LeadJourneyDashboardProps {
+  dateFrom: Date;
+  dateTo: Date;
+}
 
-  const { dateFrom, dateTo } = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-
-    if (period === 'day') start.setDate(start.getDate() - 1);
-    else if (period === 'week') start.setDate(start.getDate() - 7);
-    else start.setMonth(start.getMonth() - 1);
-
-    return { dateFrom: start, dateTo: now };
-  }, [period]);
-
+export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardProps) {
   const { data, isLoading } = useLeadAnalytics(dateFrom, dateTo);
-
-  const periodLabels: Record<Period, string> = { day: 'Dia', week: 'Semana', month: 'Mês' };
 
   if (isLoading) {
     return (
@@ -72,28 +58,11 @@ export function LeadJourneyDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Period Selector */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Route className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Percurso dos Leads</h3>
-        </div>
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
-          {(['day', 'week', 'month'] as Period[]).map(p => (
-            <Button
-              key={p}
-              size="sm"
-              variant={period === p ? 'default' : 'ghost'}
-              className="text-xs px-3 h-7"
-              onClick={() => setPeriod(p)}
-            >
-              {periodLabels[p]}
-            </Button>
-          ))}
-        </div>
+      <div className="flex items-center gap-2">
+        <Route className="w-5 h-5 text-primary" />
+        <h3 className="font-semibold">Percurso dos Leads</h3>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -140,7 +109,6 @@ export function LeadJourneyDashboard() {
         </Card>
       </div>
 
-      {/* Funnel Chart */}
       {funnelData.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -165,7 +133,6 @@ export function LeadJourneyDashboard() {
         </Card>
       )}
 
-      {/* Daily Views Chart */}
       {chartData.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -197,7 +164,6 @@ export function LeadJourneyDashboard() {
         </Card>
       )}
 
-      {/* Top Pages */}
       {analytics.top_pages.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -229,7 +195,6 @@ export function LeadJourneyDashboard() {
         </Card>
       )}
 
-      {/* Lead Journeys */}
       {analytics.journeys.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -310,3 +275,4 @@ export function LeadJourneyDashboard() {
     </div>
   );
 }
+
