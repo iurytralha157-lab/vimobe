@@ -52,24 +52,30 @@ export interface TrackEventParams {
 export async function trackEvent(params: TrackEventParams) {
   const sessionId = getSessionId();
 
+  const payload = {
+    session_id: sessionId,
+    event_type: params.eventType,
+    page_path: params.pagePath || window.location.pathname,
+    page_title: params.pageTitle || document.title,
+    referrer: document.referrer || null,
+    organization_id: params.organizationId,
+    property_id: params.propertyId || null,
+    metadata: params.metadata || null,
+    ...getUTMs(),
+    ...getDeviceInfo(),
+  };
+
+  console.log('[Tracking] Sending event:', params.eventType, 'org:', params.organizationId, 'path:', payload.page_path);
+
   try {
-    const { error } = await (supabase as any).from('lead_events').insert({
-      session_id: sessionId,
-      event_type: params.eventType,
-      page_path: params.pagePath || window.location.pathname,
-      page_title: params.pageTitle || document.title,
-      referrer: document.referrer || null,
-      organization_id: params.organizationId,
-      property_id: params.propertyId || null,
-      metadata: params.metadata || null,
-      ...getUTMs(),
-      ...getDeviceInfo(),
-    });
+    const { error } = await (supabase as any).from('lead_events').insert(payload);
     if (error) {
-      console.warn('Tracking insert error:', error.message, error.details);
+      console.error('[Tracking] Insert error:', error.message, error.details, error.hint);
+    } else {
+      console.log('[Tracking] Event recorded successfully:', params.eventType);
     }
   } catch (e) {
-    console.warn('Tracking failed:', e);
+    console.error('[Tracking] Failed:', e);
   }
 }
 
