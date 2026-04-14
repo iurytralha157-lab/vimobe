@@ -114,7 +114,7 @@ export function SalesFunnelWithPipeline({ filters }: SalesFunnelWithPipelineProp
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0 pb-3">
+        <CardContent className="pt-0 pb-3 flex-1 min-h-0 overflow-y-auto">
           {isLoading ? (
             <FunnelSkeleton />
           ) : funnelData.length === 0 ? (
