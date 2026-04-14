@@ -142,16 +142,25 @@ Deno.serve(async (req) => {
       // Update existing lead with new message
       leadId = existingLead.id;
 
+      const leadUpdateData: Record<string, unknown> = {};
+
       // Update property interest data if a new property was specified
       if (property_id) {
+        leadUpdateData.interest_property_id = property_id;
+        leadUpdateData.valor_interesse = propertyPrice;
+        leadUpdateData.commission_percentage = propertyCommission;
+      }
+
+      if (session_id) {
+        leadUpdateData.visitor_session_id = session_id;
+      }
+
+      if (Object.keys(leadUpdateData).length > 0) {
         await supabase
           .from('leads')
-          .update({
-            interest_property_id: property_id,
-            valor_interesse: propertyPrice,
-            commission_percentage: propertyCommission,
-          })
+          .update(leadUpdateData)
           .eq('id', leadId);
+
         console.log(`Updated existing lead ${leadId} with property data`);
       }
       
@@ -220,6 +229,17 @@ Deno.serve(async (req) => {
       }
 
       leadId = newLead.id;
+
+      if (session_id) {
+        const { error: sessionUpdateError } = await supabase
+          .from('leads')
+          .update({ visitor_session_id: session_id })
+          .eq('id', leadId);
+
+        if (sessionUpdateError) {
+          console.error('Error persisting visitor_session_id after lead creation:', sessionUpdateError);
+        }
+      }
 
       // Log activity
       await supabase

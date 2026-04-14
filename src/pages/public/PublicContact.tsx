@@ -1,4 +1,5 @@
 import { submitContactForm } from "@/hooks/use-public-site";
+import { trackConversion } from "@/hooks/use-site-analytics";
 import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle, Send, Youtube, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,9 @@ export default function PublicContact() {
         phone: formData.phone,
         message: formData.message || undefined,
       });
+
+      trackConversion(organizationId);
+
       toast.success('Mensagem enviada com sucesso! Entraremos em contato em breve.');
       setFormData({ name: '', email: '', phone: '', message: '' });
     } catch (error) {
