@@ -257,6 +257,7 @@ export function SiteAnalyticsTab() {
           </Card>
         )}
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {(detailed?.topProperties?.length ?? 0) > 0 && (
           <Card>
             <CardHeader className="pb-3">
@@ -335,6 +336,7 @@ export function SiteAnalyticsTab() {
             </CardContent>
           </Card>
         )}
+        </div>
       </TabsContent>
 
       <TabsContent value="journeys" className="space-y-6">
