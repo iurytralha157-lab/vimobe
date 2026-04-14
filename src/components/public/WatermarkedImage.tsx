@@ -45,6 +45,10 @@ export function WatermarkedImage({
       <img
         src={src}
         alt={alt}
+        width={800}
+        height={600}
+        loading="lazy"
+        decoding="async"
         className={cn('w-full h-full object-cover', imgClassName)}
       />
       
