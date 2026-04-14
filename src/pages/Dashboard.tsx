@@ -168,7 +168,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right column (col 9-12): Sales Funnel */}
-          <div className="col-span-4">
+          <div className="col-span-4 min-h-0 overflow-hidden">
             {funnelComponent}
           </div>
         </div>
