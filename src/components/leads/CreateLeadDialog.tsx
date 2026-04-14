@@ -260,14 +260,14 @@ export function CreateLeadDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onInteractOutside={handleInteractOutside} className={`max-w-lg p-0 flex flex-col h-[85vh] sm:h-auto sm:max-h-[85vh] overflow-hidden w-[90%] sm:w-full rounded-lg`}>
-        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-0 flex flex-col overflow-hidden">
+        <SheetHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+          <SheetTitle className="flex items-center gap-2">
             {isTelecom && <UserCheck className="h-5 w-5 text-primary" />}
             {dialogTitle}
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
         {/* Draft restored banner */}
         {draftRestored && (
@@ -934,7 +934,7 @@ export function CreateLeadDialog({
             )}
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
