@@ -122,6 +122,11 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
     { ganhos: 0, perdas: 0, abertos: 0 }
   );
 
+  // Smart tick interval: show as many dates as possible
+  // Up to ~15 labels fit comfortably; beyond that, skip minimally
+  const totalDays = data.length;
+  const tickInterval = totalDays <= 15 ? 0 : totalDays <= 31 ? 1 : Math.floor(totalDays / 15);
+
   return (
     <Card className="overflow-hidden h-full flex flex-col">
       <CardHeader className="pb-2">
@@ -162,8 +167,9 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
                 dataKey="date" 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                 dy={8}
+                interval={tickInterval}
               />
               <YAxis 
                 axisLine={false}
