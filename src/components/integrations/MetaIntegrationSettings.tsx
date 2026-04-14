@@ -384,15 +384,15 @@ export function MetaIntegrationSettings() {
         </div>
       )}
 
-      {/* Page Selector Dialog */}
-      <Dialog open={showPageSelector} onOpenChange={setShowPageSelector}>
-        <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
-          <DialogHeader>
-            <DialogTitle>{meta.connectPage}</DialogTitle>
-            <DialogDescription>
+      {/* Page Selector Sheet */}
+      <Sheet open={showPageSelector} onOpenChange={setShowPageSelector}>
+        <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{meta.connectPage}</SheetTitle>
+            <SheetDescription>
               {meta.changeDestination}
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -570,8 +570,8 @@ export function MetaIntegrationSettings() {
               {t.common.save}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

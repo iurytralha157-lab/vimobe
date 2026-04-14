@@ -391,14 +391,14 @@ export function DistributionTab() {
 
       {/* Rules Manager Dialog */}
       {rulesQueue && (
-        <Dialog open={!!rulesQueue} onOpenChange={(open) => !open && setRulesQueue(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Regras de "{rulesQueue.name}"</DialogTitle>
-            </DialogHeader>
+        <Sheet open={!!rulesQueue} onOpenChange={(open) => !open && setRulesQueue(null)}>
+          <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Regras de "{rulesQueue.name}"</SheetTitle>
+            </SheetHeader>
             <RulesManager roundRobinId={rulesQueue.id} roundRobinName={rulesQueue.name} />
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       )}
     </div>
   );
