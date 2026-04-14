@@ -81,8 +81,7 @@ export default function Dashboard() {
     enabled: !!organization?.id,
   });
 
-  // Funnel with pipeline selector
-  const { funnelComponent } = SalesFunnelWithPipeline({ filters });
+  const funnelComponent = <SalesFunnelWithPipeline filters={filters} />;
 
   const periodLabel = datePresetOptions.find(o => o.value === datePreset)?.label || 'Período selecionado';
 
