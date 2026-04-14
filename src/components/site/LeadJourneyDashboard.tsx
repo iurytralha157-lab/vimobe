@@ -200,49 +200,52 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
         </Card>
       )}
 
-      {analytics.top_pages.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="w-4 h-4 text-primary" />
-              Páginas Mais Acessadas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Página</TableHead>
-                  <TableHead className="text-right">Views</TableHead>
-                  {siteBaseUrl && <TableHead className="w-12" />}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {analytics.top_pages.map((page, i) => (
-                  <TableRow key={page.page_path}>
-                    <TableCell className="font-medium text-muted-foreground">{i + 1}</TableCell>
-                    <TableCell className="font-mono text-xs max-w-[300px] truncate">{page.page_path}</TableCell>
-                    <TableCell className="text-right font-semibold">{page.views}</TableCell>
-                    {siteBaseUrl && (
-                      <TableCell className="text-right p-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => window.open(`${siteBaseUrl}${page.page_path}`, '_blank')}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {analytics.top_pages.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                Páginas Mais Acessadas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="max-h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">#</TableHead>
+                      <TableHead>Página</TableHead>
+                      <TableHead className="text-right w-16">Views</TableHead>
+                      {siteBaseUrl && <TableHead className="w-10" />}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {analytics.top_pages.map((page, i) => (
+                      <TableRow key={page.page_path}>
+                        <TableCell className="font-medium text-muted-foreground text-xs">{i + 1}</TableCell>
+                        <TableCell className="font-mono text-xs max-w-[200px] truncate">{page.page_path}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs">{page.views}</TableCell>
+                        {siteBaseUrl && (
+                          <TableCell className="text-right p-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => window.open(`${siteBaseUrl}${page.page_path}`, '_blank')}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
 
       {analytics.journeys.length > 0 && (
         <Card>
