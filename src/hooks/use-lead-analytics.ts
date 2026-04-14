@@ -190,6 +190,23 @@ function getConversions(events: AnalyticsEvent[]) {
   return events.filter(event => CONVERSION_EVENT_TYPES.has(event.event_type));
 }
 
+function fillDailyRange(sparse: { date: string; views: number }[], dateFrom?: Date, dateTo?: Date): { date: string; views: number }[] {
+  const from = dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const to = dateTo || new Date();
+  const map = new Map(sparse.map(d => [d.date, d.views]));
+  const result: { date: string; views: number }[] = [];
+  const cursor = new Date(from);
+  cursor.setHours(0, 0, 0, 0);
+  const end = new Date(to);
+  end.setHours(23, 59, 59, 999);
+  while (cursor <= end) {
+    const key = cursor.toISOString().slice(0, 10);
+    result.push({ date: key, views: map.get(key) || 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return result;
+}
+
 function groupCounts(items: string[]) {
   const counts = new Map<string, number>();
   items.forEach(item => counts.set(item, (counts.get(item) || 0) + 1));
