@@ -99,25 +99,19 @@ export function SiteAnalyticsTab() {
         </Card>
       )}
 
-      {/* Period Selector */}
+      {/* Date Filter */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-primary" />
           <h3 className="font-semibold">Indicadores</h3>
         </div>
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
-          {(['day', 'week', 'month'] as Period[]).map(p => (
-            <Button
-              key={p}
-              size="sm"
-              variant={period === p ? 'default' : 'ghost'}
-              className="text-xs px-3 h-7"
-              onClick={() => setPeriod(p)}
-            >
-              {periodLabels[p]}
-            </Button>
-          ))}
-        </div>
+        <DateFilterPopover
+          datePreset={datePreset}
+          onDatePresetChange={setDatePreset}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+          defaultPreset="last7days"
+        />
       </div>
 
       {/* Visits Card */}
