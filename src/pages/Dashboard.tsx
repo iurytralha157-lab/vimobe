@@ -158,7 +158,7 @@ export default function Dashboard() {
             </div>
 
             {/* Evolution chart - fills remaining height */}
-            <div className="flex-1 min-h-[250px]">
+            <div className="flex-1 min-h-0">
               {isTelecom ? (
                 <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
               ) : (
@@ -168,7 +168,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right column (col 9-12): Sales Funnel */}
-          <div className="col-span-4">
+          <div className="col-span-4 min-h-0 overflow-hidden">
             {funnelComponent}
           </div>
         </div>
