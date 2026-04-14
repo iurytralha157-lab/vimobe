@@ -1317,7 +1317,12 @@ export function LeadDetailDialog({
           {/* History Tab */}
 
           {/* History Tab */}
-          {activeTab === 'history' && <LeadHistory leadId={lead.id} />}
+          {activeTab === 'history' && (
+            <div className="space-y-4">
+              <LeadJourneySection leadId={lead.id} />
+              <LeadHistory leadId={lead.id} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -2150,7 +2155,10 @@ export function LeadDetailDialog({
 
           {/* History Tab */}
           <TabsContent value="history" className="p-6 mt-0">
-            <LeadHistory leadId={lead.id} />
+            <div className="space-y-4">
+              <LeadJourneySection leadId={lead.id} />
+              <LeadHistory leadId={lead.id} />
+            </div>
           </TabsContent>
         </Tabs>
       </ScrollArea>

@@ -18,6 +18,16 @@ interface ContactFormDialogProps {
   trigger?: React.ReactNode;
 }
 
+function getVisitorSessionId() {
+  let sessionId = localStorage.getItem('vimob_session_id');
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    localStorage.setItem('vimob_session_id', sessionId);
+  }
+
+  return sessionId;
+}
+
 export function ContactFormDialog({
   organizationId,
   propertyId,
@@ -69,7 +79,7 @@ export function ContactFormDialog({
             message: formData.message.trim() || null,
             property_id: propertyId || null,
             property_code: propertyCode || null,
-            session_id: localStorage.getItem('vimob_session_id') || null,
+            session_id: getVisitorSessionId(),
           }),
         }
       );

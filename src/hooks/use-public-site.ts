@@ -90,6 +90,18 @@ export interface PublicProperty {
   status: string;
 }
 
+function getVisitorSessionId() {
+  if (typeof window === 'undefined') return null;
+
+  let sessionId = window.localStorage.getItem('vimob_session_id');
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    window.localStorage.setItem('vimob_session_id', sessionId);
+  }
+
+  return sessionId;
+}
+
 export function usePublicSiteConfig(organizationId: string | null) {
   return useQuery({
     queryKey: ['public-site-config', organizationId],
@@ -309,13 +321,17 @@ export async function submitContactForm(data: {
   message?: string;
   property_id?: string;
   property_code?: string;
+  session_id?: string | null;
 }) {
   const response = await fetch(
     'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-contact',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        session_id: data.session_id ?? getVisitorSessionId(),
+      }),
     }
   );
 
