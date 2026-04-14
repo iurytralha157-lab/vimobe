@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
       phone, 
       message, 
       property_id,
-      property_code
+      property_code,
+      session_id
     } = await req.json();
 
     if (!organization_id || !name || !phone) {
