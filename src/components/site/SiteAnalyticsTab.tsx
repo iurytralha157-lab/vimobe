@@ -34,7 +34,9 @@ export function SiteAnalyticsTab() {
     return { dateFrom: range.from, dateTo: range.to };
   }, [datePreset, customDateRange]);
 
-  if (isLoading) {
+  const { data, isLoading } = useSiteAnalytics(dateFrom, dateTo);
+  const { data: detailed } = useSiteAnalyticsDetailed(dateFrom, dateTo);
+
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
