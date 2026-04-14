@@ -324,6 +324,7 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
           </CardContent>
         </Card>
       )}
+      </div>
 
       {analytics.journeys.length === 0 && analytics.total_sessions === 0 && (
         <Card className="border-dashed">
