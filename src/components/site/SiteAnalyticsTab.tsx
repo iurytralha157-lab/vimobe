@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useSiteAnalytics, useSiteAnalyticsDetailed } from '@/hooks/use-site-analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,8 +7,8 @@ import { Eye, MousePointerClick, Monitor, ArrowUpRight, ArrowDownRight, Minus, B
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadJourneyDashboard } from './LeadJourneyDashboard';
-
-type Period = 'day' | 'week' | 'month';
+import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
 
 function getTrendIcon(current: number, previous: number) {
   if (current > previous) return <ArrowUpRight className="w-3 h-3 text-emerald-500" />;
@@ -24,25 +23,20 @@ function getTrendColor(current: number, previous: number) {
 }
 
 export function SiteAnalyticsTab() {
-  const [period, setPeriod] = useState<Period>('week');
+  const [datePreset, setDatePreset] = useState<DatePreset>('last7days');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
 
   const { dateFrom, dateTo } = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-
-    if (period === 'day') start.setDate(start.getDate() - 1);
-    else if (period === 'week') start.setDate(start.getDate() - 7);
-    else start.setMonth(start.getMonth() - 1);
-
-    return { dateFrom: start, dateTo: now };
-  }, [period]);
+    if (datePreset === 'custom' && customDateRange) {
+      return { dateFrom: customDateRange.from, dateTo: customDateRange.to };
+    }
+    const range = getDateRangeFromPreset(datePreset);
+    return { dateFrom: range.from, dateTo: range.to };
+  }, [datePreset, customDateRange]);
 
   const { data, isLoading } = useSiteAnalytics(dateFrom, dateTo);
   const { data: detailed } = useSiteAnalyticsDetailed(dateFrom, dateTo);
 
-  const periodLabels: Record<Period, string> = { day: 'Dia', week: 'Semana', month: 'Mês' };
-
-  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -99,25 +93,19 @@ export function SiteAnalyticsTab() {
         </Card>
       )}
 
-      {/* Period Selector */}
+      {/* Date Filter */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-primary" />
           <h3 className="font-semibold">Indicadores</h3>
         </div>
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
-          {(['day', 'week', 'month'] as Period[]).map(p => (
-            <Button
-              key={p}
-              size="sm"
-              variant={period === p ? 'default' : 'ghost'}
-              className="text-xs px-3 h-7"
-              onClick={() => setPeriod(p)}
-            >
-              {periodLabels[p]}
-            </Button>
-          ))}
-        </div>
+        <DateFilterPopover
+          datePreset={datePreset}
+          onDatePresetChange={setDatePreset}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+          defaultPreset="last7days"
+        />
       </div>
 
       {/* Visits Card */}
