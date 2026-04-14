@@ -212,7 +212,11 @@ export default function PublicSiteLayout() {
 
   // Track page views (extract propertyId from route if on property detail page)
   useEffect(() => {
-    if (!organizationId) return;
+    console.log('[PublicSiteLayout] Tracking check - organizationId:', organizationId, 'path:', location.pathname);
+    if (!organizationId) {
+      console.warn('[PublicSiteLayout] No organizationId available, skipping tracking');
+      return;
+    }
     const params = new URLSearchParams(location.search);
 
     // Try to extract property code from route patterns like /imovel/:code or /imoveis/:codigo
