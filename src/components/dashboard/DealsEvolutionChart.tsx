@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
@@ -74,7 +75,29 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
   );
 }
 
+/** Pick a nice Y-axis tick count based on available height and max value */
+function getYTickCount(chartHeight: number, maxValue: number) {
+  // Each tick label needs ~25px vertical space
+  const maxTicks = Math.max(3, Math.floor(chartHeight / 25));
+  // But don't exceed the data range granularity
+  const dataTicks = Math.min(maxTicks, maxValue + 1);
+  return Math.min(dataTicks, 12);
+}
+
+/** Compute X-axis interval so labels don't overlap. ~45px per label. */
+function getXInterval(chartWidth: number, totalPoints: number) {
+  const maxLabels = Math.max(2, Math.floor(chartWidth / 45));
+  if (totalPoints <= maxLabels) return 0; // show all
+  return Math.ceil(totalPoints / maxLabels) - 1;
+}
+
 export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProps) {
+  const [chartSize, setChartSize] = useState({ width: 600, height: 250 });
+
+  const handleResize = useCallback((width: number, height: number) => {
+    setChartSize({ width, height });
+  }, []);
+
   if (isLoading) {
     return (
       <Card className="overflow-hidden h-full flex flex-col">
@@ -122,10 +145,9 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
     { ganhos: 0, perdas: 0, abertos: 0 }
   );
 
-  // Smart tick interval: show as many dates as possible
-  // Up to ~15 labels fit comfortably; beyond that, skip minimally
-  const totalDays = data.length;
-  const tickInterval = totalDays <= 15 ? 0 : totalDays <= 31 ? 1 : Math.floor(totalDays / 15);
+  const maxValue = Math.max(...data.map(d => Math.max(d.ganhos, d.perdas, d.abertos)), 1);
+  const tickInterval = getXInterval(chartSize.width, data.length);
+  const yTickCount = getYTickCount(chartSize.height, maxValue);
 
   return (
     <Card className="overflow-hidden h-full flex flex-col">
@@ -138,7 +160,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
       <CardContent className="pb-4 flex-1 flex flex-col">
         {/* Chart */}
         <div className="flex-1 min-h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" onResize={handleResize}>
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -177,6 +199,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                 width={40}
                 allowDecimals={false}
+                tickCount={yTickCount}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area
