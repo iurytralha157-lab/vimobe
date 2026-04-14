@@ -1,6 +1,9 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 function getSessionId(): string {
   let id = localStorage.getItem('vimob_session_id');
   if (!id) {
@@ -71,9 +74,26 @@ export async function trackEvent(params: TrackEventParams) {
     const { error } = await (supabase as any).from('lead_events').insert(payload);
     if (error) {
       console.error('[Tracking] Insert error:', error.message, error.details, error.hint);
-    } else {
-      console.log('[Tracking] Event recorded successfully:', params.eventType);
+
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/lead_events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const fallbackError = await response.text();
+        console.error('[Tracking] REST fallback failed:', response.status, fallbackError);
+        return;
+      }
     }
+
+    console.log('[Tracking] Event recorded successfully:', params.eventType);
   } catch (e) {
     console.error('[Tracking] Failed:', e);
   }
