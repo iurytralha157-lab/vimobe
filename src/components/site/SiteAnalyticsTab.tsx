@@ -135,10 +135,6 @@ export function SiteAnalyticsTab() {
           </Card>
         )}
 
-        <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Indicadores</h3>
-        </div>
 
         <Card>
           <CardHeader className="pb-3">
