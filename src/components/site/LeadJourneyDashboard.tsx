@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLeadAnalytics } from '@/hooks/use-lead-analytics';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from 'recharts';
-import { Route, MousePointerClick, Users, TrendingUp, FileText, Monitor, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Route, MousePointerClick, Users, TrendingUp, FileText, Monitor, CheckCircle, XCircle, Eye, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +13,9 @@ import { useState } from 'react';
 import type { LeadJourney } from '@/hooks/use-lead-analytics';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const EVENT_LABELS: Record<string, string> = {
   pageview: 'Visualização',
@@ -30,6 +33,32 @@ interface LeadJourneyDashboardProps {
 export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardProps) {
   const { data, isLoading } = useLeadAnalytics(dateFrom, dateTo);
   const [selectedJourney, setSelectedJourney] = useState<LeadJourney | null>(null);
+  const { profile } = useAuth();
+
+  const { data: siteInfo } = useQuery({
+    queryKey: ['org-site-info', profile?.organization_id],
+    queryFn: async () => {
+      if (!profile?.organization_id) return null;
+      const { data } = await supabase
+        .from('organization_sites')
+        .select('subdomain, custom_domain, domain_verified')
+        .eq('organization_id', profile.organization_id)
+        .eq('is_active', true)
+        .maybeSingle();
+      return data as { subdomain: string | null; custom_domain: string | null; domain_verified: boolean | null } | null;
+    },
+    enabled: !!profile?.organization_id,
+  });
+
+  const siteBaseUrl = (() => {
+    if (siteInfo?.custom_domain && siteInfo?.domain_verified) {
+      return `https://${siteInfo.custom_domain}`;
+    }
+    if (siteInfo?.subdomain) {
+      return `https://vimob.vettercompany.com.br/sites/${siteInfo.subdomain}`;
+    }
+    return null;
+  })();
 
   if (isLoading) {
     return (
