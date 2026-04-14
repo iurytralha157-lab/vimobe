@@ -37,6 +37,14 @@ export interface DeviceBreakdown {
   total: number;
 }
 
+export interface LocationData {
+  city: string;
+  region: string | null;
+  lat: number;
+  lng: number;
+  sessions: number;
+}
+
 export interface LeadAnalyticsData {
   journeys: LeadJourney[];
   funnel: FunnelStep[];
@@ -45,6 +53,7 @@ export interface LeadAnalyticsData {
   total_sessions: number;
   total_conversions: number;
   device_breakdown: DeviceBreakdown[];
+  locations: LocationData[];
 }
 
 export interface SiteAnalyticsSummary {
