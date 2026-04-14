@@ -311,16 +311,17 @@ function buildSummary(events: AnalyticsEvent[]): Omit<SiteAnalyticsSummary, 'pre
   };
 }
 
-async function buildDetailedAnalytics(events: AnalyticsEvent[]): Promise<SiteAnalyticsDetailed> {
+async function buildDetailedAnalytics(events: AnalyticsEvent[], dateFrom?: Date, dateTo?: Date): Promise<SiteAnalyticsDetailed> {
   const pageViews = getPageViews(events);
   const conversions = getConversions(events);
   const totalSessions = uniqueCount(events.map(event => event.session_id));
   const totalConversions = uniqueCount(conversions.map(event => event.session_id));
   const siteLeads = events.filter(event => event.event_type === 'form_submit').length;
 
-  const dailyViews = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
+  const sparseDaily = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
     .map(([date, views]) => ({ date, views }))
     .sort((a, b) => a.date.localeCompare(b.date));
+  const dailyViews = fillDailyRange(sparseDaily, dateFrom, dateTo);
 
   const topPages = Array.from(groupCounts(pageViews.map(event => event.page_path)).entries())
     .map(([page_path, views]) => ({ page_path, views }))
@@ -377,7 +378,7 @@ async function buildDetailedAnalytics(events: AnalyticsEvent[]): Promise<SiteAna
   };
 }
 
-function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
+function buildLeadAnalytics(events: AnalyticsEvent[], dateFrom?: Date, dateTo?: Date): LeadAnalyticsData {
   const pageViews = getPageViews(events);
   const conversions = getConversions(events);
 
@@ -421,9 +422,10 @@ function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
     .sort((a, b) => b.views - a.views)
     .slice(0, 10);
 
-  const daily_views = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
+  const sparseDaily = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
     .map(([date, views]) => ({ date, views }))
     .sort((a, b) => a.date.localeCompare(b.date));
+  const daily_views = fillDailyRange(sparseDaily, dateFrom, dateTo);
 
   const device_breakdown = Array.from(groupCounts(events.map(event => event.device_type || 'unknown')).entries())
     .map(([device_type, total]) => ({ device_type, total }))
