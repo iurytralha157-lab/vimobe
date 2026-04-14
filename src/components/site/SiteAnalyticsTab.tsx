@@ -307,6 +307,7 @@ export function SiteAnalyticsTab() {
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Página</TableHead>
                     <TableHead className="text-right">Views</TableHead>
+                    {siteBaseUrl && <TableHead className="w-12" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -315,6 +316,18 @@ export function SiteAnalyticsTab() {
                       <TableCell className="font-medium text-muted-foreground">{i + 1}</TableCell>
                       <TableCell className="font-mono text-xs max-w-[300px] truncate">{page.page_path}</TableCell>
                       <TableCell className="text-right font-semibold">{page.views}</TableCell>
+                      {siteBaseUrl && (
+                        <TableCell className="text-right p-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => window.open(`${siteBaseUrl}${page.page_path}`, '_blank')}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
