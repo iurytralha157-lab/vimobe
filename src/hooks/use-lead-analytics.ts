@@ -472,7 +472,7 @@ export function useLeadAnalytics(dateFrom?: Date, dateTo?: Date) {
     queryFn: async (): Promise<LeadAnalyticsData> => {
       if (!organization?.id) return emptyLeadAnalyticsData();
       const events = await fetchAnalyticsEvents(organization.id, dateFrom, dateTo);
-      return buildLeadAnalytics(events);
+      return buildLeadAnalytics(events, dateFrom, dateTo);
     },
     enabled: !!organization?.id,
   });
@@ -521,7 +521,7 @@ export function useSiteAnalyticsDetailed(dateFrom?: Date, dateTo?: Date) {
     queryFn: async (): Promise<SiteAnalyticsDetailed> => {
       if (!organization?.id) return emptySiteAnalyticsDetailed();
       const events = await fetchAnalyticsEvents(organization.id, dateFrom, dateTo);
-      return buildDetailedAnalytics(events);
+      return buildDetailedAnalytics(events, dateFrom, dateTo);
     },
     enabled: !!organization?.id,
   });
