@@ -72,8 +72,8 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
   }
 
   const analytics = data || {
-    journeys: [], funnel: [], top_pages: [], daily_views: [],
-    total_sessions: 0, total_conversions: 0, device_breakdown: [],
+    journeys: [] as LeadJourney[], funnel: [] as { event_type: string; total: number }[], top_pages: [] as { page_path: string; views: number }[], daily_views: [] as { date: string; views: number }[],
+    total_sessions: 0, total_conversions: 0, device_breakdown: [] as { device_type: string; total: number }[], locations: [] as { city: string; region: string | null; lat: number; lng: number; sessions: number }[],
   };
 
   const conversionRate = analytics.total_sessions > 0
@@ -291,7 +291,7 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
                       <div className="flex flex-wrap gap-1">
                         {[...new Set(j.event_sequence)].map((evt, idx) => (
                           <Badge key={idx} variant="outline" className="text-[10px]">
-                            {EVENT_LABELS[evt as string] || evt}
+                            {EVENT_LABELS[evt as string] || String(evt)}
                           </Badge>
                         ))}
                       </div>
