@@ -3,12 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSiteAnalytics, useSiteAnalyticsDetailed } from '@/hooks/use-site-analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, MousePointerClick, Monitor, ArrowUpRight, ArrowDownRight, Minus, BarChart3, TrendingUp, Star, FileText, Users, Route } from 'lucide-react';
+import { Eye, MousePointerClick, Monitor, ArrowUpRight, ArrowDownRight, Minus, BarChart3, TrendingUp, Star, FileText, Users, Route, ExternalLink } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadJourneyDashboard } from './LeadJourneyDashboard';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 function getTrendIcon(current: number, previous: number) {
   if (current > previous) return <ArrowUpRight className="w-3 h-3 text-emerald-500" />;
@@ -22,8 +26,35 @@ function getTrendColor(current: number, previous: number) {
   return 'text-muted-foreground';
 }
 
+function useSiteBaseUrl() {
+  const { profile } = useAuth();
+  const { data: siteInfo } = useQuery({
+    queryKey: ['org-site-info', profile?.organization_id],
+    queryFn: async () => {
+      if (!profile?.organization_id) return null;
+      const { data } = await supabase
+        .from('organization_sites')
+        .select('subdomain, custom_domain, domain_verified')
+        .eq('organization_id', profile.organization_id)
+        .eq('is_active', true)
+        .maybeSingle();
+      return data as { subdomain: string | null; custom_domain: string | null; domain_verified: boolean | null } | null;
+    },
+    enabled: !!profile?.organization_id,
+  });
+
+  if (siteInfo?.custom_domain && siteInfo?.domain_verified) {
+    return `https://${siteInfo.custom_domain}`;
+  }
+  if (siteInfo?.subdomain) {
+    return `https://vimob.vettercompany.com.br/sites/${siteInfo.subdomain}`;
+  }
+  return null;
+}
+
 export function SiteAnalyticsTab() {
   const [datePreset, setDatePreset] = useState<DatePreset>('last7days');
+  const siteBaseUrl = useSiteBaseUrl();
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
 
   const { dateFrom, dateTo } = useMemo(() => {
