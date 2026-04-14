@@ -190,6 +190,23 @@ function getConversions(events: AnalyticsEvent[]) {
   return events.filter(event => CONVERSION_EVENT_TYPES.has(event.event_type));
 }
 
+function fillDailyRange(sparse: { date: string; views: number }[], dateFrom?: Date, dateTo?: Date): { date: string; views: number }[] {
+  const from = dateFrom || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const to = dateTo || new Date();
+  const map = new Map(sparse.map(d => [d.date, d.views]));
+  const result: { date: string; views: number }[] = [];
+  const cursor = new Date(from);
+  cursor.setHours(0, 0, 0, 0);
+  const end = new Date(to);
+  end.setHours(23, 59, 59, 999);
+  while (cursor <= end) {
+    const key = cursor.toISOString().slice(0, 10);
+    result.push({ date: key, views: map.get(key) || 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return result;
+}
+
 function groupCounts(items: string[]) {
   const counts = new Map<string, number>();
   items.forEach(item => counts.set(item, (counts.get(item) || 0) + 1));
@@ -294,16 +311,17 @@ function buildSummary(events: AnalyticsEvent[]): Omit<SiteAnalyticsSummary, 'pre
   };
 }
 
-async function buildDetailedAnalytics(events: AnalyticsEvent[]): Promise<SiteAnalyticsDetailed> {
+async function buildDetailedAnalytics(events: AnalyticsEvent[], dateFrom?: Date, dateTo?: Date): Promise<SiteAnalyticsDetailed> {
   const pageViews = getPageViews(events);
   const conversions = getConversions(events);
   const totalSessions = uniqueCount(events.map(event => event.session_id));
   const totalConversions = uniqueCount(conversions.map(event => event.session_id));
   const siteLeads = events.filter(event => event.event_type === 'form_submit').length;
 
-  const dailyViews = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
+  const sparseDaily = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
     .map(([date, views]) => ({ date, views }))
     .sort((a, b) => a.date.localeCompare(b.date));
+  const dailyViews = fillDailyRange(sparseDaily, dateFrom, dateTo);
 
   const topPages = Array.from(groupCounts(pageViews.map(event => event.page_path)).entries())
     .map(([page_path, views]) => ({ page_path, views }))
@@ -360,7 +378,7 @@ async function buildDetailedAnalytics(events: AnalyticsEvent[]): Promise<SiteAna
   };
 }
 
-function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
+function buildLeadAnalytics(events: AnalyticsEvent[], dateFrom?: Date, dateTo?: Date): LeadAnalyticsData {
   const pageViews = getPageViews(events);
   const conversions = getConversions(events);
 
@@ -404,9 +422,10 @@ function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
     .sort((a, b) => b.views - a.views)
     .slice(0, 10);
 
-  const daily_views = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
+  const sparseDaily = Array.from(groupCounts(pageViews.map(event => event.created_at.slice(0, 10))).entries())
     .map(([date, views]) => ({ date, views }))
     .sort((a, b) => a.date.localeCompare(b.date));
+  const daily_views = fillDailyRange(sparseDaily, dateFrom, dateTo);
 
   const device_breakdown = Array.from(groupCounts(events.map(event => event.device_type || 'unknown')).entries())
     .map(([device_type, total]) => ({ device_type, total }))
@@ -453,7 +472,7 @@ export function useLeadAnalytics(dateFrom?: Date, dateTo?: Date) {
     queryFn: async (): Promise<LeadAnalyticsData> => {
       if (!organization?.id) return emptyLeadAnalyticsData();
       const events = await fetchAnalyticsEvents(organization.id, dateFrom, dateTo);
-      return buildLeadAnalytics(events);
+      return buildLeadAnalytics(events, dateFrom, dateTo);
     },
     enabled: !!organization?.id,
   });
@@ -502,7 +521,7 @@ export function useSiteAnalyticsDetailed(dateFrom?: Date, dateTo?: Date) {
     queryFn: async (): Promise<SiteAnalyticsDetailed> => {
       if (!organization?.id) return emptySiteAnalyticsDetailed();
       const events = await fetchAnalyticsEvents(organization.id, dateFrom, dateTo);
-      return buildDetailedAnalytics(events);
+      return buildDetailedAnalytics(events, dateFrom, dateTo);
     },
     enabled: !!organization?.id,
   });
