@@ -2270,6 +2270,7 @@ export type Database = {
           uf: string | null
           updated_at: string
           valor_interesse: number | null
+          visitor_session_id: string | null
           won_at: string | null
         }
         Insert: {
@@ -2325,6 +2326,7 @@ export type Database = {
           uf?: string | null
           updated_at?: string
           valor_interesse?: number | null
+          visitor_session_id?: string | null
           won_at?: string | null
         }
         Update: {
@@ -2380,6 +2382,7 @@ export type Database = {
           uf?: string | null
           updated_at?: string
           valor_interesse?: number | null
+          visitor_session_id?: string | null
           won_at?: string | null
         }
         Relationships: [
