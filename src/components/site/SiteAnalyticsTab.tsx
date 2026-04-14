@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { useSiteAnalytics, useSiteAnalyticsDetailed } from '@/hooks/use-site-analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, MousePointerClick, Monitor, ArrowUpRight, ArrowDownRight, Minus, BarChart3, TrendingUp, Star, FileText, Users } from 'lucide-react';
+import { Eye, MousePointerClick, Monitor, ArrowUpRight, ArrowDownRight, Minus, BarChart3, TrendingUp, Star, FileText, Users, Route } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LeadJourneyDashboard } from './LeadJourneyDashboard';
 
 type Period = 'day' | 'week' | 'month';
 
@@ -66,6 +68,19 @@ export function SiteAnalyticsTab() {
   }));
 
   return (
+    <Tabs defaultValue="overview" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="overview" className="gap-1.5">
+          <BarChart3 className="w-4 h-4" />
+          Visão Geral
+        </TabsTrigger>
+        <TabsTrigger value="journeys" className="gap-1.5">
+          <Route className="w-4 h-4" />
+          Percurso dos Leads
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="overview">
     <div className="space-y-6">
       {!hasData && (
         <Card className="border-dashed">
@@ -289,6 +304,12 @@ export function SiteAnalyticsTab() {
         </Card>
       )}
     </div>
+      </TabsContent>
+
+      <TabsContent value="journeys">
+        <LeadJourneyDashboard />
+      </TabsContent>
+    </Tabs>
   );
 }
 
