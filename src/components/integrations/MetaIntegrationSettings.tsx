@@ -485,18 +485,18 @@ export function MetaIntegrationSettings() {
               {meta.connectButton}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
-      {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg">
-          <DialogHeader>
-            <DialogTitle>{meta.editPage}</DialogTitle>
-            <DialogDescription>
+      {/* Edit Sheet */}
+      <Sheet open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{meta.editPage}</SheetTitle>
+            <SheetDescription>
               {meta.changeDestination}
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
