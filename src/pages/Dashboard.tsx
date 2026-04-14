@@ -63,20 +63,20 @@ export default function Dashboard() {
   const { data: telecomStats, isLoading: telecomStatsLoading } = useTelecomDashboardStats(filters);
   const { data: telecomEvolutionData = [], isLoading: telecomEvolutionLoading } = useTelecomEvolutionData(filters);
 
-  // Site visits count (respects date filters)
+  // Site visits count - unique sessions (respects date filters)
   const { data: siteVisits = 0 } = useQuery({
     queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
     queryFn: async () => {
       if (!organization?.id) return 0;
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('lead_events')
-        .select('*', { count: 'exact', head: true })
+        .select('session_id')
         .eq('organization_id', organization.id)
-        .eq('event_type', 'pageview')
         .gte('created_at', filters.dateRange.from.toISOString())
         .lte('created_at', filters.dateRange.to.toISOString());
       if (error) throw error;
-      return count || 0;
+      const uniqueSessions = new Set((data || []).map(e => e.session_id));
+      return uniqueSessions.size;
     },
     enabled: !!organization?.id,
   });
