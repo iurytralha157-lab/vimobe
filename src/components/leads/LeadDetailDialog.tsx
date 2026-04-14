@@ -33,6 +33,7 @@ import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
+import { LeadJourneySection } from '@/components/leads/LeadJourneySection';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
 
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
@@ -1140,6 +1141,9 @@ export function LeadDetailDialog({
 
               {/* Rastreamento / Tracking Section */}
               <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+
+              {/* Jornada do visitante */}
+              <LeadJourneySection leadId={lead.id} />
             </div>
             )
           )}
@@ -1900,6 +1904,9 @@ export function LeadDetailDialog({
 
                 {/* Rastreamento */}
                 <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+
+                {/* Jornada do visitante */}
+                <LeadJourneySection leadId={lead.id} />
               </div>
             )}
           </TabsContent>
