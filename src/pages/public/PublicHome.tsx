@@ -121,13 +121,15 @@ export default function PublicHome() {
         {/* Background Image - LCP element */}
         <div className="absolute inset-0">
           {siteConfig.hero_image_url ? (
-            <img
-              src={siteConfig.hero_image_url}
-              alt=""
-              fetchPriority="high"
-              decoding="async"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+              <img
+               src={siteConfig.hero_image_url}
+               alt=""
+               fetchPriority="high"
+               decoding="sync"
+               width={1920}
+               height={1080}
+               className="absolute inset-0 w-full h-full object-cover"
+             />
           ) : (
             <div 
               className="absolute inset-0"
@@ -564,12 +566,14 @@ export default function PublicHome() {
               <div>
                 {siteConfig.about_image_url ? (
                   <img 
-                    src={siteConfig.about_image_url} 
-                    alt={`Sobre ${siteConfig.organization_name || 'nós'}`}
-                    loading="lazy"
-                    decoding="async"
-                    className="rounded-3xl shadow-2xl w-full h-auto"
-                  />
+                     src={siteConfig.about_image_url} 
+                     alt={`Sobre ${siteConfig.organization_name || 'nós'}`}
+                     loading="lazy"
+                     decoding="async"
+                     width={600}
+                     height={500}
+                     className="rounded-3xl shadow-2xl w-full h-auto"
+                   />
                 ) : (
                   <div 
                     className="rounded-3xl h-[400px] md:h-[500px] flex items-center justify-center relative overflow-hidden"
@@ -653,12 +657,14 @@ export default function PublicHome() {
                 hoveredCategory !== null && hoveredCategory !== idx && "md:flex-[0.6]"
               )}
             >
-              <img
-                src={cat.image}
-                alt={cat.name}
-                loading="lazy"
-                decoding="async"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
+               <img
+                 src={cat.image}
+                 alt={cat.name}
+                 loading="lazy"
+                 decoding="async"
+                 width={400}
+                 height={500}
+                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500"
                 style={{ transform: hoveredCategory === idx ? 'scale(1.1)' : 'scale(1)' }}
               />
               <div className="absolute inset-0 bg-black/40 md:hover:bg-black/30 transition-colors" />

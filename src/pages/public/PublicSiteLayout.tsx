@@ -67,6 +67,7 @@ export default function PublicSiteLayout() {
         preload.rel = 'preload';
         preload.as = 'image';
         preload.href = siteConfig.hero_image_url;
+        preload.setAttribute('fetchpriority', 'high');
         preload.setAttribute('data-hero', 'true');
         document.head.appendChild(preload);
       }
@@ -338,15 +339,17 @@ export default function PublicSiteLayout() {
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
                 {siteConfig.logo_url ? (
-                  <img 
-                    src={siteConfig.logo_url} 
-                    alt={siteConfig.site_title} 
-                    style={{ 
-                      maxWidth: Math.min(siteConfig.logo_width || 200, 500), 
-                      maxHeight: Math.min(siteConfig.logo_height || 55, 70)
-                    }}
-                    className="w-auto object-contain"
-                  />
+                 <img 
+                     src={siteConfig.logo_url} 
+                     alt={siteConfig.site_title} 
+                     width={Math.min(siteConfig.logo_width || 200, 500)}
+                     height={Math.min(siteConfig.logo_height || 55, 70)}
+                     style={{ 
+                       maxWidth: Math.min(siteConfig.logo_width || 200, 500), 
+                       maxHeight: Math.min(siteConfig.logo_height || 55, 70)
+                     }}
+                     className="w-auto object-contain"
+                   />
                 ) : (
                   <span className="text-lg md:text-xl font-semibold tracking-wider" style={{ color: '#fff' }}>
                     {siteConfig.site_title}
@@ -457,15 +460,17 @@ export default function PublicSiteLayout() {
                   {/* Mobile Header */}
                   <div className="p-6 flex items-center justify-between" style={{ borderBottom: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
                     {siteConfig.logo_url ? (
-                      <img 
-                        src={siteConfig.logo_url} 
-                        alt={siteConfig.site_title} 
-                        style={{ 
-                          maxWidth: Math.min(siteConfig.logo_width || 160, 200), 
-                          maxHeight: Math.min(siteConfig.logo_height || 50, 55) 
-                        }}
-                        className="w-auto object-contain"
-                      />
+                     <img 
+                         src={siteConfig.logo_url} 
+                         alt={siteConfig.site_title} 
+                         width={Math.min(siteConfig.logo_width || 160, 200)}
+                         height={Math.min(siteConfig.logo_height || 50, 55)}
+                         style={{ 
+                           maxWidth: Math.min(siteConfig.logo_width || 160, 200), 
+                           maxHeight: Math.min(siteConfig.logo_height || 50, 55) 
+                         }}
+                         className="w-auto object-contain"
+                       />
                     ) : (
                       <span className="text-lg font-semibold tracking-wider" style={{ color: textColor }}>
                         {siteConfig.site_title}
