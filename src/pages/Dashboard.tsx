@@ -63,6 +63,24 @@ export default function Dashboard() {
   const { data: telecomStats, isLoading: telecomStatsLoading } = useTelecomDashboardStats(filters);
   const { data: telecomEvolutionData = [], isLoading: telecomEvolutionLoading } = useTelecomEvolutionData(filters);
 
+  // Site visits count (respects date filters)
+  const { data: siteVisits = 0 } = useQuery({
+    queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
+      const { count, error } = await supabase
+        .from('lead_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organization.id)
+        .eq('event_type', 'pageview')
+        .gte('created_at', filters.dateRange.from.toISOString())
+        .lte('created_at', filters.dateRange.to.toISOString());
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id,
+  });
+
   // Funnel with pipeline selector
   const { funnelComponent } = SalesFunnelWithPipeline({ filters });
 
@@ -237,10 +255,10 @@ interface KPICardsGridProps {
   isLoading?: boolean;
   periodLabel: string;
   propertyCount?: number;
-  runningAutomations?: number;
+  siteVisits?: number;
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAutomations }: KPICardsGridProps) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits }: KPICardsGridProps) {
   if (isLoading) {
     return (
       <>
