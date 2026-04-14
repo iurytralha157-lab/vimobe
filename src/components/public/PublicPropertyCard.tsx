@@ -60,13 +60,15 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
     >
       {/* Image Section */}
       <div className="relative aspect-[4/3] overflow-hidden">
-        <img
-          src={property.imagem_principal || '/placeholder.svg'}
-          alt={title || 'Imóvel'}
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-        />
+         <img
+           src={property.imagem_principal || '/placeholder.svg'}
+           alt={title || 'Imóvel'}
+           loading="lazy"
+           decoding="async"
+           width={400}
+           height={300}
+           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+         />
 
         {/* Badge */}
         <div className="absolute top-3 left-3">
