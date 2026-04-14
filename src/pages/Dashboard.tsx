@@ -219,7 +219,7 @@ import {
   DollarSign,
   Building2,
   Clock,
-  Zap,
+  Eye,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
