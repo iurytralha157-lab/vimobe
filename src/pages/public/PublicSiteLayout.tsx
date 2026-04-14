@@ -67,6 +67,7 @@ export default function PublicSiteLayout() {
         preload.rel = 'preload';
         preload.as = 'image';
         preload.href = siteConfig.hero_image_url;
+        preload.setAttribute('fetchpriority', 'high');
         preload.setAttribute('data-hero', 'true');
         document.head.appendChild(preload);
       }
