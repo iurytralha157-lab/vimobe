@@ -19,7 +19,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
   const { organization, user } = useAuth();
@@ -38,23 +37,6 @@ export default function Dashboard() {
       return count || 0;
     },
     enabled: !!organization?.id,
-  });
-
-  // Running automations count (same logic as ExecutionHistory: running + waiting)
-  const { data: runningAutomations = 0 } = useQuery({
-    queryKey: ['dashboard-running-automations', organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return 0;
-      const { count, error } = await supabase
-        .from('automation_executions')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', organization.id)
-        .in('status', ['running', 'waiting']);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!organization?.id,
-    refetchInterval: 10000,
   });
 
   const {
@@ -80,6 +62,24 @@ export default function Dashboard() {
   // Data hooks - Telecom
   const { data: telecomStats, isLoading: telecomStatsLoading } = useTelecomDashboardStats(filters);
   const { data: telecomEvolutionData = [], isLoading: telecomEvolutionLoading } = useTelecomEvolutionData(filters);
+
+  // Site visits count (respects date filters)
+  const { data: siteVisits = 0 } = useQuery({
+    queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
+      const { count, error } = await supabase
+        .from('lead_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organization.id)
+        .eq('event_type', 'pageview')
+        .gte('created_at', filters.dateRange.from.toISOString())
+        .lte('created_at', filters.dateRange.to.toISOString());
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id,
+  });
 
   // Funnel with pipeline selector
   const { funnelComponent } = SalesFunnelWithPipeline({ filters });
@@ -151,7 +151,7 @@ export default function Dashboard() {
                 isLoading={statsLoading} 
                 periodLabel={periodLabel} 
                 propertyCount={propertyCount}
-                runningAutomations={runningAutomations}
+                siteVisits={siteVisits}
               />
             )}
 
@@ -219,7 +219,7 @@ import {
   DollarSign,
   Building2,
   Clock,
-  Zap,
+  Eye,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
@@ -255,10 +255,10 @@ interface KPICardsGridProps {
   isLoading?: boolean;
   periodLabel: string;
   propertyCount?: number;
-  runningAutomations?: number;
+  siteVisits?: number;
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAutomations }: KPICardsGridProps) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits }: KPICardsGridProps) {
   if (isLoading) {
     return (
       <>
@@ -306,7 +306,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, runningAuto
   const bottomKpis = [
     { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
     { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-1' },
-    { title: 'Automações', value: runningAutomations ?? 0, icon: Zap, tooltip: 'Automações em andamento (running + aguardando)', format: 'number', color: 'chart-2' },
+    { title: 'Visitas ao Site', value: siteVisits ?? 0, icon: Eye, tooltip: `Visitas ao site no período - ${periodLabel}`, format: 'number', color: 'chart-2' },
   ];
 
   const renderKPI = (kpi: any) => {
