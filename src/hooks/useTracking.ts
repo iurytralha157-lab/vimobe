@@ -22,6 +22,34 @@ function getUTMs() {
   };
 }
 
+function getOS(): string {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua)) return 'iOS';
+  if (/Android/.test(ua)) return 'Android';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac OS X/.test(ua)) return 'macOS';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'other';
+}
+
+let cachedGeo: { city?: string; region?: string } | null = null;
+
+async function getGeoInfo(): Promise<{ city?: string; region?: string }> {
+  if (cachedGeo) return cachedGeo;
+  try {
+    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      cachedGeo = { city: data.city || undefined, region: data.region || undefined };
+      return cachedGeo;
+    }
+  } catch {
+    // Silently fail - geo is optional
+  }
+  cachedGeo = {};
+  return cachedGeo;
+}
+
 function getDeviceInfo() {
   const width = window.innerWidth;
   let deviceType = 'desktop';
@@ -54,6 +82,15 @@ export interface TrackEventParams {
 
 export async function trackEvent(params: TrackEventParams) {
   const sessionId = getSessionId();
+  const os = getOS();
+  const geo = await getGeoInfo();
+
+  const enrichedMetadata = {
+    ...(params.metadata || {}),
+    os,
+    ...(geo.city ? { city: geo.city } : {}),
+    ...(geo.region ? { region: geo.region } : {}),
+  };
 
   const payload = {
     session_id: sessionId,
@@ -63,7 +100,7 @@ export async function trackEvent(params: TrackEventParams) {
     referrer: document.referrer || null,
     organization_id: params.organizationId,
     property_id: params.propertyId || null,
-    metadata: params.metadata || null,
+    metadata: enrichedMetadata,
     ...getUTMs(),
     ...getDeviceInfo(),
   };

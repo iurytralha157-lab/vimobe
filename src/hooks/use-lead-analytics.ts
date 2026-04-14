@@ -10,6 +10,11 @@ export interface LeadJourney {
   last_event: string;
   total_events: number;
   converted: boolean;
+  device_type: string | null;
+  browser: string | null;
+  os: string | null;
+  city: string | null;
+  region: string | null;
 }
 
 export interface FunnelStep {
@@ -83,9 +88,11 @@ type AnalyticsEvent = {
   referrer: string | null;
   utm_campaign: string | null;
   device_type: string | null;
+  browser: string | null;
   created_at: string;
   property_id: string | null;
   duration_seconds: number | null;
+  metadata: Record<string, unknown> | null;
 };
 
 const CONVERSION_EVENT_TYPES = new Set(['form_submit', 'whatsapp_click', 'cta_click', 'conversion']);
@@ -185,7 +192,7 @@ async function fetchAnalyticsEvents(organizationId: string, dateFrom?: Date, dat
   const [leadEventsResult, legacyEventsResult] = await Promise.all([
     supabase
       .from('lead_events')
-      .select('session_id, event_type, page_path, page_title, referrer, utm_campaign, device_type, created_at, property_id')
+      .select('session_id, event_type, page_path, page_title, referrer, utm_campaign, device_type, browser, created_at, property_id, metadata')
       .eq('organization_id', organizationId)
       .gte('created_at', range.from)
       .lte('created_at', range.to)
@@ -217,9 +224,11 @@ async function fetchAnalyticsEvents(organizationId: string, dateFrom?: Date, dat
     referrer: event.referrer,
     utm_campaign: event.utm_campaign,
     device_type: event.device_type,
+    browser: (event as any).browser || null,
     created_at: event.created_at,
     property_id: event.property_id,
     duration_seconds: null,
+    metadata: (event as any).metadata || null,
   }));
 
   const legacyEvents: AnalyticsEvent[] = (legacyEventsResult.data || []).map(event => ({
@@ -230,9 +239,11 @@ async function fetchAnalyticsEvents(organizationId: string, dateFrom?: Date, dat
     referrer: event.referrer,
     utm_campaign: event.utm_campaign,
     device_type: event.device_type,
+    browser: null,
     created_at: event.created_at,
     property_id: null,
     duration_seconds: event.duration_seconds,
+    metadata: null,
   }));
 
   return [...legacyEvents, ...leadEvents].sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -353,6 +364,9 @@ function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
   const journeys = Array.from(sessionMap.entries())
     .map(([session_id, sessionEvents]) => {
       const orderedEvents = [...sessionEvents].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const firstEvent = orderedEvents[0];
+      // Extract enriched data from metadata of first event
+      const meta = firstEvent?.metadata as Record<string, unknown> | null;
       return {
         session_id,
         path_sequence: orderedEvents.map(event => event.page_path),
@@ -361,6 +375,11 @@ function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
         last_event: orderedEvents[orderedEvents.length - 1]?.created_at || '',
         total_events: orderedEvents.length,
         converted: orderedEvents.some(event => CONVERSION_EVENT_TYPES.has(event.event_type)),
+        device_type: firstEvent?.device_type || null,
+        browser: firstEvent?.browser || null,
+        os: (meta?.os as string) || null,
+        city: (meta?.city as string) || null,
+        region: (meta?.region as string) || null,
       };
     })
     .sort((a, b) => b.last_event.localeCompare(a.last_event))
