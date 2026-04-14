@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { VisitorMap } from './VisitorMap';
 
 const EVENT_LABELS: Record<string, string> = {
   pageview: 'Visualização',
@@ -72,8 +73,8 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
   }
 
   const analytics = data || {
-    journeys: [], funnel: [], top_pages: [], daily_views: [],
-    total_sessions: 0, total_conversions: 0, device_breakdown: [],
+    journeys: [] as LeadJourney[], funnel: [] as { event_type: string; total: number }[], top_pages: [] as { page_path: string; views: number }[], daily_views: [] as { date: string; views: number }[],
+    total_sessions: 0, total_conversions: 0, device_breakdown: [] as { device_type: string; total: number }[], locations: [] as { city: string; region: string | null; lat: number; lng: number; sessions: number }[],
   };
 
   const conversionRate = analytics.total_sessions > 0
@@ -90,7 +91,7 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
     views: d.views,
   }));
 
-  const deviceTotal = analytics.device_breakdown.reduce((acc, d) => acc + d.total, 0);
+  const deviceTotal = analytics.device_breakdown.reduce((acc: number, d) => acc + d.total, 0);
 
   return (
     <div className="space-y-6">
@@ -245,7 +246,45 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
           </Card>
         )}
 
-        {analytics.journeys.length > 0 && (
+        {/* Visitor Location Map */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              Mapa de Visitantes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2">
+            {analytics.locations.length > 0 ? (
+              <div className="h-[350px]">
+                <VisitorMap locations={analytics.locations} />
+              </div>
+            ) : (
+              <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground">
+                <MapPin className="w-8 h-8 mb-2" />
+                <p className="text-sm">Dados de localização aparecerão com novos acessos</p>
+              </div>
+            )}
+            {analytics.locations.length > 0 && (
+              <div className="mt-3 space-y-1.5 max-h-[120px] overflow-y-auto">
+                {analytics.locations.slice(0, 10).map((loc, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs px-2">
+                    <span className="text-muted-foreground">
+                      {loc.city}{loc.region ? `, ${loc.region}` : ''}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {loc.sessions} sessão{loc.sessions > 1 ? 'es' : ''}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Journeys - Full Width */}
+      {analytics.journeys.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -291,7 +330,7 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
                       <div className="flex flex-wrap gap-1">
                         {[...new Set(j.event_sequence)].map((evt, idx) => (
                           <Badge key={idx} variant="outline" className="text-[10px]">
-                            {EVENT_LABELS[evt] || evt}
+                            {EVENT_LABELS[evt as string] || String(evt)}
                           </Badge>
                         ))}
                       </div>
@@ -324,7 +363,6 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
           </CardContent>
         </Card>
       )}
-      </div>
 
       {analytics.journeys.length === 0 && analytics.total_sessions === 0 && (
         <Card className="border-dashed">

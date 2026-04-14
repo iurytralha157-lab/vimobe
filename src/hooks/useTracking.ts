@@ -32,15 +32,20 @@ function getOS(): string {
   return 'other';
 }
 
-let cachedGeo: { city?: string; region?: string } | null = null;
+let cachedGeo: { city?: string; region?: string; lat?: number; lng?: number } | null = null;
 
-async function getGeoInfo(): Promise<{ city?: string; region?: string }> {
+async function getGeoInfo(): Promise<{ city?: string; region?: string; lat?: number; lng?: number }> {
   if (cachedGeo) return cachedGeo;
   try {
     const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       const data = await res.json();
-      cachedGeo = { city: data.city || undefined, region: data.region || undefined };
+      cachedGeo = {
+        city: data.city || undefined,
+        region: data.region || undefined,
+        lat: data.latitude || undefined,
+        lng: data.longitude || undefined,
+      };
       return cachedGeo;
     }
   } catch {
@@ -90,6 +95,8 @@ export async function trackEvent(params: TrackEventParams) {
     os,
     ...(geo.city ? { city: geo.city } : {}),
     ...(geo.region ? { region: geo.region } : {}),
+    ...(geo.lat ? { lat: geo.lat } : {}),
+    ...(geo.lng ? { lng: geo.lng } : {}),
   };
 
   const payload = {

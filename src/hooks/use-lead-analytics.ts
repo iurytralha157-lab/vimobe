@@ -37,6 +37,14 @@ export interface DeviceBreakdown {
   total: number;
 }
 
+export interface LocationData {
+  city: string;
+  region: string | null;
+  lat: number;
+  lng: number;
+  sessions: number;
+}
+
 export interface LeadAnalyticsData {
   journeys: LeadJourney[];
   funnel: FunnelStep[];
@@ -45,6 +53,7 @@ export interface LeadAnalyticsData {
   total_sessions: number;
   total_conversions: number;
   device_breakdown: DeviceBreakdown[];
+  locations: LocationData[];
 }
 
 export interface SiteAnalyticsSummary {
@@ -108,6 +117,7 @@ function emptyLeadAnalyticsData(): LeadAnalyticsData {
     total_sessions: 0,
     total_conversions: 0,
     device_breakdown: [],
+    locations: [],
   };
 }
 
@@ -402,6 +412,27 @@ function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
     .map(([device_type, total]) => ({ device_type, total }))
     .sort((a, b) => b.total - a.total);
 
+  // Build location data from metadata
+  const locationMap = new Map<string, LocationData>();
+  events.forEach(event => {
+    const meta = event.metadata as Record<string, unknown> | null;
+    if (!meta?.city || !meta?.lat || !meta?.lng) return;
+    const key = `${meta.city}`;
+    const existing = locationMap.get(key);
+    if (existing) {
+      existing.sessions += 1;
+    } else {
+      locationMap.set(key, {
+        city: meta.city as string,
+        region: (meta.region as string) || null,
+        lat: meta.lat as number,
+        lng: meta.lng as number,
+        sessions: 1,
+      });
+    }
+  });
+  const locations = Array.from(locationMap.values()).sort((a, b) => b.sessions - a.sessions);
+
   return {
     journeys,
     funnel,
@@ -410,6 +441,7 @@ function buildLeadAnalytics(events: AnalyticsEvent[]): LeadAnalyticsData {
     total_sessions: uniqueCount(events.map(event => event.session_id)),
     total_conversions: uniqueCount(conversions.map(event => event.session_id)),
     device_breakdown,
+    locations,
   };
 }
 
