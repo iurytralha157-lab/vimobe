@@ -40,21 +40,22 @@ export default function Dashboard() {
     enabled: !!organization?.id,
   });
 
-  // Running automations count (same logic as ExecutionHistory: running + waiting)
-  const { data: runningAutomations = 0 } = useQuery({
-    queryKey: ['dashboard-running-automations', organization?.id],
+  // Site visits count (respects date filters)
+  const { data: siteVisits = 0 } = useQuery({
+    queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
     queryFn: async () => {
       if (!organization?.id) return 0;
       const { count, error } = await supabase
-        .from('automation_executions')
+        .from('lead_events')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', organization.id)
-        .in('status', ['running', 'waiting']);
+        .eq('event_type', 'pageview')
+        .gte('created_at', filters.dateRange.from.toISOString())
+        .lte('created_at', filters.dateRange.to.toISOString());
       if (error) throw error;
       return count || 0;
     },
     enabled: !!organization?.id,
-    refetchInterval: 10000,
   });
 
   const {
