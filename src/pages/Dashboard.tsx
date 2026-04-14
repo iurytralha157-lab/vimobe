@@ -7,6 +7,7 @@ import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithP
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
 import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
 import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionChart';
+
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
@@ -154,12 +155,14 @@ export default function Dashboard() {
               />
             )}
 
-            {/* Row 3: Evolution */}
-            {isTelecom ? (
-              <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
-            ) : (
-              <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-            )}
+            {/* Row 3: Evolution (full width) */}
+            <div className="col-span-2">
+              {isTelecom ? (
+                <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
+              ) : (
+                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+              )}
+            </div>
           </div>
 
           {/* Right column (col 9-12): Sales Funnel */}
