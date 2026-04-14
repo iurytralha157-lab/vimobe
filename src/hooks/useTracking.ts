@@ -53,7 +53,7 @@ export async function trackEvent(params: TrackEventParams) {
   const sessionId = getSessionId();
 
   try {
-    await (supabase as any).from('lead_events').insert({
+    const { error } = await (supabase as any).from('lead_events').insert({
       session_id: sessionId,
       event_type: params.eventType,
       page_path: params.pagePath || window.location.pathname,
@@ -65,6 +65,9 @@ export async function trackEvent(params: TrackEventParams) {
       ...getUTMs(),
       ...getDeviceInfo(),
     });
+    if (error) {
+      console.warn('Tracking insert error:', error.message, error.details);
+    }
   } catch (e) {
     console.warn('Tracking failed:', e);
   }
