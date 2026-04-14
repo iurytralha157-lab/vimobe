@@ -629,15 +629,15 @@ export function PropertyFormDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] sm:max-w-3xl sm:w-full rounded-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{editingProperty ? 'Editar Imóvel' : 'Cadastrar Imóvel'}</SheetTitle>
+        </SheetHeader>
         <div className="mt-4">
           {formContent}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
