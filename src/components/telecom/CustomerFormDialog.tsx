@@ -184,8 +184,8 @@ export function CustomerFormDialog({
             {customer 
               ? 'Altere as informações do cliente.' 
               : 'Cadastre um novo cliente de internet/telecom.'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <ScrollArea className="flex-1 pr-4 -mr-4">
           <form id="customer-form" onSubmit={handleSubmit} className="space-y-4">
@@ -637,7 +637,7 @@ export function CustomerFormDialog({
             {isLoading ? 'Salvando...' : customer ? 'Salvar' : 'Cadastrar'}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
