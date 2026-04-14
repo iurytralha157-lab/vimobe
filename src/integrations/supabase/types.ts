@@ -6115,14 +6115,6 @@ export type Database = {
         }[]
       }
       get_session_owner: { Args: { p_session_id: string }; Returns: string }
-      get_site_analytics_summary: {
-        Args: {
-          p_date_from?: string
-          p_date_to?: string
-          p_organization_id: string
-        }
-        Returns: Json
-      }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {
         Args: {
