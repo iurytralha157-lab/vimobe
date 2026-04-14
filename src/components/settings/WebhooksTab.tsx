@@ -7,12 +7,12 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import {
   Select,
   SelectContent,
@@ -472,14 +472,14 @@ export function WebhooksTab() {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedWebhook(null); resetForm(); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{selectedWebhook ? 'Editar Webhook' : 'Novo Webhook'}</DialogTitle>
-            <DialogDescription>
+      <Sheet open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedWebhook(null); resetForm(); } }}>
+        <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{selectedWebhook ? 'Editar Webhook' : 'Novo Webhook'}</SheetTitle>
+            <SheetDescription>
               {selectedWebhook ? 'Altere as configurações do webhook' : 'Configure um novo webhook para receber leads'}
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label>Nome do Webhook</Label>
@@ -632,8 +632,8 @@ export function WebhooksTab() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

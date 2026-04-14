@@ -8,12 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { PhoneInput } from '@/components/ui/phone-input';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,20 +187,20 @@ export function TeamTab() {
               <CardDescription>{t.settings.users.description}</CardDescription>
             </div>
             {isAdmin && (
-              <Dialog open={userDialogOpen} onOpenChange={(open) => {
+              <Sheet open={userDialogOpen} onOpenChange={(open) => {
                 setUserDialogOpen(open);
                 if (!open) resetNewUserForm();
               }}>
-                <DialogTrigger asChild>
+                <SheetTrigger asChild>
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
                     {t.settings.users.newUser}
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t.settings.users.createUser}</DialogTitle>
-                  </DialogHeader>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>{t.settings.users.createUser}</SheetTitle>
+                  </SheetHeader>
                   <div className="space-y-4 mt-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -260,8 +260,8 @@ export function TeamTab() {
                       </Button>
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
+                </SheetContent>
+              </Sheet>
             )}
           </CardHeader>
           <CardContent className="px-4 md:px-6 pb-4">

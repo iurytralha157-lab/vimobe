@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Crown, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -141,16 +141,16 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] sm:max-w-md sm:w-full rounded-lg max-h-[85vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>{team ? 'Editar Equipe' : 'Nova Equipe'}</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{team ? 'Editar Equipe' : 'Nova Equipe'}</SheetTitle>
+          <SheetDescription>
             {team
               ? 'Atualize as informações da equipe'
               : 'Crie uma nova equipe e adicione membros'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="space-y-4 overflow-hidden">
           <div className="space-y-2">
@@ -223,7 +223,7 @@ export function TeamDialog({ open, onOpenChange, team }: TeamDialogProps) {
             {team ? 'Salvar' : 'Criar Equipe'}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -391,15 +392,15 @@ export function WhatsAppTab() {
           </div>
         }
 
-        {/* Create Session Dialog */}
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nova Conexão WhatsApp</DialogTitle>
-              <DialogDescription>
+        {/* Create Session Sheet */}
+        <Sheet open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col">
+            <SheetHeader>
+              <SheetTitle>Nova Conexão WhatsApp</SheetTitle>
+              <SheetDescription>
                 Dê um nome para identificar esta conexão
-              </DialogDescription>
-            </DialogHeader>
+              </SheetDescription>
+            </SheetHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Nome da Instância</Label>
@@ -407,23 +408,21 @@ export function WhatsAppTab() {
                   value={instanceName}
                   onChange={(e) => setInstanceName(e.target.value)}
                   placeholder="Ex: Vendas, Suporte, Marketing..." />
-
               </div>
             </div>
-            <DialogFooter>
+            <SheetFooter>
               <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                 Cancelar
               </Button>
               <Button
                 onClick={handleCreateSession}
                 disabled={!instanceName.trim() || createSession.isPending}>
-
                 {createSession.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Criar e Conectar
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
 
         {/* QR Code Dialog */}
         <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
@@ -542,14 +541,14 @@ function AccessControlDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Gerenciar Acessos</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col">
+        <SheetHeader>
+          <SheetTitle>Gerenciar Acessos</SheetTitle>
+          <SheetDescription>
             Selecione os usuários que podem ver e enviar mensagens por esta conexão
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <ScrollArea className="max-h-[400px]">
           <div className="space-y-4 py-4">
             {users.map((user) => {
@@ -578,11 +577,10 @@ function AccessControlDialog({
                     />
                   </div>
                 </div>);
-
             })}
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>);
+      </SheetContent>
+    </Sheet>);
 
 }

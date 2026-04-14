@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { maskCPF, maskRG } from '@/lib/masks';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,16 +176,16 @@ export function CustomerFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] sm:max-w-[650px] sm:w-full rounded-lg h-[90vh] max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>{customer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-0 flex flex-col overflow-hidden">
+        <SheetHeader className="flex-shrink-0 px-6 pt-6">
+          <SheetTitle>{customer ? 'Editar Cliente' : 'Novo Cliente'}</SheetTitle>
+          <SheetDescription>
             {customer 
               ? 'Altere as informações do cliente.' 
               : 'Cadastre um novo cliente de internet/telecom.'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <ScrollArea className="flex-1 pr-4 -mr-4">
           <form id="customer-form" onSubmit={handleSubmit} className="space-y-4">
@@ -637,7 +637,7 @@ export function CustomerFormDialog({
             {isLoading ? 'Salvando...' : customer ? 'Salvar' : 'Cadastrar'}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -141,11 +141,11 @@ export function StageSettingsDialog({
   if (!stage) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] sm:max-w-2xl sm:w-full rounded-lg max-h-[85vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>Configurações da Coluna</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Configurações da Coluna</SheetTitle>
+        </SheetHeader>
         
         <Tabs defaultValue="general" className="mt-4">
           <TabsList className="w-full grid grid-cols-3 mb-4">
@@ -374,7 +374,7 @@ export function StageSettingsDialog({
             )}
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
