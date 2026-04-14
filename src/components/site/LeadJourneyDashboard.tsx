@@ -90,7 +90,7 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
     views: d.views,
   }));
 
-  const deviceTotal = analytics.device_breakdown.reduce((acc, d) => acc + d.total, 0);
+  const deviceTotal = analytics.device_breakdown.reduce((acc: number, d) => acc + d.total, 0);
 
   return (
     <div className="space-y-6">
@@ -291,7 +291,7 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
                       <div className="flex flex-wrap gap-1">
                         {[...new Set(j.event_sequence)].map((evt, idx) => (
                           <Badge key={idx} variant="outline" className="text-[10px]">
-                            {EVENT_LABELS[evt] || evt}
+                            {EVENT_LABELS[evt as string] || evt}
                           </Badge>
                         ))}
                       </div>
