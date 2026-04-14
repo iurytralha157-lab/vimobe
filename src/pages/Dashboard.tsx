@@ -7,7 +7,6 @@ import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithP
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
 import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
 import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionChart';
-import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
@@ -155,8 +154,7 @@ export default function Dashboard() {
               />
             )}
 
-            {/* Row 3: Recent Activities + Evolution */}
-            <RecentActivities />
+            {/* Row 3: Evolution */}
             {isTelecom ? (
               <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
             ) : (
@@ -189,16 +187,12 @@ export default function Dashboard() {
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
-              <TabsTrigger value="activities" className="text-xs">Atividades</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
               {funnelComponent}
-            </TabsContent>
-            <TabsContent value="activities" className="mt-3">
-              <RecentActivities />
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
               {isTelecom ? (
