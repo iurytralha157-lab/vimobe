@@ -139,6 +139,12 @@ function AppRoutes() {
   
   useForceRefreshListener();
 
+  useEffect(() => {
+    if (user && !loading) {
+      preloadCoreCrmPages();
+    }
+  }, [user, loading]);
+
   const getDefaultRedirect = () => {
     if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
