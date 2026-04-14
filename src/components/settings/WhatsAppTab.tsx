@@ -541,14 +541,14 @@ function AccessControlDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Gerenciar Acessos</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[90%] sm:w-[650px] sm:max-w-[650px] p-6 flex flex-col">
+        <SheetHeader>
+          <SheetTitle>Gerenciar Acessos</SheetTitle>
+          <SheetDescription>
             Selecione os usuários que podem ver e enviar mensagens por esta conexão
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <ScrollArea className="max-h-[400px]">
           <div className="space-y-4 py-4">
             {users.map((user) => {
@@ -577,11 +577,10 @@ function AccessControlDialog({
                     />
                   </div>
                 </div>);
-
             })}
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>);
+      </SheetContent>
+    </Sheet>);
 
 }
