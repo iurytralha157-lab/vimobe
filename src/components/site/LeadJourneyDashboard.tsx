@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLeadAnalytics } from '@/hooks/use-lead-analytics';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from 'recharts';
-import { Route, MousePointerClick, Users, TrendingUp, FileText, Monitor, CheckCircle, XCircle, Eye, ExternalLink } from 'lucide-react';
+import { Route, MousePointerClick, Users, TrendingUp, FileText, Monitor, CheckCircle, XCircle, Eye, ExternalLink, Smartphone, Globe, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -374,6 +374,51 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
                   <p className="text-xs">{format(new Date(selectedJourney.last_event), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                 </div>
               </div>
+
+              {/* Device & Location Info */}
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                {selectedJourney.device_type && (
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="flex items-center gap-1 mb-1">
+                      {selectedJourney.device_type === 'mobile' ? (
+                        <Smartphone className="h-3 w-3 text-muted-foreground" />
+                      ) : (
+                        <Monitor className="h-3 w-3 text-muted-foreground" />
+                      )}
+                      <p className="text-[10px] text-muted-foreground">Dispositivo</p>
+                    </div>
+                    <p className="text-xs font-medium capitalize">{selectedJourney.device_type}</p>
+                  </div>
+                )}
+                {selectedJourney.browser && (
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Globe className="h-3 w-3 text-muted-foreground" />
+                      <p className="text-[10px] text-muted-foreground">Navegador</p>
+                    </div>
+                    <p className="text-xs font-medium capitalize">{selectedJourney.browser}</p>
+                  </div>
+                )}
+                {selectedJourney.os && (
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-[10px] text-muted-foreground mb-1">Sistema</p>
+                    <p className="text-xs font-medium">{selectedJourney.os}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* City/Region */}
+              {(selectedJourney.city || selectedJourney.region) && (
+                <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                  <div className="flex items-center gap-1 mb-1">
+                    <MapPin className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-[10px] text-muted-foreground">Localização</p>
+                  </div>
+                  <p className="text-xs font-medium">
+                    {[selectedJourney.city, selectedJourney.region].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+              )}
 
               {/* Events */}
               <div>
