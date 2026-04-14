@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { VisitorMap } from './VisitorMap';
 
 const EVENT_LABELS: Record<string, string> = {
   pageview: 'Visualização',
