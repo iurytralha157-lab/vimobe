@@ -136,7 +136,8 @@ export default function Dashboard() {
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-3 flex-1 min-h-0">
           {/* Left column (col 1-8): KPIs + Activities + Evolution */}
-          <div className="col-span-8 grid grid-cols-2 gap-3 auto-rows-min">
+          <div className="col-span-8 flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3 auto-rows-min">
             {isTelecom ? (
               <div className="col-span-2">
                 <TelecomKPICards 
@@ -154,9 +155,10 @@ export default function Dashboard() {
                 siteVisits={siteVisits}
               />
             )}
+            </div>
 
-            {/* Row 3: Evolution (full width) */}
-            <div className="col-span-2">
+            {/* Evolution chart - fills remaining height */}
+            <div className="flex-1 min-h-[250px]">
               {isTelecom ? (
                 <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
               ) : (
