@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react"; // refreshed
+import { lazy, Suspense, useEffect } from "react"; // refreshed
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -81,6 +81,13 @@ const PublishedSiteWrapper = lazy(() => import("./pages/public/PublishedSiteWrap
 // Trial expired modal
 const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
 
+function preloadCoreCrmPages() {
+  void import("./pages/Dashboard");
+  void import("./pages/Pipelines");
+  void import("./pages/Contacts");
+  void import("./pages/Conversations");
+}
+
 function isCustomDomain(): boolean {
   const hostname = window.location.hostname;
   const pathname = window.location.pathname;
@@ -131,6 +138,12 @@ function AppRoutes() {
   const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection } = useAuth();
   
   useForceRefreshListener();
+
+  useEffect(() => {
+    if (user && !loading) {
+      preloadCoreCrmPages();
+    }
+  }, [user, loading]);
 
   const getDefaultRedirect = () => {
     if (needsOrgSelection && !impersonating) return "/select-organization";
