@@ -245,7 +245,45 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
           </Card>
         )}
 
-        {analytics.journeys.length > 0 && (
+        {/* Visitor Location Map */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" />
+              Mapa de Visitantes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-2">
+            {analytics.locations.length > 0 ? (
+              <div className="h-[350px]">
+                <VisitorMap locations={analytics.locations} />
+              </div>
+            ) : (
+              <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground">
+                <MapPin className="w-8 h-8 mb-2" />
+                <p className="text-sm">Dados de localização aparecerão com novos acessos</p>
+              </div>
+            )}
+            {analytics.locations.length > 0 && (
+              <div className="mt-3 space-y-1.5 max-h-[120px] overflow-y-auto">
+                {analytics.locations.slice(0, 10).map((loc, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs px-2">
+                    <span className="text-muted-foreground">
+                      {loc.city}{loc.region ? `, ${loc.region}` : ''}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {loc.sessions} sessão{loc.sessions > 1 ? 'es' : ''}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Journeys - Full Width */}
+      {analytics.journeys.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -324,7 +362,6 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
           </CardContent>
         </Card>
       )}
-      </div>
 
       {analytics.journeys.length === 0 && analytics.total_sessions === 0 && (
         <Card className="border-dashed">
