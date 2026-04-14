@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,13 +23,18 @@ const EVENT_LABELS: Record<string, string> = {
 export function LeadJourneyDashboard() {
   const [period, setPeriod] = useState<Period>('week');
 
-  const now = new Date();
-  const dateFrom = new Date(now);
-  if (period === 'day') dateFrom.setDate(dateFrom.getDate() - 1);
-  else if (period === 'week') dateFrom.setDate(dateFrom.getDate() - 7);
-  else dateFrom.setMonth(dateFrom.getMonth() - 1);
+  const { dateFrom, dateTo } = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
 
-  const { data, isLoading } = useLeadAnalytics(dateFrom, now);
+    if (period === 'day') start.setDate(start.getDate() - 1);
+    else if (period === 'week') start.setDate(start.getDate() - 7);
+    else start.setMonth(start.getMonth() - 1);
+
+    return { dateFrom: start, dateTo: now };
+  }, [period]);
+
+  const { data, isLoading } = useLeadAnalytics(dateFrom, dateTo);
 
   const periodLabels: Record<Period, string> = { day: 'Dia', week: 'Semana', month: 'Mês' };
 
