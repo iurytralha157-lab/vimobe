@@ -1745,6 +1745,81 @@ export type Database = {
           },
         ]
       }
+      lead_events: {
+        Row: {
+          browser: string | null
+          created_at: string | null
+          device_type: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          page_path: string
+          page_title: string | null
+          property_id: string | null
+          referrer: string | null
+          screen_height: number | null
+          screen_width: number | null
+          session_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          page_path: string
+          page_title?: string | null
+          property_id?: string | null
+          referrer?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          session_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          page_path?: string
+          page_title?: string | null
+          property_id?: string | null
+          referrer?: string | null
+          screen_height?: number | null
+          screen_width?: number | null
+          session_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_events_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_meta: {
         Row: {
           ad_id: string | null
