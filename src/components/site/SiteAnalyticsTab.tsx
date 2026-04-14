@@ -130,7 +130,7 @@ export function SiteAnalyticsTab() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatBlock label="Sessões" current={stats.totalViews} previous={stats.prevViews} />
+            <StatBlock label="Sessões" current={stats.uniqueSessions} previous={stats.prevViews} />
             <StatBlock label="Páginas vistas" current={stats.totalPages} previous={stats.prevPages} />
             <StatBlock label="Páginas únicas" current={stats.uniquePages} previous={stats.prevUniquePages} />
             <StatBlock label="Tempo médio" current={stats.avgDuration} previous={stats.prevAvgDuration} suffix="s" />
