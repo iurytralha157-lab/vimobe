@@ -3,10 +3,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLeadAnalytics } from '@/hooks/use-lead-analytics';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from 'recharts';
-import { Route, MousePointerClick, Users, TrendingUp, FileText, Monitor, CheckCircle, XCircle } from 'lucide-react';
+import { Route, MousePointerClick, Users, TrendingUp, FileText, Monitor, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
+import type { LeadJourney } from '@/hooks/use-lead-analytics';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const EVENT_LABELS: Record<string, string> = {
   pageview: 'Visualização',
@@ -23,6 +29,7 @@ interface LeadJourneyDashboardProps {
 
 export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardProps) {
   const { data, isLoading } = useLeadAnalytics(dateFrom, dateTo);
+  const [selectedJourney, setSelectedJourney] = useState<LeadJourney | null>(null);
 
   if (isLoading) {
     return (
@@ -212,11 +219,14 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
                   <TableHead>Eventos</TableHead>
                   <TableHead>Entrada</TableHead>
                   <TableHead className="text-center">Converteu</TableHead>
+                  <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {analytics.journeys.slice(0, 20).map((j) => (
-                  <TableRow key={j.session_id}>
+                {analytics.journeys.slice(0, 20).map((j) => {
+                  const isConverted = j.converted;
+                  return (
+                  <TableRow key={j.session_id} className={cn(isConverted && 'bg-emerald-500/5')}>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {j.session_id.substring(0, 8)}...
                     </TableCell>
@@ -248,13 +258,24 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
                     </TableCell>
                     <TableCell className="text-center">
                       {j.converted ? (
-                        <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" />
+                        <CheckCircle className="w-5 h-5 text-emerald-500 mx-auto" />
                       ) : (
                         <XCircle className="w-4 h-4 text-muted-foreground mx-auto" />
                       )}
                     </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setSelectedJourney(j)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -272,6 +293,91 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
           </CardContent>
         </Card>
       )}
+
+      {/* Session Detail Dialog */}
+      <Dialog open={!!selectedJourney} onOpenChange={(open) => !open && setSelectedJourney(null)}>
+        <DialogContent className="w-[90%] sm:max-w-lg sm:w-full rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Route className="h-4 w-4 text-primary" />
+              Jornada da Sessão
+              {selectedJourney?.converted && (
+                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0 text-[10px]">
+                  Converteu
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedJourney && (
+            <div className="space-y-4">
+              {/* Session Info */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-[10px] text-muted-foreground mb-1">Sessão</p>
+                  <p className="font-mono text-xs">{selectedJourney.session_id.substring(0, 12)}...</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-[10px] text-muted-foreground mb-1">Total de eventos</p>
+                  <p className="font-semibold">{selectedJourney.total_events}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-[10px] text-muted-foreground mb-1">Primeira ação</p>
+                  <p className="text-xs">{format(new Date(selectedJourney.first_event), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-[10px] text-muted-foreground mb-1">Última ação</p>
+                  <p className="text-xs">{format(new Date(selectedJourney.last_event), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                </div>
+              </div>
+
+              {/* Events */}
+              <div>
+                <p className="text-xs font-medium mb-2">Tipos de evento</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[...new Set(selectedJourney.event_sequence)].map((evt, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {EVENT_LABELS[evt] || evt}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Path Timeline */}
+              <div>
+                <p className="text-xs font-medium mb-2">Percurso completo ({selectedJourney.path_sequence.length} páginas)</p>
+                <ScrollArea className="max-h-[260px]">
+                  <div className="space-y-0">
+                    {selectedJourney.path_sequence.map((path, idx) => {
+                      const isLast = idx === selectedJourney.path_sequence.length - 1;
+                      return (
+                        <div key={idx} className="relative flex gap-3 pl-6">
+                          {!isLast && (
+                            <div className="absolute left-2.5 top-5 bottom-0 w-px bg-border" />
+                          )}
+                          <div className={cn(
+                            'absolute left-0 w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold',
+                            idx === 0
+                              ? 'bg-primary/15 text-primary'
+                              : isLast
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-muted text-muted-foreground'
+                          )}>
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1 pb-2.5 min-w-0">
+                            <p className="font-mono text-xs truncate">{path}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
