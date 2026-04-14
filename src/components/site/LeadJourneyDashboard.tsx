@@ -244,9 +244,8 @@ export function LeadJourneyDashboard({ dateFrom, dateTo }: LeadJourneyDashboardP
             </CardContent>
           </Card>
         )}
-      </div>
 
-      {analytics.journeys.length > 0 && (
+        {analytics.journeys.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
