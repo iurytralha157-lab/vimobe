@@ -9,6 +9,7 @@ import { usePublicContext } from "./usePublicContext";
 import { usePropertyTypes } from "@/hooks/use-public-site";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { usePublicSiteMenu } from "@/hooks/use-public-site-menu";
+import { CookieConsent } from "@/components/public/CookieConsent";
 
 export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
@@ -831,7 +832,10 @@ export default function PublicSiteLayout() {
             </div>
           </div>
         </div>
-      </footer>
+    </footer>
+
+      {/* Cookie Consent Banner */}
+      <CookieConsent primaryColor={primaryColor} />
     </div>
   );
 }
