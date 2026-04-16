@@ -467,8 +467,14 @@ export function FloatingChat() {
     </Dialog>
   );
 
-  // Não renderizar se não tem acesso ao WhatsApp ou não está aberto
-  if (!isOpen || (!loadingWhatsAppAccess && !hasWhatsAppAccess)) return null;
+  // Não renderizar se o chat não está aberto.
+  // IMPORTANTE: usuários SEM sessão WhatsApp ainda podem abrir o chat para
+  // visualizar o histórico de mensagens de leads (somente leitura).
+  if (!isOpen) return null;
+
+  // Modo somente leitura: usuário não tem sessão própria/acesso, mas pode ver histórico
+  // de uma conversa ativa (ex.: clicou em "Ver Mensagens" num card de lead).
+  const isReadOnlyMode = !loadingWhatsAppAccess && !hasWhatsAppAccess;
 
   // Shared content components
   const FloatingChatHeader = ({
