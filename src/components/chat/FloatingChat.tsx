@@ -904,11 +904,13 @@ export function FloatingChat() {
           <FloatingChatHeader mobile />
 
           <div className="flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
-            {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
+            {activeConversation ? (
               <>
                 {messagesViewJsx}
-                {renderMessageInput(true)}
+                {!isReadOnlyMode && hasConnectedSession && renderMessageInput(true)}
               </>
+            ) : !hasConnectedSession ? (
+              <DisconnectedState />
             ) : (
               <>
                 <ConversationFilters />
@@ -931,11 +933,13 @@ export function FloatingChat() {
 
         {!isMinimized && (
           <>
-            {!hasConnectedSession ? <DisconnectedState /> : activeConversation ? (
+            {activeConversation ? (
               <>
                 {messagesViewJsx}
-                {renderMessageInput(false)}
+                {!isReadOnlyMode && hasConnectedSession && renderMessageInput(false)}
               </>
+            ) : !hasConnectedSession ? (
+              <DisconnectedState />
             ) : (
               <>
                 <ConversationFilters />
