@@ -249,7 +249,7 @@ export default function PublicContact() {
 
             {/* Contact Form */}
             <div className="lg:col-span-3">
-              <Card className="border-0 rounded-3xl shadow-xl" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }}>
+              <Card className="border-0 rounded-3xl shadow-none" style={{ backgroundColor: siteConfig.site_theme !== 'light' ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }}>
                 <CardContent className="p-8 md:p-10">
                   <div className="mb-8">
                     <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: siteConfig.site_theme !== 'light' ? siteConfig.text_color : '#111827' }}>
