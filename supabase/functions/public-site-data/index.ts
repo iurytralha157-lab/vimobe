@@ -68,9 +68,11 @@ Deno.serve(async (req) => {
 
     switch (endpoint) {
       case 'properties': {
+        // Optimized: only list-relevant fields + estimated count for speed
+        const LIST_FIELDS = 'id, code, title, descricao, tipo_de_imovel, tipo_de_negocio, status, destaque, exclusividade, bairro, cidade, uf, endereco, quartos, suites, banheiros, vagas, area_util, area_total, preco, valor_locacao, condominio, iptu, mobilia, imagem_principal, created_at, vista_codigo, imoview_codigo';
         let query = supabase
           .from('properties')
-          .select('*', { count: 'exact' })
+          .select(LIST_FIELDS, { count: 'estimated' })
           .eq('organization_id', organizationId)
           .eq('status', 'ativo')
           .order('created_at', { ascending: false });
