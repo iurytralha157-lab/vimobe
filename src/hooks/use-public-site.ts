@@ -170,6 +170,9 @@ export function usePublicProperties(organizationId: string | null, filters?: {
       return await response.json();
     },
     enabled: !!organizationId,
+    staleTime: 1000 * 60 * 2, // 2min - cache while navigating
+    gcTime: 1000 * 60 * 10,
+    placeholderData: (prev) => prev, // keep previous page visible during refetch
   });
 }
 
@@ -194,6 +197,8 @@ export function usePublicProperty(organizationId: string | null, propertyCode: s
       return data.property as PublicProperty;
     },
     enabled: !!organizationId && !!propertyCode,
+    staleTime: 1000 * 60 * 5, // 5min
+    gcTime: 1000 * 60 * 15,
   });
 }
 
