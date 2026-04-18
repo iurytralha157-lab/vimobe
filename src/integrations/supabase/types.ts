@@ -3474,8 +3474,10 @@ export type Database = {
           asaas_customer_id: string | null
           asaas_payment_link_id: string | null
           asaas_payment_link_url: string | null
+          asaas_subscription_id: string | null
           bairro: string | null
           cep: string | null
+          checkout_token: string | null
           cidade: string | null
           cnpj: string | null
           complemento: string | null
@@ -3513,8 +3515,10 @@ export type Database = {
           asaas_customer_id?: string | null
           asaas_payment_link_id?: string | null
           asaas_payment_link_url?: string | null
+          asaas_subscription_id?: string | null
           bairro?: string | null
           cep?: string | null
+          checkout_token?: string | null
           cidade?: string | null
           cnpj?: string | null
           complemento?: string | null
@@ -3552,8 +3556,10 @@ export type Database = {
           asaas_customer_id?: string | null
           asaas_payment_link_id?: string | null
           asaas_payment_link_url?: string | null
+          asaas_subscription_id?: string | null
           bairro?: string | null
           cep?: string | null
+          checkout_token?: string | null
           cidade?: string | null
           cnpj?: string | null
           complemento?: string | null
