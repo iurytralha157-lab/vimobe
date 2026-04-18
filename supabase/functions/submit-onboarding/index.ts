@@ -76,6 +76,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Fire-and-forget: notify admin via WhatsApp
+    try {
+      const notifyUrl = `${supabaseUrl}/functions/v1/notify-onboarding-received`;
+      fetch(notifyUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({ onboarding_id: data.id }),
+      }).catch((err) => console.error('notify dispatch failed:', err));
+    } catch (notifyErr) {
+      console.error('notify error:', notifyErr);
+    }
+
     return new Response(JSON.stringify({ success: true, id: data.id }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

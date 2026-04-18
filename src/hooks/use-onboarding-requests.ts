@@ -34,6 +34,9 @@ export interface OnboardingRequestData {
   youtube?: string;
   linkedin?: string;
   team_size?: string;
+  selected_plan_id?: string | null;
+  confirmed_value?: number | null;
+  billing_cycle?: string | null;
 }
 
 export interface OnboardingRequest extends OnboardingRequestData {
@@ -106,19 +109,29 @@ export function useAllOnboardingRequests() {
   });
 }
 
-// Admin: update onboarding request status
+// Admin: update onboarding request status (with optional plan info)
 export function useUpdateOnboardingRequest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { id: string; status: string; admin_notes?: string }) => {
-      const { error } = await onboardingTable()
-        .update({
-          status: params.status,
-          admin_notes: params.admin_notes,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', params.id);
+    mutationFn: async (params: {
+      id: string;
+      status: string;
+      admin_notes?: string;
+      selected_plan_id?: string | null;
+      confirmed_value?: number | null;
+      billing_cycle?: string | null;
+    }) => {
+      const updates: any = {
+        status: params.status,
+        admin_notes: params.admin_notes,
+        reviewed_at: new Date().toISOString(),
+      };
+      if (params.selected_plan_id !== undefined) updates.selected_plan_id = params.selected_plan_id;
+      if (params.confirmed_value !== undefined) updates.confirmed_value = params.confirmed_value;
+      if (params.billing_cycle !== undefined) updates.billing_cycle = params.billing_cycle;
+
+      const { error } = await onboardingTable().update(updates).eq('id', params.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -126,6 +139,28 @@ export function useUpdateOnboardingRequest() {
     },
     onError: (error: any) => {
       toast.error('Erro: ' + error.message);
+    },
+  });
+}
+
+// Admin: list active subscription plans
+export function useActiveSubscriptionPlans() {
+  return useQuery({
+    queryKey: ['active-subscription-plans'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('admin_subscription_plans')
+        .select('id, name, price, billing_cycle, description')
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        name: string;
+        price: number;
+        billing_cycle: string | null;
+        description: string | null;
+      }>;
     },
   });
 }
