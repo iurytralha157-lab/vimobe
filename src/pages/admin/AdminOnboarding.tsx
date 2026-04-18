@@ -75,6 +75,7 @@ const defaultStages = [
 
 export default function AdminOnboarding() {
   const { data: requests = [], isLoading } = useAllOnboardingRequests();
+  const { data: plans = [] } = useActiveSubscriptionPlans();
   const updateMutation = useUpdateOnboardingRequest();
   const { createOrganization } = useSuperAdmin();
 
@@ -83,7 +84,10 @@ export default function AdminOnboarding() {
   const [selectedRequest, setSelectedRequest] = useState<OnboardingRequest | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [approving, setApproving] = useState(false);
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string; paymentUrl?: string } | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [confirmedValue, setConfirmedValue] = useState<string>('');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const filteredRequests = requests.filter((req) => {
     const matchesSearch =
@@ -104,15 +108,33 @@ export default function AdminOnboarding() {
   const openDetail = (req: OnboardingRequest) => {
     setSelectedRequest(req);
     setAdminNotes(req.admin_notes || '');
+    setSelectedPlanId('');
+    setConfirmedValue('');
+    setBillingCycle('monthly');
+  };
+
+  const handlePlanChange = (planId: string) => {
+    setSelectedPlanId(planId);
+    const plan = plans.find((p) => p.id === planId);
+    if (plan) {
+      setConfirmedValue(String(plan.price));
+      const cycle = (plan.billing_cycle || '').toLowerCase();
+      setBillingCycle(cycle === 'yearly' || cycle === 'annual' ? 'yearly' : 'monthly');
+    }
   };
 
   const handleApprove = async () => {
     if (!selectedRequest) return;
+    if (!selectedPlanId || !confirmedValue || Number(confirmedValue) <= 0) {
+      toast.error('Selecione um plano e confirme o valor antes de aprovar.');
+      return;
+    }
     setApproving(true);
     const generatedPassword = Math.random().toString(36).slice(-10) + 'A1!';
+    const plan = plans.find((p) => p.id === selectedPlanId);
     try {
-      // Create org via edge function
-      await createOrganization.mutateAsync({
+      // 1. Create org via edge function
+      const orgResult: any = await createOrganization.mutateAsync({
         name: selectedRequest.company_name,
         segment: (selectedRequest.segment as any) || 'imobiliario',
         adminEmail: selectedRequest.responsible_email,
@@ -120,19 +142,52 @@ export default function AdminOnboarding() {
         adminPassword: generatedPassword,
       });
 
-      // Update request status
+      const newOrgId = orgResult?.organization?.id;
+
+      // 2. Update onboarding status with plan info
       await updateMutation.mutateAsync({
         id: selectedRequest.id,
         status: 'approved',
         admin_notes: adminNotes,
+        selected_plan_id: selectedPlanId,
+        confirmed_value: Number(confirmedValue),
+        billing_cycle: billingCycle,
       });
 
-      toast.success('Organização criada e solicitação aprovada!');
+      // 3. Trigger Asaas payment link + WhatsApp to client
+      let paymentUrl: string | undefined;
+      if (newOrgId) {
+        const { data: linkData, error: linkErr } = await supabase.functions.invoke(
+          'asaas-create-payment-link',
+          {
+            body: {
+              organization_id: newOrgId,
+              onboarding_id: selectedRequest.id,
+              plan_name: plan?.name || 'Vimob',
+              value: Number(confirmedValue),
+              billing_cycle: billingCycle,
+              customer_name: selectedRequest.responsible_name,
+              customer_email: selectedRequest.responsible_email,
+              customer_phone: selectedRequest.responsible_phone || selectedRequest.company_whatsapp,
+              customer_cpf_cnpj: selectedRequest.responsible_cpf || selectedRequest.cnpj,
+              temp_password: generatedPassword,
+            },
+          }
+        );
+        if (linkErr) {
+          console.error('asaas link error:', linkErr);
+          toast.warning('Org criada, mas falha ao gerar link Asaas: ' + linkErr.message);
+        } else {
+          paymentUrl = linkData?.payment_link_url;
+        }
+      }
+
+      toast.success('Organização aprovada e link de pagamento enviado!');
       setSelectedRequest(null);
-      // Show credentials dialog
       setCreatedCredentials({
         email: selectedRequest.responsible_email,
         password: generatedPassword,
+        paymentUrl,
       });
     } catch (err: any) {
       toast.error('Erro ao aprovar: ' + err.message);
