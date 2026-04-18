@@ -44,7 +44,7 @@ export default function Subscription() {
   const org = data?.org;
   const plan = data?.plan;
   const status = org?.subscription_status || 'pending';
-  const checkoutUrl = org?.checkout_token ? `${window.location.origin}/checkout/${org.checkout_token}` : null;
+  const checkoutUrl = org?.checkout_token ? `https://vimob.vettercompany.com.br/checkout/${org.checkout_token}` : null;
 
   const statusLabel: Record<string, { label: string; variant: any }> = {
     active: { label: 'Ativa', variant: 'default' },
