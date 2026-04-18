@@ -18,7 +18,7 @@ export default function Subscription() {
   useEffect(() => {
     (async () => {
       if (!organization?.id) return;
-      const { data: org } = await supabase
+      const { data: org } = await (supabase as any)
         .from('organizations')
         .select('id, name, subscription_status, subscription_type, trial_ends_at, plan_id, checkout_token, asaas_subscription_id')
         .eq('id', organization.id)
