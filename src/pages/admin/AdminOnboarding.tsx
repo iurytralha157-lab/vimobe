@@ -402,6 +402,54 @@ export default function AdminOnboarding() {
                   </div>
                 </div>
 
+                {/* Plan selection (only for pending) */}
+                {selectedRequest.status === 'pending' && (
+                  <div className="space-y-3 border border-primary/20 bg-primary/5 rounded-lg p-3">
+                    <h4 className="font-medium flex items-center gap-2 text-primary">
+                      💳 Plano e Cobrança (Asaas)
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium">Plano *</label>
+                        <Select value={selectedPlanId} onValueChange={handlePlanChange}>
+                          <SelectTrigger><SelectValue placeholder="Selecione o plano" /></SelectTrigger>
+                          <SelectContent>
+                            {plans.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name} — R$ {Number(p.price).toFixed(2)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium">Ciclo *</label>
+                        <Select value={billingCycle} onValueChange={(v) => setBillingCycle(v as 'monthly' | 'yearly')}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">Mensal</SelectItem>
+                            <SelectItem value="yearly">Anual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="text-xs font-medium">Valor confirmado (R$) *</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={confirmedValue}
+                          onChange={(e) => setConfirmedValue(e.target.value)}
+                          placeholder="0.00"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Ao aprovar, será gerado link Asaas (Pix/Cartão/Boleto) e enviado por WhatsApp ao cliente.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Admin Notes */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Observações do Administrador</label>
@@ -455,6 +503,20 @@ export default function AdminOnboarding() {
                   </Button>
                 </div>
               </div>
+              {createdCredentials?.paymentUrl && (
+                <div className="space-y-2 border-t pt-4">
+                  <label className="text-sm font-medium">🔗 Link de Pagamento (Asaas)</label>
+                  <div className="flex items-center gap-2">
+                    <Input readOnly value={createdCredentials.paymentUrl} />
+                    <Button size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(createdCredentials.paymentUrl!); toast.success('Link copiado!'); }}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Já enviado por WhatsApp ao responsável. Você pode reencaminhar se necessário.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button onClick={() => setCreatedCredentials(null)}>Fechar</Button>
