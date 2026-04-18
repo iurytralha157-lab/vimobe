@@ -264,6 +264,68 @@ export type Database = {
         }
         Relationships: []
       }
+      asaas_payments: {
+        Row: {
+          asaas_customer_id: string | null
+          asaas_payment_id: string
+          asaas_subscription_id: string | null
+          billing_type: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          invoice_url: string | null
+          net_value: number | null
+          organization_id: string
+          payment_date: string | null
+          raw_event: Json | null
+          status: string | null
+          updated_at: string | null
+          value: number | null
+        }
+        Insert: {
+          asaas_customer_id?: string | null
+          asaas_payment_id: string
+          asaas_subscription_id?: string | null
+          billing_type?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_url?: string | null
+          net_value?: number | null
+          organization_id: string
+          payment_date?: string | null
+          raw_event?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Update: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string
+          asaas_subscription_id?: string | null
+          billing_type?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_url?: string | null
+          net_value?: number | null
+          organization_id?: string
+          payment_date?: string | null
+          raw_event?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asaas_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments_log: {
         Row: {
           assigned_at: string | null
@@ -2937,6 +2999,7 @@ export type Database = {
           admin_notes: string | null
           banner_title: string | null
           banner_url: string | null
+          billing_cycle: string | null
           cnpj: string | null
           company_address: string | null
           company_city: string | null
@@ -2947,6 +3010,7 @@ export type Database = {
           company_number: string | null
           company_phone: string | null
           company_whatsapp: string | null
+          confirmed_value: number | null
           created_at: string | null
           custom_domain: string | null
           facebook: string | null
@@ -2964,6 +3028,7 @@ export type Database = {
           reviewed_by: string | null
           secondary_color: string | null
           segment: string | null
+          selected_plan_id: string | null
           site_seo_description: string | null
           site_title: string | null
           status: string
@@ -2977,6 +3042,7 @@ export type Database = {
           admin_notes?: string | null
           banner_title?: string | null
           banner_url?: string | null
+          billing_cycle?: string | null
           cnpj?: string | null
           company_address?: string | null
           company_city?: string | null
@@ -2987,6 +3053,7 @@ export type Database = {
           company_number?: string | null
           company_phone?: string | null
           company_whatsapp?: string | null
+          confirmed_value?: number | null
           created_at?: string | null
           custom_domain?: string | null
           facebook?: string | null
@@ -3004,6 +3071,7 @@ export type Database = {
           reviewed_by?: string | null
           secondary_color?: string | null
           segment?: string | null
+          selected_plan_id?: string | null
           site_seo_description?: string | null
           site_title?: string | null
           status?: string
@@ -3017,6 +3085,7 @@ export type Database = {
           admin_notes?: string | null
           banner_title?: string | null
           banner_url?: string | null
+          billing_cycle?: string | null
           cnpj?: string | null
           company_address?: string | null
           company_city?: string | null
@@ -3027,6 +3096,7 @@ export type Database = {
           company_number?: string | null
           company_phone?: string | null
           company_whatsapp?: string | null
+          confirmed_value?: number | null
           created_at?: string | null
           custom_domain?: string | null
           facebook?: string | null
@@ -3044,6 +3114,7 @@ export type Database = {
           reviewed_by?: string | null
           secondary_color?: string | null
           segment?: string | null
+          selected_plan_id?: string | null
           site_seo_description?: string | null
           site_title?: string | null
           status?: string
@@ -3052,7 +3123,15 @@ export type Database = {
           user_id?: string | null
           youtube?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_requests_selected_plan_id_fkey"
+            columns: ["selected_plan_id"]
+            isOneToOne: false
+            referencedRelation: "admin_subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       organization_members: {
         Row: {
@@ -3392,6 +3471,9 @@ export type Database = {
         Row: {
           accent_color: string | null
           admin_notes: string | null
+          asaas_customer_id: string | null
+          asaas_payment_link_id: string | null
+          asaas_payment_link_url: string | null
           bairro: string | null
           cep: string | null
           cidade: string | null
@@ -3428,6 +3510,9 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           admin_notes?: string | null
+          asaas_customer_id?: string | null
+          asaas_payment_link_id?: string | null
+          asaas_payment_link_url?: string | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
@@ -3464,6 +3549,9 @@ export type Database = {
         Update: {
           accent_color?: string | null
           admin_notes?: string | null
+          asaas_customer_id?: string | null
+          asaas_payment_link_id?: string | null
+          asaas_payment_link_url?: string | null
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
