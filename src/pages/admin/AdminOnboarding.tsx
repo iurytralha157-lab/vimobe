@@ -475,9 +475,13 @@ export default function AdminOnboarding() {
           </DialogContent>
         </Dialog>
 
-        {/* Credentials Dialog */}
-        <Dialog open={!!createdCredentials} onOpenChange={() => setCreatedCredentials(null)}>
-          <DialogContent>
+        {/* Credentials Dialog — só fecha pelo botão "Fechar" */}
+        <Dialog open={!!createdCredentials}>
+          <DialogContent
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>Credenciais do Usuário Criado</DialogTitle>
             </DialogHeader>
