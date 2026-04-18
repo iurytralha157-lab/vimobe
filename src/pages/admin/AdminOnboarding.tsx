@@ -31,9 +31,11 @@ import {
 import {
   useAllOnboardingRequests,
   useUpdateOnboardingRequest,
+  useActiveSubscriptionPlans,
   OnboardingRequest,
 } from '@/hooks/use-onboarding-requests';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
+import { supabase } from '@/integrations/supabase/client';
 import {
   ClipboardList,
   Clock,
