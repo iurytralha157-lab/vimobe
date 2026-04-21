@@ -149,24 +149,28 @@ export function useSetupGuide() {
   useEffect(() => {
     if (!userId || !profile) return;
     const skipped = localStorage.getItem(SKIPPED_KEY_PREFIX + userId) === 'true';
-    if (skipped) return;
 
     const shownThisSession = sessionStorage.getItem(SESSION_SHOWN_KEY) === 'true';
-    if (shownThisSession) return;
 
     const currentProgress = readProgress(userId);
-    const allDone = steps.every((s) => currentProgress[s.id]);
-    if (allDone) return;
+    const allDone = steps.length > 0 && steps.every((s) => currentProgress[s.id]);
 
-    // Defer to ensure UI is mounted
-    const timer = setTimeout(() => {
-      setOpen(true);
-      sessionStorage.setItem(SESSION_SHOWN_KEY, 'true');
-    }, 1200);
-
-    return () => clearTimeout(timer);
+    if (!skipped && !shownThisSession && !allDone) {
+      const timer = setTimeout(() => {
+        setOpen(true);
+        sessionStorage.setItem(SESSION_SHOWN_KEY, 'true');
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, profile?.id]);
+
+  // Allow opening the guide from anywhere via a custom event
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('setup-guide:open', handler);
+    return () => window.removeEventListener('setup-guide:open', handler);
+  }, []);
 
   const markComplete = useCallback(
     (id: SetupStepId) => {
