@@ -85,6 +85,7 @@ export function FollowUpTemplates({ onSelectTemplate }: FollowUpTemplatesProps) 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {/* Create from scratch */}
         <div
+          data-tour="automations-new"
           className="cursor-pointer rounded-2xl aspect-[4/3] flex items-center justify-center transition-all duration-200 group relative overflow-hidden border-0 bg-orange-500 hover:bg-orange-600"
           onClick={() => onSelectTemplate(null)}
         >
