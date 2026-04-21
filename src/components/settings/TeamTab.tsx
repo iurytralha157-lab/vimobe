@@ -125,6 +125,10 @@ export function TeamTab() {
       toast.error('Preencha nome e email');
       return;
     }
+    if (!newUserPhone.trim()) {
+      toast.error('Informe o WhatsApp para envio das credenciais de acesso');
+      return;
+    }
     setCreatingUser(true);
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -138,16 +142,22 @@ export function TeamTab() {
           name: newUserName.trim(),
           email: newUserEmail.trim(),
           phone: newUserPhone.trim() || undefined,
+          whatsapp: newUserPhone.trim() || undefined,
           endereco: newUserEndereco.trim() || undefined,
           role: newUserRole
         }
       });
       if (error) throw new Error(error.message || 'Erro ao criar usuário');
-      
-      if (result.wasMultiOrg) {
-        toast.success(result.message || `Usuário vinculado à organização! Acesso com senha existente.`);
+
+      if (result.wasMultiOrg || result.wasOrphan) {
+        toast.success(result.message || 'Usuário vinculado à organização! Acesso com senha existente.');
+      } else if (result.whatsappSent) {
+        toast.success('Usuário criado! Credenciais de acesso enviadas via WhatsApp.');
       } else {
-        toast.success(`Usuário criado! Senha padrão: ${result.defaultPassword}`);
+        toast.success(
+          `Usuário criado! Senha gerada: ${result.generatedPassword}. ⚠️ WhatsApp não enviado — copie a senha agora.`,
+          { duration: 15000 }
+        );
       }
       queryClient.invalidateQueries({ queryKey: ['organization-users'] });
       setUserDialogOpen(false);
@@ -223,7 +233,7 @@ export function TeamTab() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>{t.common.phone}</Label>
+                        <Label>WhatsApp <span className="text-destructive">*</span></Label>
                         <PhoneInput value={newUserPhone} onChange={setNewUserPhone} />
                       </div>
                       <div className="space-y-2">
@@ -241,15 +251,18 @@ export function TeamTab() {
                     </div>
                     <div className="space-y-2">
                       <Label>{t.common.address}</Label>
-                      <Input 
-                        placeholder="Endereço completo" 
-                        value={newUserEndereco} 
-                        onChange={e => setNewUserEndereco(e.target.value)} 
+                      <Input
+                        placeholder="Endereço completo"
+                        value={newUserEndereco}
+                        onChange={e => setNewUserEndereco(e.target.value)}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t.settings.users.tempPassword}: <strong>trocar@2026</strong>
-                    </p>
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                      <p className="text-xs text-foreground">
+                        🔐 Uma <strong>senha aleatória segura</strong> será gerada automaticamente e enviada
+                        ao novo usuário via <strong>WhatsApp</strong>, junto com o link de acesso e o login.
+                      </p>
+                    </div>
                     <div className="flex justify-end gap-2 pt-4">
                       <Button variant="outline" onClick={() => setUserDialogOpen(false)} disabled={creatingUser}>
                         {t.common.cancel}

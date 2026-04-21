@@ -5,7 +5,101 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const DEFAULT_PASSWORD = 'trocar@2026';
+// Generate a strong random password (12 chars: upper, lower, number, special)
+function generateRandomPassword(length = 12): string {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const numbers = '23456789';
+  const special = '!@#$%&*';
+  const all = upper + lower + numbers + special;
+
+  // Ensure at least one of each
+  let pwd = [
+    upper[Math.floor(Math.random() * upper.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    numbers[Math.floor(Math.random() * numbers.length)],
+    special[Math.floor(Math.random() * special.length)],
+  ];
+  for (let i = pwd.length; i < length; i++) {
+    pwd.push(all[Math.floor(Math.random() * all.length)]);
+  }
+  // Shuffle
+  return pwd.sort(() => Math.random() - 0.5).join('');
+}
+
+async function sendWelcomeWhatsApp(
+  supabaseAdmin: any,
+  organizationId: string,
+  toPhone: string,
+  name: string,
+  email: string,
+  password: string,
+) {
+  try {
+    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      console.log('[welcome-msg] Evolution API not configured, skipping');
+      return { sent: false, reason: 'evolution_not_configured' };
+    }
+
+    // Find notification instance
+    let instanceName: string | null = null;
+    const { data: session } = await supabaseAdmin
+      .from('whatsapp_sessions')
+      .select('instance_name, status')
+      .eq('organization_id', organizationId)
+      .eq('is_notification_session', true)
+      .maybeSingle();
+
+    if (session?.status === 'connected' && session.instance_name) {
+      instanceName = session.instance_name;
+    } else {
+      const { data: systemSettings } = await supabaseAdmin
+        .from('system_settings')
+        .select('value')
+        .limit(1)
+        .maybeSingle();
+      const globalInstance = (systemSettings?.value as any)?.notification_instance_name;
+      if (globalInstance) instanceName = globalInstance;
+    }
+
+    if (!instanceName) {
+      console.log('[welcome-msg] No notification instance available');
+      return { sent: false, reason: 'no_instance' };
+    }
+
+    const formattedPhone = toPhone.replace(/\D/g, '');
+    if (!formattedPhone || formattedPhone.length < 10) {
+      return { sent: false, reason: 'invalid_phone' };
+    }
+
+    const loginUrl = 'https://vimob.vettercompany.com.br/auth';
+    const message =
+      `👋 Olá *${name}*, seja bem-vindo(a) ao Vimob CRM!\n\n` +
+      `Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:\n\n` +
+      `🔗 *Link de acesso:* ${loginUrl}\n` +
+      `📧 *Login (e-mail):* ${email}\n` +
+      `🔑 *Senha:* ${password}\n\n` +
+      `Por segurança, recomendamos alterar a senha após o primeiro acesso em *Configurações → Minha Conta*.`;
+
+    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: EVOLUTION_API_KEY,
+      },
+      body: JSON.stringify({ number: formattedPhone, text: message }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    console.log('[welcome-msg] sent:', { phone: formattedPhone, instance: instanceName, status: response.status });
+    return { sent: response.ok, status: response.status, data };
+  } catch (e) {
+    console.error('[welcome-msg] error:', e);
+    return { sent: false, reason: 'exception', error: String(e) };
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,7 +109,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -27,7 +121,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('Missing authorization header');
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'Token de autenticação não fornecido. Por favor, faça login novamente.',
         code: 'MISSING_AUTH_HEADER'
       }), {
@@ -38,10 +132,10 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
+
     if (authError || !callerUser) {
       console.error('Auth validation failed:', authError?.message || 'User not found');
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'Sua sessão expirou. Por favor, faça login novamente.',
         code: 'SESSION_EXPIRED'
       }), {
@@ -75,7 +169,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { name, email, role, organizationId, phone, endereco } = await req.json();
+    const { name, email, role, organizationId, phone, whatsapp, endereco } = await req.json();
 
     if (!name || !email || !role) {
       return new Response(JSON.stringify({ error: 'Missing required fields: name, email, role' }), {
@@ -86,8 +180,6 @@ Deno.serve(async (req) => {
 
     // Determine which organization to use
     let targetOrgId = organizationId;
-    
-    // If not super admin, can only create users in their own organization
     if (!isSuperAdmin) {
       targetOrgId = callerProfile?.organization_id;
     }
@@ -113,6 +205,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Generate a random password for this account
+    const generatedPassword = generateRandomPassword(12);
+    // Use whatsapp field if provided, fallback to phone
+    const contactWhatsapp = (whatsapp || phone || '').toString().trim() || null;
+
     // Check if email already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
@@ -123,20 +220,19 @@ Deno.serve(async (req) => {
     if (existingUser) {
       // Check if the user exists in auth.users
       const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(existingUser.id);
-      
+
       // If user exists in public.users but NOT in auth.users, create auth entry
       if (!authUser?.user) {
         console.log(`User ${email} exists in users table but not in auth. Creating auth entry...`);
-        
-        // Create auth user with the SAME ID as the existing users table record
+
         const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
           id: existingUser.id,
           email,
-          password: DEFAULT_PASSWORD,
+          password: generatedPassword,
           email_confirm: true,
           user_metadata: { name: name || existingUser.name },
         });
-        
+
         if (createAuthError) {
           console.error('Error creating auth user for existing profile:', createAuthError);
           return new Response(JSON.stringify({ error: createAuthError.message }), {
@@ -144,15 +240,15 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        
-        // Update profile data
+
         const { error: updateError } = await supabaseAdmin
           .from('users')
           .update({
             organization_id: existingUser.organization_id || targetOrgId,
             role: role as 'admin' | 'user',
             name: name || existingUser.name,
-            phone: phone || null,
+            phone: contactWhatsapp,
+            whatsapp: contactWhatsapp,
             endereco: endereco || null,
             is_active: true,
           })
@@ -162,7 +258,6 @@ Deno.serve(async (req) => {
           console.error('Error updating user profile:', updateError);
         }
 
-        // Create organization_members entry
         await supabaseAdmin
           .from('organization_members')
           .upsert({
@@ -171,10 +266,23 @@ Deno.serve(async (req) => {
             role: role as 'admin' | 'user',
             is_active: true,
           }, { onConflict: 'user_id,organization_id' });
-        
+
+        // Send welcome whatsapp
+        let welcomeResult: any = { sent: false };
+        if (contactWhatsapp) {
+          welcomeResult = await sendWelcomeWhatsApp(
+            supabaseAdmin,
+            existingUser.organization_id || targetOrgId,
+            contactWhatsapp,
+            name || existingUser.name,
+            email,
+            generatedPassword,
+          );
+        }
+
         console.log(`Auth entry created for orphan user: ${email}`);
-        return new Response(JSON.stringify({ 
-          success: true, 
+        return new Response(JSON.stringify({
+          success: true,
           user: {
             id: existingUser.id,
             email,
@@ -182,7 +290,8 @@ Deno.serve(async (req) => {
             role,
           },
           wasAuthOrphan: true,
-          defaultPassword: DEFAULT_PASSWORD,
+          generatedPassword,
+          whatsappSent: welcomeResult.sent,
         }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -197,7 +306,8 @@ Deno.serve(async (req) => {
             organization_id: targetOrgId,
             role: role as 'admin' | 'user',
             name: name || existingUser.name,
-            phone: phone || null,
+            phone: contactWhatsapp,
+            whatsapp: contactWhatsapp,
             endereco: endereco || null,
             is_active: true,
           })
@@ -211,7 +321,6 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Also create organization_members entry
         await supabaseAdmin
           .from('organization_members')
           .upsert({
@@ -222,8 +331,8 @@ Deno.serve(async (req) => {
           }, { onConflict: 'user_id,organization_id' });
 
         console.log(`Orphan user ${email} added to org ${org.name}`);
-        return new Response(JSON.stringify({ 
-          success: true, 
+        return new Response(JSON.stringify({
+          success: true,
           user: {
             id: existingUser.id,
             email,
@@ -231,6 +340,7 @@ Deno.serve(async (req) => {
             role,
           },
           wasOrphan: true,
+          message: 'Usuário existente vinculado à organização. A senha atual dele continua válida.',
         }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -239,7 +349,6 @@ Deno.serve(async (req) => {
 
       // User already belongs to an organization
       if (existingUser.organization_id === targetOrgId) {
-        // Check if already in organization_members
         const { data: existingMember } = await supabaseAdmin
           .from('organization_members')
           .select('id')
@@ -256,7 +365,6 @@ Deno.serve(async (req) => {
       }
 
       // Multi-org: Add user to new organization via organization_members
-      // (user keeps their primary org in users.organization_id, but gains access to new org)
       const { error: memberError } = await supabaseAdmin
         .from('organization_members')
         .upsert({
@@ -275,8 +383,8 @@ Deno.serve(async (req) => {
       }
 
       console.log(`User ${email} added to org ${org.name} (multi-org)`);
-      return new Response(JSON.stringify({ 
-        success: true, 
+      return new Response(JSON.stringify({
+        success: true,
         user: {
           id: existingUser.id,
           email,
@@ -291,14 +399,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Create auth user with default password
+    // ========== NEW USER FLOW ==========
+    // 1. Create auth user with random generated password
     const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: DEFAULT_PASSWORD,
+      password: generatedPassword,
       email_confirm: true,
-      user_metadata: {
-        name,
-      },
+      user_metadata: { name },
     });
 
     if (createAuthError || !authData.user) {
@@ -309,14 +416,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Create/update user profile in users table (upsert to handle auth trigger race condition)
+    // 2. Create/update user profile (upsert handles auth trigger race)
     const { error: userError } = await supabaseAdmin
       .from('users')
       .upsert({
         id: authData.user.id,
         email,
         name,
-        phone: phone || null,
+        phone: contactWhatsapp,
+        whatsapp: contactWhatsapp,
         endereco: endereco || null,
         role: role as 'admin' | 'user',
         organization_id: targetOrgId,
@@ -324,7 +432,6 @@ Deno.serve(async (req) => {
       }, { onConflict: 'id' });
 
     if (userError) {
-      // Rollback: delete auth user
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       console.error('Error creating user profile:', userError);
       return new Response(JSON.stringify({ error: userError.message }), {
@@ -345,20 +452,34 @@ Deno.serve(async (req) => {
 
     if (memberError) {
       console.error('Error creating organization member:', memberError);
-      // Non-fatal - user was created successfully
     }
 
-    console.log(`User created successfully: ${email} in org ${org.name}`);
+    // 4. Send welcome WhatsApp with credentials
+    let welcomeResult: any = { sent: false };
+    if (contactWhatsapp) {
+      welcomeResult = await sendWelcomeWhatsApp(
+        supabaseAdmin,
+        targetOrgId,
+        contactWhatsapp,
+        name,
+        email,
+        generatedPassword,
+      );
+    }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    console.log(`User created successfully: ${email} in org ${org.name} (whatsapp sent: ${welcomeResult.sent})`);
+
+    return new Response(JSON.stringify({
+      success: true,
       user: {
         id: authData.user.id,
         email,
         name,
         role,
       },
-      defaultPassword: DEFAULT_PASSWORD,
+      generatedPassword,
+      whatsappSent: welcomeResult.sent,
+      whatsappReason: welcomeResult.reason || null,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
