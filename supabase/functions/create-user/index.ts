@@ -210,12 +210,85 @@ Deno.serve(async (req) => {
     // Use whatsapp field if provided, fallback to phone
     const contactWhatsapp = (whatsapp || phone || '').toString().trim() || null;
 
-    // Check if email already exists
-    const { data: existingUser } = await supabaseAdmin
+    // Check if email already exists in public.users
+    let { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id, organization_id, name')
       .eq('email', email)
       .maybeSingle();
+
+    // If not found in public.users, check auth.users (orphan auth entry from previous failed deletion)
+    if (!existingUser) {
+      const { data: authList } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const authMatch = authList?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+      if (authMatch) {
+        console.log(`Found orphan auth user ${email} (no public.users row). Recreating profile...`);
+        // Create the public.users profile linked to existing auth id
+        const { error: insertError } = await supabaseAdmin
+          .from('users')
+          .upsert({
+            id: authMatch.id,
+            email,
+            name,
+            phone: contactWhatsapp,
+            whatsapp: contactWhatsapp,
+            endereco: endereco || null,
+            role: role as 'admin' | 'user',
+            organization_id: targetOrgId,
+            is_active: true,
+          }, { onConflict: 'id' });
+
+        if (insertError) {
+          console.error('Error creating profile for orphan auth user:', insertError);
+          return new Response(JSON.stringify({ error: `Email já cadastrado no sistema de autenticação. Erro ao recriar perfil: ${insertError.message}` }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Reset password to a fresh generated one and resend
+        await supabaseAdmin.auth.admin.updateUserById(authMatch.id, {
+          password: generatedPassword,
+          email_confirm: true,
+          user_metadata: { name },
+        });
+
+        // Add role + membership
+        await supabaseAdmin.from('user_roles').upsert(
+          { user_id: authMatch.id, role: role as 'admin' | 'user' },
+          { onConflict: 'user_id,role' }
+        );
+        await supabaseAdmin.from('organization_members').upsert(
+          { user_id: authMatch.id, organization_id: targetOrgId, role: role as 'admin' | 'user', is_active: true },
+          { onConflict: 'user_id,organization_id' }
+        );
+
+        // Send welcome whatsapp
+        let welcomeResult: any = { sent: false };
+        if (contactWhatsapp) {
+          welcomeResult = await sendWelcomeWhatsApp(
+            supabaseAdmin,
+            targetOrgId,
+            contactWhatsapp,
+            name,
+            email,
+            generatedPassword,
+          );
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          user: { id: authMatch.id, email, name, role },
+          wasAuthOrphan: true,
+          generatedPassword,
+          whatsappSent: welcomeResult.sent,
+          message: 'Usuário recuperado de cadastro órfão. Nova senha enviada.',
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     if (existingUser) {
       // Check if the user exists in auth.users
