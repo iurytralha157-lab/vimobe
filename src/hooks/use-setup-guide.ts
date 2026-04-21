@@ -44,7 +44,7 @@ function writeProgress(userId: string, progress: Record<string, boolean>) {
 export function useSetupGuide() {
   const { user, profile } = useAuth();
   const { hasPermission } = useUserPermissions();
-  const { isModuleEnabled } = useOrganizationModules();
+  const { hasModule } = useOrganizationModules();
 
   const [progress, setProgress] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState(false);
@@ -126,9 +126,9 @@ export function useSetupGuide() {
   const steps: SetupStep[] = allSteps.filter((step) => {
     switch (step.id) {
       case 'add_property':
-        return hasPermission('properties_view') || isModuleEnabled('properties');
+        return hasModule('properties');
       case 'create_site':
-        return profile?.role === 'admin';
+        return profile?.role === 'admin' && hasModule('site');
       case 'create_automation':
         return hasPermission('automations_view');
       case 'create_queue':
