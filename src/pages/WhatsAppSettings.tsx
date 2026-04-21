@@ -370,7 +370,7 @@ export default function WhatsAppSettings() {
               <p className="text-muted-foreground text-center mb-4">
                 Conecte seu primeiro WhatsApp para começar a receber mensagens
               </p>
-              <Button onClick={() => setCreateDialogOpen(true)}>
+              <Button data-tour="whatsapp-new-session" onClick={() => setCreateDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Conectar WhatsApp
               </Button>

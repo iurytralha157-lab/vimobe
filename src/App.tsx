@@ -15,6 +15,7 @@ import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanne
 import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
+import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 
 // Eager imports - lightweight/critical
 import Auth from "./pages/Auth";
@@ -178,6 +179,7 @@ function AppRoutes() {
       <AnnouncementBanner />
       <ImpersonateBanner />
       <Suspense fallback={null}><TrialExpiredModal /></Suspense>
+      {user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
         <Suspense fallback={<PageLoader />}>

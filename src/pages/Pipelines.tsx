@@ -1123,7 +1123,7 @@ export default function Pipelines() {
               </TooltipProvider>
               
               {/* Desktop New Button */}
-              <Button size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0">
+              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0">
                 <Plus className="h-4 w-4 mr-2" />
                 {newButtonLabel}
               </Button>
