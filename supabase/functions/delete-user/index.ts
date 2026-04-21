@@ -107,35 +107,24 @@ Deno.serve(async (req) => {
 
     console.log(`Deleting user ${userId} (${targetUser.email}) by ${callerUser.id}`);
 
-    // First, clear lead_tasks references
-    await supabaseAdmin
-      .from("lead_tasks")
-      .update({ done_by: null })
-      .eq("done_by", userId);
+    // Clear references in tables that don't have CASCADE/SET NULL
+    // Set NULL for soft references
+    await supabaseAdmin.from("lead_tasks").update({ done_by: null }).eq("done_by", userId);
+    await supabaseAdmin.from("leads").update({ assigned_user_id: null }).eq("assigned_user_id", userId);
+    await supabaseAdmin.from("properties").update({ corretor_id: null }).eq("corretor_id", userId);
+    await supabaseAdmin.from("activities").update({ user_id: null }).eq("user_id", userId);
+    await supabaseAdmin.from("whatsapp_sessions").update({ owner_user_id: null }).eq("owner_user_id", userId);
+    await supabaseAdmin.from("whatsapp_session_access").update({ granted_by: null }).eq("granted_by", userId);
+    await supabaseAdmin.from("whatsapp_message_templates").update({ created_by: null }).eq("created_by", userId);
+    await supabaseAdmin.from("invitations").update({ created_by: null }).eq("created_by", userId);
+    await supabaseAdmin.from("telecom_customers").update({ seller_id: null }).eq("seller_id", userId);
 
-    // Unassign any leads from this user
-    await supabaseAdmin
-      .from("leads")
-      .update({ assigned_user_id: null })
-      .eq("assigned_user_id", userId);
-
-    // Remove from team_members
-    await supabaseAdmin
-      .from("team_members")
-      .delete()
-      .eq("user_id", userId);
-
-    // Remove from round_robin_members
-    await supabaseAdmin
-      .from("round_robin_members")
-      .delete()
-      .eq("user_id", userId);
-
-    // Remove from whatsapp_session_access
-    await supabaseAdmin
-      .from("whatsapp_session_access")
-      .delete()
-      .eq("user_id", userId);
+    // Remove from membership / pivot tables
+    await supabaseAdmin.from("team_members").delete().eq("user_id", userId);
+    await supabaseAdmin.from("round_robin_members").delete().eq("user_id", userId);
+    await supabaseAdmin.from("whatsapp_session_access").delete().eq("user_id", userId);
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+    await supabaseAdmin.from("organization_members").delete().eq("user_id", userId);
 
     // Delete from public.users (this should cascade user_roles)
     const { error: deletePublicError } = await supabaseAdmin
