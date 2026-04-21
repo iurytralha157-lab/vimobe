@@ -483,7 +483,12 @@ Deno.serve(async (req) => {
 
     if (createAuthError || !authData.user) {
       console.error('Error creating auth user:', createAuthError);
-      return new Response(JSON.stringify({ error: createAuthError?.message || 'Erro ao criar usuário' }), {
+      const isEmailExists = createAuthError?.message?.toLowerCase().includes('already been registered') ||
+        (createAuthError as any)?.code === 'email_exists';
+      const friendlyMessage = isEmailExists
+        ? 'Este email já está cadastrado no sistema. Verifique se o usuário já existe ou entre em contato com o suporte.'
+        : (createAuthError?.message || 'Erro ao criar usuário');
+      return new Response(JSON.stringify({ error: friendlyMessage }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
