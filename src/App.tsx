@@ -18,6 +18,7 @@ import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 
 // Eager imports - lightweight/critical
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 // Lazy imports - heavy pages
@@ -182,6 +183,7 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={renderAuthRoute()} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
             <Route path="/onboarding" element={renderOnboardingRoute()} />
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
