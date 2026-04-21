@@ -202,7 +202,7 @@ export function TeamTab() {
                 if (!open) resetNewUserForm();
               }}>
                 <SheetTrigger asChild>
-                  <Button size="sm">
+                  <Button data-tour="team-add-user" size="sm">
                     <Plus className="h-4 w-4 mr-2" />
                     {t.settings.users.newUser}
                   </Button>

@@ -84,7 +84,7 @@ export function useSetupGuide() {
       title: 'Criar Fila de Atendimento',
       description: 'Defina como os leads serão distribuídos entre a equipe.',
       icon: 'Workflow',
-      route: '/settings?tab=distribution',
+      route: '/crm/management?tab=distribution',
       ctaLabel: 'Iniciar',
       tourTarget: 'distribution-new-queue',
     },
