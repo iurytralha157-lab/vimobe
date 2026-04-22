@@ -129,8 +129,9 @@ export default function Contacts() {
   const deferredSearch = useDeferredValue(search);
 
   // Calculate date range from preset or custom range
-  const dateRange = useMemo(() => {
+  const dateRange = useMemo<{ from: Date; to: Date } | null>(() => {
     if (customDateRange) return customDateRange;
+    if (!datePreset) return null;
     return getDateRangeFromPreset(datePreset);
   }, [datePreset, customDateRange]);
 

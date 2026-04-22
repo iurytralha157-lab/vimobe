@@ -16,8 +16,8 @@ import {
 } from '@/hooks/use-dashboard-filters';
 
 interface DateFilterPopoverProps {
-  datePreset: DatePreset;
-  onDatePresetChange: (preset: DatePreset) => void;
+  datePreset: DatePreset | null;
+  onDatePresetChange: (preset: DatePreset | null) => void;
   customDateRange?: { from: Date; to: Date } | null;
   onCustomDateRangeChange?: (range: { from: Date; to: Date } | null) => void;
   triggerClassName?: string;
