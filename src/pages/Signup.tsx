@@ -30,6 +30,22 @@ const steps = [
   { id: 3, title: 'Confirmar' },
 ];
 
+const STRENGTH_COLORS: Record<PasswordStrength['level'], string> = {
+  'very-weak': 'bg-red-500',
+  'weak': 'bg-orange-500',
+  'fair': 'bg-yellow-500',
+  'good': 'bg-lime-500',
+  'strong': 'bg-green-500',
+};
+
+const STRENGTH_LABELS: Record<PasswordStrength['level'], string> = {
+  'very-weak': 'Muito fraca',
+  'weak': 'Fraca',
+  'fair': 'Razoável',
+  'good': 'Boa',
+  'strong': 'Forte',
+};
+
 export default function Signup() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -51,6 +67,7 @@ export default function Signup() {
     teamSize: '1-5',
   });
 
+  const passwordStrength = usePasswordStrength(accountData.password);
   const progress = (currentStep / steps.length) * 100;
 
   const canProceed = () => {
@@ -58,11 +75,9 @@ export default function Signup() {
       case 1:
         return accountData.name.trim().length >= 2 && 
                accountData.email.includes('@') && 
-               accountData.password.length >= 8;
+               passwordStrength.isValid;
       case 2:
-        return orgData.organizationName.trim().length >= 2;
-      default:
-        return true;
+...
     }
   };
 
