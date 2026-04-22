@@ -38,6 +38,7 @@ const resetSchema = z.object({
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const { data: systemSettings } = useSystemSettings();
@@ -61,9 +62,42 @@ export default function ResetPassword() {
 
   const passwordStrength = usePasswordStrength(password);
 
-  // Detect recovery session — Supabase places tokens in URL hash and emits PASSWORD_RECOVERY event
   useEffect(() => {
     let mounted = true;
+
+    const checkSession = async () => {
+      // 1. Check if we have a token_hash in the URL (new method)
+      const tokenHash = searchParams.get("token_hash");
+      const type = searchParams.get("type");
+
+      if (tokenHash && type === 'recovery') {
+        try {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+          
+          if (error) {
+            console.error("Error verifying token hash:", error);
+          } else if (mounted) {
+            setHasRecoverySession(true);
+            setValidatingSession(false);
+            return;
+          }
+        } catch (err) {
+          console.error("Unexpected error verifying token hash:", err);
+        }
+      }
+
+      // 2. Check if we already have a session (hash method or already verified)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted) {
+        if (session) {
+          setHasRecoverySession(true);
+        }
+        setValidatingSession(false);
+      }
+    };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
@@ -74,20 +108,13 @@ export default function ResetPassword() {
       }
     });
 
-    // Also check existing session in case event fired before listener attached
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted) {
-        if (session) setHasRecoverySession(true);
-        setValidatingSession(false);
-      }
-    })();
+    checkSession();
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
