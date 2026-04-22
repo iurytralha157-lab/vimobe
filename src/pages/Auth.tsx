@@ -87,9 +87,10 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Pre-load background image
+  // Pre-load background image only on desktop (mobile uses CSS gradient to save 500KB+)
   useEffect(() => {
     if (!loginBgUrl) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) return;
     const img = new Image();
     img.onload = () => setBgLoaded(true);
     img.src = loginBgUrl;
@@ -261,22 +262,13 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background relative">
-      {/* Mobile: full-screen background image behind everything */}
-      {showBg && (
-        <div className="lg:hidden absolute inset-0 w-full h-[55vh] overflow-hidden">
-          <img
-            src={loginBgUrl!}
-            alt=""
-            aria-hidden="true"
-            role="presentation"
-            className="w-full h-full object-cover scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-background" />
-        </div>
-      )}
+      {/* Mobile: lightweight gradient background instead of heavy image to improve LCP/CLS */}
+      <div className="lg:hidden absolute inset-0 w-full h-[55vh] overflow-hidden bg-gradient-to-br from-primary/30 via-primary/10 to-background pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-background" />
+      </div>
 
       {/* Mobile spacer to push form below image - reduced to allow move the form up */}
-      {showBg && <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />}
+      <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />
 
       {/* Login form container */}
       <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
@@ -286,6 +278,8 @@ export default function Auth() {
               <img
                 src={logoUrl}
                 alt="Logo"
+                width="160"
+                height="56"
                 className="h-14 w-auto mb-2"
                 fetchPriority="high"
                 decoding="async"
@@ -459,7 +453,7 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right panel - Background image */}
+      {/* Right panel - Background image (desktop only, lazy-loaded) */}
       {showBg && (
         <div className="hidden lg:block flex-1 relative">
           <img
@@ -467,6 +461,8 @@ export default function Auth() {
             alt=""
             aria-hidden="true"
             role="presentation"
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
           />
           {/* Horizontal gradient to blend form background with image */}
