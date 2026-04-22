@@ -57,7 +57,7 @@ export function useSetupGuide() {
       title: 'Conectar WhatsApp',
       description: 'Conecte sua conta para receber mensagens dos leads.',
       icon: 'MessageCircle',
-      route: '/settings?tab=whatsapp',
+      route: '/crm/conversas',
       ctaLabel: 'Iniciar',
       tourTarget: 'whatsapp-new-session',
     },

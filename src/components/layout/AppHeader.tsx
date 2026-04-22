@@ -57,7 +57,7 @@ export function AppHeader({
 
   const handleSwitchOrg = async (orgId: string) => {
     await switchOrganization(orgId);
-    navigate('/dashboard', { replace: true });
+    navigate('/crm/conversas', { replace: true });
     // Force reload to reset all queries
     window.location.reload();
   };
