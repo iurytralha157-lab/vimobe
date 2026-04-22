@@ -82,6 +82,8 @@ const PublicFavorites = lazy(() => import("./pages/public/PublicFavorites"));
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
 const PublishedSiteWrapper = lazy(() => import("./pages/public/PublishedSiteWrapper"));
 
+const APIDocs = lazy(() => import("./pages/public/APIDocs"));
+
 // Trial expired modal
 const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
 
@@ -252,6 +254,9 @@ function AppRoutes() {
             
             {/* Published Sites */}
             <Route path="/sites/:slug/*" element={<PublishedSiteWrapper />} />
+            
+            {/* Public API Documentation */}
+            <Route path="/docs/api" element={<APIDocs />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

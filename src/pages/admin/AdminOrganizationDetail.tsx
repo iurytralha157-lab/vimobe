@@ -69,7 +69,8 @@ const ALL_MODULES = [
 { name: 'automations', label: 'Automações', category: 'advanced' },
 { name: 'wordpress', label: 'Integração WordPress', category: 'advanced' },
 { name: 'webhooks', label: 'Webhooks', category: 'advanced' },
-{ name: 'ai_agent', label: 'Agente de IA (WhatsApp)', category: 'advanced' }];
+{ name: 'ai_agent', label: 'Agente de IA (WhatsApp)', category: 'advanced' },
+{ name: 'api', label: 'API Pública (Imóveis)', category: 'advanced' }];
 
 
 export default function AdminOrganizationDetail() {
