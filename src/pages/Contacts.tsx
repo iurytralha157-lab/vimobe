@@ -606,7 +606,10 @@ export default function Contacts() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-foreground">{contact.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground">{contact.name}</p>
+                                <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
+                              </div>
                               {contact.source && (
                                 <p className="text-xs text-muted-foreground">
                                   {sourceLabels[contact.source] || contact.source}
