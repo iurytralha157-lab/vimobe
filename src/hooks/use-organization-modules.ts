@@ -19,7 +19,8 @@ export type ModuleName =
   | 'performance'  // Performance de Corretores
   | 'webhooks'     // Webhooks
   | 'site'         // Site Integrado
-  | 'ai_agent';    // Agente de IA
+  | 'ai_agent'    // Agente de IA
+  | 'api';         // API Pública
 
 // Default modules that are enabled if no explicit record exists
 // Note: 'automations' is disabled by default and must be explicitly enabled by super admin
@@ -80,8 +81,8 @@ export function useOrganizationModules() {
     // Find the module in the list
     const moduleRecord = modules.find(m => m.module_name === moduleName);
     
-    // If not found in list, assume enabled (default behavior)
-    if (!moduleRecord) return true;
+    // If not found in list, check if it's enabled by default
+    if (!moduleRecord) return DEFAULT_ENABLED_MODULES.includes(moduleName);
     
     return moduleRecord.is_enabled;
   };

@@ -17,7 +17,7 @@ export function APITab() {
     queryKey: ['api-keys', profile?.organization_id],
     queryFn: async () => {
       if (!profile?.organization_id) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('organization_api_keys')
         .select('*')
         .eq('organization_id', profile.organization_id)
@@ -43,7 +43,7 @@ export function APITab() {
       // For this simple implementation, we'll use a prefix of the first 8 chars
       const keyPrefix = apiKey.substring(0, 12); // sk_ + 9 chars
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('organization_api_keys')
         .insert({
           organization_id: profile.organization_id,
