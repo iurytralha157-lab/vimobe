@@ -17,8 +17,9 @@ export function APITab() {
     queryKey: ['api-keys', profile?.organization_id],
     queryFn: async () => {
       if (!profile?.organization_id) return [];
-      const { data, error } = await (supabase as any)
-        .from('organization_api_keys')
+      // @ts-ignore
+      const { data, error } = await supabase
+        .from('organization_api_keys' as any)
         .select('*')
         .eq('organization_id', profile.organization_id)
         .order('created_at', { ascending: false });
@@ -40,8 +41,9 @@ export function APITab() {
       
       const keyPrefix = apiKey.substring(0, 12);
       
-      const { error } = await (supabase as any)
-        .from('organization_api_keys')
+      // @ts-ignore
+      const { error } = await supabase
+        .from('organization_api_keys' as any)
         .insert({
           organization_id: profile.organization_id,
           key_hash: apiKey,
@@ -66,8 +68,9 @@ export function APITab() {
 
   const deleteKeyMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
-        .from('organization_api_keys')
+      // @ts-ignore
+      const { error } = await supabase
+        .from('organization_api_keys' as any)
         .delete()
         .eq('id', id);
       if (error) throw error;
