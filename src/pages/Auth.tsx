@@ -211,7 +211,7 @@ export default function Auth() {
         toast({
           variant: "destructive",
           title: "Erro ao enviar email",
-          description: "Não foi possível enviar o email de recuperação. Tente novamente.",
+          description: getFriendlyErrorMessage(error),
         });
         securityLogger.logEvent({
           type: 'password_reset_requested',
