@@ -92,8 +92,8 @@ export function DateFilterPopover({
             triggerClassName
           )}
         >
-          <CalendarIcon className="h-4 w-4" />
-          <span>{getDateLabel()}</span>
+          <CalendarIcon className="h-4 w-4 shrink-0" />
+          <span className="truncate">{getDateLabel()}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align={align}>
