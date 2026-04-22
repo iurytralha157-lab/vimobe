@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,9 +51,24 @@ const tabIntros: Record<string, { title: string; description: string; tips?: str
   },
 };
 
+const VALID_TABS = ['teams', 'pipelines', 'distribution', 'tags'];
+
 export default function CRMManagement() {
-  const [activeTab, setActiveTab] = useState('teams');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'teams'
+  );
   const isMobile = useIsMobile();
+
+  // Sync URL ?tab= changes into state (e.g., from setup guide redirects)
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && VALID_TABS.includes(t) && t !== activeTab) {
+      setActiveTab(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const managementTabs: AnimatedTabItem[] = useMemo(() => [
     { value: 'teams', label: 'Equipes', icon: Users },
