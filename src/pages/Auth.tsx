@@ -292,7 +292,7 @@ export default function Auth() {
               />
             )}
           </div>
-          <p className="text-sm text-muted-foreground text-center mb-6">
+          <p className="text-sm text-muted-foreground text-center mb-6" aria-live="polite">
             {mode === 'login'
               ? 'Acesse seu sistema de gestão imobiliário'
               : 'Recupere o acesso à sua conta'}
