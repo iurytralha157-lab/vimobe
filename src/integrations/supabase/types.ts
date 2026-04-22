@@ -6455,6 +6455,22 @@ export type Database = {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: Json
       }
+      register_lead_reentry: {
+        Args: {
+          p_campaign_name?: string
+          p_entry_type?: string
+          p_lead_id: string
+          p_metadata?: Json
+          p_org_id: string
+          p_property_id?: string
+          p_source?: string
+          p_utm_campaign?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_valor_interesse?: number
+        }
+        Returns: undefined
+      }
       reorder_stages: { Args: { p_stages: Json }; Returns: undefined }
       resolve_site_domain: {
         Args: { p_domain: string }
