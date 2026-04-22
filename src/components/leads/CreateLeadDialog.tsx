@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { maskCPF, maskRG } from '@/lib/masks';
+import { maskCPF, maskRG, maskPhone } from '@/lib/masks';
+import { toast } from 'sonner';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -199,7 +202,24 @@ export function CreateLeadDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Validate email format (only if provided)
+    if (formData.email && !EMAIL_REGEX.test(formData.email.trim())) {
+      toast.error('Email inválido. Use o formato nome@dominio.com');
+      setActiveTab('basic');
+      return;
+    }
+
+    // Validate phone has only digits and minimum length (only if provided)
+    if (formData.phone) {
+      const phoneDigits = formData.phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10) {
+        toast.error('Telefone inválido. Informe DDD + número (mín. 10 dígitos).');
+        setActiveTab('basic');
+        return;
+      }
+    }
+
     try {
       const newLead = await createLead.mutateAsync({
         name: formData.name,
@@ -524,8 +544,10 @@ export function CreateLeadDialog({
                           <Label className="text-sm font-medium">Telefone</Label>
                           <Input
                             value={formData.phone}
-                            onChange={(e) => updateField('phone', e.target.value)}
+                            onChange={(e) => updateField('phone', maskPhone(e.target.value))}
                             placeholder="(00) 00000-0000"
+                            inputMode="tel"
+                            maxLength={15}
                           />
                         </div>
                         <div className="space-y-1.5">
@@ -535,6 +557,8 @@ export function CreateLeadDialog({
                             value={formData.email}
                             onChange={(e) => updateField('email', e.target.value)}
                             placeholder="email@exemplo.com"
+                            pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$"
+                            title="Informe um email válido (ex: nome@dominio.com)"
                           />
                         </div>
                       </div>
