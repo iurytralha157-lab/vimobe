@@ -167,55 +167,36 @@ export function useCreateLead() {
           });
           
           if (existingLead) {
-            // Atualizar lead existente ao invés de criar novo
-            const updateData: any = {};
-            if (lead.name && lead.name !== 'unknown') updateData.name = lead.name;
-            if (lead.email) updateData.email = lead.email;
-            if (lead.message) updateData.message = lead.message;
-            if (lead.property_code) updateData.property_code = lead.property_code;
-            if (lead.assigned_user_id) updateData.assigned_user_id = lead.assigned_user_id;
-            if (lead.stage_id) updateData.stage_id = lead.stage_id;
-            if (lead.pipeline_id) updateData.pipeline_id = lead.pipeline_id;
-            
-            // Registrar atividade de reentrada no histórico
-            const { data: userData } = await supabase.auth.getUser();
-            await supabase.from('activities').insert({
-              lead_id: existingLead.id,
-              type: 'lead_reentry',
-              content: `Lead entrou novamente${lead.source ? ` via ${lead.source}` : ''}`,
-              user_id: userData.user?.id || null,
-              metadata: {
-                source: lead.source || 'manual',
-                new_data: updateData,
-                original_phone: lead.phone,
-              }
-            });
-            
-            if (Object.keys(updateData).length > 0) {
-              const { data: updatedLead, error: updateError } = await supabase
-                .from('leads')
-                .update(updateData)
-                .eq('id', existingLead.id)
-                .select()
-                .single();
-              
-              if (updateError) throw updateError;
-              
-              // Add tags if provided
-              if (lead.tag_ids && lead.tag_ids.length > 0) {
-                for (const tagId of lead.tag_ids) {
-                  await supabase
-                    .from('lead_tags')
-                    .upsert({ lead_id: existingLead.id, tag_id: tagId }, { onConflict: 'lead_id,tag_id' });
+            // Registrar reentrada via RPC
+            const { error: reentryError } = await supabase.rpc('register_lead_reentry', {
+              p_lead_id: existingLead.id,
+              p_org_id: organizationId,
+              p_entry_type: 'manual_reentry',
+              p_source: lead.source || 'manual',
+              p_property_id: lead.property_id || null,
+              p_valor_interesse: lead.valor_interesse || null,
+              p_metadata: {
+                new_data: {
+                  name: lead.name,
+                  email: lead.email,
+                  message: lead.message,
+                  property_code: lead.property_code
                 }
               }
-              
-              toast.success('Lead atualizado (telefone já existia)');
-              return updatedLead;
+            });
+
+            if (reentryError) {
+              console.error('Erro ao registrar reentrada:', reentryError);
+              // Fallback para atualização simples se a RPC falhar
+              await supabase.from('leads').update({
+                name: lead.name,
+                email: lead.email,
+                message: lead.message
+              }).eq('id', existingLead.id);
             }
-            
-            toast.info('Lead já existe com este telefone');
-            return existingLead;
+
+            toast.success('Lead atualizado (telefone já existia)');
+            return { id: existingLead.id };
           }
         }
       }

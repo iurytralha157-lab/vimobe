@@ -200,68 +200,46 @@ Deno.serve(async (req) => {
         stage_entered_at: new Date().toISOString(),
       };
       
-      // Atualizar o lead
-      const { error: updateError } = await supabase
-        .from('leads')
-        .update(updateData)
-        .eq('id', existingLead.id);
-      
-      if (updateError) {
-        console.error('Lead update error:', updateError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to update lead', details: updateError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      // Registrar atividade de reentrada com detalhes completos
-      await supabase.from('activities').insert({
-        lead_id: existingLead.id,
-        type: 'lead_reentry',
-        content: `Lead reentrou via webhook "${webhook.name}"`,
-        user_id: null,
-        metadata: {
-          source: 'webhook',
+      // Registrar reentrada via RPC
+      const { error: reentryError } = await supabase.rpc('register_lead_reentry', {
+        p_lead_id: existingLead.id,
+        p_org_id: webhook.organization_id,
+        p_entry_type: 'webhook_reentry',
+        p_source: 'webhook',
+        p_property_id: resolvedPropertyId || null,
+        p_valor_interesse: valorInteresse || null,
+        p_metadata: {
           webhook_id: webhook.id,
           webhook_name: webhook.name,
-          pipeline_name: webhook.pipeline?.name,
-          stage_name: webhook.stage?.name,
-          from_stage_id: oldStageId,
-          to_stage_id: targetStageId,
-          from_pipeline_id: oldPipelineId,
-          to_pipeline_id: targetPipelineId,
-          from_status: oldDealStatus,
-          to_status: 'open',
-          previous_assignee_id: oldAssigneeId,
-          keep_assignee: shouldKeepAssignee,
           new_data: mappedData,
+          old_data: {
+            stage_id: oldStageId,
+            pipeline_id: oldPipelineId,
+            assignee_id: oldAssigneeId,
+            status: oldDealStatus
+          }
         }
       });
+
+      if (reentryError) {
+        console.error('Lead reentry RPC error:', reentryError);
+        // Fallback update
+        await supabase
+          .from('leads')
+          .update({
+            ...(mappedData.name && mappedData.name !== 'unknown' && { name: mappedData.name }),
+            ...(mappedData.email && { email: mappedData.email }),
+            deal_status: 'open',
+            last_entry_at: new Date().toISOString(),
+          })
+          .eq('id', existingLead.id);
+      }
       
       let finalAssigneeId = oldAssigneeId;
       
       if (shouldKeepAssignee) {
         // Lead continua com o responsável anterior
         console.log('Keeping original assignee per queue config:', oldAssigneeId);
-        
-        // Registrar que o lead continua com o mesmo responsável
-        const { data: userData } = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', oldAssigneeId)
-          .single();
-        
-        await supabase.from('activities').insert({
-          lead_id: existingLead.id,
-          type: 'assignee_changed',
-          content: `Lead continua com ${userData?.name || 'responsável anterior'} (configuração da fila)`,
-          user_id: oldAssigneeId,
-          metadata: {
-            to_user_id: oldAssigneeId,
-            to_user_name: userData?.name,
-            reason: 'keep_assignee_config',
-          }
-        });
       } else {
         // Chamar redistribuição via RPC
         console.log('Calling handle_lead_intake for redistribution...');
@@ -275,37 +253,13 @@ Deno.serve(async (req) => {
         if (redistributionResult?.assigned_user_id) {
           console.log(`Lead redistributed to: ${redistributionResult.assigned_user_id}`);
           finalAssigneeId = redistributionResult.assigned_user_id;
-        } else {
+        } else if (oldAssigneeId) {
           // Se não conseguiu redistribuir, manter o responsável anterior
-          if (oldAssigneeId) {
-            console.log('No redistribution available, keeping original assignee:', oldAssigneeId);
-            await supabase
-              .from('leads')
-              .update({ assigned_user_id: oldAssigneeId, assigned_at: new Date().toISOString() })
-              .eq('id', existingLead.id);
-            
-            // Registrar que o lead continua com o mesmo responsável
-            const { data: userData } = await supabase
-              .from('users')
-              .select('name')
-              .eq('id', oldAssigneeId)
-              .single();
-            
-            await supabase.from('activities').insert({
-              lead_id: existingLead.id,
-              type: 'assignee_changed',
-              content: `Lead continua com ${userData?.name || 'responsável anterior'}`,
-              user_id: oldAssigneeId,
-              metadata: {
-                to_user_id: oldAssigneeId,
-                to_user_name: userData?.name,
-                reason: 'no_redistribution_available',
-              }
-            });
-          } else {
-            console.log('No previous assignee and no redistribution available');
-            finalAssigneeId = null;
-          }
+          console.log('No redistribution available, keeping original assignee:', oldAssigneeId);
+          await supabase
+            .from('leads')
+            .update({ assigned_user_id: oldAssigneeId, assigned_at: new Date().toISOString() })
+            .eq('id', existingLead.id);
         }
       }
       

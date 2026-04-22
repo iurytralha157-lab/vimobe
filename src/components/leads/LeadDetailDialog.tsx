@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp, RotateCw } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -35,6 +35,7 @@ import { LeadHistory } from '@/components/leads/LeadHistory';
 import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
 import { LeadJourneySection } from '@/components/leads/LeadJourneySection';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
+import { ReentryBadge } from '@/components/leads/ReentryBadge';
 
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';

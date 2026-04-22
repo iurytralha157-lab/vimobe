@@ -337,45 +337,63 @@ serve(async (req) => {
               // Remove undefined values
               Object.keys(updateData).forEach(k => updateData[k] === undefined && delete updateData[k]);
 
-              const { error: updateError } = await supabase
-                .from('leads')
-                .update(updateData)
-                .eq('id', existingByPhone.id);
-
-              if (updateError) {
-                console.error('Error updating existing lead:', updateError);
-                continue;
-              }
-
-              // Record reentry activity
-              await supabase.from('activities').insert({
-                lead_id: existingByPhone.id,
-                type: 'lead_reentry',
-                content: 'Lead reenviado via Meta Ads',
-                user_id: null,
-                metadata: {
-                  source: 'meta',
+              const { error: reentryError } = await supabase.rpc('register_lead_reentry', {
+                p_lead_id: existingByPhone.id,
+                p_org_id: integration.organization_id,
+                p_entry_type: 'meta_reentry',
+                p_source: 'meta',
+                p_campaign_name: leadData.campaign_name || null,
+                p_utm_source: leadData.campaign_id || null,
+                p_property_id: propertyId || null,
+                p_valor_interesse: valorInteresse || null,
+                p_metadata: {
                   form_id: formId,
                   page_id: pageId,
-                  campaign_name: leadData.campaign_name || null,
-                  from_stage_id: oldStageId,
-                  from_pipeline_id: oldPipelineId,
-                  from_status: oldDealStatus,
-                  to_status: 'open',
-                  previous_assignee_id: oldAssigneeId,
-                  keep_assignee: !!shouldKeepAssignee,
+                  ad_id: leadData.ad_id,
+                  platform: leadData.platform,
+                  old_data: {
+                    stage_id: oldStageId,
+                    pipeline_id: oldPipelineId,
+                    assignee_id: oldAssigneeId,
+                    status: oldDealStatus
+                  }
                 }
               });
 
-              // Record timeline event
-              await supabase.from('lead_timeline_events').insert({
-                lead_id: existingByPhone.id,
-                event_type: 'reentry',
-                title: 'Lead reenviado via Meta Ads',
-                description: `Formulário: ${formId}${leadData.campaign_name ? ` | Campanha: ${leadData.campaign_name}` : ''}`,
-              });
+              if (reentryError) {
+                console.error('Error recording reentry via RPC:', reentryError);
+                // Fallback basic update
+                await supabase.from('leads').update({
+                  name: name !== 'Lead Facebook' ? name : undefined,
+                  email: email || undefined,
+                  meta_lead_id: leadgenId,
+                  deal_status: 'open',
+                  last_entry_at: new Date().toISOString()
+                }).eq('id', existingByPhone.id);
+              }
 
               // Handle redistribution if needed
+              let queueReentryBehavior = 'redistribute';
+              try {
+                const { data: matchingQueue } = await supabase
+                  .rpc('pick_round_robin_for_lead', { p_lead_id: existingByPhone.id });
+
+                if (matchingQueue) {
+                  const { data: queueData } = await supabase
+                    .from('round_robins')
+                    .select('reentry_behavior')
+                    .eq('id', matchingQueue)
+                    .single();
+                  if (queueData?.reentry_behavior) {
+                    queueReentryBehavior = queueData.reentry_behavior;
+                  }
+                }
+              } catch (e) {
+                console.log('Could not check reentry behavior, using default redistribute');
+              }
+
+              const shouldKeepAssignee = queueReentryBehavior === 'keep_assignee' && oldAssigneeId;
+
               if (!shouldKeepAssignee) {
                 console.log('Calling handle_lead_intake for redistribution...');
                 const { data: redistributionResult, error: redistributionError } = await supabase
