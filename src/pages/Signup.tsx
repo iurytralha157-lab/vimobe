@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,8 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock } from 'lucide-react';
+import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock, ShieldAlert, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePasswordStrength, type PasswordStrength } from "@/hooks/use-password-strength";
 import { getFriendlyErrorMessage } from '@/lib/error-handler';
 
 const SEGMENTS = [
