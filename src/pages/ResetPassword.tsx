@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { getFriendlyErrorMessage } from "@/lib/error-handler";
 
 const STRENGTH_COLORS: Record<PasswordStrength['level'], string> = {
   'very-weak': 'bg-red-500',
