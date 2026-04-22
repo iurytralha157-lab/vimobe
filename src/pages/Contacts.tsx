@@ -87,6 +87,7 @@ import { EmptyState } from '@/components/contacts/EmptyState';
 import { useContactsList, type ContactListFilters } from '@/hooks/use-contacts-list';
 import { exportContactsFiltered } from '@/lib/export-contacts';
 import { useLead, useDeleteLead } from '@/hooks/use-leads';
+import { ReentryBadge } from '@/components/leads/ReentryBadge';
 import { useToast } from '@/hooks/use-toast';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
@@ -104,7 +105,7 @@ export default function Contacts() {
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
   const [selectedDealStatus, setSelectedDealStatus] = useState<string>('all');
-  const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
+  const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
@@ -129,8 +130,9 @@ export default function Contacts() {
   const deferredSearch = useDeferredValue(search);
 
   // Calculate date range from preset or custom range
-  const dateRange = useMemo(() => {
+  const dateRange = useMemo<{ from: Date; to: Date } | null>(() => {
     if (customDateRange) return customDateRange;
+    if (!datePreset) return null;
     return getDateRangeFromPreset(datePreset);
   }, [datePreset, customDateRange]);
 
@@ -604,7 +606,10 @@ export default function Contacts() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-foreground">{contact.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground">{contact.name}</p>
+                                <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
+                              </div>
                               {contact.source && (
                                 <p className="text-xs text-muted-foreground">
                                   {sourceLabels[contact.source] || contact.source}

@@ -23,6 +23,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/hooks/use-contacts-list';
+import { ReentryBadge } from '@/components/leads/ReentryBadge';
 
 // Deal status configuration
 const dealStatusConfig = {
@@ -59,7 +60,10 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
       {/* Header: Name + Actions */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{contact.name}</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="font-medium truncate">{contact.name}</p>
+            <ReentryBadge count={contact.reentry_count} lastEntryAt={contact.last_entry_at} />
+          </div>
           <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
             {contact.phone && (
               <a 

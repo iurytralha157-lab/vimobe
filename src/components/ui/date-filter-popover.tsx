@@ -16,8 +16,8 @@ import {
 } from '@/hooks/use-dashboard-filters';
 
 interface DateFilterPopoverProps {
-  datePreset: DatePreset;
-  onDatePresetChange: (preset: DatePreset) => void;
+  datePreset: DatePreset | null;
+  onDatePresetChange: (preset: DatePreset | null) => void;
   customDateRange?: { from: Date; to: Date } | null;
   onCustomDateRangeChange?: (range: { from: Date; to: Date } | null) => void;
   triggerClassName?: string;
@@ -40,8 +40,20 @@ export function DateFilterPopover({
   const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
 
   const handleDatePresetChange = (preset: DatePreset) => {
-    onDatePresetChange(preset);
+    // Toggle off when re-clicking the same preset (allows clearing)
+    if (datePreset === preset && !customDateRange) {
+      onDatePresetChange(null);
+    } else {
+      onDatePresetChange(preset);
+    }
     onCustomDateRangeChange?.(null);
+    setDatePickerOpen(false);
+  };
+
+  const handleClearDate = () => {
+    onDatePresetChange(null);
+    onCustomDateRangeChange?.(null);
+    setTempDateRange({});
     setDatePickerOpen(false);
   };
 
@@ -61,11 +73,12 @@ export function DateFilterPopover({
     if (datePreset === 'custom' && customDateRange) {
       return `${format(customDateRange.from, 'dd/MM', { locale: ptBR })} - ${format(customDateRange.to, 'dd/MM', { locale: ptBR })}`;
     }
+    if (!datePreset) return 'Período';
     const option = datePresetOptions.find(o => o.value === datePreset);
     return option?.label || 'Período';
   };
 
-  const isActive = datePreset !== defaultPreset || !!customDateRange;
+  const isActive = (datePreset !== null && datePreset !== defaultPreset) || !!customDateRange;
 
   return (
     <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
@@ -140,6 +153,17 @@ export function DateFilterPopover({
               >
                 Aplicar
               </Button>
+
+              {(datePreset !== null || customDateRange) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-9 text-muted-foreground"
+                  onClick={handleClearDate}
+                >
+                  Limpar período
+                </Button>
+              )}
             </>
           )}
         </div>

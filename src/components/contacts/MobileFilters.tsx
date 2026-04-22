@@ -32,8 +32,8 @@ interface MobileFiltersProps {
   setSelectedTag: (value: string) => void;
   selectedSource: string;
   setSelectedSource: (value: string) => void;
-  datePreset: DatePreset;
-  onDatePresetChange: (preset: DatePreset) => void;
+  datePreset: DatePreset | null;
+  onDatePresetChange: (preset: DatePreset | null) => void;
   customDateRange: { from: Date; to: Date } | null;
   onCustomDateRangeChange: (range: { from: Date; to: Date } | null) => void;
   pipelines: { id: string; name: string }[];
