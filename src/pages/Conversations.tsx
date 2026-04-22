@@ -465,11 +465,13 @@ export default function Conversations() {
                         onDelete={() => handleDelete(conv)} 
                         availableTags={availableTags || []} 
                         onAddTag={tagId => conv.lead && addLeadTag.mutate({
-                leadId: conv.lead.id,
-                tagId
-              })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
-                leadId: conv.lead.id,
-                tagId
+                          leadId: conv.lead.id,
+                          tagId
+                        })} 
+                        onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
+                          leadId: conv.lead.id,
+                          tagId
+                        })} 
                         onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} 
                         onCreateLead={() => {
                           setCreateLeadContact({
