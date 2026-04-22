@@ -688,6 +688,13 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
           )}
         </div>
       </ScrollArea>
+      <LostReasonDialog
+        open={lostReasonDialogOpen}
+        onOpenChange={setLostReasonDialogOpen}
+        onConfirm={handleConfirmLostReason}
+        leadName={lead.name}
+        loading={dealStatusChange.isPending}
+      />
     </div>
   );
 }
