@@ -104,7 +104,7 @@ export default function Contacts() {
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedSource, setSelectedSource] = useState<string>('all');
   const [selectedDealStatus, setSelectedDealStatus] = useState<string>('all');
-  const [datePreset, setDatePreset] = useState<DatePreset>('last30days');
+  const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
   const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date } | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
