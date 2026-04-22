@@ -175,8 +175,8 @@ export function useSuperAdmin() {
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao excluir organização: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao excluir organização: ' + getFriendlyErrorMessage(error));
     },
   });
 
