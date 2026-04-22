@@ -104,7 +104,7 @@ export function SetupGuideDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="p-0 overflow-hidden max-w-[860px] w-[95vw] gap-0 border-border/50"
+        className="p-0 overflow-hidden max-w-[860px] w-[95vw] gap-0 border-border/50 [&>button]:hidden"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] min-h-[520px]">
