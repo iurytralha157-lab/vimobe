@@ -216,10 +216,10 @@ export function SetupGuideDialog() {
                   <div
                     key={step.id}
                     className={cn(
-                      'flex items-center gap-2.5 md:gap-3 p-2.5 md:p-3 rounded-lg border transition-colors',
+                      'flex items-center gap-2.5 md:gap-3 p-2.5 md:p-3 rounded-lg transition-colors',
                       done
-                        ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40'
-                        : 'bg-card border-border hover:border-border/80'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/20'
+                        : 'bg-card hover:bg-muted/50'
                     )}
                   >
                     <div
