@@ -133,8 +133,8 @@ export function useSuperAdmin() {
       toast.success('Organização atualizada!');
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao atualizar: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar: ' + getFriendlyErrorMessage(error));
     },
   });
 
