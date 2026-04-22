@@ -6226,6 +6226,10 @@ export type Database = {
         Returns: boolean
       }
       can_manage_session: { Args: { session_id: string }; Returns: boolean }
+      check_storage_org_access: {
+        Args: { org_id_text: string }
+        Returns: boolean
+      }
       cleanup_orphan_members: { Args: never; Returns: Json }
       create_default_stages_for_pipeline: {
         Args: { p_org_id: string; p_pipeline_id: string }
