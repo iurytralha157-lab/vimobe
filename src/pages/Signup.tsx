@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,8 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { LoadingButton } from '@/components/ui/loading-button';
-import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock } from 'lucide-react';
+import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock, ShieldAlert, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePasswordStrength, type PasswordStrength } from "@/hooks/use-password-strength";
 import { getFriendlyErrorMessage } from '@/lib/error-handler';
 
 const SEGMENTS = [
@@ -28,6 +29,22 @@ const steps = [
   { id: 2, title: 'Empresa' },
   { id: 3, title: 'Confirmar' },
 ];
+
+const STRENGTH_COLORS: Record<PasswordStrength['level'], string> = {
+  'very-weak': 'bg-red-500',
+  'weak': 'bg-orange-500',
+  'fair': 'bg-yellow-500',
+  'good': 'bg-lime-500',
+  'strong': 'bg-green-500',
+};
+
+const STRENGTH_LABELS: Record<PasswordStrength['level'], string> = {
+  'very-weak': 'Muito fraca',
+  'weak': 'Fraca',
+  'fair': 'Razoável',
+  'good': 'Boa',
+  'strong': 'Forte',
+};
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -50,6 +67,7 @@ export default function Signup() {
     teamSize: '1-5',
   });
 
+  const passwordStrength = usePasswordStrength(accountData.password);
   const progress = (currentStep / steps.length) * 100;
 
   const canProceed = () => {
@@ -57,7 +75,7 @@ export default function Signup() {
       case 1:
         return accountData.name.trim().length >= 2 && 
                accountData.email.includes('@') && 
-               accountData.password.length >= 8;
+               passwordStrength.isValid;
       case 2:
         return orgData.organizationName.trim().length >= 2;
       default:
@@ -254,6 +272,47 @@ export default function Signup() {
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
+                  {accountData.password && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex gap-1 h-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex-1 rounded-full transition-colors",
+                              i <= passwordStrength.score
+                                ? STRENGTH_COLORS[passwordStrength.level]
+                                : "bg-muted"
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold">
+                        <span className="text-muted-foreground">Força:</span>
+                        <span className={cn(
+                          passwordStrength.score >= 4 ? "text-green-500" : "text-muted-foreground"
+                        )}>
+                          {STRENGTH_LABELS[passwordStrength.level]}
+                        </span>
+                      </div>
+                      {passwordStrength.feedback.length > 0 && !passwordStrength.isValid && (
+                        <ul className="text-[10px] text-muted-foreground space-y-0.5">
+                          {passwordStrength.feedback.map((f, i) => (
+                            <li key={i} className="flex items-center gap-1">
+                              <ShieldAlert className="h-2.5 w-2.5" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {passwordStrength.isValid && (
+                        <div className="flex items-center gap-1 text-[10px] text-green-500 font-medium">
+                          <Check className="h-2.5 w-2.5" />
+                          Senha segura
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

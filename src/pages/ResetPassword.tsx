@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { getFriendlyErrorMessage } from "@/lib/error-handler";
 
 const STRENGTH_COLORS: Record<PasswordStrength['level'], string> = {
   'very-weak': 'bg-red-500',
@@ -123,13 +124,12 @@ export default function ResetPassword() {
 
       setTimeout(() => navigate('/auth', { replace: true }), 2000);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao alterar senha";
       toast({
         title: "Erro ao alterar senha",
-        description: message,
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
-      setErrors({ password: message });
+      setErrors({ password: getFriendlyErrorMessage(err) });
     } finally {
       setLoading(false);
     }

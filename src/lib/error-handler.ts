@@ -13,7 +13,7 @@ export function getFriendlyErrorMessage(error: any): string {
   }
   
   if (lowerMessage.includes('invalid login credentials')) {
-    return 'E-mail ou senha incorretos.';
+    return 'Credenciais inválidas. Verifique seus dados e tente novamente.';
   }
 
   if (lowerMessage.includes('email not confirmed')) {
