@@ -36,6 +36,7 @@ import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
 import { LeadJourneySection } from '@/components/leads/LeadJourneySection';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
 import { ReentryBadge } from '@/components/leads/ReentryBadge';
+import { LostReasonDialog } from '@/components/leads/LostReasonDialog';
 
 import { TaskOutcomeDialog, TaskOutcome, getOutcomeLabel } from '@/components/leads/TaskOutcomeDialog';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
@@ -2313,6 +2314,13 @@ export function LeadDetailDialog({
         </Drawer>
         {RoteiroDialog()}
         {OutcomeDialogComponent()}
+        <LostReasonDialog
+          open={lostReasonDialogOpen}
+          onOpenChange={setLostReasonDialogOpen}
+          onConfirm={handleConfirmLostReason}
+          leadName={lead?.name}
+          loading={dealStatusChange.isPending}
+        />
       </>
     );
   }
@@ -2326,6 +2334,13 @@ export function LeadDetailDialog({
       </Dialog>
       {RoteiroDialog()}
       {OutcomeDialogComponent()}
+      <LostReasonDialog
+        open={lostReasonDialogOpen}
+        onOpenChange={setLostReasonDialogOpen}
+        onConfirm={handleConfirmLostReason}
+        leadName={lead?.name}
+        loading={dealStatusChange.isPending}
+      />
     </>
   );
 }
