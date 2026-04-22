@@ -38,8 +38,7 @@ export function ReentryBadge({ count, lastEntryAt, className, size = 'sm' }: Ree
           <span
             className={cn(
               'inline-flex items-center gap-1 rounded-full font-semibold',
-              'bg-amber-100 text-amber-800 border border-amber-200',
-              'dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40',
+              'bg-warning/15 text-warning border border-warning/30',
               sizeClass,
               className
             )}
