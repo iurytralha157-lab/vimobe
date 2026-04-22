@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { Loader2, Eye, EyeOff, Check, ShieldAlert, Lock } from "lucide-react";
 import { useTheme } from "next-themes";
