@@ -71,11 +71,6 @@ export function SetupGuideDialog() {
     } catch {
       // ignore storage errors
     }
-    // Mark as complete optimistically when the user engages with the step.
-    // This ensures progress is saved even if no tour callback runs.
-    if (!progress[step.id]) {
-      markComplete(step.id);
-    }
     setOpen(false);
     navigate(step.route);
     if (step.tourTarget) {
