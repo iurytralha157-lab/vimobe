@@ -21,7 +21,7 @@ export function SuperAdminRoute({ children }: SuperAdminRouteProps) {
   }
 
   if (!isSuperAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/crm/conversas" replace />;
   }
 
   return <>{children}</>;
