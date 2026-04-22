@@ -27,6 +27,7 @@ export interface SetupStep {
 const STORAGE_KEY_PREFIX = 'setup_guide_progress_';
 const SESSION_SHOWN_KEY = 'setup_guide_shown_this_session';
 const SKIPPED_KEY_PREFIX = 'setup_guide_skipped_';
+const ACTIVE_STEP_KEY_PREFIX = 'setup_guide_active_step_';
 
 function readProgress(userId: string): Record<string, boolean> {
   try {
@@ -38,7 +39,27 @@ function readProgress(userId: string): Record<string, boolean> {
 }
 
 function writeProgress(userId: string, progress: Record<string, boolean>) {
-  localStorage.setItem(STORAGE_KEY_PREFIX + userId, JSON.stringify(progress));
+  try {
+    localStorage.setItem(STORAGE_KEY_PREFIX + userId, JSON.stringify(progress));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+function readActiveStep(userId: string): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_STEP_KEY_PREFIX + userId);
+  } catch {
+    return null;
+  }
+}
+
+function clearActiveStep(userId: string) {
+  try {
+    localStorage.removeItem(ACTIVE_STEP_KEY_PREFIX + userId);
+  } catch {
+    // ignore
+  }
 }
 
 export function useSetupGuide() {
@@ -178,6 +199,9 @@ export function useSetupGuide() {
       const next = { ...readProgress(userId), [id]: true };
       writeProgress(userId, next);
       setProgress(next);
+      // Clear the "active step" pointer once it's completed
+      const active = readActiveStep(userId);
+      if (active === id) clearActiveStep(userId);
     },
     [userId]
   );
@@ -208,7 +232,12 @@ export function useSetupGuide() {
     writeProgress(userId, {});
     setProgress({});
     localStorage.removeItem(SKIPPED_KEY_PREFIX + userId);
+    clearActiveStep(userId);
+    sessionStorage.removeItem(SESSION_SHOWN_KEY);
   }, [userId]);
+
+  // Expose the persisted active step so consumers can resume the tour
+  const activeStepId = userId ? readActiveStep(userId) : null;
 
   const completedCount = steps.filter((s) => progress[s.id]).length;
   const totalCount = steps.length;
@@ -226,5 +255,6 @@ export function useSetupGuide() {
     completedCount,
     totalCount,
     percent,
+    activeStepId,
   };
 }
