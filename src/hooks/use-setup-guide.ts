@@ -78,7 +78,7 @@ export function useSetupGuide() {
       title: 'Conectar WhatsApp',
       description: 'Conecte sua conta para receber mensagens dos leads.',
       icon: 'MessageCircle',
-      route: '/crm/conversas',
+      route: '/settings?tab=whatsapp',
       ctaLabel: 'Iniciar',
       tourTarget: 'whatsapp-new-session',
     },
@@ -133,14 +133,6 @@ export function useSetupGuide() {
       route: '/automations',
       ctaLabel: 'Iniciar',
       tourTarget: 'automations-new',
-    },
-    {
-      id: 'view_plan',
-      title: 'Ver plano de assinatura',
-      description: 'Conheça os detalhes do seu plano atual.',
-      icon: 'CreditCard',
-      route: '/assinatura',
-      ctaLabel: 'Ver',
     },
   ];
 
