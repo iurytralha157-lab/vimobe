@@ -450,7 +450,7 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right panel - Background image */}
+      {/* Right panel - Background image (desktop only, lazy-loaded) */}
       {showBg && (
         <div className="hidden lg:block flex-1 relative">
           <img
@@ -458,6 +458,8 @@ export default function Auth() {
             alt=""
             aria-hidden="true"
             role="presentation"
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
           />
           {/* Horizontal gradient to blend form background with image */}
