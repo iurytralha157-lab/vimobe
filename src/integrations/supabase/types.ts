@@ -1807,6 +1807,96 @@ export type Database = {
           },
         ]
       }
+      lead_entry_events: {
+        Row: {
+          campaign_name: string | null
+          created_at: string
+          entry_type: string
+          id: string
+          lead_id: string
+          metadata: Json
+          organization_id: string
+          pipeline_id: string | null
+          property_id: string | null
+          source: string | null
+          stage_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          valor_interesse: number | null
+        }
+        Insert: {
+          campaign_name?: string | null
+          created_at?: string
+          entry_type: string
+          id?: string
+          lead_id: string
+          metadata?: Json
+          organization_id: string
+          pipeline_id?: string | null
+          property_id?: string | null
+          source?: string | null
+          stage_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          valor_interesse?: number | null
+        }
+        Update: {
+          campaign_name?: string | null
+          created_at?: string
+          entry_type?: string
+          id?: string
+          lead_id?: string
+          metadata?: Json
+          organization_id?: string
+          pipeline_id?: string | null
+          property_id?: string | null
+          source?: string | null
+          stage_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          valor_interesse?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_entry_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_entry_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_entry_events_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_entry_events_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_entry_events_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_events: {
         Row: {
           browser: string | null
@@ -2307,6 +2397,7 @@ export type Database = {
           id: string
           interest_plan_id: string | null
           interest_property_id: string | null
+          last_entry_at: string | null
           lost_at: string | null
           lost_reason: string | null
           message: string | null
@@ -2322,6 +2413,7 @@ export type Database = {
           property_code: string | null
           property_id: string | null
           redistribution_count: number | null
+          reentry_count: number
           renda_familiar: string | null
           source: string | null
           source_session_id: string | null
@@ -2363,6 +2455,7 @@ export type Database = {
           id?: string
           interest_plan_id?: string | null
           interest_property_id?: string | null
+          last_entry_at?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
@@ -2378,6 +2471,7 @@ export type Database = {
           property_code?: string | null
           property_id?: string | null
           redistribution_count?: number | null
+          reentry_count?: number
           renda_familiar?: string | null
           source?: string | null
           source_session_id?: string | null
@@ -2419,6 +2513,7 @@ export type Database = {
           id?: string
           interest_plan_id?: string | null
           interest_property_id?: string | null
+          last_entry_at?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           message?: string | null
@@ -2434,6 +2529,7 @@ export type Database = {
           property_code?: string | null
           property_id?: string | null
           redistribution_count?: number | null
+          reentry_count?: number
           renda_familiar?: string | null
           source?: string | null
           source_session_id?: string | null
