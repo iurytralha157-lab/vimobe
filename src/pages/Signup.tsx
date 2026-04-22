@@ -272,6 +272,47 @@ export default function Signup() {
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
+                  {accountData.password && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex gap-1 h-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex-1 rounded-full transition-colors",
+                              i <= passwordStrength.score
+                                ? STRENGTH_COLORS[passwordStrength.level]
+                                : "bg-muted"
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold">
+                        <span className="text-muted-foreground">Força:</span>
+                        <span className={cn(
+                          passwordStrength.score >= 4 ? "text-green-500" : "text-muted-foreground"
+                        )}>
+                          {STRENGTH_LABELS[passwordStrength.level]}
+                        </span>
+                      </div>
+                      {passwordStrength.feedback.length > 0 && !passwordStrength.isValid && (
+                        <ul className="text-[10px] text-muted-foreground space-y-0.5">
+                          {passwordStrength.feedback.map((f, i) => (
+                            <li key={i} className="flex items-center gap-1">
+                              <ShieldAlert className="h-2.5 w-2.5" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {passwordStrength.isValid && (
+                        <div className="flex items-center gap-1 text-[10px] text-green-500 font-medium">
+                          <Check className="h-2.5 w-2.5" />
+                          Senha segura
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
