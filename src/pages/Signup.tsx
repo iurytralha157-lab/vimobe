@@ -77,7 +77,9 @@ export default function Signup() {
                accountData.email.includes('@') && 
                passwordStrength.isValid;
       case 2:
-...
+        return orgData.organizationName.trim().length >= 2;
+      default:
+        return true;
     }
   };
 
