@@ -148,10 +148,6 @@ const bottomItems: NavItem[] = [{
   icon: Settings,
   labelKey: 'settings',
   path: '/settings'
-}, {
-  icon: HelpCircle,
-  labelKey: 'help',
-  path: '/help'
 }];
 
 function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {

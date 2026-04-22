@@ -252,10 +252,6 @@ export function AppHeader({
                 <Settings className="h-4 w-4 text-muted-foreground" />
                 Configurações
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/help')} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2">
-                <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                Ajuda
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.dispatchEvent(new Event('setup-guide:open'))} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2">
                 <CheckSquare className="h-4 w-4 text-muted-foreground" />
                 Guia de configuração
