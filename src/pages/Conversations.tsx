@@ -635,11 +635,26 @@ export default function Conversations() {
                   }
                 />
               </footer>
-            </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30">
-              <WhatsAppIcon size={120} className="mb-4 opacity-30" />
-              <p className="font-medium">Selecione uma conversa</p>
-              <p className="text-sm">para começar a enviar mensagens</p>
-            </div>}
+            </> : (
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30 p-6 text-center">
+                <WhatsAppIcon size={120} className="mb-4 opacity-30" />
+                {!loadingSessions && sessions?.length === 0 ? (
+                  <>
+                    <p className="font-medium text-lg mb-2">WhatsApp não conectado</p>
+                    <p className="text-sm max-w-xs mb-6">Conecte sua conta para começar a receber e enviar mensagens.</p>
+                    <Button onClick={() => navigate('/settings?tab=whatsapp')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Conectar WhatsApp
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">Selecione uma conversa</p>
+                    <p className="text-sm">para começar a enviar mensagens</p>
+                  </>
+                )}
+              </div>
+            )}
         </main>
 
         {/* Lead Side Panel - Desktop only */}
