@@ -104,26 +104,16 @@ export function SetupGuideDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="p-0 overflow-hidden max-w-[860px] w-[95vw] gap-0 border-border/50 [&>button]:hidden"
+        className="p-0 overflow-hidden max-w-[860px] w-[95vw] max-h-[92vh] gap-0 border-border/50 [&>button]:hidden"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] min-h-[520px]">
+        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] md:min-h-[520px] max-h-[92vh] md:max-h-none">
           {/* Left panel */}
-          <div className="relative bg-gradient-to-b from-primary to-primary/80 text-primary-foreground p-6 flex flex-col justify-between">
-            <div>
-              <h2 className="text-xl font-bold leading-tight">
-                Olá, {firstName}!
-              </h2>
-              <p className="text-sm mt-3 text-primary-foreground/90 leading-relaxed">
-                Complete os passos ao lado para começar a receber e gerenciar
-                seus leads.
-              </p>
-            </div>
-
-            {/* Circular progress */}
-            <div className="flex flex-col items-center justify-center my-6">
-              <div className="relative w-28 h-28">
-                <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
+          <div className="relative bg-gradient-to-b from-primary to-primary/80 text-primary-foreground p-4 md:p-6 flex md:flex-col md:justify-between items-center md:items-stretch gap-3 md:gap-0">
+            {/* Compact circular progress on mobile, full on desktop */}
+            <div className="flex items-center md:flex-col md:items-center md:justify-center md:my-6 shrink-0">
+              <div className="relative w-14 h-14 md:w-28 md:h-28">
+                <svg className="w-14 h-14 md:w-28 md:h-28 -rotate-90" viewBox="0 0 100 100">
                   <circle
                     cx="50"
                     cy="50"
@@ -146,33 +136,62 @@ export function SetupGuideDialog() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold">{percent}%</span>
+                  <span className="text-xs md:text-2xl font-bold">{percent}%</span>
                 </div>
               </div>
-              <p className="text-xs mt-3 text-primary-foreground/90">
+              <p className="hidden md:block text-xs mt-3 text-primary-foreground/90">
                 {completedCount} de {totalCount} concluídos
               </p>
             </div>
 
-            <div className="space-y-2 text-sm">
+            <div className="flex-1 md:hidden min-w-0">
+              <h2 className="text-base font-bold leading-tight">
+                Olá, {firstName}!
+              </h2>
+              <p className="text-xs mt-0.5 text-primary-foreground/90 leading-snug">
+                {completedCount} de {totalCount} concluídos
+              </p>
+            </div>
+
+            <div className="hidden md:block">
+              <h2 className="text-xl font-bold leading-tight">
+                Olá, {firstName}!
+              </h2>
+              <p className="text-sm mt-3 text-primary-foreground/90 leading-relaxed">
+                Complete os passos ao lado para começar a receber e gerenciar
+                seus leads.
+              </p>
+            </div>
+
+            <div className="hidden md:flex flex-col space-y-2 text-sm">
               <button
                 onClick={() => setOpen(false)}
-                className="block underline opacity-90 hover:opacity-100"
+                className="block underline opacity-90 hover:opacity-100 text-left"
               >
                 Ver mais tarde
               </button>
               <button
                 onClick={() => setConfirmingSkip(true)}
-                className="block underline opacity-90 hover:opacity-100"
+                className="block underline opacity-90 hover:opacity-100 text-left"
               >
                 Pular e concluir tudo
               </button>
             </div>
+
+            {/* Mobile close button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden h-8 w-8 rounded-full text-primary-foreground hover:bg-primary-foreground/10 shrink-0"
+              onClick={() => setOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Right panel */}
-          <div className="flex flex-col">
-            <div className="flex items-start justify-between p-6 pb-4">
+          <div className="flex flex-col min-h-0 flex-1">
+            <div className="hidden md:flex items-start justify-between p-6 pb-4">
               <div>
                 <h3 className="text-lg font-semibold">Guia de configuração</h3>
                 <p className="text-sm text-muted-foreground">
@@ -189,7 +208,7 @@ export function SetupGuideDialog() {
               </Button>
             </div>
 
-            <div className="flex-1 overflow-auto px-6 space-y-2.5">
+            <div className="flex-1 overflow-auto px-4 md:px-6 py-3 md:py-0 space-y-2 md:space-y-2.5">
               {steps.map((step) => {
                 const Icon = ICON_MAP[step.icon] || Circle;
                 const done = !!progress[step.id];
@@ -197,7 +216,7 @@ export function SetupGuideDialog() {
                   <div
                     key={step.id}
                     className={cn(
-                      'flex items-center gap-3 p-3 rounded-lg border transition-colors',
+                      'flex items-center gap-2.5 md:gap-3 p-2.5 md:p-3 rounded-lg border transition-colors',
                       done
                         ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40'
                         : 'bg-card border-border hover:border-border/80'
@@ -205,7 +224,7 @@ export function SetupGuideDialog() {
                   >
                     <div
                       className={cn(
-                        'h-9 w-9 rounded-md flex items-center justify-center shrink-0',
+                        'h-8 w-8 md:h-9 md:w-9 rounded-md flex items-center justify-center shrink-0',
                         done
                           ? 'bg-emerald-500 text-white'
                           : 'bg-primary/10 text-primary'
@@ -226,7 +245,7 @@ export function SetupGuideDialog() {
                       >
                         {step.title}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      <p className="hidden md:block text-xs text-muted-foreground mt-0.5 truncate">
                         {step.description}
                       </p>
                     </div>
@@ -234,7 +253,7 @@ export function SetupGuideDialog() {
                       <Button
                         size="sm"
                         onClick={() => handleStart(step)}
-                        className="shrink-0"
+                        className="shrink-0 h-8 px-3"
                       >
                         {step.ctaLabel}
                       </Button>
@@ -253,10 +272,10 @@ export function SetupGuideDialog() {
               })}
             </div>
 
-            <div className="border-t mt-4 px-6 py-4 flex items-center gap-4">
-              <div className="flex-1">
+            <div className="border-t mt-2 md:mt-4 px-4 md:px-6 py-3 md:py-4 flex items-center gap-3 md:gap-4">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-muted-foreground">Progresso geral</span>
+                  <span className="text-muted-foreground">Progresso</span>
                   <span className="font-medium">{percent}%</span>
                 </div>
                 <Progress value={percent} className="h-1.5" />
@@ -265,11 +284,27 @@ export function SetupGuideDialog() {
                 variant="ghost"
                 size="sm"
                 onClick={restart}
-                className="text-xs text-muted-foreground"
+                className="text-xs text-muted-foreground shrink-0 px-2"
               >
-                <RotateCcw className="h-3 w-3 mr-1.5" />
-                Reiniciar guia
+                <RotateCcw className="h-3 w-3 md:mr-1.5" />
+                <span className="hidden md:inline">Reiniciar guia</span>
               </Button>
+            </div>
+
+            {/* Mobile-only quick actions */}
+            <div className="md:hidden border-t px-4 py-2 flex items-center justify-between text-xs">
+              <button
+                onClick={() => setOpen(false)}
+                className="underline text-muted-foreground"
+              >
+                Ver mais tarde
+              </button>
+              <button
+                onClick={() => setConfirmingSkip(true)}
+                className="underline text-muted-foreground"
+              >
+                Pular tudo
+              </button>
             </div>
           </div>
         </div>
