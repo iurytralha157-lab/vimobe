@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook } from 'lucide-react';
+import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
@@ -24,6 +24,7 @@ import { TeamTab } from '@/components/settings/TeamTab';
 import { WebhooksTab } from '@/components/settings/WebhooksTab';
 import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
 import { AIAgentTab } from '@/components/settings/AIAgentTab';
+import { APITab } from '@/components/settings/APITab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
@@ -45,6 +46,7 @@ export default function Settings() {
   const hasWhatsAppModule = hasModule('whatsapp');
   const hasWebhooksModule = hasModule('webhooks');
   const hasAIAgentModule = hasModule('ai_agent');
+  const hasAPIModule = hasModule('api');
 
   const settingsTabs: AnimatedTabItem[] = useMemo(() => {
     const tabs: AnimatedTabItem[] = [
@@ -73,8 +75,12 @@ export default function Settings() {
       tabs.push({ value: 'ai-agent', label: 'Agente IA', icon: Bot });
     }
 
+    if (hasAPIModule) {
+      tabs.push({ value: 'api', label: 'API Pública', icon: Key });
+    }
+
     return tabs;
-  }, [t, hasWebhooksModule, hasWhatsAppModule, hasAIAgentModule, profile?.role, isSuperAdmin]);
+  }, [t, hasWebhooksModule, hasWhatsAppModule, hasAIAgentModule, hasAPIModule, profile?.role, isSuperAdmin]);
 
   const currentTab = settingsTabs.find((tab) => tab.value === activeTab);
   const CurrentIcon = currentTab?.icon;
@@ -188,6 +194,12 @@ export default function Settings() {
           {hasWhatsAppModule && hasAIAgentModule && (
             <TabsContent value="ai-agent">
               <AIAgentTab />
+            </TabsContent>
+          )}
+
+          {hasAPIModule && (
+            <TabsContent value="api">
+              <APITab />
             </TabsContent>
           )}
         </Tabs>
