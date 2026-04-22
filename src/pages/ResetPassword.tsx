@@ -355,7 +355,7 @@ export default function ResetPassword() {
         </div>
       </div>
 
-      {/* Right panel - Background image */}
+      {/* Right panel - Background image (desktop only, lazy-loaded) */}
       {showBg && (
         <div className="hidden lg:block flex-1 relative">
           <img
@@ -363,6 +363,8 @@ export default function ResetPassword() {
             alt=""
             aria-hidden="true"
             role="presentation"
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
