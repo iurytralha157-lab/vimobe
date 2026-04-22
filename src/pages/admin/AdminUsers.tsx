@@ -44,6 +44,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { getFriendlyErrorMessage } from '@/lib/error-handler';
 
 export default function AdminUsers() {
   const { allUsers, loadingUsers, organizations, updateUser, deleteUser } = useSuperAdmin();
