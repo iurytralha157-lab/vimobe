@@ -35,7 +35,25 @@ export default function Settings() {
   const { hasModule } = useOrganizationModules();
   const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState('account');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'account';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Sync tab when URL query param changes (e.g. external navigation)
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && t !== activeTab) {
+      setActiveTab(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', value);
+    setSearchParams(next, { replace: true });
+  };
 
   const activeMetaPages = metaIntegrations.filter((i) => i.is_connected);
   const totalMetaLeadsReceived = metaIntegrations.reduce(
