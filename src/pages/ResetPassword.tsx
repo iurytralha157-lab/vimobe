@@ -41,7 +41,7 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
-  const { data: systemSettings } = useSystemSettings();
+  const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
 
   const [loading, setLoading] = useState(false);
   const [validatingSession, setValidatingSession] = useState(true);
@@ -52,13 +52,27 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
+  const [bgLoaded, setBgLoaded] = useState(false);
 
   const logoUrl = useMemo(() => {
-    if (!systemSettings) return '/logo.png';
+    if (!systemSettings) return null;
     return resolvedTheme === 'dark'
       ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
       : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
   }, [systemSettings, resolvedTheme]);
+
+  const loginBgUrl = useMemo(() => {
+    if (!systemSettings) return null;
+    return systemSettings.login_bg_url || null;
+  }, [systemSettings]);
+
+  // Pre-load background image
+  useEffect(() => {
+    if (!loginBgUrl) return;
+    const img = new Image();
+    img.onload = () => setBgLoaded(true);
+    img.src = loginBgUrl;
+  }, [loginBgUrl]);
 
   const passwordStrength = usePasswordStrength(password);
 
@@ -66,7 +80,6 @@ export default function ResetPassword() {
     let mounted = true;
 
     const checkSession = async () => {
-      // 1. Check if we have a token_hash in the URL (new method)
       const tokenHash = searchParams.get("token_hash");
       const type = searchParams.get("type");
 
@@ -76,7 +89,7 @@ export default function ResetPassword() {
             token_hash: tokenHash,
             type: 'recovery',
           });
-          
+
           if (error) {
             console.error("Error verifying token hash:", error);
           } else if (mounted) {
@@ -89,7 +102,6 @@ export default function ResetPassword() {
         }
       }
 
-      // 2. Check if we already have a session (hash method or already verified)
       const { data: { session } } = await supabase.auth.getSession();
       if (mounted) {
         if (session) {
@@ -146,7 +158,6 @@ export default function ResetPassword() {
         description: "Você já pode fazer login com a nova senha.",
       });
 
-      // Sign out so user logs in fresh with the new password
       await supabase.auth.signOut();
 
       setTimeout(() => navigate('/auth', { replace: true }), 2000);
@@ -162,158 +173,209 @@ export default function ResetPassword() {
     }
   };
 
-  if (validatingSession) {
+  if (settingsLoading || validatingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  if (!hasRecoverySession) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 text-center space-y-4">
-          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
-            <ShieldAlert className="h-6 w-6 text-destructive" />
-          </div>
-          <h1 className="text-xl font-semibold">Link inválido ou expirado</h1>
-          <p className="text-sm text-muted-foreground">
-            Este link de recuperação não é mais válido. Solicite um novo link de redefinição de senha.
-          </p>
-          <Button className="w-full" onClick={() => navigate('/auth')}>
-            Voltar para o login
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const showBg = loginBgUrl && bgLoaded;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 space-y-6">
-        <div className="flex flex-col items-center space-y-3">
-          <img src={logoUrl} alt="Logo" className="h-12 object-contain" />
-          <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Lock className="h-6 w-6 text-primary" />
-          </div>
-          <h1 className="text-2xl font-semibold text-center">Definir nova senha</h1>
-          <p className="text-sm text-muted-foreground text-center">
-            Digite e confirme sua nova senha de acesso.
-          </p>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background relative">
+      {/* Mobile: full-screen background image behind everything */}
+      {showBg && (
+        <div className="lg:hidden absolute inset-0 w-full h-[55vh] overflow-hidden">
+          <img
+            src={loginBgUrl!}
+            alt=""
+            aria-hidden="true"
+            role="presentation"
+            className="w-full h-full object-cover scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-background" />
         </div>
+      )}
 
-        {success ? (
-          <div className="text-center space-y-3 py-4">
-            <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Check className="h-6 w-6 text-primary" />
-            </div>
-            <p className="text-sm text-foreground">
-              Senha alterada com sucesso! Redirecionando para o login...
-            </p>
+      {/* Mobile spacer */}
+      {showBg && <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />}
+
+      {/* Form container */}
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
+        <div className="w-full max-w-sm">
+          <div className="flex flex-col items-center mb-2">
+            {logoUrl && (
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="h-14 w-auto mb-2"
+                fetchPriority="high"
+                decoding="async"
+              />
+            )}
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="password">Nova senha</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
-                  autoComplete="new-password"
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+          <p className="text-sm text-muted-foreground text-center mb-6">
+            {hasRecoverySession
+              ? 'Defina sua nova senha de acesso'
+              : 'Recuperação de senha'}
+          </p>
 
-              {password && (
-                <div className="space-y-1.5">
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div
-                        key={i}
-                        className={`h-1 flex-1 rounded-full transition-colors ${
-                          i <= passwordStrength.score
-                            ? STRENGTH_COLORS[passwordStrength.level]
-                            : 'bg-muted'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Força: <span className="font-medium">{STRENGTH_LABELS[passwordStrength.level]}</span>
+          {!hasRecoverySession ? (
+            <div className="space-y-5">
+              <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-xl flex items-start gap-3">
+                <ShieldAlert className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-destructive">
+                  <p className="font-semibold mb-1">Link inválido ou expirado</p>
+                  <p className="text-xs opacity-90">
+                    Este link de recuperação não é mais válido. Solicite um novo link de redefinição de senha.
                   </p>
-                  {passwordStrength.feedback.length > 0 && !passwordStrength.isValid && (
-                    <ul className="text-xs text-muted-foreground space-y-0.5 mt-1">
-                      {passwordStrength.feedback.map((f, i) => (
-                        <li key={i}>• {f}</li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
-              )}
-
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password}</p>
-              )}
+              </div>
+              <Button
+                onClick={() => navigate('/auth')}
+                className="w-full h-11 rounded-xl font-semibold uppercase tracking-wider text-xs"
+              >
+                Voltar para o login
+              </Button>
             </div>
+          ) : success ? (
+            <div className="space-y-5 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Check className="h-6 w-6 text-primary" />
+              </div>
+              <p className="text-sm text-foreground">
+                Senha alterada com sucesso! Redirecionando para o login...
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <Label htmlFor="password" className="text-sm text-foreground">Nova senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    disabled={loading}
+                    className="h-11 rounded-xl bg-muted pl-11 pr-12"
+                    aria-invalid={!!errors.password}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirm ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repita a senha"
-                  autoComplete="new-password"
-                  disabled={loading}
-                />
+                {password && (
+                  <div className="space-y-1.5 mt-2">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded-full transition-colors ${
+                            i <= passwordStrength.score
+                              ? STRENGTH_COLORS[passwordStrength.level]
+                              : 'bg-muted'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Força: <span className="font-medium">{STRENGTH_LABELS[passwordStrength.level]}</span>
+                    </p>
+                    {passwordStrength.feedback.length > 0 && !passwordStrength.isValid && (
+                      <ul className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                        {passwordStrength.feedback.map((f, i) => (
+                          <li key={i}>• {f}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {errors.password && (
+                  <p className="text-xs text-destructive mt-1" role="alert">{errors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword" className="text-sm text-foreground">Confirmar nova senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirm ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                    disabled={loading}
+                    className="h-11 rounded-xl bg-muted pl-11 pr-12"
+                    aria-invalid={!!errors.confirmPassword}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                    aria-label={showConfirm ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-xs text-destructive mt-1" role="alert">{errors.confirmPassword}</p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-11 rounded-xl font-semibold uppercase tracking-wider text-xs"
+                disabled={loading || !passwordStrength.isValid || password !== confirmPassword}
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Alterar senha
+              </Button>
+
+              <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
+                  onClick={() => navigate('/auth')}
+                  disabled={loading}
+                  className="text-sm text-primary hover:underline disabled:opacity-50"
                 >
-                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  Cancelar
                 </button>
               </div>
-              {errors.confirmPassword && (
-                <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading || !passwordStrength.isValid || password !== confirmPassword}
-            >
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Alterar senha
-            </Button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/auth')}
-              disabled={loading}
-              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Cancelar
-            </button>
-          </form>
-        )}
+            </form>
+          )}
+        </div>
       </div>
+
+      {/* Right panel - Background image */}
+      {showBg && (
+        <div className="hidden lg:block flex-1 relative">
+          <img
+            src={loginBgUrl!}
+            alt=""
+            aria-hidden="true"
+            role="presentation"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
+        </div>
+      )}
     </div>
   );
 }

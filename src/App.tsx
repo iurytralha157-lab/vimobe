@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -176,12 +176,15 @@ function AppRoutes() {
     return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
   };
 
+  const location = useLocation();
+  const isResetPasswordRoute = location.pathname === '/reset-password';
+
   return (
     <>
-      <AnnouncementBanner />
-      <ImpersonateBanner />
-      <Suspense fallback={null}><TrialExpiredModal /></Suspense>
-      {user && profile && profile.organization_id && <SetupGuideDialog />}
+      {!isResetPasswordRoute && <AnnouncementBanner />}
+      {!isResetPasswordRoute && <ImpersonateBanner />}
+      {!isResetPasswordRoute && <Suspense fallback={null}><TrialExpiredModal /></Suspense>}
+      {!isResetPasswordRoute && user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
         <Suspense fallback={<PageLoader />}>
