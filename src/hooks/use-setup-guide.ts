@@ -134,14 +134,6 @@ export function useSetupGuide() {
       ctaLabel: 'Iniciar',
       tourTarget: 'automations-new',
     },
-    {
-      id: 'view_plan',
-      title: 'Ver plano de assinatura',
-      description: 'Conheça os detalhes do seu plano atual.',
-      icon: 'CreditCard',
-      route: '/assinatura',
-      ctaLabel: 'Ver',
-    },
   ];
 
   const steps: SetupStep[] = allSteps.filter((step) => {
