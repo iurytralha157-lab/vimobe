@@ -752,7 +752,7 @@ export default function Pipelines() {
         {/* Pipeline Selector + Toolbar */}
         {/* Mobile: Single compact row */}
         {isMobile ? (
-          <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1 mb-3 w-full">
             {/* Pipeline Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -818,7 +818,7 @@ export default function Pipelines() {
               onDatePresetChange={setDatePreset}
               customDateRange={customDateRange}
               onCustomDateRangeChange={setCustomDateRange}
-              triggerClassName="h-8 w-auto min-w-[100px] text-xs justify-start flex-shrink-0"
+              triggerClassName="h-8 px-2 text-xs justify-center flex-1 min-w-0"
             />
 
             {/* Filters Popover */}
@@ -826,18 +826,15 @@ export default function Pipelines() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   className={cn(
-                    "h-8 px-2.5 text-xs gap-1.5 flex-shrink-0",
+                    "h-8 w-8 flex-shrink-0 relative",
                     ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && "border-primary text-primary"
                   )}
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
-                  Filtros
                   {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && (
-                    <Badge variant="default" className="h-4 w-4 p-0 flex items-center justify-center text-[10px] ml-0.5">
-                      •
-                    </Badge>
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
                   )}
                 </Button>
               </PopoverTrigger>
@@ -1145,7 +1142,7 @@ export default function Pipelines() {
 
         {/* Kanban Board with Drag and Drop */}
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0 pb-2">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0 pb-2 scrollbar-thin">
             <div className="flex gap-3 h-full min-w-max px-1">
               {filteredStages.map((stage: any) => (
                 <div 
