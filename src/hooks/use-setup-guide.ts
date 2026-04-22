@@ -115,17 +115,17 @@ export function useSetupGuide() {
       case 'whatsapp':
         return true;
       case 'first_lead':
-        return hasPermission('leads_view');
+        return true;
       case 'add_broker':
-        return isAdmin && hasPermission('users_manage');
+        return isAdmin;
       case 'create_queue':
         return isAdmin;
       case 'add_property':
-        return hasModule('properties') && hasPermission('properties_view');
+        return hasModule('properties');
       case 'create_site':
         return isAdmin && hasModule('site');
       case 'create_automation':
-        return hasPermission('automations_view');
+        return isAdmin || hasPermission('automations_view');
       default:
         return true;
     }
