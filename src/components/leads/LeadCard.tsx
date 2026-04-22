@@ -16,6 +16,7 @@ import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 import { useCreateActivity } from '@/hooks/use-activities';
 import { TaskOutcomeDialog, TaskOutcome } from '@/components/leads/TaskOutcomeDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { ReentryBadge } from '@/components/leads/ReentryBadge';
 
 // Deal status labels and colors
 const dealStatusConfig = {
@@ -207,7 +208,10 @@ export function LeadCard({
                   </span>}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-sm truncate text-foreground">{lead.name}</h4>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <h4 className="font-semibold text-sm truncate text-foreground">{lead.name}</h4>
+                  <ReentryBadge count={lead.reentry_count} lastEntryAt={lead.last_entry_at} />
+                </div>
                 {lead.phone && <p className="text-[11px] text-muted-foreground truncate">{formatPhoneForDisplay(lead.phone)}</p>}
               </div>
             </div>
