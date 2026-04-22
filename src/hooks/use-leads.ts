@@ -168,7 +168,7 @@ export function useCreateLead() {
           
           if (existingLead) {
             // Registrar reentrada via RPC
-            const { error: reentryError } = await supabase.rpc('register_lead_reentry', {
+            const { error: reentryError } = await (supabase.rpc as any)('register_lead_reentry', {
               p_lead_id: existingLead.id,
               p_org_id: organizationId,
               p_entry_type: 'manual_reentry',
