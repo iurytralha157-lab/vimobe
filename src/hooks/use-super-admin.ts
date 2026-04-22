@@ -250,8 +250,8 @@ export function useSuperAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao atualizar usuário: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar usuário: ' + getFriendlyErrorMessage(error));
     },
   });
 
@@ -263,7 +263,7 @@ export function useSuperAdmin() {
       });
 
       if (error) {
-        throw new Error(error.message || 'Erro ao excluir usuário');
+        throw error;
       }
 
       if (result?.error) {
@@ -282,8 +282,8 @@ export function useSuperAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao excluir usuário: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao excluir usuário: ' + getFriendlyErrorMessage(error));
     },
   });
 
