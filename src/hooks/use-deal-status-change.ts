@@ -12,6 +12,7 @@ interface ChangeDealStatusParams {
   valorInteresse: number | null;
   commissionPercentage: number | null;
   leadName: string;
+  lostReason?: string | null;
 }
 
 /**
@@ -36,6 +37,7 @@ export function useDealStatusChange() {
       valorInteresse,
       commissionPercentage,
       leadName,
+      lostReason,
     }: ChangeDealStatusParams) => {
       // Update lead status
       const updateData: any = {
@@ -49,7 +51,7 @@ export function useDealStatusChange() {
       } else if (newStatus === 'lost') {
         updateData.lost_at = new Date().toISOString();
         updateData.won_at = null;
-        updateData.lost_reason = '';
+        updateData.lost_reason = lostReason || '';
       } else {
         updateData.won_at = null;
         updateData.lost_at = null;
@@ -67,18 +69,21 @@ export function useDealStatusChange() {
 
       // Log activity
       const { data: { user } } = await supabase.auth.getUser();
+      const content = newStatus === 'won'
+        ? `Lead "${leadName}" marcado como GANHO`
+        : newStatus === 'lost'
+        ? `Lead "${leadName}" marcado como PERDIDO${lostReason ? ` — Motivo: ${lostReason}` : ''}`
+        : `Lead "${leadName}" reaberto`;
+
       await supabase.from('activities').insert({
         lead_id: leadId,
         user_id: user?.id || null,
         type: 'status_change',
-        content: newStatus === 'won' 
-          ? `Lead "${leadName}" marcado como GANHO` 
-          : newStatus === 'lost'
-          ? `Lead "${leadName}" marcado como PERDIDO`
-          : `Lead "${leadName}" reaberto`,
-        metadata: { 
+        content,
+        metadata: {
           new_status: newStatus,
-          valor_interesse: valorInteresse 
+          valor_interesse: valorInteresse,
+          ...(newStatus === 'lost' && lostReason ? { lost_reason: lostReason } : {}),
         }
       });
 
