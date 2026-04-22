@@ -90,7 +90,6 @@ const allNavItems: NavItem[] = [
 const bottomItems: NavItem[] = [
   { icon: Globe, labelKey: 'mySite', path: '/settings/site', adminOnly: true, module: 'site' },
   { icon: Settings, labelKey: 'settings', path: '/settings' },
-  { icon: HelpCircle, labelKey: 'help', path: '/help' },
 ];
 interface MobileSidebarProps {
   externalOpen?: boolean;
