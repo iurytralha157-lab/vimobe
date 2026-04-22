@@ -470,13 +470,17 @@ export default function Conversations() {
               })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
                 leadId: conv.lead.id,
                 tagId
-              })} onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} onCreateLead={() => {
-                setCreateLeadContact({
-                  phone: conv.contact_phone || undefined,
-                  name: conv.contact_name || undefined
-                });
-                setCreateLeadOpen(true);
-              }} />)}
+                        onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} 
+                        onCreateLead={() => {
+                          setCreateLeadContact({
+                            phone: conv.contact_phone || undefined,
+                            name: conv.contact_name || undefined
+                          });
+                          setCreateLeadOpen(true);
+                        }} 
+                      />
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             </div>}
