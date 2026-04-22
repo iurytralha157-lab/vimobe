@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDealStatusChange } from "@/hooks/use-deal-status-change";
+import { LostReasonDialog } from "@/components/leads/LostReasonDialog";
 // force rebuild
 
 import { Button } from "@/components/ui/button";
@@ -79,6 +82,8 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
   const updateLead = useUpdateLead();
   const addTag = useAddLeadTag();
   const removeTag = useRemoveLeadTag();
+  const dealStatusChange = useDealStatusChange();
+  const { profile, organization } = useAuth();
 
   const [valorLocal, setValorLocal] = useState("");
   const [propertyPickerOpen, setPropertyPickerOpen] = useState(false);
@@ -87,6 +92,7 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
   const [filterPurpose, setFilterPurpose] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
 
   // Sync local value state with lead data
   useEffect(() => {
@@ -127,12 +133,38 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
   };
 
   const handleDealStatusChange = (newStatus: string) => {
-    if (newStatus !== dealStatus) {
-      const updates: any = { id: leadId, deal_status: newStatus };
-      if (newStatus === "won") updates.won_at = new Date().toISOString();
-      if (newStatus === "lost") updates.lost_at = new Date().toISOString();
-      updateLead.mutate(updates);
+    if (newStatus === dealStatus) return;
+
+    if (newStatus === "lost") {
+      setLostReasonDialogOpen(true);
+      return;
     }
+
+    dealStatusChange.mutate({
+      leadId,
+      newStatus: newStatus as "open" | "won" | "lost",
+      organizationId: profile?.organization_id || organization?.id || "",
+      userId: lead.assigned_user_id,
+      propertyId: (lead as any).property_id || null,
+      valorInteresse: lead.valor_interesse ?? null,
+      commissionPercentage: (lead as any).commission_percentage ?? null,
+      leadName: lead.name || "Lead",
+    });
+  };
+
+  const handleConfirmLostReason = async (reason: string) => {
+    await dealStatusChange.mutateAsync({
+      leadId,
+      newStatus: "lost",
+      organizationId: profile?.organization_id || organization?.id || "",
+      userId: lead.assigned_user_id,
+      propertyId: (lead as any).property_id || null,
+      valorInteresse: lead.valor_interesse ?? null,
+      commissionPercentage: (lead as any).commission_percentage ?? null,
+      leadName: lead.name || "Lead",
+      lostReason: reason,
+    });
+    setLostReasonDialogOpen(false);
   };
 
   const handleAddTag = (tagId: string) => {
