@@ -106,9 +106,9 @@ export default function Settings() {
   return (
     <AppLayout title={t.settings.title}>
       <div className="animate-in">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           {isMobile ? (
-            <Select value={activeTab} onValueChange={setActiveTab}>
+            <Select value={activeTab} onValueChange={handleTabChange}>
               <SelectTrigger className="w-full">
                 <SelectValue>
                   <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export default function Settings() {
               </SelectContent>
             </Select>
           ) : (
-            <AnimatedTabNav tabs={settingsTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+            <AnimatedTabNav tabs={settingsTabs} activeTab={activeTab} onTabChange={handleTabChange} />
           )}
 
           <TabsContent value="account">
