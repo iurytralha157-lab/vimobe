@@ -152,7 +152,7 @@ function AppRoutes() {
   const getDefaultRedirect = () => {
     if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
-    return "/dashboard";
+    return "/crm/conversas";
   };
 
   const renderAuthRoute = () => {

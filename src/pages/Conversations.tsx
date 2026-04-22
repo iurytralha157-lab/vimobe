@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap } from "lucide-react";
+import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap, Plus } from "lucide-react";
 import { StartAutomationDialog } from "@/components/whatsapp/StartAutomationDialog";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
@@ -434,24 +434,55 @@ export default function Conversations() {
               {/* Mobile Conversation List */}
               <ScrollArea className="flex-1">
                 <div className="divide-y">
-                  {loadingConversations ? <div className="flex items-center justify-center py-12">
+                  {loadingConversations ? (
+                    <div className="flex items-center justify-center py-12">
                       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    </div> : filteredConversations?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
+                    </div>
+                  ) : filteredConversations?.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                       <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma conversa</p>
-                    </div> : filteredConversations?.map(conv => <ConversationItem key={conv.id} conversation={conv} isSelected={false} onClick={() => setSelectedConversation(conv)} formatTime={formatConversationTime} onArchive={() => handleArchive(conv)} onDelete={() => handleDelete(conv)} availableTags={availableTags || []} onAddTag={tagId => conv.lead && addLeadTag.mutate({
-                leadId: conv.lead.id,
-                tagId
-              })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
-                leadId: conv.lead.id,
-                tagId
-              })} onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} onCreateLead={() => {
-                setCreateLeadContact({
-                  phone: conv.contact_phone || undefined,
-                  name: conv.contact_name || undefined
-                });
-                setCreateLeadOpen(true);
-              }} />)}
+                      {!loadingSessions && sessions?.length === 0 ? (
+                        <>
+                          <p className="text-sm font-medium mb-1">WhatsApp não conectado</p>
+                          <p className="text-xs text-muted-foreground mb-4">Conecte sua conta para ver suas conversas.</p>
+                          <Button size="sm" onClick={() => navigate('/settings?tab=whatsapp')}>
+                            Conectar WhatsApp
+                          </Button>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhuma conversa encontrada</p>
+                      )}
+                    </div>
+                  ) : (
+                    filteredConversations?.map(conv => (
+                      <ConversationItem 
+                        key={conv.id} 
+                        conversation={conv} 
+                        isSelected={false} 
+                        onClick={() => setSelectedConversation(conv)} 
+                        formatTime={formatConversationTime} 
+                        onArchive={() => handleArchive(conv)} 
+                        onDelete={() => handleDelete(conv)} 
+                        availableTags={availableTags || []} 
+                        onAddTag={tagId => conv.lead && addLeadTag.mutate({
+                          leadId: conv.lead.id,
+                          tagId
+                        })} 
+                        onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
+                          leadId: conv.lead.id,
+                          tagId
+                        })} 
+                        onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} 
+                        onCreateLead={() => {
+                          setCreateLeadContact({
+                            phone: conv.contact_phone || undefined,
+                            name: conv.contact_name || undefined
+                          });
+                          setCreateLeadOpen(true);
+                        }} 
+                      />
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             </div>}
@@ -635,11 +666,26 @@ export default function Conversations() {
                   }
                 />
               </footer>
-            </> : <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30">
-              <WhatsAppIcon size={120} className="mb-4 opacity-30" />
-              <p className="font-medium">Selecione uma conversa</p>
-              <p className="text-sm">para começar a enviar mensagens</p>
-            </div>}
+            </> : (
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/30 p-6 text-center">
+                <WhatsAppIcon size={120} className="mb-4 opacity-30" />
+                {!loadingSessions && sessions?.length === 0 ? (
+                  <>
+                    <p className="font-medium text-lg mb-2">WhatsApp não conectado</p>
+                    <p className="text-sm max-w-xs mb-6">Conecte sua conta para começar a receber e enviar mensagens.</p>
+                    <Button onClick={() => navigate('/settings?tab=whatsapp')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Conectar WhatsApp
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">Selecione uma conversa</p>
+                    <p className="text-sm">para começar a enviar mensagens</p>
+                  </>
+                )}
+              </div>
+            )}
         </main>
 
         {/* Lead Side Panel - Desktop only */}

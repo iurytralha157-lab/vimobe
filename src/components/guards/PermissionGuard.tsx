@@ -16,7 +16,7 @@ interface PermissionGuardProps {
 export function PermissionGuard({ 
   permission, 
   children, 
-  fallbackPath = '/dashboard' 
+  fallbackPath = '/crm/conversas' 
 }: PermissionGuardProps) {
   const { profile, isSuperAdmin, loading: authLoading } = useAuth();
   const { data: hasPermission, isLoading: permissionLoading } = useHasPermission(permission);
