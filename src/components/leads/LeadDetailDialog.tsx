@@ -137,6 +137,7 @@ export function LeadDetailDialog({
   const [quickActionOutcomeOpen, setQuickActionOutcomeOpen] = useState(false);
   const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
+  const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     phone: '',
@@ -528,11 +529,17 @@ export function LeadDetailDialog({
   const handleDealStatusChange = async (newStatus: string) => {
     const previousStatus = lead.deal_status;
     if (newStatus === previousStatus) return;
-    
+
+    // Intercept "lost" → ask for reason via dialog
+    if (newStatus === 'lost') {
+      setLostReasonDialogOpen(true);
+      return;
+    }
+
     // Validation when marking as "won"
     if (newStatus === 'won') {
       const valorInteresse = lead.valor_interesse || 0;
-      
+
       if (valorInteresse <= 0) {
         // Show warning but allow to proceed
         toast.warning('Valor de interesse não preenchido', {
@@ -541,7 +548,7 @@ export function LeadDetailDialog({
         });
       }
     }
-    
+
     await dealStatusChange.mutateAsync({
       leadId: lead.id,
       newStatus: newStatus as 'open' | 'won' | 'lost',
@@ -552,7 +559,25 @@ export function LeadDetailDialog({
       commissionPercentage: lead.commission_percentage,
       leadName: lead.name || 'Lead',
     });
-    
+
+    refetchStages();
+  };
+
+  // Confirm lost with reason from dialog
+  const handleConfirmLostReason = async (reason: string) => {
+    await dealStatusChange.mutateAsync({
+      leadId: lead.id,
+      newStatus: 'lost',
+      organizationId: profile?.organization_id || organization?.id || '',
+      userId: lead.assigned_user_id,
+      propertyId: lead.property_id,
+      valorInteresse: lead.valor_interesse,
+      commissionPercentage: lead.commission_percentage,
+      leadName: lead.name || 'Lead',
+      lostReason: reason,
+    });
+    setLostReasonLocal(reason);
+    setLostReasonDialogOpen(false);
     refetchStages();
   };
   
