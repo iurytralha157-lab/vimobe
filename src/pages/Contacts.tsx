@@ -87,6 +87,7 @@ import { EmptyState } from '@/components/contacts/EmptyState';
 import { useContactsList, type ContactListFilters } from '@/hooks/use-contacts-list';
 import { exportContactsFiltered } from '@/lib/export-contacts';
 import { useLead, useDeleteLead } from '@/hooks/use-leads';
+import { ReentryBadge } from '@/components/leads/ReentryBadge';
 import { useToast } from '@/hooks/use-toast';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
 import { DatePreset, getDateRangeFromPreset } from '@/hooks/use-dashboard-filters';
