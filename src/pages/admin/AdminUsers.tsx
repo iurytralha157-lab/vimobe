@@ -104,7 +104,7 @@ export default function AdminUsers() {
       await updateUser.mutateAsync({ userId, is_active: !currentStatus });
       toast.success(currentStatus ? 'Usuário desativado' : 'Usuário ativado');
     } catch (error) {
-      toast.error('Erro ao atualizar usuário');
+      toast.error(getFriendlyErrorMessage(error));
     }
   };
 
@@ -114,7 +114,7 @@ export default function AdminUsers() {
       toast.success('Usuário excluído');
       setDeleteDialog({ open: false, userId: '', userName: '' });
     } catch (error) {
-      toast.error('Erro ao excluir usuário');
+      toast.error(getFriendlyErrorMessage(error));
     }
   };
 
