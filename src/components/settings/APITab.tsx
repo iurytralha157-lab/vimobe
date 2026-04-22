@@ -24,7 +24,7 @@ export function APITab() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!profile?.organization_id,
   });
@@ -33,21 +33,18 @@ export function APITab() {
     mutationFn: async () => {
       if (!profile?.organization_id) throw new Error('No organization found');
       
-      // Generate a random key
       const buffer = new Uint8Array(32);
       crypto.getRandomValues(buffer);
       const randomPart = Array.from(buffer, (byte) => byte.toString(16).padStart(2, '0')).join('');
       const apiKey = `sk_${randomPart}`;
       
-      // We'll store a prefix and a hash for security
-      // For this simple implementation, we'll use a prefix of the first 8 chars
-      const keyPrefix = apiKey.substring(0, 12); // sk_ + 9 chars
+      const keyPrefix = apiKey.substring(0, 12);
       
       const { error } = await (supabase as any)
         .from('organization_api_keys')
         .insert({
           organization_id: profile.organization_id,
-          key_hash: apiKey, // In a real production app, this should be hashed (e.g. SHA-256)
+          key_hash: apiKey,
           key_prefix: keyPrefix,
           name: 'Chave Padrão',
           created_by: profile.id
@@ -69,7 +66,7 @@ export function APITab() {
 
   const deleteKeyMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('organization_api_keys')
         .delete()
         .eq('id', id);
@@ -143,7 +140,7 @@ export function APITab() {
                 Nenhuma chave de API gerada.
               </div>
             ) : (
-              apiKeys?.map((key) => (
+              apiKeys?.map((key: any) => (
                 <div key={key.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
                   <div className="space-y-1">
                     <p className="font-medium">{key.name}</p>
