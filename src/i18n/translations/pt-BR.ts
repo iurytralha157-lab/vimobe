@@ -113,7 +113,7 @@ export const ptBR = {
     users: {
       title: 'Usuários',
       description: 'Gerencie os membros da sua equipe',
-      newUser: 'Novo Usuário',
+      newUser: 'Novo Corretor',
       createUser: 'Criar Usuário',
       admin: 'Administrador',
       user: 'Usuário',
