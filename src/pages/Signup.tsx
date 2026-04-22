@@ -117,7 +117,7 @@ export default function Signup() {
       toast({
         variant: 'destructive',
         title: 'Erro ao criar conta',
-        description: error.message || 'Tente novamente.',
+        description: getFriendlyErrorMessage(error),
       });
     }
   };
