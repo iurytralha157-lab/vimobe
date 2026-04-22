@@ -46,6 +46,8 @@ export interface Contact {
   total_count: number;
   deal_status: 'open' | 'won' | 'lost' | null;
   lost_reason: string | null;
+  last_entry_at: string | null;
+  reentry_count: number;
 }
 
 export function useContactsList(filters: ContactListFilters) {
