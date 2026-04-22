@@ -158,7 +158,7 @@ export default function Auth() {
         toast({
           variant: "destructive",
           title: "Erro ao entrar",
-          description: "Credenciais inválidas. Verifique seu email e senha.",
+          description: getFriendlyErrorMessage(error),
         });
         return;
       }
