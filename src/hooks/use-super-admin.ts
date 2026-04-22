@@ -89,8 +89,8 @@ export function useSuperAdmin() {
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao criar organização: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao criar organização: ' + getFriendlyErrorMessage(error));
     },
   });
 
