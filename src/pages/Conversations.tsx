@@ -671,12 +671,26 @@ export default function Conversations() {
                 <WhatsAppIcon size={120} className="mb-4 opacity-30" />
                 {!loadingSessions && sessions?.length === 0 ? (
                   <>
-                    <p className="font-medium text-lg mb-2">WhatsApp não conectado</p>
-                    <p className="text-sm max-w-xs mb-6">Conecte sua conta para começar a receber e enviar mensagens.</p>
+                    <p className="font-semibold text-lg text-foreground mb-2">WhatsApp ainda não conectado</p>
+                    <p className="text-sm max-w-sm mb-4">
+                      Para começar a receber e enviar mensagens, conecte sua conta do WhatsApp escaneando o QR Code.
+                    </p>
+                    <ol className="text-xs text-left max-w-sm mb-6 space-y-1.5 list-decimal list-inside text-muted-foreground">
+                      <li>Clique no botão abaixo para abrir as configurações.</li>
+                      <li>Crie uma nova sessão e escaneie o QR Code com seu celular.</li>
+                      <li>Aguarde alguns segundos até o status ficar como “Conectado”.</li>
+                    </ol>
                     <Button onClick={() => navigate('/settings?tab=whatsapp')}>
                       <Plus className="w-4 h-4 mr-2" />
-                      Conectar WhatsApp
+                      Conectar WhatsApp agora
                     </Button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/help')}
+                      className="text-xs text-muted-foreground underline mt-3 hover:text-foreground"
+                    >
+                      Preciso de ajuda para conectar
+                    </button>
                   </>
                 ) : (
                   <>

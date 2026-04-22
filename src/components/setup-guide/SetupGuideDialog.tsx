@@ -56,6 +56,21 @@ export function SetupGuideDialog() {
   const firstName = profile?.name?.split(' ')[0]?.toUpperCase() || 'USUÁRIO';
 
   const handleStart = (step: SetupStep) => {
+    if (!step.route) {
+      console.warn(`[SetupGuide] Step "${step.id}" não possui rota definida.`);
+      return;
+    }
+    // Persist the active step so a page reload resumes from here
+    try {
+      if (profile?.id) {
+        localStorage.setItem(
+          `setup_guide_active_step_${profile.id}`,
+          step.id
+        );
+      }
+    } catch {
+      // ignore storage errors
+    }
     setOpen(false);
     navigate(step.route);
     if (step.tourTarget) {
@@ -64,7 +79,18 @@ export function SetupGuideDialog() {
         startSetupTour({
           target: step.tourTarget!,
           stepId: step.id,
-          onComplete: () => markComplete(step.id),
+          onComplete: () => {
+            markComplete(step.id);
+            try {
+              if (profile?.id) {
+                localStorage.removeItem(
+                  `setup_guide_active_step_${profile.id}`
+                );
+              }
+            } catch {
+              // ignore
+            }
+          },
         });
       }, 600);
     }
