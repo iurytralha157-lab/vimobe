@@ -1737,32 +1737,39 @@ async function createLeadFromConversation(
     });
 
     if (existingLead) {
+      // Registrar reentrada via RPC
+      const { error: reentryError } = await supabase.rpc('register_lead_reentry', {
+        p_lead_id: existingLead.id,
+        p_org_id: session.organization_id,
+        p_entry_type: 'whatsapp_reentry',
+        p_source: 'whatsapp',
+        p_metadata: {
+          from_ads: isFromAds,
+          ad_source: adSource || null,
+          phone: contactPhone,
+          first_message: firstMessage
+        }
+      });
+
+      if (reentryError) {
+        console.error('Error recording reentry via RPC:', reentryError);
+        // Fallback update
+        await supabase
+          .from('leads')
+          .update({
+            deal_status: 'open',
+            last_entry_at: new Date().toISOString(),
+          })
+          .eq('id', existingLead.id);
+      }
+      
       // Link conversation to existing lead
       await supabase
         .from("whatsapp_conversations")
         .update({ lead_id: existingLead.id })
         .eq("id", conversation.id);
       
-      console.log(`Linked conversation to existing lead: ${existingLead.id} (matched by normalized phone)`);
-      
-      // Registrar atividade de reentrada no histórico
-      await supabase.from("activities").insert({
-        lead_id: existingLead.id,
-        type: "lead_reentry",
-        content: `Lead entrou novamente via WhatsApp`,
-        user_id: null,
-        metadata: {
-          source: "whatsapp",
-          from_ads: isFromAds,
-          ad_source: adSource || null,
-          phone: contactPhone,
-        }
-      });
-      
-      // If from ads, still apply tag to existing lead
-      if (isFromAds) {
-        await applyFacebookAdsTag(supabase, session.organization_id, existingLead.id, adSource);
-      }
+      console.log(`Linked conversation to existing lead: ${existingLead.id}`);
       return;
     }
 

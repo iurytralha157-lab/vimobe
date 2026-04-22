@@ -212,8 +212,8 @@ export function useLeadHistory(leadId: string | null) {
     queryFn: async (): Promise<UnifiedHistoryEvent[]> => {
       if (!leadId) return [];
 
-      // Fetch both in parallel
-      const [timelineResult, activitiesResult] = await Promise.all([
+      // Fetch timeline, activities and entry events in parallel
+      const [timelineResult, activitiesResult, entriesResult] = await Promise.all([
         supabase
           .from('lead_timeline_events')
           .select('*')
@@ -224,13 +224,20 @@ export function useLeadHistory(leadId: string | null) {
           .select('*, user:users(id, name, avatar_url)')
           .eq('lead_id', leadId)
           .order('created_at', { ascending: true }),
+        supabase
+          .from('lead_entry_events')
+          .select('*')
+          .eq('lead_id', leadId)
+          .order('created_at', { ascending: true }),
       ]);
 
       if (timelineResult.error) throw timelineResult.error;
       if (activitiesResult.error) throw activitiesResult.error;
+      if (entriesResult.error) throw entriesResult.error;
 
       const timelineEvents = timelineResult.data || [];
       const activityEvents = activitiesResult.data || [];
+      const entryEvents = entriesResult.data || [];
 
       // Collect all user IDs that need resolution from metadata
       const userIdsToResolve = new Set<string>();
@@ -338,8 +345,22 @@ export function useLeadHistory(leadId: string | null) {
           };
         });
 
+      // Build entry events mapped to unified format
+      const entriesMapped: UnifiedHistoryEvent[] = entryEvents.map((e: any) => ({
+        id: `entry-${e.id}`,
+        type: 'lead_reentry',
+        label: e.entry_type === 'initial' ? 'Primeira entrada' : 'Reentrada do Lead',
+        content: `Origem: ${e.source}${e.campaign_name ? ` | Campanha: ${e.campaign_name}` : ''}`,
+        timestamp: e.created_at,
+        actor: null,
+        source: 'timeline' as const,
+        metadata: e,
+        channel: e.source,
+        isAutomation: false,
+      }));
+
       // Merge and sort chronologically (oldest first)
-      return [...timelineMapped, ...activityMapped].sort(
+      return [...timelineMapped, ...activityMapped, ...entriesMapped].sort(
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
     },
