@@ -171,7 +171,7 @@ export default function Auth() {
       toast({
         variant: "destructive",
         title: "Erro ao entrar",
-        description: "Ocorreu um erro. Tente novamente.",
+        description: getFriendlyErrorMessage(error),
       });
     } finally {
       setLoading(false);
