@@ -434,12 +434,37 @@ export default function Conversations() {
               {/* Mobile Conversation List */}
               <ScrollArea className="flex-1">
                 <div className="divide-y">
-                  {loadingConversations ? <div className="flex items-center justify-center py-12">
+                  {loadingConversations ? (
+                    <div className="flex items-center justify-center py-12">
                       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    </div> : filteredConversations?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
+                    </div>
+                  ) : filteredConversations?.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                       <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma conversa</p>
-                    </div> : filteredConversations?.map(conv => <ConversationItem key={conv.id} conversation={conv} isSelected={false} onClick={() => setSelectedConversation(conv)} formatTime={formatConversationTime} onArchive={() => handleArchive(conv)} onDelete={() => handleDelete(conv)} availableTags={availableTags || []} onAddTag={tagId => conv.lead && addLeadTag.mutate({
+                      {!loadingSessions && sessions?.length === 0 ? (
+                        <>
+                          <p className="text-sm font-medium mb-1">WhatsApp não conectado</p>
+                          <p className="text-xs text-muted-foreground mb-4">Conecte sua conta para ver suas conversas.</p>
+                          <Button size="sm" onClick={() => navigate('/settings?tab=whatsapp')}>
+                            Conectar WhatsApp
+                          </Button>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhuma conversa encontrada</p>
+                      )}
+                    </div>
+                  ) : (
+                    filteredConversations?.map(conv => (
+                      <ConversationItem 
+                        key={conv.id} 
+                        conversation={conv} 
+                        isSelected={false} 
+                        onClick={() => setSelectedConversation(conv)} 
+                        formatTime={formatConversationTime} 
+                        onArchive={() => handleArchive(conv)} 
+                        onDelete={() => handleDelete(conv)} 
+                        availableTags={availableTags || []} 
+                        onAddTag={tagId => conv.lead && addLeadTag.mutate({
                 leadId: conv.lead.id,
                 tagId
               })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
