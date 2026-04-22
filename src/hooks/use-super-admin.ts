@@ -218,8 +218,8 @@ export function useSuperAdmin() {
       toast.success('Acesso ao módulo atualizado!');
       queryClient.invalidateQueries({ queryKey: ['organization-modules'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao atualizar módulo: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar módulo: ' + getFriendlyErrorMessage(error));
     },
   });
 
