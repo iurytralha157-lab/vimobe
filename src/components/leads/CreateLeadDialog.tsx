@@ -12,7 +12,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TagSelector } from '@/components/ui/tag-selector';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck, CreditCard, Calendar, FileText, X } from 'lucide-react';
+import { Loader2, User, Briefcase, Building2, MapPin, DollarSign, Trophy, XCircle, CircleDot, UserCheck, CreditCard, Calendar, FileText, X, Home } from 'lucide-react';
+import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useOrganizationUsers } from '@/hooks/use-users';
@@ -737,6 +738,36 @@ export function CreateLeadDialog({
                         </div>
                       </div>
 
+                      {!isTelecom && (
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Home className="h-3.5 w-3.5" />
+                            Imóvel de Interesse
+                          </Label>
+                          <PropertyPickerDialog
+                            properties={properties.map((p: any) => ({
+                              id: p.id,
+                              code: p.code,
+                              title: p.title,
+                              bairro: p.bairro,
+                              cidade: p.cidade,
+                              preco: p.preco,
+                              imagem_principal: p.imagem_principal,
+                              tipo_de_imovel: p.tipo_de_imovel,
+                              tipo_de_negocio: p.tipo_de_negocio,
+                              commission_percentage: p.commission_percentage,
+                            }))}
+                            selectedPropertyId={formData.property_id || null}
+                            onSelect={(p) => {
+                              updateField('property_id', p.id);
+                              if (p.preco && !formData.valor_interesse) {
+                                updateField('valor_interesse', String(p.preco));
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+
                       <div className="space-y-2">
                         <Label>Valor de Interesse (R$)</Label>
                         <Input
@@ -869,27 +900,6 @@ export function CreateLeadDialog({
                     </div>
                   </div>
 
-                  {!isTelecom && properties.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Imóvel de Interesse</Label>
-                      <Select 
-                        value={formData.property_id || "__none__"} 
-                        onValueChange={(v) => updateField('property_id', v === "__none__" ? '' : v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um imóvel (opcional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Nenhum</SelectItem>
-                          {properties.slice(0, 50).map(p => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.title} {p.code ? `(${p.code})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
 
                   <div className="space-y-2">
                     <Label>Tags</Label>
