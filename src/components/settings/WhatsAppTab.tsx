@@ -279,7 +279,7 @@ export function WhatsAppTab() {
               Gerencie suas conexões via Evolution API
             </CardDescription>
           </div>
-          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="shrink-0">
+          <Button data-tour="whatsapp-new-session" size="sm" onClick={() => setCreateDialogOpen(true)} className="shrink-0">
             <Plus className="w-4 h-4 mr-1.5" />
             Nova
           </Button>
