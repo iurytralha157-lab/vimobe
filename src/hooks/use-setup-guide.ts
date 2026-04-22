@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserPermissions } from '@/hooks/use-user-permissions';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
+import { supabase } from '@/integrations/supabase/client';
 
 export type SetupStepId =
   | 'whatsapp'
@@ -10,9 +11,7 @@ export type SetupStepId =
   | 'create_queue'
   | 'add_property'
   | 'create_site'
-  | 'create_automation'
-  | 'view_plan'
-  | 'mobile_app';
+  | 'create_automation';
 
 export interface SetupStep {
   id: SetupStepId;
@@ -24,47 +23,12 @@ export interface SetupStep {
   tourTarget?: string;
 }
 
-const STORAGE_KEY_PREFIX = 'setup_guide_progress_';
+// Only users created on/after this date will see the guide.
+// Older accounts are considered "already onboarded" and won't be bothered.
+const GUIDE_CUTOFF_DATE = new Date('2026-04-22T00:00:00Z');
+
 const SESSION_SHOWN_KEY = 'setup_guide_shown_this_session';
-const SKIPPED_KEY_PREFIX = 'setup_guide_skipped_';
-const ACTIVE_STEP_KEY_PREFIX = 'setup_guide_active_step_';
-
-function readProgress(userId: string): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_PREFIX + userId);
-    const parsed = raw ? JSON.parse(raw) : {};
-    console.log('[SetupGuide] readProgress', userId, parsed);
-    return parsed;
-  } catch (e) {
-    console.error('[SetupGuide] readProgress error', e);
-    return {};
-  }
-}
-
-function writeProgress(userId: string, progress: Record<string, boolean>) {
-  try {
-    localStorage.setItem(STORAGE_KEY_PREFIX + userId, JSON.stringify(progress));
-    console.log('[SetupGuide] writeProgress', userId, progress);
-  } catch (e) {
-    console.error('[SetupGuide] writeProgress error', e);
-  }
-}
-
-function readActiveStep(userId: string): string | null {
-  try {
-    return localStorage.getItem(ACTIVE_STEP_KEY_PREFIX + userId);
-  } catch {
-    return null;
-  }
-}
-
-function clearActiveStep(userId: string) {
-  try {
-    localStorage.removeItem(ACTIVE_STEP_KEY_PREFIX + userId);
-  } catch {
-    // ignore
-  }
-}
+const ACTIVE_STEP_LS_PREFIX = 'setup_guide_active_step_';
 
 export function useSetupGuide() {
   const { user, profile } = useAuth();
@@ -72,8 +36,12 @@ export function useSetupGuide() {
   const { hasModule } = useOrganizationModules();
 
   const [progress, setProgress] = useState<Record<string, boolean>>({});
+  const [skipped, setSkipped] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const userId = user?.id;
+  const isNewUser = !!user?.created_at && new Date(user.created_at) >= GUIDE_CUTOFF_DATE;
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Build available steps based on permissions
   const allSteps: SetupStep[] = [
@@ -140,39 +108,80 @@ export function useSetupGuide() {
     },
   ];
 
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+
   const steps: SetupStep[] = allSteps.filter((step) => {
     switch (step.id) {
+      case 'whatsapp':
+        return true;
+      case 'first_lead':
+        return hasPermission('leads_view');
+      case 'add_broker':
+        return isAdmin && hasPermission('users_manage');
+      case 'create_queue':
+        return isAdmin;
       case 'add_property':
-        return hasModule('properties');
+        return hasModule('properties') && hasPermission('properties_view');
       case 'create_site':
-        return profile?.role === 'admin' && hasModule('site');
+        return isAdmin && hasModule('site');
       case 'create_automation':
         return hasPermission('automations_view');
-      case 'create_queue':
-      case 'add_broker':
-        return profile?.role === 'admin';
       default:
         return true;
     }
   });
 
-  // Load progress from storage
+  // Load progress from DB
   useEffect(() => {
-    if (!userId) return;
-    setProgress(readProgress(userId));
+    if (!userId) {
+      setLoaded(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('setup_guide_progress' as any)
+        .select('completed_steps, skipped')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error('[SetupGuide] load error', error);
+      }
+      const row: any = data || {};
+      setProgress((row.completed_steps as Record<string, boolean>) || {});
+      setSkipped(!!row.skipped);
+      setLoaded(true);
+    })();
+    return () => { cancelled = true; };
   }, [userId]);
 
-  // Show pop-up only once per session, after login
+  // Persist helper (debounced)
+  const persist = useCallback(
+    (next: { completed_steps?: Record<string, boolean>; skipped?: boolean }) => {
+      if (!userId) return;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(async () => {
+        const payload: any = { user_id: userId, ...next };
+        const { error } = await supabase
+          .from('setup_guide_progress' as any)
+          .upsert(payload, { onConflict: 'user_id' });
+        if (error) console.error('[SetupGuide] save error', error);
+      }, 250);
+    },
+    [userId]
+  );
+
+  // Show pop-up only once per session, after login — only for NEW users
   useEffect(() => {
-    if (!userId || !profile) return;
-    const skipped = localStorage.getItem(SKIPPED_KEY_PREFIX + userId) === 'true';
+    if (!userId || !profile || !loaded) return;
+    if (!isNewUser) return; // legacy users never see the guide
+    if (skipped) return;
 
     const shownThisSession = sessionStorage.getItem(SESSION_SHOWN_KEY) === 'true';
+    const allDone = steps.length > 0 && steps.every((s) => progress[s.id]);
 
-    const currentProgress = readProgress(userId);
-    const allDone = steps.length > 0 && steps.every((s) => currentProgress[s.id]);
-
-    if (!skipped && !shownThisSession && !allDone) {
+    if (!shownThisSession && !allDone) {
       const timer = setTimeout(() => {
         setOpen(true);
         sessionStorage.setItem(SESSION_SHOWN_KEY, 'true');
@@ -180,7 +189,7 @@ export function useSetupGuide() {
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, profile?.id]);
+  }, [userId, profile?.id, loaded, isNewUser, skipped]);
 
   // Allow opening the guide from anywhere via a custom event
   useEffect(() => {
@@ -192,48 +201,65 @@ export function useSetupGuide() {
   const markComplete = useCallback(
     (id: SetupStepId) => {
       if (!userId) return;
-      const next = { ...readProgress(userId), [id]: true };
-      writeProgress(userId, next);
-      setProgress(next);
-      // Clear the "active step" pointer once it's completed
-      const active = readActiveStep(userId);
-      if (active === id) clearActiveStep(userId);
+      setProgress((prev) => {
+        const next = { ...prev, [id]: true };
+        persist({ completed_steps: next });
+        return next;
+      });
+      try {
+        const active = localStorage.getItem(ACTIVE_STEP_LS_PREFIX + userId);
+        if (active === id) localStorage.removeItem(ACTIVE_STEP_LS_PREFIX + userId);
+      } catch {
+        // ignore
+      }
     },
-    [userId]
+    [userId, persist]
   );
 
   const markIncomplete = useCallback(
     (id: SetupStepId) => {
       if (!userId) return;
-      const current = readProgress(userId);
-      delete current[id];
-      writeProgress(userId, current);
-      setProgress(current);
+      setProgress((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        persist({ completed_steps: next });
+        return next;
+      });
     },
-    [userId]
+    [userId, persist]
   );
 
   const skipAll = useCallback(() => {
     if (!userId) return;
     const next: Record<string, boolean> = {};
     steps.forEach((s) => (next[s.id] = true));
-    writeProgress(userId, next);
     setProgress(next);
-    localStorage.setItem(SKIPPED_KEY_PREFIX + userId, 'true');
+    setSkipped(true);
+    persist({ completed_steps: next, skipped: true });
     setOpen(false);
-  }, [userId, steps]);
+  }, [userId, steps, persist]);
 
   const restart = useCallback(() => {
     if (!userId) return;
-    writeProgress(userId, {});
     setProgress({});
-    localStorage.removeItem(SKIPPED_KEY_PREFIX + userId);
-    clearActiveStep(userId);
+    setSkipped(false);
+    persist({ completed_steps: {}, skipped: false });
+    try {
+      localStorage.removeItem(ACTIVE_STEP_LS_PREFIX + userId);
+    } catch {
+      // ignore
+    }
     sessionStorage.removeItem(SESSION_SHOWN_KEY);
-  }, [userId]);
+  }, [userId, persist]);
 
-  // Expose the persisted active step so consumers can resume the tour
-  const activeStepId = userId ? readActiveStep(userId) : null;
+  const activeStepId = (() => {
+    if (!userId) return null;
+    try {
+      return localStorage.getItem(ACTIVE_STEP_LS_PREFIX + userId);
+    } catch {
+      return null;
+    }
+  })();
 
   const completedCount = steps.filter((s) => progress[s.id]).length;
   const totalCount = steps.length;
@@ -252,5 +278,6 @@ export function useSetupGuide() {
     totalCount,
     percent,
     activeStepId,
+    isNewUser,
   };
 }
