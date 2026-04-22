@@ -752,7 +752,7 @@ export default function Pipelines() {
         {/* Pipeline Selector + Toolbar */}
         {/* Mobile: Single compact row */}
         {isMobile ? (
-          <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1 mb-3 w-full">
             {/* Pipeline Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
