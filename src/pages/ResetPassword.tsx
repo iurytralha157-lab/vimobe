@@ -124,13 +124,12 @@ export default function ResetPassword() {
 
       setTimeout(() => navigate('/auth', { replace: true }), 2000);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao alterar senha";
       toast({
         title: "Erro ao alterar senha",
-        description: message,
+        description: getFriendlyErrorMessage(err),
         variant: "destructive",
       });
-      setErrors({ password: message });
+      setErrors({ password: getFriendlyErrorMessage(err) });
     } finally {
       setLoading(false);
     }
