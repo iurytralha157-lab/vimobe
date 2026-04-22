@@ -32,8 +32,11 @@ const ACTIVE_STEP_KEY_PREFIX = 'setup_guide_active_step_';
 function readProgress(userId: string): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PREFIX + userId);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
+    const parsed = raw ? JSON.parse(raw) : {};
+    console.log('[SetupGuide] readProgress', userId, parsed);
+    return parsed;
+  } catch (e) {
+    console.error('[SetupGuide] readProgress error', e);
     return {};
   }
 }
@@ -41,8 +44,9 @@ function readProgress(userId: string): Record<string, boolean> {
 function writeProgress(userId: string, progress: Record<string, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEY_PREFIX + userId, JSON.stringify(progress));
-  } catch {
-    // ignore quota errors
+    console.log('[SetupGuide] writeProgress', userId, progress);
+  } catch (e) {
+    console.error('[SetupGuide] writeProgress error', e);
   }
 }
 
