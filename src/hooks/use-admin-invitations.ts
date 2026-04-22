@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getFriendlyErrorMessage } from '@/lib/error-handler';
 
 export interface AdminInvitation {
   id: string;
@@ -68,8 +69,8 @@ export function useAdminInvitations(organizationId: string | undefined) {
       toast.success('Convite criado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['admin-invitations', organizationId] });
     },
-    onError: (error) => {
-      toast.error('Erro ao criar convite: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao criar convite: ' + getFriendlyErrorMessage(error));
     },
   });
 
@@ -87,8 +88,8 @@ export function useAdminInvitations(organizationId: string | undefined) {
       toast.success('Convite removido!');
       queryClient.invalidateQueries({ queryKey: ['admin-invitations', organizationId] });
     },
-    onError: (error) => {
-      toast.error('Erro ao remover convite: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao remover convite: ' + getFriendlyErrorMessage(error));
     },
   });
 

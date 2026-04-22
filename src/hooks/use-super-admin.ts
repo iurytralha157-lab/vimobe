@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getFriendlyErrorMessage } from '@/lib/error-handler';
 import { logAuditAction } from './use-audit-logs';
 
 export interface OrganizationWithStats {
@@ -88,8 +89,8 @@ export function useSuperAdmin() {
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao criar organização: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao criar organização: ' + getFriendlyErrorMessage(error));
     },
   });
 
@@ -132,8 +133,8 @@ export function useSuperAdmin() {
       toast.success('Organização atualizada!');
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao atualizar: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar: ' + getFriendlyErrorMessage(error));
     },
   });
 
@@ -174,8 +175,8 @@ export function useSuperAdmin() {
       queryClient.invalidateQueries({ queryKey: ['super-admin-organizations'] });
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao excluir organização: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao excluir organização: ' + getFriendlyErrorMessage(error));
     },
   });
 
@@ -217,8 +218,8 @@ export function useSuperAdmin() {
       toast.success('Acesso ao módulo atualizado!');
       queryClient.invalidateQueries({ queryKey: ['organization-modules'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao atualizar módulo: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar módulo: ' + getFriendlyErrorMessage(error));
     },
   });
 
@@ -249,8 +250,8 @@ export function useSuperAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao atualizar usuário: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar usuário: ' + getFriendlyErrorMessage(error));
     },
   });
 
@@ -262,7 +263,7 @@ export function useSuperAdmin() {
       });
 
       if (error) {
-        throw new Error(error.message || 'Erro ao excluir usuário');
+        throw error;
       }
 
       if (result?.error) {
@@ -281,8 +282,8 @@ export function useSuperAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao excluir usuário: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao excluir usuário: ' + getFriendlyErrorMessage(error));
     },
   });
 

@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { LoadingButton } from '@/components/ui/loading-button';
 import { Building2, ArrowRight, ArrowLeft, Eye, EyeOff, CheckCircle2, Loader2, Mail, User, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFriendlyErrorMessage } from '@/lib/error-handler';
 
 const SEGMENTS = [
   { value: 'imobiliario', label: 'Imobiliário' },
@@ -116,7 +117,7 @@ export default function Signup() {
       toast({
         variant: 'destructive',
         title: 'Erro ao criar conta',
-        description: error.message || 'Tente novamente.',
+        description: getFriendlyErrorMessage(error),
       });
     }
   };

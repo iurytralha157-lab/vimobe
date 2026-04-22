@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { getFriendlyErrorMessage } from "@/lib/error-handler";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -157,7 +158,7 @@ export default function Auth() {
         toast({
           variant: "destructive",
           title: "Erro ao entrar",
-          description: "Credenciais inválidas. Verifique seu email e senha.",
+          description: getFriendlyErrorMessage(error),
         });
         return;
       }
@@ -170,7 +171,7 @@ export default function Auth() {
       toast({
         variant: "destructive",
         title: "Erro ao entrar",
-        description: "Ocorreu um erro. Tente novamente.",
+        description: getFriendlyErrorMessage(error),
       });
     } finally {
       setLoading(false);
@@ -210,7 +211,7 @@ export default function Auth() {
         toast({
           variant: "destructive",
           title: "Erro ao enviar email",
-          description: "Não foi possível enviar o email de recuperação. Tente novamente.",
+          description: getFriendlyErrorMessage(error),
         });
         securityLogger.logEvent({
           type: 'password_reset_requested',
