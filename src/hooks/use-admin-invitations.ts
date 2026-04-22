@@ -88,8 +88,8 @@ export function useAdminInvitations(organizationId: string | undefined) {
       toast.success('Convite removido!');
       queryClient.invalidateQueries({ queryKey: ['admin-invitations', organizationId] });
     },
-    onError: (error) => {
-      toast.error('Erro ao remover convite: ' + error.message);
+    onError: (error: any) => {
+      toast.error('Erro ao remover convite: ' + getFriendlyErrorMessage(error));
     },
   });
 
