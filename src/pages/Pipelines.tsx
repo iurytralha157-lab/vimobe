@@ -1142,7 +1142,7 @@ export default function Pipelines() {
 
         {/* Kanban Board with Drag and Drop */}
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0 pb-2">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0 pb-2 scrollbar-thin">
             <div className="flex gap-3 h-full min-w-max px-1">
               {filteredStages.map((stage: any) => (
                 <div 
