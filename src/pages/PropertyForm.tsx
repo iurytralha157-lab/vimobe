@@ -177,12 +177,19 @@ export default function PropertyForm() {
     if (!id) {
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
-        if (raw) return { ...initialFormData, ...JSON.parse(raw) };
+        const meta = user?.user_metadata?.property_draft;
+        if (raw || meta) {
+          return { 
+            ...initialFormData, 
+            ...(meta ? meta : {}),
+            ...(raw ? JSON.parse(raw) : {}) 
+          };
+        }
       } catch {}
     }
     return initialFormData;
   });
-  const [hasDraft] = useState(() => !id && !!localStorage.getItem(DRAFT_KEY));
+  const [hasDraft] = useState(() => !id && (!!localStorage.getItem(DRAFT_KEY) || !!user?.user_metadata?.property_draft));
   const [activeTab, setActiveTab] = useState('owner');
   const [newTypeName, setNewTypeName] = useState('');
   const [showAddType, setShowAddType] = useState(false);
