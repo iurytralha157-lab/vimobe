@@ -336,6 +336,7 @@ export function useSetupGuide() {
     totalCount,
     percent,
     activeStepId,
+    setActiveStepId,
     isNewUser,
   };
 }
