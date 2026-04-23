@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -159,12 +160,27 @@ const parseCurrencyInput = (value: string): string => value.replace(/\D/g, '');
 
 const DRAFT_KEY = 'property-form-draft';
 
-function saveDraft(data: PropertyFormData) {
+async function saveDraft(data: PropertyFormData, supabaseClient?: any) {
   localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  
+  if (supabaseClient) {
+    try {
+      await supabaseClient.auth.updateUser({
+        data: { property_draft: data }
+      });
+    } catch (error) {
+      console.warn('Failed to sync draft to cloud', error);
+    }
+  }
 }
 
-function clearDraft() {
+function clearDraft(supabaseClient?: any) {
   localStorage.removeItem(DRAFT_KEY);
+  if (supabaseClient) {
+    supabaseClient.auth.updateUser({
+      data: { property_draft: null }
+    }).catch(() => {});
+  }
 }
 
 export default function PropertyForm() {
@@ -177,12 +193,19 @@ export default function PropertyForm() {
     if (!id) {
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
-        if (raw) return { ...initialFormData, ...JSON.parse(raw) };
+        const meta = user?.user_metadata?.property_draft;
+        if (raw || meta) {
+          return { 
+            ...initialFormData, 
+            ...(meta ? meta : {}),
+            ...(raw ? JSON.parse(raw) : {}) 
+          };
+        }
       } catch {}
     }
     return initialFormData;
   });
-  const [hasDraft] = useState(() => !id && !!localStorage.getItem(DRAFT_KEY));
+  const [hasDraft] = useState(() => !id && (!!localStorage.getItem(DRAFT_KEY) || !!user?.user_metadata?.property_draft));
   const [activeTab, setActiveTab] = useState('owner');
   const [newTypeName, setNewTypeName] = useState('');
   const [showAddType, setShowAddType] = useState(false);
@@ -231,7 +254,7 @@ export default function PropertyForm() {
   // Auto-save draft for new properties
   useEffect(() => {
     if (!isEditing) {
-      const timer = setTimeout(() => saveDraft(formData), 500);
+      const timer = setTimeout(() => saveDraft(formData, supabase), 2000); // 2s debounce for cloud sync
       return () => clearTimeout(timer);
     }
   }, [formData, isEditing]);
@@ -355,7 +378,7 @@ export default function PropertyForm() {
       } else {
         await createProperty.mutateAsync(propertyData);
       }
-      clearDraft();
+      clearDraft(supabase);
       navigate('/properties');
     } catch (err) {
       // errors handled by mutation
@@ -411,7 +434,7 @@ export default function PropertyForm() {
             {hasDraft && !isEditing && (
               <span className="text-xs text-muted-foreground mr-2">Rascunho restaurado</span>
             )}
-            <Button type="button" variant="outline" onClick={() => { clearDraft(); navigate('/properties'); }}>
+            <Button type="button" variant="outline" onClick={() => { clearDraft(supabase); navigate('/properties'); }}>
               Cancelar
             </Button>
             <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>

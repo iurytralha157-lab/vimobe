@@ -49,6 +49,7 @@ export function SetupGuideDialog() {
     completedCount,
     totalCount,
     percent,
+    setActiveStepId,
   } = useSetupGuide();
   const navigate = useNavigate();
   const [confirmingSkip, setConfirmingSkip] = useState(false);
@@ -61,16 +62,7 @@ export function SetupGuideDialog() {
       return;
     }
     // Persist the active step so a page reload resumes from here
-    try {
-      if (profile?.id) {
-        localStorage.setItem(
-          `setup_guide_active_step_${profile.id}`,
-          step.id
-        );
-      }
-    } catch {
-      // ignore storage errors
-    }
+    setActiveStepId(step.id);
     setOpen(false);
     navigate(step.route);
     if (step.tourTarget) {
@@ -81,15 +73,7 @@ export function SetupGuideDialog() {
           stepId: step.id,
           onComplete: () => {
             markComplete(step.id);
-            try {
-              if (profile?.id) {
-                localStorage.removeItem(
-                  `setup_guide_active_step_${profile.id}`
-                );
-              }
-            } catch {
-              // ignore
-            }
+            setActiveStepId(null);
           },
         });
       }, 600);

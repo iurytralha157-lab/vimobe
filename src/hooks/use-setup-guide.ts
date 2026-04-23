@@ -25,7 +25,7 @@ export interface SetupStep {
 
 // Only users created on/after this date will see the guide.
 // Older accounts are considered "already onboarded" and won't be bothered.
-const GUIDE_CUTOFF_DATE = new Date('2026-04-22T00:00:00Z');
+const GUIDE_CUTOFF_DATE = new Date('2024-01-01T00:00:00Z');
 
 const SESSION_SHOWN_KEY = 'setup_guide_shown_this_session';
 const ACTIVE_STEP_LS_PREFIX = 'setup_guide_active_step_';
@@ -42,6 +42,11 @@ export function useSetupGuide() {
   const userId = user?.id;
   const isNewUser = !!user?.created_at && new Date(user.created_at) >= GUIDE_CUTOFF_DATE;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fallback to metadata if DB table is missing
+  const metaProgress = user?.user_metadata?.setup_progress || {};
+  const metaSkipped = !!user?.user_metadata?.setup_skipped;
+
 
   // Build available steps based on permissions
   const allSteps: SetupStep[] = [
@@ -131,7 +136,7 @@ export function useSetupGuide() {
     }
   });
 
-  // Load progress from DB
+  // Load progress from DB (with metadata fallback)
   useEffect(() => {
     if (!userId) {
       setLoaded(false);
@@ -139,22 +144,40 @@ export function useSetupGuide() {
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from('setup_guide_progress' as any)
-        .select('completed_steps, skipped')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        console.error('[SetupGuide] load error', error);
+      try {
+        const { data, error } = await supabase
+          .from('setup_guide_progress' as any)
+          .select('completed_steps, skipped')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (cancelled) return;
+        
+        if (error) {
+          // If table is missing or other error, use metadata
+          console.warn('[SetupGuide] falling back to user metadata', error);
+          setProgress(metaProgress);
+          setSkipped(metaSkipped);
+        } else if (data) {
+          const row: any = data;
+          setProgress((row.completed_steps as Record<string, boolean>) || {});
+          setSkipped(!!row.skipped);
+        } else {
+          // No row in DB yet, use metadata
+          setProgress(metaProgress);
+          setSkipped(metaSkipped);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setProgress(metaProgress);
+          setSkipped(metaSkipped);
+        }
+      } finally {
+        if (!cancelled) setLoaded(true);
       }
-      const row: any = data || {};
-      setProgress((row.completed_steps as Record<string, boolean>) || {});
-      setSkipped(!!row.skipped);
-      setLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, metaProgress, metaSkipped]);
 
   // Persist helper (debounced)
   const persist = useCallback(
@@ -162,14 +185,30 @@ export function useSetupGuide() {
       if (!userId) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
+        // 1. Try DB table
         const payload: any = { user_id: userId, ...next };
-        const { error } = await supabase
+        const { error: dbError } = await supabase
           .from('setup_guide_progress' as any)
           .upsert(payload, { onConflict: 'user_id' });
-        if (error) console.error('[SetupGuide] save error', error);
-      }, 250);
+        
+        if (dbError) {
+          console.warn('[SetupGuide] DB save failed, relying on metadata', dbError);
+        }
+
+        // 2. Always sync to user metadata as a robust fallback
+        const { error: metaError } = await supabase.auth.updateUser({
+          data: {
+            setup_progress: next.completed_steps ?? progress,
+            setup_skipped: next.skipped ?? skipped
+          }
+        });
+
+        if (metaError) {
+          console.error('[SetupGuide] metadata save error', metaError);
+        }
+      }, 500);
     },
-    [userId]
+    [userId, progress, skipped]
   );
 
   // Show pop-up only once per session, after login — only for NEW users
@@ -252,12 +291,31 @@ export function useSetupGuide() {
     sessionStorage.removeItem(SESSION_SHOWN_KEY);
   }, [userId, persist]);
 
+  const setActiveStepId = useCallback((id: string | null) => {
+    if (!userId) return;
+    try {
+      if (id) {
+        localStorage.setItem(ACTIVE_STEP_LS_PREFIX + userId, id);
+      } else {
+        localStorage.removeItem(ACTIVE_STEP_LS_PREFIX + userId);
+      }
+    } catch {}
+
+    // Save to metadata
+    supabase.auth.updateUser({
+      data: { setup_active_step: id }
+    }).catch(() => {});
+  }, [userId]);
+
+
   const activeStepId = (() => {
     if (!userId) return null;
     try {
-      return localStorage.getItem(ACTIVE_STEP_LS_PREFIX + userId);
+      const fromMeta = user?.user_metadata?.setup_active_step;
+      const fromLS = localStorage.getItem(ACTIVE_STEP_LS_PREFIX + userId);
+      return fromMeta || fromLS || null;
     } catch {
-      return null;
+      return user?.user_metadata?.setup_active_step || null;
     }
   })();
 
@@ -278,6 +336,7 @@ export function useSetupGuide() {
     totalCount,
     percent,
     activeStepId,
+    setActiveStepId,
     isNewUser,
   };
 }
