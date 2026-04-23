@@ -73,15 +73,7 @@ export function SetupGuideDialog() {
           stepId: step.id,
           onComplete: () => {
             markComplete(step.id);
-            try {
-              if (profile?.id) {
-                localStorage.removeItem(
-                  `setup_guide_active_step_${profile.id}`
-                );
-              }
-            } catch {
-              // ignore
-            }
+            setActiveStepId(null);
           },
         });
       }, 600);
