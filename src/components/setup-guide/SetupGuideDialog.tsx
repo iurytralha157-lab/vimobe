@@ -62,16 +62,7 @@ export function SetupGuideDialog() {
       return;
     }
     // Persist the active step so a page reload resumes from here
-    try {
-      if (profile?.id) {
-        localStorage.setItem(
-          `setup_guide_active_step_${profile.id}`,
-          step.id
-        );
-      }
-    } catch {
-      // ignore storage errors
-    }
+    setActiveStepId(step.id);
     setOpen(false);
     navigate(step.route);
     if (step.tourTarget) {
