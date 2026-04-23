@@ -136,7 +136,7 @@ export function useSetupGuide() {
     }
   });
 
-  // Load progress from DB
+  // Load progress from DB (with metadata fallback)
   useEffect(() => {
     if (!userId) {
       setLoaded(false);
@@ -144,22 +144,40 @@ export function useSetupGuide() {
     }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from('setup_guide_progress' as any)
-        .select('completed_steps, skipped')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        console.error('[SetupGuide] load error', error);
+      try {
+        const { data, error } = await supabase
+          .from('setup_guide_progress' as any)
+          .select('completed_steps, skipped')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (cancelled) return;
+        
+        if (error) {
+          // If table is missing or other error, use metadata
+          console.warn('[SetupGuide] falling back to user metadata', error);
+          setProgress(metaProgress);
+          setSkipped(metaSkipped);
+        } else if (data) {
+          const row: any = data;
+          setProgress((row.completed_steps as Record<string, boolean>) || {});
+          setSkipped(!!row.skipped);
+        } else {
+          // No row in DB yet, use metadata
+          setProgress(metaProgress);
+          setSkipped(metaSkipped);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setProgress(metaProgress);
+          setSkipped(metaSkipped);
+        }
+      } finally {
+        if (!cancelled) setLoaded(true);
       }
-      const row: any = data || {};
-      setProgress((row.completed_steps as Record<string, boolean>) || {});
-      setSkipped(!!row.skipped);
-      setLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, metaProgress, metaSkipped]);
 
   // Persist helper (debounced)
   const persist = useCallback(
