@@ -159,12 +159,27 @@ const parseCurrencyInput = (value: string): string => value.replace(/\D/g, '');
 
 const DRAFT_KEY = 'property-form-draft';
 
-function saveDraft(data: PropertyFormData) {
+async function saveDraft(data: PropertyFormData, supabaseClient?: any) {
   localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  
+  if (supabaseClient) {
+    try {
+      await supabaseClient.auth.updateUser({
+        data: { property_draft: data }
+      });
+    } catch (error) {
+      console.warn('Failed to sync draft to cloud', error);
+    }
+  }
 }
 
-function clearDraft() {
+function clearDraft(supabaseClient?: any) {
   localStorage.removeItem(DRAFT_KEY);
+  if (supabaseClient) {
+    supabaseClient.auth.updateUser({
+      data: { property_draft: null }
+    }).catch(() => {});
+  }
 }
 
 export default function PropertyForm() {
