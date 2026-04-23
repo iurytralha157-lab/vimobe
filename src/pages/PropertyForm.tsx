@@ -434,7 +434,7 @@ export default function PropertyForm() {
             {hasDraft && !isEditing && (
               <span className="text-xs text-muted-foreground mr-2">Rascunho restaurado</span>
             )}
-            <Button type="button" variant="outline" onClick={() => { clearDraft(); navigate('/properties'); }}>
+            <Button type="button" variant="outline" onClick={() => { clearDraft(supabase); navigate('/properties'); }}>
               Cancelar
             </Button>
             <Button type="submit" disabled={createProperty.isPending || updateProperty.isPending || !isFormValid}>
