@@ -25,7 +25,7 @@ export interface SetupStep {
 
 // Only users created on/after this date will see the guide.
 // Older accounts are considered "already onboarded" and won't be bothered.
-const GUIDE_CUTOFF_DATE = new Date('2026-04-22T00:00:00Z');
+const GUIDE_CUTOFF_DATE = new Date('2024-01-01T00:00:00Z');
 
 const SESSION_SHOWN_KEY = 'setup_guide_shown_this_session';
 const ACTIVE_STEP_LS_PREFIX = 'setup_guide_active_step_';
