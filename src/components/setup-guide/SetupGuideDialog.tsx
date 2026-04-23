@@ -49,6 +49,7 @@ export function SetupGuideDialog() {
     completedCount,
     totalCount,
     percent,
+    setActiveStepId,
   } = useSetupGuide();
   const navigate = useNavigate();
   const [confirmingSkip, setConfirmingSkip] = useState(false);
