@@ -291,6 +291,23 @@ export function useSetupGuide() {
     sessionStorage.removeItem(SESSION_SHOWN_KEY);
   }, [userId, persist]);
 
+  const setActiveStepId = useCallback((id: string | null) => {
+    if (!userId) return;
+    try {
+      if (id) {
+        localStorage.setItem(ACTIVE_STEP_LS_PREFIX + userId, id);
+      } else {
+        localStorage.removeItem(ACTIVE_STEP_LS_PREFIX + userId);
+      }
+    } catch {}
+
+    // Save to metadata
+    supabase.auth.updateUser({
+      data: { setup_active_step: id }
+    }).catch(() => {});
+  }, [userId]);
+
+
   const activeStepId = (() => {
     if (!userId) return null;
     try {
