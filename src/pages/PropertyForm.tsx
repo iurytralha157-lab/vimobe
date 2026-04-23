@@ -253,7 +253,7 @@ export default function PropertyForm() {
   // Auto-save draft for new properties
   useEffect(() => {
     if (!isEditing) {
-      const timer = setTimeout(() => saveDraft(formData), 500);
+      const timer = setTimeout(() => saveDraft(formData, supabase), 2000); // 2s debounce for cloud sync
       return () => clearTimeout(timer);
     }
   }, [formData, isEditing]);
