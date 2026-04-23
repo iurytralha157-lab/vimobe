@@ -294,9 +294,11 @@ export function useSetupGuide() {
   const activeStepId = (() => {
     if (!userId) return null;
     try {
-      return localStorage.getItem(ACTIVE_STEP_LS_PREFIX + userId);
+      const fromMeta = user?.user_metadata?.setup_active_step;
+      const fromLS = localStorage.getItem(ACTIVE_STEP_LS_PREFIX + userId);
+      return fromMeta || fromLS || null;
     } catch {
-      return null;
+      return user?.user_metadata?.setup_active_step || null;
     }
   })();
 
