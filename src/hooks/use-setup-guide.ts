@@ -185,14 +185,30 @@ export function useSetupGuide() {
       if (!userId) return;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(async () => {
+        // 1. Try DB table
         const payload: any = { user_id: userId, ...next };
-        const { error } = await supabase
+        const { error: dbError } = await supabase
           .from('setup_guide_progress' as any)
           .upsert(payload, { onConflict: 'user_id' });
-        if (error) console.error('[SetupGuide] save error', error);
-      }, 250);
+        
+        if (dbError) {
+          console.warn('[SetupGuide] DB save failed, relying on metadata', dbError);
+        }
+
+        // 2. Always sync to user metadata as a robust fallback
+        const { error: metaError } = await supabase.auth.updateUser({
+          data: {
+            setup_progress: next.completed_steps ?? progress,
+            setup_skipped: next.skipped ?? skipped
+          }
+        });
+
+        if (metaError) {
+          console.error('[SetupGuide] metadata save error', metaError);
+        }
+      }, 500);
     },
-    [userId]
+    [userId, progress, skipped]
   );
 
   // Show pop-up only once per session, after login — only for NEW users
