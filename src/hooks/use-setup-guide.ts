@@ -43,6 +43,11 @@ export function useSetupGuide() {
   const isNewUser = !!user?.created_at && new Date(user.created_at) >= GUIDE_CUTOFF_DATE;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Fallback to metadata if DB table is missing
+  const metaProgress = user?.user_metadata?.setup_progress || {};
+  const metaSkipped = !!user?.user_metadata?.setup_skipped;
+
+
   // Build available steps based on permissions
   const allSteps: SetupStep[] = [
     {
