@@ -356,10 +356,14 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
 
     // Auto-connect to last node if exists
     if (lastNode && lastNode.type !== 'start') {
+      const sourceHandle = lastNode.type === 'wait' ? 'no_reply' : 
+                          lastNode.type === 'condition' ? 'true' : null;
+
       const newEdge: Edge = {
         id: `e-${lastNode.id}-${newNodeId}`,
         source: lastNode.id,
         target: newNodeId,
+        sourceHandle: sourceHandle,
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { strokeWidth: 2 },
       };
