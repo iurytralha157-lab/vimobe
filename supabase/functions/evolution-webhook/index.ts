@@ -2214,7 +2214,7 @@ async function handleStopFollowUpOnReply(
           // The delay node is the one that has a connection with source_handle "no_reply" pointing to currentNodeId
           const noReplyConn = fullAutomation.connections.find(
             (c: any) => c.target_node_id === currentNodeId && 
-                         (c.source_handle === "no_reply" || c.source_handle === "default")
+                         (c.source_handle === "no_reply" || c.source_handle === "default" || !c.source_handle)
           );
           
           let delayNodeId = noReplyConn?.source_node_id;
