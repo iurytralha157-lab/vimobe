@@ -99,7 +99,11 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
   const getNextNodes = useCallback((nodeId: string, sourceHandle?: string): Node[] => {
     const outEdges = edges.filter(e => {
       if (e.source !== nodeId) return false;
-      if (sourceHandle) return e.sourceHandle === sourceHandle;
+      if (sourceHandle) {
+        // If we're looking for a specific handle, match it exactly OR match null if it's the default
+        // For wait nodes, null sourceHandle should act as 'no_reply' or default
+        return e.sourceHandle === sourceHandle || (!e.sourceHandle && (sourceHandle === 'no_reply' || sourceHandle === 'default'));
+      }
       return true;
     });
     return outEdges
