@@ -69,7 +69,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
-import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts, useLeadMetaFilters } from '@/hooks/use-stages';
+import { useStages, useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts, useLeadMetaFilters } from '@/hooks/use-stages';
 import { useLoadMoreLeads } from '@/hooks/use-stages';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
