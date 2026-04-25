@@ -58,6 +58,12 @@ export function DashboardFilters({
   onUserChange,
   source,
   onSourceChange,
+  campaignId,
+  onCampaignChange,
+  adSetId,
+  onAdSetChange,
+  adId,
+  onAdChange,
   onClear,
   hasActiveFilters,
 }: DashboardFiltersProps) {
