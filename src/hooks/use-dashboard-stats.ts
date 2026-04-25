@@ -300,7 +300,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       // Calculate previous stats for trends using deal_status
       const prevTotalLeads = prevCount || previousLeads?.length || 0;
       const prevClosedLeads = previousLeads?.filter((l: any) => l.deal_status === 'won').length || 0;
-      const prevConversionRate = prevTotalLeads > 0 ? Math.round((prevClosedLeads / prevTotalLeads) * 100) : 0;
+      const prevConversionRate = prevTotalLeads > 0 ? Number(((prevClosedLeads / prevTotalLeads) * 100).toFixed(1)) : 0;
 
       // Calculate trends (percentage change from previous period)
       const leadsTrend = prevTotalLeads > 0 
