@@ -15,6 +15,9 @@ interface FilteredStageCountsParams {
   filterDealStatus?: string;
   searchQuery?: string;
   dateRange?: { from: Date; to: Date } | null;
+  filterCampaign?: string;
+  filterAdSet?: string;
+  filterAd?: string;
 }
 
 // Limite de leads por estágio para paginação
@@ -31,7 +34,7 @@ const LEAD_PIPELINE_FIELDS = `
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
-  lead_meta(campaign_name, platform)
+  lead_meta(campaign_name, adset_name, ad_name, platform)
 `;
 
 export function useStages(pipelineId?: string) {
@@ -78,13 +81,16 @@ export function useStagesWithLeads(
     filterTag?: string;
     filterDealStatus?: string;
     searchQuery?: string;
+    filterCampaign?: string;
+    filterAdSet?: string;
+    filterAd?: string;
   }
 ) {
   const dateFromISO = filters?.dateRange?.from?.toISOString();
   const dateToISO = filters?.dateRange?.to?.toISOString();
   
   return useQuery({
-    queryKey: ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery],
+    queryKey: ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd],
     queryFn: async () => {
       // Get default pipeline if not provided
       let targetPipelineId = pipelineId;
@@ -153,6 +159,15 @@ export function useStagesWithLeads(
         if (taggedLeadIds) {
           query = query.in('id', taggedLeadIds);
         }
+        if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
+          query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
+        }
+        if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
+          query = query.eq('lead_meta.adset_name', filters.filterAdSet);
+        }
+        if (filters?.filterAd && filters.filterAd !== 'all') {
+          query = query.eq('lead_meta.ad_name', filters.filterAd);
+        }
         return query;
       };
       
@@ -209,6 +224,10 @@ export function useStagesWithLeads(
         // Tags
         (async () => {
           if (leadIds.length === 0) return {} as Record<string, { id: string; name: string; color: string }[]>;
+          const { data: leadMeta } = await (filters?.filterCampaign || filters?.filterAdSet || filters?.filterAd 
+            ? (supabase.from('lead_meta').select('lead_id, campaign_name, adset_name, ad_name').not('lead_id', 'is', null) as any)
+            : (supabase.from('lead_tags').select('lead_id, tag:tags(id, name, color)').in('lead_id', leadIds) as any));
+            
           const { data: leadTags } = await supabase
             .from('lead_tags')
             .select('lead_id, tag:tags(id, name, color)')
@@ -333,6 +352,9 @@ export function useFilteredStageCounts({
   filterDealStatus,
   searchQuery,
   dateRange,
+  filterCampaign,
+  filterAdSet,
+  filterAd,
 }: FilteredStageCountsParams) {
   return useQuery({
     queryKey: [
@@ -345,6 +367,9 @@ export function useFilteredStageCounts({
       searchQuery,
       dateRange?.from.toISOString(),
       dateRange?.to.toISOString(),
+      filterCampaign,
+      filterAdSet,
+      filterAd,
     ],
     enabled: !!pipelineId && stageIds.length > 0,
     staleTime: 30_000,
@@ -399,6 +424,18 @@ export function useFilteredStageCounts({
 
           if (taggedLeadIds) {
             query = query.in('id', taggedLeadIds);
+          }
+
+          if (filterCampaign && filterCampaign !== 'all') {
+            query = query.eq('lead_meta.campaign_name', filterCampaign);
+          }
+
+          if (filterAdSet && filterAdSet !== 'all') {
+            query = query.eq('lead_meta.adset_name', filterAdSet);
+          }
+
+          if (filterAd && filterAd !== 'all') {
+            query = query.eq('lead_meta.ad_name', filterAd);
           }
 
           const { count, error } = await query;
