@@ -344,7 +344,6 @@ export function useLeadMetaFilters() {
   return useQuery({
     queryKey: ['lead-meta-filters'],
     queryFn: async () => {
-      // Obter o perfil do usuário para filtrar pela organização
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { campaigns: [], adsets: [], ads: [] };
       
@@ -352,11 +351,11 @@ export function useLeadMetaFilters() {
         .from('profiles')
         .select('organization_id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
       
       if (!profile?.organization_id) return { campaigns: [], adsets: [], ads: [] };
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('lead_meta')
         .select('campaign_name, adset_name, ad_name, leads!inner(organization_id)')
         .eq('leads.organization_id', profile.organization_id)
@@ -364,13 +363,13 @@ export function useLeadMetaFilters() {
       
       if (error) throw error;
       
-      const campaigns = [...new Set(data.map(item => item.campaign_name).filter(Boolean))].sort() as string[];
-      const adsets = [...new Set(data.map(item => item.adset_name).filter(Boolean))].sort() as string[];
-      const ads = [...new Set(data.map(item => item.ad_name).filter(Boolean))].sort() as string[];
+      const campaigns = [...new Set((data as any[]).map(item => item.campaign_name).filter(Boolean))].sort() as string[];
+      const adsets = [...new Set((data as any[]).map(item => item.adset_name).filter(Boolean))].sort() as string[];
+      const ads = [...new Set((data as any[]).map(item => item.ad_name).filter(Boolean))].sort() as string[];
       
       return { campaigns, adsets, ads };
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 10,
   });
 }
 
