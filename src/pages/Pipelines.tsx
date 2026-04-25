@@ -940,64 +940,94 @@ export default function Pipelines() {
           </div>
         ) : (
           /* Desktop: original two-row layout */
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
-            <div className="flex items-center justify-start gap-2">
-              {/* Pipeline Selector */}
-              <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-muted">
-                <Settings className="h-4 w-4 text-foreground" />
-                <span className="text-xs text-foreground/90 font-medium">Pipeline</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
-                      {currentPipeline?.name || 'Selecionar'}
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    {pipelines.map(pipeline => (
-                      <DropdownMenuItem 
-                        key={pipeline.id}
-                        onClick={() => setSelectedPipelineId(pipeline.id)}
-                        className="flex items-center justify-between"
-                      >
-                        <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
-                          {pipeline.name}
-                        </span>
-                        {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1 bg-muted">
+                  <GitBranch className="h-3.5 w-3.5 text-foreground" />
+                  <span className="text-xs text-foreground/90 font-medium">Pipeline</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
+                        {currentPipeline?.name || 'Selecionar'}
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      {pipelines.map(pipeline => (
+                        <DropdownMenuItem 
+                          key={pipeline.id}
+                          onClick={() => setSelectedPipelineId(pipeline.id)}
+                          className="flex items-center justify-between"
+                        >
+                          <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
+                            {pipeline.name}
+                          </span>
+                          {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 opacity-50 hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePipeline(pipeline.id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                      {isAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nova Pipeline
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {canEditPipeline && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-5 w-5 opacity-50 hover:opacity-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePipeline(pipeline.id);
-                            }}
+                            className="h-6 w-6"
+                            onClick={() => setStagesEditorOpen(true)}
+                            disabled={!selectedPipelineId}
                           >
-                            <Trash2 className="h-3 w-3 text-destructive" />
+                            <Settings className="h-3.5 w-3.5" />
                           </Button>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                    {isAdmin && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nova Pipeline
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {canEditPipeline && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => setStagesEditorOpen(true)}
+                        </TooltipTrigger>
+                        <TooltipContent>Configurações de Estágios</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+
+                <div className="h-4 w-px bg-border" />
+                
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Leads</span>
+                    <span className="text-sm font-black leading-none mt-1">
+                      {filteredStages.reduce((acc, stage) => acc + (stage.leads?.length || 0), 0)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">VGV Aberto</span>
+                    <span className="text-sm font-black text-primary leading-none mt-1">
+                      {formatCompactCurrency(Array.from(stageVGVMap.values()).reduce((acc, v) => acc + v.openVGV, 0))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
                           disabled={!selectedPipelineId}
                         >
                           <Settings className="h-4 w-4 text-foreground/80 hover:text-foreground" />
