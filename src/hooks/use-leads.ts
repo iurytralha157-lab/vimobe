@@ -37,14 +37,15 @@ export function useLeads(filters?: {
         .order('created_at', { ascending: false })
         .limit(limit);
       
-      if (filters?.stageId) {
-        query = query.eq('stage_id', filters.stageId);
-      }
-      if (filters?.assigneeId) {
-        query = query.eq('assigned_user_id', filters.assigneeId);
-      }
       if (filters?.search) {
         query = query.or(`name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+      } else {
+        if (filters?.stageId) {
+          query = query.eq('stage_id', filters.stageId);
+        }
+        if (filters?.assigneeId) {
+          query = query.eq('assigned_user_id', filters.assigneeId);
+        }
       }
       
       const { data, error } = await query;
