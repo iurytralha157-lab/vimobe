@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2 } from 'lucide-react';
@@ -55,7 +55,7 @@ const formatShortTime = (date: Date): string => {
   }
   return `${diffHrs}h`;
 };
-export function LeadCard({
+export const LeadCard = memo(function LeadCard({
   lead,
   onClick,
   index,
@@ -401,4 +401,4 @@ export function LeadCard({
       isLoading={createActivity.isPending}
     />
   </>;
-}
+});

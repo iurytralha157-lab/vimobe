@@ -60,7 +60,7 @@ export const AppHeader = React.memo(function AppHeader({
 
   const handleSwitchOrg = async (orgId: string) => {
     await switchOrganization(orgId);
-    navigate('/crm/conversas', { replace: true });
+    navigate('/dashboard', { replace: true });
     // Force reload to reset all queries
     window.location.reload();
   };

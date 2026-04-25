@@ -69,7 +69,7 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (profile?.organization_id) {
-      navigate('/crm/conversas');
+      navigate('/dashboard');
     }
   }, [profile, navigate]);
 
