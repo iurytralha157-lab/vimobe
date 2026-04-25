@@ -401,4 +401,4 @@ export const LeadCard = memo(function LeadCard({
       isLoading={createActivity.isPending}
     />
   </>;
-}
+});
