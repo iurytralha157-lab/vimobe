@@ -639,14 +639,30 @@ export function useTopBrokers(filters?: DashboardFilters) {
       }
 
       // Fallback: No won leads, show ranking by total leads assigned
-      let fallbackQuery = supabase
-        .from('leads')
-        .select(`
+      let fallbackSelectString = `
           assigned_user_id,
           valor_interesse,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
-        `)
+        `;
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        fallbackSelectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
+      let fallbackQuery = supabase
+        .from('leads')
+        .select(fallbackSelectString)
         .not('assigned_user_id', 'is', null);
+      
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        fallbackQuery = fallbackQuery.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        fallbackQuery = fallbackQuery.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        fallbackQuery = fallbackQuery.eq('lead_meta.ad_id', filters.adId);
+      }
 
       if (filters?.dateRange) {
         fallbackQuery = fallbackQuery
