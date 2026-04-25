@@ -11,7 +11,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useUserPermissions } from '@/hooks/use-user-permissions';
@@ -177,7 +177,7 @@ function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: num
   return <Icon className={cn(`h-${Math.round(size/4)} w-${Math.round(size/4)} flex-shrink-0`, className)} />;
 }
 
-export function AppSidebar() {
+export const AppSidebar = React.memo(function AppSidebar() {
   const location = useLocation();
   const {
     profile,
@@ -345,4 +345,4 @@ export function AppSidebar() {
       </ul>
     </div>
   </aside>;
-}
+});

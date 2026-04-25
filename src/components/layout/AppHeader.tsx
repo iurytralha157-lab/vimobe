@@ -1,3 +1,4 @@
+import React from 'react';
 import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Building2, Check, Key } from 'lucide-react';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ interface AppHeaderProps {
   title?: string;
 }
 
-export function AppHeader({
+export const AppHeader = React.memo(function AppHeader({
   title
 }: AppHeaderProps) {
   const {
@@ -291,4 +292,4 @@ export function AppHeader({
       </div>
     </header>
   );
-}
+});

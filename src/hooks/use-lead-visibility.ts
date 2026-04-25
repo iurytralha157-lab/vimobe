@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 /**
  * Interface que define o nível de visibilidade de leads para um usuário
@@ -13,17 +14,9 @@ export interface LeadVisibility {
 }
 
 /**
- * Verifica o nível de visibilidade de leads para um usuário.
- * 
- * Níveis de visibilidade:
- * 1. canViewAll = true: Admins, super_admins, ou usuários com permissão lead_view_all
- * 2. teamMemberIds preenchido: Líderes de equipe que podem ver leads de todos os membros
- * 3. userId preenchido: Usuários normais que só podem ver seus próprios leads
- * 
- * @param userId - ID do usuário a verificar
- * @returns Promise<LeadVisibility> com as informações de visibilidade
+ * Função interna para verificar o nível de visibilidade de leads para um usuário.
  */
-export async function checkLeadVisibility(userId: string): Promise<LeadVisibility> {
+async function fetchLeadVisibility(userId: string): Promise<LeadVisibility> {
   // 1. Verificar role do usuário
   const { data: userData } = await supabase
     .from('users')
@@ -71,6 +64,26 @@ export async function checkLeadVisibility(userId: string): Promise<LeadVisibilit
   
   // 4. Usuário normal - só vê próprios leads
   return { canViewAll: false, userId };
+}
+
+/**
+ * Hook que verifica o nível de visibilidade de leads para um usuário usando cache do TanStack Query.
+ */
+export function useLeadVisibility(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['lead-visibility', userId],
+    queryFn: () => fetchLeadVisibility(userId!),
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 15, // Cache por 15 minutos (permissões não mudam frequentemente)
+  });
+}
+
+/**
+ * Legado: Verifica o nível de visibilidade de leads para um usuário.
+ * Recomendado usar o hook useLeadVisibility.
+ */
+export async function checkLeadVisibility(userId: string): Promise<LeadVisibility> {
+  return fetchLeadVisibility(userId);
 }
 
 /**

@@ -201,9 +201,11 @@ export function useWhatsAppConversations(
     },
     enabled: !!profile?.organization_id,
     // Fallback polling: refetch every 15s if realtime fails
-    refetchInterval: 15000,
+    // Refetch less often automatically, rely more on realtime
+    refetchInterval: 30000, 
     refetchIntervalInBackground: false,
-    staleTime: 5000,
+    staleTime: 10000,
+    gcTime: 1000 * 60 * 5,
   });
 }
 
@@ -267,9 +269,10 @@ export function useWhatsAppMessages(conversationId: string | null, leadId?: stri
       return (data?.messages || []) as WhatsAppMessage[];
     },
     enabled: !!conversationId || !!leadId,
-    refetchInterval: 10000,
+    refetchInterval: 20000, // Reduced polling frequency
     refetchIntervalInBackground: false,
-    staleTime: 0,
+    staleTime: 5000, // Messages stay fresh longer
+    gcTime: 1000 * 60 * 2,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
@@ -879,8 +882,10 @@ export function useWhatsAppRealtimeConversations() {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+        // Also invalidate messages if we are in a conversation
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         debounceTimer = null;
-      }, 500);
+      }, 2000); // 2 second debounce for better performance
     };
 
     const channel = supabase
