@@ -188,7 +188,15 @@ export function LeadCard({
                 </span>
                 {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
               </>}
+
+            {/* Stuck Indicator */}
+            {lead.stage_entered_at && (Date.now() - new Date(lead.stage_entered_at).getTime()) > (48 * 60 * 60 * 1000) && lead.deal_status === 'open' && (
+              <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 border-orange-500/50 bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                Parado
+              </Badge>
+            )}
           </div>
+
 
 
 
