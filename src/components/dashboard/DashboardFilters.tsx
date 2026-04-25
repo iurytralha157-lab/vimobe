@@ -24,6 +24,7 @@ import {
   sourceOptions,
 } from '@/hooks/use-dashboard-filters';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { CampaignFilter } from './CampaignFilter';
 
 interface DashboardFiltersProps {
   datePreset: DatePreset;
@@ -36,6 +37,12 @@ interface DashboardFiltersProps {
   onUserChange: (userId: string | null) => void;
   source: string | null;
   onSourceChange: (source: string | null) => void;
+  campaignId: string | null;
+  onCampaignChange: (id: string | null) => void;
+  adSetId: string | null;
+  onAdSetChange: (id: string | null) => void;
+  adId: string | null;
+  onAdChange: (id: string | null) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
 }
@@ -51,6 +58,12 @@ export function DashboardFilters({
   onUserChange,
   source,
   onSourceChange,
+  campaignId,
+  onCampaignChange,
+  adSetId,
+  onAdSetChange,
+  adId,
+  onAdChange,
   onClear,
   hasActiveFilters,
 }: DashboardFiltersProps) {
@@ -90,7 +103,7 @@ export function DashboardFilters({
     : users;
 
   // Check if any extra filters are active (excluding date)
-  const hasExtraFilters = teamId !== null || userId !== null || source !== null;
+  const hasExtraFilters = teamId !== null || userId !== null || source !== null || campaignId !== null || adSetId !== null || adId !== null;
 
   // Shared filter components
   const TeamFilter = () => availableTeams.length > 0 ? (
@@ -175,6 +188,16 @@ export function DashboardFilters({
           customDateRange={customDateRange}
           onCustomDateRangeChange={onCustomDateRangeChange}
           triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start"
+        />
+
+        {/* Meta Campaign Filter */}
+        <CampaignFilter 
+          campaignId={campaignId}
+          onCampaignChange={onCampaignChange}
+          adSetId={adSetId}
+          onAdSetChange={onAdSetChange}
+          adId={adId}
+          onAdChange={onAdChange}
         />
 
         {/* Filters Popover */}
@@ -326,6 +349,16 @@ export function DashboardFilters({
           ))}
         </SelectContent>
       </Select>
+      
+      {/* Meta Campaign Filter */}
+      <CampaignFilter 
+        campaignId={campaignId}
+        onCampaignChange={onCampaignChange}
+        adSetId={adSetId}
+        onAdSetChange={onAdSetChange}
+        adId={adId}
+        onAdChange={onAdChange}
+      />
 
       {/* Clear Filters */}
       {hasActiveFilters && (

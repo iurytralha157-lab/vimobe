@@ -18,6 +18,9 @@ export interface DashboardFilters {
   teamId: string | null;
   userId: string | null;
   source: string | null;
+  campaignId: string | null;
+  adSetId: string | null;
+  adId: string | null;
 }
 
 export interface DatePresetOption {
@@ -79,6 +82,9 @@ export function useDashboardFilters() {
   const [teamId, setTeamId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [adSetId, setAdSetId] = useState<string | null>(null);
+  const [adId, setAdId] = useState<string | null>(null);
 
   const dateRange = useMemo(() => {
     if (datePreset === 'custom' && customDateRange) {
@@ -93,7 +99,10 @@ export function useDashboardFilters() {
     teamId,
     userId,
     source,
-  }), [datePreset, dateRange, teamId, userId, source]);
+    campaignId,
+    adSetId,
+    adId,
+  }), [datePreset, dateRange, teamId, userId, source, campaignId, adSetId, adId]);
 
   const clearFilters = () => {
     setDatePreset('last30days');
@@ -101,9 +110,19 @@ export function useDashboardFilters() {
     setTeamId(null);
     setUserId(null);
     setSource(null);
+    setCampaignId(null);
+    setAdSetId(null);
+    setAdId(null);
   };
 
-  const hasActiveFilters = teamId !== null || userId !== null || source !== null || datePreset !== 'last30days';
+  const hasActiveFilters = 
+    teamId !== null || 
+    userId !== null || 
+    source !== null || 
+    campaignId !== null || 
+    adSetId !== null || 
+    adId !== null || 
+    datePreset !== 'last30days';
 
   return {
     filters,
@@ -117,6 +136,12 @@ export function useDashboardFilters() {
     setUserId,
     source,
     setSource,
+    campaignId,
+    setCampaignId,
+    adSetId,
+    setAdSetId,
+    adId,
+    setAdId,
     clearFilters,
     hasActiveFilters,
   };

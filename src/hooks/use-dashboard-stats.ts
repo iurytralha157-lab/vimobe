@@ -115,7 +115,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
       // Get visibility level (admin, team leader, or normal user)
@@ -133,14 +133,32 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       const previousFrom = subDays(currentFrom, periodDays);
       const previousTo = subDays(currentTo, periodDays);
       
-      // Build base query for current period - using deal_status for accurate conversion tracking
+      // Build base query for current period
+      let selectString = 'id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds';
+      
+      // If we have Meta filters, we need to join with lead_meta
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
       let query = supabase
         .from('leads')
-        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds', { count: 'exact' })
+        .select(selectString, { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString())
-        .limit(10000); // Aumentado para suportar mais leads nos cálculos de stats
+        .limit(10000);
+
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        query = query.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        query = query.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        query = query.eq('lead_meta.ad_id', filters.adId);
+      }
 
       // Apply visibility filter (admin, team leader, or self-only)
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
@@ -187,13 +205,29 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       }
 
       // Fetch previous period data for trends
+      let prevSelectString = 'id, deal_status';
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        prevSelectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
       let previousQuery = supabase
         .from('leads')
-        .select('id, deal_status', { count: 'exact' })
+        .select(prevSelectString, { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', previousFrom.toISOString())
         .lte('created_at', previousTo.toISOString())
         .limit(10000);
+      
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        previousQuery = previousQuery.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        previousQuery = previousQuery.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        previousQuery = previousQuery.eq('lead_meta.ad_id', filters.adId);
+      }
       
       // Apply same visibility filter for previous period
       previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
@@ -380,7 +414,7 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, pipelineId, user?.id],
+    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId, pipelineId, user?.id],
     queryFn: async () => {
       // Get visibility level (admin, team leader, or normal user)
       const visibility = user?.id 
@@ -436,7 +470,7 @@ export function useLeadSourcesData(filters?: DashboardFilters, pipelineId?: stri
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, pipelineId, user?.id],
+    queryKey: ['lead-sources-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId, pipelineId, user?.id],
     queryFn: async () => {
       // Get visibility level (admin, team leader, or normal user)
       const visibility = user?.id 
@@ -488,7 +522,7 @@ export function useTopBrokers(filters?: DashboardFilters) {
   const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['top-brokers', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['top-brokers', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<TopBrokersResult> => {
       // Get current user to check visibility
@@ -503,17 +537,33 @@ export function useTopBrokers(filters?: DashboardFilters) {
       }
       
       // First try: Get leads with won status using deal_status
-      let query = supabase
-        .from('leads')
-        .select(`
+      let selectString = `
           assigned_user_id,
           valor_interesse,
           deal_status,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
-        `)
+        `;
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
+      let query = supabase
+        .from('leads')
+        .select(selectString)
         .eq('organization_id', organizationId!)
         .not('assigned_user_id', 'is', null)
         .eq('deal_status', 'won');
+
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        query = query.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        query = query.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        query = query.eq('lead_meta.ad_id', filters.adId);
+      }
 
       // Team leaders only see their team members
       if (visibility.teamMemberIds) {
@@ -589,14 +639,30 @@ export function useTopBrokers(filters?: DashboardFilters) {
       }
 
       // Fallback: No won leads, show ranking by total leads assigned
-      let fallbackQuery = supabase
-        .from('leads')
-        .select(`
+      let fallbackSelectString = `
           assigned_user_id,
           valor_interesse,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
-        `)
+        `;
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        fallbackSelectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
+      let fallbackQuery = supabase
+        .from('leads')
+        .select(fallbackSelectString)
         .not('assigned_user_id', 'is', null);
+      
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        fallbackQuery = fallbackQuery.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        fallbackQuery = fallbackQuery.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        fallbackQuery = fallbackQuery.eq('lead_meta.ad_id', filters.adId);
+      }
 
       if (filters?.dateRange) {
         fallbackQuery = fallbackQuery
@@ -731,7 +797,7 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
   const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['deals-evolution', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['deals-evolution', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<DealsEvolutionPoint[]> => {
       // Get visibility level
@@ -746,12 +812,28 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       const daysDiff = differenceInDays(dateTo, dateFrom);
       
       // Build base query
+      let selectString = 'id, created_at, deal_status, assigned_user_id, source';
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
       let query = supabase
         .from('leads')
-        .select('id, created_at, deal_status, assigned_user_id, source')
+        .select(selectString)
         .eq('organization_id', organizationId!)
         .gte('created_at', dateFrom.toISOString())
         .lte('created_at', dateTo.toISOString());
+
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        query = query.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        query = query.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        query = query.eq('lead_meta.ad_id', filters.adId);
+      }
 
       // Apply visibility filter (admin, team leader, or self-only)
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
