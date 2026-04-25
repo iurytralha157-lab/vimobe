@@ -87,13 +87,25 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Pre-load background image only on desktop (mobile uses CSS gradient to save 500KB+)
+  // Optimized background image loading
   useEffect(() => {
     if (!loginBgUrl) return;
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) return;
-    const img = new Image();
-    img.onload = () => setBgLoaded(true);
-    img.src = loginBgUrl;
+    
+    // Delay loading of the heavy background image to prioritize form rendering
+    // and use a WebP version with better compression
+    const timer = setTimeout(() => {
+      const img = new Image();
+      img.onload = () => setBgLoaded(true);
+      
+      // If it's a Supabase URL, use image transformation for WebP and resizing
+      const optimizedUrl = loginBgUrl.includes('supabase.co') 
+        ? `${loginBgUrl}?width=1200&quality=80&format=webp`
+        : loginBgUrl;
+        
+      img.src = optimizedUrl;
+    }, 800); // 800ms delay to prioritize the login form
+
+    return () => clearTimeout(timer);
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
