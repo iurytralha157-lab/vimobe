@@ -190,6 +190,7 @@ function AppRoutes() {
       {!isResetPasswordRoute && user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
+        <MetricsPanel />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={renderAuthRoute()} />
