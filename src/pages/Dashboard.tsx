@@ -35,6 +35,7 @@ export default function Dashboard() {
       return count || 0;
     },
     enabled: !!organization?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const {
