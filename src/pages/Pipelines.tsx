@@ -69,7 +69,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
-import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts } from '@/hooks/use-stages';
+import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts, useLeadMetaFilters } from '@/hooks/use-stages';
 import { useLoadMoreLeads } from '@/hooks/use-stages';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
@@ -113,6 +113,9 @@ export default function Pipelines() {
   const [filterUser, setFilterUser] = useState<string | undefined>(undefined);
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterDealStatus, setFilterDealStatus] = useState<string>('all');
+  const [filterCampaign, setFilterCampaign] = useState<string>('all');
+  const [filterAdSet, setFilterAdSet] = useState<string>('all');
+  const [filterAd, setFilterAd] = useState<string>('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
@@ -138,6 +141,7 @@ export default function Pipelines() {
   const deletePipeline = useDeletePipeline();
   const createStage = useCreateStage();
   const loadMoreLeads = useLoadMoreLeads();
+  const { data: metaFilters } = useLeadMetaFilters();
   
   // Set initial pipeline when pipelines load
   useEffect(() => {
@@ -187,6 +191,9 @@ export default function Pipelines() {
       filterTag: filterTag !== 'all' ? filterTag : undefined,
       filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
       searchQuery: searchQuery || undefined,
+      filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
+      filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
+      filterAd: filterAd !== 'all' ? filterAd : undefined,
     }
   );
   const { data: users = [] } = useOrganizationUsers();
@@ -219,6 +226,9 @@ export default function Pipelines() {
         filterTag: filterTag !== 'all' ? filterTag : undefined,
         filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
         searchQuery: searchQuery || undefined,
+        filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
+        filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
+        filterAd: filterAd !== 'all' ? filterAd : undefined,
       },
     });
   }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery]);
