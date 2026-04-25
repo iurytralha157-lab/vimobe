@@ -205,13 +205,29 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       }
 
       // Fetch previous period data for trends
+      let prevSelectString = 'id, deal_status';
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        prevSelectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
       let previousQuery = supabase
         .from('leads')
-        .select('id, deal_status', { count: 'exact' })
+        .select(prevSelectString, { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', previousFrom.toISOString())
         .lte('created_at', previousTo.toISOString())
         .limit(10000);
+      
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        previousQuery = previousQuery.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        previousQuery = previousQuery.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        previousQuery = previousQuery.eq('lead_meta.ad_id', filters.adId);
+      }
       
       // Apply same visibility filter for previous period
       previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
