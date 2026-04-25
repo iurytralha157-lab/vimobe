@@ -51,6 +51,12 @@ export default function Dashboard() {
     setUserId,
     source,
     setSource,
+    campaignId,
+    setCampaignId,
+    adSetId,
+    setAdSetId,
+    adId,
+    setAdId,
     clearFilters,
     hasActiveFilters,
   } = useDashboardFilters();
