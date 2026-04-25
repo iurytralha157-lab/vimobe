@@ -939,9 +939,9 @@ export default function Pipelines() {
             </Button>
           </div>
         ) : (
-          /* Desktop: original two-row layout */
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-3">
-            <div className="flex flex-col gap-1">
+          /* Desktop: Pipeline Selector + Summary Row */
+          <div className="flex flex-col gap-3 mb-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1 bg-muted">
                   <GitBranch className="h-3.5 w-3.5 text-foreground" />
@@ -1026,12 +1026,16 @@ export default function Pipelines() {
                   </div>
                 </div>
               </div>
+
+              {/* Desktop New Button */}
+              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="h-9">
+                <Plus className="h-4 w-4 mr-2" />
+                {newButtonLabel}
+              </Button>
             </div>
-
-            <div className="flex items-center gap-2 ml-auto">
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-0">
-              {/* Search */}
+            
+            {/* Filters Row */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
               <div className="relative flex-shrink-0">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
@@ -1042,7 +1046,6 @@ export default function Pipelines() {
                 />
               </div>
 
-              {/* Date Filter */}
               <DateFilterPopover
                 datePreset={datePreset}
                 onDatePresetChange={setDatePreset}
@@ -1051,7 +1054,6 @@ export default function Pipelines() {
                 triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start flex-shrink-0"
               />
 
-              {/* Responsible Filter */}
               {(isAdmin || hasLeadViewAll) ? (
                 <Select value={filterUser} onValueChange={setFilterUser}>
                   <SelectTrigger className={cn(
@@ -1075,7 +1077,6 @@ export default function Pipelines() {
                 </div>
               )}
 
-              {/* Tag Filter */}
               <Select value={filterTag} onValueChange={setFilterTag}>
                 <SelectTrigger className={cn(
                   "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
@@ -1097,7 +1098,6 @@ export default function Pipelines() {
                 </SelectContent>
               </Select>
 
-              {/* Deal Status Filter */}
               <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
                 <SelectTrigger className={cn(
                   "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
@@ -1112,8 +1112,7 @@ export default function Pipelines() {
                   <SelectItem value="lost"><span className="flex items-center gap-2"><XCircle className="h-3.5 w-3.5 text-red-600" />Perdido</span></SelectItem>
                 </SelectContent>
               </Select>
-            
-              {/* Refresh Button */}
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1130,15 +1129,10 @@ export default function Pipelines() {
                   <TooltipContent>Atualizar Pipeline</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
-              {/* Desktop New Button */}
-              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0">
-                <Plus className="h-4 w-4 mr-2" />
-                {newButtonLabel}
-              </Button>
             </div>
           </div>
         )}
+
 
         {/* Empty State */}
         {stages.length === 0 && (
