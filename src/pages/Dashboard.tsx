@@ -81,6 +81,7 @@ export default function Dashboard() {
       return uniqueSessions.size;
     },
     enabled: !!organization?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const funnelComponent = <SalesFunnelWithPipeline filters={filters} />;
