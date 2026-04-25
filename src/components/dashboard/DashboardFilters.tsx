@@ -103,7 +103,7 @@ export function DashboardFilters({
     : users;
 
   // Check if any extra filters are active (excluding date)
-  const hasExtraFilters = teamId !== null || userId !== null || source !== null;
+  const hasExtraFilters = teamId !== null || userId !== null || source !== null || campaignId !== null || adSetId !== null || adId !== null;
 
   // Shared filter components
   const TeamFilter = () => availableTeams.length > 0 ? (
