@@ -32,6 +32,18 @@ Deno.serve(async (req) => {
 
     console.log("🕐 Automation delay processor started");
 
+    // ─── Recovery sweep: mark stuck executions as failed ───────────────
+    try {
+      const { data: recovered, error: recErr } = await supabase.rpc("recover_stuck_executions", {
+        p_stale_minutes: 10,
+      });
+      if (!recErr && recovered && recovered > 0) {
+        console.log(`♻️ Recovered ${recovered} stuck execution(s)`);
+      }
+    } catch (recErr) {
+      console.warn("recover_stuck_executions RPC unavailable:", recErr);
+    }
+
     // Find all executions ready to continue
     const now = new Date().toISOString();
     const { data: waitingExecutions, error: fetchError } = await supabase
