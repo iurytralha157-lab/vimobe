@@ -21,7 +21,7 @@ interface FlowSimulatorProps {
   onHighlightNode?: (nodeId: string | null) => void;
 }
 
-const PREVIEW_WAIT_MS = 60_000; // 1 minute for all waits in preview
+
 
 export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSimulatorProps) {
   const [messages, setMessages] = useState<SimMessage[]>([]);
