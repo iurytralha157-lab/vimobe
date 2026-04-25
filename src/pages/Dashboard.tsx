@@ -5,8 +5,6 @@ import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
-import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
-import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionChart';
 
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
