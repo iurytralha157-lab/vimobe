@@ -679,7 +679,7 @@ export default function Pipelines() {
       let openVGV = 0;
       for (const lead of stage.leads || []) {
         if (lead.deal_status !== 'won' && lead.deal_status !== 'lost') {
-          openVGV += lead.valor_interesse || lead.interest_property?.preco || lead.interest_plan?.price || 0;
+          openVGV += lead.valor_interesse || lead.interest_property?.preco || lead.interest_plan?.price || lead.property?.preco || 0;
         }
       }
       if (openVGV > 0) map.set(stage.id, { openVGV });
