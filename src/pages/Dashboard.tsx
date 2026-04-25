@@ -146,11 +146,7 @@ export default function Dashboard() {
 
             {/* Evolution chart - fills remaining height */}
             <div className="flex-1 min-h-0">
-              {isTelecom ? (
-                <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
-              ) : (
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-              )}
             </div>
           </div>
 
