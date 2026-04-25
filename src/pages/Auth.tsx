@@ -290,8 +290,10 @@ export default function Auth() {
       {/* Login form container */}
       <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
         <div className="w-full max-w-sm">
-          <div className="flex flex-col items-center mb-2">
-            {logoUrl && (
+          <div className="flex flex-col items-center mb-2 min-h-[56px] justify-center">
+            {settingsLoading ? (
+              <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
+            ) : logoUrl ? (
               <img
                 src={logoUrl}
                 alt="Logo"
@@ -301,7 +303,7 @@ export default function Auth() {
                 fetchPriority="high"
                 decoding="async"
               />
-            )}
+            ) : null}
           </div>
           <p className="text-sm text-muted-foreground text-center mb-6" aria-live="polite">
             {mode === 'login'
