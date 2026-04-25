@@ -115,7 +115,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
   const organizationId = profile?.organization_id;
 
   return useQuery({
-    queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source],
+    queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
       // Get visibility level (admin, team leader, or normal user)
