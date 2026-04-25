@@ -472,22 +472,8 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right panel - Background image (desktop only, lazy-loaded) */}
-      {showBg && (
-        <div className="hidden lg:block flex-1 relative">
-          <img
-            src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=1200&quality=80&format=webp` : loginBgUrl}
-            alt=""
-            aria-hidden="true"
-            role="presentation"
-            loading="lazy"
-            decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          {/* Horizontal gradient to blend form background with image */}
-          <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
-        </div>
-      )}
+      {/* Desktop empty space for background view */}
+      <div className="hidden lg:block flex-1" />
     </div>
   );
 }
