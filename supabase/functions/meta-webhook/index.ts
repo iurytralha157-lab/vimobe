@@ -374,8 +374,6 @@ serve(async (req) => {
 
               // Handle redistribution if needed
               if (!shouldKeepAssignee) {
-
-              if (!shouldKeepAssignee) {
                 console.log('Calling handle_lead_intake for redistribution...');
                 const { data: redistributionResult, error: redistributionError } = await supabase
                   .rpc('handle_lead_intake', { p_lead_id: existingByPhone.id });
