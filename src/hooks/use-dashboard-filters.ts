@@ -82,6 +82,9 @@ export function useDashboardFilters() {
   const [teamId, setTeamId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [adSetId, setAdSetId] = useState<string | null>(null);
+  const [adId, setAdId] = useState<string | null>(null);
 
   const dateRange = useMemo(() => {
     if (datePreset === 'custom' && customDateRange) {
