@@ -159,7 +159,7 @@ export default function AdminOrganizationDetail() {
 
   const handleImpersonate = () => {
     startImpersonate(org.id, org.name);
-    navigate('/crm/conversas');
+    navigate('/dashboard');
   };
 
   const isModuleEnabled = (moduleName: string) => {
