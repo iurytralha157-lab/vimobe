@@ -1359,16 +1359,22 @@ export default function Pipelines() {
                             snapshot.isDraggingOver && "bg-accent/30"
                           )}
                         >
-                          {stage.leads?.map((lead: any, index: number) => (
-                            <LeadCard 
-                              key={lead.id} 
-                              lead={lead} 
-                              index={index}
-                              onClick={() => setSelectedLead(lead)}
-                              onAssignNow={(leadId) => assignLeadRoundRobin.mutate(leadId)}
-                              isDragDisabled={isDragDisabled}
-                            />
-                          ))}
+                          {isInitialLeadsLoading ? (
+                            Array.from({ length: 3 }).map((_, i) => (
+                              <div key={i} className="bg-background/50 animate-pulse rounded-lg h-24 w-full" />
+                            ))
+                          ) : (
+                            stage.leads?.map((lead: any, index: number) => (
+                              <LeadCard 
+                                key={lead.id} 
+                                lead={lead} 
+                                index={index}
+                                onClick={() => setSelectedLead(lead)}
+                                onAssignNow={(leadId) => assignLeadRoundRobin.mutate(leadId)}
+                                isDragDisabled={isDragDisabled}
+                              />
+                            ))
+                          )}
                           {provided.placeholder}
                           
                           
