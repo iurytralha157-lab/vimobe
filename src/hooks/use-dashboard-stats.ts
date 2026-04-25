@@ -141,34 +141,6 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
       }
 
-      let query = supabase
-        .from('leads')
-        .select(selectString, { count: 'exact' })
-        .eq('organization_id', organizationId!)
-        .gte('created_at', currentFrom.toISOString())
-        .lte('created_at', currentTo.toISOString())
-        .limit(10000);
-
-      // Apply Meta filters
-      if (filters?.campaignId) {
-        query = query.eq('lead_meta.campaign_id', filters.campaignId);
-      }
-      if (filters?.adSetId) {
-        query = query.eq('lead_meta.adset_id', filters.adSetId);
-      }
-      if (filters?.adId) {
-        query = query.eq('lead_meta.ad_id', filters.adId);
-      }
-
-      // Apply visibility filter (admin, team leader, or self-only)
-      query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
-
-      // Apply source filter
-      if (filters?.source) {
-        query = query.eq('source', filters.source as any);
-      }
-
-      // Apply team filter (only for users who can view all or are team leaders)
       // Prepare queries
       let query = supabase
         .from('leads')
@@ -192,7 +164,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .lte('created_at', previousTo.toISOString())
         .limit(10000);
 
-      // Apply filters to both queries
+      // Apply Meta filters to both queries
       if (filters?.campaignId) {
         query = query.eq('lead_meta.campaign_id', filters.campaignId);
         previousQuery = previousQuery.eq('lead_meta.campaign_id', filters.campaignId);
@@ -206,15 +178,17 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         previousQuery = previousQuery.eq('lead_meta.ad_id', filters.adId);
       }
 
+      // Apply visibility filter to both
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
       previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
 
+      // Apply source filter to both
       if (filters?.source) {
         query = query.eq('source', filters.source as any);
         previousQuery = previousQuery.eq('source', filters.source as any);
       }
 
-      // Handle team filter
+      // Apply team filter (only for users who can view all or are team leaders)
       let memberIds: string[] = [];
       if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
         const { data: teamMembers } = await supabase
@@ -229,7 +203,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
       }
 
-      // Execute queries in parallel
+      // Execute queries in parallel for better performance
       const todayStr = new Date().toISOString().split('T')[0];
       
       const [
