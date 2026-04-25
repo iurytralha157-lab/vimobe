@@ -246,11 +246,37 @@ export function NodeConfigPanel({
               <div className="space-y-1.5">
                 <Label className="text-xs">Tempo de espera</Label>
                 <div className="flex gap-2">
-                  <Input type="number" min={1} value={selectedNode.data.wait_value || 1} className="w-20 h-9"
-                    onChange={(e) => onNodeDataChange(selectedNode.id, { wait_value: parseInt(e.target.value) || 1 })} />
-                  <Select value={selectedNode.data.wait_type || 'days'} onValueChange={(v) => onNodeDataChange(selectedNode.id, { wait_type: v })}>
+                  <Input 
+                    type="number" 
+                    min={1} 
+                    max={selectedNode.data.wait_type === 'seconds' ? 59 : 1}
+                    value={selectedNode.data.wait_value || 1} 
+                    className="w-20 h-9"
+                    onChange={(e) => {
+                      let val = parseInt(e.target.value) || 1;
+                      const type = selectedNode.data.wait_type || 'days';
+                      if (type !== 'seconds' && val > 1) val = 1;
+                      if (type === 'seconds' && val > 59) val = 59;
+                      onNodeDataChange(selectedNode.id, { wait_value: val });
+                    }} 
+                  />
+                  <Select 
+                    value={selectedNode.data.wait_type || 'days'} 
+                    onValueChange={(v) => {
+                      const newData: Record<string, any> = { wait_type: v };
+                      if (v !== 'seconds') {
+                        newData.wait_value = 1;
+                      }
+                      onNodeDataChange(selectedNode.id, newData);
+                    }}
+                  >
                     <SelectTrigger className="flex-1 h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent className="z-[200]"><SelectItem value="seconds">Segundos</SelectItem><SelectItem value="minutes">Minutos</SelectItem><SelectItem value="hours">Horas</SelectItem><SelectItem value="days">Dias</SelectItem></SelectContent>
+                    <SelectContent className="z-[200]">
+                      <SelectItem value="seconds">Segundos</SelectItem>
+                      <SelectItem value="minutes">Minutos</SelectItem>
+                      <SelectItem value="hours">Horas</SelectItem>
+                      <SelectItem value="days">Dias</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
