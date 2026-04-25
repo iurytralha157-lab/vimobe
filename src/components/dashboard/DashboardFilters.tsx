@@ -339,6 +339,16 @@ export function DashboardFilters({
           ))}
         </SelectContent>
       </Select>
+      
+      {/* Meta Campaign Filter */}
+      <CampaignFilter 
+        campaignId={campaignId}
+        onCampaignChange={onCampaignChange}
+        adSetId={adSetId}
+        onAdSetChange={onAdSetChange}
+        adId={adId}
+        onAdChange={onAdChange}
+      />
 
       {/* Clear Filters */}
       {hasActiveFilters && (
