@@ -119,6 +119,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
     queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
+      return performanceTracker.trackTimed('useEnhancedDashboardStats', async () => {
       // Use queryClient to get cached visibility or fetch it
       const visibility = await checkLeadVisibility(currentUserId);
       
