@@ -220,8 +220,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session.user);
 
-      await fetchProfile(session.user.id);
-      await checkMultiOrg(session.user.id);
+      await Promise.all([
+        fetchProfile(session.user.id),
+        checkMultiOrg(session.user.id)
+      ]);
       setLoading(false);
     });
 
