@@ -64,7 +64,7 @@ function formatValue(value: string | number, format: string): string {
         maximumFractionDigits: value >= 100000 ? 1 : 0,
       }).format(value);
     case 'percent':
-      return `${value}%`;
+      return `${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}%`;
     case 'number':
     default:
       return value.toLocaleString('pt-BR');
