@@ -190,6 +190,16 @@ export function DashboardFilters({
           triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start"
         />
 
+        {/* Meta Campaign Filter */}
+        <CampaignFilter 
+          campaignId={campaignId}
+          onCampaignChange={onCampaignChange}
+          adSetId={adSetId}
+          onAdSetChange={onAdSetChange}
+          adId={adId}
+          onAdChange={onAdChange}
+        />
+
         {/* Filters Popover */}
         <Popover>
           <PopoverTrigger asChild>
