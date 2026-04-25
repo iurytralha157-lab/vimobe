@@ -34,7 +34,7 @@ export default function SelectOrganization() {
 
   const handleSelectOrg = async (orgId: string) => {
     await switchOrganization(orgId);
-    navigate('/crm/conversas', { replace: true });
+    navigate('/dashboard', { replace: true });
   };
 
   if (loading || orgsLoading) {
