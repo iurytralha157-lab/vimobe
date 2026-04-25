@@ -224,10 +224,6 @@ export function useStagesWithLeads(
         // Tags
         (async () => {
           if (leadIds.length === 0) return {} as Record<string, { id: string; name: string; color: string }[]>;
-          const { data: leadMeta } = await (filters?.filterCampaign || filters?.filterAdSet || filters?.filterAd 
-            ? (supabase.from('lead_meta').select('lead_id, campaign_name, adset_name, ad_name').not('lead_id', 'is', null) as any)
-            : (supabase.from('lead_tags').select('lead_id, tag:tags(id, name, color)').in('lead_id', leadIds) as any));
-            
           const { data: leadTags } = await supabase
             .from('lead_tags')
             .select('lead_id, tag:tags(id, name, color)')
@@ -341,6 +337,27 @@ export function useStagesWithLeads(
         has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
       }));
     },
+  });
+}
+
+export function useLeadMetaFilters() {
+  return useQuery({
+    queryKey: ['lead-meta-filters'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lead_meta')
+        .select('campaign_name, adset_name, ad_name')
+        .not('campaign_name', 'is', null);
+      
+      if (error) throw error;
+      
+      const campaigns = [...new Set(data.map(item => item.campaign_name).filter(Boolean))].sort();
+      const adsets = [...new Set(data.map(item => item.adset_name).filter(Boolean))].sort();
+      const ads = [...new Set(data.map(item => item.ad_name).filter(Boolean))].sort();
+      
+      return { campaigns, adsets, ads };
+    },
+    staleTime: 1000 * 60 * 10, // 10 minutes
   });
 }
 
