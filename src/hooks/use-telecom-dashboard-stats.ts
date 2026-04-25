@@ -91,7 +91,7 @@ export function useTelecomDashboardStats(filters?: DashboardFilters) {
 
       // Conversion rate: instalados / total
       const conversionRate = total && total > 0 
-        ? Math.round((instalados || 0) / total * 100) 
+        ? Number(((instalados || 0) / total * 100).toFixed(1)) 
         : 0;
 
       // Previous period for trends (30 days ago)
