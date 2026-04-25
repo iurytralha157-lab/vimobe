@@ -70,18 +70,10 @@ export function CampaignFilter({
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      const { data: leads } = await supabase
-        .from('leads')
-        .select('id')
-        .eq('organization_id', organization.id);
-      
-      if (!leads || leads.length === 0) return [];
-      const leadIds = leads.map(l => l.id);
-
       let query = supabase
         .from('lead_meta')
-        .select('adset_id, adset_name')
-        .in('lead_id', leadIds)
+        .select('adset_id, adset_name, leads!inner(organization_id)')
+        .eq('leads.organization_id', organization.id)
         .not('adset_id', 'is', null)
         .order('adset_name');
       
@@ -93,7 +85,7 @@ export function CampaignFilter({
       if (error) throw error;
       
       const uniqueMap = new Map();
-      data.forEach(item => {
+      (data as any[]).forEach(item => {
         if (item.adset_id) {
           uniqueMap.set(item.adset_id, item.adset_name || 'Sem nome');
         }
