@@ -415,15 +415,32 @@ export default function Auth() {
                   Entrar
                 </Button>
 
-                <div className="text-center">
+                <div className="text-center space-y-4 pt-2">
                   <button
                     type="button"
                     onClick={() => switchMode('forgot')}
                     disabled={loginAttempts.isLockedOut}
-                    className="text-sm text-primary hover:underline disabled:opacity-50"
+                    className="text-sm text-primary hover:underline disabled:opacity-50 block w-full"
                   >
                     Esqueceu sua senha?
                   </button>
+                  
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">Ou</span>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/signup"
+                    className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
+                  >
+                    <UserPlus size={16} />
+                    Criar uma nova conta
+                  </Link>
                 </div>
               </form>
             ) : (
