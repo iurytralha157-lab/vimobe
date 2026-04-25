@@ -476,7 +476,7 @@ export default function Auth() {
       {showBg && (
         <div className="hidden lg:block flex-1 relative">
           <img
-            src={loginBgUrl!}
+            src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=1200&quality=80&format=webp` : loginBgUrl}
             alt=""
             aria-hidden="true"
             role="presentation"
