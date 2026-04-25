@@ -695,6 +695,15 @@ export function useLoadMoreLeads() {
       if (taggedLeadIds) {
         query = query.in('id', taggedLeadIds);
       }
+      if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
+        query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
+      }
+      if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
+        query = query.eq('lead_meta.adset_name', filters.filterAdSet);
+      }
+      if (filters?.filterAd && filters.filterAd !== 'all') {
+        query = query.eq('lead_meta.ad_name', filters.filterAd);
+      }
       
       const { data, error } = await query;
       
