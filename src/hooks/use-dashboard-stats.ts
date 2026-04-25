@@ -189,10 +189,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       // Fetch previous period data for trends
       let previousQuery = supabase
         .from('leads')
-        .select('id, deal_status')
+        .select('id, deal_status', { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', previousFrom.toISOString())
-        .lte('created_at', previousTo.toISOString());
+        .lte('created_at', previousTo.toISOString())
+        .limit(10000);
       
       // Apply same visibility filter for previous period
       previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
