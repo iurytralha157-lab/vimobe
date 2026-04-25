@@ -136,10 +136,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       // Build base query for current period - using deal_status for accurate conversion tracking
       let query = supabase
         .from('leads')
-        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds')
+        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds', { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', currentFrom.toISOString())
-        .lte('created_at', currentTo.toISOString());
+        .lte('created_at', currentTo.toISOString())
+        .limit(10000); // Aumentado para suportar mais leads nos cálculos de stats
 
       // Apply visibility filter (admin, team leader, or self-only)
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
