@@ -143,17 +143,19 @@ export function useStagesWithLeads(
 
       // Helper to apply shared filters to a query
       const applyFilters = (query: any) => {
+        // Se houver busca, ignoramos os outros filtros para encontrar o lead em qualquer lugar
+        if (normalizedSearch) {
+          query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
+          return query;
+        }
+
         if (filterUserId && filterUserId !== 'all') {
           query = query.eq('assigned_user_id', filterUserId);
         }
         if (filters?.filterDealStatus && filters.filterDealStatus !== 'all') {
           query = query.eq('deal_status', filters.filterDealStatus);
         }
-        if (normalizedSearch) {
-          query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
-        }
-        // Apply date filter only when not searching
-        if (!normalizedSearch && filters?.dateRange) {
+        if (filters?.dateRange) {
           query = query
             .gte('created_at', filters.dateRange.from.toISOString())
             .lte('created_at', filters.dateRange.to.toISOString());
