@@ -5,15 +5,13 @@ import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
-import { TelecomKPICards } from '@/components/dashboard/TelecomKPICards';
-import { TelecomEvolutionChart } from '@/components/dashboard/TelecomEvolutionChart';
 
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
 import { 
   useEnhancedDashboardStats, 
   useDealsEvolutionData,
 } from '@/hooks/use-dashboard-stats';
-import { useTelecomDashboardStats, useTelecomEvolutionData } from '@/hooks/use-telecom-dashboard-stats';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
@@ -22,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
   const { organization, user } = useAuth();
-  const isTelecom = organization?.segment === 'telecom';
+  
 
   // Property count query
   const { data: propertyCount = 0 } = useQuery({
@@ -65,9 +63,6 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
 
-  // Data hooks - Telecom
-  const { data: telecomStats, isLoading: telecomStatsLoading } = useTelecomDashboardStats(filters);
-  const { data: telecomEvolutionData = [], isLoading: telecomEvolutionLoading } = useTelecomEvolutionData(filters);
 
   // Site visits count - unique sessions (respects date filters)
   const { data: siteVisits = 0 } = useQuery({
@@ -108,15 +103,6 @@ export default function Dashboard() {
     paidCommissions: 0,
   };
 
-  const telecomKpiData = telecomStats || {
-    totalCustomers: 0,
-    activeCustomers: 0,
-    conversionRate: 0,
-    monthlyRecurringRevenue: 0,
-    customersTrend: 0,
-    activeTrend: 0,
-    conversionTrend: 0,
-  };
 
   return (
     <AppLayout title="Dashboard" disableMainScroll>
@@ -149,15 +135,6 @@ export default function Dashboard() {
           {/* Left column (col 1-8): KPIs + Activities + Evolution */}
           <div className="col-span-8 flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3 auto-rows-min">
-            {isTelecom ? (
-              <div className="col-span-2">
-                <TelecomKPICards 
-                  data={telecomKpiData} 
-                  isLoading={telecomStatsLoading} 
-                  periodLabel={periodLabel}
-                />
-              </div>
-            ) : (
               <KPICardsGrid 
                 data={kpiData} 
                 isLoading={statsLoading} 
@@ -165,16 +142,11 @@ export default function Dashboard() {
                 propertyCount={propertyCount}
                 siteVisits={siteVisits}
               />
-            )}
             </div>
 
             {/* Evolution chart - fills remaining height */}
             <div className="flex-1 min-h-0">
-              {isTelecom ? (
-                <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
-              ) : (
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-              )}
             </div>
           </div>
 
@@ -187,19 +159,11 @@ export default function Dashboard() {
         {/* ===== MOBILE LAYOUT ===== */}
         <div className="lg:hidden space-y-4">
           {/* KPIs */}
-          {isTelecom ? (
-            <TelecomKPICards 
-              data={telecomKpiData} 
-              isLoading={telecomStatsLoading} 
-              periodLabel={periodLabel}
-            />
-          ) : (
-            <KPICards 
-              data={kpiData} 
-              isLoading={statsLoading} 
-              periodLabel={periodLabel}
-            />
-          )}
+          <KPICards 
+            data={kpiData} 
+            isLoading={statsLoading} 
+            periodLabel={periodLabel}
+          />
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
@@ -211,11 +175,7 @@ export default function Dashboard() {
               {funnelComponent}
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
-              {isTelecom ? (
-                <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
-              ) : (
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-              )}
             </TabsContent>
           </Tabs>
         </div>
