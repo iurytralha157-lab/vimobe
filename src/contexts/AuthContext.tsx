@@ -75,23 +75,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
-    // Check both user_roles table AND users.role field for super_admin
-    const [rolesResult, usersResult] = await Promise.all([
-      (supabase as any)
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'super_admin')
-        .maybeSingle(),
-      supabase
-        .from('users')
-        .select('role')
-        .eq('id', userId)
-        .eq('role', 'super_admin')
-        .maybeSingle()
-    ]);
+    return performanceTracker.trackTimed('checkSuperAdmin', async () => {
+      // Check both user_roles table AND users.role field for super_admin
+      const [rolesResult, usersResult] = await Promise.all([
+        (supabase as any)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'super_admin')
+          .maybeSingle(),
+        supabase
+          .from('users')
+          .select('role')
+          .eq('id', userId)
+          .eq('role', 'super_admin')
+          .maybeSingle()
+      ]);
 
-    return !!(rolesResult.data || usersResult.data);
+      return !!(rolesResult.data || usersResult.data);
+    });
   };
 
   const fetchProfile = async (userId: string): Promise<boolean> => {
