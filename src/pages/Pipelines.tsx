@@ -183,7 +183,9 @@ export default function Pipelines() {
     return getDateRangeFromPreset(datePreset);
   }, [datePreset, customDateRange]);
 
-  const { data: stages = [], isLoading: stagesLoading, refetch } = useStagesWithLeads(
+  const { data: baseStages = [], isLoading: baseStagesLoading } = useStages(selectedPipelineId || undefined);
+
+  const { data: stagesWithLeads = [], isLoading: leadsLoading, refetch } = useStagesWithLeads(
     selectedPipelineId || undefined, 
     filterUser,
     {
@@ -196,6 +198,13 @@ export default function Pipelines() {
       filterAd: filterAd !== 'all' ? filterAd : undefined,
     }
   );
+
+  // Combine base stages with leads data when available
+  const stages = useMemo(() => {
+    if (stagesWithLeads.length > 0) return stagesWithLeads;
+    return baseStages.map(s => ({ ...s, leads: [], total_lead_count: s.lead_count || 0, has_more: false }));
+  }, [baseStages, stagesWithLeads]);
+
   const { data: users = [] } = useOrganizationUsers();
   const { data: allTags = [] } = useTags();
   // createLead agora é gerenciado pelo CreateLeadDialog
@@ -207,7 +216,8 @@ export default function Pipelines() {
   // (This must be defined after filteredStages — see below)
   
   const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
-  const isLoading = pipelinesLoading || stagesLoading;
+  const isLoading = pipelinesLoading || baseStagesLoading;
+  const isInitialLeadsLoading = leadsLoading && stagesWithLeads.length === 0;
 
   // Handler para carregar mais leads de uma coluna específica
   const handleLoadMore = useCallback((stageId: string) => {
