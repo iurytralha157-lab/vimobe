@@ -374,11 +374,21 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
     }
   }, [currentWaitNodeId, nodes, addMessage, addSystemMessage, stopCountdown, continueAfterNode]);
 
-  // Timeout for wait nodes - 1 minute
+  // Timeout for wait nodes - follows dynamic time cap
   useEffect(() => {
     if (!waitingForReply || !currentWaitNodeId) return;
     const node = nodes.find(n => n.id === currentWaitNodeId);
     if (!node || node.type !== 'wait') return;
+
+    const value = node.data.wait_value || node.data.delay_value || 1;
+    const type = node.data.wait_type || node.data.delay_type || 'days';
+    
+    let totalSeconds = value;
+    if (type === 'minutes') totalSeconds *= 60;
+    else if (type === 'hours') totalSeconds *= 3600;
+    else if (type === 'days') totalSeconds *= 86400;
+
+    const simulationSeconds = Math.min(totalSeconds, 60);
 
     const timer = setTimeout(async () => {
       if (!waitingForReply) return;
@@ -394,7 +404,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
         addSystemMessage('⏰ Espera concluída.');
         await continueAfterNode(nodeId, null);
       }
-    }, PREVIEW_WAIT_MS);
+    }, simulationSeconds * 1000);
 
     return () => clearTimeout(timer);
   }, [waitingForReply, currentWaitNodeId, nodes, stopCountdown, addSystemMessage, continueAfterNode]);
