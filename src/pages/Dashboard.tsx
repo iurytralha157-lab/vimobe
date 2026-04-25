@@ -103,15 +103,6 @@ export default function Dashboard() {
     paidCommissions: 0,
   };
 
-  const telecomKpiData = telecomStats || {
-    totalCustomers: 0,
-    activeCustomers: 0,
-    conversionRate: 0,
-    monthlyRecurringRevenue: 0,
-    customersTrend: 0,
-    activeTrend: 0,
-    conversionTrend: 0,
-  };
 
   return (
     <AppLayout title="Dashboard" disableMainScroll>
