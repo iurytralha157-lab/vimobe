@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { performanceTracker } from '@/lib/performance';
 import { AppLayout } from '@/components/layout/AppLayout';
 
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
