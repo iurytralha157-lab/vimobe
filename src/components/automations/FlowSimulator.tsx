@@ -212,12 +212,35 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
         const unitLabels: Record<string, string> = { seconds: 'segundo(s)', minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
         const stopOnReply = node.data.stop_on_reply === true;
 
-        addSystemMessage(`⏳ Aguardando ${value} ${unitLabels[type] || type} — preview: 1 min`);
+        // Calculate actual duration in seconds
+        let totalSeconds = value;
+        if (type === 'minutes') totalSeconds *= 60;
+        else if (type === 'hours') totalSeconds *= 3600;
+        else if (type === 'days') totalSeconds *= 86400;
 
-        // Start 60s countdown
-        startCountdown(60);
+        // Cap at 60 seconds for simulation, unless it's already shorter
+        const simulationSeconds = Math.min(totalSeconds, 60);
+
+        addSystemMessage(`⏳ Aguardando ${value} ${unitLabels[type] || type} — preview: ${simulationSeconds}s`);
+
+        // Start countdown with the calculated time
+        startCountdown(simulationSeconds);
         setWaitingForReply(true);
         setCurrentWaitNodeId(node.id);
+
+        // Auto-resolve wait after simulationSeconds
+        const timerId = setTimeout(async () => {
+          if (abortRef.current) return;
+          // Only trigger if we're still waiting for THIS node
+          setWaitingForReply(current => {
+            if (current && !stopOnReply) {
+              // Automatically continue if not waiting for a specific reply
+              handleUserReply(''); // Special case for auto-continue
+            }
+            return current;
+          });
+        }, simulationSeconds * 1000);
+
         return; // Pause here
       }
 
