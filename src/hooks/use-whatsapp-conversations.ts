@@ -201,9 +201,11 @@ export function useWhatsAppConversations(
     },
     enabled: !!profile?.organization_id,
     // Fallback polling: refetch every 15s if realtime fails
-    refetchInterval: 15000,
+    // Refetch less often automatically, rely more on realtime
+    refetchInterval: 30000, 
     refetchIntervalInBackground: false,
-    staleTime: 5000,
+    staleTime: 10000,
+    gcTime: 1000 * 60 * 5,
   });
 }
 
