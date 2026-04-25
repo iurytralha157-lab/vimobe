@@ -415,21 +415,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user has multiple orgs after profile is loaded
   const checkMultiOrg = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('organization_members' as any)
-        .select('organization_id')
-        .eq('user_id', userId)
-        .eq('is_active', true);
+    return performanceTracker.trackTimed('checkMultiOrg', async () => {
+      try {
+        const { data, error } = await supabase
+          .from('organization_members' as any)
+          .select('organization_id')
+          .eq('user_id', userId)
+          .eq('is_active', true);
 
-      if (!error && data && data.length > 1) {
-        setNeedsOrgSelection(true);
-      } else {
+        if (!error && data && data.length > 1) {
+          setNeedsOrgSelection(true);
+        } else {
+          setNeedsOrgSelection(false);
+        }
+      } catch {
         setNeedsOrgSelection(false);
       }
-    } catch {
-      setNeedsOrgSelection(false);
-    }
+    });
   };
 
   return (
