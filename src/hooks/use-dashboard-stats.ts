@@ -164,7 +164,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
       }
 
-      const { data: leads, error } = await query;
+      const { data: leads, error, count } = await query;
 
       if (error) {
         console.error('Error fetching enhanced stats:', error);
