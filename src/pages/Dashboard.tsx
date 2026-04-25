@@ -11,7 +11,7 @@ import {
   useEnhancedDashboardStats, 
   useDealsEvolutionData,
 } from '@/hooks/use-dashboard-stats';
-import { useTelecomDashboardStats, useTelecomEvolutionData } from '@/hooks/use-telecom-dashboard-stats';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
