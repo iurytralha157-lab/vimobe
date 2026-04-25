@@ -269,9 +269,10 @@ export function useWhatsAppMessages(conversationId: string | null, leadId?: stri
       return (data?.messages || []) as WhatsAppMessage[];
     },
     enabled: !!conversationId || !!leadId,
-    refetchInterval: 10000,
+    refetchInterval: 20000, // Reduced polling frequency
     refetchIntervalInBackground: false,
-    staleTime: 0,
+    staleTime: 5000, // Messages stay fresh longer
+    gcTime: 1000 * 60 * 2,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
