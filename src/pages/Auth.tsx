@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -51,7 +51,7 @@ export default function Auth() {
   const securityLogger = useSecurityLogger();
 
   const logoUrl = useMemo(() => {
-    if (!systemSettings) return '/logo.png';
+    if (!systemSettings) return null;
     return resolvedTheme === 'dark'
       ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
       : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
@@ -78,8 +78,6 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bgLoaded, setBgLoaded] = useState(false);
-  const [logoError, setLogoError] = useState(false);
-  const [bgError, setBgError] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => {
     return localStorage.getItem('remember_me') === 'true';
   });
@@ -89,20 +87,25 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Background image loading
+  // Optimized background image loading
   useEffect(() => {
-    if (!loginBgUrl) {
-      setBgLoaded(true);
-      return;
-    }
+    if (!loginBgUrl) return;
     
-    const img = new Image();
-    img.onload = () => setBgLoaded(true);
-    img.onerror = () => {
-      setBgError(true);
-      setBgLoaded(true);
-    };
-    img.src = loginBgUrl;
+    // Delay loading of the heavy background image to prioritize form rendering
+    // and use a WebP version with better compression
+    const timer = setTimeout(() => {
+      const img = new Image();
+      img.onload = () => setBgLoaded(true);
+      
+      // If it's a Supabase URL, use image transformation for WebP and resizing
+      const optimizedUrl = loginBgUrl.includes('supabase.co') 
+        ? `${loginBgUrl}?width=1200&quality=80&format=webp`
+        : loginBgUrl;
+        
+      img.src = optimizedUrl;
+    }, 800); // 800ms delay to prioritize the login form
+
+    return () => clearTimeout(timer);
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
@@ -258,48 +261,56 @@ export default function Auth() {
     }
   };
 
-  const showBg = (loginBgUrl && bgLoaded && !bgError) || !loginBgUrl;
+  // We no longer block the entire page on settings loading to improve perceived speed
+  const showBg = loginBgUrl && bgLoaded;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
-      {/* Background Layer */}
-      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-muted">
-        {loginBgUrl && !bgError ? (
-          <img 
-            src={loginBgUrl}
-            alt="Login Background"
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onError={() => setBgError(true)}
-          />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background relative">
+      {/* Mobile background: optimized WebP image with crop if available */}
+      <div className="lg:hidden absolute inset-0 w-full h-[50vh] overflow-hidden pointer-events-none">
+        {loginBgUrl ? (
+          <div className="relative w-full h-full">
+            <img 
+              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=600&quality=70&format=webp` : loginBgUrl}
+              alt=""
+              className="w-full h-full object-cover opacity-50 blur-[2px]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-background/40 to-background" />
+          </div>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-background" />
+          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/10 to-background">
+            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-background" />
+          </div>
         )}
-        <div className="absolute inset-0 bg-black/10" />
       </div>
 
+      {/* Mobile spacer to push form below image - reduced to allow move the form up */}
+      <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />
+
       {/* Login form container */}
-      <div className="w-full lg:w-[480px] flex flex-col items-center justify-center min-h-screen px-6 py-12 bg-card border-l border-border shadow-2xl z-10">
-        <div className="w-full max-w-sm space-y-8">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="min-h-[60px] flex items-center justify-center">
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
+        <div className="w-full max-w-sm">
+          <div className="flex flex-col items-center mb-2 min-h-[56px] justify-center">
+            {settingsLoading ? (
+              <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
+            ) : logoUrl ? (
               <img
-                src={logoError ? '/logo.png' : (logoUrl || '/logo.png')}
+                src={logoUrl}
                 alt="Logo"
-                className="h-16 w-auto object-contain"
-                onError={() => setLogoError(true)}
+                width="160"
+                height="56"
+                className="h-14 w-auto mb-2"
+                fetchPriority="high"
+                decoding="async"
               />
-            </div>
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {mode === 'login' ? 'Bem-vindo de volta' : 'Recuperar senha'}
-              </h1>
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                {mode === 'login'
-                  ? 'Acesse seu sistema de gestão imobiliária'
-                  : 'Digite seu e-mail para receber as instruções'}
-              </p>
-            </div>
+            ) : null}
           </div>
+          <p className="text-sm text-muted-foreground text-center mb-6" aria-live="polite">
+            {mode === 'login'
+              ? 'Acesse seu sistema de gestão imobiliária'
+              : 'Recupere o acesso à sua conta'}
+          </p>
+
           <div
             className={`transition-all duration-200 ease-in-out ${isTransitioning ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
               }`}
@@ -461,8 +472,22 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Desktop empty space for background view */}
-      <div className="hidden lg:block flex-1" />
+      {/* Right panel - Background image (desktop only, lazy-loaded) */}
+      {showBg && (
+        <div className="hidden lg:block flex-1 relative">
+          <img
+            src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=1200&quality=80&format=webp` : loginBgUrl}
+            alt=""
+            aria-hidden="true"
+            role="presentation"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          {/* Horizontal gradient to blend form background with image */}
+          <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
+        </div>
+      )}
     </div>
   );
 }
