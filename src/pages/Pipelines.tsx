@@ -24,8 +24,7 @@ import {
   Trophy,
   XCircle,
   CircleDot,
-  RefreshCw,
-  GitBranch
+  RefreshCw
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
@@ -679,7 +678,7 @@ export default function Pipelines() {
       let openVGV = 0;
       for (const lead of stage.leads || []) {
         if (lead.deal_status !== 'won' && lead.deal_status !== 'lost') {
-          openVGV += lead.valor_interesse || lead.interest_property?.preco || lead.interest_plan?.price || lead.property?.preco || 0;
+          openVGV += lead.valor_interesse || lead.interest_property?.preco || lead.interest_plan?.price || 0;
         }
       }
       if (openVGV > 0) map.set(stage.id, { openVGV });
@@ -940,103 +939,90 @@ export default function Pipelines() {
             </Button>
           </div>
         ) : (
-          /* Desktop: Pipeline Selector + Summary Row */
-          <div className="flex flex-col gap-3 mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1 bg-muted">
-                  <GitBranch className="h-3.5 w-3.5 text-foreground" />
-                  <span className="text-xs text-foreground/90 font-medium">Pipeline</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
-                        {currentPipeline?.name || 'Selecionar'}
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48">
-                      {pipelines.map(pipeline => (
-                        <DropdownMenuItem 
-                          key={pipeline.id}
-                          onClick={() => setSelectedPipelineId(pipeline.id)}
-                          className="flex items-center justify-between"
-                        >
-                          <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
-                            {pipeline.name}
-                          </span>
-                          {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 opacity-50 hover:opacity-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeletePipeline(pipeline.id);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                      {isAdmin && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Nova Pipeline
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {canEditPipeline && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+          /* Desktop: original two-row layout */
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+            <div className="flex items-center justify-start gap-2">
+              {/* Pipeline Selector */}
+              <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-muted">
+                <Settings className="h-4 w-4 text-foreground" />
+                <span className="text-xs text-foreground/90 font-medium">Pipeline</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
+                      {currentPipeline?.name || 'Selecionar'}
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {pipelines.map(pipeline => (
+                      <DropdownMenuItem 
+                        key={pipeline.id}
+                        onClick={() => setSelectedPipelineId(pipeline.id)}
+                        className="flex items-center justify-between"
+                      >
+                        <span className={cn(pipeline.id === selectedPipelineId && "font-semibold")}>
+                          {pipeline.name}
+                        </span>
+                        {isAdmin && pipeline.id !== selectedPipelineId && pipelines.length > 1 && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6"
-                            onClick={() => setStagesEditorOpen(true)}
-                            disabled={!selectedPipelineId}
+                            className="h-5 w-5 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePipeline(pipeline.id);
+                            }}
                           >
-                            <Settings className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3 text-destructive" />
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Configurações de Estágios</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-
-                <div className="h-4 w-px bg-border" />
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Leads</span>
-                    <span className="text-sm font-black leading-none mt-1">
-                      {filteredStages.reduce((acc, stage) => acc + (stage.leads?.length || 0), 0)}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">VGV Aberto</span>
-                    <span className="text-sm font-black text-primary leading-none mt-1">
-                      {formatCompactCurrency(Array.from(stageVGVMap.values()).reduce((acc, v) => acc + v.openVGV, 0))}
-                    </span>
-                  </div>
-                </div>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setNewPipelineDialogOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nova Pipeline
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {canEditPipeline && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setStagesEditorOpen(true)}
+                          disabled={!selectedPipelineId}
+                        >
+                          <Settings className="h-4 w-4 text-foreground/80 hover:text-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Gerenciar Colunas</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setNewPipelineDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 text-foreground" />
+                  </Button>
+                )}
               </div>
-
-              {/* Desktop New Button */}
-              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="h-9">
-                <Plus className="h-4 w-4 mr-2" />
-                {newButtonLabel}
-              </Button>
             </div>
             
             {/* Filters Row */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2 overflow-x-auto pb-0">
+              {/* Search */}
               <div className="relative flex-shrink-0">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
@@ -1047,6 +1033,7 @@ export default function Pipelines() {
                 />
               </div>
 
+              {/* Date Filter */}
               <DateFilterPopover
                 datePreset={datePreset}
                 onDatePresetChange={setDatePreset}
@@ -1055,6 +1042,7 @@ export default function Pipelines() {
                 triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start flex-shrink-0"
               />
 
+              {/* Responsible Filter */}
               {(isAdmin || hasLeadViewAll) ? (
                 <Select value={filterUser} onValueChange={setFilterUser}>
                   <SelectTrigger className={cn(
@@ -1078,6 +1066,7 @@ export default function Pipelines() {
                 </div>
               )}
 
+              {/* Tag Filter */}
               <Select value={filterTag} onValueChange={setFilterTag}>
                 <SelectTrigger className={cn(
                   "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
@@ -1099,6 +1088,7 @@ export default function Pipelines() {
                 </SelectContent>
               </Select>
 
+              {/* Deal Status Filter */}
               <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
                 <SelectTrigger className={cn(
                   "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
@@ -1113,7 +1103,8 @@ export default function Pipelines() {
                   <SelectItem value="lost"><span className="flex items-center gap-2"><XCircle className="h-3.5 w-3.5 text-red-600" />Perdido</span></SelectItem>
                 </SelectContent>
               </Select>
-
+            
+              {/* Refresh Button */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1130,10 +1121,15 @@ export default function Pipelines() {
                   <TooltipContent>Atualizar Pipeline</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              
+              {/* Desktop New Button */}
+              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0">
+                <Plus className="h-4 w-4 mr-2" />
+                {newButtonLabel}
+              </Button>
             </div>
           </div>
         )}
-
 
         {/* Empty State */}
         {stages.length === 0 && (
