@@ -373,26 +373,7 @@ serve(async (req) => {
               }
 
               // Handle redistribution if needed
-              let queueReentryBehavior = 'redistribute';
-              try {
-                const { data: matchingQueue } = await supabase
-                  .rpc('pick_round_robin_for_lead', { p_lead_id: existingByPhone.id });
-
-                if (matchingQueue) {
-                  const { data: queueData } = await supabase
-                    .from('round_robins')
-                    .select('reentry_behavior')
-                    .eq('id', matchingQueue)
-                    .single();
-                  if (queueData?.reentry_behavior) {
-                    queueReentryBehavior = queueData.reentry_behavior;
-                  }
-                }
-              } catch (e) {
-                console.log('Could not check reentry behavior, using default redistribute');
-              }
-
-              const shouldKeepAssignee = queueReentryBehavior === 'keep_assignee' && oldAssigneeId;
+              if (!shouldKeepAssignee) {
 
               if (!shouldKeepAssignee) {
                 console.log('Calling handle_lead_intake for redistribution...');
