@@ -97,59 +97,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const fetchProfile = async (userId: string): Promise<boolean> => {
-    try {
-      // Fetch profile and check super admin status in parallel
-      const [userResult, superAdmin] = await Promise.all([
-        supabase.from('users').select('*').eq('id', userId).single(),
-        checkSuperAdmin(userId)
-      ]);
+    return performanceTracker.trackTimed('fetchProfile', async () => {
+      try {
+        // Fetch profile and check super admin status in parallel
+        // Optimized: Select only required fields
+        const [userResult, superAdmin] = await Promise.all([
+          supabase
+            .from('users')
+            .select('id, organization_id, name, email, role, avatar_url, is_active, language, phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf')
+            .eq('id', userId)
+            .single(),
+          checkSuperAdmin(userId)
+        ]);
 
-      const profileData = userResult.data;
+        const profileData = userResult.data;
 
-      if (profileData) {
-        setIsSuperAdmin(superAdmin);
+        if (profileData) {
+          setIsSuperAdmin(superAdmin);
 
-        // Block inactive users (super_admins bypass this check)
-        if (!profileData.is_active && !superAdmin) {
-          console.warn('User is deactivated, signing out');
-          await supabase.auth.signOut();
-          alert('Sua conta foi desativada. Entre em contato com o administrador.');
-          return false;
-        }
-
-        setProfile(profileData as UserProfile);
-
-        const storedImpersonating = localStorage.getItem('impersonating');
-        const activeImpersonation: ImpersonateSession | null = storedImpersonating
-          ? JSON.parse(storedImpersonating)
-          : null;
-
-        const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
-
-        if (orgIdToFetch) {
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('*')
-            .eq('id', orgIdToFetch)
-            .single();
-
-          if (orgData) {
-            if (!orgData.is_active && !superAdmin && !activeImpersonation) {
-              console.warn('Organization is deactivated, signing out');
-              await supabase.auth.signOut();
-              alert('Sua organização foi desativada. Entre em contato com o suporte.');
-              return false;
-            }
-            setOrganization(orgData as Organization);
+          // Block inactive users (super_admins bypass this check)
+          if (!profileData.is_active && !superAdmin) {
+            console.warn('User is deactivated, signing out');
+            await supabase.auth.signOut();
+            alert('Sua conta foi desativada. Entre em contato com o administrador.');
+            return false;
           }
+
+          setProfile(profileData as UserProfile);
+
+          const storedImpersonating = localStorage.getItem('impersonating');
+          const activeImpersonation: ImpersonateSession | null = storedImpersonating
+            ? JSON.parse(storedImpersonating)
+            : null;
+
+          const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
+
+          if (orgIdToFetch) {
+            // Optimized: Select only required fields
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('id, name, logo_url, theme_mode, accent_color, is_active, subscription_status, segment')
+              .eq('id', orgIdToFetch)
+              .single();
+
+            if (orgData) {
+              if (!orgData.is_active && !superAdmin && !activeImpersonation) {
+                console.warn('Organization is deactivated, signing out');
+                await supabase.auth.signOut();
+                alert('Sua organização foi desativada. Entre em contato com o suporte.');
+                return false;
+              }
+              setOrganization(orgData as Organization);
+            }
+          }
+          return true;
         }
-        return true;
+        return false;
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        return false;
       }
-      return false;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      return false;
-    }
+    });
   };
 
   const startImpersonate = async (orgId: string, orgName: string) => {
