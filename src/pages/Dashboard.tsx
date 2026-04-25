@@ -85,6 +85,12 @@ export default function Dashboard() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  useEffect(() => {
+    if (!statsLoading && !evolutionLoading) {
+      performanceTracker.addMetric('Dashboard Full Load', performance.now(), 'ms');
+    }
+  }, [statsLoading, evolutionLoading]);
+
   const funnelComponent = <SalesFunnelWithPipeline filters={filters} />;
 
   const periodLabel = datePresetOptions.find(o => o.value === datePreset)?.label || 'Período selecionado';
