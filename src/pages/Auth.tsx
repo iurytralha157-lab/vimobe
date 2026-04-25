@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert, UserPlus } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +18,10 @@ import { getFriendlyErrorMessage } from "@/lib/error-handler";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
-  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres")
+  password: z.string()
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .regex(/[A-Z]/, "Senha deve conter pelo menos uma letra maiúscula")
+    .regex(/[0-9]/, "Senha deve conter pelo menos um número")
 });
 
 const RESET_COOLDOWN_MS = 60 * 1000; // 1 minuto entre resets
@@ -288,8 +292,8 @@ export default function Auth() {
       <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />
 
       {/* Login form container */}
-      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0">
-        <div className="w-full max-w-sm">
+      <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col items-center justify-start lg:justify-center px-8 py-8 lg:py-10 flex-shrink-0 mx-auto lg:mx-0 flex-1 lg:flex-none relative z-10 -mt-16 lg:mt-0 animate-in">
+        <div className="w-full max-w-sm bg-card/70 backdrop-blur-xl p-8 rounded-3xl shadow-soft border border-border/50">
           <div className="flex flex-col items-center mb-2 min-h-[56px] justify-center">
             {settingsLoading ? (
               <div className="h-10 w-32 bg-muted animate-pulse rounded-lg" />
@@ -411,15 +415,32 @@ export default function Auth() {
                   Entrar
                 </Button>
 
-                <div className="text-center">
+                <div className="text-center space-y-4 pt-2">
                   <button
                     type="button"
                     onClick={() => switchMode('forgot')}
                     disabled={loginAttempts.isLockedOut}
-                    className="text-sm text-primary hover:underline disabled:opacity-50"
+                    className="text-sm text-primary hover:underline disabled:opacity-50 block w-full"
                   >
                     Esqueceu sua senha?
                   </button>
+                  
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">Ou</span>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/signup"
+                    className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
+                  >
+                    <UserPlus size={16} />
+                    Criar uma nova conta
+                  </Link>
                 </div>
               </form>
             ) : (

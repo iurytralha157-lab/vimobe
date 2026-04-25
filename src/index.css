@@ -46,8 +46,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary - Orange #ff482a */
-    --primary: 8 100% 58%;
+    /* Primary - Modern Purple #7c3aed */
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -56,13 +56,13 @@
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 8 100% 96%;
-    --accent-foreground: 8 100% 45%;
+    --accent: 262 83% 96%;
+    --accent-foreground: 262 83% 45%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 8 100% 58%;
+    --success: 142 76% 45%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
@@ -70,34 +70,34 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 8 100% 58%;
+    --ring: 262 83% 58%;
 
     --radius: 0.875rem;
 
     /* Sidebar */
     --sidebar-background: 220 14% 98%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 187 85% 40%;
+    --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 8 100% 96%;
-    --sidebar-accent-foreground: 8 100% 45%;
+    --sidebar-accent: 262 83% 96%;
+    --sidebar-accent-foreground: 262 83% 45%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 187 85% 40%;
+    --sidebar-ring: 262 83% 58%;
 
     /* Kanban colors */
     --kanban-new: 217 91% 60%;
     --kanban-contacted: 187 85% 40%;
-    --kanban-active: 8 100% 58%;
+    --kanban-active: 262 83% 58%;
     --kanban-meeting: 262 83% 58%;
     --kanban-noshow: 38 92% 50%;
     --kanban-negotiation: 330 81% 60%;
-    --kanban-closed: 8 100% 58%;
+    --kanban-closed: 262 83% 58%;
     --kanban-lost: 0 84% 60%;
 
     /* Chart colors */
     --chart-1: 187 85% 40%;
     --chart-2: 262 83% 58%;
-    --chart-3: 8 100% 58%;
+    --chart-3: 262 83% 58%;
     --chart-4: 38 92% 50%;
     --chart-5: 330 81% 60%;
 
@@ -123,8 +123,8 @@
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 98%;
 
-    /* Orange Primary #ff482a */
-    --primary: 8 100% 58%;
+    /* Modern Purple Primary #7c3aed */
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 12%;
@@ -133,14 +133,14 @@
     --muted: 0 0% 14%;
     --muted-foreground: 0 0% 63%;
 
-    /* Orange Accent */
-    --accent: 8 100% 12%;
-    --accent-foreground: 8 100% 65%;
+    /* Purple Accent */
+    --accent: 262 83% 12%;
+    --accent-foreground: 262 83% 65%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 8 100% 58%;
+    --success: 142 76% 45%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 85% 50%;
@@ -148,17 +148,17 @@
 
     --border: 0 0% 15%;
     --input: 0 0% 15%;
-    --ring: 8 100% 58%;
+    --ring: 262 83% 58%;
 
     /* Sidebar Black Premium */
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 8 100% 58%;
+    --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 8 100% 12%;
-    --sidebar-accent-foreground: 8 100% 65%;
+    --sidebar-accent: 262 83% 12%;
+    --sidebar-accent-foreground: 262 83% 65%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 21 77% 51%;
+    --sidebar-ring: 262 83% 58%;
     --radius: 0.875rem;
 
     /* Chat bubble - other person (inverted for dark mode) */

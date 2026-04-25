@@ -210,7 +210,7 @@ export function PropertyPickerDialog({ properties, selectedPropertyId, onSelect,
                         </div>
                       )}
                       {p.code && (
-                        <Badge className="absolute top-1.5 left-1.5 text-[9px] px-1.5 py-0 h-4 bg-[#ff482a] text-white backdrop-blur-sm border-0">
+                        <Badge className="absolute top-1.5 left-1.5 text-[9px] px-1.5 py-0 h-4 bg-primary text-white backdrop-blur-sm border-0">
                           {p.code}
                         </Badge>
                       )}
