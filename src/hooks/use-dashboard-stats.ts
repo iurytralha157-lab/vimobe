@@ -414,7 +414,7 @@ export function useFunnelData(filters?: DashboardFilters, pipelineId?: string | 
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, pipelineId, user?.id],
+    queryKey: ['funnel-data', filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId, pipelineId, user?.id],
     queryFn: async () => {
       // Get visibility level (admin, team leader, or normal user)
       const visibility = user?.id 
