@@ -328,7 +328,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         overduePayables,
         paidCommissions,
       };
-    },
+    });
+  },
     staleTime: 1000 * 60 * 5,
   });
 }
