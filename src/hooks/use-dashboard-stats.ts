@@ -253,12 +253,49 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       ]);
 
       if (error) {
-...
+        console.error('Error fetching enhanced stats:', error);
+        return {
+          totalLeads: 0,
+          conversionRate: 0,
+          closedLeads: 0,
+          avgResponseTime: '--',
+          totalSalesValue: 0,
+          pendingCommissions: 0,
+          leadsTrend: 0,
+          conversionTrend: 0,
+          closedTrend: 0,
+          totalReceivables: 0,
+          totalPayables: 0,
+          overdueReceivables: 0,
+          overduePayables: 0,
+          paidCommissions: 0,
         };
       }
 
       const pendingCommissions = commissions
-...
+        ?.filter(c => c.status === 'forecast' || c.status === 'approved')
+        ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
+      
+      const paidCommissions = commissions
+        ?.filter(c => c.status === 'paid')
+        ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
+
+      const receivables = financialEntries?.filter(e => e.type === 'receivable') || [];
+      const payables = financialEntries?.filter(e => e.type === 'payable') || [];
+      
+      const totalReceivables = receivables
+        .filter(e => e.status === 'pending')
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      
+      const totalPayables = payables
+        .filter(e => e.status === 'pending')
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      
+      const overdueReceivables = receivables
+        .filter(e => e.status === 'pending' && e.due_date && e.due_date < todayStr)
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      
+      const overduePayables = payables
         .filter(e => e.status === 'pending' && e.due_date && e.due_date < todayStr)
         .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
