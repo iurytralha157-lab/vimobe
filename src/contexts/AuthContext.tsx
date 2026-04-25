@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/hooks/use-audit-logs';
+import { performanceTracker } from '@/lib/performance';
 interface UserProfile {
   id: string;
   organization_id: string | null;
