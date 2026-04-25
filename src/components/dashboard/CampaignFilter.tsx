@@ -43,26 +43,17 @@ export function CampaignFilter({
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      // Get leads for this org to join with lead_meta
-      const { data: leads } = await supabase
-        .from('leads')
-        .select('id')
-        .eq('organization_id', organization.id);
-      
-      if (!leads || leads.length === 0) return [];
-      const leadIds = leads.map(l => l.id);
-
       const { data, error } = await supabase
         .from('lead_meta')
-        .select('campaign_id, campaign_name')
-        .in('lead_id', leadIds)
+        .select('campaign_id, campaign_name, leads!inner(organization_id)')
+        .eq('leads.organization_id', organization.id)
         .not('campaign_id', 'is', null)
         .order('campaign_name');
       
       if (error) throw error;
       
       const uniqueMap = new Map();
-      data.forEach(item => {
+      (data as any[]).forEach(item => {
         if (item.campaign_id) {
           uniqueMap.set(item.campaign_id, item.campaign_name || 'Sem nome');
         }
