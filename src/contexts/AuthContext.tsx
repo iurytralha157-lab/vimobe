@@ -95,15 +95,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string): Promise<boolean> => {
     try {
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Fetch profile and check super admin status in parallel
+      const [userResult, superAdmin] = await Promise.all([
+        supabase.from('users').select('*').eq('id', userId).single(),
+        checkSuperAdmin(userId)
+      ]);
+
+      const profileData = userResult.data;
 
       if (profileData) {
-        // Check if super_admin
-        const superAdmin = await checkSuperAdmin(userId);
         setIsSuperAdmin(superAdmin);
 
         // Block inactive users (super_admins bypass this check)
@@ -116,8 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setProfile(profileData as UserProfile);
 
-        // Ler do localStorage para garantir que o valor está atualizado,
-        // mesmo durante o startup onde o estado React ainda pode ser null (stale closure)
         const storedImpersonating = localStorage.getItem('impersonating');
         const activeImpersonation: ImpersonateSession | null = storedImpersonating
           ? JSON.parse(storedImpersonating)
@@ -133,7 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
 
           if (orgData) {
-            // Block access if organization is inactive (super_admins bypass)
             if (!orgData.is_active && !superAdmin && !activeImpersonation) {
               console.warn('Organization is deactivated, signing out');
               await supabase.auth.signOut();
@@ -223,8 +220,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session.user);
 
-      await fetchProfile(session.user.id);
-      await checkMultiOrg(session.user.id);
+      await Promise.all([
+        fetchProfile(session.user.id),
+        checkMultiOrg(session.user.id)
+      ]);
       setLoading(false);
     });
 

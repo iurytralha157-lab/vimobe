@@ -17,10 +17,10 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 
-// Eager imports - lightweight/critical
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
+// Lazy imports - critical routes
+const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Lazy imports - heavy pages
 const Onboarding = lazy(() => import("./pages/Onboarding"));
@@ -147,7 +147,9 @@ function AppRoutes() {
 
   useEffect(() => {
     if (user && !loading) {
-      preloadCoreCrmPages();
+      // Delay preloading slightly to prioritize current page render
+      const timer = setTimeout(preloadCoreCrmPages, 2000);
+      return () => clearTimeout(timer);
     }
   }, [user, loading]);
 
