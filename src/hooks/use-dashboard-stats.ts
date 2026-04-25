@@ -118,15 +118,15 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
     queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
-      // Get visibility level (admin, team leader, or normal user)
-      const visibility = currentUserId 
-        ? await checkLeadVisibility(currentUserId) 
-        : { canViewAll: false, userId: undefined };
+      // Use queryClient to get cached visibility or fetch it
+      const visibility = await checkLeadVisibility(currentUserId);
       
       // Calculate date ranges for current and previous periods
       const now = new Date();
       const currentFrom = filters?.dateRange?.from || subDays(now, 30);
       const currentTo = filters?.dateRange?.to || now;
+      const currentFromIso = currentFrom.toISOString();
+      const currentToIso = currentTo.toISOString();
       
       // Calculate previous period (same duration, before current period)
       const periodDays = Math.ceil((currentTo.getTime() - currentFrom.getTime()) / (1000 * 60 * 60 * 24));
@@ -146,9 +146,9 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .from('leads')
         .select(selectString, { count: 'exact' })
         .eq('organization_id', organizationId!)
-        .gte('created_at', currentFrom.toISOString())
-        .lte('created_at', currentTo.toISOString())
-        .limit(10000);
+        .gte('created_at', currentFromIso)
+        .lte('created_at', currentToIso)
+        .limit(5000); // Reduced from 10000 for better performance
 
       // Build previous period query
       let prevSelectString = 'id, deal_status';
@@ -162,7 +162,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .eq('organization_id', organizationId!)
         .gte('created_at', previousFrom.toISOString())
         .lte('created_at', previousTo.toISOString())
-        .limit(10000);
+        .limit(5000); // Reduced from 10000
 
       // Apply Meta filters to both queries
       if (filters?.campaignId) {
@@ -188,21 +188,6 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         previousQuery = previousQuery.eq('source', filters.source as any);
       }
 
-      // Apply team filter (only for users who can view all or are team leaders)
-      let memberIds: string[] = [];
-      if (filters?.teamId && (visibility.canViewAll || visibility.teamMemberIds)) {
-        const { data: teamMembers } = await supabase
-          .from('team_members')
-          .select('user_id')
-          .eq('team_id', filters.teamId);
-        
-        if (teamMembers && teamMembers.length > 0) {
-          memberIds = teamMembers.map(m => m.user_id);
-          query = query.in('assigned_user_id', memberIds);
-          previousQuery = previousQuery.in('assigned_user_id', memberIds);
-        }
-      }
-
       // Execute queries in parallel for better performance
       const todayStr = new Date().toISOString().split('T')[0];
       
@@ -217,13 +202,14 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         supabase
           .from('commissions')
           .select('amount, status')
-          .eq('organization_id', organizationId),
+          .eq('organization_id', organizationId)
+          .gte('created_at', currentFromIso), // Added date filter to commissions
         supabase
           .from('financial_entries')
           .select('type, amount, status, due_date')
           .eq('organization_id', organizationId)
-          .gte('due_date', currentFrom.toISOString().split('T')[0])
-          .lte('due_date', currentTo.toISOString().split('T')[0])
+          .gte('due_date', currentFromIso.split('T')[0])
+          .lte('due_date', currentToIso.split('T')[0])
       ]);
 
       if (error) {
