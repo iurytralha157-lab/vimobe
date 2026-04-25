@@ -147,7 +147,9 @@ function AppRoutes() {
 
   useEffect(() => {
     if (user && !loading) {
-      preloadCoreCrmPages();
+      // Delay preloading slightly to prioritize current page render
+      const timer = setTimeout(preloadCoreCrmPages, 2000);
+      return () => clearTimeout(timer);
     }
   }, [user, loading]);
 
