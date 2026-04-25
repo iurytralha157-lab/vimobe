@@ -264,7 +264,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       }, 0) || 0;
 
       // Calculate previous stats for trends using deal_status
-      const prevTotalLeads = previousLeads?.length || 0;
+      const prevTotalLeads = prevCount || previousLeads?.length || 0;
       const prevClosedLeads = previousLeads?.filter((l: any) => l.deal_status === 'won').length || 0;
       const prevConversionRate = prevTotalLeads > 0 ? Math.round((prevClosedLeads / prevTotalLeads) * 100) : 0;
 
