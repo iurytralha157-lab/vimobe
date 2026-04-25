@@ -133,14 +133,14 @@
     --muted: 0 0% 14%;
     --muted-foreground: 0 0% 63%;
 
-    /* Orange Accent */
-    --accent: 8 100% 12%;
-    --accent-foreground: 8 100% 65%;
+    /* Purple Accent */
+    --accent: 262 83% 12%;
+    --accent-foreground: 262 83% 65%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
 
-    --success: 8 100% 58%;
+    --success: 142 76% 45%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 85% 50%;
@@ -148,17 +148,17 @@
 
     --border: 0 0% 15%;
     --input: 0 0% 15%;
-    --ring: 8 100% 58%;
+    --ring: 262 83% 58%;
 
     /* Sidebar Black Premium */
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 8 100% 58%;
+    --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 8 100% 12%;
-    --sidebar-accent-foreground: 8 100% 65%;
+    --sidebar-accent: 262 83% 12%;
+    --sidebar-accent-foreground: 262 83% 65%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 21 77% 51%;
+    --sidebar-ring: 262 83% 58%;
     --radius: 0.875rem;
 
     /* Chat bubble - other person (inverted for dark mode) */
