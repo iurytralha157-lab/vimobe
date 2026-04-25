@@ -69,7 +69,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
-import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts } from '@/hooks/use-stages';
+import { useStagesWithLeads, usePipelines, useCreatePipeline, useDeletePipeline, useCreateStage, useFilteredStageCounts, useLeadMetaFilters } from '@/hooks/use-stages';
 import { useLoadMoreLeads } from '@/hooks/use-stages';
 import { CreateLeadDialog } from '@/components/leads/CreateLeadDialog';
 import { useOrganizationUsers } from '@/hooks/use-users';
@@ -113,6 +113,9 @@ export default function Pipelines() {
   const [filterUser, setFilterUser] = useState<string | undefined>(undefined);
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterDealStatus, setFilterDealStatus] = useState<string>('all');
+  const [filterCampaign, setFilterCampaign] = useState<string>('all');
+  const [filterAdSet, setFilterAdSet] = useState<string>('all');
+  const [filterAd, setFilterAd] = useState<string>('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
@@ -138,6 +141,7 @@ export default function Pipelines() {
   const deletePipeline = useDeletePipeline();
   const createStage = useCreateStage();
   const loadMoreLeads = useLoadMoreLeads();
+  const { data: metaFilters } = useLeadMetaFilters();
   
   // Set initial pipeline when pipelines load
   useEffect(() => {
@@ -187,6 +191,9 @@ export default function Pipelines() {
       filterTag: filterTag !== 'all' ? filterTag : undefined,
       filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
       searchQuery: searchQuery || undefined,
+      filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
+      filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
+      filterAd: filterAd !== 'all' ? filterAd : undefined,
     }
   );
   const { data: users = [] } = useOrganizationUsers();
@@ -219,6 +226,9 @@ export default function Pipelines() {
         filterTag: filterTag !== 'all' ? filterTag : undefined,
         filterDealStatus: filterDealStatus !== 'all' ? filterDealStatus : undefined,
         searchQuery: searchQuery || undefined,
+        filterCampaign: filterCampaign !== 'all' ? filterCampaign : undefined,
+        filterAdSet: filterAdSet !== 'all' ? filterAdSet : undefined,
+        filterAd: filterAd !== 'all' ? filterAd : undefined,
       },
     });
   }, [selectedPipelineId, stages, loadMoreLeads, filterUser, dateRange, filterTag, filterDealStatus, searchQuery]);
@@ -832,11 +842,11 @@ export default function Pipelines() {
                   size="icon"
                   className={cn(
                     "h-8 w-8 flex-shrink-0 relative",
-                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && "border-primary text-primary"
+                    ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && "border-primary text-primary"
                   )}
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && (
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
                     <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
                   )}
                 </Button>
@@ -906,7 +916,49 @@ export default function Pipelines() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || searchQuery) && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Campanha</label>
+                    <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                      <SelectTrigger className={cn("h-9 w-full text-xs", filterCampaign && filterCampaign !== 'all' && "border-primary text-primary")}>
+                        <SelectValue placeholder="Campanha" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {metaFilters?.campaigns.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Conjunto</label>
+                    <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                      <SelectTrigger className={cn("h-9 w-full text-xs", filterAdSet && filterAdSet !== 'all' && "border-primary text-primary")}>
+                        <SelectValue placeholder="Conjunto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {metaFilters?.adsets.map(a => (
+                          <SelectItem key={a} value={a}>{a}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Anúncio</label>
+                    <Select value={filterAd} onValueChange={setFilterAd}>
+                      <SelectTrigger className={cn("h-9 w-full text-xs", filterAd && filterAd !== 'all' && "border-primary text-primary")}>
+                        <SelectValue placeholder="Anúncio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {metaFilters?.ads.map(a => (
+                          <SelectItem key={a} value={a}>{a}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -915,6 +967,9 @@ export default function Pipelines() {
                         setFilterUser(isAdmin || hasLeadViewAll ? 'all' : profile?.id);
                         setFilterTag('all');
                         setFilterDealStatus('all');
+                        setFilterCampaign('all');
+                        setFilterAdSet('all');
+                        setFilterAd('all');
                         setSearchInput('');
                         setSearchQuery('');
                       }}
@@ -1101,6 +1156,54 @@ export default function Pipelines() {
                   <SelectItem value="open"><span className="flex items-center gap-2"><CircleDot className="h-3.5 w-3.5 text-muted-foreground" />Aberto</span></SelectItem>
                   <SelectItem value="won"><span className="flex items-center gap-2"><Trophy className="h-3.5 w-3.5 text-emerald-600" />Ganho</span></SelectItem>
                   <SelectItem value="lost"><span className="flex items-center gap-2"><XCircle className="h-3.5 w-3.5 text-red-600" />Perdido</span></SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Campaign Filter */}
+              <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                <SelectTrigger className={cn(
+                  "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                  filterCampaign && filterCampaign !== 'all' && "border-primary text-primary"
+                )}>
+                  <SelectValue placeholder="Campanha" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Campanhas</SelectItem>
+                  {metaFilters?.campaigns.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* AdSet Filter */}
+              <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                <SelectTrigger className={cn(
+                  "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                  filterAdSet && filterAdSet !== 'all' && "border-primary text-primary"
+                )}>
+                  <SelectValue placeholder="Conjunto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Conjuntos</SelectItem>
+                  {metaFilters?.adsets.map(a => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Ad Filter */}
+              <Select value={filterAd} onValueChange={setFilterAd}>
+                <SelectTrigger className={cn(
+                  "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                  filterAd && filterAd !== 'all' && "border-primary text-primary"
+                )}>
+                  <SelectValue placeholder="Anúncio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Anúncios</SelectItem>
+                  {metaFilters?.ads.map(a => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             

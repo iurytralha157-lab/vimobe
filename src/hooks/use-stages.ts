@@ -15,6 +15,9 @@ interface FilteredStageCountsParams {
   filterDealStatus?: string;
   searchQuery?: string;
   dateRange?: { from: Date; to: Date } | null;
+  filterCampaign?: string;
+  filterAdSet?: string;
+  filterAd?: string;
 }
 
 // Limite de leads por estágio para paginação
@@ -31,7 +34,7 @@ const LEAD_PIPELINE_FIELDS = `
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
-  lead_meta(campaign_name, platform)
+  lead_meta(campaign_name, adset_name, ad_name, platform)
 `;
 
 export function useStages(pipelineId?: string) {
@@ -78,13 +81,16 @@ export function useStagesWithLeads(
     filterTag?: string;
     filterDealStatus?: string;
     searchQuery?: string;
+    filterCampaign?: string;
+    filterAdSet?: string;
+    filterAd?: string;
   }
 ) {
   const dateFromISO = filters?.dateRange?.from?.toISOString();
   const dateToISO = filters?.dateRange?.to?.toISOString();
   
   return useQuery({
-    queryKey: ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery],
+    queryKey: ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd],
     queryFn: async () => {
       // Get default pipeline if not provided
       let targetPipelineId = pipelineId;
@@ -152,6 +158,15 @@ export function useStagesWithLeads(
         }
         if (taggedLeadIds) {
           query = query.in('id', taggedLeadIds);
+        }
+        if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
+          query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
+        }
+        if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
+          query = query.eq('lead_meta.adset_name', filters.filterAdSet);
+        }
+        if (filters?.filterAd && filters.filterAd !== 'all') {
+          query = query.eq('lead_meta.ad_name', filters.filterAd);
         }
         return query;
       };
@@ -325,6 +340,40 @@ export function useStagesWithLeads(
   });
 }
 
+export function useLeadMetaFilters() {
+  return useQuery({
+    queryKey: ['lead-meta-filters'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { campaigns: [], adsets: [], ads: [] };
+      
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const orgId = profile?.organization_id;
+      if (!orgId) return { campaigns: [], adsets: [], ads: [] };
+
+      const { data, error } = await (supabase as any)
+        .from('lead_meta')
+        .select('campaign_name, adset_name, ad_name, leads!inner(organization_id)')
+        .eq('leads.organization_id', orgId)
+        .not('campaign_name', 'is', null);
+      
+      if (error) throw error;
+      
+      const campaigns = [...new Set((data as any[]).map(item => item.campaign_name).filter(Boolean))].sort() as string[];
+      const adsets = [...new Set((data as any[]).map(item => item.adset_name).filter(Boolean))].sort() as string[];
+      const ads = [...new Set((data as any[]).map(item => item.ad_name).filter(Boolean))].sort() as string[];
+      
+      return { campaigns, adsets, ads };
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
 export function useFilteredStageCounts({
   pipelineId,
   stageIds,
@@ -333,6 +382,9 @@ export function useFilteredStageCounts({
   filterDealStatus,
   searchQuery,
   dateRange,
+  filterCampaign,
+  filterAdSet,
+  filterAd,
 }: FilteredStageCountsParams) {
   return useQuery({
     queryKey: [
@@ -345,6 +397,9 @@ export function useFilteredStageCounts({
       searchQuery,
       dateRange?.from.toISOString(),
       dateRange?.to.toISOString(),
+      filterCampaign,
+      filterAdSet,
+      filterAd,
     ],
     enabled: !!pipelineId && stageIds.length > 0,
     staleTime: 30_000,
@@ -399,6 +454,18 @@ export function useFilteredStageCounts({
 
           if (taggedLeadIds) {
             query = query.in('id', taggedLeadIds);
+          }
+
+          if (filterCampaign && filterCampaign !== 'all') {
+            query = query.eq('lead_meta.campaign_name', filterCampaign);
+          }
+
+          if (filterAdSet && filterAdSet !== 'all') {
+            query = query.eq('lead_meta.adset_name', filterAdSet);
+          }
+
+          if (filterAd && filterAd !== 'all') {
+            query = query.eq('lead_meta.ad_name', filterAd);
           }
 
           const { count, error } = await query;
@@ -599,6 +666,9 @@ export function useLoadMoreLeads() {
         filterTag?: string;
         filterDealStatus?: string;
         searchQuery?: string;
+        filterCampaign?: string;
+        filterAdSet?: string;
+        filterAd?: string;
       };
     }) => {
       // Pre-fetch tagged lead IDs if tag filter is active
@@ -637,6 +707,15 @@ export function useLoadMoreLeads() {
       }
       if (taggedLeadIds) {
         query = query.in('id', taggedLeadIds);
+      }
+      if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
+        query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
+      }
+      if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
+        query = query.eq('lead_meta.adset_name', filters.filterAdSet);
+      }
+      if (filters?.filterAd && filters.filterAd !== 'all') {
+        query = query.eq('lead_meta.ad_name', filters.filterAd);
       }
       
       const { data, error } = await query;
@@ -744,7 +823,7 @@ export function useLoadMoreLeads() {
       // Build matching cache key
       const dateFromISO = filters?.dateRange?.from?.toISOString();
       const dateToISO = filters?.dateRange?.to?.toISOString();
-      const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery];
+      const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd];
       // Mesclar novos leads no cache existente
       queryClient.setQueryData(cacheKey, (old: any[] | undefined) => {
         if (!old) return old;
