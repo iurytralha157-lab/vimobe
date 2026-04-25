@@ -135,15 +135,6 @@ export default function Dashboard() {
           {/* Left column (col 1-8): KPIs + Activities + Evolution */}
           <div className="col-span-8 flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3 auto-rows-min">
-            {isTelecom ? (
-              <div className="col-span-2">
-                <TelecomKPICards 
-                  data={telecomKpiData} 
-                  isLoading={telecomStatsLoading} 
-                  periodLabel={periodLabel}
-                />
-              </div>
-            ) : (
               <KPICardsGrid 
                 data={kpiData} 
                 isLoading={statsLoading} 
@@ -151,7 +142,6 @@ export default function Dashboard() {
                 propertyCount={propertyCount}
                 siteVisits={siteVisits}
               />
-            )}
             </div>
 
             {/* Evolution chart - fills remaining height */}
