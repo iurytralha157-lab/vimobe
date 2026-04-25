@@ -16,6 +16,7 @@ import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
+import { MetricsPanel } from "@/components/MetricsPanel";
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
@@ -189,6 +190,7 @@ function AppRoutes() {
       {!isResetPasswordRoute && user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
+        <MetricsPanel />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={renderAuthRoute()} />

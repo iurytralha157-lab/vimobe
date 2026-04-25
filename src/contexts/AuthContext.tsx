@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/hooks/use-audit-logs';
+import { performanceTracker } from '@/lib/performance';
 interface UserProfile {
   id: string;
   organization_id: string | null;
@@ -74,79 +75,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
-    // Check both user_roles table AND users.role field for super_admin
-    const [rolesResult, usersResult] = await Promise.all([
-      (supabase as any)
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'super_admin')
-        .maybeSingle(),
-      supabase
-        .from('users')
-        .select('role')
-        .eq('id', userId)
-        .eq('role', 'super_admin')
-        .maybeSingle()
-    ]);
+    return performanceTracker.trackTimed('checkSuperAdmin', async () => {
+      // Check both user_roles table AND users.role field for super_admin
+      const [rolesResult, usersResult] = await Promise.all([
+        (supabase as any)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'super_admin')
+          .maybeSingle(),
+        supabase
+          .from('users')
+          .select('role')
+          .eq('id', userId)
+          .eq('role', 'super_admin')
+          .maybeSingle()
+      ]);
 
-    return !!(rolesResult.data || usersResult.data);
+      return !!(rolesResult.data || usersResult.data);
+    });
   };
 
   const fetchProfile = async (userId: string): Promise<boolean> => {
-    try {
-      // Fetch profile and check super admin status in parallel
-      const [userResult, superAdmin] = await Promise.all([
-        supabase.from('users').select('*').eq('id', userId).single(),
-        checkSuperAdmin(userId)
-      ]);
+    return performanceTracker.trackTimed('fetchProfile', async () => {
+      try {
+        // Fetch profile and check super admin status in parallel
+        // Optimized: Select only required fields
+        const [userResult, superAdmin] = await Promise.all([
+          supabase
+            .from('users')
+            .select('id, organization_id, name, email, role, avatar_url, is_active, language, phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf')
+            .eq('id', userId)
+            .single(),
+          checkSuperAdmin(userId)
+        ]);
 
-      const profileData = userResult.data;
+        const profileData = userResult.data;
 
-      if (profileData) {
-        setIsSuperAdmin(superAdmin);
+        if (profileData) {
+          setIsSuperAdmin(superAdmin);
 
-        // Block inactive users (super_admins bypass this check)
-        if (!profileData.is_active && !superAdmin) {
-          console.warn('User is deactivated, signing out');
-          await supabase.auth.signOut();
-          alert('Sua conta foi desativada. Entre em contato com o administrador.');
-          return false;
-        }
-
-        setProfile(profileData as UserProfile);
-
-        const storedImpersonating = localStorage.getItem('impersonating');
-        const activeImpersonation: ImpersonateSession | null = storedImpersonating
-          ? JSON.parse(storedImpersonating)
-          : null;
-
-        const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
-
-        if (orgIdToFetch) {
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('*')
-            .eq('id', orgIdToFetch)
-            .single();
-
-          if (orgData) {
-            if (!orgData.is_active && !superAdmin && !activeImpersonation) {
-              console.warn('Organization is deactivated, signing out');
-              await supabase.auth.signOut();
-              alert('Sua organização foi desativada. Entre em contato com o suporte.');
-              return false;
-            }
-            setOrganization(orgData as Organization);
+          // Block inactive users (super_admins bypass this check)
+          if (!profileData.is_active && !superAdmin) {
+            console.warn('User is deactivated, signing out');
+            await supabase.auth.signOut();
+            alert('Sua conta foi desativada. Entre em contato com o administrador.');
+            return false;
           }
+
+          setProfile(profileData as UserProfile);
+
+          const storedImpersonating = localStorage.getItem('impersonating');
+          const activeImpersonation: ImpersonateSession | null = storedImpersonating
+            ? JSON.parse(storedImpersonating)
+            : null;
+
+          const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
+
+          if (orgIdToFetch) {
+            // Optimized: Select only required fields
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('id, name, logo_url, theme_mode, accent_color, is_active, subscription_status, segment')
+              .eq('id', orgIdToFetch)
+              .single();
+
+            if (orgData) {
+              if (!orgData.is_active && !superAdmin && !activeImpersonation) {
+                console.warn('Organization is deactivated, signing out');
+                await supabase.auth.signOut();
+                alert('Sua organização foi desativada. Entre em contato com o suporte.');
+                return false;
+              }
+              setOrganization(orgData as Organization);
+            }
+          }
+          return true;
         }
-        return true;
+        return false;
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        return false;
       }
-      return false;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      return false;
-    }
+    });
   };
 
   const startImpersonate = async (orgId: string, orgName: string) => {
@@ -404,21 +415,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user has multiple orgs after profile is loaded
   const checkMultiOrg = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('organization_members' as any)
-        .select('organization_id')
-        .eq('user_id', userId)
-        .eq('is_active', true);
+    return performanceTracker.trackTimed('checkMultiOrg', async () => {
+      try {
+        const { data, error } = await supabase
+          .from('organization_members' as any)
+          .select('organization_id')
+          .eq('user_id', userId)
+          .eq('is_active', true);
 
-      if (!error && data && data.length > 1) {
-        setNeedsOrgSelection(true);
-      } else {
+        if (!error && data && data.length > 1) {
+          setNeedsOrgSelection(true);
+        } else {
+          setNeedsOrgSelection(false);
+        }
+      } catch {
         setNeedsOrgSelection(false);
       }
-    } catch {
-      setNeedsOrgSelection(false);
-    }
+    });
   };
 
   return (

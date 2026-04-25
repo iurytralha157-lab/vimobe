@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { performanceTracker } from '@/lib/performance';
 import { AppLayout } from '@/components/layout/AppLayout';
 
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
@@ -83,6 +84,12 @@ export default function Dashboard() {
     enabled: !!organization?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  useEffect(() => {
+    if (!statsLoading && !evolutionLoading) {
+      performanceTracker.addMetric('Dashboard Full Load', performance.now(), 'ms');
+    }
+  }, [statsLoading, evolutionLoading]);
 
   const funnelComponent = <SalesFunnelWithPipeline filters={filters} />;
 

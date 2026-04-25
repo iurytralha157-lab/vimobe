@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { performanceTracker } from '@/lib/performance';
 import { subDays, format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DashboardFilters } from './use-dashboard-filters';
@@ -118,6 +119,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
     queryKey: ['enhanced-dashboard-stats', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
+      return performanceTracker.trackTimed('useEnhancedDashboardStats', async () => {
       // Use queryClient to get cached visibility or fetch it
       const visibility = await checkLeadVisibility(currentUserId);
       
@@ -326,7 +328,8 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         overduePayables,
         paidCommissions,
       };
-    },
+    });
+  },
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -776,6 +779,7 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
     queryKey: ['deals-evolution', currentUserId, organizationId, filters?.dateRange?.from?.toISOString(), filters?.dateRange?.to?.toISOString(), filters?.teamId, filters?.userId, filters?.source, filters?.campaignId, filters?.adSetId, filters?.adId],
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<DealsEvolutionPoint[]> => {
+      return performanceTracker.trackTimed('useDealsEvolutionData', async () => {
       // Get visibility level
       const visibility = currentUserId 
         ? await checkLeadVisibility(currentUserId) 
@@ -891,7 +895,8 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       });
 
       return result;
-    },
+    });
+  },
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
