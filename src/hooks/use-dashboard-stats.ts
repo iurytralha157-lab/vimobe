@@ -780,12 +780,28 @@ export function useDealsEvolutionData(filters?: DashboardFilters) {
       const daysDiff = differenceInDays(dateTo, dateFrom);
       
       // Build base query
+      let selectString = 'id, created_at, deal_status, assigned_user_id, source';
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
       let query = supabase
         .from('leads')
-        .select('id, created_at, deal_status, assigned_user_id, source')
+        .select(selectString)
         .eq('organization_id', organizationId!)
         .gte('created_at', dateFrom.toISOString())
         .lte('created_at', dateTo.toISOString());
+
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        query = query.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        query = query.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        query = query.eq('lead_meta.ad_id', filters.adId);
+      }
 
       // Apply visibility filter (admin, team leader, or self-only)
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
