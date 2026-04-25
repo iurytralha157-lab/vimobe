@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
   const { organization, user } = useAuth();
-  const isTelecom = organization?.segment === 'telecom';
+  
 
   // Property count query
   const { data: propertyCount = 0 } = useQuery({
