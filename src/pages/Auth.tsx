@@ -51,7 +51,7 @@ export default function Auth() {
   const securityLogger = useSecurityLogger();
 
   const logoUrl = useMemo(() => {
-    if (!systemSettings) return null;
+    if (!systemSettings) return '/logo.png';
     return resolvedTheme === 'dark'
       ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
       : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
@@ -78,6 +78,8 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bgLoaded, setBgLoaded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  const [bgError, setBgError] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => {
     return localStorage.getItem('remember_me') === 'true';
   });
@@ -87,25 +89,25 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Optimized background image loading
+  // Background image loading - no delay for "speed"
   useEffect(() => {
-    if (!loginBgUrl) return;
+    if (!loginBgUrl) {
+      setBgLoaded(true);
+      return;
+    }
     
-    // Delay loading of the heavy background image to prioritize form rendering
-    // and use a WebP version with better compression
-    const timer = setTimeout(() => {
-      const img = new Image();
-      img.onload = () => setBgLoaded(true);
+    const img = new Image();
+    img.onload = () => setBgLoaded(true);
+    img.onerror = () => {
+      setBgError(true);
+      setBgLoaded(true);
+    };
+    
+    const optimizedUrl = loginBgUrl.includes('supabase.co') 
+      ? `${loginBgUrl}?width=1200&quality=80&format=webp`
+      : loginBgUrl;
       
-      // If it's a Supabase URL, use image transformation for WebP and resizing
-      const optimizedUrl = loginBgUrl.includes('supabase.co') 
-        ? `${loginBgUrl}?width=1200&quality=80&format=webp`
-        : loginBgUrl;
-        
-      img.src = optimizedUrl;
-    }, 800); // 800ms delay to prioritize the login form
-
-    return () => clearTimeout(timer);
+    img.src = optimizedUrl;
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
