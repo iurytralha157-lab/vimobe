@@ -24,7 +24,8 @@ import {
   Trophy,
   XCircle,
   CircleDot,
-  RefreshCw
+  RefreshCw,
+  GitBranch
 } from 'lucide-react';
 import { StageSettingsDialog } from '@/components/pipelines/StageSettingsDialog';
 import { PipelineSlaSettings } from '@/components/pipelines/PipelineSlaSettings';
