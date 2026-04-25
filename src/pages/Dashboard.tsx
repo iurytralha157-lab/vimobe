@@ -63,9 +63,6 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useEnhancedDashboardStats(filters);
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
 
-  // Data hooks - Telecom
-  const { data: telecomStats, isLoading: telecomStatsLoading } = useTelecomDashboardStats(filters);
-  const { data: telecomEvolutionData = [], isLoading: telecomEvolutionLoading } = useTelecomEvolutionData(filters);
 
   // Site visits count - unique sessions (respects date filters)
   const { data: siteVisits = 0 } = useQuery({
