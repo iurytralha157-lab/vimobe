@@ -21,7 +21,7 @@ interface FilteredStageCountsParams {
 }
 
 // Limite de leads por estágio para paginação
-const LEADS_PER_STAGE = 100;
+const LEADS_PER_STAGE = 50;
 
 // Campos otimizados para leads no pipeline - only columns that exist in the database
 const LEAD_PIPELINE_FIELDS = `
