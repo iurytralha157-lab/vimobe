@@ -26,7 +26,7 @@ interface AppHeaderProps {
   title?: string;
 }
 
-export function AppHeader({
+export const AppHeader = React.memo(function AppHeader({
   title
 }: AppHeaderProps) {
   const {
