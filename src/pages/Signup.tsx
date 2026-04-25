@@ -126,7 +126,7 @@ export default function Signup() {
       setStatus('success');
 
       setTimeout(() => {
-        navigate('/crm/conversas');
+        navigate('/dashboard');
       }, 2000);
     } catch (error: any) {
       console.error('Signup error:', error);
