@@ -537,17 +537,33 @@ export function useTopBrokers(filters?: DashboardFilters) {
       }
       
       // First try: Get leads with won status using deal_status
-      let query = supabase
-        .from('leads')
-        .select(`
+      let selectString = `
           assigned_user_id,
           valor_interesse,
           deal_status,
           user:users!leads_assigned_user_id_fkey(id, name, avatar_url)
-        `)
+        `;
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
+      let query = supabase
+        .from('leads')
+        .select(selectString)
         .eq('organization_id', organizationId!)
         .not('assigned_user_id', 'is', null)
         .eq('deal_status', 'won');
+
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        query = query.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        query = query.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        query = query.eq('lead_meta.ad_id', filters.adId);
+      }
 
       // Team leaders only see their team members
       if (visibility.teamMemberIds) {
