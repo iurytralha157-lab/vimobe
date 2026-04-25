@@ -89,7 +89,7 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Background image loading - no delay for "speed"
+  // Background image loading
   useEffect(() => {
     if (!loginBgUrl) {
       setBgLoaded(true);
@@ -102,12 +102,7 @@ export default function Auth() {
       setBgError(true);
       setBgLoaded(true);
     };
-    
-    const optimizedUrl = loginBgUrl.includes('supabase.co') 
-      ? `${loginBgUrl}?width=1200&quality=80&format=webp`
-      : loginBgUrl;
-      
-    img.src = optimizedUrl;
+    img.src = loginBgUrl;
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
