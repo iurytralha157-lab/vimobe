@@ -134,6 +134,12 @@ export default function Dashboard() {
           onUserChange={setUserId}
           source={source}
           onSourceChange={setSource}
+          campaignId={campaignId}
+          onCampaignChange={setCampaignId}
+          adSetId={adSetId}
+          onAdSetChange={setAdSetId}
+          adId={adId}
+          onAdChange={setAdId}
           onClear={clearFilters}
           hasActiveFilters={hasActiveFilters}
         />
