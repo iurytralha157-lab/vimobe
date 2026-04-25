@@ -810,7 +810,7 @@ export function useLoadMoreLeads() {
       // Build matching cache key
       const dateFromISO = filters?.dateRange?.from?.toISOString();
       const dateToISO = filters?.dateRange?.to?.toISOString();
-      const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery];
+      const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd];
       // Mesclar novos leads no cache existente
       queryClient.setQueryData(cacheKey, (old: any[] | undefined) => {
         if (!old) return old;
