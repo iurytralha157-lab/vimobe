@@ -91,6 +91,8 @@ export function useStagesWithLeads(
   
   return useQuery({
     queryKey: ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd],
+    staleTime: 30000, // 30 seconds
+    gcTime: 1000 * 60 * 15, // 15 minutes
     queryFn: async () => {
       // Get default pipeline if not provided
       let targetPipelineId = pipelineId;
