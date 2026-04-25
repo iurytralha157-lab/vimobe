@@ -292,4 +292,4 @@ export const AppHeader = React.memo(function AppHeader({
       </div>
     </header>
   );
-}
+});
