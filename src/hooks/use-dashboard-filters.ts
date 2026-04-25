@@ -136,6 +136,12 @@ export function useDashboardFilters() {
     setUserId,
     source,
     setSource,
+    campaignId,
+    setCampaignId,
+    adSetId,
+    setAdSetId,
+    adId,
+    setAdId,
     clearFilters,
     hasActiveFilters,
   };
