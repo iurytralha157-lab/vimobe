@@ -187,11 +187,7 @@ export default function Dashboard() {
               {funnelComponent}
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
-              {isTelecom ? (
-                <TelecomEvolutionChart data={telecomEvolutionData} isLoading={telecomEvolutionLoading} />
-              ) : (
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-              )}
             </TabsContent>
           </Tabs>
         </div>
