@@ -205,7 +205,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         previousQuery = previousQuery.in('assigned_user_id', memberIds);
       }
       
-      const { data: previousLeads } = await previousQuery;
+      const { data: previousLeads, count: prevCount } = await previousQuery;
 
       // Fetch commissions
       const { data: commissions } = await supabase
