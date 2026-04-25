@@ -347,18 +347,19 @@ export function useLeadMetaFilters() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { campaigns: [], adsets: [], ads: [] };
       
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('organization_id')
         .eq('id', user.id)
         .maybeSingle();
       
-      if (!profile?.organization_id) return { campaigns: [], adsets: [], ads: [] };
+      const orgId = profile?.organization_id;
+      if (!orgId) return { campaigns: [], adsets: [], ads: [] };
 
       const { data, error } = await (supabase as any)
         .from('lead_meta')
         .select('campaign_name, adset_name, ad_name, leads!inner(organization_id)')
-        .eq('leads.organization_id', profile.organization_id)
+        .eq('leads.organization_id', orgId)
         .not('campaign_name', 'is', null);
       
       if (error) throw error;
