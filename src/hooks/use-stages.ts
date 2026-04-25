@@ -693,31 +693,32 @@ export function useLoadMoreLeads() {
         .order('stage_entered_at', { ascending: false })
         .range(offset, offset + LEADS_PER_STAGE - 1);
       
-      if (filterUserId && filterUserId !== 'all') {
-        query = query.eq('assigned_user_id', filterUserId);
-      }
-      if (filters?.filterDealStatus && filters.filterDealStatus !== 'all') {
-        query = query.eq('deal_status', filters.filterDealStatus);
-      }
       if (normalizedSearch) {
         query = query.or(`name.ilike.%${normalizedSearch}%,phone.ilike.%${normalizedSearch}%`);
-      }
-      if (!normalizedSearch && filters?.dateRange) {
-        query = query
-          .gte('created_at', filters.dateRange.from.toISOString())
-          .lte('created_at', filters.dateRange.to.toISOString());
-      }
-      if (taggedLeadIds) {
-        query = query.in('id', taggedLeadIds);
-      }
-      if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
-        query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
-      }
-      if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
-        query = query.eq('lead_meta.adset_name', filters.filterAdSet);
-      }
-      if (filters?.filterAd && filters.filterAd !== 'all') {
-        query = query.eq('lead_meta.ad_name', filters.filterAd);
+      } else {
+        if (filterUserId && filterUserId !== 'all') {
+          query = query.eq('assigned_user_id', filterUserId);
+        }
+        if (filters?.filterDealStatus && filters.filterDealStatus !== 'all') {
+          query = query.eq('deal_status', filters.filterDealStatus);
+        }
+        if (filters?.dateRange) {
+          query = query
+            .gte('created_at', filters.dateRange.from.toISOString())
+            .lte('created_at', filters.dateRange.to.toISOString());
+        }
+        if (taggedLeadIds) {
+          query = query.in('id', taggedLeadIds);
+        }
+        if (filters?.filterCampaign && filters.filterCampaign !== 'all') {
+          query = query.eq('lead_meta.campaign_name', filters.filterCampaign);
+        }
+        if (filters?.filterAdSet && filters.filterAdSet !== 'all') {
+          query = query.eq('lead_meta.adset_name', filters.filterAdSet);
+        }
+        if (filters?.filterAd && filters.filterAd !== 'all') {
+          query = query.eq('lead_meta.ad_name', filters.filterAd);
+        }
       }
       
       const { data, error } = await query;
