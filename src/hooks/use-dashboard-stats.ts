@@ -249,7 +249,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
       // Calculate current stats using deal_status instead of stage_key
-      const totalLeads = leads?.length || 0;
+      const totalLeads = count || leads?.length || 0;
       const closedLeads = leads?.filter((l: any) => l.deal_status === 'won').length || 0;
       
       const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
