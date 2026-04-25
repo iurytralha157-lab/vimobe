@@ -24,6 +24,7 @@ import {
   sourceOptions,
 } from '@/hooks/use-dashboard-filters';
 import { DateFilterPopover } from '@/components/ui/date-filter-popover';
+import { CampaignFilter } from './CampaignFilter';
 
 interface DashboardFiltersProps {
   datePreset: DatePreset;
@@ -36,6 +37,12 @@ interface DashboardFiltersProps {
   onUserChange: (userId: string | null) => void;
   source: string | null;
   onSourceChange: (source: string | null) => void;
+  campaignId: string | null;
+  onCampaignChange: (id: string | null) => void;
+  adSetId: string | null;
+  onAdSetChange: (id: string | null) => void;
+  adId: string | null;
+  onAdChange: (id: string | null) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
 }
