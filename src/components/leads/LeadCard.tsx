@@ -55,7 +55,7 @@ const formatShortTime = (date: Date): string => {
   }
   return `${diffHrs}h`;
 };
-export function LeadCard({
+export const LeadCard = memo(function LeadCard({
   lead,
   onClick,
   index,
