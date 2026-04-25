@@ -882,8 +882,10 @@ export function useWhatsAppRealtimeConversations() {
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
+        // Also invalidate messages if we are in a conversation
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
         debounceTimer = null;
-      }, 500);
+      }, 2000); // 2 second debounce for better performance
     };
 
     const channel = supabase
