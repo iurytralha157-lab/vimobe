@@ -136,10 +136,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       // Build base query for current period - using deal_status for accurate conversion tracking
       let query = supabase
         .from('leads')
-        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds')
+        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds', { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', currentFrom.toISOString())
-        .lte('created_at', currentTo.toISOString());
+        .lte('created_at', currentTo.toISOString())
+        .limit(10000); // Aumentado para suportar mais leads nos cálculos de stats
 
       // Apply visibility filter (admin, team leader, or self-only)
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
@@ -163,7 +164,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         }
       }
 
-      const { data: leads, error } = await query;
+      const { data: leads, error, count } = await query;
 
       if (error) {
         console.error('Error fetching enhanced stats:', error);
@@ -188,10 +189,11 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       // Fetch previous period data for trends
       let previousQuery = supabase
         .from('leads')
-        .select('id, deal_status')
+        .select('id, deal_status', { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', previousFrom.toISOString())
-        .lte('created_at', previousTo.toISOString());
+        .lte('created_at', previousTo.toISOString())
+        .limit(10000);
       
       // Apply same visibility filter for previous period
       previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
@@ -203,7 +205,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         previousQuery = previousQuery.in('assigned_user_id', memberIds);
       }
       
-      const { data: previousLeads } = await previousQuery;
+      const { data: previousLeads, count: prevCount } = await previousQuery;
 
       // Fetch commissions
       const { data: commissions } = await supabase
@@ -248,7 +250,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
       // Calculate current stats using deal_status instead of stage_key
-      const totalLeads = leads?.length || 0;
+      const totalLeads = count || leads?.length || 0;
       const closedLeads = leads?.filter((l: any) => l.deal_status === 'won').length || 0;
       
       const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
@@ -262,7 +264,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       }, 0) || 0;
 
       // Calculate previous stats for trends using deal_status
-      const prevTotalLeads = previousLeads?.length || 0;
+      const prevTotalLeads = prevCount || previousLeads?.length || 0;
       const prevClosedLeads = previousLeads?.filter((l: any) => l.deal_status === 'won').length || 0;
       const prevConversionRate = prevTotalLeads > 0 ? Math.round((prevClosedLeads / prevTotalLeads) * 100) : 0;
 
