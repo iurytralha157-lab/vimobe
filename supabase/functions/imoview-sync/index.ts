@@ -154,10 +154,10 @@ Deno.serve(async (req) => {
           JSON.stringify({ success: true, message: "Conexão válida", sample: data }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-      } catch (e) {
+      } catch (e: any) {
         console.error("Imoview test error:", e);
         return new Response(
-          JSON.stringify({ success: false, error: `Connection failed: ${e.message}` }),
+          JSON.stringify({ success: false, error: `Connection failed: ${e?.message}` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -180,8 +180,8 @@ Deno.serve(async (req) => {
             headers: { "Content-Type": "application/json", "chave": apiKey },
             body: JSON.stringify({ numeroPagina: page, numeroRegistros: perPage }),
           });
-        } catch (e) {
-          errors.push(`Fetch error page ${page}: ${e.message}`);
+        } catch (e: any) {
+          errors.push(`Fetch error page ${page}: ${e?.message}`);
           break;
         }
 
@@ -325,8 +325,8 @@ Deno.serve(async (req) => {
             } else {
               totalSynced++;
             }
-          } catch (e) {
-            errors.push(`Process error: ${e.message}`);
+          } catch (e: any) {
+            errors.push(`Process error: ${e?.message}`);
           }
         }
 
@@ -362,8 +362,8 @@ Deno.serve(async (req) => {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e?.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      leadId = newLead.id;
+      leadId = (newLead as any)?.id;
 
       if (session_id) {
         const { error: sessionUpdateError } = await supabase
