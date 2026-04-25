@@ -133,14 +133,32 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       const previousFrom = subDays(currentFrom, periodDays);
       const previousTo = subDays(currentTo, periodDays);
       
-      // Build base query for current period - using deal_status for accurate conversion tracking
+      // Build base query for current period
+      let selectString = 'id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds';
+      
+      // If we have Meta filters, we need to join with lead_meta
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
       let query = supabase
         .from('leads')
-        .select('id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds', { count: 'exact' })
+        .select(selectString, { count: 'exact' })
         .eq('organization_id', organizationId!)
         .gte('created_at', currentFrom.toISOString())
         .lte('created_at', currentTo.toISOString())
-        .limit(10000); // Aumentado para suportar mais leads nos cálculos de stats
+        .limit(10000);
+
+      // Apply Meta filters
+      if (filters?.campaignId) {
+        query = query.eq('lead_meta.campaign_id', filters.campaignId);
+      }
+      if (filters?.adSetId) {
+        query = query.eq('lead_meta.adset_id', filters.adSetId);
+      }
+      if (filters?.adId) {
+        query = query.eq('lead_meta.ad_id', filters.adId);
+      }
 
       // Apply visibility filter (admin, team leader, or self-only)
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
