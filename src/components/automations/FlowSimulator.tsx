@@ -21,7 +21,7 @@ interface FlowSimulatorProps {
   onHighlightNode?: (nodeId: string | null) => void;
 }
 
-const PREVIEW_WAIT_MS = 60_000; // 1 minute for all waits in preview
+
 
 export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSimulatorProps) {
   const [messages, setMessages] = useState<SimMessage[]>([]);
@@ -210,12 +210,20 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
         const value = node.data.wait_value || node.data.delay_value || 1;
         const type = node.data.wait_type || node.data.delay_type || 'days';
         const unitLabels: Record<string, string> = { seconds: 'segundo(s)', minutes: 'minuto(s)', hours: 'hora(s)', days: 'dia(s)' };
-        const stopOnReply = node.data.stop_on_reply === true;
 
-        addSystemMessage(`⏳ Aguardando ${value} ${unitLabels[type] || type} — preview: 1 min`);
+        // Calculate actual duration in seconds
+        let totalSeconds = value;
+        if (type === 'minutes') totalSeconds *= 60;
+        else if (type === 'hours') totalSeconds *= 3600;
+        else if (type === 'days') totalSeconds *= 86400;
 
-        // Start 60s countdown
-        startCountdown(60);
+        // Cap at 60 seconds for simulation, unless it's already shorter
+        const simulationSeconds = Math.min(totalSeconds, 60);
+
+        addSystemMessage(`⏳ Aguardando ${value} ${unitLabels[type] || type} — preview: ${simulationSeconds}s`);
+
+        // Start countdown with the calculated time
+        startCountdown(simulationSeconds);
         setWaitingForReply(true);
         setCurrentWaitNodeId(node.id);
         return; // Pause here
@@ -366,11 +374,21 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
     }
   }, [currentWaitNodeId, nodes, addMessage, addSystemMessage, stopCountdown, continueAfterNode]);
 
-  // Timeout for wait nodes - 1 minute
+  // Timeout for wait nodes - follows dynamic time cap
   useEffect(() => {
     if (!waitingForReply || !currentWaitNodeId) return;
     const node = nodes.find(n => n.id === currentWaitNodeId);
     if (!node || node.type !== 'wait') return;
+
+    const value = node.data.wait_value || node.data.delay_value || 1;
+    const type = node.data.wait_type || node.data.delay_type || 'days';
+    
+    let totalSeconds = value;
+    if (type === 'minutes') totalSeconds *= 60;
+    else if (type === 'hours') totalSeconds *= 3600;
+    else if (type === 'days') totalSeconds *= 86400;
+
+    const simulationSeconds = Math.min(totalSeconds, 60);
 
     const timer = setTimeout(async () => {
       if (!waitingForReply) return;
@@ -386,7 +404,7 @@ export function FlowSimulator({ nodes, edges, onClose, onHighlightNode }: FlowSi
         addSystemMessage('⏰ Espera concluída.');
         await continueAfterNode(nodeId, null);
       }
-    }, PREVIEW_WAIT_MS);
+    }, simulationSeconds * 1000);
 
     return () => clearTimeout(timer);
   }, [waitingForReply, currentWaitNodeId, nodes, stopCountdown, addSystemMessage, continueAfterNode]);
