@@ -356,25 +356,16 @@ export function useLeadMetaFilters() {
       const orgId = userData?.organization_id;
       if (!orgId) return { campaigns: [], adsets: [], ads: [] };
 
-      // Get leads for this org to filter lead_meta
-      const { data: leads } = await supabase
-        .from('leads')
-        .select('id')
-        .eq('organization_id', orgId);
-      
-      if (!leads || leads.length === 0) return { campaigns: [], adsets: [], ads: [] };
-      const leadIds = leads.map(l => l.id);
-
       const { data, error } = await supabase
         .from('lead_meta')
-        .select('campaign_name, adset_name, ad_name')
-        .in('lead_id', leadIds);
+        .select('campaign_name, adset_name, ad_name, leads!inner(organization_id)')
+        .eq('leads.organization_id', orgId);
       
       if (error) throw error;
       
-      const campaigns = [...new Set((data || []).map(item => item.campaign_name).filter(Boolean))].sort() as string[];
-      const adsets = [...new Set((data || []).map(item => item.adset_name).filter(Boolean))].sort() as string[];
-      const ads = [...new Set((data || []).map(item => item.ad_name).filter(Boolean))].sort() as string[];
+      const campaigns = [...new Set((data || []).map((item: any) => item.campaign_name).filter(Boolean))].sort() as string[];
+      const adsets = [...new Set((data || []).map((item: any) => item.adset_name).filter(Boolean))].sort() as string[];
+      const ads = [...new Set((data || []).map((item: any) => item.ad_name).filter(Boolean))].sort() as string[];
       
       return { campaigns, adsets, ads };
     },
