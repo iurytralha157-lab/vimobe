@@ -89,7 +89,7 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Background image loading - no delay for "speed"
+  // Background image loading
   useEffect(() => {
     if (!loginBgUrl) {
       setBgLoaded(true);
@@ -102,12 +102,7 @@ export default function Auth() {
       setBgError(true);
       setBgLoaded(true);
     };
-    
-    const optimizedUrl = loginBgUrl.includes('supabase.co') 
-      ? `${loginBgUrl}?width=1200&quality=80&format=webp`
-      : loginBgUrl;
-      
-    img.src = optimizedUrl;
+    img.src = loginBgUrl;
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
@@ -266,43 +261,33 @@ export default function Auth() {
   const showBg = (loginBgUrl && bgLoaded && !bgError) || !loginBgUrl;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background relative overflow-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
       {/* Background Layer */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-muted">
         {loginBgUrl && !bgError ? (
-          <>
-            <img 
-              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=1200&quality=80&format=webp` : loginBgUrl}
-              alt=""
-              className={`w-full h-full object-cover transition-opacity duration-700 ${bgLoaded ? 'opacity-40 lg:opacity-100' : 'opacity-0'}`}
-              onError={() => {
-                setBgError(true);
-                setBgLoaded(true);
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 lg:via-transparent to-transparent lg:bg-gradient-to-r lg:from-background lg:to-transparent" />
-          </>
+          <img 
+            src={loginBgUrl}
+            alt="Login Background"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onError={() => setBgError(true)}
+          />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-background to-background" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-background" />
         )}
+        <div className="absolute inset-0 bg-black/10" />
       </div>
 
       {/* Login form container */}
-      <div className="w-full lg:w-[480px] flex flex-col items-center justify-center min-h-screen px-6 py-12 relative z-10 bg-background/80 backdrop-blur-sm lg:bg-background lg:backdrop-blur-none shadow-2xl">
+      <div className="w-full lg:w-[480px] flex flex-col items-center justify-center min-h-screen px-6 py-12 bg-card border-l border-border shadow-2xl z-10">
         <div className="w-full max-w-sm space-y-8">
           <div className="flex flex-col items-center space-y-4">
             <div className="min-h-[60px] flex items-center justify-center">
-              {settingsLoading && !logoError ? (
-                <div className="h-12 w-32 bg-muted animate-pulse rounded-lg" />
-              ) : (
-                <img
-                  src={logoError ? '/logo.png' : (logoUrl || '/logo.png')}
-                  alt="Logo"
-                  className="h-16 w-auto object-contain transition-all duration-300 hover:scale-105"
-                  onError={() => setLogoError(true)}
-                  fetchPriority="high"
-                />
-              )}
+              <img
+                src={logoError ? '/logo.png' : (logoUrl || '/logo.png')}
+                alt="Logo"
+                className="h-16 w-auto object-contain"
+                onError={() => setLogoError(true)}
+              />
             </div>
             <div className="text-center space-y-2">
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
