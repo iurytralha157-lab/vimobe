@@ -70,19 +70,19 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 8 100% 58%;
+    --ring: 262 83% 58%;
 
     --radius: 0.875rem;
 
     /* Sidebar */
     --sidebar-background: 220 14% 98%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 187 85% 40%;
+    --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 8 100% 96%;
-    --sidebar-accent-foreground: 8 100% 45%;
+    --sidebar-accent: 262 83% 96%;
+    --sidebar-accent-foreground: 262 83% 45%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 187 85% 40%;
+    --sidebar-ring: 262 83% 58%;
 
     /* Kanban colors */
     --kanban-new: 217 91% 60%;
