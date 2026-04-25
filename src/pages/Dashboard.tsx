@@ -159,19 +159,11 @@ export default function Dashboard() {
         {/* ===== MOBILE LAYOUT ===== */}
         <div className="lg:hidden space-y-4">
           {/* KPIs */}
-          {isTelecom ? (
-            <TelecomKPICards 
-              data={telecomKpiData} 
-              isLoading={telecomStatsLoading} 
-              periodLabel={periodLabel}
-            />
-          ) : (
-            <KPICards 
-              data={kpiData} 
-              isLoading={statsLoading} 
-              periodLabel={periodLabel}
-            />
-          )}
+          <KPICards 
+            data={kpiData} 
+            isLoading={statsLoading} 
+            periodLabel={periodLabel}
+          />
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
