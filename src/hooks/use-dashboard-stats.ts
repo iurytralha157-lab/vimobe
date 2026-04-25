@@ -141,6 +141,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
       }
 
+      // Prepare queries
       let query = supabase
         .from('leads')
         .select(selectString, { count: 'exact' })
@@ -149,23 +150,42 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         .lte('created_at', currentTo.toISOString())
         .limit(10000);
 
-      // Apply Meta filters
+      // Build previous period query
+      let prevSelectString = 'id, deal_status';
+      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
+        prevSelectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
+      }
+
+      let previousQuery = supabase
+        .from('leads')
+        .select(prevSelectString, { count: 'exact' })
+        .eq('organization_id', organizationId!)
+        .gte('created_at', previousFrom.toISOString())
+        .lte('created_at', previousTo.toISOString())
+        .limit(10000);
+
+      // Apply Meta filters to both queries
       if (filters?.campaignId) {
         query = query.eq('lead_meta.campaign_id', filters.campaignId);
+        previousQuery = previousQuery.eq('lead_meta.campaign_id', filters.campaignId);
       }
       if (filters?.adSetId) {
         query = query.eq('lead_meta.adset_id', filters.adSetId);
+        previousQuery = previousQuery.eq('lead_meta.adset_id', filters.adSetId);
       }
       if (filters?.adId) {
         query = query.eq('lead_meta.ad_id', filters.adId);
+        previousQuery = previousQuery.eq('lead_meta.ad_id', filters.adId);
       }
 
-      // Apply visibility filter (admin, team leader, or self-only)
+      // Apply visibility filter to both
       query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
+      previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
 
-      // Apply source filter
+      // Apply source filter to both
       if (filters?.source) {
         query = query.eq('source', filters.source as any);
+        previousQuery = previousQuery.eq('source', filters.source as any);
       }
 
       // Apply team filter (only for users who can view all or are team leaders)
@@ -179,10 +199,32 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         if (teamMembers && teamMembers.length > 0) {
           memberIds = teamMembers.map(m => m.user_id);
           query = query.in('assigned_user_id', memberIds);
+          previousQuery = previousQuery.in('assigned_user_id', memberIds);
         }
       }
 
-      const { data: leads, error, count } = await query;
+      // Execute queries in parallel for better performance
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      const [
+        { data: leads, error, count },
+        { data: previousLeads, count: prevCount },
+        { data: commissions },
+        { data: financialEntries }
+      ] = await Promise.all([
+        query,
+        previousQuery,
+        supabase
+          .from('commissions')
+          .select('amount, status')
+          .eq('organization_id', organizationId),
+        supabase
+          .from('financial_entries')
+          .select('type, amount, status, due_date')
+          .eq('organization_id', organizationId)
+          .gte('due_date', currentFrom.toISOString().split('T')[0])
+          .lte('due_date', currentTo.toISOString().split('T')[0])
+      ]);
 
       if (error) {
         console.error('Error fetching enhanced stats:', error);
@@ -204,48 +246,6 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         };
       }
 
-      // Fetch previous period data for trends
-      let prevSelectString = 'id, deal_status';
-      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
-        prevSelectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
-      }
-
-      let previousQuery = supabase
-        .from('leads')
-        .select(prevSelectString, { count: 'exact' })
-        .eq('organization_id', organizationId!)
-        .gte('created_at', previousFrom.toISOString())
-        .lte('created_at', previousTo.toISOString())
-        .limit(10000);
-      
-      // Apply Meta filters
-      if (filters?.campaignId) {
-        previousQuery = previousQuery.eq('lead_meta.campaign_id', filters.campaignId);
-      }
-      if (filters?.adSetId) {
-        previousQuery = previousQuery.eq('lead_meta.adset_id', filters.adSetId);
-      }
-      if (filters?.adId) {
-        previousQuery = previousQuery.eq('lead_meta.ad_id', filters.adId);
-      }
-      
-      // Apply same visibility filter for previous period
-      previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
-      
-      if (filters?.source) {
-        previousQuery = previousQuery.eq('source', filters.source as any);
-      }
-      if (memberIds.length > 0) {
-        previousQuery = previousQuery.in('assigned_user_id', memberIds);
-      }
-      
-      const { data: previousLeads, count: prevCount } = await previousQuery;
-
-      // Fetch commissions
-      const { data: commissions } = await supabase
-        .from('commissions')
-        .select('amount, status');
-      
       const pendingCommissions = commissions
         ?.filter(c => c.status === 'forecast' || c.status === 'approved')
         ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
@@ -253,16 +253,6 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       const paidCommissions = commissions
         ?.filter(c => c.status === 'paid')
         ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
-
-      // Fetch financial entries
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
-      
-      const { data: financialEntries } = await supabase
-        .from('financial_entries')
-        .select('type, amount, status, due_date')
-        .gte('due_date', currentFrom.toISOString().split('T')[0])
-        .lte('due_date', currentTo.toISOString().split('T')[0]);
 
       const receivables = financialEntries?.filter(e => e.type === 'receivable') || [];
       const payables = financialEntries?.filter(e => e.type === 'payable') || [];

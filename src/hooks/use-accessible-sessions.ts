@@ -36,31 +36,21 @@ export function useAccessibleSessions() {
         role: profile.role
       });
 
-      // Fetch owned sessions first
-      const { data: ownedSessions, error: ownedError } = await supabase
-        .from("whatsapp_sessions")
-        .select("*")
-        .eq("owner_user_id", profile.id);
-
-      if (ownedError) {
-        console.error("Error fetching owned sessions:", ownedError);
-      }
-      console.log("[useAccessibleSessions] Owned sessions query result:", {
-        count: ownedSessions?.length || 0,
-        sessions: ownedSessions?.map(s => ({ id: s.id, name: s.instance_name, owner: s.owner_user_id }))
-      });
-
-      // Separately fetch access grants filtered only by user_id.
-      // This avoids the circular RLS: the policy on whatsapp_session_access checks
-      // session_id IN (SELECT id FROM whatsapp_sessions WITH RLS), which itself checks
-      // whatsapp_session_access again — causing a circular loop that returns nothing.
-      // By querying just session_id from the grants and then fetching sessions by ID,
-      // we break the cycle.
-      const { data: accessGrants, error: accessError } = await supabase
-        .from("whatsapp_session_access")
-        .select("session_id")
-        .eq("user_id", profile.id)
-        .eq("can_view", true);
+      // Fetch owned sessions and access grants in parallel
+      const [
+        { data: ownedSessions, error: ownedError },
+        { data: accessGrants, error: accessError }
+      ] = await Promise.all([
+        supabase
+          .from("whatsapp_sessions")
+          .select("*")
+          .eq("owner_user_id", profile.id),
+        supabase
+          .from("whatsapp_session_access")
+          .select("session_id")
+          .eq("user_id", profile.id)
+          .eq("can_view", true)
+      ]);
 
       if (accessError) {
         console.error("Error fetching session access grants:", accessError);
