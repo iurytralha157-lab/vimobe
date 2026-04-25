@@ -287,7 +287,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
       const totalLeads = count || leads?.length || 0;
       const closedLeads = leads?.filter((l: any) => l.deal_status === 'won').length || 0;
       
-      const conversionRate = totalLeads > 0 ? Math.round((closedLeads / totalLeads) * 100) : 0;
+      const conversionRate = totalLeads > 0 ? Number(((closedLeads / totalLeads) * 100).toFixed(1)) : 0;
       
       // Calculate total sales from won leads (using valor_interesse)
       const totalSalesValue = leads?.reduce((sum: number, l: any) => {
