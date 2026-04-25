@@ -261,15 +261,7 @@ export default function Auth() {
     }
   };
 
-  // Show nothing until settings are loaded to avoid flash
-  if (settingsLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
+  // We no longer block the entire page on settings loading to improve perceived speed
   const showBg = loginBgUrl && bgLoaded;
 
   return (
