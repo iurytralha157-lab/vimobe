@@ -99,7 +99,10 @@ export function useDashboardFilters() {
     teamId,
     userId,
     source,
-  }), [datePreset, dateRange, teamId, userId, source]);
+    campaignId,
+    adSetId,
+    adId,
+  }), [datePreset, dateRange, teamId, userId, source, campaignId, adSetId, adId]);
 
   const clearFilters = () => {
     setDatePreset('last30days');
@@ -107,9 +110,19 @@ export function useDashboardFilters() {
     setTeamId(null);
     setUserId(null);
     setSource(null);
+    setCampaignId(null);
+    setAdSetId(null);
+    setAdId(null);
   };
 
-  const hasActiveFilters = teamId !== null || userId !== null || source !== null || datePreset !== 'last30days';
+  const hasActiveFilters = 
+    teamId !== null || 
+    userId !== null || 
+    source !== null || 
+    campaignId !== null || 
+    adSetId !== null || 
+    adId !== null || 
+    datePreset !== 'last30days';
 
   return {
     filters,
