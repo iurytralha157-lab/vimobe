@@ -322,7 +322,7 @@ async function callLovableAI(
 }
 
 async function insertOutboxMessage(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   conversation_id: string,
   content: string
 ): Promise<void> {
@@ -330,7 +330,7 @@ async function insertOutboxMessage(
     .from("whatsapp_conversations")
     .select("session_id, remote_jid, organization_id")
     .eq("id", conversation_id)
-    .maybeSingle();
+    .maybeSingle() as { data: any };
 
   if (!conv) {
     console.error("[ai-agent-responder] Could not find conversation for outbox");

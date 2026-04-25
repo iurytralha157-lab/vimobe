@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
 
           if (error) {
             console.error(`Error redistributing lead ${lead.id}:`, error);
-            results.push({ leadId: lead.id, success: false, error: error.message });
+            results.push({ leadId: lead.id, success: false, error: (error as any)?.message });
           } else {
             console.log(`Successfully redistributed lead ${lead.id}:`, data);
             results.push({ leadId: lead.id, success: true });
