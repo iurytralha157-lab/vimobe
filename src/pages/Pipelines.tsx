@@ -1028,29 +1028,8 @@ export default function Pipelines() {
               </div>
             </div>
 
-                          disabled={!selectedPipelineId}
-                        >
-                          <Settings className="h-4 w-4 text-foreground/80 hover:text-foreground" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Gerenciar Colunas</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setNewPipelineDialogOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 text-foreground" />
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            {/* Filters Row */}
+            <div className="flex items-center gap-2 ml-auto">
+
             <div className="flex items-center gap-2 overflow-x-auto pb-0">
               {/* Search */}
               <div className="relative flex-shrink-0">
