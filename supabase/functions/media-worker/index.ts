@@ -1,6 +1,48 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decode } from "https://deno.land/std@0.177.0/encoding/base64.ts";
 
+const MAGIC_BYTES: Record<string, string[]> = {
+  'image/jpeg': ['FFD8FF'],
+  'image/png': ['89504E47'],
+  'image/gif': ['47494638'],
+  'image/webp': ['52494646'],
+  'audio/mpeg': ['494433', 'FFF1', 'FFF9'],
+  'audio/ogg': ['4F676753'],
+  'audio/mp4': ['000000'],
+  'video/mp4': ['000000'],
+  'application/pdf': ['25504446'],
+};
+
+function validateMagicBytes(content: Uint8Array, expectedMime: string): boolean {
+  if (content.length < 4) return false;
+  const hex = Array.from(content.slice(0, 8))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('').toUpperCase();
+
+  const mimeBase = expectedMime.split(';')[0].toLowerCase();
+  
+  // Special cases for container formats
+  if (mimeBase === 'image/webp' && hex.startsWith('52494646')) return true;
+  if ((mimeBase === 'video/mp4' || mimeBase === 'audio/mp4') && hex.includes('66747970')) return true;
+
+  const expectedSignatures = MAGIC_BYTES[mimeBase];
+  if (!expectedSignatures) return true; // Allow if we don't have the signature defined
+
+  return expectedSignatures.some(sig => hex.startsWith(sig));
+}
+
+function normalizeBase64(base64: string): string {
+  if (!base64) return "";
+  // Remove data URL prefix, whitespace and newlines
+  return base64.replace(/^data:.*?;base64,/, '').replace(/[\r\n\s]/g, '');
+}
+
+function isValidBase64(str: string): boolean {
+  if (!str || str.length % 4 !== 0) return false;
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+  return base64Regex.test(str);
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -184,7 +226,8 @@ Deno.serve(async (req) => {
             EVOLUTION_API_KEY,
             session.instance_name,
             job.message_key,
-            job.media_type
+            job.media_type,
+            job.media_mime_type || ""
           );
           
           if (result1.content) {
@@ -192,18 +235,24 @@ Deno.serve(async (req) => {
           } else {
             failureReasons.push(`S1: ${result1.error || "Unknown error"}`);
             
-            // Strategy 2: downloadMedia endpoint
-            const result2 = await tryDownloadMedia(
-              EVOLUTION_API_URL,
-              EVOLUTION_API_KEY,
-              session.instance_name,
-              job.message_key
-            );
-            
-            if (result2.content) {
-              mediaContent = result2.content;
+            // Strategy 2: Only in diagnostic mode
+            const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
+            if (isDiagnostic) {
+              const result2 = await tryDownloadMedia(
+                EVOLUTION_API_URL,
+                EVOLUTION_API_KEY,
+                session.instance_name,
+                job.message_key,
+                job.media_mime_type || ""
+              );
+              
+              if (result2.content) {
+                mediaContent = result2.content;
+              } else {
+                failureReasons.push(`S2: ${result2.error || "Unknown error"}`);
+              }
             } else {
-              failureReasons.push(`S2: ${result2.error || "Unknown error"}`);
+              failureReasons.push("S2 skipped (non-diagnostic mode)");
             }
           }
         } else {
@@ -256,6 +305,31 @@ Deno.serve(async (req) => {
           results.push({ job_id: job.id, status: "completed", media_url: mediaUrl });
         } else {
           const reason = mediaContent ? `Media too small: ${mediaContent.length} bytes` : failureReasons.join(" | ");
+          const isValidationError = reason.includes("Magic bytes validation failed");
+          
+          if (isValidationError) {
+             // Fail fast on validation error
+             await supabase
+              .from("whatsapp_messages")
+              .update({
+                media_status: "failed",
+                media_error: `Falha de validação: ${reason}`,
+              })
+              .eq("id", job.message_id);
+
+            await supabase
+              .from("media_jobs")
+              .update({
+                status: "failed",
+                error_message: reason,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", job.id);
+              
+             results.push({ job_id: job.id, status: "failed", error: reason });
+             continue;
+          }
+          
           throw new Error(`Could not download media. ${reason}`);
         }
 
@@ -336,7 +410,8 @@ async function tryGetBase64(
   apiKey: string,
   instanceName: string,
   messageKey: any,
-  mediaType: string
+  mediaType: string,
+  expectedMime: string
 ): Promise<{ content: Uint8Array | null; error?: string }> {
   console.log("Strategy 1: Trying getBase64FromMediaMessage...");
   
@@ -359,18 +434,35 @@ async function tryGetBase64(
           },
           body: JSON.stringify({
             message: { key: messageKey },
-            convertToMp4: mediaType === "audio",
+            // Only convert to mp4 for videos as per requirement
+            convertToMp4: mediaType === "video",
           }),
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        if (data.base64) {
-          console.log(`Strategy 1 success on attempt ${attempt}`);
-          return { content: decode(data.base64) };
+        const base64 = data.base64;
+        
+        if (base64) {
+          const normalized = normalizeBase64(base64);
+          if (!isValidBase64(normalized)) {
+            lastError = `Invalid base64 received (attempt ${attempt})`;
+            continue;
+          }
+
+          const content = decode(normalized);
+          
+          if (validateMagicBytes(content, expectedMime)) {
+            console.log(`Strategy 1 success on attempt ${attempt}`);
+            return { content };
+          } else {
+            lastError = `Magic bytes validation failed (attempt ${attempt})`;
+            console.warn(`Magic bytes validation failed for ${expectedMime}`);
+          }
+        } else {
+          lastError = `No base64 in response (attempt ${attempt})`;
         }
-        lastError = `No base64 in response (attempt ${attempt})`;
       } else {
         const text = await response.text();
         lastError = `HTTP ${response.status}: ${text.substring(0, 100)} (attempt ${attempt})`;
@@ -389,7 +481,8 @@ async function tryDownloadMedia(
   apiUrl: string,
   apiKey: string,
   instanceName: string,
-  messageKey: any
+  messageKey: any,
+  expectedMime: string
 ): Promise<{ content: Uint8Array | null; error?: string }> {
   console.log("Strategy 2: Trying downloadMedia endpoint...");
   
@@ -416,18 +509,27 @@ async function tryDownloadMedia(
         
         if (!contentType.includes("application/json")) {
           const buffer = await response.arrayBuffer();
-          if (buffer.byteLength > 100) {
-            console.log(`Strategy 2 success: ${buffer.byteLength} bytes`);
-            return { content: new Uint8Array(buffer) };
+          const content = new Uint8Array(buffer);
+          
+          if (content.length > 100 && validateMagicBytes(content, expectedMime)) {
+            console.log(`Strategy 2 success: ${content.length} bytes`);
+            return { content };
           }
-          errors.push(`${endpoint}: Empty or too small buffer (${buffer.byteLength} bytes)`);
+          errors.push(`${endpoint}: Validation failed or too small (${content.length} bytes)`);
         } else {
           const data = await response.json();
-          if (data.base64) {
-            console.log("Strategy 2 success via base64");
-            return { content: decode(data.base64) };
+          const base64 = data.base64;
+          if (base64) {
+            const normalized = normalizeBase64(base64);
+            const content = decode(normalized);
+            if (validateMagicBytes(content, expectedMime)) {
+              console.log("Strategy 2 success via base64");
+              return { content };
+            }
+            errors.push(`${endpoint}: Magic bytes validation failed`);
+          } else {
+            errors.push(`${endpoint}: No base64 in JSON response`);
           }
-          errors.push(`${endpoint}: No base64 in JSON response`);
         }
       } else {
         const text = await response.text();
