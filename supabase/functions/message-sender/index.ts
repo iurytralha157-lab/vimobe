@@ -67,11 +67,13 @@ Deno.serve(async (req) => {
           throw new Error("Session not connected");
         }
 
-        // Extract phone from remote_jid
-        const phone = message.conversation?.remote_jid
-          ?.replace("@s.whatsapp.net", "")
-          .replace("@c.us", "")
-          .replace("@g.us", "");
+        // Use full JID for groups, digits-only for personal
+        const isGroup = message.conversation?.is_group || message.conversation?.remote_jid?.endsWith("@g.us");
+        const phone = isGroup 
+          ? message.conversation?.remote_jid 
+          : message.conversation?.remote_jid
+              ?.replace("@s.whatsapp.net", "")
+              .replace("@c.us", "");
 
         if (!phone) {
           throw new Error("Invalid conversation remote_jid");
