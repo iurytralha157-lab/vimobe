@@ -589,7 +589,7 @@ export function MessageBubble({
         }
         return (
           <div className={cn(
-            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-full max-w-[200px]",
+            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-48 h-48",
             fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
           )}>
             <ImageIcon className="w-10 h-10 opacity-50" />
