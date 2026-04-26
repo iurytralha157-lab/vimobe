@@ -102,14 +102,19 @@ Deno.serve(async (req) => {
         if (existing) continue;
 
         const orgId = (msg as any).session?.organization_id;
-        if (!orgId) continue;
+        const remoteJid = (msg as any).conversation?.remote_jid;
+        if (!orgId || !remoteJid) continue;
 
         const { error: insErr } = await supabase.from("media_jobs").insert({
           organization_id: orgId,
           message_id: msg.id,
           session_id: msg.session_id,
           conversation_id: msg.conversation_id,
-          message_key: { id: msg.message_id },
+          message_key: { 
+            id: msg.message_id,
+            remoteJid: remoteJid,
+            fromMe: msg.from_me
+          },
           media_type: msg.message_type,
           media_mime_type: msg.media_mime_type,
           status: 'pending',
