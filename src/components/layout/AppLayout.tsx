@@ -2,7 +2,18 @@ import { ReactNode } from 'react';
 import { AppSidebar } from './AppSidebar';
 import { RightSidebar } from './RightSidebar';
 import { AppHeader } from './AppHeader';
-...
+import { MobileBottomNav } from './MobileBottomNav';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { FloatingChatProvider } from '@/contexts/FloatingChatContext';
+import { FloatingChat } from '@/components/chat/FloatingChat';
+import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
+import { SidebarProvider } from '@/contexts/SidebarContext';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
+import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { usePhoneReminder } from '@/hooks/use-phone-reminder';
+import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useAuth } from '@/contexts/AuthContext';
 import { Wrench } from 'lucide-react';
 
