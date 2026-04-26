@@ -226,7 +226,8 @@ Deno.serve(async (req) => {
             EVOLUTION_API_KEY,
             session.instance_name,
             job.message_key,
-            job.media_type
+            job.media_type,
+            job.media_mime_type || ""
           );
           
           if (result1.content) {
@@ -234,18 +235,24 @@ Deno.serve(async (req) => {
           } else {
             failureReasons.push(`S1: ${result1.error || "Unknown error"}`);
             
-            // Strategy 2: downloadMedia endpoint
-            const result2 = await tryDownloadMedia(
-              EVOLUTION_API_URL,
-              EVOLUTION_API_KEY,
-              session.instance_name,
-              job.message_key
-            );
-            
-            if (result2.content) {
-              mediaContent = result2.content;
+            // Strategy 2: Only in diagnostic mode
+            const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
+            if (isDiagnostic) {
+              const result2 = await tryDownloadMedia(
+                EVOLUTION_API_URL,
+                EVOLUTION_API_KEY,
+                session.instance_name,
+                job.message_key,
+                job.media_mime_type || ""
+              );
+              
+              if (result2.content) {
+                mediaContent = result2.content;
+              } else {
+                failureReasons.push(`S2: ${result2.error || "Unknown error"}`);
+              }
             } else {
-              failureReasons.push(`S2: ${result2.error || "Unknown error"}`);
+              failureReasons.push("S2 skipped (non-diagnostic mode)");
             }
           }
         } else {
