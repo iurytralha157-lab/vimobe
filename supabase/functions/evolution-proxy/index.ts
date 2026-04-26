@@ -275,7 +275,7 @@ async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName:
 
 async function sendMessage(apiUrl: string, apiKey: string, params: any): Promise<EvolutionResponse> {
   try {
-    const { instanceName, number, text, phone, message, sessionName } = params;
+    const { instanceName, number, text, phone, message, sessionName, mentions } = params;
     const instance = instanceName || sessionName;
     const phoneNumber = number || phone;
     const messageText = text || message;
