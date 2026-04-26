@@ -474,6 +474,7 @@ export function useSendWhatsAppMessage() {
           number: phone,
           text,
           isGroup,
+          mentions,
           ...((storedMediaUrl || base64) && { 
             mediaUrl: storedMediaUrl, 
             mediaType: mediaType || "image",
