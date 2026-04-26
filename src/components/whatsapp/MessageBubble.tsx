@@ -572,7 +572,7 @@ export function MessageBubble({
                 <img
                   src={mediaUrl!}
                   alt={content || "Imagem"}
-                  className="w-full h-auto object-cover"
+                  className="w-48 h-48 object-cover rounded-md"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
                 />
