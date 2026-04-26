@@ -1071,34 +1071,11 @@ async function downloadAndStoreMediaWithPath(
     return { url: "", path: null };
   }
 
-  console.log(`Attempting to download media: type=${messageType}, mimeType=${mediaMimeType}, instance=${session.instance_name}, fromMe=${fromMe}`);
-  console.log("Media key:", JSON.stringify(key));
-  
-  // Extract thumbnail if available (for images) - use as fallback
-  const message = messageData.message || {};
-  const mediaMessage = message.imageMessage || message.videoMessage || 
-                       message.audioMessage || message.documentMessage;
-  const jpegThumbnail = message.imageMessage?.jpegThumbnail;
-  const directPath = mediaMessage?.directPath;
-  
-  // Log detailed info about thumbnail and directPath
-  if (jpegThumbnail) {
-    const thumbnailType = typeof jpegThumbnail;
-    const thumbnailInfo = thumbnailType === 'object' && jpegThumbnail !== null 
-      ? `object with ${Object.keys(jpegThumbnail).length} keys` 
-      : `${thumbnailType}`;
-    console.log(`Thumbnail available for ${messageType}: ${thumbnailInfo}`);
-  }
-  if (directPath) {
-    console.log(`DirectPath available: ${directPath.substring(0, 80)}...`);
-  }
-  console.log(`fromMe=${fromMe} - ${fromMe ? 'our message' : 'received message, adding extra delay'}`);
+  const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
+  console.log(`Attempting to download media: type=${messageType}, mimeType=${mediaMimeType}, instance=${session.instance_name}, fromMe=${fromMe}, diagnostic=${isDiagnostic}`);
 
-
-  // Helper function for delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Get file extension from mime type
   const getExtension = (mime: string): string => {
     const mimeExtMap: Record<string, string> = {
       "image/jpeg": "jpg",
@@ -1106,23 +1083,16 @@ async function downloadAndStoreMediaWithPath(
       "image/gif": "gif",
       "image/webp": "webp",
       "video/mp4": "mp4",
-      "video/3gpp": "3gp",
       "audio/ogg": "ogg",
-      "audio/ogg; codecs=opus": "ogg",
       "audio/mpeg": "mp3",
       "audio/mp4": "m4a",
       "application/pdf": "pdf",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
     };
     return mimeExtMap[mime] || mime.split("/")[1]?.split(";")[0] || "bin";
   };
 
-  // Upload content to Supabase Storage - returns both URL and path
   let storedPath: string | null = null;
-  
   const uploadToStorage = async (content: Uint8Array): Promise<string> => {
-    // Validate magic bytes before upload
     if (!validateMagicBytes(content, mediaMimeType)) {
       console.warn(`Magic bytes validation failed for ${mediaMimeType}`);
       return "";
@@ -1150,29 +1120,17 @@ async function downloadAndStoreMediaWithPath(
       .getPublicUrl(filePath);
 
     storedPath = filePath;
-    console.log(`Media stored successfully: ${filePath} -> ${urlData.publicUrl}`);
     return urlData.publicUrl;
   };
 
-  // === STRATEGY 1: getBase64FromMediaMessage with more retries ===
+  // === STRATEGY 1: getBase64FromMediaMessage (PRIORITIZED) ===
   const tryGetBase64FromEvolution = async (): Promise<string | null> => {
-    console.log("Strategy 1: Trying getBase64FromMediaMessage endpoint...");
+    if (!fromMe) await delay(3000);
     
-    if (!fromMe) {
-      console.log("Received message detected, adding 3s initial delay...");
-      await delay(3000);
-    }
-    
-    for (let attempt = 1; attempt <= 5; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        if (attempt === 1) {
-          await delay(1000);
-        } else {
-          console.log(`Retry attempt ${attempt}/5 after delay...`);
-          await delay(3000 * attempt);
-        }
-
-        const mediaResponse = await fetch(
+        await delay(1000 * attempt);
+        const response = await fetch(
           `${EVOLUTION_API_URL}/chat/getBase64FromMediaMessage/${session.instance_name}`,
           {
             method: "POST",
@@ -1182,32 +1140,16 @@ async function downloadAndStoreMediaWithPath(
             },
             body: JSON.stringify({
               message: { key },
-              // Only convert to mp4 for videos as per requirement
               convertToMp4: messageType === "video",
             }),
           }
         );
 
-        const responseText = await mediaResponse.text();
-        console.log(`Strategy 1 attempt ${attempt}: status=${mediaResponse.status}`);
-
-        if (mediaResponse.ok) {
-          try {
-            const mediaData = JSON.parse(responseText);
-            if (mediaData.base64) {
-              const normalized = normalizeBase64(mediaData.base64);
-              if (isValidBase64(normalized)) {
-                console.log(`Strategy 1 success on attempt ${attempt}, base64 length: ${normalized.length}`);
-                return normalized;
-              }
-            }
-          } catch (e) {
-            console.error("Failed to parse response:", responseText.substring(0, 100));
-          }
-        } else {
-          console.log(`Strategy 1 attempt ${attempt} failed:`, responseText.substring(0, 150));
-          if (!responseText.includes("Message not found") && !responseText.includes("not found")) {
-            break;
+        if (response.ok) {
+          const data = await response.json();
+          if (data.base64) {
+            const normalized = normalizeBase64(data.base64);
+            if (isValidBase64(normalized)) return normalized;
           }
         }
       } catch (error) {
@@ -1217,333 +1159,68 @@ async function downloadAndStoreMediaWithPath(
     return null;
   };
 
-  // === STRATEGY 2: Download media by message ID (Diagnostic only) ===
-  const tryDownloadMediaById = async (): Promise<Uint8Array | null> => {
-    const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
-    if (!isDiagnostic) {
-      console.log("Strategy 2 skipped (non-diagnostic mode)");
-      return null;
-    }
+  // === DIAGNOSTIC STRATEGIES ===
+  const tryDiagnosticStrategies = async (): Promise<Uint8Array | null> => {
+    if (!isDiagnostic) return null;
 
-    console.log("Strategy 2: Trying downloadMedia by message ID...");
-    
-    try {
-      const endpoints = [
-        `${EVOLUTION_API_URL}/chat/downloadMedia/${session.instance_name}`,
-        `${EVOLUTION_API_URL}/message/downloadMedia/${session.instance_name}`,
-      ];
-
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`Trying endpoint: ${endpoint}`);
-          
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "apikey": EVOLUTION_API_KEY,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ message: { key } }),
-          });
-
-          if (response.ok) {
-            const contentType = response.headers.get("content-type") || "";
-            
-            if (!contentType.includes("application/json")) {
-              const buffer = await response.arrayBuffer();
-              if (buffer.byteLength > 0) {
-                return new Uint8Array(buffer);
-              }
-            } else {
-              const data = await response.json();
-              if (data.base64) {
-                const normalized = normalizeBase64(data.base64);
-                return decode(normalized);
-              }
-            }
+    // Strategy 2: Download by ID
+    const endpoints = [
+      `${EVOLUTION_API_URL}/chat/downloadMedia/${session.instance_name}`,
+      `${EVOLUTION_API_URL}/message/downloadMedia/${session.instance_name}`,
+    ];
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "apikey": EVOLUTION_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({ message: { key } }),
+        });
+        if (response.ok) {
+          const contentType = response.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) {
+            const buffer = await response.arrayBuffer();
+            return new Uint8Array(buffer);
+          } else {
+            const data = await response.json();
+            if (data.base64) return decode(normalizeBase64(data.base64));
           }
-        } catch (e) {
-          console.log(`Endpoint ${endpoint} failed:`, e);
         }
-      }
-    } catch (error) {
-      console.error("Strategy 2 error:", error);
-    }
-    return null;
-  };
-
-  // === STRATEGY 3: Direct download from WhatsApp URL (Diagnostic only) ===
-  const tryDirectDownload = async (): Promise<Uint8Array | null> => {
-    const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
-    if (!isDiagnostic) {
-      console.log("Strategy 3 skipped (non-diagnostic mode)");
-      return null;
+      } catch (e) { console.log(`S2 failed:`, e); }
     }
 
+    // Strategy 3/5: Direct URL/Path
     const message = messageData.message || {};
     const mediaMessage = message.imageMessage || message.videoMessage || 
                          message.audioMessage || message.documentMessage;
+    const mediaUrl = mediaMessage?.url || (mediaMessage?.directPath ? `https://mmg.whatsapp.net${mediaMessage.directPath}` : null);
     
-    const mediaUrl = mediaMessage?.url;
-    
-    if (!mediaUrl) return null;
-
-    console.log("Strategy 3: Trying direct download from WhatsApp URL...");
-
-    try {
-      const response = await fetch(mediaUrl, {
-        headers: { "User-Agent": "WhatsApp/2.23.20.0" },
-      });
-
-      if (response.ok) {
-        const buffer = await response.arrayBuffer();
-        if (buffer.byteLength > 100) {
-          return new Uint8Array(buffer);
-        }
-      }
-    } catch (error) {
-      console.error("Strategy 3 error:", error);
-    }
-    return null;
-  };
-          // Evolution API can handle decrypted URLs.
-          return new Uint8Array(buffer);
-        }
-      } else {
-        console.log(`Strategy 3 failed: HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Strategy 3 error:", error);
-    }
-    return null;
-  };
-
-  // === STRATEGY 4: Fetch media via Evolution proxy endpoint ===
-  const tryEvolutionMediaProxy = async (): Promise<Uint8Array | null> => {
-    console.log("Strategy 4: Trying Evolution media proxy...");
-    
-    try {
-      // Some Evolution API versions have a different media endpoint
-      const response = await fetch(
-        `${EVOLUTION_API_URL}/chat/fetchMediaUrl/${session.instance_name}`,
-        {
-          method: "POST",
-          headers: {
-            "apikey": EVOLUTION_API_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            messageId: key.id,
-            remoteJid: key.remoteJid,
-            fromMe: key.fromMe,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const contentType = response.headers.get("content-type") || "";
-        
-        if (!contentType.includes("application/json")) {
+    if (mediaUrl) {
+      try {
+        const response = await fetch(mediaUrl, { headers: { "User-Agent": "WhatsApp/2.24.1.0" } });
+        if (response.ok) {
           const buffer = await response.arrayBuffer();
-          if (buffer.byteLength > 0) {
-            console.log(`Strategy 4 success: ${buffer.byteLength} bytes`);
-            return new Uint8Array(buffer);
-          }
-        } else {
-          const data = await response.json();
-          if (data.base64) {
-            console.log(`Strategy 4 success via base64`);
-            return decode(data.base64);
-          }
-          if (data.url) {
-            // Got a direct URL, try to download it
-            console.log("Strategy 4: Got URL, attempting download...");
-            const urlResponse = await fetch(data.url);
-            if (urlResponse.ok) {
-              const buffer = await urlResponse.arrayBuffer();
-              if (buffer.byteLength > 0) {
-                return new Uint8Array(buffer);
-              }
-            }
-          }
+          if (buffer.byteLength > 100) return new Uint8Array(buffer);
         }
-      }
-    } catch (error) {
-      console.error("Strategy 4 error:", error);
+      } catch (e) { console.log(`S3/5 failed:`, e); }
     }
     return null;
   };
 
-  // === STRATEGY 5: Try using directPath to construct download URL ===
-  const tryDirectPathDownload = async (): Promise<Uint8Array | null> => {
-    if (!directPath) {
-      console.log("Strategy 5: No directPath available");
-      return null;
-    }
-
-    console.log("Strategy 5: Trying download via directPath...");
-    
-    try {
-      // WhatsApp CDN URLs can be constructed from directPath
-      const cdnUrls = [
-        `https://mmg.whatsapp.net${directPath}`,
-        `https://media.whatsapp.net${directPath}`,
-      ];
-
-      for (const url of cdnUrls) {
-        try {
-          console.log(`Trying CDN URL: ${url.substring(0, 80)}...`);
-          const response = await fetch(url, {
-            headers: {
-              "User-Agent": "WhatsApp/2.24.1.0",
-              "Accept": "*/*",
-            },
-          });
-
-          if (response.ok) {
-            const buffer = await response.arrayBuffer();
-            if (buffer.byteLength > 100) {
-              console.log(`Strategy 5 success: downloaded ${buffer.byteLength} bytes from CDN`);
-              return new Uint8Array(buffer);
-            }
-          } else {
-            console.log(`CDN URL returned: ${response.status}`);
-          }
-        } catch (e) {
-          console.log(`CDN URL failed:`, e);
-        }
-      }
-    } catch (error) {
-      console.error("Strategy 5 error:", error);
-    }
-    return null;
-  };
-
-  // === FALLBACK: Save thumbnail if available (for images only) ===
-  const saveThumbnail = async (): Promise<string> => {
-    if (messageType !== "image" || !jpegThumbnail) {
-      console.log("Fallback: No thumbnail available");
-      return "";
-    }
-
-    console.log("Fallback: Saving jpegThumbnail as last resort...");
-    
-    try {
-      // jpegThumbnail can come in different formats from Evolution API:
-      // 1. Base64 string
-      // 2. Uint8Array
-      // 3. Regular array
-      // 4. Object with numeric keys {"0": 255, "1": 216, ...}
-      let thumbnailBytes: Uint8Array;
-      
-      if (typeof jpegThumbnail === 'string') {
-        // If it's a base64 string, decode it
-        thumbnailBytes = decode(jpegThumbnail);
-      } else if (jpegThumbnail instanceof Uint8Array) {
-        thumbnailBytes = jpegThumbnail;
-      } else if (Array.isArray(jpegThumbnail)) {
-        thumbnailBytes = new Uint8Array(jpegThumbnail);
-      } else if (typeof jpegThumbnail === 'object' && jpegThumbnail !== null) {
-        // Object with numeric keys like {"0": 255, "1": 216, "2": 255, ...}
-        const keys = Object.keys(jpegThumbnail).filter(k => !isNaN(Number(k))).sort((a, b) => Number(a) - Number(b));
-        const values = keys.map(k => jpegThumbnail[k]);
-        thumbnailBytes = new Uint8Array(values);
-        console.log(`Converted object thumbnail to ${thumbnailBytes.length} bytes`);
-      } else {
-        console.log("Unknown thumbnail format:", typeof jpegThumbnail);
-        return "";
-      }
-      
-      // Validate JPEG magic bytes (0xFF 0xD8)
-      if (thumbnailBytes.length < 2 || thumbnailBytes[0] !== 0xFF || thumbnailBytes[1] !== 0xD8) {
-        console.log("Invalid JPEG thumbnail - wrong magic bytes");
-        return "";
-      }
-
-      const filePath = `${session.organization_id}/${conversationId}/${messageId}_thumb.jpg`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("whatsapp-media")
-        .upload(filePath, thumbnailBytes, {
-          contentType: "image/jpeg",
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error("Error uploading thumbnail:", uploadError);
-        return "";
-      }
-
-      const { data: urlData } = supabase.storage
-        .from("whatsapp-media")
-        .getPublicUrl(filePath);
-
-      console.log(`Thumbnail saved successfully: ${urlData.publicUrl}`);
-      return urlData.publicUrl;
-    } catch (error) {
-      console.error("Error saving thumbnail:", error);
-      return "";
-    }
-  };
-
-  try {
-    // Try Strategy 1: getBase64FromMediaMessage (most reliable when it works)
-    const base64Content = await tryGetBase64FromEvolution();
-    if (base64Content) {
-      const fileContent = decode(base64Content);
-      const url = await uploadToStorage(fileContent);
-      if (url) return { url, path: storedPath };
-    }
-
-    // Try Strategy 2: Download media by ID
-    const mediaById = await tryDownloadMediaById();
-    if (mediaById) {
-      const url = await uploadToStorage(mediaById);
-      if (url) return { url, path: storedPath };
-    }
-
-    // Try Strategy 3: Direct download from WhatsApp (URL expires quickly)
-    const directDownload = await tryDirectDownload();
-    if (directDownload && directDownload.length > 100) {
-      const url = await uploadToStorage(directDownload);
-      if (url) {
-        console.log("Strategy 3: Direct download successful");
-        return { url, path: storedPath };
-      }
-    }
-
-    // Try Strategy 4: Evolution media proxy
-    const proxyContent = await tryEvolutionMediaProxy();
-    if (proxyContent) {
-      const url = await uploadToStorage(proxyContent);
-      if (url) return { url, path: storedPath };
-    }
-
-    // Try Strategy 5: DirectPath CDN download
-    const directPathContent = await tryDirectPathDownload();
-    if (directPathContent && directPathContent.length > 100) {
-      const url = await uploadToStorage(directPathContent);
-      if (url) {
-        return { url, path: storedPath };
-      }
-    }
-
-    // FALLBACK: For images, try to save the thumbnail
-    if (messageType === "image" && jpegThumbnail) {
-      const thumbnailUrl = await saveThumbnail();
-      if (thumbnailUrl) {
-        console.log("Using thumbnail as fallback for image");
-        return { url: thumbnailUrl, path: storedPath };
-      }
-    }
-
-    console.log("All download strategies failed");
-    return { url: "", path: null };
-
-  } catch (error) {
-    console.error("Error in downloadAndStoreMediaWithPath:", error);
-    return { url: "", path: null };
+  // Main execution flow
+  const base64 = await tryGetBase64FromEvolution();
+  if (base64) {
+    const url = await uploadToStorage(decode(base64));
+    if (url) return { url, path: storedPath };
   }
+
+  const binaryContent = await tryDiagnosticStrategies();
+  if (binaryContent) {
+    const url = await uploadToStorage(binaryContent);
+    if (url) return { url, path: storedPath };
+  }
+
+  return { url: "", path: null };
+}
 }
 
 async function handleMessagesUpdate(supabase: any, session: any, data: any) {
