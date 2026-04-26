@@ -432,6 +432,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           number: formattedPhone,
           image: mediaContent,
           caption: mediaCaption,
+          mentions: mentions || [],
         };
       } else if (mediaType === "video") {
         altEndpoint = "sendVideo";
@@ -439,6 +440,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           number: formattedPhone,
           video: mediaContent,
           caption: mediaCaption,
+          mentions: mentions || [],
         };
       } else if (mediaType === "document") {
         altEndpoint = "sendDocument";
@@ -447,12 +449,14 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           document: mediaContent,
           fileName: filename || "document",
           caption: mediaCaption,
+          mentions: mentions || [],
         };
       } else if (mediaType === "audio") {
         altEndpoint = "sendAudio";
         altBody = {
           number: formattedPhone,
           audio: mediaContent,
+          mentions: mentions || [],
         };
       }
 
