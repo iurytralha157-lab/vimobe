@@ -1221,7 +1221,6 @@ async function downloadAndStoreMediaWithPath(
 
   return { url: "", path: null };
 }
-}
 
 async function handleMessagesUpdate(supabase: any, session: any, data: any) {
   const updates = Array.isArray(data) ? data : [data];
