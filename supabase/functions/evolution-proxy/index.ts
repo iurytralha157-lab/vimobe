@@ -275,7 +275,7 @@ async function getConnectionStatus(apiUrl: string, apiKey: string, instanceName:
 
 async function sendMessage(apiUrl: string, apiKey: string, params: any): Promise<EvolutionResponse> {
   try {
-    const { instanceName, number, text, phone, message, sessionName } = params;
+    const { instanceName, number, text, phone, message, sessionName, mentions } = params;
     const instance = instanceName || sessionName;
     const phoneNumber = number || phone;
     const messageText = text || message;
@@ -292,6 +292,7 @@ async function sendMessage(apiUrl: string, apiKey: string, params: any): Promise
       body: JSON.stringify({
         number: formattedPhone,
         text: messageText,
+        mentions: mentions || [],
       }),
     });
 
@@ -323,7 +324,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
   try {
     const { 
       instanceName, number, phone, path, filename, caption, sessionName, 
-      mediaUrl, mediaType, text, base64, mimetype 
+      mediaUrl, mediaType, text, base64, mimetype, mentions 
     } = params;
     const instance = instanceName || sessionName;
     const phoneNumber = number || phone;
@@ -358,6 +359,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "image.jpg",
         media: mediaContent,
+        mentions: mentions || [],
       };
     } else if (mediaType === "video") {
       endpoint = "sendMedia";
@@ -368,12 +370,14 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "video.mp4",
         media: mediaContent,
+        mentions: mentions || [],
       };
     } else if (mediaType === "audio") {
       endpoint = "sendWhatsAppAudio";
       body = {
         number: formattedPhone,
         audio: mediaContent,
+        mentions: mentions || [],
       };
     } else if (mediaType === "document") {
       endpoint = "sendMedia";
@@ -384,6 +388,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "document",
         media: mediaContent,
+        mentions: mentions || [],
       };
     } else {
       // Generic fallback
@@ -395,6 +400,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "file",
         media: mediaContent,
+        mentions: mentions || [],
       };
     }
 
@@ -426,6 +432,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           number: formattedPhone,
           image: mediaContent,
           caption: mediaCaption,
+          mentions: mentions || [],
         };
       } else if (mediaType === "video") {
         altEndpoint = "sendVideo";
@@ -433,6 +440,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           number: formattedPhone,
           video: mediaContent,
           caption: mediaCaption,
+          mentions: mentions || [],
         };
       } else if (mediaType === "document") {
         altEndpoint = "sendDocument";
@@ -441,12 +449,14 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           document: mediaContent,
           fileName: filename || "document",
           caption: mediaCaption,
+          mentions: mentions || [],
         };
       } else if (mediaType === "audio") {
         altEndpoint = "sendAudio";
         altBody = {
           number: formattedPhone,
           audio: mediaContent,
+          mentions: mentions || [],
         };
       }
 

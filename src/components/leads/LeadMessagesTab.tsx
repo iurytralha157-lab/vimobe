@@ -135,7 +135,7 @@ function MessageBubble({ msg, leadName }: { msg: LeadMessage; leadName: string }
         {msg.content && msg.content !== '[Imagem]' && msg.content !== '[Áudio]' && msg.content !== '[Gravação]' && msg.content !== '[Vídeo]' && msg.content !== '[Sticker]' && (
           <p className="whitespace-pre-wrap break-words">
             {(() => {
-              const mentionRegex = /(@\d+|@[\w\s\u00C0-\u017F]{2,})/g;
+              const mentionRegex = /(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})/g;
               const parts = msg.content.split(mentionRegex);
               
               if (parts.length === 1) return msg.content;

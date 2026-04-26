@@ -462,6 +462,10 @@ export function useSendWhatsAppMessage() {
         phone
       });
 
+      // Extract mentions from text (numbers only for now)
+      const mentionMatches = text?.match(/@(\d{7,})/g);
+      const mentions = mentionMatches ? mentionMatches.map(m => m.replace("@", "")) : [];
+
       // Send via Evolution API - prefer stored URL over base64
       const { data, error } = await supabase.functions.invoke("evolution-proxy", {
         body: {
@@ -470,6 +474,7 @@ export function useSendWhatsAppMessage() {
           number: phone,
           text,
           isGroup,
+          mentions,
           ...((storedMediaUrl || base64) && { 
             mediaUrl: storedMediaUrl, 
             mediaType: mediaType || "image",
