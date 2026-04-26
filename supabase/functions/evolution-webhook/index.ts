@@ -621,23 +621,29 @@ async function handleMessagesUpsert(
             mediaStoragePath = result.path;
             mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
           } else if (mediaUrl) {
-            // Always try to download from Evolution API to get permanent copy
-            console.log(`Downloading media from Evolution API for ${messageType}`);
-            const result = await downloadAndStoreMediaWithPath(
-              supabase,
-              supabaseUrl,
-              session,
-              conversation.id,
-              messageId,
-              messageType,
-              normalizedMimeType,
-              key,
-              messageData,
-              fromMe
-            );
-            permanentMediaUrl = result.url;
-            mediaStoragePath = result.path;
-            mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
+            // For outgoing messages, we try to download immediately
+            // For incoming messages, we defer to the worker to avoid blocking the webhook
+            if (fromMe) {
+              console.log(`Downloading outgoing media from Evolution API for ${messageType}`);
+              const result = await downloadAndStoreMediaWithPath(
+                supabase,
+                supabaseUrl,
+                session,
+                conversation.id,
+                messageId,
+                messageType,
+                normalizedMimeType,
+                key,
+                messageData,
+                fromMe
+              );
+              permanentMediaUrl = result.url;
+              mediaStoragePath = result.path;
+              mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
+            } else {
+              console.log(`Deferring incoming ${messageType} media to worker`);
+              mediaStatusForInsert = 'pending';
+            }
           } else {
             // No media source available
             mediaStatusForInsert = 'pending';
