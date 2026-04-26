@@ -20,11 +20,57 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Check if this is a forced retry for a specific message
-    let body: { message_id?: string; force?: boolean } = {};
+    let body: { message_id?: string; force?: boolean; scan_orphans?: boolean } = {};
     try {
       body = await req.json();
     } catch {
       // No body is fine for cron jobs
+    }
+
+    // Scan mode: create jobs for all messages that are 'pending' without a job
+    if (body.scan_orphans) {
+      console.log("Scanning for orphan pending media messages...");
+      const { data: orphans } = await supabase
+        .from("whatsapp_messages")
+        .select("id, session_id, conversation_id, message_type, media_mime_type, message_id, session:whatsapp_sessions(organization_id)")
+        .eq("media_status", "pending")
+        .is("media_url", null)
+        .in("message_type", ["image", "audio", "video", "document"])
+        .gte("sent_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+      let created = 0;
+      for (const msg of orphans || []) {
+        const { data: existing } = await supabase
+          .from("media_jobs")
+          .select("id")
+          .eq("message_id", msg.id)
+          .in("status", ["pending", "processing"])
+          .maybeSingle();
+        
+        if (existing) continue;
+
+        const orgId = (msg as any).session?.organization_id;
+        if (!orgId) continue;
+
+        const { error: insErr } = await supabase.from("media_jobs").insert({
+          organization_id: orgId,
+          message_id: msg.id,
+          session_id: msg.session_id,
+          conversation_id: msg.conversation_id,
+          message_key: { id: msg.message_id },
+          media_type: msg.message_type,
+          media_mime_type: msg.media_mime_type,
+          status: 'pending',
+          attempts: 0,
+          next_retry_at: new Date().toISOString(),
+        });
+        if (!insErr) created++;
+      }
+      console.log(`Scan complete: ${created} jobs created out of ${orphans?.length || 0} orphans`);
+      return new Response(
+        JSON.stringify({ success: true, orphans_found: orphans?.length || 0, jobs_created: created }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (body.message_id && body.force) {
