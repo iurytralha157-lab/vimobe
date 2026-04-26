@@ -233,10 +233,11 @@ Deno.serve(async (req) => {
         let mediaContent: Uint8Array | null = null;
         const messageId = job.message_key?.id;
         let failureReasons: string[] = [];
+        let messageNotFound = false;
 
         if (EVOLUTION_API_URL && EVOLUTION_API_KEY && messageId) {
-          // Strategy 1: getBase64FromMediaMessage with retries
-          const result1 = await tryGetBase64(
+          // Strategy 1a: getBase64FromMediaMessage with full key
+          let result1 = await tryGetBase64(
             EVOLUTION_API_URL,
             EVOLUTION_API_KEY,
             session.instance_name,
@@ -244,13 +245,28 @@ Deno.serve(async (req) => {
             job.media_type,
             job.media_mime_type || ""
           );
-          
+
+          // Strategy 1b: retry with minimal key { id } — Evolution sometimes
+          // rejects extra fields (remoteJidAlt, addressingMode, empty participant).
+          if (!result1.content && /Message not found/i.test(result1.error || "")) {
+            console.log("Retrying Strategy 1 with minimal key { id } only...");
+            result1 = await tryGetBase64(
+              EVOLUTION_API_URL,
+              EVOLUTION_API_KEY,
+              session.instance_name,
+              { id: messageId },
+              job.media_type,
+              job.media_mime_type || ""
+            );
+          }
+
           if (result1.content) {
             mediaContent = result1.content;
           } else {
-            failureReasons.push(`S1: ${result1.error || "Unknown error"}`);
-            
-            // Strategy 2: Only in diagnostic mode
+            const err = result1.error || "Unknown error";
+            failureReasons.push(`S1: ${err}`);
+            if (/Message not found/i.test(err)) messageNotFound = true;
+
             const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
             if (isDiagnostic) {
               const result2 = await tryDownloadMedia(
@@ -260,7 +276,6 @@ Deno.serve(async (req) => {
                 job.message_key,
                 job.media_mime_type || ""
               );
-              
               if (result2.content) {
                 mediaContent = result2.content;
               } else {
