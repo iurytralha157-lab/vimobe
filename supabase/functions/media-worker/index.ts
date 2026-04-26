@@ -385,7 +385,8 @@ async function tryGetBase64(
   apiKey: string,
   instanceName: string,
   messageKey: any,
-  mediaType: string
+  mediaType: string,
+  expectedMime: string
 ): Promise<{ content: Uint8Array | null; error?: string }> {
   console.log("Strategy 1: Trying getBase64FromMediaMessage...");
   
@@ -408,18 +409,35 @@ async function tryGetBase64(
           },
           body: JSON.stringify({
             message: { key: messageKey },
-            convertToMp4: mediaType === "audio",
+            // Only convert to mp4 for videos as per requirement
+            convertToMp4: mediaType === "video",
           }),
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        if (data.base64) {
-          console.log(`Strategy 1 success on attempt ${attempt}`);
-          return { content: decode(data.base64) };
+        const base64 = data.base64;
+        
+        if (base64) {
+          const normalized = normalizeBase64(base64);
+          if (!isValidBase64(normalized)) {
+            lastError = `Invalid base64 received (attempt ${attempt})`;
+            continue;
+          }
+
+          const content = decode(normalized);
+          
+          if (validateMagicBytes(content, expectedMime)) {
+            console.log(`Strategy 1 success on attempt ${attempt}`);
+            return { content };
+          } else {
+            lastError = `Magic bytes validation failed (attempt ${attempt})`;
+            console.warn(`Magic bytes validation failed for ${expectedMime}`);
+          }
+        } else {
+          lastError = `No base64 in response (attempt ${attempt})`;
         }
-        lastError = `No base64 in response (attempt ${attempt})`;
       } else {
         const text = await response.text();
         lastError = `HTTP ${response.status}: ${text.substring(0, 100)} (attempt ${attempt})`;
@@ -438,7 +456,8 @@ async function tryDownloadMedia(
   apiUrl: string,
   apiKey: string,
   instanceName: string,
-  messageKey: any
+  messageKey: any,
+  expectedMime: string
 ): Promise<{ content: Uint8Array | null; error?: string }> {
   console.log("Strategy 2: Trying downloadMedia endpoint...");
   
@@ -465,18 +484,27 @@ async function tryDownloadMedia(
         
         if (!contentType.includes("application/json")) {
           const buffer = await response.arrayBuffer();
-          if (buffer.byteLength > 100) {
-            console.log(`Strategy 2 success: ${buffer.byteLength} bytes`);
-            return { content: new Uint8Array(buffer) };
+          const content = new Uint8Array(buffer);
+          
+          if (content.length > 100 && validateMagicBytes(content, expectedMime)) {
+            console.log(`Strategy 2 success: ${content.length} bytes`);
+            return { content };
           }
-          errors.push(`${endpoint}: Empty or too small buffer (${buffer.byteLength} bytes)`);
+          errors.push(`${endpoint}: Validation failed or too small (${content.length} bytes)`);
         } else {
           const data = await response.json();
-          if (data.base64) {
-            console.log("Strategy 2 success via base64");
-            return { content: decode(data.base64) };
+          const base64 = data.base64;
+          if (base64) {
+            const normalized = normalizeBase64(base64);
+            const content = decode(normalized);
+            if (validateMagicBytes(content, expectedMime)) {
+              console.log("Strategy 2 success via base64");
+              return { content };
+            }
+            errors.push(`${endpoint}: Magic bytes validation failed`);
+          } else {
+            errors.push(`${endpoint}: No base64 in JSON response`);
           }
-          errors.push(`${endpoint}: No base64 in JSON response`);
         }
       } else {
         const text = await response.text();
