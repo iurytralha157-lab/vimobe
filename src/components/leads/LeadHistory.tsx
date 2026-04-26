@@ -314,7 +314,7 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
                     {event.content && !outcomeNotes && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {(() => {
-                          const mentionRegex = /(@[0-9+()-\s]{5,}\d|@[\w\u00C0-\u017F]+(?:[\s.][\w\u00C0-\u017F]+)*)/g;
+                          const mentionRegex = /(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})/g;
                           const parts = event.content.split(mentionRegex);
                           
                           if (parts.length === 1) return event.content;
