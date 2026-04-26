@@ -359,6 +359,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "image.jpg",
         media: mediaContent,
+        mentions: mentions || [],
       };
     } else if (mediaType === "video") {
       endpoint = "sendMedia";
@@ -369,12 +370,14 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "video.mp4",
         media: mediaContent,
+        mentions: mentions || [],
       };
     } else if (mediaType === "audio") {
       endpoint = "sendWhatsAppAudio";
       body = {
         number: formattedPhone,
         audio: mediaContent,
+        mentions: mentions || [],
       };
     } else if (mediaType === "document") {
       endpoint = "sendMedia";
@@ -385,6 +388,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "document",
         media: mediaContent,
+        mentions: mentions || [],
       };
     } else {
       // Generic fallback
@@ -396,6 +400,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
         caption: mediaCaption,
         fileName: filename || "file",
         media: mediaContent,
+        mentions: mentions || [],
       };
     }
 
