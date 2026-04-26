@@ -255,7 +255,8 @@ Deno.serve(async (req) => {
           console.log(`Job ${job.id} completed: ${mediaUrl}`);
           results.push({ job_id: job.id, status: "completed", media_url: mediaUrl });
         } else {
-          throw new Error(`Could not download media. ${failureReasons.join(" | ")}`);
+          const reason = mediaContent ? `Media too small: ${mediaContent.length} bytes` : failureReasons.join(" | ");
+          throw new Error(`Could not download media. ${reason}`);
         }
 
       } catch (error) {
