@@ -280,8 +280,8 @@ async function sendMessage(apiUrl: string, apiKey: string, params: any): Promise
     const phoneNumber = number || phone;
     const messageText = text || message;
 
-    // Format phone number for Evolution (just digits with country code)
-    const formattedPhone = phoneNumber.replace(/\D/g, "");
+    // Format phone number for Evolution (just digits for personal, full JID for groups)
+    const formattedPhone = (phoneNumber.includes("@") || params.isGroup) ? phoneNumber : phoneNumber.replace(/\D/g, "");
 
     const response = await fetch(`${apiUrl}/message/sendText/${instance}`, {
       method: "POST",
@@ -336,7 +336,8 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
     );
     const mediaCaption = isJustFilename ? "" : rawCaption;
 
-    const formattedPhone = phoneNumber.replace(/\D/g, "");
+    // Format phone number for Evolution (just digits for personal, full JID for groups)
+    const formattedPhone = (phoneNumber.includes("@") || params.isGroup) ? phoneNumber : phoneNumber.replace(/\D/g, "");
 
     // Prefer base64 if available (more reliable), fallback to URL
     const mediaContent = base64 || mediaUrl || path;
@@ -440,6 +441,12 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           document: mediaContent,
           fileName: filename || "document",
           caption: mediaCaption,
+        };
+      } else if (mediaType === "audio") {
+        altEndpoint = "sendAudio";
+        altBody = {
+          number: formattedPhone,
+          audio: mediaContent,
         };
       }
 
