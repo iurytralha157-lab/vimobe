@@ -715,10 +715,10 @@ export function MessageBubble({
       )}
     >
       <div className={cn(
-        "max-w-[75%] rounded-lg px-2 py-1.5 relative overflow-hidden",
+        "max-w-[75%] rounded-lg relative overflow-hidden",
         fromMe 
-          ? "bg-primary text-primary-foreground rounded-br-[4px]" 
-          : "bg-chatBubble text-chatBubble-foreground rounded-bl-[4px]"
+          ? "bg-primary text-primary-foreground rounded-br-[4px] px-2 py-1.5" 
+          : "bg-chatBubble text-chatBubble-foreground rounded-bl-[4px] px-[2px] py-[2px]"
       )}>
         {/* Sender name for groups or sent messages with sender info */}
         {!fromMe && senderName && (
