@@ -324,7 +324,7 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
   try {
     const { 
       instanceName, number, phone, path, filename, caption, sessionName, 
-      mediaUrl, mediaType, text, base64, mimetype 
+      mediaUrl, mediaType, text, base64, mimetype, mentions 
     } = params;
     const instance = instanceName || sessionName;
     const phoneNumber = number || phone;
