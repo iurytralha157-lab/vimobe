@@ -336,7 +336,8 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
     );
     const mediaCaption = isJustFilename ? "" : rawCaption;
 
-    const formattedPhone = phoneNumber.replace(/\D/g, "");
+    // Format phone number for Evolution (just digits for personal, full JID for groups)
+    const formattedPhone = (phoneNumber.includes("@") || params.isGroup) ? phoneNumber : phoneNumber.replace(/\D/g, "");
 
     // Prefer base64 if available (more reliable), fallback to URL
     const mediaContent = base64 || mediaUrl || path;
