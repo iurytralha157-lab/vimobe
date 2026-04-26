@@ -175,26 +175,39 @@ Deno.serve(async (req) => {
         // Try multiple strategies to download media
         let mediaContent: Uint8Array | null = null;
         const messageId = job.message_key?.id;
+        let failureReasons: string[] = [];
 
         if (EVOLUTION_API_URL && EVOLUTION_API_KEY && messageId) {
           // Strategy 1: getBase64FromMediaMessage with retries
-          mediaContent = await tryGetBase64(
+          const result1 = await tryGetBase64(
             EVOLUTION_API_URL,
             EVOLUTION_API_KEY,
             session.instance_name,
             job.message_key,
             job.media_type
           );
-
-          // Strategy 2: downloadMedia endpoint
-          if (!mediaContent) {
-            mediaContent = await tryDownloadMedia(
+          
+          if (result1.content) {
+            mediaContent = result1.content;
+          } else {
+            failureReasons.push(`S1: ${result1.error || "Unknown error"}`);
+            
+            // Strategy 2: downloadMedia endpoint
+            const result2 = await tryDownloadMedia(
               EVOLUTION_API_URL,
               EVOLUTION_API_KEY,
               session.instance_name,
               job.message_key
             );
+            
+            if (result2.content) {
+              mediaContent = result2.content;
+            } else {
+              failureReasons.push(`S2: ${result2.error || "Unknown error"}`);
+            }
           }
+        } else {
+          failureReasons.push("Missing configuration or message ID");
         }
 
         if (mediaContent && mediaContent.length > 100) {
@@ -242,7 +255,8 @@ Deno.serve(async (req) => {
           console.log(`Job ${job.id} completed: ${mediaUrl}`);
           results.push({ job_id: job.id, status: "completed", media_url: mediaUrl });
         } else {
-          throw new Error("Could not download media from any strategy");
+          const reason = mediaContent ? `Media too small: ${mediaContent.length} bytes` : failureReasons.join(" | ");
+          throw new Error(`Could not download media. ${reason}`);
         }
 
       } catch (error) {
@@ -323,10 +337,11 @@ async function tryGetBase64(
   instanceName: string,
   messageKey: any,
   mediaType: string
-): Promise<Uint8Array | null> {
+): Promise<{ content: Uint8Array | null; error?: string }> {
   console.log("Strategy 1: Trying getBase64FromMediaMessage...");
   
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  let lastError = "";
   
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -353,15 +368,20 @@ async function tryGetBase64(
         const data = await response.json();
         if (data.base64) {
           console.log(`Strategy 1 success on attempt ${attempt}`);
-          return decode(data.base64);
+          return { content: decode(data.base64) };
         }
+        lastError = `No base64 in response (attempt ${attempt})`;
+      } else {
+        const text = await response.text();
+        lastError = `HTTP ${response.status}: ${text.substring(0, 100)} (attempt ${attempt})`;
       }
     } catch (e) {
+      lastError = `${e instanceof Error ? e.message : String(e)} (attempt ${attempt})`;
       console.error(`Strategy 1 attempt ${attempt} error:`, e);
     }
   }
   
-  return null;
+  return { content: null, error: lastError };
 }
 
 // Strategy 2: Try downloadMedia endpoint
@@ -370,13 +390,15 @@ async function tryDownloadMedia(
   apiKey: string,
   instanceName: string,
   messageKey: any
-): Promise<Uint8Array | null> {
+): Promise<{ content: Uint8Array | null; error?: string }> {
   console.log("Strategy 2: Trying downloadMedia endpoint...");
   
   const endpoints = [
     `${apiUrl}/chat/downloadMedia/${instanceName}`,
     `${apiUrl}/message/downloadMedia/${instanceName}`,
   ];
+
+  let errors: string[] = [];
 
   for (const endpoint of endpoints) {
     try {
@@ -396,22 +418,28 @@ async function tryDownloadMedia(
           const buffer = await response.arrayBuffer();
           if (buffer.byteLength > 100) {
             console.log(`Strategy 2 success: ${buffer.byteLength} bytes`);
-            return new Uint8Array(buffer);
+            return { content: new Uint8Array(buffer) };
           }
+          errors.push(`${endpoint}: Empty or too small buffer (${buffer.byteLength} bytes)`);
         } else {
           const data = await response.json();
           if (data.base64) {
             console.log("Strategy 2 success via base64");
-            return decode(data.base64);
+            return { content: decode(data.base64) };
           }
+          errors.push(`${endpoint}: No base64 in JSON response`);
         }
+      } else {
+        const text = await response.text();
+        errors.push(`${endpoint}: HTTP ${response.status} - ${text.substring(0, 50)}`);
       }
     } catch (e) {
+      errors.push(`${endpoint}: ${e instanceof Error ? e.message : String(e)}`);
       console.log(`Endpoint ${endpoint} failed:`, e);
     }
   }
 
-  return null;
+  return { content: null, error: errors.join(" | ") };
 }
 
 function getExtensionFromMime(mime: string): string {
