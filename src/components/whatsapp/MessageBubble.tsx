@@ -746,12 +746,11 @@ export function MessageBubble({
                     <span 
                       key={index} 
                       className={cn(
-                        "font-bold transition-all duration-200",
+                        "font-semibold px-1 py-0.5 rounded transition-all duration-200 inline-block",
                         fromMe 
-                          ? "text-primary-foreground underline underline-offset-2" 
-                          : "text-blue-500 dark:text-blue-400 hover:text-blue-600 cursor-pointer"
+                          ? "bg-white/20 text-white" 
+                          : "bg-primary/15 text-primary dark:bg-primary/25"
                       )}
-                      title="Mencionado"
                     >
                       {part}
                     </span>
