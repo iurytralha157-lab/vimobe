@@ -442,6 +442,12 @@ async function sendMedia(apiUrl: string, apiKey: string, params: any): Promise<E
           fileName: filename || "document",
           caption: mediaCaption,
         };
+      } else if (mediaType === "audio") {
+        altEndpoint = "sendAudio";
+        altBody = {
+          number: formattedPhone,
+          audio: mediaContent,
+        };
       }
 
       if (altEndpoint && altBody) {
