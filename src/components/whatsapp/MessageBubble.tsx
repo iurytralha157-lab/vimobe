@@ -572,7 +572,7 @@ export function MessageBubble({
                 <img
                   src={mediaUrl!}
                   alt={content || "Imagem"}
-                  className="w-full h-auto object-cover"
+                  className="w-48 h-48 object-cover rounded-md"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
                 />
@@ -589,7 +589,7 @@ export function MessageBubble({
         }
         return (
           <div className={cn(
-            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-full max-w-[200px]",
+            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-48 h-48",
             fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
           )}>
             <ImageIcon className="w-10 h-10 opacity-50" />
@@ -618,7 +618,7 @@ export function MessageBubble({
               >
                 <video
                   src={mediaUrl!}
-                  className="w-full h-auto"
+                  className="w-48 h-48 object-cover rounded-md"
                   preload="metadata"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -639,7 +639,7 @@ export function MessageBubble({
         }
         return (
           <div className={cn(
-            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-full max-w-[200px]",
+            "flex flex-col items-center justify-center gap-2 p-4 rounded-md w-48 h-48",
             fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
           )}>
             <Video className="w-10 h-10 opacity-50" />
