@@ -1007,12 +1007,24 @@ async function storeBase64MediaWithPath(
 ): Promise<{ url: string; path: string | null }> {
   try {
     const extension = getExtensionFromMime(mediaMimeType);
-    // Standardized path: orgs/{org_id}/sessions/{session_id}/media/{messageId}.{ext}
     const filePath = `orgs/${session.organization_id}/sessions/${session.id}/media/${messageId}.${extension}`;
     
+    // Normalize and validate base64
+    const normalized = normalizeBase64(base64Content);
+    if (!isValidBase64(normalized)) {
+      console.warn("Invalid base64 provided to storeBase64MediaWithPath");
+      return { url: "", path: null };
+    }
+
     // Decode base64 to Uint8Array
-    const fileContent = decode(base64Content);
+    const fileContent = decode(normalized);
     
+    // Validate magic bytes
+    if (!validateMagicBytes(fileContent, mediaMimeType)) {
+      console.warn(`Magic bytes validation failed for ${mediaMimeType} in storeBase64MediaWithPath`);
+      return { url: "", path: null };
+    }
+
     console.log(`Storing base64 media: ${filePath}, size: ${fileContent.length} bytes`);
 
     const { error: uploadError } = await supabase.storage
