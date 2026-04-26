@@ -735,7 +735,7 @@ export function MessageBubble({
         {content && messageType === "text" && (
           <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">
             {(() => {
-              const mentionRegex = /(@\d+|@[\w\s\u00C0-\u017F]{2,})/g;
+              const mentionRegex = /(@[0-9+()-\s]{5,}\d|@[\w\u00C0-\u017F]+(?:[\s.][\w\u00C0-\u017F]+)*)/g;
               const parts = content.split(mentionRegex);
               
               if (parts.length === 1) return content;
