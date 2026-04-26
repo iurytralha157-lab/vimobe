@@ -280,8 +280,8 @@ async function sendMessage(apiUrl: string, apiKey: string, params: any): Promise
     const phoneNumber = number || phone;
     const messageText = text || message;
 
-    // Format phone number for Evolution (just digits with country code)
-    const formattedPhone = phoneNumber.replace(/\D/g, "");
+    // Format phone number for Evolution (just digits for personal, full JID for groups)
+    const formattedPhone = (phoneNumber.includes("@") || params.isGroup) ? phoneNumber : phoneNumber.replace(/\D/g, "");
 
     const response = await fetch(`${apiUrl}/message/sendText/${instance}`, {
       method: "POST",
