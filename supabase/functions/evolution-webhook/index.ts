@@ -1,6 +1,46 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decode } from "https://deno.land/std@0.177.0/encoding/base64.ts";
 
+const MAGIC_BYTES: Record<string, string[]> = {
+  'image/jpeg': ['FFD8FF'],
+  'image/png': ['89504E47'],
+  'image/gif': ['47494638'],
+  'image/webp': ['52494646'],
+  'audio/mpeg': ['494433', 'FFF1', 'FFF9'],
+  'audio/ogg': ['4F676753'],
+  'audio/mp4': ['000000'],
+  'video/mp4': ['000000'],
+  'application/pdf': ['25504446'],
+};
+
+function validateMagicBytes(content: Uint8Array, expectedMime: string): boolean {
+  if (content.length < 4) return false;
+  const hex = Array.from(content.slice(0, 8))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('').toUpperCase();
+
+  const mimeBase = expectedMime.split(';')[0].toLowerCase();
+  
+  if (mimeBase === 'image/webp' && hex.startsWith('52494646')) return true;
+  if ((mimeBase === 'video/mp4' || mimeBase === 'audio/mp4') && hex.includes('66747970')) return true;
+
+  const expectedSignatures = MAGIC_BYTES[mimeBase];
+  if (!expectedSignatures) return true;
+
+  return expectedSignatures.some(sig => hex.startsWith(sig));
+}
+
+function normalizeBase64(base64: string): string {
+  if (!base64) return "";
+  return base64.replace(/^data:.*?;base64,/, '').replace(/[\r\n\s]/g, '');
+}
+
+function isValidBase64(str: string): boolean {
+  if (!str || str.length % 4 !== 0) return false;
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+  return base64Regex.test(str);
+}
+
 // Declare EdgeRuntime for background tasks
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
 
