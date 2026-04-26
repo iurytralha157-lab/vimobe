@@ -675,7 +675,6 @@ async function handleMessagesUpsert(
             session_id: session.id,
             conversation_id: conversation.id,
             message_id: insertedMessage.id,
-            remote_jid: remoteJid,
             message_key: key,
             media_type: messageType,
             media_mime_type: normalizeMimeType(mediaMimeType),
@@ -685,6 +684,14 @@ async function handleMessagesUpsert(
           
           if (jobError) {
             console.error("Error creating media job:", jobError);
+            // Mark message with error so user sees a retry button instead of eternal loading
+            await supabase
+              .from("whatsapp_messages")
+              .update({ 
+                media_status: 'failed', 
+                media_error: `Falha ao agendar download: ${jobError.message}` 
+              })
+              .eq("id", insertedMessage.id);
           } else {
             console.log(`Media job created for retry`);
             
