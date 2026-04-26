@@ -211,8 +211,6 @@ Deno.serve(async (req) => {
         }
 
         if (mediaContent && mediaContent.length > 100) {
-
-        if (mediaContent && mediaContent.length > 100) {
           // Store in Supabase Storage with standardized path
           const extension = getExtensionFromMime(job.media_mime_type || "");
           const filePath = `orgs/${session.organization_id}/sessions/${session.id}/media/${messageId}.${extension}`;
