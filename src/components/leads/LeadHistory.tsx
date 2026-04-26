@@ -313,7 +313,26 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
                     {/* Content / detail */}
                     {event.content && !outcomeNotes && (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {event.content}
+                        {(() => {
+                          const mentionRegex = /(@\d+|@[\w\s\u00C0-\u017F]{2,})/g;
+                          const parts = event.content.split(mentionRegex);
+                          
+                          if (parts.length === 1) return event.content;
+
+                          return parts.map((part, index) => {
+                            if (part.match(mentionRegex)) {
+                              return (
+                                <span 
+                                  key={index} 
+                                  className="font-semibold text-primary px-1 bg-primary/10 rounded"
+                                >
+                                  {part}
+                                </span>
+                              );
+                            }
+                            return part;
+                          });
+                        })()}
                       </p>
                     )}
 
