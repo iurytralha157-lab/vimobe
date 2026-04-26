@@ -654,12 +654,12 @@ async function handleMessagesUpsert(
       let mediaStoragePath: string | null = null;
       const normalizedMimeType = normalizeMimeType(mediaMimeType);
       
-      if (messageType !== "text" && messageType !== "sticker") {
+      if (messageType !== "text") {
         try {
           // Log media processing attempt
-          console.log(`Processing ${messageType} media: base64=${!!base64FromWebhook}, url=${!!mediaUrl}, mime=${mediaMimeType}`);
+          console.log(`Processing ${messageType} media: base64=${!!base64FromWebhook}, url=${!!mediaUrl}, mime=${mediaMimeType}, hasThumbnail=${!!jpegThumbnailRaw}`);
           
-          // If base64 came directly in webhook, use it directly (faster)
+          // If base64 came directly in webhook, use it directly (faster, most reliable)
           if (base64FromWebhook) {
             console.log(`Using base64 from webhook directly for ${messageType}, length: ${base64FromWebhook.length}`);
             const result = await storeBase64MediaWithPath(
@@ -674,43 +674,60 @@ async function handleMessagesUpsert(
             permanentMediaUrl = result.url;
             mediaStoragePath = result.path;
             mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
-          } else if (mediaUrl) {
-            // For outgoing messages, we try to download immediately
-            // For incoming messages, we defer to the worker to avoid blocking the webhook
-            if (fromMe) {
-              console.log(`Downloading outgoing media from Evolution API for ${messageType}`);
-              const result = await downloadAndStoreMediaWithPath(
-                supabase,
-                supabaseUrl,
-                session,
-                conversation.id,
-                messageId,
-                messageType,
-                normalizedMimeType,
-                key,
-                messageData,
-                fromMe
-              );
-              permanentMediaUrl = result.url;
-              mediaStoragePath = result.path;
-              mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
-            } else {
-              console.log(`Deferring incoming ${messageType} media to worker`);
-              mediaStatusForInsert = 'pending';
-            }
+          } else if (mediaUrl && fromMe) {
+            // Outgoing media: try to download immediately via Evolution API
+            console.log(`Downloading outgoing media from Evolution API for ${messageType}`);
+            const result = await downloadAndStoreMediaWithPath(
+              supabase,
+              supabaseUrl,
+              session,
+              conversation.id,
+              messageId,
+              messageType,
+              normalizedMimeType,
+              key,
+              messageData,
+              fromMe
+            );
+            permanentMediaUrl = result.url;
+            mediaStoragePath = result.path;
+            mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
           } else {
-            // No media source available
+            // Incoming media without inline base64 — defer to worker
+            console.log(`Deferring incoming ${messageType} media to worker`);
             mediaStatusForInsert = 'pending';
+          }
+
+          // Fallback: if we still don't have a final URL but have a jpegThumbnail,
+          // store it as a temporary preview so the UI shows something instead of an empty loader.
+          if (!permanentMediaUrl && jpegThumbnailRaw && (messageType === "image" || messageType === "video")) {
+            const thumbBytes = jpegThumbnailToBytes(jpegThumbnailRaw);
+            if (thumbBytes && thumbBytes.length > 32) {
+              try {
+                const thumbPath = `orgs/${session.organization_id}/sessions/${session.id}/media/${messageId}_thumb.jpg`;
+                const { error: thumbErr } = await supabase.storage
+                  .from("whatsapp-media")
+                  .upload(thumbPath, thumbBytes, { contentType: "image/jpeg", upsert: true });
+                if (!thumbErr) {
+                  const { data: thumbUrl } = supabase.storage.from("whatsapp-media").getPublicUrl(thumbPath);
+                  permanentMediaUrl = thumbUrl.publicUrl;
+                  mediaStoragePath = thumbPath;
+                  // Keep status pending — worker will replace with full-size when available
+                  console.log(`Stored jpegThumbnail preview: ${permanentMediaUrl}`);
+                }
+              } catch (thumbStoreErr) {
+                console.warn("Failed to store thumbnail preview:", thumbStoreErr);
+              }
+            }
           }
           
           if (permanentMediaUrl) {
-            console.log(`Media stored successfully: ${permanentMediaUrl}`);
+            console.log(`Media stored: ${permanentMediaUrl} (status=${mediaStatusForInsert})`);
           } else {
-            console.log(`Failed to store media, marking as pending for retry`);
+            console.log(`No media stored yet, marking as ${mediaStatusForInsert} for retry`);
           }
         } catch (mediaError) {
           console.error("Error processing media:", mediaError);
-          // Mark as pending for retry by media-worker
           mediaStatusForInsert = 'pending';
           permanentMediaUrl = null;
         }
