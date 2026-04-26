@@ -292,6 +292,7 @@ async function sendMessage(apiUrl: string, apiKey: string, params: any): Promise
       body: JSON.stringify({
         number: formattedPhone,
         text: messageText,
+        mentions: mentions || [],
       }),
     });
 
