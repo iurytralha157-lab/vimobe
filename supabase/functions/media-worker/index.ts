@@ -336,14 +336,19 @@ Deno.serve(async (req) => {
         } else {
           const reason = mediaContent ? `Media too small: ${mediaContent.length} bytes` : failureReasons.join(" | ");
           const isValidationError = reason.includes("Magic bytes validation failed");
-          
-          if (isValidationError) {
-             // Fail fast on validation error
-             await supabase
+          // Fail fast also when Evolution can't find the message — retrying won't help
+          const isUnrecoverable = isValidationError || messageNotFound;
+
+          if (isUnrecoverable) {
+            const errorLabel = isValidationError
+              ? `Falha de validação: ${reason}`
+              : `Mídia indisponível: a Evolution não encontrou esta mensagem (provavelmente expirou no servidor do WhatsApp).`;
+
+            await supabase
               .from("whatsapp_messages")
               .update({
                 media_status: "failed",
-                media_error: `Falha de validação: ${reason}`,
+                media_error: errorLabel,
               })
               .eq("id", job.message_id);
 
@@ -355,11 +360,11 @@ Deno.serve(async (req) => {
                 updated_at: new Date().toISOString(),
               })
               .eq("id", job.id);
-              
-             results.push({ job_id: job.id, status: "failed", error: reason });
-             continue;
+
+            results.push({ job_id: job.id, status: "failed", error: reason });
+            continue;
           }
-          
+
           throw new Error(`Could not download media. ${reason}`);
         }
 
