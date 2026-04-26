@@ -1,107 +1,153 @@
-## Diagnóstico
+## Diagnóstico do estado atual
 
-Encontrei a causa mais provável do carregamento infinito.
+Boa notícia: **grande parte da estrutura já existe no código**, mas há lacunas críticas que impedem o funcionamento e expõem riscos de segurança. O que encontrei:
 
-Hoje a mensagem de mídia chega no webhook com dados suficientes para salvar o arquivo, mas o fluxo está deixando algumas mensagens em `media_status = 'pending'` indefinidamente.
+| Item | Status atual | Problema |
+|---|---|---|
+| Edge Function `public-api` | ✅ Existe (`/properties` e `/properties/:id`) | Valida API key com comparação direta — vulnerável |
+| Página pública `/docs/api` (`APIDocs.tsx`) | ✅ Existe e está roteada em `App.tsx` | OK, mas precisa de ajustes (URL real do endpoint + exemplo de resposta) |
+| Aba "API Pública" em **Configurações** (`APITab.tsx`) | ✅ Existe e aparece quando `hasModule('api')` é true | **Salva a chave em texto plano** no banco (`key_hash` recebe o `sk_...` cru) |
+| Item "API Pública" no dropdown do header | ✅ Existe | OK |
+| Módulo `'api'` em `useOrganizationModules` | ✅ Listado como `ModuleName` | OK |
+| Toggle do módulo no **Super Admin** (`AdminOrganizationDetail.tsx`) | ✅ Aparece como "API Pública (Imóveis)" na categoria *advanced* | OK |
+| Tabela `organization_api_keys` | ❌ **NÃO EXISTE no banco** (migration nunca foi aplicada) | Bloqueador total |
+| Módulo `'api'` cadastrado em `organization_modules` de qualquer org | ❌ Nenhuma org tem | Super Admin precisa habilitar |
 
-Exemplo real da conversa com André Rocha:
+> Conclusão: o esqueleto foi criado em uma sessão anterior mas nunca foi finalizado/migrado. Vamos completar e endurecer.
 
-- Mensagem de imagem `3ABC2C5B962A16AFDE57`
-- Está no banco como `media_status = pending`, sem `media_url`
-- O `media-worker` tenta buscar no endpoint `getBase64FromMediaMessage`
-- A Evolution responde: `400 Message not found`
-- Como ainda não chegou no número máximo de tentativas, a UI fica mostrando “Carregando mídia...”
+---
 
-Também vi nos logs que a Evolution às vezes envia o `base64` no próprio webhook, mas ele pode estar em outro nível do payload. O código atual só procura em poucos lugares:
+## O que vou fazer
 
-```ts
-message.imageMessage.base64 || messageData.base64 || payload?.base64
-```
+### 1. Migration — criar tabela `organization_api_keys` (com hash real)
 
-Nos logs recentes apareceu `base64` dentro de `data.message`, não necessariamente nesses caminhos. Quando o sistema não encontra esse base64, ele agenda o worker. Aí o worker consulta a Evolution depois e recebe “Message not found”. Resultado: loading infinito.
+Aplicar nova migration que:
 
-Outro problema: o código criou uma regra para não processar `sticker`, então figurinha pode nunca virar mídia reproduzível.
+- Cria `public.organization_api_keys` com colunas:
+  - `id uuid PK`, `organization_id uuid → organizations(id) ON DELETE CASCADE`
+  - `key_hash text NOT NULL UNIQUE` — guardará o **SHA-256 hex** da chave (não a chave em si)
+  - `key_prefix text NOT NULL` — primeiros 12 chars (ex.: `sk_live_a1b2`) para o usuário identificar a chave na UI
+  - `name text` — apelido (ex.: "Site institucional")
+  - `last_used_at timestamptz`, `created_at`, `updated_at`, `created_by uuid`, `revoked_at timestamptz`
+- Índices em `organization_id` e `key_hash`
+- RLS habilitado, com policies usando função `SECURITY DEFINER` (`has_org_role`) para evitar recursão e ler `organization_members.role IN ('admin','super_admin')`:
+  - SELECT, INSERT, DELETE: somente admins da própria organização
+  - UPDATE bloqueado (chaves são imutáveis; rotação = criar nova + revogar antiga)
+- Trigger `set_updated_at`
+- Função utilitária `public.hash_api_key(text) RETURNS text` que retorna `encode(digest(key, 'sha256'),'hex')` (extensão `pgcrypto` já é padrão no Supabase)
 
-## Plano de correção
+### 2. Geração de chave — fluxo seguro (cliente → RPC)
 
-### 1. Capturar base64 do webhook de forma robusta
-Criar um helper único para extrair base64 de todos os formatos comuns da Evolution:
+Substituir o INSERT direto do `APITab.tsx` por uma RPC `generate_organization_api_key(p_name text)`:
 
-- `message.imageMessage.base64`
-- `message.audioMessage.base64`
-- `message.videoMessage.base64`
-- `message.documentMessage.base64`
-- `message.stickerMessage.base64`
-- `message.base64`
-- `messageData.base64`
-- `payload.base64`
-- possíveis estruturas aninhadas como `data.message.base64`
+- Gera bytes aleatórios via `gen_random_bytes(32)` no servidor → chave `sk_live_<64hex>`
+- Calcula hash, insere `key_hash = hash`, `key_prefix = substring(chave, 1, 12)`, `created_by = auth.uid()`
+- **Retorna a chave em texto plano UMA ÚNICA VEZ** (no JSON de resposta)
+- Verifica que o usuário é admin da org (via `has_org_role`)
+- A RPC é `SECURITY DEFINER` com `search_path = public`
 
-Se o base64 veio no webhook, salvar imediatamente no Supabase Storage e marcar `media_status = ready`.
+Atualizar `APITab.tsx`:
+- Trocar a geração client-side pela chamada `supabase.rpc('generate_organization_api_key', { p_name })`
+- Adicionar campo opcional "Apelido da chave" antes de gerar
+- Exibir aviso reforçado: "Esta é a única vez que você verá a chave completa"
+- Mostrar `last_used_at` em cada chave listada
+- Botão "Revogar" em vez de "Remover" definitivo (UPDATE `revoked_at` bloqueado pela RLS — usaremos DELETE mesmo, mais simples e seguro)
 
-### 2. Corrigir sticker e mídia recebida
-Incluir `sticker` no pipeline de mídia:
+### 3. Endurecer a Edge Function `public-api`
 
-- `stickerMessage` deve usar `message_type = 'sticker'`
-- MIME padrão: `image/webp`
-- Deve salvar no Storage igual imagem
-- Deve ser exibida na UI como imagem/webp
+Atualizar `supabase/functions/public-api/index.ts`:
 
-### 3. Eliminar loading infinito
-Alterar a regra do `media-worker`:
+- Receber a chave do header `Authorization: Bearer sk_live_...`
+- Calcular `SHA-256` da chave recebida (Web Crypto API do Deno)
+- Buscar por `key_hash = <hash>` (não mais comparar texto plano)
+- Rejeitar se `revoked_at IS NOT NULL`
+- Atualizar `last_used_at = now()` (fire-and-forget)
+- Manter checagem do módulo `'api'` em `organization_modules`
+- **Garantir isolamento por organização**: todo SELECT em `properties` filtra por `organization_id = keyData.organization_id` (já está, mas vou auditar `/properties/:id` para evitar IDOR — está OK, já filtra)
+- Ajustar campos retornados: remover colunas internas/sensíveis (ex.: `created_by`, notas internas se houver) e retornar apenas o que faz sentido publicamente:
+  - `id, codigo, titulo, descricao, tipo_de_imovel, finalidade, valor_venda, valor_locacao, valor_condominio, valor_iptu, quartos, suites, banheiros, vagas, area_total, area_util, cidade, bairro, estado, cep, logradouro (sem número), fotos, caracteristicas, status, created_at`
+- Adicionar paginação simples: `?page=1&per_page=50` (default 50, max 100)
+- Adicionar filtros já previstos: `city`, `neighborhood`, `type`, e mais `purpose` (venda/locação), `min_price`, `max_price`, `bedrooms`
+- CORS já está OK (`*`) — mantém, pois é API pública
+- Retornar 401/403/404/500 com JSON consistente `{ error, code }`
 
-- Se a Evolution responder `Message not found`, marcar a mídia como `failed` com `media_error` claro, sem esperar 5 tentativas longas.
-- Se falhar por motivo recuperável, manter retry.
-- Na UI, deixar de mostrar loading eterno; se a mensagem ficar `pending` por tempo demais, exibir “Mídia demorando para processar” com botão “Tentar novamente”.
+### 4. Página de docs `/docs/api` (`APIDocs.tsx`)
 
-### 4. Melhorar fallback para imagem com thumbnail
-Quando uma imagem não tiver base64 final mas tiver `jpegThumbnail`, salvar o thumbnail como preview temporário no Storage e exibir algo visual em vez de loader vazio.
+Atualizar para refletir o endpoint real:
 
-- `media_status` pode continuar `pending` enquanto tenta buscar a versão final.
-- Mas a UI terá uma miniatura para mostrar.
-- Se a versão final falhar, a mensagem não fica visualmente travada.
+- Trocar `window.location.origin + '/functions/v1/public-api'` pela URL real:
+  `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-api`
+- Documentar:
+  - Autenticação (header `Authorization: Bearer sk_live_...`)
+  - Endpoints `/properties` (com todos os filtros + paginação) e `/properties/:id`
+  - Tabela de campos retornados
+  - Códigos de erro (401 chave inválida, 403 módulo desativado, 404 não encontrado)
+  - Exemplo `curl` e exemplo `fetch` em JS
+  - Aviso de privacidade (número do logradouro é omitido — alinhado com a memória `address-privacy-v1`)
+- Adicionar exemplo de resposta JSON
+- Manter a página acessível publicamente sem autenticação (já está em rota pública)
 
-### 5. Ajustar a chamada do `getBase64FromMediaMessage`
-Testar duas variações do body da Evolution, porque a própria documentação mostra apenas `{ key: { id } }`, enquanto hoje estamos mandando a chave completa:
+### 5. Liberação por Super Admin
 
-```ts
-{ message: { key: fullKey }, convertToMp4: messageType === 'video' }
-```
+Já funciona via `AdminOrganizationDetail.tsx` (linha 73 lista `{ name: 'api', label: 'API Pública (Imóveis)' }`). Vou:
+- Validar que o toggle realmente faz upsert em `organization_modules` com `module_name='api'`
+- Confirmar visualmente o badge "Avançado"
 
-Adicionar fallback seguro:
+### 6. Gating na UI da organização
 
-```ts
-{ message: { key: { id: messageId } }, convertToMp4: messageType === 'video' }
-```
+Já implementado:
+- `APITab` só aparece em `/settings` se `hasModule('api')` (Settings.tsx:96)
+- Item "API Pública" no dropdown do AppHeader só aparece se `hasModule('api')` (AppHeader.tsx:262)
+- Vou apenas adicionar um link "Ver Documentação Pública" também dentro da `APITab` (já existe via botão) e revisar o copy explicando segurança/uso.
 
-Isso pode resolver casos onde a Evolution retorna `Message not found` por não aceitar campos extras como `remoteJidAlt`, `addressingMode` ou `participant` vazio.
+### 7. Documentação dentro da aba (em Configurações)
 
-### 6. Validar bytes antes de gravar
-Manter e reforçar a validação atual:
+Reforçar dentro do `APITab.tsx`:
+- Card de boas práticas: "Nunca exponha sua chave no frontend. Use sempre via backend."
+- Mostrar exemplo curto de uso
+- Link grande para `/docs/api`
 
-- JPEG começa com `FFD8FF`
-- PNG começa com `89504E47`
-- WEBP começa com `RIFF` e contém `WEBP`
-- OGG começa com `OggS`
-- PDF começa com `%PDF`
-- MP4 precisa conter `ftyp` nos primeiros bytes
+---
 
-Se não bater com o MIME esperado, não salvar como mídia pronta.
+## Garantias de segurança (checklist)
 
-### 7. Reprocessar pendências recentes
-Depois da correção:
+- ✅ Chave nunca é armazenada em texto plano (apenas hash SHA-256)
+- ✅ Chave só é exibida ao usuário **uma vez**, no momento da criação
+- ✅ Geração é server-side via RPC `SECURITY DEFINER` com `search_path = public`
+- ✅ Edge Function valida hash + módulo ativo + organização
+- ✅ Isolamento total por `organization_id` em todos os SELECTs
+- ✅ RLS bloqueia leitura/criação de chaves de outras orgs (somente admin/super_admin)
+- ✅ Endereço sem número (alinhado a memória `address-privacy-v1`)
+- ✅ Apenas imóveis com `status = 'disponivel'` retornados na listagem (já está)
+- ✅ CORS aberto (correto para API pública), mas autenticação obrigatória em toda rota
+- ✅ Documentação alerta a manter chave fora do frontend
 
-- Rodar o `media-worker` em modo `scan_orphans`
-- Recriar jobs corretos para mídias pendentes recentes
-- Para as que têm base64 nos logs não dá para recuperar pelo banco, mas as próximas recebidas já entram certas.
-- Para as que a Evolution ainda conseguir localizar, o worker baixará e salvará.
+---
 
-## Resultado esperado
+## Fora do escopo (para depois, se quiser)
 
-Após implementar:
+- Rate limiting por chave (sugiro adicionar via Cloudflare ou tabela de logs depois)
+- Webhooks de eventos (criação/atualização de imóvel notificando o cliente)
+- Endpoints de leads, contatos, etc. (você pediu **somente imóveis** por enquanto)
+- Versionamento da API (`/v1/`) — podemos adicionar quando houver `/v2`
 
-- Imagens, áudios, vídeos, documentos e figurinhas recebidos com base64 no webhook serão salvos direto no Storage.
-- O sistema não dependerá do `getBase64FromMediaMessage` quando a própria Evolution já entregou o base64.
-- Quando a Evolution realmente não entregar base64 e também não encontrar a mensagem depois, o chat mostrará erro com botão de retry, não loading infinito.
-- Imagens com thumbnail terão preview visual enquanto processam.
-- O fluxo ficará simples: webhook recebe mídia → decodifica base64 → valida assinatura → salva no Storage → banco recebe URL pronta → chat reproduz.
+---
+
+## Arquivos que serão alterados/criados
+
+**Novos:**
+- `supabase/migrations/<timestamp>_create_organization_api_keys.sql`
+
+**Modificados:**
+- `supabase/functions/public-api/index.ts` (hash + paginação + filtros + sanitização)
+- `src/components/settings/APITab.tsx` (RPC + nome da chave + UX de revogação)
+- `src/pages/public/APIDocs.tsx` (URL real + exemplos + tabela de campos + erros)
+
+**Sem alteração (já estão prontos):**
+- `src/App.tsx` (rota `/docs/api` já existe)
+- `src/components/layout/AppHeader.tsx` (item no dropdown já existe)
+- `src/pages/Settings.tsx` (aba já existe condicional ao módulo)
+- `src/pages/admin/AdminOrganizationDetail.tsx` (toggle do módulo já existe)
+- `src/hooks/use-organization-modules.ts` (`'api'` já é tipo válido)
+
+Após aplicar a migration e o Super Admin habilitar o módulo `api` na organização desejada (ex.: Better), a aba "API Pública" aparecerá em **Configurações** e no dropdown do header, permitindo gerar a chave e consumir os imóveis com isolamento garantido por organização.

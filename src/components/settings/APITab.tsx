@@ -4,26 +4,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Copy, RefreshCw, ExternalLink, ShieldCheck, Key } from 'lucide-react';
+import { Copy, RefreshCw, ExternalLink, ShieldCheck, Key, AlertTriangle } from 'lucide-react';
 
 export function APITab() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [newKey, setNewKey] = useState<string | null>(null);
+  const [keyName, setKeyName] = useState('');
 
   const { data: apiKeys, isLoading } = useQuery({
     queryKey: ['api-keys', profile?.organization_id],
     queryFn: async () => {
       if (!profile?.organization_id) return [];
-      // @ts-ignore
       const { data, error } = await supabase
         .from('organization_api_keys' as any)
         .select('*')
         .eq('organization_id', profile.organization_id)
         .order('created_at', { ascending: false });
-      
       if (error) throw error;
       return data as any[];
     },
@@ -33,42 +33,31 @@ export function APITab() {
   const generateKeyMutation = useMutation({
     mutationFn: async () => {
       if (!profile?.organization_id) throw new Error('No organization found');
-      
-      const buffer = new Uint8Array(32);
-      crypto.getRandomValues(buffer);
-      const randomPart = Array.from(buffer, (byte) => byte.toString(16).padStart(2, '0')).join('');
-      const apiKey = `sk_${randomPart}`;
-      
-      const keyPrefix = apiKey.substring(0, 12);
-      
-      // @ts-ignore
-      const { error } = await supabase
-        .from('organization_api_keys' as any)
-        .insert({
-          organization_id: profile.organization_id,
-          key_hash: apiKey,
-          key_prefix: keyPrefix,
-          name: 'Chave Padrão',
-          created_by: profile.id
-        });
-
+      // Geração 100% server-side via RPC SECURITY DEFINER.
+      // O banco gera a chave, salva apenas o hash SHA-256 e retorna a chave em texto UMA ÚNICA VEZ.
+      const { data, error } = await supabase.rpc('generate_organization_api_key' as any, {
+        p_organization_id: profile.organization_id,
+        p_name: keyName || 'Chave Padrão',
+      });
       if (error) throw error;
-      return apiKey;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row?.api_key) throw new Error('Resposta inválida da geração de chave');
+      return row.api_key as string;
     },
     onSuccess: (apiKey) => {
       setNewKey(apiKey);
+      setKeyName('');
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
       toast.success('Chave de API gerada com sucesso!');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error generating API key:', error);
-      toast.error('Erro ao gerar chave de API');
-    }
+      toast.error(error?.message || 'Erro ao gerar chave de API');
+    },
   });
 
   const deleteKeyMutation = useMutation({
     mutationFn: async (id: string) => {
-      // @ts-ignore
       const { error } = await supabase
         .from('organization_api_keys' as any)
         .delete()
@@ -78,7 +67,7 @@ export function APITab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
       toast.success('Chave de API removida');
-    }
+    },
   });
 
   const copyToClipboard = (text: string) => {
@@ -88,47 +77,80 @@ export function APITab() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Banner de segurança */}
+      <Card className="border-amber-500/30 bg-amber-500/5">
+        <CardContent className="pt-6 flex gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1 text-sm">
+            <p className="font-medium">Mantenha sua chave em segredo</p>
+            <p className="text-muted-foreground">
+              A chave dá acesso aos imóveis desta organização. Nunca a coloque no frontend
+              público (HTML, JS do navegador, repositórios públicos). Use sempre a partir
+              do seu backend.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2">
                 <Key className="h-5 w-5" />
                 Chaves de API
               </CardTitle>
               <CardDescription>
-                Use estas chaves para autenticar suas requisições na API pública.
+                Use estas chaves para autenticar suas requisições na API pública e puxar
+                os imóveis cadastrados nesta organização.
               </CardDescription>
             </div>
-            <Button 
-              onClick={() => generateKeyMutation.mutate()} 
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-2 items-end">
+            <div className="flex-1 space-y-1.5 w-full">
+              <Label htmlFor="key-name">Apelido da chave (opcional)</Label>
+              <Input
+                id="key-name"
+                placeholder="Ex.: Site institucional"
+                value={keyName}
+                onChange={(e) => setKeyName(e.target.value)}
+                maxLength={80}
+              />
+            </div>
+            <Button
+              onClick={() => generateKeyMutation.mutate()}
               disabled={generateKeyMutation.isPending}
             >
               {generateKeyMutation.isPending ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <Key className="h-4 w-4 mr-2" />
               )}
               Gerar Nova Chave
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+
           {newKey && (
-            <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-2 animate-in fade-in slide-in-from-top-2">
+            <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg space-y-3 animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center gap-2 text-primary font-medium">
                 <ShieldCheck className="h-4 w-4" />
-                Sua nova chave de API (Salva em local seguro!)
+                Sua nova chave de API
               </div>
               <p className="text-sm text-muted-foreground">
-                Por motivos de segurança, você só poderá ver esta chave uma vez.
+                Esta é a <strong>única vez</strong> que você verá a chave completa. Copie e
+                guarde em local seguro agora — depois só restará o prefixo identificador.
               </p>
               <div className="flex gap-2">
-                <Input value={newKey} readOnly className="font-mono" />
+                <Input value={newKey} readOnly className="font-mono text-xs" />
                 <Button variant="outline" size="icon" onClick={() => copyToClipboard(newKey)}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
+              <Button variant="ghost" size="sm" onClick={() => setNewKey(null)}>
+                Já salvei, ocultar
+              </Button>
             </div>
           )}
 
@@ -144,28 +166,39 @@ export function APITab() {
               </div>
             ) : (
               apiKeys?.map((key: any) => (
-                <div key={key.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                <div
+                  key={key.id}
+                  className="flex items-center justify-between p-4 border rounded-lg bg-card"
+                >
                   <div className="space-y-1">
                     <p className="font-medium">{key.name}</p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                        {key.key_prefix}...
+                        {key.key_prefix}…
                       </code>
                       <span className="text-xs text-muted-foreground">
                         Criada em {new Date(key.created_at).toLocaleDateString('pt-BR')}
                       </span>
+                      {key.last_used_at && (
+                        <span className="text-xs text-muted-foreground">
+                          • Último uso{' '}
+                          {new Date(key.last_used_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => deleteKeyMutation.mutate(key.id)}
-                    >
-                      Remover
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      if (confirm(`Remover a chave "${key.name}"? Sistemas que a usam pararão de funcionar imediatamente.`)) {
+                        deleteKeyMutation.mutate(key.id);
+                      }
+                    }}
+                  >
+                    Remover
+                  </Button>
                 </div>
               ))
             )}
@@ -177,7 +210,7 @@ export function APITab() {
         <CardHeader>
           <CardTitle className="text-lg">Documentação da API</CardTitle>
           <CardDescription>
-            Aprenda como integrar seus imóveis em outros sistemas.
+            Aprenda como integrar seus imóveis em sites e outros sistemas.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -185,7 +218,7 @@ export function APITab() {
             <div className="space-y-1">
               <p className="font-medium">Guia de Integração</p>
               <p className="text-sm text-muted-foreground">
-                Veja os endpoints disponíveis e como consumir os dados dos seus imóveis.
+                Endpoints, parâmetros, exemplos em curl/JavaScript e formato de resposta.
               </p>
             </div>
             <Button variant="outline" asChild>
