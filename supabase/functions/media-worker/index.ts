@@ -175,27 +175,42 @@ Deno.serve(async (req) => {
         // Try multiple strategies to download media
         let mediaContent: Uint8Array | null = null;
         const messageId = job.message_key?.id;
+        let failureReasons: string[] = [];
 
         if (EVOLUTION_API_URL && EVOLUTION_API_KEY && messageId) {
           // Strategy 1: getBase64FromMediaMessage with retries
-          mediaContent = await tryGetBase64(
+          const result1 = await tryGetBase64(
             EVOLUTION_API_URL,
             EVOLUTION_API_KEY,
             session.instance_name,
             job.message_key,
             job.media_type
           );
-
-          // Strategy 2: downloadMedia endpoint
-          if (!mediaContent) {
-            mediaContent = await tryDownloadMedia(
+          
+          if (result1.content) {
+            mediaContent = result1.content;
+          } else {
+            failureReasons.push(`S1: ${result1.error || "Unknown error"}`);
+            
+            // Strategy 2: downloadMedia endpoint
+            const result2 = await tryDownloadMedia(
               EVOLUTION_API_URL,
               EVOLUTION_API_KEY,
               session.instance_name,
               job.message_key
             );
+            
+            if (result2.content) {
+              mediaContent = result2.content;
+            } else {
+              failureReasons.push(`S2: ${result2.error || "Unknown error"}`);
+            }
           }
+        } else {
+          failureReasons.push("Missing configuration or message ID");
         }
+
+        if (mediaContent && mediaContent.length > 100) {
 
         if (mediaContent && mediaContent.length > 100) {
           // Store in Supabase Storage with standardized path
