@@ -734,7 +734,32 @@ export function MessageBubble({
         {/* Text content */}
         {content && messageType === "text" && (
           <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">
-            {content}
+            {(() => {
+              const mentionRegex = /(@\d+|@[\w\s]{2,})/g;
+              const parts = content.split(mentionRegex);
+              
+              if (parts.length === 1) return content;
+
+              return parts.map((part, index) => {
+                if (part.match(mentionRegex)) {
+                  return (
+                    <span 
+                      key={index} 
+                      className={cn(
+                        "font-bold transition-all duration-200",
+                        fromMe 
+                          ? "text-primary-foreground underline underline-offset-2" 
+                          : "text-blue-500 dark:text-blue-400 hover:text-blue-600 cursor-pointer"
+                      )}
+                      title="Mencionado"
+                    >
+                      {part}
+                    </span>
+                  );
+                }
+                return part;
+              });
+            })()}
             {/* Invisible spacer for timestamp */}
             <span className="inline-block w-[60px]"></span>
           </p>
