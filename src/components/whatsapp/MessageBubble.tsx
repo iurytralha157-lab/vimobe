@@ -282,18 +282,42 @@ export function MessageBubble({
     }
   };
 
-  const renderMediaPending = () => (
-    <div className={cn(
-      "flex items-center gap-3 p-4 rounded-md animate-pulse min-w-[180px]",
-      fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
-    )}>
-      <Loader2 className="w-5 h-5 animate-spin opacity-70" />
-      <div className="flex flex-col">
-        <span className="text-sm opacity-80">Carregando mídia...</span>
-        <span className="text-xs opacity-50">Aguarde um momento</span>
+  const renderMediaPending = () => {
+    // If message is older than 90 seconds and still pending, show retry option
+    const ageMs = Date.now() - new Date(sentAt).getTime();
+    const isStuck = ageMs > 90_000;
+
+    if (isStuck) {
+      return (
+        <div className={cn(
+          "flex flex-col items-center gap-2 p-4 rounded-md min-w-[200px]",
+          fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
+        )}>
+          <Clock className="w-5 h-5 opacity-70" />
+          <span className="text-sm opacity-90 text-center">Mídia demorando para chegar</span>
+          {onRetryMedia && (
+            <Button size="sm" variant="outline" className="mt-1" onClick={onRetryMedia}>
+              <RefreshCw className="w-3 h-3 mr-1" />
+              Tentar novamente
+            </Button>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className={cn(
+        "flex items-center gap-3 p-4 rounded-md animate-pulse min-w-[180px]",
+        fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
+      )}>
+        <Loader2 className="w-5 h-5 animate-spin opacity-70" />
+        <div className="flex flex-col">
+          <span className="text-sm opacity-80">Carregando mídia...</span>
+          <span className="text-xs opacity-50">Aguarde um momento</span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderMediaFailed = () => (
     <div className={cn(

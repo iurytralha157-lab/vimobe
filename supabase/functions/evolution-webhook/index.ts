@@ -41,6 +41,55 @@ function isValidBase64(str: string): boolean {
   return base64Regex.test(str);
 }
 
+// Robust base64 extractor — checks every common location Evolution may use
+function extractBase64FromPayload(
+  message: any,
+  messageData: any,
+  payload: any,
+  mediaContainer: any
+): string | null {
+  const candidates: any[] = [
+    mediaContainer?.base64,
+    mediaContainer?.mediaBase64,
+    mediaContainer?.data,
+    message?.base64,
+    message?.mediaBase64,
+    messageData?.base64,
+    messageData?.mediaBase64,
+    messageData?.message?.base64,
+    payload?.base64,
+    payload?.data?.base64,
+    payload?.data?.message?.base64,
+    payload?.media?.base64,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.length > 100) return c;
+  }
+  return null;
+}
+
+// Convert WhatsApp jpegThumbnail (object with numeric keys or array) to Uint8Array
+function jpegThumbnailToBytes(thumbnail: any): Uint8Array | null {
+  if (!thumbnail) return null;
+  try {
+    if (Array.isArray(thumbnail)) return new Uint8Array(thumbnail);
+    if (typeof thumbnail === "string") {
+      const normalized = thumbnail.replace(/^data:.*?;base64,/, "").replace(/[\r\n\s]/g, "");
+      if (normalized.length > 0) return decode(normalized);
+    }
+    if (typeof thumbnail === "object") {
+      const keys = Object.keys(thumbnail).filter((k) => /^\d+$/.test(k));
+      if (keys.length === 0) return null;
+      const bytes = new Uint8Array(keys.length);
+      for (const k of keys) bytes[Number(k)] = thumbnail[k];
+      return bytes;
+    }
+  } catch (_e) {
+    return null;
+  }
+  return null;
+}
+
 // Declare EdgeRuntime for background tasks
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
 
@@ -381,6 +430,7 @@ async function handleMessagesUpsert(
       let mediaUrl = "";
       let mediaMimeType = "";
       let base64FromWebhook: string | null = null;
+      let jpegThumbnailRaw: any = null;
 
       if (message.conversation) {
         content = message.conversation;
@@ -390,35 +440,39 @@ async function handleMessagesUpsert(
         messageType = "image";
         content = message.imageMessage.caption || "[Imagem]";
         mediaUrl = message.imageMessage.url || "";
-        // Fix: mimetype can come as "false" string from Evolution API
         const rawMime = message.imageMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "image/jpeg";
-        // Try multiple locations for base64
-        base64FromWebhook = message.imageMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.imageMessage);
+        jpegThumbnailRaw = message.imageMessage.jpegThumbnail || null;
       } else if (message.videoMessage) {
         messageType = "video";
         content = message.videoMessage.caption || "[Vídeo]";
         mediaUrl = message.videoMessage.url || "";
         const rawMime = message.videoMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "video/mp4";
-        base64FromWebhook = message.videoMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.videoMessage);
+        jpegThumbnailRaw = message.videoMessage.jpegThumbnail || null;
       } else if (message.audioMessage) {
         messageType = "audio";
         content = message.audioMessage.ptt ? "[Áudio]" : "[Gravação]";
         mediaUrl = message.audioMessage.url || "";
         const rawMime = message.audioMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "audio/ogg";
-        base64FromWebhook = message.audioMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.audioMessage);
       } else if (message.documentMessage) {
         messageType = "document";
         content = message.documentMessage.fileName || "[Documento]";
         mediaUrl = message.documentMessage.url || "";
         const rawMime = message.documentMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "application/octet-stream";
-        base64FromWebhook = message.documentMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.documentMessage);
       } else if (message.stickerMessage) {
         messageType = "sticker";
-        content = "[Sticker]";
+        content = "[Figurinha]";
+        mediaUrl = message.stickerMessage.url || "";
+        const rawMime = message.stickerMessage.mimetype;
+        mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "image/webp";
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.stickerMessage);
       } else if (message.reactionMessage) {
         continue;
       } else if (message.protocolMessage) {
@@ -600,12 +654,12 @@ async function handleMessagesUpsert(
       let mediaStoragePath: string | null = null;
       const normalizedMimeType = normalizeMimeType(mediaMimeType);
       
-      if (messageType !== "text" && messageType !== "sticker") {
+      if (messageType !== "text") {
         try {
           // Log media processing attempt
-          console.log(`Processing ${messageType} media: base64=${!!base64FromWebhook}, url=${!!mediaUrl}, mime=${mediaMimeType}`);
+          console.log(`Processing ${messageType} media: base64=${!!base64FromWebhook}, url=${!!mediaUrl}, mime=${mediaMimeType}, hasThumbnail=${!!jpegThumbnailRaw}`);
           
-          // If base64 came directly in webhook, use it directly (faster)
+          // If base64 came directly in webhook, use it directly (faster, most reliable)
           if (base64FromWebhook) {
             console.log(`Using base64 from webhook directly for ${messageType}, length: ${base64FromWebhook.length}`);
             const result = await storeBase64MediaWithPath(
@@ -620,43 +674,60 @@ async function handleMessagesUpsert(
             permanentMediaUrl = result.url;
             mediaStoragePath = result.path;
             mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
-          } else if (mediaUrl) {
-            // For outgoing messages, we try to download immediately
-            // For incoming messages, we defer to the worker to avoid blocking the webhook
-            if (fromMe) {
-              console.log(`Downloading outgoing media from Evolution API for ${messageType}`);
-              const result = await downloadAndStoreMediaWithPath(
-                supabase,
-                supabaseUrl,
-                session,
-                conversation.id,
-                messageId,
-                messageType,
-                normalizedMimeType,
-                key,
-                messageData,
-                fromMe
-              );
-              permanentMediaUrl = result.url;
-              mediaStoragePath = result.path;
-              mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
-            } else {
-              console.log(`Deferring incoming ${messageType} media to worker`);
-              mediaStatusForInsert = 'pending';
-            }
+          } else if (mediaUrl && fromMe) {
+            // Outgoing media: try to download immediately via Evolution API
+            console.log(`Downloading outgoing media from Evolution API for ${messageType}`);
+            const result = await downloadAndStoreMediaWithPath(
+              supabase,
+              supabaseUrl,
+              session,
+              conversation.id,
+              messageId,
+              messageType,
+              normalizedMimeType,
+              key,
+              messageData,
+              fromMe
+            );
+            permanentMediaUrl = result.url;
+            mediaStoragePath = result.path;
+            mediaStatusForInsert = permanentMediaUrl ? 'ready' : 'pending';
           } else {
-            // No media source available
+            // Incoming media without inline base64 — defer to worker
+            console.log(`Deferring incoming ${messageType} media to worker`);
             mediaStatusForInsert = 'pending';
+          }
+
+          // Fallback: if we still don't have a final URL but have a jpegThumbnail,
+          // store it as a temporary preview so the UI shows something instead of an empty loader.
+          if (!permanentMediaUrl && jpegThumbnailRaw && (messageType === "image" || messageType === "video")) {
+            const thumbBytes = jpegThumbnailToBytes(jpegThumbnailRaw);
+            if (thumbBytes && thumbBytes.length > 32) {
+              try {
+                const thumbPath = `orgs/${session.organization_id}/sessions/${session.id}/media/${messageId}_thumb.jpg`;
+                const { error: thumbErr } = await supabase.storage
+                  .from("whatsapp-media")
+                  .upload(thumbPath, thumbBytes, { contentType: "image/jpeg", upsert: true });
+                if (!thumbErr) {
+                  const { data: thumbUrl } = supabase.storage.from("whatsapp-media").getPublicUrl(thumbPath);
+                  permanentMediaUrl = thumbUrl.publicUrl;
+                  mediaStoragePath = thumbPath;
+                  // Keep status pending — worker will replace with full-size when available
+                  console.log(`Stored jpegThumbnail preview: ${permanentMediaUrl}`);
+                }
+              } catch (thumbStoreErr) {
+                console.warn("Failed to store thumbnail preview:", thumbStoreErr);
+              }
+            }
           }
           
           if (permanentMediaUrl) {
-            console.log(`Media stored successfully: ${permanentMediaUrl}`);
+            console.log(`Media stored: ${permanentMediaUrl} (status=${mediaStatusForInsert})`);
           } else {
-            console.log(`Failed to store media, marking as pending for retry`);
+            console.log(`No media stored yet, marking as ${mediaStatusForInsert} for retry`);
           }
         } catch (mediaError) {
           console.error("Error processing media:", mediaError);
-          // Mark as pending for retry by media-worker
           mediaStatusForInsert = 'pending';
           permanentMediaUrl = null;
         }
