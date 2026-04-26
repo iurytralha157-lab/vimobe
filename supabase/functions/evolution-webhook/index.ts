@@ -1122,8 +1122,13 @@ async function downloadAndStoreMediaWithPath(
   let storedPath: string | null = null;
   
   const uploadToStorage = async (content: Uint8Array): Promise<string> => {
+    // Validate magic bytes before upload
+    if (!validateMagicBytes(content, mediaMimeType)) {
+      console.warn(`Magic bytes validation failed for ${mediaMimeType}`);
+      return "";
+    }
+
     const extension = getExtension(mediaMimeType);
-    // Standardized path: orgs/{org_id}/sessions/{session_id}/media/{messageId}.{ext}
     const filePath = `orgs/${session.organization_id}/sessions/${session.id}/media/${messageId}.${extension}`;
 
     console.log(`Uploading to storage: ${filePath}, size: ${content.length} bytes`);
@@ -1153,7 +1158,6 @@ async function downloadAndStoreMediaWithPath(
   const tryGetBase64FromEvolution = async (): Promise<string | null> => {
     console.log("Strategy 1: Trying getBase64FromMediaMessage endpoint...");
     
-    // For received messages (not fromMe), add initial delay to allow Evolution to process
     if (!fromMe) {
       console.log("Received message detected, adding 3s initial delay...");
       await delay(3000);
@@ -1161,12 +1165,11 @@ async function downloadAndStoreMediaWithPath(
     
     for (let attempt = 1; attempt <= 5; attempt++) {
       try {
-        // Increased initial delay to give Evolution time to process
         if (attempt === 1) {
           await delay(1000);
         } else {
           console.log(`Retry attempt ${attempt}/5 after delay...`);
-          await delay(3000 * attempt); // Exponential backoff - increased
+          await delay(3000 * attempt);
         }
 
         const mediaResponse = await fetch(
@@ -1179,7 +1182,8 @@ async function downloadAndStoreMediaWithPath(
             },
             body: JSON.stringify({
               message: { key },
-              convertToMp4: messageType === "audio",
+              // Only convert to mp4 for videos as per requirement
+              convertToMp4: messageType === "video",
             }),
           }
         );
@@ -1191,16 +1195,17 @@ async function downloadAndStoreMediaWithPath(
           try {
             const mediaData = JSON.parse(responseText);
             if (mediaData.base64) {
-              console.log(`Strategy 1 success on attempt ${attempt}, base64 length: ${mediaData.base64.length}`);
-              return mediaData.base64;
+              const normalized = normalizeBase64(mediaData.base64);
+              if (isValidBase64(normalized)) {
+                console.log(`Strategy 1 success on attempt ${attempt}, base64 length: ${normalized.length}`);
+                return normalized;
+              }
             }
           } catch (e) {
             console.error("Failed to parse response:", responseText.substring(0, 100));
           }
         } else {
           console.log(`Strategy 1 attempt ${attempt} failed:`, responseText.substring(0, 150));
-          
-          // If not "Message not found", don't retry with same strategy
           if (!responseText.includes("Message not found") && !responseText.includes("not found")) {
             break;
           }
@@ -1212,12 +1217,17 @@ async function downloadAndStoreMediaWithPath(
     return null;
   };
 
-  // === STRATEGY 2: Download media by message ID ===
+  // === STRATEGY 2: Download media by message ID (Diagnostic only) ===
   const tryDownloadMediaById = async (): Promise<Uint8Array | null> => {
+    const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
+    if (!isDiagnostic) {
+      console.log("Strategy 2 skipped (non-diagnostic mode)");
+      return null;
+    }
+
     console.log("Strategy 2: Trying downloadMedia by message ID...");
     
     try {
-      // Try different endpoints that Evolution API might support
       const endpoints = [
         `${EVOLUTION_API_URL}/chat/downloadMedia/${session.instance_name}`,
         `${EVOLUTION_API_URL}/message/downloadMedia/${session.instance_name}`,
@@ -1233,27 +1243,22 @@ async function downloadAndStoreMediaWithPath(
               "apikey": EVOLUTION_API_KEY,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              message: { key },
-            }),
+            body: JSON.stringify({ message: { key } }),
           });
 
           if (response.ok) {
             const contentType = response.headers.get("content-type") || "";
             
-            // If response is binary/media
             if (!contentType.includes("application/json")) {
               const buffer = await response.arrayBuffer();
               if (buffer.byteLength > 0) {
-                console.log(`Strategy 2 success: got ${buffer.byteLength} bytes`);
                 return new Uint8Array(buffer);
               }
             } else {
-              // Try to extract base64 from JSON response
               const data = await response.json();
               if (data.base64) {
-                console.log(`Strategy 2 success via base64, length: ${data.base64.length}`);
-                return decode(data.base64);
+                const normalized = normalizeBase64(data.base64);
+                return decode(normalized);
               }
             }
           }
@@ -1267,39 +1272,40 @@ async function downloadAndStoreMediaWithPath(
     return null;
   };
 
-  // === STRATEGY 3: Direct download from WhatsApp URL (before it expires) ===
+  // === STRATEGY 3: Direct download from WhatsApp URL (Diagnostic only) ===
   const tryDirectDownload = async (): Promise<Uint8Array | null> => {
-    // Extract the media URL from message data
+    const isDiagnostic = Deno.env.get("DEBUG_MEDIA") === "true";
+    if (!isDiagnostic) {
+      console.log("Strategy 3 skipped (non-diagnostic mode)");
+      return null;
+    }
+
     const message = messageData.message || {};
     const mediaMessage = message.imageMessage || message.videoMessage || 
                          message.audioMessage || message.documentMessage;
     
     const mediaUrl = mediaMessage?.url;
     
-    if (!mediaUrl) {
-      console.log("Strategy 3: No media URL available");
-      return null;
-    }
+    if (!mediaUrl) return null;
 
     console.log("Strategy 3: Trying direct download from WhatsApp URL...");
-    console.log(`URL: ${mediaUrl.substring(0, 100)}...`);
 
     try {
-      // WhatsApp URLs expire quickly, so try immediately
       const response = await fetch(mediaUrl, {
-        headers: {
-          "User-Agent": "WhatsApp/2.23.20.0",
-        },
+        headers: { "User-Agent": "WhatsApp/2.23.20.0" },
       });
 
       if (response.ok) {
         const buffer = await response.arrayBuffer();
-        if (buffer.byteLength > 100) { // Minimum size to be valid media
-          console.log(`Strategy 3 success: downloaded ${buffer.byteLength} bytes directly`);
-          
-          // Note: This content might be encrypted. WhatsApp uses AES-256-CBC
-          // The mediaKey in the message is needed to decrypt, but it requires
-          // specific crypto handling. For now, return the raw bytes and hope
+        if (buffer.byteLength > 100) {
+          return new Uint8Array(buffer);
+        }
+      }
+    } catch (error) {
+      console.error("Strategy 3 error:", error);
+    }
+    return null;
+  };
           // Evolution API can handle decrypted URLs.
           return new Uint8Array(buffer);
         }
