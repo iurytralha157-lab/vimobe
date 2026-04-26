@@ -48,6 +48,14 @@ export function useWhatsAppHealthMonitor() {
       });
 
       if (error) {
+        // Treat transient Edge Runtime unavailability (503) as inconclusive,
+        // not as a disconnection. Avoid noisy console errors.
+        const msg = (error as any)?.message || "";
+        const isTransient = msg.includes("non-2xx") || msg.includes("503") || msg.includes("temporarily unavailable");
+        if (isTransient) {
+          console.warn(`Health check transient error for ${displayName} (will retry)`);
+          return true; // Assume still connected; let next poll re-verify
+        }
         console.error(`Health check error for ${displayName}:`, error);
         return false;
       }
