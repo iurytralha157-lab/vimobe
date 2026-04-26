@@ -77,6 +77,9 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
             {children}
           </main>
         </div>
+
+        {/* Right sidebar */}
+        {!isMobile && <RightSidebar />}
       </div>
 
       {/* Mobile Bottom Navigation */}
