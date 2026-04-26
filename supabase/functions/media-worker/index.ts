@@ -305,6 +305,31 @@ Deno.serve(async (req) => {
           results.push({ job_id: job.id, status: "completed", media_url: mediaUrl });
         } else {
           const reason = mediaContent ? `Media too small: ${mediaContent.length} bytes` : failureReasons.join(" | ");
+          const isValidationError = reason.includes("Magic bytes validation failed");
+          
+          if (isValidationError) {
+             // Fail fast on validation error
+             await supabase
+              .from("whatsapp_messages")
+              .update({
+                media_status: "failed",
+                media_error: `Falha de validação: ${reason}`,
+              })
+              .eq("id", job.message_id);
+
+            await supabase
+              .from("media_jobs")
+              .update({
+                status: "failed",
+                error_message: reason,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", job.id);
+              
+             results.push({ job_id: job.id, status: "failed", error: reason });
+             continue;
+          }
+          
           throw new Error(`Could not download media. ${reason}`);
         }
 
