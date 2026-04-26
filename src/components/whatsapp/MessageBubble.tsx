@@ -561,7 +561,7 @@ export function MessageBubble({
           return (
             <>
               <div 
-                className="rounded-md overflow-hidden max-w-full cursor-pointer relative"
+                className="rounded-lg overflow-hidden cursor-pointer relative w-[300px]"
                 onClick={() => setViewerOpen(true)}
               >
                 {imageLoading && (
@@ -572,7 +572,7 @@ export function MessageBubble({
                 <img
                   src={mediaUrl!}
                   alt={content || "Imagem"}
-                  className="w-[1920px] h-[1080px] object-cover rounded-md"
+                  className="w-[300px] max-h-[400px] object-cover rounded-lg"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
                 />
@@ -589,7 +589,7 @@ export function MessageBubble({
         }
         return (
           <div className={cn(
-            "flex flex-col items-center justify-center gap-2 p-2 rounded-md w-[1920px] h-[1080px]",
+            "flex flex-col items-center justify-center gap-2 p-4 rounded-lg w-[300px] h-[200px]",
             fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
           )}>
             <ImageIcon className="w-10 h-10 opacity-50" />
@@ -613,12 +613,12 @@ export function MessageBubble({
           return (
             <>
               <div 
-                className="rounded-md overflow-hidden max-w-full cursor-pointer relative"
+                className="rounded-lg overflow-hidden cursor-pointer relative w-[300px]"
                 onClick={() => setViewerOpen(true)}
               >
                 <video
                   src={mediaUrl!}
-                  className="w-[1920px] h-[1080px] object-cover rounded-md"
+                  className="w-[300px] max-h-[400px] object-cover rounded-lg"
                   preload="metadata"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -639,7 +639,7 @@ export function MessageBubble({
         }
         return (
           <div className={cn(
-            "flex flex-col items-center justify-center gap-2 p-2 rounded-md w-[1920px] h-[1080px]",
+            "flex flex-col items-center justify-center gap-2 p-4 rounded-lg w-[300px] h-[200px]",
             fromMe ? "bg-primary-foreground/10" : "bg-muted/50"
           )}>
             <Video className="w-10 h-10 opacity-50" />
