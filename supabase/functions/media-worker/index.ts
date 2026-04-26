@@ -74,7 +74,17 @@ Deno.serve(async (req) => {
       console.log("Scanning for orphan pending media messages...");
       const { data: orphans } = await supabase
         .from("whatsapp_messages")
-        .select("id, session_id, conversation_id, message_type, media_mime_type, message_id, session:whatsapp_sessions(organization_id)")
+        .select(`
+          id, 
+          session_id, 
+          conversation_id, 
+          message_type, 
+          media_mime_type, 
+          message_id, 
+          from_me,
+          session:whatsapp_sessions(organization_id),
+          conversation:whatsapp_conversations(remote_jid)
+        `)
         .eq("media_status", "pending")
         .is("media_url", null)
         .in("message_type", ["image", "audio", "video", "document"])
