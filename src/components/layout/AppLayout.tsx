@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { AppSidebar } from './AppSidebar';
-import { RightSidebar } from './RightSidebar';
 import { AppHeader } from './AppHeader';
 import { MobileBottomNav } from './MobileBottomNav';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -77,9 +76,6 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
             {children}
           </main>
         </div>
-
-        {/* Right sidebar */}
-        {!isMobile && <RightSidebar />}
       </div>
 
       {/* Mobile Bottom Navigation */}
