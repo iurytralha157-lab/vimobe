@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
           console.log(`Job ${job.id} completed: ${mediaUrl}`);
           results.push({ job_id: job.id, status: "completed", media_url: mediaUrl });
         } else {
-          throw new Error("Could not download media from any strategy");
+          throw new Error(`Could not download media. ${failureReasons.join(" | ")}`);
         }
 
       } catch (error) {
