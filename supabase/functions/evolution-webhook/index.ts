@@ -41,6 +41,55 @@ function isValidBase64(str: string): boolean {
   return base64Regex.test(str);
 }
 
+// Robust base64 extractor — checks every common location Evolution may use
+function extractBase64FromPayload(
+  message: any,
+  messageData: any,
+  payload: any,
+  mediaContainer: any
+): string | null {
+  const candidates: any[] = [
+    mediaContainer?.base64,
+    mediaContainer?.mediaBase64,
+    mediaContainer?.data,
+    message?.base64,
+    message?.mediaBase64,
+    messageData?.base64,
+    messageData?.mediaBase64,
+    messageData?.message?.base64,
+    payload?.base64,
+    payload?.data?.base64,
+    payload?.data?.message?.base64,
+    payload?.media?.base64,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.length > 100) return c;
+  }
+  return null;
+}
+
+// Convert WhatsApp jpegThumbnail (object with numeric keys or array) to Uint8Array
+function jpegThumbnailToBytes(thumbnail: any): Uint8Array | null {
+  if (!thumbnail) return null;
+  try {
+    if (Array.isArray(thumbnail)) return new Uint8Array(thumbnail);
+    if (typeof thumbnail === "string") {
+      const normalized = thumbnail.replace(/^data:.*?;base64,/, "").replace(/[\r\n\s]/g, "");
+      if (normalized.length > 0) return decode(normalized);
+    }
+    if (typeof thumbnail === "object") {
+      const keys = Object.keys(thumbnail).filter((k) => /^\d+$/.test(k));
+      if (keys.length === 0) return null;
+      const bytes = new Uint8Array(keys.length);
+      for (const k of keys) bytes[Number(k)] = thumbnail[k];
+      return bytes;
+    }
+  } catch (_e) {
+    return null;
+  }
+  return null;
+}
+
 // Declare EdgeRuntime for background tasks
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
 
