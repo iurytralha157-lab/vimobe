@@ -618,7 +618,7 @@ export function MessageBubble({
               >
                 <video
                   src={mediaUrl!}
-                  className="w-48 h-48 object-cover rounded-md"
+                  className="w-[12.75rem] h-[12.75rem] object-cover rounded-md"
                   preload="metadata"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
