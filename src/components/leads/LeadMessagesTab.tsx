@@ -133,7 +133,33 @@ function MessageBubble({ msg, leadName }: { msg: LeadMessage; leadName: string }
 
         {/* Text content */}
         {msg.content && msg.content !== '[Imagem]' && msg.content !== '[Áudio]' && msg.content !== '[Gravação]' && msg.content !== '[Vídeo]' && msg.content !== '[Sticker]' && (
-          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+          <p className="whitespace-pre-wrap break-words">
+            {(() => {
+              const mentionRegex = /(@\d+|@[\w\s\u00C0-\u017F]{2,})/g;
+              const parts = msg.content.split(mentionRegex);
+              
+              if (parts.length === 1) return msg.content;
+
+              return parts.map((part, index) => {
+                if (part.match(mentionRegex)) {
+                  return (
+                    <span 
+                      key={index} 
+                      className={cn(
+                        "font-semibold px-1 py-0.5 rounded transition-all duration-200 inline-block",
+                        msg.from_me 
+                          ? "bg-primary-foreground/20 text-primary-foreground" 
+                          : "bg-primary/15 text-primary dark:bg-primary/25"
+                      )}
+                    >
+                      {part}
+                    </span>
+                  );
+                }
+                return part;
+              });
+            })()}
+          </p>
         )}
 
         {/* Timestamp */}
