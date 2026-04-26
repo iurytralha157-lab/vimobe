@@ -430,6 +430,7 @@ async function handleMessagesUpsert(
       let mediaUrl = "";
       let mediaMimeType = "";
       let base64FromWebhook: string | null = null;
+      let jpegThumbnailRaw: any = null;
 
       if (message.conversation) {
         content = message.conversation;
@@ -439,35 +440,39 @@ async function handleMessagesUpsert(
         messageType = "image";
         content = message.imageMessage.caption || "[Imagem]";
         mediaUrl = message.imageMessage.url || "";
-        // Fix: mimetype can come as "false" string from Evolution API
         const rawMime = message.imageMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "image/jpeg";
-        // Try multiple locations for base64
-        base64FromWebhook = message.imageMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.imageMessage);
+        jpegThumbnailRaw = message.imageMessage.jpegThumbnail || null;
       } else if (message.videoMessage) {
         messageType = "video";
         content = message.videoMessage.caption || "[Vídeo]";
         mediaUrl = message.videoMessage.url || "";
         const rawMime = message.videoMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "video/mp4";
-        base64FromWebhook = message.videoMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.videoMessage);
+        jpegThumbnailRaw = message.videoMessage.jpegThumbnail || null;
       } else if (message.audioMessage) {
         messageType = "audio";
         content = message.audioMessage.ptt ? "[Áudio]" : "[Gravação]";
         mediaUrl = message.audioMessage.url || "";
         const rawMime = message.audioMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "audio/ogg";
-        base64FromWebhook = message.audioMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.audioMessage);
       } else if (message.documentMessage) {
         messageType = "document";
         content = message.documentMessage.fileName || "[Documento]";
         mediaUrl = message.documentMessage.url || "";
         const rawMime = message.documentMessage.mimetype;
         mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "application/octet-stream";
-        base64FromWebhook = message.documentMessage.base64 || messageData.base64 || payload?.base64 || null;
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.documentMessage);
       } else if (message.stickerMessage) {
         messageType = "sticker";
-        content = "[Sticker]";
+        content = "[Figurinha]";
+        mediaUrl = message.stickerMessage.url || "";
+        const rawMime = message.stickerMessage.mimetype;
+        mediaMimeType = (rawMime && rawMime !== "false" && rawMime !== false) ? rawMime : "image/webp";
+        base64FromWebhook = extractBase64FromPayload(message, messageData, payload, message.stickerMessage);
       } else if (message.reactionMessage) {
         continue;
       } else if (message.protocolMessage) {
