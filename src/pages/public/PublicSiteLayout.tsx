@@ -330,7 +330,9 @@ export default function PublicSiteLayout() {
             <div className="flex justify-between items-center h-[80px]">
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
-                {siteConfig.logo_url ? (
+                {isLoading ? (
+                  <Skeleton className="h-10 w-40 bg-white/10" />
+                ) : siteConfig?.logo_url ? (
                  <img 
                      src={siteConfig.logo_url} 
                      alt={siteConfig.site_title} 
@@ -344,7 +346,7 @@ export default function PublicSiteLayout() {
                    />
                 ) : (
                   <span className="text-lg md:text-xl font-semibold tracking-wider" style={{ color: '#fff' }}>
-                    {siteConfig.site_title}
+                    {siteConfig?.site_title || 'Site Imobiliário'}
                   </span>
                 )}
               </Link>
