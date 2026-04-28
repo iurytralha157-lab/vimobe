@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { supabase } from '@/integrations/supabase/client';
 import { Bell, BellOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,6 +19,28 @@ export const NotificationsTab = () => {
       } else if (permission === 'denied') {
         toast.error('Permissão de notificação negada. Por favor, ative nas configurações do navegador.');
       }
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.functions.invoke('send-push', {
+        body: {
+          user_id: user.id,
+          title: 'Teste de Notificação',
+          message: 'Esta é uma notificação de teste enviada via Web Push API!',
+          url: '/settings?tab=notifications'
+        }
+      });
+
+      if (error) throw error;
+      toast.success('Solicitação de teste enviada!');
+    } catch (err) {
+      console.error('Erro ao testar push:', err);
+      toast.error('Erro ao enviar notificação de teste.');
     }
   };
 
@@ -63,12 +86,21 @@ export const NotificationsTab = () => {
               </p>
             </div>
           </div>
-          <Button 
-            variant={subscription ? "outline" : "default"}
-            onClick={handleToggle}
-          >
-            {subscription ? 'Desativar' : 'Ativar'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleTestNotification}
+              disabled={!subscription}
+            >
+              Testar
+            </Button>
+            <Button 
+              variant={subscription ? "destructive" : "default"}
+              onClick={handleToggle}
+            >
+              {subscription ? 'Desativar' : 'Ativar'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
