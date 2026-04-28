@@ -145,17 +145,17 @@ export default function PublicHome() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4 pt-20">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-light mb-8 max-w-4xl leading-tight">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-light mb-4 md:mb-8 max-w-4xl leading-tight">
             {isLoading ? (
-              <Skeleton className="h-12 w-3/4 mx-auto bg-white/10" />
+              <Skeleton className="h-10 md:h-12 w-3/4 mx-auto bg-white/10" />
             ) : (
               siteConfig?.hero_title || 'Transformando seus sonhos em realidade!'
             )}
           </h1>
           {(siteConfig?.hero_subtitle || isLoading) && (
-            <p className="text-base md:text-lg text-white/70 mb-20 max-w-2xl w-full">
+            <p className="text-sm md:text-lg text-white/70 mb-8 md:mb-20 max-w-2xl w-full">
               {isLoading ? (
-                <Skeleton className="h-6 w-1/2 mx-auto bg-white/10" />
+                <Skeleton className="h-5 md:h-6 w-1/2 mx-auto bg-white/10" />
               ) : (
                 siteConfig?.hero_subtitle
               )}
@@ -165,7 +165,7 @@ export default function PublicHome() {
           {/* Search Bar - Dynamic filters */}
           <form 
             onSubmit={handleSearch} 
-            className="bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4"
+            className="bg-black/60 md:bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4 mb-20 md:mb-0"
           >
             {activeFilters.map((filter) => {
               const key = filter.filter_key;
