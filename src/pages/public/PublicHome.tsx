@@ -165,7 +165,7 @@ export default function PublicHome() {
           {/* Search Bar - Dynamic filters */}
           <form 
             onSubmit={handleSearch} 
-            className="bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4"
+            className="bg-black/60 md:bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4 mb-20 md:mb-0"
           >
             {activeFilters.map((filter) => {
               const key = filter.filter_key;
