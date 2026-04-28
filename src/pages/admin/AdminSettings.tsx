@@ -19,6 +19,7 @@ interface SystemSettingsValue {
   logo_url_dark?: string | null;
   favicon_url_light?: string | null;
   favicon_url_dark?: string | null;
+  pwa_icon_url?: string | null;
   login_bg_url?: string | null;
   default_whatsapp?: string | null;
   logo_width?: number | null;
@@ -48,6 +49,7 @@ export default function AdminSettings() {
   const [uploadingDark, setUploadingDark] = useState(false);
   const [uploadingFaviconLight, setUploadingFaviconLight] = useState(false);
   const [uploadingFaviconDark, setUploadingFaviconDark] = useState(false);
+  const [uploadingPwaIcon, setUploadingPwaIcon] = useState(false);
   const [uploadingLoginBg, setUploadingLoginBg] = useState(false);
   const [logoWidth, setLogoWidth] = useState(140);
   const [logoHeight, setLogoHeight] = useState(40);
@@ -125,6 +127,7 @@ export default function AdminSettings() {
         logo_url_dark: value.logo_url_dark || null,
         favicon_url_light: value.favicon_url_light || null,
         favicon_url_dark: value.favicon_url_dark || null,
+        pwa_icon_url: value.pwa_icon_url || null,
         login_bg_url: value.login_bg_url || null,
         default_whatsapp: value.default_whatsapp || null,
         logo_width: value.logo_width || null,
@@ -153,6 +156,7 @@ export default function AdminSettings() {
       logo_url_dark: settings.logo_url_dark,
       favicon_url_light: settings.favicon_url_light,
       favicon_url_dark: settings.favicon_url_dark,
+      pwa_icon_url: settings.pwa_icon_url,
       login_bg_url: settings.login_bg_url,
       default_whatsapp: settings.default_whatsapp,
       logo_width: settings.logo_width,
@@ -260,6 +264,28 @@ export default function AdminSettings() {
       toast.error('Erro ao fazer upload: ' + error.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleUploadPwaIcon = async (file: File) => {
+    if (!settings) return;
+    setUploadingPwaIcon(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `system/pwa-icon.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(path);
+      await updateSettingsValue({ pwa_icon_url: publicUrl });
+      toast.success('Ícone do PWA atualizado!');
+    } catch (error: any) {
+      toast.error('Erro ao fazer upload: ' + error.message);
+    } finally {
+      setUploadingPwaIcon(false);
     }
   };
 
@@ -540,6 +566,67 @@ export default function AdminSettings() {
                     )}
                     Upload Ícone Escuro
                   </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* PWA Icon Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ícone do Aplicativo (PWA)</CardTitle>
+            <CardDescription>
+              Este ícone será usado para o ícone da tela inicial no iOS e Android quando o app for instalado.
+              Recomendado: 512x512px, PNG, sem transparência para melhor compatibilidade.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 md:px-6 pb-4 space-y-6">
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Maximize2 className="h-4 w-4" />
+                Ícone do PWA / Tela Inicial
+              </Label>
+              <div className="flex items-center gap-4">
+                <div 
+                  className="w-24 h-24 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-border flex items-center justify-center overflow-hidden"
+                >
+                  {settings?.pwa_icon_url ? (
+                    <img 
+                      src={settings.pwa_icon_url} 
+                      alt="PWA Icon" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground text-xs text-center p-2">Sem ícone definido</span>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    id="pwa-icon-upload"
+                    accept="image/png, image/jpeg"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadPwaIcon(file);
+                    }}
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => document.getElementById('pwa-icon-upload')?.click()}
+                    disabled={uploadingPwaIcon}
+                  >
+                    {uploadingPwaIcon ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Upload Ícone PWA
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2 max-w-xs">
+                    Este ícone atualiza automaticamente a manifest do aplicativo para dispositivos móveis.
+                  </p>
                 </div>
               </div>
             </div>
