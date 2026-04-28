@@ -973,7 +973,7 @@ export default function Pipelines() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="all">Todos</SelectItem>
-                                  {metaFilters?.adsets.map(a => <SelectItem key(a) value={a}>{a}</SelectItem>)}
+                                  {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
