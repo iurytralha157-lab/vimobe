@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { usePublicContext } from "./usePublicContext";
-import { usePropertyTypes } from "@/hooks/use-public-site";
+
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { usePublicSiteMenu } from "@/hooks/use-public-site-menu";
 import { CookieConsent } from "@/components/public/CookieConsent";
@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
-  const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { count: favCount } = usePublicFavorites(organizationId);
   const location = useLocation();

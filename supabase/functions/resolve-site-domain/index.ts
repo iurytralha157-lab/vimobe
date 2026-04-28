@@ -5,6 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const cacheHeaders = {
+  ...corsHeaders,
+  'Cache-Control': 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600',
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -57,7 +62,7 @@ Deno.serve(async (req) => {
             organization_name: orgName,
           },
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...cacheHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -92,7 +97,7 @@ Deno.serve(async (req) => {
         subdomain: siteData.subdomain || null,
         site_config: siteData.site_config
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...cacheHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
