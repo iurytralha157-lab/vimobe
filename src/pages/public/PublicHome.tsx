@@ -372,7 +372,7 @@ export default function PublicHome() {
       </section>
 
       {/* Exclusive Properties Section */}
-      {exclusiveProperties.length > 0 && (
+      {(exclusiveProperties.length > 0 || isHomeDataLoading) && (
         <section className="py-20" style={{ backgroundColor: altBg }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
