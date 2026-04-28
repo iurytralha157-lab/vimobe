@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'logo-white.png', 'logo-black.png', 'sounds/notification.mp3', 'offline.html'],
       manifest: {
-        name: 'Vimob - CRM Imobiliário Inteligente',
-        short_name: 'Vimob',
+        name: 'Vimob Crm',
+        short_name: 'Vimob Crm',
         description: 'CRM Imobiliário Inteligente para gestão de leads, vendas e equipe comercial',
         theme_color: '#DC6B30',
         background_color: '#0A0A0A',
