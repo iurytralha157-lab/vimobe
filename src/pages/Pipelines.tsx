@@ -926,47 +926,73 @@ export default function Pipelines() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Campanha</label>
-                    <Select value={filterCampaign} onValueChange={setFilterCampaign}>
-                      <SelectTrigger className={cn("h-9 w-full text-xs", filterCampaign && filterCampaign !== 'all' && "border-primary text-primary")}>
-                        <SelectValue placeholder="Campanha" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        {metaFilters?.campaigns.map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Conjunto</label>
-                    <Select value={filterAdSet} onValueChange={setFilterAdSet}>
-                      <SelectTrigger className={cn("h-9 w-full text-xs", filterAdSet && filterAdSet !== 'all' && "border-primary text-primary")}>
-                        <SelectValue placeholder="Conjunto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        {metaFilters?.adsets.map(a => (
-                          <SelectItem key={a} value={a}>{a}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Anúncio</label>
-                    <Select value={filterAd} onValueChange={setFilterAd}>
-                      <SelectTrigger className={cn("h-9 w-full text-xs", filterAd && filterAd !== 'all' && "border-primary text-primary")}>
-                        <SelectValue placeholder="Anúncio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        {metaFilters?.ads.map(a => (
-                          <SelectItem key={a} value={a}>{a}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-1.5 pb-2 border-b border-border">
+                    <label className="text-xs font-medium text-muted-foreground">Campanhas Meta</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className={cn(
+                            "h-9 w-full text-xs gap-1.5 justify-between",
+                            (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && "border-[#1877F2] text-[#1877F2]"
+                          )}
+                        >
+                          <div className="flex items-center gap-1.5 truncate">
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            <span>Meta Ads</span>
+                          </div>
+                          {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                            <Badge className="h-4 min-w-4 p-0 px-1 text-[10px] bg-[#1877F2]">
+                              {[filterCampaign !== 'all', filterAdSet !== 'all', filterAd !== 'all'].filter(Boolean).length}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent side="left" className="w-72 p-4 z-[100]">
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-sm">Filtros Meta</h4>
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Campanha</label>
+                              <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todas" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todas</SelectItem>
+                                  {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Conjunto</label>
+                              <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos</SelectItem>
+                                  {metaFilters?.adsets.map(a => <SelectItem key(a) value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase text-muted-foreground">Criativo</label>
+                              <Select value={filterAd} onValueChange={setFilterAd}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos</SelectItem>
+                                  {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   {((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign && filterCampaign !== 'all') || (filterAdSet && filterAdSet !== 'all') || (filterAd && filterAd !== 'all') || searchQuery) && (
                     <Button
