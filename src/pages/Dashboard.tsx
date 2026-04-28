@@ -76,7 +76,8 @@ export default function Dashboard() {
         .select('session_id')
         .eq('organization_id', organization.id)
         .gte('created_at', filters.dateRange.from.toISOString())
-        .lte('created_at', filters.dateRange.to.toISOString());
+        .lte('created_at', filters.dateRange.to.toISOString())
+        .limit(5000);
       if (error) throw error;
       const uniqueSessions = new Set((data || []).map(e => e.session_id));
       return uniqueSessions.size;
