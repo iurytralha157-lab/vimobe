@@ -91,21 +91,19 @@ export default function Auth() {
   useEffect(() => {
     if (!loginBgUrl) return;
     
-    // Delay loading of the heavy background image to prioritize form rendering
-    // and use a WebP version with better compression
-    const timer = setTimeout(() => {
-      const img = new Image();
-      img.onload = () => setBgLoaded(true);
-      
-      // If it's a Supabase URL, use image transformation for WebP and resizing
-      const optimizedUrl = loginBgUrl.includes('supabase.co') 
-        ? `${loginBgUrl}?width=1200&quality=80&format=webp`
-        : loginBgUrl;
+    // Use a small blurred placeholder or a lower quality version initially
+    const img = new Image();
+    
+    // If it's a Supabase URL, use image transformation for WebP and resizing
+    // We request a smaller width initially for mobile or a general good default
+    const optimizedUrl = loginBgUrl.includes('supabase.co') 
+      ? `${loginBgUrl}?width=800&quality=60&format=webp`
+      : loginBgUrl;
         
-      img.src = optimizedUrl;
-    }, 800); // 800ms delay to prioritize the login form
+    img.src = optimizedUrl;
+    img.onload = () => setBgLoaded(true);
 
-    return () => clearTimeout(timer);
+    // Also preload the higher quality version if needed, but the 800px webp is usually enough
   }, [loginBgUrl]);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
@@ -265,15 +263,16 @@ export default function Auth() {
   const showBg = loginBgUrl && bgLoaded;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-background relative">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
       {/* Mobile background: optimized WebP image with crop if available */}
       <div className="lg:hidden absolute inset-0 w-full h-[50vh] overflow-hidden pointer-events-none">
         {loginBgUrl ? (
           <div className="relative w-full h-full">
             <img 
-              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=600&quality=70&format=webp` : loginBgUrl}
+              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=400&quality=50&format=webp` : loginBgUrl}
               alt=""
-              className="w-full h-full object-cover opacity-50 blur-[2px]"
+              className={`w-full h-full object-cover transition-opacity duration-700 ${bgLoaded ? 'opacity-40' : 'opacity-0'} blur-[2px]`}
+              loading="eager"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-background/40 to-background" />
           </div>
