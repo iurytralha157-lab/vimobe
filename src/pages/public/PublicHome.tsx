@@ -113,7 +113,7 @@ export default function PublicHome() {
   ];
 
   // We remove the blocking return and use optional chaining/placeholders below
-  const isLoading = isConfigLoading;
+  const isLoading = isConfigLoading && !siteConfig;
 
   return (
     <div style={{ backgroundColor }}>
