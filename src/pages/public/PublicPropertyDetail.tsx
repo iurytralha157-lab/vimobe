@@ -82,16 +82,8 @@ export default function PublicPropertyDetail() {
       )) as string[]
     : [];
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor }}>
-        <div 
-          className="animate-spin rounded-full h-12 w-12 border-b-2" 
-          style={{ borderColor: primaryColor }}
-        />
-      </div>
-    );
-  }
+  // We remove the blocking spinner and handle loading inside the component
+  const isSiteLoading = !siteConfig;
 
   if (!property) {
     return (
