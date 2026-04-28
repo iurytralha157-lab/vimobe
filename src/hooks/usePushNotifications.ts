@@ -91,9 +91,11 @@ export const usePushNotifications = () => {
       }
 
       console.log('Creating new subscription...');
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey
       });
 
       console.log('Subscription successful');
