@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from('users')
-            .select('id, organization_id, name, email, role, avatar_url, is_active, language, phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf')
+            .select('id, organization_id, name, email, role, avatar_url, is_active, language')
             .eq('id', userId)
             .single(),
           checkSuperAdmin(userId)
@@ -136,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Optimized: Select only required fields
             const { data: orgData } = await supabase
               .from('organizations')
-              .select('id, name, logo_url, theme_mode, accent_color, is_active, subscription_status, segment')
+              .select('id, name, logo_url, theme_mode, accent_color, is_active')
               .eq('id', orgIdToFetch)
               .single();
 
