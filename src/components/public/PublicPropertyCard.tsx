@@ -125,7 +125,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
         )}
 
         {/* Title */}
-        <h3 className="font-semibold text-sm leading-snug mb-1.5 line-clamp-2" style={{ color: textColor || '#111827' }}>
+        <h3 className="font-semibold text-sm leading-tight mb-2 line-clamp-2 min-h-[2.5rem]" style={{ color: textColor || '#111827' }}>
           {title}
         </h3>
 
@@ -138,7 +138,7 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
         )}
 
         {/* Features */}
-        <div className="flex items-center gap-3 text-xs mb-3 flex-wrap" style={{ color: textColor ? `${textColor}B3` : '#6b7280' }}>
+        <div className="flex items-center gap-x-4 gap-y-2 text-xs mb-3 flex-wrap" style={{ color: textColor ? `${textColor}B3` : '#6b7280' }}>
           {suites != null && suites > 0 ? (
             <span className="flex items-center gap-1">
               <Bed className="w-3.5 h-3.5" />
