@@ -116,13 +116,16 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 5,
       gcTime: 1000 * 60 * 15,
       refetchOnWindowFocus: false,
-      refetchOnMount: false,
       retry: 1,
     },
   },
 });
 
-const PageLoader = () => null;
+const PageLoader = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
