@@ -15,7 +15,7 @@ import {
   LayoutGrid,
   CloudDownload
 } from 'lucide-react';
-import { useProperties, useUpdateProperty, useDeleteProperty, Property } from '@/hooks/use-properties';
+import { useInfiniteProperties, useUpdateProperty, useDeleteProperty, Property } from '@/hooks/use-properties';
 import { PropertyCard } from '@/components/properties/PropertyCard';
 import { PropertyPreviewDialog } from '@/components/properties/PropertyPreviewDialog';
 import { VistaImportDialog } from '@/components/properties/VistaImportDialog';
@@ -53,7 +53,16 @@ export default function Properties() {
 
   const deferredSearch = useDeferredValue(search);
   
-  const { data: properties = [], isLoading } = useProperties(deferredSearch);
+  const { 
+    data, 
+    isLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useInfiniteProperties(deferredSearch);
+
+  const properties = data?.pages.flatMap(page => page.properties) || [];
+  const totalCount = data?.pages[0]?.totalCount || 0;
   const updateProperty = useUpdateProperty();
   const deleteProperty = useDeleteProperty();
 
@@ -79,7 +88,7 @@ export default function Properties() {
   };
 
   const stats = {
-    total: properties.length,
+    total: totalCount,
     destaque: properties.filter(p => p.destaque).length,
     vendidos: properties.filter(p => p.status === 'vendido').length,
     venda: properties.filter(p => p.tipo_de_negocio === 'Venda' && p.status !== 'vendido').length,
@@ -254,6 +263,27 @@ export default function Properties() {
             );
           })}
         </div>
+
+        {/* Load More */}
+        {hasNextPage && (
+          <div className="flex justify-center py-8">
+            <Button
+              variant="outline"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="min-w-[200px]"
+            >
+              {isFetchingNextPage ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Carregando...
+                </>
+              ) : (
+                'Carregar mais imóveis'
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Preview Dialog */}
         <PropertyPreviewDialog
