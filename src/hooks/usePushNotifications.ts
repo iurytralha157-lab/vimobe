@@ -92,7 +92,7 @@ export const usePushNotifications = () => {
       // Save to Supabase
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('push_subscriptions')
           .upsert({
             user_id: user.id,
