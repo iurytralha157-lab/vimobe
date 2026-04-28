@@ -405,6 +405,40 @@ Deno.serve(async (req) => {
 
     console.log(`Sending push to user: ${payload.user_id}, title: ${payload.title}`);
 
+    // Try to send WhatsApp notification in parallel
+    const sendWhatsApp = async () => {
+      try {
+        const { data: user } = await supabase
+          .from("users")
+          .select("organization_id, whatsapp")
+          .eq("id", payload.user_id)
+          .single();
+
+        if (user?.whatsapp && user?.organization_id) {
+          console.log(`[WhatsApp] Triggering notification for user: ${payload.user_id}`);
+          const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-notifier`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              organization_id: user.organization_id,
+              user_id: payload.user_id,
+              message: `*${payload.title}*\n${payload.body || ""}`
+            }),
+          });
+          const result = await whatsappResponse.json();
+          console.log(`[WhatsApp] Notification result:`, result);
+        }
+      } catch (err) {
+        console.error("[WhatsApp] Failed to send notification:", err);
+      }
+    };
+
+    // Trigger WhatsApp sending without awaiting it to not delay push
+    sendWhatsApp();
+
     // Get active push tokens for user
     const { data: tokens, error: tokensError } = await supabase
       .from("push_tokens")
