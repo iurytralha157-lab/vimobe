@@ -24,9 +24,10 @@ export const NotificationsTab = () => {
           toast.error('Permissão de notificação negada. Por favor, ative nas configurações do navegador.');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao alternar notificações:', err);
-      toast.error('Ocorreu um erro ao processar as notificações.');
+      const errorMessage = err.message || 'Erro desconhecido';
+      toast.error(`Erro: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

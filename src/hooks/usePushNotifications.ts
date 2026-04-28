@@ -13,7 +13,14 @@ export const usePushNotifications = () => {
       setIsSupported(true);
       setPermission(Notification.permission);
       
-      // Check current subscription
+      // We check for SW explicitly to ensure it's registered
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (!reg) {
+          console.log('No SW found, registering...');
+          navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        }
+      });
+
       navigator.serviceWorker.ready.then(registration => {
         registration.pushManager.getSubscription().then(sub => {
           setSubscription(sub);
@@ -84,9 +91,11 @@ export const usePushNotifications = () => {
       }
 
       console.log('Creating new subscription...');
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey
       });
 
       console.log('Subscription successful');
