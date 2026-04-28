@@ -111,7 +111,14 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      data = { message: responseText };
+    }
+    
     console.log("WhatsApp notification sent:", { user: user.name, phone: formattedPhone, instance: instanceName, status: response.status });
 
     if (!response.ok) {

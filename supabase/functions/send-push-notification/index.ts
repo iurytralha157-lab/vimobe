@@ -113,6 +113,16 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   return `${unsignedToken}.${signatureB64}`;
 }
 
+// Helper to extract raw P-256 key from SPKI/DER (91 bytes)
+function getRawPublicKey(publicKeyB64: string): string {
+  const bytes = base64UrlDecode(publicKeyB64);
+  if (bytes.length === 91) {
+    // Offset 26 is where the 65-byte raw uncompressed point starts
+    return base64UrlEncode(bytes.slice(26));
+  }
+  return publicKeyB64;
+}
+
 // Send Web Push notification
 async function sendWebPushNotification(
   subscriptionJson: string,
@@ -124,6 +134,9 @@ async function sendWebPushNotification(
   try {
     const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
     const { privateKey, publicKey } = getVapidKeys();
+    
+    // Ensure we use the raw uncompressed public key (65 bytes) for the header
+    const rawPublicKey = getRawPublicKey(publicKey);
 
     // Extract audience from endpoint
     const endpointUrl = new URL(subscription.endpoint);
@@ -147,7 +160,7 @@ async function sendWebPushNotification(
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
-        "Authorization": `vapid t=${jwt}, k=${publicKey}`,
+        "Authorization": `vapid t=${jwt}, k=${rawPublicKey}`,
         "Content-Type": "application/octet-stream",
         "Content-Encoding": "aes128gcm",
         "TTL": priority === 'high' ? "86400" : "3600",
@@ -391,6 +404,40 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Sending push to user: ${payload.user_id}, title: ${payload.title}`);
+
+    // Try to send WhatsApp notification in parallel
+    const sendWhatsApp = async () => {
+      try {
+        const { data: user } = await supabase
+          .from("users")
+          .select("organization_id, whatsapp")
+          .eq("id", payload.user_id)
+          .single();
+
+        if (user?.whatsapp && user?.organization_id) {
+          console.log(`[WhatsApp] Triggering notification for user: ${payload.user_id}`);
+          const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-notifier`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              organization_id: user.organization_id,
+              user_id: payload.user_id,
+              message: `*${payload.title}*\n${payload.body || ""}`
+            }),
+          });
+          const result = await whatsappResponse.json();
+          console.log(`[WhatsApp] Notification result:`, result);
+        }
+      } catch (err) {
+        console.error("[WhatsApp] Failed to send notification:", err);
+      }
+    };
+
+    // Trigger WhatsApp sending without awaiting it to not delay push
+    sendWhatsApp();
 
     // Get active push tokens for user
     const { data: tokens, error: tokensError } = await supabase
