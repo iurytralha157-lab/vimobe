@@ -190,16 +190,6 @@ export function DashboardFilters({
           triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start"
         />
 
-        {/* Meta Campaign Filter */}
-        <CampaignFilter 
-          campaignId={campaignId}
-          onCampaignChange={onCampaignChange}
-          adSetId={adSetId}
-          onAdSetChange={onAdSetChange}
-          adId={adId}
-          onAdChange={onAdChange}
-        />
-
         {/* Filters Popover */}
         <Popover>
           <PopoverTrigger asChild>
@@ -208,12 +198,12 @@ export function DashboardFilters({
               size="sm" 
               className={cn(
                 "h-8 px-2.5 text-xs gap-1.5",
-                hasExtraFilters && "border-primary text-primary"
+                (hasExtraFilters) && "border-primary text-primary"
               )}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
               Filtros
-              {hasExtraFilters && (
+              {(hasExtraFilters) && (
                 <Badge 
                   variant="default" 
                   className="h-4 w-4 p-0 flex items-center justify-center text-[10px] ml-0.5"
@@ -223,8 +213,22 @@ export function DashboardFilters({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-56 p-3">
+          <PopoverContent align="end" className="w-64 p-3">
             <div className="space-y-3">
+              {/* Meta Campaign Filter */}
+              <div className="space-y-1.5 pb-2 border-b border-border">
+                <label className="text-xs font-medium text-muted-foreground">Campanhas Meta</label>
+                <CampaignFilter 
+                  campaignId={campaignId}
+                  onCampaignChange={onCampaignChange}
+                  adSetId={adSetId}
+                  onAdSetChange={onAdSetChange}
+                  adId={adId}
+                  onAdChange={onAdChange}
+                  fullWidth
+                />
+              </div>
+
               {/* Team */}
               {availableTeams.length > 0 && (
                 <div className="space-y-1.5">
@@ -350,15 +354,41 @@ export function DashboardFilters({
         </SelectContent>
       </Select>
       
-      {/* Meta Campaign Filter */}
-      <CampaignFilter 
-        campaignId={campaignId}
-        onCampaignChange={onCampaignChange}
-        adSetId={adSetId}
-        onAdSetChange={onAdSetChange}
-        adId={adId}
-        onAdChange={onAdChange}
-      />
+      {/* Desktop Filters Popover for Meta Ads */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={cn(
+              "h-8 px-2.5 text-xs gap-1.5",
+              (campaignId || adSetId || adId) && "border-[#1877F2] text-[#1877F2] hover:text-[#1877F2] hover:bg-[#1877F2]/10"
+            )}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Campanhas
+            {(campaignId || adSetId || adId) && (
+              <Badge 
+                variant="default" 
+                className="h-4 min-w-4 p-0 px-1 flex items-center justify-center text-[10px] ml-0.5 bg-[#1877F2]"
+              >
+                {[campaignId, adSetId, adId].filter(Boolean).length}
+              </Badge>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80 p-3">
+          <CampaignFilter 
+            campaignId={campaignId}
+            onCampaignChange={onCampaignChange}
+            adSetId={adSetId}
+            onAdSetChange={onAdSetChange}
+            adId={adId}
+            onAdChange={onAdChange}
+            fullWidth
+          />
+        </PopoverContent>
+      </Popover>
 
       {/* Clear Filters */}
       {hasActiveFilters && (

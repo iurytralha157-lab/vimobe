@@ -25,6 +25,7 @@ interface CampaignFilterProps {
   onAdSetChange: (id: string | null) => void;
   adId: string | null;
   onAdChange: (id: string | null) => void;
+  fullWidth?: boolean;
 }
 
 export function CampaignFilter({
@@ -34,6 +35,7 @@ export function CampaignFilter({
   onAdSetChange,
   adId,
   onAdChange,
+  fullWidth = false,
 }: CampaignFilterProps) {
   const { organization } = useAuth();
 
@@ -133,6 +135,104 @@ export function CampaignFilter({
   const activeCount = [campaignId, adSetId, adId].filter(Boolean).length;
   const hasActiveFilters = activeCount > 0;
 
+  const content = (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="font-medium text-sm flex items-center gap-2">
+          <Facebook className="h-4 w-4 text-[#1877F2]" />
+          Filtros Meta Ads
+        </h4>
+        {hasActiveFilters && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 px-2 text-[11px] text-muted-foreground hover:text-destructive"
+            onClick={() => {
+              onCampaignChange(null);
+              onAdSetChange(null);
+              onAdChange(null);
+            }}
+          >
+            Limpar
+          </Button>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase">Campanha</label>
+          <Select
+            value={campaignId || 'all'}
+            onValueChange={(val) => {
+              onCampaignChange(val === 'all' ? null : val);
+              onAdSetChange(null);
+              onAdChange(null);
+            }}
+          >
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Todas campanhas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas campanhas</SelectItem>
+              {campaigns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase">Conjunto de Anúncios</label>
+          <Select
+            value={adSetId || 'all'}
+            onValueChange={(val) => {
+              onAdSetChange(val === 'all' ? null : val);
+              onAdChange(null);
+            }}
+          >
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Todos conjuntos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos conjuntos</SelectItem>
+              {adSets.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase">Criativo</label>
+          <Select
+            value={adId || 'all'}
+            onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
+          >
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Todos criativos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos criativos</SelectItem>
+              {ads.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (fullWidth) {
+    return content;
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -157,97 +257,7 @@ export function CampaignFilter({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4" align="end">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <Facebook className="h-4 w-4 text-[#1877F2]" />
-              Filtros Meta Ads
-            </h4>
-            {hasActiveFilters && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2 text-[11px] text-muted-foreground hover:text-destructive"
-                onClick={() => {
-                  onCampaignChange(null);
-                  onAdSetChange(null);
-                  onAdChange(null);
-                }}
-              >
-                Limpar
-              </Button>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase">Campanha</label>
-              <Select
-                value={campaignId || 'all'}
-                onValueChange={(val) => {
-                  onCampaignChange(val === 'all' ? null : val);
-                  onAdSetChange(null);
-                  onAdChange(null);
-                }}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Todas campanhas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas campanhas</SelectItem>
-                  {campaigns.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase">Conjunto de Anúncios</label>
-              <Select
-                value={adSetId || 'all'}
-                onValueChange={(val) => {
-                  onAdSetChange(val === 'all' ? null : val);
-                  onAdChange(null);
-                }}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Todos conjuntos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos conjuntos</SelectItem>
-                  {adSets.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase">Criativo</label>
-              <Select
-                value={adId || 'all'}
-                onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Todos criativos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos criativos</SelectItem>
-                  {ads.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+        {content}
       </PopoverContent>
     </Popover>
   );
