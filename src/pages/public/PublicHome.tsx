@@ -460,7 +460,13 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredProperties.map((property) => (
+              {isHomeDataLoading ? (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-[400px] w-full bg-neutral-800/20 rounded-2xl animate-pulse" />
+                  ))}
+                </>
+              ) : featuredProperties.map((property) => (
                 <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
                   <PublicPropertyCard
                     property={property}
