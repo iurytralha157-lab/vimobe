@@ -178,16 +178,21 @@ export const LeadCard = memo(function LeadCard({
               </span>}
             
             {/* Tags - primeira tag em destaque */}
-            {lead.tags && lead.tags.length > 0 && <>
-                <span className="text-[9px] px-1.5 py-0.5 font-medium rounded-full border" style={{
-            backgroundColor: lead.tags[0].color,
-            color: '#FFFFFF',
-            borderColor: lead.tags[0].color
-          }}>
-                  {lead.tags[0].name}
-                </span>
-                {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
-              </>}
+            {lead.tags && lead.tags.length > 0 ? (
+                <>
+                  <span className="text-[9px] px-1.5 py-0.5 font-medium rounded-full border" style={{
+                    backgroundColor: lead.tags[0].color || '#6b7280',
+                    color: '#FFFFFF',
+                    borderColor: lead.tags[0].color || '#6b7280'
+                  }}>
+                    {lead.tags[0].name}
+                  </span>
+                  {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
+                </>
+              ) : (
+                // Indicador visual discreto de que existem detalhes (tags/tarefas) que podem ser carregados
+                <div className="h-4 w-1 bg-muted rounded-full" />
+              )}
           </div>
 
 
