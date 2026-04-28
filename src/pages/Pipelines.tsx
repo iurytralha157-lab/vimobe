@@ -1280,23 +1280,7 @@ export default function Pipelines() {
                 </PopoverContent>
               </Popover>
             
-              {/* Refresh Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 flex-shrink-0"
-                      onClick={handleManualRefresh}
-                      disabled={isRefreshing}
-                    >
-                      <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Atualizar Pipeline</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* Botão de Refresh removido */}
               
               {/* Desktop New Button */}
               <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0">
