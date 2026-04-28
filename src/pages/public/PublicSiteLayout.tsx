@@ -331,7 +331,7 @@ export default function PublicSiteLayout() {
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
                 {isLoading ? (
-                  <Skeleton className="h-10 w-40 bg-white/10" />
+                  <Skeleton className="h-8 md:h-10 w-32 md:w-40 bg-white/10" />
                 ) : siteConfig?.logo_url ? (
                  <img 
                      src={siteConfig.logo_url} 
@@ -339,13 +339,15 @@ export default function PublicSiteLayout() {
                      width={Math.min(siteConfig.logo_width || 200, 500)}
                      height={Math.min(siteConfig.logo_height || 55, 70)}
                      style={{ 
-                       maxWidth: Math.min(siteConfig.logo_width || 200, 500), 
-                       maxHeight: Math.min(siteConfig.logo_height || 55, 70)
+                       maxWidth: '100%',
+                       maxHeight: '100%',
+                       width: siteConfig.logo_width ? `${siteConfig.logo_width}px` : 'auto',
+                       height: siteConfig.logo_height ? `${siteConfig.logo_height}px` : '40px'
                      }}
-                     className="w-auto object-contain"
+                     className="w-auto object-contain max-h-[40px] md:max-h-[55px]"
                    />
                 ) : (
-                  <span className="text-lg md:text-xl font-semibold tracking-wider" style={{ color: '#fff' }}>
+                  <span className="text-base md:text-xl font-semibold tracking-wider" style={{ color: '#fff' }}>
                     {siteConfig?.site_title || 'Site Imobiliário'}
                   </span>
                 )}
