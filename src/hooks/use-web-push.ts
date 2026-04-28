@@ -107,7 +107,7 @@ export function useWebPush() {
       // Serializa a subscription como JSON string
       const subscriptionJson = JSON.stringify(subscription.toJSON());
 
-      // Verifica se já existe um token web para este usuário
+      // Verifica se já existe um token web para este usuário com esta mesma subscription
       const { data: existing } = await supabase
         .from('push_tokens')
         .select('id, token')
