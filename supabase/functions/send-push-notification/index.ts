@@ -113,6 +113,16 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   return `${unsignedToken}.${signatureB64}`;
 }
 
+// Helper to extract raw P-256 key from SPKI/DER (91 bytes)
+function getRawPublicKey(publicKeyB64: string): string {
+  const bytes = base64UrlDecode(publicKeyB64);
+  if (bytes.length === 91) {
+    // Offset 26 is where the 65-byte raw uncompressed point starts
+    return base64UrlEncode(bytes.slice(26));
+  }
+  return publicKeyB64;
+}
+
 // Send Web Push notification
 async function sendWebPushNotification(
   subscriptionJson: string,
@@ -124,6 +134,9 @@ async function sendWebPushNotification(
   try {
     const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
     const { privateKey, publicKey } = getVapidKeys();
+    
+    // Ensure we use the raw uncompressed public key (65 bytes) for the header
+    const rawPublicKey = getRawPublicKey(publicKey);
 
     // Extract audience from endpoint
     const endpointUrl = new URL(subscription.endpoint);
@@ -147,7 +160,7 @@ async function sendWebPushNotification(
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
-        "Authorization": `vapid t=${jwt}, k=${publicKey}`,
+        "Authorization": `vapid t=${jwt}, k=${rawPublicKey}`,
         "Content-Type": "application/octet-stream",
         "Content-Encoding": "aes128gcm",
         "TTL": priority === 'high' ? "86400" : "3600",
