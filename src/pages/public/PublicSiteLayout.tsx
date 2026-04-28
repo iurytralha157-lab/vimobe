@@ -252,8 +252,7 @@ export default function PublicSiteLayout() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
-  // We don't block the whole layout with a spinner anymore. 
-  // We'll show skeletons for parts that are still loading.
+  // We don't block the layout with a spinner anymore.
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0D0D0D', color: '#FFFFFF' }}>
