@@ -588,7 +588,7 @@ export default function PublicHome() {
       )}
 
       {/* About Section on Home */}
-      {siteConfig.show_about_on_home && (
+      {siteConfig?.show_about_on_home && (
         <section className="py-20" style={{ backgroundColor: altBg }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
