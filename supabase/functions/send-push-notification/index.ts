@@ -456,39 +456,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send to all tokens
-    let sentCount = 0;
-    let failedCount = 0;
-    const invalidTokenIds: string[] = [];
+    // Send to all native tokens (FCM)
+    for (const tokenRecord of tokens || []) {
+      if (tokenRecord.platform === 'web') continue; // Handled by webSubscriptions now or legacy
 
-    for (const tokenRecord of tokens) {
       let result: { success: boolean; error?: string };
       
-      if (tokenRecord.platform === 'web') {
-        // Send via Web Push
-        console.log(`[Push] Sending Web Push to token ID: ${tokenRecord.id}`);
-        result = await sendWebPushNotification(
-          tokenRecord.token,
-          payload.title,
-          payload.body || "",
-          payload.data || {},
-          payload.priority || "high"
-        );
+      // Send via FCM for native apps
+      if (!accessToken) {
+        console.error("[Push] No FCM access token available for native token");
+        result = { success: false, error: "No FCM access token" };
       } else {
-        // Send via FCM for native apps
-        if (!accessToken) {
-          console.error("[Push] No FCM access token available for native token");
-          result = { success: false, error: "No FCM access token" };
-        } else {
-          result = await sendFCMNotification(
-            tokenRecord.token,
-            accessToken,
-            payload.title,
-            payload.body || "",
-            payload.data || {},
-            payload.priority || "high"
-          );
-        }
+        result = await sendFCMNotification(
+          tokenRecord.token,
+          accessToken,
+          payload.title,
+          payload.body,
+          { ...payload.data, url: payload.url },
+          payload.priority as any || "high"
+        );
       }
 
       if (result.success) {
@@ -501,7 +487,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Deactivate invalid tokens
+    // Send to all Web Push subscriptions
+    for (const subRecord of webSubscriptions || []) {
+      console.log(`[Push] Sending Web Push to subscription ID: ${subRecord.id}`);
+      const result = await sendWebPushNotification(
+        JSON.stringify(subRecord.subscription),
+        payload.title,
+        payload.body,
+        { ...payload.data, url: payload.url },
+        payload.priority as any || "high"
+      );
+
+      if (result.success) {
+        sentCount++;
+      } else {
+        failedCount++;
+        // We don't have a mechanism to deactivate web subscriptions here easily 
+        // without more logic, but we could add it if needed.
+      }
+    }
+
+    // Deactivate invalid native tokens
     if (invalidTokenIds.length > 0) {
       console.log(`Deactivating ${invalidTokenIds.length} invalid tokens`);
       await supabase
