@@ -216,10 +216,14 @@ export default function PublicProperties() {
             {isSiteLoading ? (
               <Skeleton className="h-12 w-64 mx-auto bg-white/10" />
             ) : (
-              filters.tipo === 'Apartamento' ? 'Apartamentos' : 
-              filters.tipo === 'Casa' ? 'Casas' : 
-              filters.finalidade === 'aluguel' ? 'Aluguel' : 
-              'Imóveis Disponíveis'
+              <>
+                {filters.tipo === 'Apartamento' ? 'Apartamentos' : 
+                 filters.tipo === 'Casa' ? 'Casas' : 
+                 filters.finalidade === 'aluguel' ? 'Aluguel' : 
+                 'Imóveis'}
+                {filters.cidade && ` em ${filters.cidade}`}
+                {!filters.tipo && !filters.finalidade && !filters.cidade && ' Disponíveis'}
+              </>
             )}
           </h1>
         </div>

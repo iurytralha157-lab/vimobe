@@ -4,13 +4,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { PublicSiteConfig } from '@/hooks/use-public-site';
 import { PublicContext, PublicContextType } from './usePublicContext';
 import { ScrollToTop } from '@/components/ScrollToTop';
-import PublicSiteLayout from './PublicSiteLayout';
-import PublicHome from './PublicHome';
-import PublicProperties from './PublicProperties';
-import PublicPropertyDetail from './PublicPropertyDetail';
-import PublicAbout from './PublicAbout';
-import PublicContact from './PublicContact';
-import PublicFavorites from './PublicFavorites';
+import { lazy, Suspense } from 'react';
+
+const PublicSiteLayout = lazy(() => import('./PublicSiteLayout'));
+const PublicHome = lazy(() => import('./PublicHome'));
+const PublicProperties = lazy(() => import('./PublicProperties'));
+const PublicPropertyDetail = lazy(() => import('./PublicPropertyDetail'));
+const PublicAbout = lazy(() => import('./PublicAbout'));
+const PublicContact = lazy(() => import('./PublicContact'));
+const PublicFavorites = lazy(() => import('./PublicFavorites'));
+
+const PageLoader = () => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 
 function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: string }) {
@@ -168,15 +176,14 @@ function PublishedSiteRoutes({ slug }: { slug: string }) {
     <>
       <ScrollToTop />
       <Routes>
-        <Route path="/" element={<PublicSiteLayout />}>
-          <Route index element={<PublicHome />} />
-          <Route path="imoveis" element={<PublicProperties />} />
-          <Route path="imoveis/:codigo" element={<PublicPropertyDetail />} />
-          <Route path="imovel/:code" element={<PublicPropertyDetail />} />
-          <Route path="sobre" element={<PublicAbout />} />
-          <Route path="contato" element={<PublicContact />} />
-          <Route path="favoritos" element={<PublicFavorites />} />
-          
+        <Route path="/" element={<Suspense fallback={null}><PublicSiteLayout /></Suspense>}>
+          <Route index element={<Suspense fallback={<PageLoader />}><PublicHome /></Suspense>} />
+          <Route path="imoveis" element={<Suspense fallback={<PageLoader />}><PublicProperties /></Suspense>} />
+          <Route path="imoveis/:codigo" element={<Suspense fallback={<PageLoader />}><PublicPropertyDetail /></Suspense>} />
+          <Route path="imovel/:code" element={<Suspense fallback={<PageLoader />}><PublicPropertyDetail /></Suspense>} />
+          <Route path="sobre" element={<Suspense fallback={<PageLoader />}><PublicAbout /></Suspense>} />
+          <Route path="contato" element={<Suspense fallback={<PageLoader />}><PublicContact /></Suspense>} />
+          <Route path="favoritos" element={<Suspense fallback={<PageLoader />}><PublicFavorites /></Suspense>} />
         </Route>
         <Route path="*" element={<Navigate to={`/sites/${slug}`} replace />} />
       </Routes>
