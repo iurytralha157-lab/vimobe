@@ -27,6 +27,16 @@ export function usePwaUpdate() {
         action: {
           label: 'Atualizar Agora',
           onClick: () => {
+            // Clear simple caches before reloading
+            if ('caches' in window) {
+              caches.keys().then(names => {
+                for (let name of names) {
+                  if (name.includes('supabase') || name.includes('images')) {
+                    caches.delete(name);
+                  }
+                }
+              });
+            }
             updateServiceWorker(true);
           },
         },
