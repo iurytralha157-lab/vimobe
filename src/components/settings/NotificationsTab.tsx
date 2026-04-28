@@ -21,6 +21,28 @@ export const NotificationsTab = () => {
     }
   };
 
+  const handleTestNotification = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.functions.invoke('send-push', {
+        body: {
+          user_id: user.id,
+          title: 'Teste de Notificação',
+          message: 'Esta é uma notificação de teste enviada via Web Push API!',
+          url: '/settings?tab=notifications'
+        }
+      });
+
+      if (error) throw error;
+      toast.success('Solicitação de teste enviada!');
+    } catch (err) {
+      console.error('Erro ao testar push:', err);
+      toast.error('Erro ao enviar notificação de teste.');
+    }
+  };
+
   if (!isSupported) {
     return (
       <Card>
