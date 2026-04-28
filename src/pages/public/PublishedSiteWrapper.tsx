@@ -38,7 +38,7 @@ function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: 
 
         const { data, error: fetchError } = await supabase
           .from('organization_sites')
-          .select('id, organization_id, subdomain, custom_domain, site_title, site_description, primary_color, secondary_color, accent_color, logo_url, favicon_url, email, phone, whatsapp, address, city, state, facebook, instagram, linkedin, youtube, about_title, about_text, about_image_url, seo_title, seo_description, seo_keywords, google_analytics_id, hero_image_url, hero_title, hero_subtitle, page_banner_url, logo_width, logo_height, watermark_enabled, watermark_opacity, watermark_logo_url, watermark_size, watermark_position, is_active, site_theme, background_color, text_color, card_color, show_about_on_home, about_subtitle, about_stats, about_checkmarks, about_features, gtm_id, meta_pixel_id, google_ads_id, head_scripts, body_scripts, organizations(name)')
+          .select('*, organizations(name)')
           .eq('subdomain', slug)
           .eq('is_active', true)
           .maybeSingle();
