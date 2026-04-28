@@ -13,11 +13,12 @@ export const usePushNotifications = () => {
       setIsSupported(true);
       setPermission(Notification.permission);
       
-      // We check for SW explicitly to ensure it's registered
+      const SW_PATH = '/sw-push.js';
+      
       navigator.serviceWorker.getRegistration().then(reg => {
-        if (!reg) {
-          console.log('No SW found, registering...');
-          navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        if (!reg || reg.active?.scriptURL.indexOf(SW_PATH) === -1) {
+          console.log('No compatible SW found, registering:', SW_PATH);
+          navigator.serviceWorker.register(SW_PATH, { scope: '/' });
         }
       });
 
