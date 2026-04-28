@@ -43,18 +43,44 @@ export const usePushNotifications = () => {
         return;
       }
 
-      console.log('Requesting notification permission...');
-      const result = await Notification.requestPermission();
+      console.log('Starting subscription process...');
+      
+      // On some mobile devices (especially iOS PWA), Notification.requestPermission() 
+      // must be triggered directly by a user gesture. We are inside handleToggle which is a user gesture.
+      
+      let result = Notification.permission;
+      if (result === 'default') {
+        console.log('Requesting notification permission...');
+        result = await Notification.requestPermission();
+      }
+      
       console.log('Permission result:', result);
       setPermission(result);
 
       if (result !== 'granted') {
-        throw new Error('Permission not granted for notifications');
+        console.warn('Permission not granted for notifications:', result);
+        return;
+      }
+
+      // Check for Service Worker Registration explicitly
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      if (registrations.length === 0) {
+        console.warn('No service worker registered. Registering /sw.js...');
+        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       }
 
       const registration = await navigator.serviceWorker.ready;
       console.log('Service worker ready for subscription');
       
+      // Before subscribing, check if there is an existing one
+      const existingSub = await registration.pushManager.getSubscription();
+      if (existingSub) {
+        console.log('Found existing subscription, using it.');
+        setSubscription(existingSub);
+        return existingSub;
+      }
+
+      console.log('Creating new subscription...');
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -70,15 +96,20 @@ export const usePushNotifications = () => {
           .from('push_subscriptions')
           .upsert({
             user_id: user.id,
-            subscription: sub.toJSON(),
+            subscription: JSON.parse(JSON.stringify(sub)),
           }, { onConflict: 'user_id' });
 
         if (error) console.error('Error saving subscription to Supabase:', error);
       }
 
       return sub;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to subscribe the user: ', err);
+      // Detailed error for debugging
+      if (err.name === 'NotAllowedError') {
+        console.error('Permission denied or interaction required');
+      }
+      throw err; // Re-throw to be caught by the component UI
     }
   };
 
