@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -7,8 +8,11 @@ import { toast } from 'sonner';
 
 export const NotificationsTab = () => {
   const { isSupported, permission, subscription, subscribeUser, unsubscribeUser } = usePushNotifications();
+  const [loading, setLoading] = useState(false);
 
   const handleToggle = async () => {
+    setLoading(true);
+    try {
     if (subscription) {
       await unsubscribeUser();
       toast.success('Notificações desativadas');
@@ -20,9 +24,11 @@ export const NotificationsTab = () => {
         toast.error('Permissão de notificação negada. Por favor, ative nas configurações do navegador.');
       }
     }
+    setLoading(false);
   };
 
   const handleTestNotification = async () => {
+    setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -41,6 +47,8 @@ export const NotificationsTab = () => {
     } catch (err) {
       console.error('Erro ao testar push:', err);
       toast.error('Erro ao enviar notificação de teste.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,15 +98,16 @@ export const NotificationsTab = () => {
             <Button 
               variant="outline"
               onClick={handleTestNotification}
-              disabled={!subscription}
+              disabled={!subscription || loading}
             >
-              Testar
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Testar'}
             </Button>
             <Button 
               variant={subscription ? "destructive" : "default"}
               onClick={handleToggle}
+              disabled={loading}
             >
-              {subscription ? 'Desativar' : 'Ativar'}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (subscription ? 'Desativar' : 'Ativar')}
             </Button>
           </div>
         </div>
