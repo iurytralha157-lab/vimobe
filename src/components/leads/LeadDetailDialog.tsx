@@ -690,7 +690,7 @@ export function LeadDetailDialog({
                 Ligar
               </Button>
               <Button size="sm" onClick={handleQuickWhatsApp} className="h-9 flex-1 rounded-full">
-                <MessageCircle className="h-4 w-4 mr-1.5" />
+                <DynamicWhatsAppIcon size={16} className="mr-1.5" />
                 Chat
               </Button>
             </>
@@ -2219,7 +2219,7 @@ export function LeadDetailDialog({
           
           {selectedTask?.recommended_message && <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
               <div className="flex items-start gap-3">
-                <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <DynamicWhatsAppIcon size={20} className="mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs font-medium text-primary mb-1">Mensagem sugerida:</p>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -2235,7 +2235,7 @@ export function LeadDetailDialog({
               Marcar como feito
             </Button>
             {selectedTask?.recommended_message && lead.phone && <Button variant="outline" className="flex-1" onClick={() => handleRoteiroAction('message')}>
-                <MessageCircle className="h-4 w-4 mr-2" />
+                <DynamicWhatsAppIcon size={16} className="mr-2" />
                 Enviar mensagem
               </Button>}
           </div>
