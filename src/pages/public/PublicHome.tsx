@@ -114,6 +114,7 @@ export default function PublicHome() {
 
   // We remove the blocking return and use optional chaining/placeholders below
   const isLoading = isConfigLoading && !siteConfig;
+  const showSkeletons = isHomeDataLoading && !homeData;
 
   return (
     <div style={{ backgroundColor }}>
@@ -372,7 +373,7 @@ export default function PublicHome() {
       </section>
 
       {/* Exclusive Properties Section */}
-      {(exclusiveProperties.length > 0 || isHomeDataLoading) && (
+      {(exclusiveProperties.length > 0 || showSkeletons) && (
         <section className="py-20" style={{ backgroundColor: altBg }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -388,7 +389,7 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {isHomeDataLoading ? (
+              {showSkeletons ? (
                 <>
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-[400px] w-full bg-neutral-800/20 rounded-2xl animate-pulse" />
@@ -444,7 +445,7 @@ export default function PublicHome() {
       )}
 
       {/* Featured Properties Section */}
-      {(featuredProperties.length > 0 || isHomeDataLoading) && (
+      {(featuredProperties.length > 0 || showSkeletons) && (
         <section className="py-20" style={{ backgroundColor: isDarkTheme ? backgroundColor : '#FFFFFF' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -460,7 +461,7 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {isHomeDataLoading ? (
+              {showSkeletons ? (
                 <>
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-[400px] w-full bg-neutral-800/20 rounded-2xl animate-pulse" />
@@ -516,7 +517,7 @@ export default function PublicHome() {
       )}
 
       {/* All Properties Section */}
-      {(allProperties.length > 0 || isHomeDataLoading) && (
+      {(allProperties.length > 0 || showSkeletons) && (
         <section className="py-20" style={{ backgroundColor: isDarkTheme ? backgroundColor : '#FFFFFF' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-6 md:mb-12">
@@ -532,7 +533,7 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {isHomeDataLoading ? (
+              {showSkeletons ? (
                 <>
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="h-[400px] w-full bg-neutral-800/20 rounded-2xl animate-pulse" />
