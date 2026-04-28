@@ -118,7 +118,7 @@ export function usePushNotifications() {
 
     if (leadId) {
       // Navigate to lead detail or relevant page
-      navigate('/pipelines', { state: { openLeadId: leadId } });
+      navigate('/crm/pipelines', { state: { openLeadId: leadId } });
     } else if (type === 'commission' || type === 'financial') {
       navigate('/financial/dashboard');
     } else if (type === 'task') {

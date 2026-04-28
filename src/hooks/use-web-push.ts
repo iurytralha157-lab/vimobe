@@ -107,27 +107,25 @@ export function useWebPush() {
       // Serializa a subscription como JSON string
       const subscriptionJson = JSON.stringify(subscription.toJSON());
 
-      // Verifica se já existe um token web para este usuário
+      // Verifica se já existe um token web para este usuário com esta mesma subscription
       const { data: existing } = await supabase
         .from('push_tokens')
         .select('id, token')
         .eq('user_id', user.id)
         .eq('platform', 'web')
+        .eq('token', subscriptionJson)
         .maybeSingle();
 
       if (existing) {
-        // Atualiza se o token mudou
-        if (existing.token !== subscriptionJson) {
-          await supabase
-            .from('push_tokens')
-            .update({ 
-              token: subscriptionJson, 
-              is_active: true,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existing.id);
-          console.log('[WebPush] Subscription atualizada');
-        }
+        // Se já existe e a subscription é a mesma, apenas garante que está ativo
+        await supabase
+          .from('push_tokens')
+          .update({ 
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+        console.log('[WebPush] Subscription existente reativada');
       } else {
         // Cria nova entrada
         await supabase
