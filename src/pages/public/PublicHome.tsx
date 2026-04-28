@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 import { usePublicSearchFilters, DEFAULT_SEARCH_FILTERS } from "@/hooks/use-public-search-filters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
