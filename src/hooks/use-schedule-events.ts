@@ -3,26 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-// Sync event with Google Calendar
+// Sync with Google Calendar disabled for performance optimization
 async function syncWithGoogleCalendar(
   action: 'create' | 'update' | 'delete',
   event: { id?: string; title?: string; description?: string; start_time?: string; end_time?: string; google_event_id?: string }
 ) {
-  try {
-    const { data, error } = await supabase.functions.invoke('google-calendar-sync', {
-      body: { action, event: { ...event, start_at: event.start_time, end_at: event.end_time } },
-    });
-    
-    if (error) {
-      console.warn('Google Calendar sync failed:', error);
-      toast.warning('Evento salvo localmente, mas não foi possível sincronizar com o Google Calendar.');
-    }
-    
-    return data;
-  } catch (err) {
-    console.warn('Google Calendar sync error:', err);
-    toast.warning('Evento salvo localmente, mas não foi possível sincronizar com o Google Calendar.');
-  }
+  // Logic disabled
+  return null;
 }
 
 export type EventType = 'call' | 'email' | 'meeting' | 'task' | 'message' | 'visit';
@@ -73,9 +60,10 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
       let query = (supabase as any)
         .from('schedule_events')
         .select(`
-          *,
+          id, organization_id, user_id, lead_id, property_id, title, 
+          event_type, start_time, end_time, is_all_day, status,
           user:users!schedule_events_user_id_fkey(id, name, avatar_url),
-          lead:leads(id, name, phone)
+          lead:leads(id, name)
         `)
         .order('start_time', { ascending: true });
 
@@ -101,6 +89,7 @@ export function useScheduleEvents(options: UseScheduleEventsOptions = {}) {
       return (data || []) as ScheduleEvent[];
     },
     enabled: !!profile?.organization_id,
+    staleTime: 1000 * 60 * 5, // Cache por 5 minutos
   });
 }
 
