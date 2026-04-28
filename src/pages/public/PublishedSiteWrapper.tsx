@@ -22,87 +22,99 @@ function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: 
   useEffect(() => {
     const loadSiteConfig = async () => {
       try {
+        // Check session cache first
+        const cached = sessionStorage.getItem(`site_slug_${slug}`);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            setOrganizationId(parsed.organization_id);
+            setSiteConfig(parsed.site_config);
+            setIsLoading(false);
+            return;
+          } catch (e) {
+            sessionStorage.removeItem(`site_slug_${slug}`);
+          }
+        }
+
         console.log('Loading site config for slug:', slug);
         
-        // Buscar site pelo subdomain (slug)
         const { data, error: fetchError } = await supabase
           .from('organization_sites')
           .select('*, organizations(name)')
           .eq('subdomain', slug)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
 
-        if (fetchError) {
+        if (fetchError || !data) {
           console.error('Error loading site config:', fetchError);
           setError('Site não encontrado');
-          setIsLoading(false);
           return;
         }
 
-        console.log('Site config loaded:', data);
+        const config = {
+          id: data.id,
+          is_active: data.is_active ?? true,
+          subdomain: data.subdomain,
+          custom_domain: data.custom_domain,
+          site_title: data.site_title || 'Site Imobiliário',
+          site_description: data.site_description,
+          primary_color: data.primary_color || '#F97316',
+          secondary_color: data.secondary_color || '#1E293B',
+          accent_color: data.accent_color || '#F97316',
+          logo_url: data.logo_url,
+          favicon_url: data.favicon_url,
+          email: data.email,
+          phone: data.phone,
+          whatsapp: data.whatsapp,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          facebook: data.facebook,
+          instagram: data.instagram,
+          linkedin: data.linkedin,
+          youtube: data.youtube,
+          about_title: data.about_title,
+          about_text: data.about_text,
+          about_image_url: data.about_image_url,
+          seo_title: data.seo_title,
+          seo_description: data.seo_description,
+          seo_keywords: data.seo_keywords,
+          google_analytics_id: data.google_analytics_id,
+          hero_image_url: data.hero_image_url,
+          hero_title: data.hero_title,
+          hero_subtitle: data.hero_subtitle,
+          page_banner_url: data.page_banner_url,
+          logo_width: data.logo_width,
+          logo_height: data.logo_height,
+          watermark_enabled: data.watermark_enabled,
+          watermark_opacity: data.watermark_opacity,
+          watermark_logo_url: data.watermark_logo_url,
+          watermark_size: (data as any).watermark_size ?? 80,
+          watermark_position: (data as any).watermark_position ?? 'bottom-right',
+          organization_name: (data.organizations as any)?.name || 'Imobiliária',
+          site_theme: (data as any).site_theme || 'dark',
+          background_color: (data as any).background_color || '#0D0D0D',
+          text_color: (data as any).text_color || '#FFFFFF',
+          card_color: (data as any).card_color || '#FFFFFF',
+          show_about_on_home: (data as any).show_about_on_home ?? false,
+          about_subtitle: (data as any).about_subtitle || null,
+          about_stats: (data as any).about_stats || null,
+          about_checkmarks: (data as any).about_checkmarks || null,
+          about_features: (data as any).about_features || null,
+          gtm_id: (data as any).gtm_id || null,
+          meta_pixel_id: (data as any).meta_pixel_id || null,
+          google_ads_id: (data as any).google_ads_id || null,
+          head_scripts: (data as any).head_scripts || null,
+          body_scripts: (data as any).body_scripts || null,
+        };
 
-        if (data) {
-          setOrganizationId(data.organization_id);
-          setSiteConfig({
-            id: data.id,
-            is_active: data.is_active ?? true,
-            subdomain: data.subdomain,
-            custom_domain: data.custom_domain,
-            site_title: data.site_title || 'Site Imobiliário',
-            site_description: data.site_description,
-            primary_color: data.primary_color || '#F97316',
-            secondary_color: data.secondary_color || '#1E293B',
-            accent_color: data.accent_color || '#F97316',
-            logo_url: data.logo_url,
-            favicon_url: data.favicon_url,
-            email: data.email,
-            phone: data.phone,
-            whatsapp: data.whatsapp,
-            address: data.address,
-            city: data.city,
-            state: data.state,
-            facebook: data.facebook,
-            instagram: data.instagram,
-            linkedin: data.linkedin,
-            youtube: data.youtube,
-            about_title: data.about_title,
-            about_text: data.about_text,
-            about_image_url: data.about_image_url,
-            seo_title: data.seo_title,
-            seo_description: data.seo_description,
-            seo_keywords: data.seo_keywords,
-            google_analytics_id: data.google_analytics_id,
-            // Hero fields
-            hero_image_url: data.hero_image_url,
-            hero_title: data.hero_title,
-            hero_subtitle: data.hero_subtitle,
-            page_banner_url: data.page_banner_url,
-            // Logo size fields
-            logo_width: data.logo_width,
-            logo_height: data.logo_height,
-            // Watermark fields
-            watermark_enabled: data.watermark_enabled,
-            watermark_opacity: data.watermark_opacity,
-            watermark_logo_url: data.watermark_logo_url,
-            watermark_size: (data as any).watermark_size ?? 80,
-            watermark_position: (data as any).watermark_position ?? 'bottom-right',
-            organization_name: (data.organizations as any)?.name || 'Imobiliária',
-            site_theme: (data as any).site_theme || 'dark',
-            background_color: (data as any).background_color || '#0D0D0D',
-            text_color: (data as any).text_color || '#FFFFFF',
-            card_color: (data as any).card_color || '#FFFFFF',
-            show_about_on_home: (data as any).show_about_on_home ?? false,
-            about_subtitle: (data as any).about_subtitle || null,
-            about_stats: (data as any).about_stats || null,
-            about_checkmarks: (data as any).about_checkmarks || null,
-            about_features: (data as any).about_features || null,
-            gtm_id: (data as any).gtm_id || null,
-            meta_pixel_id: (data as any).meta_pixel_id || null,
-            google_ads_id: (data as any).google_ads_id || null,
-            head_scripts: (data as any).head_scripts || null,
-            body_scripts: (data as any).body_scripts || null,
-          });
-        }
+        setOrganizationId(data.organization_id);
+        setSiteConfig(config);
+
+        sessionStorage.setItem(`site_slug_${slug}`, JSON.stringify({
+          organization_id: data.organization_id,
+          site_config: config
+        }));
       } catch (err) {
         console.error('Error:', err);
         setError('Erro ao carregar site');

@@ -328,6 +328,36 @@ export function usePublicNeighborhoods(organizationId: string | null, cidade?: s
   });
 }
 
+export function usePublicHomeData(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['public-home-data', organizationId],
+    queryFn: async () => {
+      if (!organizationId) return { featured: [], exclusive: [], latest: [], types: [], cities: [] };
+
+      const params = new URLSearchParams({
+        organization_id: organizationId,
+        endpoint: 'home',
+      });
+
+      const response = await fetch(
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/public-site-data?${params.toString()}`
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch home data');
+      return await response.json() as {
+        featured: PublicProperty[];
+        exclusive: PublicProperty[];
+        latest: PublicProperty[];
+        types: string[];
+        cities: string[];
+      };
+    },
+    enabled: !!organizationId,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+  });
+}
+
 export async function submitContactForm(data: {
   organization_id: string;
   name: string;

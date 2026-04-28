@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useFeaturedProperties, useExclusiveProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods } from "@/hooks/use-public-site";
+import { useFeaturedProperties, useExclusiveProperties, usePropertyTypes, usePublicProperties, usePublicCities, usePublicNeighborhoods, usePublicHomeData } from "@/hooks/use-public-site";
 import { Search, Building, MapPin, ArrowRight, Bed, Bath, Car, Maximize, Heart, MessageCircle, CheckCircle2 } from "lucide-react";
 import { PublicPropertyCard } from "@/components/public/PublicPropertyCard";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,14 @@ import { usePublicSearchFilters, DEFAULT_SEARCH_FILTERS } from "@/hooks/use-publ
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
-  const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
-  const { data: exclusiveProperties = [] } = useExclusiveProperties(organizationId);
-  const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
-  const allProperties = allPropertiesData?.properties || [];
-  const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
+  const { data: homeData } = usePublicHomeData(organizationId);
+  const featuredProperties = homeData?.featured || [];
+  const exclusiveProperties = homeData?.exclusive || [];
+  const allProperties = homeData?.latest || [];
+  const propertyTypes = homeData?.types || [];
+  const cities = homeData?.cities || [];
+  
   const { data: configuredFilters } = usePublicSearchFilters(organizationId);
-  const { data: cities = [] } = usePublicCities(organizationId);
   const navigate = useNavigate();
   const location = useLocation();
 

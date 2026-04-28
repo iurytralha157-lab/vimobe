@@ -73,6 +73,20 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
       try {
         const hostname = window.location.hostname;
         
+        // Check session cache first
+        const cachedConfig = sessionStorage.getItem(`site_config_${hostname}`);
+        if (cachedConfig) {
+          try {
+            const parsed = JSON.parse(cachedConfig);
+            setOrganizationId(parsed.organization_id);
+            setSiteConfig(parsed.site_config);
+            setIsLoading(false);
+            return;
+          } catch (e) {
+            sessionStorage.removeItem(`site_config_${hostname}`);
+          }
+        }
+
         // Skip for localhost and main app domains
         if (
           hostname === 'localhost' ||
@@ -85,7 +99,7 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Step 1: Try resolve-site-domain
+        // Unified resolver call
         const response = await fetch(
           'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/resolve-site-domain',
           {
@@ -99,7 +113,7 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
           const data = await response.json();
           if (data.found) {
             setOrganizationId(data.organization_id);
-            setSiteConfig({
+            const config = {
               ...data.site_config,
               site_theme: data.site_config.site_theme || 'dark',
               background_color: data.site_config.background_color || '#0D0D0D',
@@ -107,51 +121,39 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
               card_color: data.site_config.card_color || '#FFFFFF',
               watermark_size: data.site_config.watermark_size ?? 80,
               watermark_position: data.site_config.watermark_position ?? 'bottom-right',
-            });
+            };
+            setSiteConfig(config);
+            
+            // Cache result for this session
+            sessionStorage.setItem(`site_config_${hostname}`, JSON.stringify({
+              organization_id: data.organization_id,
+              site_config: config
+            }));
             return;
           }
         }
 
-        // Step 2: Fallback - try get-worker-config
-        console.log('resolve-site-domain failed, trying get-worker-config for:', hostname);
-        const workerResponse = await fetch(
-          'https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/get-worker-config',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain: hostname }),
-          }
-        );
-
-        if (!workerResponse.ok) {
-          setError('Site não encontrado');
-          return;
-        }
-
-        const workerData = await workerResponse.json();
-        if (!workerData.slug) {
-          setError('Site não encontrado');
-          return;
-        }
-
-        // Step 3: Load site config by subdomain
-        console.log('Worker config found slug:', workerData.slug);
+        // Fallback for subdomains if resolve-site-domain fails
         const { data: siteData, error: siteError } = await supabase
           .from('organization_sites')
           .select('*, organizations(name)')
-          .eq('subdomain', workerData.slug)
+          .or(`subdomain.eq.${hostname.split('.')[0]},custom_domain.eq.${hostname}`)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
 
-        if (siteError || !siteData) {
-          console.error('Error loading site by slug:', siteError);
+        if (siteData) {
+          const orgName = (siteData.organizations as any)?.name || 'Imobiliária';
+          const config = mapSiteDataToConfig(siteData, orgName);
+          setOrganizationId(siteData.organization_id);
+          setSiteConfig(config);
+          
+          sessionStorage.setItem(`site_config_${hostname}`, JSON.stringify({
+            organization_id: siteData.organization_id,
+            site_config: config
+          }));
+        } else {
           setError('Site não encontrado');
-          return;
         }
-
-        const orgName = (siteData.organizations as any)?.name || 'Imobiliária';
-        setOrganizationId(siteData.organization_id);
-        setSiteConfig(mapSiteDataToConfig(siteData, orgName));
       } catch (err) {
         console.error('Error resolving site:', err);
         setError('Erro ao carregar site');
