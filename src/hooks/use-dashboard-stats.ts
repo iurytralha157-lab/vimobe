@@ -123,7 +123,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
         const currentFrom = filters?.dateRange?.from || subDays(new Date(), 30);
         const currentTo = filters?.dateRange?.to || new Date();
 
-        const { data, error } = await supabase.rpc('get_enhanced_dashboard_stats', {
+        const { data, error } = await (supabase as any).rpc('get_enhanced_dashboard_stats', {
           p_organization_id: organizationId,
           p_user_id_filter: filters?.userId || null,
           p_team_id_filter: filters?.teamId || null,
@@ -131,13 +131,12 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           p_date_to: currentTo.toISOString(),
           p_source_filter: filters?.source || null,
           p_campaign_id_filter: filters?.campaignId || null,
-          p_adset_id_filter: filters?.adSetId || null,
+          p_adset_id_filter: filters?.adset_id || null, // Corrigido para minúsculo conforme padrão
           p_ad_id_filter: filters?.adId || null
         });
 
         if (error) {
           console.error('Error fetching enhanced stats via RPC:', error);
-          // Fallback to empty stats if RPC fails
           return {
             totalLeads: 0,
             conversionRate: 0,
@@ -156,7 +155,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           };
         }
 
-        return data as EnhancedDashboardStats;
+        return data as unknown as EnhancedDashboardStats;
       });
     },
     staleTime: 1000 * 60 * 5,
