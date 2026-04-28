@@ -153,12 +153,12 @@ export default function PublicHome() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4 pt-20">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-light mb-4 md:mb-8 max-w-4xl leading-tight">
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4 pt-20 max-w-7xl mx-auto">
+          <h1 className="text-3xl md:text-5xl lg:text-7xl font-light mb-6 md:mb-10 max-w-5xl leading-[1.1] tracking-tight">
             {isLoading ? (
               <Skeleton className="h-10 md:h-12 w-3/4 mx-auto bg-white/10" />
             ) : (
-              siteConfig?.hero_title || 'Transformando seus sonhos em realidade!'
+              siteConfig?.hero_title || 'Encontre o imóvel dos seus sonhos com exclusividade'
             )}
           </h1>
           {(siteConfig?.hero_subtitle || isLoading) && (
@@ -174,7 +174,7 @@ export default function PublicHome() {
           {/* Search Bar - Dynamic filters */}
           <form 
             onSubmit={handleSearch} 
-            className="bg-black/60 md:bg-black/40 backdrop-blur-xl rounded-2xl p-4 md:p-5 flex flex-col md:flex-row flex-wrap gap-3 max-w-5xl w-full mx-4 mb-20 md:mb-0"
+            className="bg-black/40 backdrop-blur-3xl rounded-3xl p-4 md:p-6 flex flex-col md:flex-row flex-wrap gap-4 max-w-6xl w-full mx-4 mb-20 md:mb-0 border border-white/10 shadow-2xl"
           >
             {activeFilters.map((filter) => {
               const key = filter.filter_key;

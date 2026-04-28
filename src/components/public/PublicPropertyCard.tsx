@@ -55,8 +55,11 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
 
   return (
     <div 
-      className="rounded-2xl overflow-hidden transition-all duration-300 group h-full flex flex-col border"
-      style={{ backgroundColor: cardColor || '#FFFFFF', borderColor: textColor ? `${textColor}15` : '#f3f4f6' }}
+      className="rounded-2xl overflow-hidden transition-all duration-500 group h-full flex flex-col border border-white/5 hover:border-white/10"
+      style={{ 
+        backgroundColor: cardColor || '#FFFFFF', 
+        boxShadow: '0 4px 20px -10px rgba(0,0,0,0.1)'
+      }}
     >
       {/* Image Section */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -116,16 +119,16 @@ export function PublicPropertyCard({ property, primaryColor = '#C4A052', cardCol
       </div>
 
       {/* Content Section */}
-      <div className="p-4 flex flex-col flex-1">
+      <div className="p-5 flex flex-col flex-1">
         {/* Code */}
         {(property.codigo || property.code) && (
-          <p className="text-[11px] font-medium mb-1" style={{ color: textColor ? `${textColor}99` : '#9ca3af' }}>
-            Cód: {property.codigo || property.code}
+          <p className="text-[10px] uppercase tracking-[0.15em] font-semibold mb-1.5 opacity-60" style={{ color: textColor || '#111827' }}>
+            REF: {property.codigo || property.code}
           </p>
         )}
-
+ 
         {/* Title */}
-        <h3 className="font-semibold text-sm leading-tight mb-2 line-clamp-2 min-h-[2.5rem]" style={{ color: textColor || '#111827' }}>
+        <h3 className="font-medium text-[15px] leading-snug mb-2 line-clamp-2 min-h-[2.5rem] tracking-tight" style={{ color: textColor || '#111827' }}>
           {title}
         </h3>
 

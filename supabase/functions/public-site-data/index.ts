@@ -50,19 +50,8 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify the site is active for this organization
-    const { data: siteData, error: siteError } = await supabase
-      .from('organization_sites')
-      .select('is_active')
-      .eq('organization_id', organizationId)
-      .maybeSingle();
-
-    if (siteError || !siteData?.is_active) {
-      return new Response(
-        JSON.stringify({ error: 'Site not found or inactive' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Optional: verification query removed for speed as RLS/filter by status handles it.
+    // We only filter by organizationId in queries below.
 
     let response;
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { usePublicContext } from "./usePublicContext";
-import { usePropertyTypes } from "@/hooks/use-public-site";
+
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { usePublicSiteMenu } from "@/hooks/use-public-site-menu";
 import { CookieConsent } from "@/components/public/CookieConsent";
@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
-  const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { count: favCount } = usePublicFavorites(organizationId);
   const location = useLocation();
@@ -321,32 +321,33 @@ export default function PublicSiteLayout() {
     <div className="min-h-screen flex flex-col public-site-wrapper" style={{ backgroundColor, color: textColor }} role="document">
       {/* Header - Floating Glassmorphism */}
       <header className="fixed top-0 left-0 right-0 z-50" role="banner">
-        <div className="max-w-[1200px] mx-auto px-4 pt-4">
+        <div className="max-w-[1200px] mx-auto px-2 sm:px-4 pt-4">
           <div 
-            className="backdrop-blur-xl rounded-2xl px-8 pl-4"
-            style={{ backgroundColor: 'rgba(0,0,0,0.4)', border: 'none' }}
+            className="backdrop-blur-2xl rounded-2xl px-4 sm:px-8"
+            style={{ 
+              backgroundColor: 'rgba(0,0,0,0.6)', 
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)' 
+            }}
           >
-            <div className="flex justify-between items-center h-[80px]">
+            <div className="flex justify-between items-center h-[70px] md:h-[85px]">
               {/* Logo */}
-              <Link to={getHref("")} className="flex items-center">
+              <Link to={getHref("")} className="flex items-center min-w-0 flex-shrink pr-4">
                 {isLoading && !siteConfig ? (
-                  <Skeleton className="h-8 md:h-10 w-32 md:w-40 bg-white/10" />
+                  <Skeleton className="h-8 md:h-10 w-24 md:w-40 bg-white/10" />
                 ) : siteConfig?.logo_url ? (
-                 <img 
-                     src={siteConfig.logo_url} 
-                     alt={siteConfig.site_title} 
-                     width={Math.min(siteConfig.logo_width || 200, 500)}
-                     height={Math.min(siteConfig.logo_height || 55, 70)}
-                     style={{ 
-                       maxWidth: '100%',
-                       maxHeight: '100%',
-                       width: siteConfig.logo_width ? `${siteConfig.logo_width}px` : 'auto',
-                       height: siteConfig.logo_height ? `${siteConfig.logo_height}px` : '40px'
-                     }}
-                     className="w-auto object-contain max-h-[40px] md:max-h-[55px]"
-                   />
+                  <div className="flex items-center justify-start h-full max-w-[150px] md:max-w-[250px]">
+                    <img 
+                      src={siteConfig.logo_url} 
+                      alt={siteConfig.site_title} 
+                      className="w-auto h-auto max-h-[35px] md:max-h-[55px] object-contain"
+                      style={{ 
+                        width: siteConfig.logo_width ? `${Math.min(siteConfig.logo_width, 250)}px` : 'auto',
+                      }}
+                    />
+                  </div>
                 ) : (
-                  <span className="text-base md:text-xl font-semibold tracking-wider" style={{ color: '#fff' }}>
+                  <span className="text-sm md:text-xl font-bold tracking-[0.2em] uppercase truncate" style={{ color: '#fff' }}>
                     {siteConfig?.site_title || 'Site Imobiliário'}
                   </span>
                 )}
