@@ -38,9 +38,14 @@ export const usePushNotifications = () => {
 
   const subscribeUser = async () => {
     try {
-      if (!isSupported) return;
+      if (!isSupported) {
+        console.warn('Push notifications not supported');
+        return;
+      }
 
+      console.log('Requesting notification permission...');
       const result = await Notification.requestPermission();
+      console.log('Permission result:', result);
       setPermission(result);
 
       if (result !== 'granted') {
@@ -48,12 +53,14 @@ export const usePushNotifications = () => {
       }
 
       const registration = await navigator.serviceWorker.ready;
+      console.log('Service worker ready for subscription');
       
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
 
+      console.log('Subscription successful:', sub);
       setSubscription(sub);
 
       // Save to Supabase
