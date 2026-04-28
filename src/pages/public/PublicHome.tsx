@@ -112,9 +112,17 @@ export default function PublicHome() {
     { name: 'STUDIOS', type: 'Studio', image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop' },
   ];
 
-  // We remove the blocking return and use optional chaining/placeholders below
   const isLoading = isConfigLoading && !siteConfig;
   const showSkeletons = isHomeDataLoading && !homeData;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0D0D0D' }}>
+        <div className="w-12 h-12 border-4 border-[#C4A052] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-white/50 text-sm animate-pulse">Carregando seu site imobiliário...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ backgroundColor }}>
