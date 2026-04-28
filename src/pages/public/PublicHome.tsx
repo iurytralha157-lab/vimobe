@@ -112,9 +112,8 @@ export default function PublicHome() {
     { name: 'STUDIOS', type: 'Studio', image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop' },
   ];
 
-  if (!siteConfig) {
-    return null;
-  }
+  // We remove the blocking return and use optional chaining/placeholders below
+  const isLoading = isConfigLoading;
 
   return (
     <div style={{ backgroundColor }}>
