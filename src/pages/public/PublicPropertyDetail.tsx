@@ -15,6 +15,7 @@ import {
   PropertyPricing,
   RelatedProperties,
 } from "@/components/public/property-detail";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicPropertyDetail() {
   // Support both old route (/imoveis/:codigo) and new route (/imovel/:code)
