@@ -305,6 +305,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <IOSInstallGuide />
           <BrowserRouter>
             {customDomain ? (
               <LanguageProvider>
