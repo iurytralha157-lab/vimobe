@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const VAPID_PUBLIC_KEY = 'BAag7UTmqxehuk8_3B64CZzRKUc732au_PeDATZo9R2KSXx9hvIzwZs78J8L9o--mhqKaLSBKy1Gb_0mxE_xS7o';
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BAag7UTmqxehuk8_3B64CZzRKUc732au_PeDATZo9R2KSXx9hvIzwZs78J8L9o--mhqKaLSBKy1Gb_0mxE_xS7o';
 
 export const usePushNotifications = () => {
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
