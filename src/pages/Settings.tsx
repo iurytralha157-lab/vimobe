@@ -25,6 +25,7 @@ import { WebhooksTab } from '@/components/settings/WebhooksTab';
 import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
 import { AIAgentTab } from '@/components/settings/AIAgentTab';
 import { APITab } from '@/components/settings/APITab';
+import { NotificationsTab } from '@/components/settings/NotificationsTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
