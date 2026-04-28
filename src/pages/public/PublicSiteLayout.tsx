@@ -251,20 +251,11 @@ export default function PublicSiteLayout() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
-  if (isLoading) {
+  // We don't block the whole layout with a spinner anymore. 
+  // We'll show skeletons for parts that are still loading.
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor }}>
-        <div 
-          className="animate-spin rounded-full h-12 w-12 border-b-2"
-          style={{ borderColor: primaryColor }}
-        ></div>
-      </div>
-    );
-  }
-
-  if (error || !siteConfig) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor, color: textColor }}>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0D0D0D', color: '#FFFFFF' }}>
         <h1 className="text-2xl font-bold mb-2">Site não encontrado</h1>
         <p style={{ opacity: 0.6 }}>{error || 'Verifique o endereço e tente novamente.'}</p>
       </div>
