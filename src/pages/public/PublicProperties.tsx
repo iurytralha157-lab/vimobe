@@ -14,7 +14,7 @@ import { usePublicFavorites } from "@/hooks/use-public-favorites";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicProperties() {
-  const { organizationId, siteConfig } = usePublicContext();
+  const { organizationId, siteConfig, isLoading: isConfigLoading } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
