@@ -116,6 +116,15 @@ export default function PublicHome() {
   const isLoading = isConfigLoading && !siteConfig;
   const showSkeletons = isHomeDataLoading && !homeData;
 
+  if (isLoading) {
+    return (
+      <div className=\"min-h-screen flex flex-col items-center justify-center\" style={{ backgroundColor: '#0D0D0D' }}>
+        <div className=\"w-12 h-12 border-4 border-[#C4A052] border-t-transparent rounded-full animate-spin mb-4\"></div>
+        <p className=\"text-white/50 text-sm animate-pulse\">Carregando seu site imobiliário...</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ backgroundColor }}>
       {/* Hero Section - Fullscreen */}
