@@ -143,7 +143,7 @@ export default function PropertyGallery({
                   {allMedia.map((img, index) => (
                     <div
                       key={index}
-                      className="h-full min-w-0 flex-[0_0_50%] px-px md:flex-[0_0_25%]"
+                      className="h-full min-w-0 flex-[0_0_50%] px-1 md:flex-[0_0_25%]"
                     >
                       <button
                         onClick={() => {
