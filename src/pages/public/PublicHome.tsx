@@ -15,9 +15,9 @@ import { usePublicSearchFilters, DEFAULT_SEARCH_FILTERS } from "@/hooks/use-publ
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicHome() {
-  const { organizationId, siteConfig } = usePublicContext();
+  const { organizationId, siteConfig, isLoading: isConfigLoading } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
-  const { data: homeData } = usePublicHomeData(organizationId);
+  const { data: homeData, isLoading: isHomeDataLoading } = usePublicHomeData(organizationId);
   const featuredProperties = homeData?.featured || [];
   const exclusiveProperties = homeData?.exclusive || [];
   const allProperties = homeData?.latest || [];
