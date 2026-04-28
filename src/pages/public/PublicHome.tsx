@@ -121,7 +121,7 @@ export default function PublicHome() {
       <section className="relative h-screen">
         {/* Background Image - LCP element */}
         <div className="absolute inset-0">
-          {siteConfig.hero_image_url ? (
+          {siteConfig?.hero_image_url ? (
                <img
                 src={siteConfig.hero_image_url}
                 alt=""
@@ -132,6 +132,8 @@ export default function PublicHome() {
                 loading="eager"
                 className="absolute inset-0 w-full h-full object-cover"
               />
+          ) : isLoading ? (
+            <Skeleton className="absolute inset-0 w-full h-full bg-neutral-900" />
           ) : (
             <div 
               className="absolute inset-0"
