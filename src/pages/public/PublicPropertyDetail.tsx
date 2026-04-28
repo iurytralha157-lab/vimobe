@@ -82,9 +82,6 @@ export default function PublicPropertyDetail() {
       )) as string[]
     : [];
 
-  // We remove the blocking spinner and handle loading inside the component
-  const isSiteLoading = !siteConfig;
-
   if (!property && !isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ backgroundColor }}>
@@ -106,156 +103,169 @@ export default function PublicPropertyDetail() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor }}>
+    <div className="min-h-screen" style={{ backgroundColor: backgroundColor || '#0D0D0D' }}>
       {/* Gallery at Top - Full Width */}
-      <PropertyGallery 
-        images={allImages} 
-        title={property.titulo} 
-        primaryColor={primaryColor}
-        videoUrl={(property as any).video_imovel}
-        watermarkEnabled={siteConfig?.watermark_enabled || false}
-        watermarkOpacity={siteConfig?.watermark_opacity || 20}
-        watermarkUrl={siteConfig?.watermark_logo_url || siteConfig?.logo_url}
-        watermarkSize={siteConfig?.watermark_size || 80}
-        watermarkPosition={(siteConfig?.watermark_position as any) || 'bottom-right'}
-      />
+      {isLoading ? (
+        <Skeleton className="w-full h-[400px] md:h-[600px] rounded-none bg-neutral-800/20" />
+      ) : property && (
+        <PropertyGallery 
+          images={allImages} 
+          title={property.titulo} 
+          primaryColor={primaryColor}
+          videoUrl={(property as any).video_imovel}
+          watermarkEnabled={siteConfig?.watermark_enabled || false}
+          watermarkOpacity={siteConfig?.watermark_opacity || 20}
+          watermarkUrl={siteConfig?.watermark_logo_url || siteConfig?.logo_url}
+          watermarkSize={siteConfig?.watermark_size || 80}
+          watermarkPosition={(siteConfig?.watermark_position as any) || 'bottom-right'}
+        />
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Property Header */}
-            <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
-              {/* Tags */}
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span 
-                  className="px-4 py-1.5 text-sm font-semibold text-white rounded-full"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {getDisplayPropertyType(property.tipo_imovel || (property as any).tipo_de_imovel)}
-                </span>
-                <span className="px-4 py-1.5 text-sm font-medium rounded-full" style={{ backgroundColor: `${textColor}10`, color: textColor }}>
-                  Cód: {property.codigo || (property as any).code}
-                </span>
-                {(property as any).tipo_de_negocio && (
-                  <span className="px-4 py-1.5 text-sm font-medium rounded-full" style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}>
-                    {(property as any).tipo_de_negocio}
+        {isLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              <Skeleton className="h-48 w-full bg-neutral-800/20 rounded-2xl" />
+              <Skeleton className="h-64 w-full bg-neutral-800/20 rounded-2xl" />
+            </div>
+            <div className="lg:col-span-1">
+              <Skeleton className="h-[400px] w-full bg-neutral-800/20 rounded-2xl" />
+            </div>
+          </div>
+        ) : property && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Property Header */}
+              <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
+                {/* Tags */}
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span 
+                    className="px-4 py-1.5 text-sm font-semibold text-white rounded-full"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {getDisplayPropertyType(property.tipo_imovel || (property as any).tipo_de_imovel)}
                   </span>
-                )}
+                  <span className="px-4 py-1.5 text-sm font-medium rounded-full" style={{ backgroundColor: `${textColor}10`, color: textColor }}>
+                    Cód: {property.codigo || (property as any).code}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h1 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: textColor }}>
+                  {property.titulo || (property as any).title}
+                </h1>
+
+                {/* Address */}
+                <p className="flex items-center gap-2 text-lg" style={{ color: textColor, opacity: 0.6 }}>
+                  <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
+                  {[
+                    property.endereco || (property as any).endereco,
+                    property.bairro || (property as any).bairro,
+                    property.cidade || (property as any).cidade,
+                    property.estado || (property as any).uf,
+                  ].filter(Boolean).join(', ')}
+                </p>
               </div>
 
-              {/* Title */}
-              <h1 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: textColor }}>
-                {property.titulo || (property as any).title}
-              </h1>
+              {/* Features */}
+              <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
+                <h2 className="text-xl font-bold mb-6" style={{ color: textColor }}>Características</h2>
+                <PropertyFeatures
+                  quartos={property.quartos || (property as any).quartos}
+                  suites={property.suites || (property as any).suites}
+                  banheiros={property.banheiros || (property as any).banheiros}
+                  vagas={property.vagas || (property as any).vagas}
+                  areaUtil={(property as any).area_util}
+                  areaTotal={property.area_total || (property as any).area_total}
+                  andar={(property as any).andar}
+                  anoConstrucao={(property as any).ano_construcao}
+                  mobilia={(property as any).mobilia}
+                  regraPet={(property as any).regra_pet}
+                  primaryColor={primaryColor}
+                  textColor={textColor}
+                />
+              </div>
 
-              {/* Address */}
-              <p className="flex items-center gap-2 text-lg" style={{ color: textColor, opacity: 0.6 }}>
-                <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: primaryColor }} />
-                {[
-                  property.endereco || (property as any).endereco,
-                  property.bairro || (property as any).bairro,
-                  property.cidade || (property as any).cidade,
-                  property.estado || (property as any).uf,
-                ].filter(Boolean).join(', ')}
-              </p>
-            </div>
+              {/* Description Section */}
+              {(property.descricao || (property as any).descricao) && (
+                <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
+                  <h2 className="text-xl font-bold mb-4" style={{ color: textColor }}>Descrição</h2>
+                  <div className="prose max-w-none">
+                    <p className="leading-relaxed whitespace-pre-line" style={{ color: textColor, opacity: 0.7 }}>
+                      {property.descricao || (property as any).descricao}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-            {/* Features */}
-            <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
-              <h2 className="text-xl font-bold mb-6" style={{ color: textColor }}>Características</h2>
-              <PropertyFeatures
-                quartos={property.quartos || (property as any).quartos}
-                suites={property.suites || (property as any).suites}
-                banheiros={property.banheiros || (property as any).banheiros}
-                vagas={property.vagas || (property as any).vagas}
-                areaUtil={(property as any).area_util}
-                areaTotal={property.area_total || (property as any).area_total}
-                andar={(property as any).andar}
-                anoConstrucao={(property as any).ano_construcao}
-                mobilia={(property as any).mobilia}
-                regraPet={(property as any).regra_pet}
+              {/* Details (Extras, Nearby) */}
+              <PropertyDetails
+                descricao={null}
+                detalhesExtras={(property as any).detalhes_extras}
+                proximidades={(property as any).proximidades}
                 primaryColor={primaryColor}
+                cardColor={cardColor}
+                textColor={textColor}
+              />
+
+              {/* Location Map */}
+              <PropertyLocation
+                latitude={(property as any).latitude}
+                longitude={(property as any).longitude}
+                endereco={property.endereco || (property as any).endereco}
+                
+                complemento={(property as any).complemento}
+                bairro={property.bairro || (property as any).bairro}
+                cidade={property.cidade || (property as any).cidade}
+                uf={property.estado || (property as any).uf}
+                cep={property.cep || (property as any).cep}
+                title={property.titulo || (property as any).title}
+                primaryColor={primaryColor}
+                cardColor={cardColor}
                 textColor={textColor}
               />
             </div>
 
-            {/* Description Section */}
-            {(property.descricao || (property as any).descricao) && (
-              <div className="rounded-2xl p-6 md:p-8" style={{ backgroundColor: cardColor, borderColor: `${textColor}15`, borderWidth: 1 }}>
-                <h2 className="text-xl font-bold mb-4" style={{ color: textColor }}>Descrição</h2>
-                <div className="prose max-w-none">
-                  <p className="leading-relaxed whitespace-pre-line" style={{ color: textColor, opacity: 0.7 }}>
-                    {property.descricao || (property as any).descricao}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Details (Extras, Nearby) */}
-            <PropertyDetails
-              descricao={null}
-              detalhesExtras={(property as any).detalhes_extras}
-              proximidades={(property as any).proximidades}
-              primaryColor={primaryColor}
-              cardColor={cardColor}
-              textColor={textColor}
-            />
-
-            {/* Location Map */}
-            <PropertyLocation
-              latitude={(property as any).latitude}
-              longitude={(property as any).longitude}
-              endereco={property.endereco || (property as any).endereco}
-              
-              complemento={(property as any).complemento}
-              bairro={property.bairro || (property as any).bairro}
-              cidade={property.cidade || (property as any).cidade}
-              uf={property.estado || (property as any).uf}
-              cep={property.cep || (property as any).cep}
-              title={property.titulo || (property as any).title}
-              primaryColor={primaryColor}
-              cardColor={cardColor}
-              textColor={textColor}
-            />
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <PropertyPricing
+                preco={property.valor_venda || (property as any).preco}
+                valorLocacao={(property as any).valor_locacao}
+                tipoNegocio={(property as any).tipo_de_negocio}
+                condominio={(property as any).condominio}
+                iptu={(property as any).iptu}
+                seguroIncendio={(property as any).seguro_incendio}
+                taxaServico={(property as any).taxa_de_servico}
+                codigo={property.codigo || (property as any).code}
+                codigoExterno={(property as any).vista_codigo || (property as any).imoview_codigo}
+                titulo={property.titulo || (property as any).title}
+                propertyId={property.id}
+                organizationId={organizationId || ''}
+                whatsappNumber={siteConfig?.whatsapp}
+                phoneNumber={siteConfig?.phone}
+                primaryColor={primaryColor}
+                cardColor={cardColor}
+                textColor={textColor}
+              />
+            </div>
           </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <PropertyPricing
-              preco={property.valor_venda || (property as any).preco}
-              valorLocacao={(property as any).valor_locacao}
-              tipoNegocio={(property as any).tipo_de_negocio}
-              condominio={(property as any).condominio}
-              iptu={(property as any).iptu}
-              seguroIncendio={(property as any).seguro_incendio}
-              taxaServico={(property as any).taxa_de_servico}
-              codigo={property.codigo || (property as any).code}
-              codigoExterno={(property as any).vista_codigo || (property as any).imoview_codigo}
-              titulo={property.titulo || (property as any).title}
-              propertyId={property.id}
-              organizationId={organizationId || ''}
-              whatsappNumber={siteConfig?.whatsapp}
-              phoneNumber={siteConfig?.phone}
-              primaryColor={primaryColor}
-              cardColor={cardColor}
-              textColor={textColor}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Related Properties */}
         <div className="mt-16">
-          <RelatedProperties
-            organizationId={organizationId || ''}
-            currentPropertyCode={property.codigo || (property as any).code}
-            tipoImovel={property.tipo_imovel || (property as any).tipo_de_imovel}
-            cidade={property.cidade || (property as any).cidade}
-            getHref={getHref}
-            primaryColor={primaryColor}
-            cardColor={siteConfig?.card_color}
-            textColor={siteConfig?.text_color}
-          />
+          {property && (
+            <RelatedProperties
+              organizationId={organizationId || ''}
+              currentPropertyCode={property.codigo || (property as any).code}
+              tipoImovel={property.tipo_imovel || (property as any).tipo_de_imovel}
+              cidade={property.cidade || (property as any).cidade}
+              getHref={getHref}
+              primaryColor={primaryColor}
+              cardColor={siteConfig?.card_color}
+              textColor={siteConfig?.text_color}
+            />
+          )}
         </div>
       </div>
     </div>
