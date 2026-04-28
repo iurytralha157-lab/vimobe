@@ -13,11 +13,19 @@ export const usePushNotifications = () => {
       setIsSupported(true);
       setPermission(Notification.permission);
       
-      navigator.serviceWorker.ready.then(registration => {
-        registration.pushManager.getSubscription().then(sub => {
-          setSubscription(sub);
-        });
-      });
+      const checkRegistration = async () => {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (registration) {
+            const sub = await registration.pushManager.getSubscription();
+            setSubscription(sub);
+          }
+        } catch (err) {
+          console.error('Error checking registration:', err);
+        }
+      };
+
+      checkRegistration();
     }
   }, []);
 
@@ -52,8 +60,24 @@ export const usePushNotifications = () => {
         throw new Error('Permission not granted for notifications');
       }
 
-      const registration = await navigator.serviceWorker.ready;
-      console.log('Service worker ready for subscription');
+      let registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        console.log('No registration found, registering sw.js...');
+        registration = await navigator.serviceWorker.register('/sw.js');
+      }
+      
+      console.log('Service worker registration:', registration);
+      
+      // Wait for SW to be active if it's installing/waiting
+      if (registration.installing) {
+        await new Promise<void>((resolve) => {
+          registration!.installing!.addEventListener('statechange', (e: any) => {
+            if (e.target.state === 'activated') resolve();
+          });
+        });
+      }
+
+      console.log('Service worker is active, subscribing...');
       
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
