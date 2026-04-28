@@ -640,112 +640,19 @@ export function useLoadMoreLeads() {
       const leadIds = (data || []).map((l: any) => l.id);
       let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
       
-      if (leadIds.length > 0) {
-        const { data: leadTags } = await supabase
-          .from('lead_tags')
-          .select('lead_id, tag:tags(id, name, color)')
-          .in('lead_id', leadIds);
-        
-        tagsByLead = (leadTags || []).reduce((acc, lt) => {
-          if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
-          if (lt.tag) acc[lt.lead_id].push(lt.tag as any);
-          return acc;
-        }, {} as Record<string, { id: string; name: string; color: string }[]>);
-      }
-      
-      // Buscar fotos do WhatsApp
-      const leadsWithPhone = (data || []).filter((l: any) => l.phone);
-      let phoneToWhatsApp: Map<string, { picture: string | null; unread_count: number }> = new Map();
-      
-      if (leadsWithPhone.length > 0) {
-        const phoneNumbers: string[] = [];
-        leadsWithPhone.forEach((l: any) => {
-          const cleaned = l.phone.replace(/\D/g, '');
-          if (!cleaned) return;
-          phoneNumbers.push(cleaned);
-          if (cleaned.startsWith('55') && cleaned.length >= 12) {
-            phoneNumbers.push(cleaned.substring(2));
-          } else {
-            phoneNumbers.push('55' + cleaned);
-          }
-        });
-        const uniquePhones = [...new Set(phoneNumbers.filter(Boolean))];
-        
-        const { data: conversations } = uniquePhones.length > 0
-          ? await supabase
-              .from('whatsapp_conversations')
-              .select('contact_phone, contact_picture, unread_count')
-              .in('contact_phone', uniquePhones)
-              .is('deleted_at', null)
-          : { data: [] };
-        
-        (conversations || []).forEach(c => {
-          if (c.contact_phone) {
-            const normalized = normalizePhone(c.contact_phone);
-            if (normalized) {
-              const existing = phoneToWhatsApp.get(normalized);
-              phoneToWhatsApp.set(normalized, {
-                picture: c.contact_picture || existing?.picture || null,
-                unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
-              });
-            }
-          }
-        });
-      }
-      
-      // Buscar tasks_count para os novos leads
-      let tasksByLead2: Record<string, { pending: number; completed: number }> = {};
-      if (leadIds.length > 0) {
-        const { data: taskCounts } = await supabase
-          .from('lead_tasks')
-          .select('lead_id, is_done')
-          .in('lead_id', leadIds);
-        
-        (taskCounts || []).forEach((t: any) => {
-          if (!tasksByLead2[t.lead_id]) tasksByLead2[t.lead_id] = { pending: 0, completed: 0 };
-          if (t.is_done) {
-            tasksByLead2[t.lead_id].completed++;
-          } else {
-            tasksByLead2[t.lead_id].pending++;
-          }
-        });
-      }
-      
-      // Enriquecer leads com tags e fotos
-      const enrichedLeads = (data || []).map((lead: any) => {
-        let whatsapp_picture: string | null = null;
-        let unread_count = 0;
-        if (lead.phone) {
-          const normalizedPhone = normalizePhone(lead.phone);
-          const whatsappData = phoneToWhatsApp.get(normalizedPhone);
-          whatsapp_picture = whatsappData?.picture || null;
-          unread_count = whatsappData?.unread_count || 0;
-        }
-        
-        return {
-          ...lead,
-          tags: tagsByLead[lead.id] || [],
-          tasks_count: tasksByLead2[lead.id] || { pending: 0, completed: 0 },
-          whatsapp_picture,
-          unread_count,
-        };
-      });
-      
-      return { stageId, leads: enrichedLeads };
+      return { stageId, leads: data || [] };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
-      // Build matching cache key
       const dateFromISO = filters?.dateRange?.from?.toISOString();
       const dateToISO = filters?.dateRange?.to?.toISOString();
       const cacheKey = ['stages-with-leads', pipelineId, filterUserId, dateFromISO, dateToISO, filters?.filterTag, filters?.filterDealStatus, filters?.searchQuery, filters?.filterCampaign, filters?.filterAdSet, filters?.filterAd];
-      // Mesclar novos leads no cache existente
+      
       queryClient.setQueryData(cacheKey, (old: any[] | undefined) => {
         if (!old) return old;
         
         return old.map(stage => {
           if (stage.id !== stageId) return stage;
           
-          // Adicionar novos leads evitando duplicatas
           const existingIds = new Set((stage.leads || []).map((l: any) => l.id));
           const newLeads = leads.filter((l: any) => !existingIds.has(l.id));
           
