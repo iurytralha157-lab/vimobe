@@ -11,9 +11,10 @@ import { usePublicContext } from "./usePublicContext";
 import PropertyFiltersContent from "@/components/public/PropertyFiltersContent";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 import { usePublicFavorites } from "@/hooks/use-public-favorites";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicProperties() {
-  const { organizationId, siteConfig } = usePublicContext();
+  const { organizationId, siteConfig, isLoading: isConfigLoading } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -183,9 +184,8 @@ export default function PublicProperties() {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  if (!siteConfig) {
-    return null;
-  }
+  // We remove the blocking return and use optional chaining/placeholders below
+  const isSiteLoading = isConfigLoading;
 
   // Memoized callbacks to prevent unnecessary re-renders
   const handleSetLocalSearch = useCallback((value: string) => {
@@ -202,10 +202,10 @@ export default function PublicProperties() {
       <div 
         className="py-16 md:py-20 relative overflow-hidden"
         style={{
-          backgroundImage: siteConfig.page_banner_url 
+          backgroundImage: siteConfig?.page_banner_url 
             ? `url(${siteConfig.page_banner_url})` 
             : undefined,
-          backgroundColor: !siteConfig.page_banner_url ? secondaryColor : undefined,
+          backgroundColor: !siteConfig?.page_banner_url ? (secondaryColor || '#0D0D0D') : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -213,10 +213,14 @@ export default function PublicProperties() {
         <div className="absolute inset-0 bg-black/60" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white pt-16 text-center">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-light">
-            {filters.tipo === 'Apartamento' ? 'Apartamentos' : 
-             filters.tipo === 'Casa' ? 'Casas' : 
-             filters.finalidade === 'aluguel' ? 'Aluguel' : 
-             'Imóveis Disponíveis'}
+            {isSiteLoading ? (
+              <Skeleton className="h-12 w-64 mx-auto bg-white/10" />
+            ) : (
+              filters.tipo === 'Apartamento' ? 'Apartamentos' : 
+              filters.tipo === 'Casa' ? 'Casas' : 
+              filters.finalidade === 'aluguel' ? 'Aluguel' : 
+              'Imóveis Disponíveis'
+            )}
           </h1>
         </div>
       </div>

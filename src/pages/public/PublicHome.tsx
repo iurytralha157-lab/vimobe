@@ -12,11 +12,12 @@ import { cn } from "@/lib/utils";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 import { usePublicSearchFilters, DEFAULT_SEARCH_FILTERS } from "@/hooks/use-public-search-filters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicHome() {
-  const { organizationId, siteConfig } = usePublicContext();
+  const { organizationId, siteConfig, isLoading: isConfigLoading } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
-  const { data: homeData } = usePublicHomeData(organizationId);
+  const { data: homeData, isLoading: isHomeDataLoading } = usePublicHomeData(organizationId);
   const featuredProperties = homeData?.featured || [];
   const exclusiveProperties = homeData?.exclusive || [];
   const allProperties = homeData?.latest || [];
@@ -111,9 +112,8 @@ export default function PublicHome() {
     { name: 'STUDIOS', type: 'Studio', image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop' },
   ];
 
-  if (!siteConfig) {
-    return null;
-  }
+  // We remove the blocking return and use optional chaining/placeholders below
+  const isLoading = isConfigLoading;
 
   return (
     <div style={{ backgroundColor }}>
@@ -121,7 +121,7 @@ export default function PublicHome() {
       <section className="relative h-screen">
         {/* Background Image - LCP element */}
         <div className="absolute inset-0">
-          {siteConfig.hero_image_url ? (
+          {siteConfig?.hero_image_url ? (
                <img
                 src={siteConfig.hero_image_url}
                 alt=""
@@ -132,6 +132,8 @@ export default function PublicHome() {
                 loading="eager"
                 className="absolute inset-0 w-full h-full object-cover"
               />
+          ) : isLoading ? (
+            <Skeleton className="absolute inset-0 w-full h-full bg-neutral-900" />
           ) : (
             <div 
               className="absolute inset-0"
@@ -144,11 +146,19 @@ export default function PublicHome() {
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4 pt-20">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-light mb-8 max-w-4xl leading-tight">
-            {siteConfig.hero_title || 'Transformando seus sonhos em realidade!'}
+            {isLoading ? (
+              <Skeleton className="h-12 w-3/4 mx-auto bg-white/10" />
+            ) : (
+              siteConfig?.hero_title || 'Transformando seus sonhos em realidade!'
+            )}
           </h1>
-          {siteConfig.hero_subtitle && (
-            <p className="text-base md:text-lg text-white/70 mb-20 max-w-2xl">
-              {siteConfig.hero_subtitle}
+          {(siteConfig?.hero_subtitle || isLoading) && (
+            <p className="text-base md:text-lg text-white/70 mb-20 max-w-2xl w-full">
+              {isLoading ? (
+                <Skeleton className="h-6 w-1/2 mx-auto bg-white/10" />
+              ) : (
+                siteConfig?.hero_subtitle
+              )}
             </p>
           )}
 
@@ -362,7 +372,7 @@ export default function PublicHome() {
       </section>
 
       {/* Exclusive Properties Section */}
-      {exclusiveProperties.length > 0 && (
+      {(exclusiveProperties.length > 0 || isHomeDataLoading) && (
         <section className="py-20" style={{ backgroundColor: altBg }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -378,7 +388,13 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {exclusiveProperties.map((property) => (
+              {isHomeDataLoading ? (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-[400px] w-full bg-neutral-800/20 rounded-2xl animate-pulse" />
+                  ))}
+                </>
+              ) : exclusiveProperties.map((property) => (
                 <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
                   <PublicPropertyCard
                     property={property}
@@ -428,7 +444,7 @@ export default function PublicHome() {
       )}
 
       {/* Featured Properties Section */}
-      {featuredProperties.length > 0 && (
+      {(featuredProperties.length > 0 || isHomeDataLoading) && (
         <section className="py-20" style={{ backgroundColor: isDarkTheme ? backgroundColor : '#FFFFFF' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -444,7 +460,13 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredProperties.map((property) => (
+              {isHomeDataLoading ? (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-[400px] w-full bg-neutral-800/20 rounded-2xl animate-pulse" />
+                  ))}
+                </>
+              ) : featuredProperties.map((property) => (
                 <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
                   <PublicPropertyCard
                     property={property}
@@ -494,7 +516,7 @@ export default function PublicHome() {
       )}
 
       {/* All Properties Section */}
-      {allProperties.length > 0 && (
+      {(allProperties.length > 0 || isHomeDataLoading) && (
         <section className="py-20" style={{ backgroundColor: isDarkTheme ? backgroundColor : '#FFFFFF' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-6 md:mb-12">
@@ -510,7 +532,13 @@ export default function PublicHome() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {allProperties.map((property) => (
+              {isHomeDataLoading ? (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-[400px] w-full bg-neutral-800/20 rounded-2xl animate-pulse" />
+                  ))}
+                </>
+              ) : allProperties.map((property) => (
                 <Link key={property.id} to={getHref(`imovel/${property.codigo || (property as any).code}`)} className="block h-full">
                   <PublicPropertyCard
                     property={property}

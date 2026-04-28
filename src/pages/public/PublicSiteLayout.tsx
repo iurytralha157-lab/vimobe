@@ -10,6 +10,7 @@ import { usePropertyTypes } from "@/hooks/use-public-site";
 import { ContactFormDialog } from "@/components/public/ContactFormDialog";
 import { usePublicSiteMenu } from "@/hooks/use-public-site-menu";
 import { CookieConsent } from "@/components/public/CookieConsent";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicSiteLayout() {
   const { organizationId, siteConfig, isLoading, error } = usePublicContext();
@@ -251,20 +252,11 @@ export default function PublicSiteLayout() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
-  if (isLoading) {
+  // We don't block the whole layout with a spinner anymore. 
+  // We'll show skeletons for parts that are still loading.
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor }}>
-        <div 
-          className="animate-spin rounded-full h-12 w-12 border-b-2"
-          style={{ borderColor: primaryColor }}
-        ></div>
-      </div>
-    );
-  }
-
-  if (error || !siteConfig) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor, color: textColor }}>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0D0D0D', color: '#FFFFFF' }}>
         <h1 className="text-2xl font-bold mb-2">Site não encontrado</h1>
         <p style={{ opacity: 0.6 }}>{error || 'Verifique o endereço e tente novamente.'}</p>
       </div>
@@ -338,7 +330,9 @@ export default function PublicSiteLayout() {
             <div className="flex justify-between items-center h-[80px]">
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
-                {siteConfig.logo_url ? (
+                {isLoading ? (
+                  <Skeleton className="h-10 w-40 bg-white/10" />
+                ) : siteConfig?.logo_url ? (
                  <img 
                      src={siteConfig.logo_url} 
                      alt={siteConfig.site_title} 
@@ -352,13 +346,20 @@ export default function PublicSiteLayout() {
                    />
                 ) : (
                   <span className="text-lg md:text-xl font-semibold tracking-wider" style={{ color: '#fff' }}>
-                    {siteConfig.site_title}
+                    {siteConfig?.site_title || 'Site Imobiliário'}
                   </span>
                 )}
               </Link>
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1" aria-label="Navegação principal">
+                {isLoading && (
+                  <>
+                    <Skeleton className="h-6 w-16 bg-white/10 mx-2" />
+                    <Skeleton className="h-6 w-20 bg-white/10 mx-2" />
+                    <Skeleton className="h-6 w-16 bg-white/10 mx-2" />
+                  </>
+                )}
                 {/* Dynamic menu items */}
                 {allNavItems ? allNavItems.map((item) => (
                   item.link_type === 'external' ? (
