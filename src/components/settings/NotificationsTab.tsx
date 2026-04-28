@@ -17,17 +17,27 @@ export const NotificationsTab = () => {
         await unsubscribeUser();
         toast.success('Notificações desativadas');
       } else {
+        console.log('Attempting to subscribe...');
         const sub = await subscribeUser();
         if (sub) {
           toast.success('Notificações ativadas com sucesso!');
         } else if (permission === 'denied') {
-          toast.error('Permissão de notificação negada. Por favor, ative nas configurações do navegador.');
+          toast.error('Permissão de notificação negada. Por favor, ative nas configurações do dispositivo.');
+        } else {
+          toast.error('Não foi possível completar a inscrição.');
         }
       }
     } catch (err: any) {
-      console.error('Erro ao alternar notificações:', err);
+      console.error('Detailed error in handleToggle:', err);
       const errorMessage = err.message || 'Erro desconhecido';
-      toast.error(`Erro: ${errorMessage}`);
+      // Log specific known errors to help debugging
+      if (errorMessage.includes('Registration failed')) {
+        toast.error('Falha no registro do Service Worker. Tente recarregar a página.');
+      } else if (errorMessage.includes('Permission')) {
+        toast.error('Permissão de notificação não concedida.');
+      } else {
+        toast.error(`Erro ao processar notificações: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
