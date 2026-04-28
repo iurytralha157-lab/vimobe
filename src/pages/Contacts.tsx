@@ -524,6 +524,7 @@ export default function Contacts() {
                       contact={contact} 
                       sourceLabels={sourceLabels}
                       onViewDetails={() => setSelectedContactId(contact.id)}
+                      onDelete={() => setDeleteContactId(contact.id)}
                     />
                   ))}
                 </div>
