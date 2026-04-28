@@ -146,11 +146,19 @@ export default function PublicHome() {
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4 pt-20">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-light mb-8 max-w-4xl leading-tight">
-            {siteConfig.hero_title || 'Transformando seus sonhos em realidade!'}
+            {isLoading ? (
+              <Skeleton className="h-12 w-3/4 mx-auto bg-white/10" />
+            ) : (
+              siteConfig?.hero_title || 'Transformando seus sonhos em realidade!'
+            )}
           </h1>
-          {siteConfig.hero_subtitle && (
-            <p className="text-base md:text-lg text-white/70 mb-20 max-w-2xl">
-              {siteConfig.hero_subtitle}
+          {(siteConfig?.hero_subtitle || isLoading) && (
+            <p className="text-base md:text-lg text-white/70 mb-20 max-w-2xl w-full">
+              {isLoading ? (
+                <Skeleton className="h-6 w-1/2 mx-auto bg-white/10" />
+              ) : (
+                siteConfig?.hero_subtitle
+              )}
             </p>
           )}
 
