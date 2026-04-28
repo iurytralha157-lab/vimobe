@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Bell, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useWebPush } from '@/hooks/use-web-push';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner';
@@ -13,11 +13,13 @@ export function WebPushPrompt() {
   const { user } = useAuth();
   const { 
     isSupported, 
-    isSubscribed, 
-    isLoading, 
-    permission,
-    subscribe 
-  } = useWebPush();
+    subscription, 
+    subscribeUser: subscribe 
+  } = usePushNotifications();
+  
+  const isSubscribed = !!subscription;
+  const isLoading = false; // usePushNotifications doesn't have isLoading state yet, but we can manage it locally
+  const permission = Notification.permission;
   
   const [showPrompt, setShowPrompt] = useState(false);
   const [isSubscribing, setIsSubscribing] = useState(false);
@@ -83,15 +85,20 @@ export function WebPushPrompt() {
   const handleEnable = async () => {
     setIsSubscribing(true);
     
-    const success = await subscribe();
-    
-    setIsSubscribing(false);
-    
-    if (success) {
-      toast.success('Notificações ativadas com sucesso!');
-      setShowPrompt(false);
-    } else {
-      toast.error('Não foi possível ativar as notificações. Verifique as permissões do navegador.');
+    try {
+      const sub = await subscribe();
+      
+      if (sub) {
+        toast.success('Notificações ativadas com sucesso!');
+        setShowPrompt(false);
+      } else {
+        toast.error('Não foi possível ativar as notificações. Verifique as permissões do dispositivo.');
+      }
+    } catch (err: any) {
+      console.error('Error enabling push from prompt:', err);
+      toast.error('Erro ao ativar notificações: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setIsSubscribing(false);
     }
   };
 

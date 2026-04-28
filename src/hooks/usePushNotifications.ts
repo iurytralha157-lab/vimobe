@@ -13,15 +13,8 @@ export const usePushNotifications = () => {
       setIsSupported(true);
       setPermission(Notification.permission);
       
-      const SW_PATH = '/sw-push.js';
-      
-      navigator.serviceWorker.getRegistration().then(reg => {
-        if (!reg || reg.active?.scriptURL.indexOf(SW_PATH) === -1) {
-          console.log('No compatible SW found, registering:', SW_PATH);
-          navigator.serviceWorker.register(SW_PATH, { scope: '/' });
-        }
-      });
-
+      // Let VitePWA handle the service worker registration
+      // We just wait for it to be ready
       navigator.serviceWorker.ready.then(registration => {
         registration.pushManager.getSubscription().then(sub => {
           setSubscription(sub);
@@ -47,6 +40,13 @@ export const usePushNotifications = () => {
       for (let i = 0; i < rawData.length; ++i) {
         outputArray[i] = rawData.charCodeAt(i);
       }
+
+      // If the key is in SPKI/DER format (91 bytes), extract the raw 65-byte key
+      if (outputArray.length === 91) {
+        console.log('SPKI format detected, extracting raw key');
+        return outputArray.slice(26);
+      }
+
       return outputArray;
     } catch (e) {
       console.error('Error converting VAPID key:', e);
