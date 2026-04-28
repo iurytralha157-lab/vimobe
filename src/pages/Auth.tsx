@@ -471,22 +471,22 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right panel - Background image (desktop only, lazy-loaded) */}
-      {showBg && (
-        <div className="hidden lg:block flex-1 relative">
+      {/* Right panel - Background image (desktop only) */}
+      <div className="hidden lg:block flex-1 relative bg-muted">
+        {loginBgUrl && (
           <img
-            src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=1200&quality=80&format=webp` : loginBgUrl}
+            src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=1200&quality=70&format=webp` : loginBgUrl}
             alt=""
             aria-hidden="true"
             role="presentation"
-            loading="lazy"
+            loading="eager"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-cover"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
-          {/* Horizontal gradient to blend form background with image */}
-          <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
-        </div>
-      )}
+        )}
+        {/* Horizontal gradient to blend form background with image */}
+        <div className="absolute inset-y-0 left-0 w-72 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none" />
+      </div>
     </div>
   );
 }
