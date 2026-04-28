@@ -137,6 +137,10 @@ export default function Settings() {
             <AccountTab />
           </TabsContent>
 
+          <TabsContent value="notifications">
+            <NotificationsTab />
+          </TabsContent>
+
           <TabsContent value="team">
             <TeamTab />
           </TabsContent>
