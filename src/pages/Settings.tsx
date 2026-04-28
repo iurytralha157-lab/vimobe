@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key } from 'lucide-react';
+import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key, Bell } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
