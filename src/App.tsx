@@ -298,6 +298,7 @@ function CustomDomainRoutes() {
 
 const App = () => {
   const customDomain = isCustomDomain();
+  usePwaUpdate();
 
   return (
     <QueryClientProvider client={queryClient}>
