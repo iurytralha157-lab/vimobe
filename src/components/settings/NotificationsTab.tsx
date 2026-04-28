@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { supabase } from '@/integrations/supabase/client';
 import { Bell, BellOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -85,12 +86,21 @@ export const NotificationsTab = () => {
               </p>
             </div>
           </div>
-          <Button 
-            variant={subscription ? "outline" : "default"}
-            onClick={handleToggle}
-          >
-            {subscription ? 'Desativar' : 'Ativar'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleTestNotification}
+              disabled={!subscription}
+            >
+              Testar
+            </Button>
+            <Button 
+              variant={subscription ? "destructive" : "default"}
+              onClick={handleToggle}
+            >
+              {subscription ? 'Desativar' : 'Ativar'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
