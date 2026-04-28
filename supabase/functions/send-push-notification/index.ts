@@ -456,6 +456,11 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Send to all tokens
+    let sentCount = 0;
+    let failedCount = 0;
+    const invalidTokenIds: string[] = [];
+
     // Send to all native tokens (FCM)
     for (const tokenRecord of tokens || []) {
       if (tokenRecord.platform === 'web') continue; // Handled by webSubscriptions now or legacy
