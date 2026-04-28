@@ -113,6 +113,7 @@ export default function PublicHome() {
   ];
 
   const isLoading = isConfigLoading && !siteConfig;
+  const showSkeletons = isHomeDataLoading && !homeData;
 
   if (isLoading) {
     return (
