@@ -2,7 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-const CHANNEL_NAME = 'system-updates';
+const CHANNEL_NAME = 'system-updates-v2'; // Bumped version
 
 /**
  * Performs a complete cache clear including Service Worker and all browser caches
