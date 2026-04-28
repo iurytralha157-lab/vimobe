@@ -15,9 +15,31 @@ const PROPERTY_LIST_FIELDS = `
   commission_percentage, cadastrado_por
 `;
 
-export function useProperties(search?: string, pageSize: number = 24) {
+export function useProperties(search?: string) {
+  return useQuery({
+    queryKey: ['properties', search],
+    queryFn: async () => {
+      let query = supabase
+        .from('properties')
+        .select(PROPERTY_LIST_FIELDS)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+      
+      if (search) {
+        query = query.or(`code.ilike.%${search}%,title.ilike.%${search}%,bairro.ilike.%${search}%,cidade.ilike.%${search}%,uf.ilike.%${search}%,tipo_de_imovel.ilike.%${search}%,tipo_de_negocio.ilike.%${search}%,vista_codigo.ilike.%${search}%,imoview_codigo.ilike.%${search}%`);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      return data as Property[];
+    },
+  });
+}
+
+export function useInfiniteProperties(search?: string, pageSize: number = 24) {
   return useInfiniteQuery({
-    queryKey: ['properties', search, pageSize],
+    queryKey: ['properties-infinite', search, pageSize],
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from('properties')
