@@ -16,7 +16,6 @@ import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-na
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp, RotateCw } from 'lucide-react';
-import { DynamicWhatsAppIcon } from '@/components/icons/DynamicWhatsAppIcon';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -690,7 +689,7 @@ export function LeadDetailDialog({
                 Ligar
               </Button>
               <Button size="sm" onClick={handleQuickWhatsApp} className="h-9 flex-1 rounded-full">
-                <DynamicWhatsAppIcon size={16} className="mr-1.5" />
+                <MessageCircle className="h-4 w-4 mr-1.5" />
                 Chat
               </Button>
             </>
@@ -2219,7 +2218,7 @@ export function LeadDetailDialog({
           
           {selectedTask?.recommended_message && <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
               <div className="flex items-start gap-3">
-                <DynamicWhatsAppIcon size={20} className="mt-0.5 shrink-0" />
+                <MessageCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs font-medium text-primary mb-1">Mensagem sugerida:</p>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -2235,7 +2234,7 @@ export function LeadDetailDialog({
               Marcar como feito
             </Button>
             {selectedTask?.recommended_message && lead.phone && <Button variant="outline" className="flex-1" onClick={() => handleRoteiroAction('message')}>
-                <DynamicWhatsAppIcon size={16} className="mr-2" />
+                <MessageCircle className="h-4 w-4 mr-2" />
                 Enviar mensagem
               </Button>}
           </div>

@@ -14,12 +14,12 @@ import {
   ExternalLink,
   UserCircle,
   Calendar,
+  MessageCircle,
   Trophy,
   XCircle,
   CircleDot,
   Trash2,
 } from 'lucide-react';
-import { DynamicWhatsAppIcon } from '@/components/icons/DynamicWhatsAppIcon';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -102,8 +102,8 @@ export function ContactCard({ contact, sourceLabels, onViewDetails, onDelete }: 
             </DropdownMenuItem>
             {contact.phone && (
               <DropdownMenuItem asChild>
-                <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank" className="flex items-center">
-                  <DynamicWhatsAppIcon size={16} className="mr-2" />
+                <a href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`} target="_blank">
+                  <Phone className="h-4 w-4 mr-2" />
                   WhatsApp
                 </a>
               </DropdownMenuItem>
@@ -228,7 +228,7 @@ export function ContactCard({ contact, sourceLabels, onViewDetails, onDelete }: 
         <div className="pt-2 border-t">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             {contact.last_interaction_channel === 'whatsapp' && (
-              <DynamicWhatsAppIcon size={12} className="mr-1.5" />
+              <MessageCircle className="h-3 w-3" />
             )}
             <span className="truncate flex-1">
               {contact.last_interaction_preview || 'Interação registrada'}
