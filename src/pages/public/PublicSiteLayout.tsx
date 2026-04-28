@@ -329,7 +329,7 @@ export default function PublicSiteLayout() {
             <div className="flex justify-between items-center h-[80px]">
               {/* Logo */}
               <Link to={getHref("")} className="flex items-center">
-                {isLoading ? (
+                {isLoading && !siteConfig ? (
                   <Skeleton className="h-8 md:h-10 w-32 md:w-40 bg-white/10" />
                 ) : siteConfig?.logo_url ? (
                  <img 
@@ -354,7 +354,7 @@ export default function PublicSiteLayout() {
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1" aria-label="Navegação principal">
-                {isLoading && (
+                {isLoading && !siteConfig && (
                   <>
                     <Skeleton className="h-6 w-16 bg-white/10 mx-2" />
                     <Skeleton className="h-6 w-20 bg-white/10 mx-2" />
