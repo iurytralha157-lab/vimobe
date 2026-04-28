@@ -150,6 +150,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setOrganization(orgData as Organization);
             }
           }
+          
+          // Fetch full profile data in background after critical data is loaded
+          fetchFullProfile(userId);
+          
           return true;
         }
         return false;
@@ -158,6 +162,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
     });
+  };
+
+  const fetchFullProfile = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf')
+        .eq('id', userId)
+        .single();
+      
+      if (data) {
+        setProfile(prev => prev ? { ...prev, ...data } : null);
+      }
+    } catch (error) {
+      console.error('Error fetching full profile:', error);
+    }
   };
 
   const startImpersonate = async (orgId: string, orgName: string) => {
