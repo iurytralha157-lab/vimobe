@@ -353,6 +353,13 @@ export default function PublicSiteLayout() {
 
               {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-1" aria-label="Navegação principal">
+                {isLoading && (
+                  <>
+                    <Skeleton className="h-6 w-16 bg-white/10 mx-2" />
+                    <Skeleton className="h-6 w-20 bg-white/10 mx-2" />
+                    <Skeleton className="h-6 w-16 bg-white/10 mx-2" />
+                  </>
+                )}
                 {/* Dynamic menu items */}
                 {allNavItems ? allNavItems.map((item) => (
                   item.link_type === 'external' ? (
