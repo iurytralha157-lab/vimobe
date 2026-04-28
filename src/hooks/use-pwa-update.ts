@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+// @ts-ignore - virtual module handled by vite-plugin-pwa
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { toast } from 'sonner';
 
