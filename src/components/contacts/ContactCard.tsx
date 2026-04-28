@@ -18,6 +18,7 @@ import {
   Trophy,
   XCircle,
   CircleDot,
+  Trash2,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -36,9 +37,10 @@ interface ContactCardProps {
   contact: Contact;
   sourceLabels: Record<string, string>;
   onViewDetails?: () => void;
+  onDelete?: () => void;
 }
 
-export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCardProps) {
+export function ContactCard({ contact, sourceLabels, onViewDetails, onDelete }: ContactCardProps) {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -114,6 +116,16 @@ export function ContactCard({ contact, sourceLabels, onViewDetails }: ContactCar
                 </a>
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.();
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir contato
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
