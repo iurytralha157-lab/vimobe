@@ -13,7 +13,14 @@ export const usePushNotifications = () => {
       setIsSupported(true);
       setPermission(Notification.permission);
       
-      // Check current subscription
+      // We check for SW explicitly to ensure it's registered
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (!reg) {
+          console.log('No SW found, registering...');
+          navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        }
+      });
+
       navigator.serviceWorker.ready.then(registration => {
         registration.pushManager.getSubscription().then(sub => {
           setSubscription(sub);
