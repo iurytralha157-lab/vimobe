@@ -131,7 +131,7 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
           p_date_to: currentTo.toISOString(),
           p_source_filter: filters?.source || null,
           p_campaign_id_filter: filters?.campaignId || null,
-          p_adset_id_filter: filters?.adset_id || null, // Corrigido para minúsculo conforme padrão
+          p_adset_id_filter: filters?.adSetId || null,
           p_ad_id_filter: filters?.adId || null
         });
 
