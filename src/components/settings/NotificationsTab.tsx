@@ -13,18 +13,23 @@ export const NotificationsTab = () => {
   const handleToggle = async () => {
     setLoading(true);
     try {
-    if (subscription) {
-      await unsubscribeUser();
-      toast.success('Notificações desativadas');
-    } else {
-      const sub = await subscribeUser();
-      if (sub) {
-        toast.success('Notificações ativadas com sucesso!');
-      } else if (permission === 'denied') {
-        toast.error('Permissão de notificação negada. Por favor, ative nas configurações do navegador.');
+      if (subscription) {
+        await unsubscribeUser();
+        toast.success('Notificações desativadas');
+      } else {
+        const sub = await subscribeUser();
+        if (sub) {
+          toast.success('Notificações ativadas com sucesso!');
+        } else if (permission === 'denied') {
+          toast.error('Permissão de notificação negada. Por favor, ative nas configurações do navegador.');
+        }
       }
+    } catch (err) {
+      console.error('Erro ao alternar notificações:', err);
+      toast.error('Ocorreu um erro ao processar as notificações.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleTestNotification = async () => {
