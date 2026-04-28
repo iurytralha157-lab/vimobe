@@ -105,7 +105,7 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     console.log('Syncing subscription with backend...');
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
@@ -127,7 +127,7 @@ export const usePushNotifications = () => {
         
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase
+          await (supabase as any)
             .from('push_subscriptions')
             .delete()
             .eq('user_id', user.id);
