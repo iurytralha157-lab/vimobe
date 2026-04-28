@@ -83,7 +83,7 @@ export const usePushNotifications = () => {
         
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase
+          await (supabase as any)
             .from('push_subscriptions')
             .delete()
             .eq('user_id', user.id);
