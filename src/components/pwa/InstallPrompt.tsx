@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Download, Share, Plus, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInstallPrompt } from '@/hooks/use-install-prompt';
+import { useSystemSettings } from '@/hooks/use-system-settings';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import {
 
 export function InstallPrompt() {
   const { showPrompt, isIOS, isStandalone, install, dismiss, canInstall } = useInstallPrompt();
+  const { data: settings } = useSystemSettings();
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   // Don't show if already installed or prompt shouldn't be shown
@@ -36,7 +38,11 @@ export function InstallPrompt() {
       <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background border-t border-border shadow-lg animate-in slide-in-from-bottom duration-300">
         <div className="max-w-lg mx-auto flex items-center gap-4">
           <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center overflow-hidden">
-            <img src="/apple-touch-icon.png" alt="App Icon" className="w-8 h-8 object-contain" />
+            <img 
+              src={settings?.pwa_icon_url || "/apple-touch-icon.png"} 
+              alt="App Icon" 
+              className="w-full h-full object-cover" 
+            />
           </div>
 
           <div className="flex-1 min-w-0">
