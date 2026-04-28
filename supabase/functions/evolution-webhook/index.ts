@@ -849,6 +849,90 @@ async function handleMessagesUpsert(
               .update({ first_touch_at: new Date().toISOString() })
               .eq("id", conversation.lead_id)
               .is("first_touch_at", null);
+
+            // Trigger notification-scheduler for calculate-first-response if we have the session owner
+            if (session.owner_user_id) {
+              const triggerCalc = async () => {
+                try {
+                  console.log(`Triggering calculate-first-response for lead ${conversation.lead_id}`);
+                  await fetch(`${supabaseUrl}/functions/v1/calculate-first-response`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${supabaseKey}`,
+                    },
+                    body: JSON.stringify({
+                      lead_id: conversation.lead_id,
+                      user_id: session.owner_user_id,
+                      channel: 'whatsapp',
+                      external_message_id: messageId
+                    }),
+                  });
+                } catch (calcError) {
+                  console.error("Failed to trigger calculate-first-response:", calcError);
+                }
+              };
+              EdgeRuntime.waitUntil(triggerCalc());
+            }
+          } catch (firstResponseError) {
+            console.error("Error tracking first response:", firstResponseError);
+          }
+        }
+        
+        // ===== PUSH NOTIFICATION: Notify recipient on new message =====
+        if (!fromMe) {
+          try {
+            // Find who should receive the notification
+            // Usually the lead owner (assigned_user_id) or the session owner
+            let targetUserId = null;
+            
+            if (conversation.lead_id) {
+              const { data: lead } = await supabase
+                .from("leads")
+                .select("assigned_user_id")
+                .eq("id", conversation.lead_id)
+                .single();
+              targetUserId = lead?.assigned_user_id;
+            }
+            
+            if (!targetUserId) {
+              targetUserId = session.owner_user_id;
+            }
+
+            if (targetUserId) {
+              const triggerPush = async () => {
+                try {
+                  console.log(`Triggering push notification for message from ${contactName} to user ${targetUserId}`);
+                  await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${supabaseKey}`,
+                    },
+                    body: JSON.stringify({
+                      user_id: targetUserId,
+                      title: `💬 WhatsApp: ${contactName}`,
+                      body: content,
+                      data: {
+                        type: 'whatsapp_message',
+                        conversation_id: conversation.id,
+                        remote_jid: remoteJid,
+                        lead_id: conversation.lead_id
+                      }
+                    }),
+                  });
+                } catch (pushError) {
+                  console.error("Failed to trigger push notification:", pushError);
+                }
+              };
+              EdgeRuntime.waitUntil(triggerPush());
+            }
+          } catch (notifyError) {
+            console.error("Error triggering message notification:", notifyError);
+          }
+        }
+
+              .is("first_touch_at", null);
             
             // Call calculate-first-response
             const frResponse = await fetch(`${supabaseUrl}/functions/v1/calculate-first-response`, {
