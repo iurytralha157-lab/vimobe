@@ -14,6 +14,7 @@ import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { usePwaUpdate } from "@/hooks/use-pwa-update";
 import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 import { MetricsPanel } from "@/components/MetricsPanel";
@@ -298,6 +299,7 @@ function CustomDomainRoutes() {
 
 const App = () => {
   const customDomain = isCustomDomain();
+  usePwaUpdate();
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: 'prompt', // Changed from autoUpdate to prompt to allow clear cache strategy
+      registerType: 'prompt', // We use 'prompt' and manage it via usePwaUpdate for better control
       includeAssets: ['favicon.png', 'logo-white.png', 'logo-black.png', 'sounds/notification.mp3', 'offline.html'],
       manifest: {
         name: 'Vimob Crm',
