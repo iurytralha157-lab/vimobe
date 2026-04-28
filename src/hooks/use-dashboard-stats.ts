@@ -120,216 +120,45 @@ export function useEnhancedDashboardStats(filters?: DashboardFilters) {
     enabled: !!currentUserId && !!organizationId,
     queryFn: async (): Promise<EnhancedDashboardStats> => {
       return performanceTracker.trackTimed('useEnhancedDashboardStats', async () => {
-      // Use queryClient to get cached visibility or fetch it
-      const visibility = await checkLeadVisibility(currentUserId);
-      
-      // Calculate date ranges for current and previous periods
-      const now = new Date();
-      const currentFrom = filters?.dateRange?.from || subDays(now, 30);
-      const currentTo = filters?.dateRange?.to || now;
-      const currentFromIso = currentFrom.toISOString();
-      const currentToIso = currentTo.toISOString();
-      
-      // Calculate previous period (same duration, before current period)
-      const periodDays = Math.ceil((currentTo.getTime() - currentFrom.getTime()) / (1000 * 60 * 60 * 24));
-      const previousFrom = subDays(currentFrom, periodDays);
-      const previousTo = subDays(currentTo, periodDays);
-      
-      // Build base query for current period
-      let selectString = 'id, created_at, stage_id, assigned_user_id, source, valor_interesse, deal_status, first_response_seconds';
-      
-      // If we have Meta filters, we need to join with lead_meta
-      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
-        selectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
-      }
+        const currentFrom = filters?.dateRange?.from || subDays(new Date(), 30);
+        const currentTo = filters?.dateRange?.to || new Date();
 
-      // Prepare queries
-      let query = supabase
-        .from('leads')
-        .select(selectString, { count: 'exact' })
-        .eq('organization_id', organizationId!)
-        .gte('created_at', currentFromIso)
-        .lte('created_at', currentToIso)
-        .limit(5000); // Reduced from 10000 for better performance
+        const { data, error } = await supabase.rpc('get_enhanced_dashboard_stats', {
+          p_organization_id: organizationId,
+          p_user_id_filter: filters?.userId || null,
+          p_team_id_filter: filters?.teamId || null,
+          p_date_from: currentFrom.toISOString(),
+          p_date_to: currentTo.toISOString(),
+          p_source_filter: filters?.source || null,
+          p_campaign_id_filter: filters?.campaignId || null,
+          p_adset_id_filter: filters?.adSetId || null,
+          p_ad_id_filter: filters?.adId || null
+        });
 
-      // Build previous period query
-      let prevSelectString = 'id, deal_status';
-      if (filters?.campaignId || filters?.adSetId || filters?.adId) {
-        prevSelectString += ', lead_meta!inner(campaign_id, adset_id, ad_id)';
-      }
-
-      let previousQuery = supabase
-        .from('leads')
-        .select(prevSelectString, { count: 'exact' })
-        .eq('organization_id', organizationId!)
-        .gte('created_at', previousFrom.toISOString())
-        .lte('created_at', previousTo.toISOString())
-        .limit(5000); // Reduced from 10000
-
-      // Apply Meta filters to both queries
-      if (filters?.campaignId) {
-        query = query.eq('lead_meta.campaign_id', filters.campaignId);
-        previousQuery = previousQuery.eq('lead_meta.campaign_id', filters.campaignId);
-      }
-      if (filters?.adSetId) {
-        query = query.eq('lead_meta.adset_id', filters.adSetId);
-        previousQuery = previousQuery.eq('lead_meta.adset_id', filters.adSetId);
-      }
-      if (filters?.adId) {
-        query = query.eq('lead_meta.ad_id', filters.adId);
-        previousQuery = previousQuery.eq('lead_meta.ad_id', filters.adId);
-      }
-
-      // Apply visibility filter to both
-      query = applyVisibilityFilter(query, visibility, 'assigned_user_id', filters?.userId);
-      previousQuery = applyVisibilityFilter(previousQuery, visibility, 'assigned_user_id', filters?.userId);
-
-      // Apply source filter to both
-      if (filters?.source) {
-        query = query.eq('source', filters.source as any);
-        previousQuery = previousQuery.eq('source', filters.source as any);
-      }
-
-      // Execute queries in parallel for better performance
-      const todayStr = new Date().toISOString().split('T')[0];
-      
-      const [
-        { data: leads, error, count },
-        { data: previousLeads, count: prevCount },
-        { data: commissions },
-        { data: financialEntries }
-      ] = await Promise.all([
-        query,
-        previousQuery,
-        supabase
-          .from('commissions')
-          .select('amount, status')
-          .eq('organization_id', organizationId)
-          .gte('created_at', currentFromIso), // Added date filter to commissions
-        supabase
-          .from('financial_entries')
-          .select('type, amount, status, due_date')
-          .eq('organization_id', organizationId)
-          .gte('due_date', currentFromIso.split('T')[0])
-          .lte('due_date', currentToIso.split('T')[0])
-      ]);
-
-      if (error) {
-        console.error('Error fetching enhanced stats:', error);
-        return {
-          totalLeads: 0,
-          conversionRate: 0,
-          closedLeads: 0,
-          avgResponseTime: '--',
-          totalSalesValue: 0,
-          pendingCommissions: 0,
-          leadsTrend: 0,
-          conversionTrend: 0,
-          closedTrend: 0,
-          totalReceivables: 0,
-          totalPayables: 0,
-          overdueReceivables: 0,
-          overduePayables: 0,
-          paidCommissions: 0,
-        };
-      }
-
-      const pendingCommissions = commissions
-        ?.filter(c => c.status === 'forecast' || c.status === 'approved')
-        ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
-      
-      const paidCommissions = commissions
-        ?.filter(c => c.status === 'paid')
-        ?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
-
-      const receivables = financialEntries?.filter(e => e.type === 'receivable') || [];
-      const payables = financialEntries?.filter(e => e.type === 'payable') || [];
-      
-      const totalReceivables = receivables
-        .filter(e => e.status === 'pending')
-        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-      
-      const totalPayables = payables
-        .filter(e => e.status === 'pending')
-        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-      
-      const overdueReceivables = receivables
-        .filter(e => e.status === 'pending' && e.due_date && e.due_date < todayStr)
-        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-      
-      const overduePayables = payables
-        .filter(e => e.status === 'pending' && e.due_date && e.due_date < todayStr)
-        .reduce((sum, e) => sum + Number(e.amount || 0), 0);
-
-      // Calculate current stats using deal_status instead of stage_key
-      const totalLeads = count || leads?.length || 0;
-      const closedLeads = leads?.filter((l: any) => l.deal_status === 'won').length || 0;
-      
-      const conversionRate = totalLeads > 0 ? Number(((closedLeads / totalLeads) * 100).toFixed(1)) : 0;
-      
-      // Calculate total sales from won leads (using valor_interesse)
-      const totalSalesValue = leads?.reduce((sum: number, l: any) => {
-        if (l.deal_status === 'won') {
-          return sum + (l.valor_interesse || 0);
+        if (error) {
+          console.error('Error fetching enhanced stats via RPC:', error);
+          // Fallback to empty stats if RPC fails
+          return {
+            totalLeads: 0,
+            conversionRate: 0,
+            closedLeads: 0,
+            avgResponseTime: '--',
+            totalSalesValue: 0,
+            pendingCommissions: 0,
+            leadsTrend: 0,
+            conversionTrend: 0,
+            closedTrend: 0,
+            totalReceivables: 0,
+            totalPayables: 0,
+            overdueReceivables: 0,
+            overduePayables: 0,
+            paidCommissions: 0,
+          };
         }
-        return sum;
-      }, 0) || 0;
 
-      // Calculate previous stats for trends using deal_status
-      const prevTotalLeads = prevCount || previousLeads?.length || 0;
-      const prevClosedLeads = previousLeads?.filter((l: any) => l.deal_status === 'won').length || 0;
-      const prevConversionRate = prevTotalLeads > 0 ? Number(((prevClosedLeads / prevTotalLeads) * 100).toFixed(1)) : 0;
-
-      // Calculate trends (percentage change from previous period)
-      const leadsTrend = prevTotalLeads > 0 
-        ? Math.round(((totalLeads - prevTotalLeads) / prevTotalLeads) * 100) 
-        : totalLeads > 0 ? 100 : 0;
-      
-      const conversionTrend = prevConversionRate > 0 
-        ? conversionRate - prevConversionRate 
-        : conversionRate;
-      
-      const closedTrend = prevClosedLeads > 0 
-        ? Math.round(((closedLeads - prevClosedLeads) / prevClosedLeads) * 100) 
-        : closedLeads > 0 ? 100 : 0;
-
-      // Calculate average response time using first_response_seconds (more accurate)
-      let avgResponseTime = '--';
-      const leadsWithResponse = leads?.filter((l: any) => l.first_response_seconds != null) || [];
-      if (leadsWithResponse.length > 0) {
-        const totalSeconds = leadsWithResponse.reduce((sum: number, l: any) => sum + l.first_response_seconds, 0);
-        const avgSeconds = Math.round(totalSeconds / leadsWithResponse.length);
-        
-        if (avgSeconds < 60) {
-          avgResponseTime = `${avgSeconds}s`;
-        } else if (avgSeconds < 3600) {
-          const minutes = Math.floor(avgSeconds / 60);
-          avgResponseTime = `${minutes}m`;
-        } else {
-          const hours = Math.floor(avgSeconds / 3600);
-          const minutes = Math.floor((avgSeconds % 3600) / 60);
-          avgResponseTime = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-        }
-      }
-
-      return {
-        totalLeads,
-        conversionRate,
-        closedLeads,
-        avgResponseTime,
-        totalSalesValue,
-        pendingCommissions,
-        leadsTrend,
-        conversionTrend,
-        closedTrend,
-        totalReceivables,
-        totalPayables,
-        overdueReceivables,
-        overduePayables,
-        paidCommissions,
-      };
-    });
-  },
+        return data as EnhancedDashboardStats;
+      });
+    },
     staleTime: 1000 * 60 * 5,
   });
 }
