@@ -298,15 +298,20 @@ function CustomDomainRoutes() {
   );
 }
 
-const App = () => {
-  const customDomain = isCustomDomain();
+const BrandingAndPwa = () => {
   usePwaUpdate();
   useSystemBranding();
+  return null;
+};
+
+const App = () => {
+  const customDomain = isCustomDomain();
 
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <TooltipProvider>
+          <BrandingAndPwa />
           <Toaster />
           <Sonner />
           <IOSInstallGuide />
