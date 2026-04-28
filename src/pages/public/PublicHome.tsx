@@ -16,13 +16,14 @@ import { usePublicSearchFilters, DEFAULT_SEARCH_FILTERS } from "@/hooks/use-publ
 export default function PublicHome() {
   const { organizationId, siteConfig } = usePublicContext();
   const { isFavorite, toggleFavorite } = usePublicFavorites(organizationId);
-  const { data: featuredProperties = [] } = useFeaturedProperties(organizationId);
-  const { data: exclusiveProperties = [] } = useExclusiveProperties(organizationId);
-  const { data: allPropertiesData } = usePublicProperties(organizationId, { limit: 6 });
-  const allProperties = allPropertiesData?.properties || [];
-  const { data: propertyTypes = [] } = usePropertyTypes(organizationId);
+  const { data: homeData } = usePublicHomeData(organizationId);
+  const featuredProperties = homeData?.featured || [];
+  const exclusiveProperties = homeData?.exclusive || [];
+  const allProperties = homeData?.latest || [];
+  const propertyTypes = homeData?.types || [];
+  const cities = homeData?.cities || [];
+  
   const { data: configuredFilters } = usePublicSearchFilters(organizationId);
-  const { data: cities = [] } = usePublicCities(organizationId);
   const navigate = useNavigate();
   const location = useLocation();
 
