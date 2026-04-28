@@ -36,8 +36,6 @@ function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: 
           }
         }
 
-        console.log('Loading site config for slug:', slug);
-        
         const { data, error: fetchError } = await supabase
           .from('organization_sites')
           .select('*, organizations(name)')

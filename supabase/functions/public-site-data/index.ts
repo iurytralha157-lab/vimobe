@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     switch (endpoint) {
       case 'properties': {
         // Optimized: only list-relevant fields + estimated count for speed
-        const LIST_FIELDS = 'id, code, title, descricao, tipo_de_imovel, tipo_de_negocio, status, destaque, exclusividade, bairro, cidade, uf, endereco, quartos, suites, banheiros, vagas, area_util, area_total, preco, valor_locacao, condominio, iptu, mobilia, imagem_principal, created_at, vista_codigo, imoview_codigo';
+        const LIST_FIELDS = 'id, code, title, bairro, cidade, uf, endereco, quartos, suites, banheiros, vagas, area_util, preco, valor_locacao, imagem_principal';
         let query = supabase
           .from('properties')
           .select(LIST_FIELDS, { count: 'estimated' })
@@ -395,8 +395,8 @@ Deno.serve(async (req) => {
           { data: typesData },
           { data: citiesData }
         ] = await Promise.all([
-          supabase.from('properties').select('*').eq('organization_id', organizationId).eq('status', 'ativo').eq('destaque', true).order('created_at', { ascending: false }).limit(6),
-          supabase.from('properties').select('*').eq('organization_id', organizationId).eq('status', 'ativo').eq('exclusividade', true).order('created_at', { ascending: false }).limit(6),
+          supabase.from('properties').select('id, code, title, bairro, cidade, uf, quartos, suites, banheiros, vagas, area_util, preco, valor_locacao, imagem_principal').eq('organization_id', organizationId).eq('status', 'ativo').eq('destaque', true).order('created_at', { ascending: false }).limit(6),
+          supabase.from('properties').select('id, code, title, bairro, cidade, uf, quartos, suites, banheiros, vagas, area_util, preco, valor_locacao, imagem_principal').eq('organization_id', organizationId).eq('status', 'ativo').eq('exclusividade', true).order('created_at', { ascending: false }).limit(6),
           supabase.from('properties').select('id, code, title, bairro, cidade, uf, quartos, suites, banheiros, vagas, area_util, preco, valor_locacao, imagem_principal').eq('organization_id', organizationId).eq('status', 'ativo').order('created_at', { ascending: false }).limit(6),
           supabase.from('properties').select('tipo_de_imovel').eq('organization_id', organizationId).eq('status', 'ativo').not('tipo_de_imovel', 'is', null),
           supabase.from('properties').select('cidade').eq('organization_id', organizationId).eq('status', 'ativo').not('cidade', 'is', null)

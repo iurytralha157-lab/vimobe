@@ -122,15 +122,16 @@ export default function PublicHome() {
         {/* Background Image - LCP element */}
         <div className="absolute inset-0">
           {siteConfig.hero_image_url ? (
-              <img
-               src={siteConfig.hero_image_url}
-               alt=""
-               fetchPriority="high"
-               decoding="sync"
-               width={1920}
-               height={1080}
-               className="absolute inset-0 w-full h-full object-cover"
-             />
+               <img
+                src={siteConfig.hero_image_url}
+                alt=""
+                fetchPriority="high"
+                decoding="sync"
+                width={1920}
+                height={1080}
+                loading="eager"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
           ) : (
             <div 
               className="absolute inset-0"
