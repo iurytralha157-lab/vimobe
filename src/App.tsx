@@ -17,6 +17,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 import { MetricsPanel } from "@/components/MetricsPanel";
+import { IOSInstallGuide } from "@/components/IOSInstallGuide";
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
@@ -304,6 +305,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <IOSInstallGuide />
           <BrowserRouter>
             {customDomain ? (
               <LanguageProvider>
