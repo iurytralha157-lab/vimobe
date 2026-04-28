@@ -1019,15 +1019,7 @@ export default function Pipelines() {
             </Popover>
 
             {/* Refresh */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 flex-shrink-0"
-              onClick={handleManualRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
-            </Button>
+            {/* Botão de Refresh removido */}
           </div>
         ) : (
           /* Desktop: original two-row layout */
