@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// VAPID public key - chave pública para Web Push
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+// VAPID public key - confirm this matches your server-side VAPID_PUBLIC_KEY
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BKVaoTX00HN5-8AZge8DPv8ZhGu9upg5RGpMbuqAX05E6Xw-94IrbyFo7M32qy6CzvIKl6_EK5VnDFXkgB6nWs8'; 
+
 
 // Converte base64 URL-safe para Uint8Array (necessário para applicationServerKey)
 // Suporta tanto chaves raw (65 bytes) quanto SPKI/DER (91 bytes)
