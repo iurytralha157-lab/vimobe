@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BAag7UTmqxehuk8_3B64CZzRKUc732au_PeDATZo9R2KSXx9hvIzwZs78J8L9o--mhqKaLSBKy1Gb_0mxE_xS7o';
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWjUfBw5nc02KFFL6pr1jM51bHv0CllEuy5ypnldeYLMhYSbQbKlWHK7T9VK1CF2xVgH_9HOc3tavj0iuT1mEzA';
 
 export const usePushNotifications = () => {
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
@@ -13,40 +13,46 @@ export const usePushNotifications = () => {
       setIsSupported(true);
       setPermission(Notification.permission);
       
+      // Check current subscription
       navigator.serviceWorker.ready.then(registration => {
         registration.pushManager.getSubscription().then(sub => {
           setSubscription(sub);
+        }).catch(err => {
+          console.error('Error getting push subscription:', err);
         });
+      }).catch(err => {
+        console.error('Service worker not ready:', err);
       });
     }
   }, []);
 
   const urlBase64ToUint8Array = (base64String: string) => {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/\-/g, '+')
-      .replace(/_/g, '/');
+    try {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
 
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
 
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    } catch (e) {
+      console.error('Error converting VAPID key:', e);
+      return new Uint8Array();
     }
-    return outputArray;
   };
 
   const subscribeUser = async () => {
     try {
       if (!isSupported) {
-        console.warn('Push notifications not supported');
-        return;
+        throw new Error('Push notifications are not supported in this browser.');
       }
 
       console.log('Starting subscription process...');
-      
-      // On some mobile devices (especially iOS PWA), Notification.requestPermission() 
-      // must be triggered directly by a user gesture. We are inside handleToggle which is a user gesture.
       
       let result = Notification.permission;
       if (result === 'default') {
@@ -54,28 +60,25 @@ export const usePushNotifications = () => {
         result = await Notification.requestPermission();
       }
       
-      console.log('Permission result:', result);
       setPermission(result);
-
       if (result !== 'granted') {
-        console.warn('Permission not granted for notifications:', result);
-        return;
+        throw new Error(`Permission ${result}`);
       }
 
-      // Check for Service Worker Registration explicitly
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      if (registrations.length === 0) {
-        console.warn('No service worker registered. Registering /sw.js...');
-        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      }
-
-      const registration = await navigator.serviceWorker.ready;
+      // Wait for service worker with a timeout to prevent infinite loading
+      const registrationPromise = navigator.serviceWorker.ready;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout waiting for Service Worker')), 10000)
+      );
+      
+      const registration = await Promise.race([registrationPromise, timeoutPromise]) as ServiceWorkerRegistration;
       console.log('Service worker ready for subscription');
       
-      // Before subscribing, check if there is an existing one
       const existingSub = await registration.pushManager.getSubscription();
       if (existingSub) {
-        console.log('Found existing subscription, using it.');
+        console.log('Found existing subscription');
+        // Still upsert to database to be sure it's synced
+        await syncSubscriptionWithBackend(existingSub);
         setSubscription(existingSub);
         return existingSub;
       }
@@ -86,30 +89,33 @@ export const usePushNotifications = () => {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
 
-      console.log('Subscription successful:', sub);
+      console.log('Subscription successful');
+      await syncSubscriptionWithBackend(sub);
       setSubscription(sub);
-
-      // Save to Supabase
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { error } = await (supabase as any)
-          .from('push_subscriptions')
-          .upsert({
-            user_id: user.id,
-            subscription: JSON.parse(JSON.stringify(sub)),
-          }, { onConflict: 'user_id' });
-
-        if (error) console.error('Error saving subscription to Supabase:', error);
-      }
 
       return sub;
     } catch (err: any) {
       console.error('Failed to subscribe the user: ', err);
-      // Detailed error for debugging
-      if (err.name === 'NotAllowedError') {
-        console.error('Permission denied or interaction required');
-      }
-      throw err; // Re-throw to be caught by the component UI
+      throw err;
+    }
+  };
+
+  const syncSubscriptionWithBackend = async (sub: PushSubscription) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    console.log('Syncing subscription with backend...');
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert({
+        user_id: user.id,
+        subscription: JSON.parse(JSON.stringify(sub)),
+      }, { onConflict: 'user_id' });
+
+    if (error) {
+      console.error('Error saving subscription to Supabase:', error);
+    } else {
+      console.log('Subscription synced successfully');
     }
   };
 
@@ -121,7 +127,7 @@ export const usePushNotifications = () => {
         
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await (supabase as any)
+          await supabase
             .from('push_subscriptions')
             .delete()
             .eq('user_id', user.id);
@@ -129,6 +135,7 @@ export const usePushNotifications = () => {
       }
     } catch (err) {
       console.error('Error unsubscribing', err);
+      throw err;
     }
   };
 
