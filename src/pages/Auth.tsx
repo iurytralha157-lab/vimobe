@@ -53,8 +53,8 @@ export default function Auth() {
   const logoUrl = useMemo(() => {
     if (!systemSettings) return null;
     return resolvedTheme === 'dark'
-      ? systemSettings.logo_url_dark || systemSettings.logo_url_light || '/logo.png'
-      : systemSettings.logo_url_light || systemSettings.logo_url_dark || '/logo.png';
+      ? systemSettings.logo_url_dark || systemSettings.logo_url_light
+      : systemSettings.logo_url_light || systemSettings.logo_url_dark;
   }, [systemSettings, resolvedTheme]);
 
   const loginBgUrl = useMemo(() => {
