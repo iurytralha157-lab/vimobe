@@ -81,6 +81,7 @@ export function useContactsList(filters: ContactListFilters) {
       })) as Contact[];
     },
     placeholderData: keepPreviousData,
-    staleTime: 30_000,
+    staleTime: 1000 * 60 * 5, // Cache por 5 minutos
+    gcTime: 1000 * 60 * 15,
   });
 }

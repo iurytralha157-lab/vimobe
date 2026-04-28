@@ -120,7 +120,7 @@ export default function Contacts() {
 
   // Pagination & Sort states
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(30);
+  const [pageSize, setPageSize] = useState(50); // Aumentado para 50 como padrão otimizado
   const [sortBy, setSortBy] = useState<ContactListFilters['sortBy']>('created_at');
   const [sortDir, setSortDir] = useState<ContactListFilters['sortDir']>('desc');
   
