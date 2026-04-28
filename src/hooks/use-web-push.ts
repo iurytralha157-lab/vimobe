@@ -113,6 +113,7 @@ export function useWebPush() {
         .select('id, token')
         .eq('user_id', user.id)
         .eq('platform', 'web')
+        .eq('token', subscriptionJson)
         .maybeSingle();
 
       if (existing) {
