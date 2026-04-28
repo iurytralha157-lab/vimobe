@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarView } from '@/components/schedule/CalendarView';
 import { EventsList } from '@/components/schedule/EventsList';
 import { EventForm } from '@/components/schedule/EventForm';
-import { GoogleCalendarConnect } from '@/components/schedule/GoogleCalendarConnect';
+// Google Calendar integration removed temporarily
 import { UserFilter } from '@/components/schedule/UserFilter';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useUsers } from '@/hooks/use-users';
@@ -49,9 +49,8 @@ export default function Agenda() {
       weekStartsOn: 0
     });
     return {
-      startDate: addDays(weekStart, -35),
-      // Include previous month
-      endDate: addDays(weekEnd, 35) // Include next month
+      startDate: weekStart,
+      endDate: weekEnd
     };
   }, [selectedDate]);
   const {
@@ -137,8 +136,7 @@ export default function Agenda() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Google Calendar Connect */}
-            <GoogleCalendarConnect />
+            {/* Google Calendar integration disabled */}
 
             {/* Quick stats - filtered for current week only */}
             <div className="bg-card rounded-xl p-4 space-y-4 border-0">
