@@ -36,6 +36,7 @@ export default function Conversations() {
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [messageLimit, setMessageLimit] = useState(50);
   const [messageText, setMessageText] = useState("");
   const [hideGroups, setHideGroups] = useState(() => {
     return localStorage.getItem("whatsapp-hide-groups") === "true";
@@ -64,8 +65,9 @@ export default function Conversations() {
   );
   const {
     data: messages,
-    isLoading: loadingMessages
-  } = useWhatsAppMessages(selectedConversation?.id || null);
+    isLoading: loadingMessages,
+    isFetching: fetchingMessages
+  } = useWhatsAppMessages(selectedConversation?.id || null, null, messageLimit);
   const sendMessage = useSendWhatsAppMessage();
   const markAsRead = useMarkConversationAsRead();
   const archiveConversation = useArchiveConversation();
@@ -113,6 +115,7 @@ export default function Conversations() {
   useEffect(() => {
     previousMessagesLengthRef.current = 0;
     isUserScrollingRef.current = false;
+    setMessageLimit(50); // Reset limit
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
     }, 80);
@@ -339,6 +342,20 @@ export default function Conversations() {
               <div className="flex-1 overflow-hidden min-h-0">
                 <ScrollArea className="h-full">
                   <div className="p-3 space-y-2 bg-secondary min-h-full">
+                    {messages && messages.length >= messageLimit && (
+                      <div className="flex justify-center py-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-xs text-muted-foreground"
+                          onClick={() => setMessageLimit(prev => prev + 50)}
+                          disabled={fetchingMessages}
+                        >
+                          {fetchingMessages ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
+                          Carregar mensagens anteriores
+                        </Button>
+                      </div>
+                    )}
                     {loadingMessages ? <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                       </div> : messages?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center">
