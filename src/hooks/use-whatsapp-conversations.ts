@@ -232,9 +232,13 @@ export function useWhatsAppConversation(conversationId: string | null) {
   });
 }
 
-export function useWhatsAppMessages(conversationId: string | null, leadId?: string | null) {
+export function useWhatsAppMessages(
+  conversationId: string | null, 
+  leadId?: string | null,
+  limit: number = 50
+) {
   const queryClient = useQueryClient();
-  const messageQueryKey = ["whatsapp-messages", conversationId, leadId];
+  const messageQueryKey = ["whatsapp-messages", conversationId, leadId, limit];
 
   const query = useQuery({
     queryKey: messageQueryKey,
@@ -246,10 +250,12 @@ export function useWhatsAppMessages(conversationId: string | null, leadId?: stri
           .from("whatsapp_messages")
           .select("*")
           .eq("conversation_id", conversationId)
-          .order("sent_at", { ascending: true });
+          .order("sent_at", { ascending: false }) // Mudado para false para pegar as mais recentes
+          .limit(limit);
 
-        if (!error && data && data.length > 0) {
-          return data as WhatsAppMessage[];
+        if (!error && data) {
+          // Reverter para ordem ascendente para o chat
+          return (data as WhatsAppMessage[]).reverse();
         }
 
         if (error && !leadId) {
