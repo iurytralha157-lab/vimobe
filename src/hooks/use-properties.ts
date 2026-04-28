@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
@@ -15,25 +15,31 @@ const PROPERTY_LIST_FIELDS = `
   commission_percentage, cadastrado_por
 `;
 
-export function useProperties(search?: string) {
-  return useQuery({
-    queryKey: ['properties', search],
-    queryFn: async () => {
+export function useProperties(search?: string, pageSize: number = 24) {
+  return useInfiniteQuery({
+    queryKey: ['properties', search, pageSize],
+    queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from('properties')
-        .select(PROPERTY_LIST_FIELDS)
+        .select(PROPERTY_LIST_FIELDS, { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(1000);
+        .range(pageParam * pageSize, (pageParam + 1) * pageSize - 1);
       
       if (search) {
         query = query.or(`code.ilike.%${search}%,title.ilike.%${search}%,bairro.ilike.%${search}%,cidade.ilike.%${search}%,uf.ilike.%${search}%,tipo_de_imovel.ilike.%${search}%,tipo_de_negocio.ilike.%${search}%,vista_codigo.ilike.%${search}%,imoview_codigo.ilike.%${search}%`);
       }
       
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       
       if (error) throw error;
-      return data as Property[];
+      return {
+        properties: data as Property[],
+        nextPage: data.length === pageSize ? pageParam + 1 : undefined,
+        totalCount: count || 0
+      };
     },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+    initialPageParam: 0,
   });
 }
 
