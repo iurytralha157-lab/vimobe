@@ -444,7 +444,7 @@ export default function PublicHome() {
       )}
 
       {/* Featured Properties Section */}
-      {featuredProperties.length > 0 && (
+      {(featuredProperties.length > 0 || isHomeDataLoading) && (
         <section className="py-20" style={{ backgroundColor: isDarkTheme ? backgroundColor : '#FFFFFF' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
