@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key } from 'lucide-react';
+import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key, Bell } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
@@ -25,6 +25,7 @@ import { WebhooksTab } from '@/components/settings/WebhooksTab';
 import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
 import { AIAgentTab } from '@/components/settings/AIAgentTab';
 import { APITab } from '@/components/settings/APITab';
+import { NotificationsTab } from '@/components/settings/NotificationsTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
@@ -70,6 +71,7 @@ export default function Settings() {
     const tabs: AnimatedTabItem[] = [
       { value: 'account', label: 'Conta', icon: User,
         renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> },
+      { value: 'notifications', label: 'Notificações', icon: Bell },
     ];
 
     // Only admins and super admins can see the Users tab
@@ -134,6 +136,10 @@ export default function Settings() {
 
           <TabsContent value="account">
             <AccountTab />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <NotificationsTab />
           </TabsContent>
 
           <TabsContent value="team">
