@@ -11,6 +11,7 @@ import { usePublicContext } from "./usePublicContext";
 import PropertyFiltersContent from "@/components/public/PropertyFiltersContent";
 import { getPositionClasses, WatermarkPosition } from "@/lib/watermark-utils";
 import { usePublicFavorites } from "@/hooks/use-public-favorites";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PublicProperties() {
   const { organizationId, siteConfig } = usePublicContext();
