@@ -21,7 +21,7 @@ interface FilteredStageCountsParams {
 }
 
 // Limite de leads por estágio para paginação inicial (otimizado para performance)
-const LEADS_PER_STAGE = 50;
+const LEADS_PER_STAGE = 25; // Reduzido de 50 para carregamento inicial mais rápido
 
 // Campos otimizados para leads no pipeline - only columns that exist in the database
 const LEAD_PIPELINE_FIELDS = `
@@ -55,21 +55,14 @@ export function useStages(pipelineId?: string) {
       
       const stages = data || [];
       
-      // Count leads per stage using head:true (no data transfer, just count)
-      const countPromises = stages.map(stage =>
-        supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('stage_id', stage.id)
-      );
-      
-      const countResults = await Promise.all(countPromises);
-      
-      return stages.map((stage, index) => ({
+      // Count leads per stage is now faster because we don't do it here if we use useStagesWithLeads
+      // but keeping it for compatibility with other components
+      return stages.map(stage => ({
         ...stage,
-        lead_count: countResults[index]?.count || 0,
+        lead_count: 0, // Placeholder, counts are now handled better in stages-with-leads
       })) as Stage[];
     },
+    staleTime: 1000 * 60 * 10, // Stages don't change often
   });
 }
 
