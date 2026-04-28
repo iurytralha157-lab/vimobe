@@ -85,15 +85,20 @@ export function WebPushPrompt() {
   const handleEnable = async () => {
     setIsSubscribing(true);
     
-    const success = await subscribe();
-    
-    setIsSubscribing(false);
-    
-    if (success) {
-      toast.success('Notificações ativadas com sucesso!');
-      setShowPrompt(false);
-    } else {
-      toast.error('Não foi possível ativar as notificações. Verifique as permissões do navegador.');
+    try {
+      const sub = await subscribe();
+      
+      if (sub) {
+        toast.success('Notificações ativadas com sucesso!');
+        setShowPrompt(false);
+      } else {
+        toast.error('Não foi possível ativar as notificações. Verifique as permissões do dispositivo.');
+      }
+    } catch (err: any) {
+      console.error('Error enabling push from prompt:', err);
+      toast.error('Erro ao ativar notificações: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
