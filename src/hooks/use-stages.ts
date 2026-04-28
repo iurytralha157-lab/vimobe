@@ -176,7 +176,7 @@ export function useStagesWithLeads(
           .eq('pipeline_id', targetPipelineId)
           .eq('stage_id', stage.id)
           .order('stage_entered_at', { ascending: false })
-          .range(0, LEADS_PER_STAGE - 1);
+          .limit(LEADS_PER_STAGE);
         
         return applyFilters(query);
       });
@@ -216,120 +216,46 @@ export function useStagesWithLeads(
       
       const leadIds = leads.map((l: any) => l.id);
       
-      // Run ALL enrichment queries in parallel (tags, whatsapp, tasks)
-      const [tagsByLead, phoneToWhatsApp, tasksByLead] = await Promise.all([
-        // Tags
-        (async () => {
-          if (leadIds.length === 0) return {} as Record<string, { id: string; name: string; color: string }[]>;
-          const { data: leadTags } = await supabase
-            .from('lead_tags')
-            .select('lead_id, tag:tags(id, name, color)')
-            .in('lead_id', leadIds);
-          return (leadTags || []).reduce((acc, lt) => {
-            if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
-            if (lt.tag) acc[lt.lead_id].push(lt.tag as any);
-            return acc;
-          }, {} as Record<string, { id: string; name: string; color: string }[]>);
-        })(),
-        // WhatsApp conversations
-        (async () => {
-          const leadsWithPhone = leads.filter((l: any) => l.phone);
-          const result = new Map<string, { picture: string | null; unread_count: number; has_messages: boolean }>();
-          if (leadsWithPhone.length === 0) return result;
-          
-          const phoneNumbers: string[] = [];
-          leadsWithPhone.forEach((l: any) => {
-            const cleaned = l.phone.replace(/\D/g, '');
-            if (!cleaned) return;
-            phoneNumbers.push(cleaned);
-            if (cleaned.startsWith('55') && cleaned.length >= 12) {
-              phoneNumbers.push(cleaned.substring(2));
-            } else {
-              phoneNumbers.push('55' + cleaned);
-            }
-          });
-          const uniquePhones = [...new Set(phoneNumbers.filter(Boolean))];
-          
-          if (uniquePhones.length === 0) return result;
-          
-          const { data: conversations } = await supabase
-            .from('whatsapp_conversations')
-            .select('contact_phone, contact_picture, unread_count, last_message_at')
-            .in('contact_phone', uniquePhones)
-            .is('deleted_at', null);
-          
-          (conversations || []).forEach(c => {
-            if (c.contact_phone) {
-              const normalized = normalizePhone(c.contact_phone);
-              if (normalized) {
-                const existing = result.get(normalized);
-                result.set(normalized, {
-                  picture: c.contact_picture || existing?.picture || null,
-                  unread_count: (existing?.unread_count || 0) + (c.unread_count || 0),
-                  has_messages: existing?.has_messages || !!c.last_message_at,
-                });
-              }
-            }
-          });
-          return result;
-        })(),
-        // Tasks
-        (async () => {
-          const result: Record<string, { pending: number; completed: number }> = {};
-          if (leadIds.length === 0) return result;
-          const { data: taskCounts } = await supabase
-            .from('lead_tasks')
-            .select('lead_id, is_done')
-            .in('lead_id', leadIds);
-          (taskCounts || []).forEach((t: any) => {
-            if (!result[t.lead_id]) result[t.lead_id] = { pending: 0, completed: 0 };
-            if (t.is_done) {
-              result[t.lead_id].completed++;
-            } else {
-              result[t.lead_id].pending++;
-            }
-          });
-          return result;
-        })(),
-      ]);
+      // No enrichment here - will fetch details only when needed or via small optimized batches
+      return result;
+    },
+  });
+}
+
+// Separate hook for enrichment if needed, or keeping it but with massive optimization
+async function getEnrichedLeadsBatch(leads: any[]) {
+  const leadIds = leads.map(l => l.id);
+  if (leadIds.length === 0) return [];
+
+  const [tagsResult, taskCountsResult] = await Promise.all([
+    supabase.from('lead_tags').select('lead_id, tag:tags(id, name, color)').in('lead_id', leadIds),
+    supabase.from('lead_tasks').select('lead_id, is_done').in('lead_id', leadIds)
+  ]);
+
+  const tagsByLead = (tagsResult.data || []).reduce((acc: any, lt: any) => {
+    if (!acc[lt.lead_id]) acc[lt.lead_id] = [];
+    if (lt.tag) acc[lt.lead_id].push(lt.tag);
+    return acc;
+  }, {});
+
+  const tasksByLead = (taskCountsResult.data || []).reduce((acc: any, t: any) => {
+    if (!acc[t.lead_id]) acc[t.lead_id] = { pending: 0, completed: 0 };
+    if (t.is_done) acc[t.lead_id].completed++;
+    else acc[t.lead_id].pending++;
+    return acc;
+  }, {});
+
+  return leads.map(l => ({
+    ...l,
+    tags: tagsByLead[l.id] || [],
+    tasks_count: tasksByLead[l.id] || { pending: 0, completed: 0 }
+  }));
+}
       
-      // Map de stages para lookup rápido
-      const stagesById = stages.reduce((acc, stage) => {
-        acc[stage.id] = stage;
-        return acc;
-      }, {} as Record<string, any>);
-      
-      // Enriquecer leads por estágio
-      const enrichedLeadsByStage: Record<string, any[]> = {};
-      
-      for (const stageId of Object.keys(leadsByStageRaw)) {
-        enrichedLeadsByStage[stageId] = leadsByStageRaw[stageId].map((lead: any) => {
-          let whatsapp_picture: string | null = null;
-          let unread_count = 0;
-          let has_whatsapp_messages = false;
-          if (lead.phone) {
-            const normalizedPhone = normalizePhone(lead.phone);
-            const whatsappData = phoneToWhatsApp.get(normalizedPhone);
-            whatsapp_picture = whatsappData?.picture || null;
-            unread_count = whatsappData?.unread_count || 0;
-            has_whatsapp_messages = whatsappData?.has_messages || false;
-          }
-          
-          return {
-            ...lead,
-            tags: tagsByLead[lead.id] || [],
-            tasks_count: tasksByLead[lead.id] || { pending: 0, completed: 0 },
-            stage: stagesById[stageId] || null,
-            whatsapp_picture,
-            unread_count,
-            has_whatsapp_messages,
-          };
-        });
-      }
-      
+      // Build final stages list
       return stages.map(stage => ({
         ...stage,
-        leads: enrichedLeadsByStage[stage.id] || [],
+        leads: leadsByStageRaw[stage.id] || [],
         total_lead_count: totalCountsByStage[stage.id] || 0,
         has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
       }));
