@@ -37,7 +37,20 @@ export function usePwaUpdate() {
                 }
               });
             }
+            // Clear all caches for icons specifically
+            if ('caches' in window) {
+              caches.keys().then(names => {
+                for (let name of names) {
+                  caches.delete(name);
+                }
+              });
+            }
+            // Clear storage and reload
+            localStorage.clear();
+            sessionStorage.clear();
+            
             updateServiceWorker(true);
+            setTimeout(() => window.location.reload(), 500);
           },
         },
         duration: Infinity,
