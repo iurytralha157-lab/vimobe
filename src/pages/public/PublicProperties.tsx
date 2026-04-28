@@ -184,9 +184,8 @@ export default function PublicProperties() {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  if (!siteConfig) {
-    return null;
-  }
+  // We remove the blocking return and use optional chaining/placeholders below
+  const isSiteLoading = isConfigLoading;
 
   // Memoized callbacks to prevent unnecessary re-renders
   const handleSetLocalSearch = useCallback((value: string) => {
