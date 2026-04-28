@@ -214,15 +214,18 @@ export function useStagesWithLeads(
         leads.push(...stageLeads);
       });
       
-      const leadIds = leads.map((l: any) => l.id);
-      
-      // No enrichment here - will fetch details only when needed or via small optimized batches
-      return result;
+      // Build final stages list
+      return stages.map(stage => ({
+        ...stage,
+        leads: leadsByStageRaw[stage.id] || [],
+        total_lead_count: totalCountsByStage[stage.id] || 0,
+        has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
+      }));
     },
   });
 }
 
-// Separate hook for enrichment if needed, or keeping it but with massive optimization
+// Separate function for enrichment if needed later
 async function getEnrichedLeadsBatch(leads: any[]) {
   const leadIds = leads.map(l => l.id);
   if (leadIds.length === 0) return [];
@@ -250,17 +253,6 @@ async function getEnrichedLeadsBatch(leads: any[]) {
     tags: tagsByLead[l.id] || [],
     tasks_count: tasksByLead[l.id] || { pending: 0, completed: 0 }
   }));
-}
-      
-      // Build final stages list
-      return stages.map(stage => ({
-        ...stage,
-        leads: leadsByStageRaw[stage.id] || [],
-        total_lead_count: totalCountsByStage[stage.id] || 0,
-        has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
-      }));
-    },
-  });
 }
 
 export function useLeadMetaFilters() {
