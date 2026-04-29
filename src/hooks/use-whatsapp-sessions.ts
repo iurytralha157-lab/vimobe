@@ -16,7 +16,7 @@ export interface WhatsAppSession {
   profile_name: string | null;
   profile_picture: string | null;
   is_active: boolean;
-  is_notification_session?: boolean;
+  // is_notification_session removed
   created_at: string;
   updated_at: string;
   last_connected_at?: string | null;
@@ -63,7 +63,7 @@ export function useWhatsAppSessions() {
         ...session,
         display_name: (session as any).display_name || null,
         last_connected_at: (session as any).last_connected_at || null,
-        is_notification_session: (session as any).is_notification_session || false,
+        // is_notification_session removed
       })) as WhatsAppSession[];
     },
     enabled: !!profile?.organization_id,
@@ -543,31 +543,5 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
   };
 }
 
-export function useToggleNotificationSession() {
-  const queryClient = useQueryClient();
+// useToggleNotificationSession removed
 
-  return useMutation({
-    mutationFn: async ({ sessionId, enabled }: { sessionId: string; enabled: boolean }) => {
-      const { error } = await supabase
-        .from("whatsapp_sessions")
-        .update({ is_notification_session: enabled } as any)
-        .eq("id", sessionId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-      toast({
-        title: "Configuração atualizada",
-        description: "Sessão de notificação alterada com sucesso",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-}

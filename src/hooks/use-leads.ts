@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 import { normalizePhone } from '@/lib/phone-utils';
-import { notifyLeadCreated } from './use-lead-notifications';
+// notifyLeadCreated removed
 import { logAuditAction } from './use-audit-logs';
 export type Lead = Tables<'leads'> & {
   tags?: { id: string; name: string; color: string }[];
@@ -297,15 +297,8 @@ export function useCreateLead() {
         organizationId
       ).catch(console.error);
       
-      // Notificar todas as partes interessadas (vendedor, líderes, admins)
-      await notifyLeadCreated({
-        leadId: data.id,
-        leadName: lead.name,
-        organizationId: organizationId,
-        pipelineId: pipelineId,
-        assignedUserId: lead.assigned_user_id,
-        source: lead.source || 'manual',
-      });
+      // Notificar todas as partes interessadas removido
+
       
       return data;
     },
@@ -449,13 +442,8 @@ export function useDeleteLead() {
         .eq('id', id)
         .single();
       
-      // Delete related notifications first to avoid FK constraint violation
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('lead_id', id);
-      
-      if (notifError) throw notifError;
+      // Delete related notifications removed
+
 
       const { error } = await supabase
         .from('leads')

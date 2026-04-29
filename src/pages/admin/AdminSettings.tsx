@@ -27,7 +27,7 @@ interface SystemSettingsValue {
   maintenance_mode?: boolean | null;
   maintenance_message?: string | null;
   feature_flags?: Record<string, boolean> | null;
-  notification_instance_name?: string | null;
+  // notification_instance_name removed
 }
 
 interface SystemSettingsRow {
@@ -64,11 +64,8 @@ export default function AdminSettings() {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
   const [savingFlags, setSavingFlags] = useState(false);
 
-  // WhatsApp notification instance state
-  const [notificationInstanceName, setNotificationInstanceName] = useState('');
-  const [savingInstance, setSavingInstance] = useState(false);
-  const [checkingInstance, setCheckingInstance] = useState(false);
-  const [instanceConnected, setInstanceConnected] = useState<boolean | null>(null);
+  // notificationInstanceName state removed
+
 
   // Announcements state
   const [announcementMessage, setAnnouncementMessage] = useState('');
@@ -135,7 +132,6 @@ export default function AdminSettings() {
         maintenance_mode: value.maintenance_mode || false,
         maintenance_message: value.maintenance_message || '',
         feature_flags: value.feature_flags || {},
-        notification_instance_name: value.notification_instance_name || null,
       });
       setWhatsapp(value.default_whatsapp || '');
       setLogoWidth(value.logo_width || 140);
@@ -143,7 +139,6 @@ export default function AdminSettings() {
       setMaintenanceMode(value.maintenance_mode || false);
       setMaintenanceMessage(value.maintenance_message || '');
       setFeatureFlags(value.feature_flags || {});
-      setNotificationInstanceName(value.notification_instance_name || '');
     }
     setLoading(false);
   };
@@ -164,7 +159,6 @@ export default function AdminSettings() {
       maintenance_mode: settings.maintenance_mode,
       maintenance_message: settings.maintenance_message,
       feature_flags: settings.feature_flags,
-      notification_instance_name: settings.notification_instance_name,
     };
 
     const newValue = { ...currentValue, ...updates };
@@ -783,118 +777,8 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* WhatsApp Notification Instance Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-green-500" />
-              WhatsApp de Notificações (Global)
-            </CardTitle>
-            <CardDescription>
-              Configure uma instância WhatsApp central para enviar notificações automáticas. 
-              Organizações que possuem seu próprio WhatsApp de notificação usarão o deles. 
-              As demais receberão notificações por este WhatsApp global.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 md:px-6 pb-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="notification-instance">Nome da Instância (Evolution API)</Label>
-              <Input
-                id="notification-instance"
-                placeholder="ex: vetor-notifications"
-                value={notificationInstanceName}
-                onChange={(e) => {
-                  setNotificationInstanceName(e.target.value);
-                  setInstanceConnected(null);
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Informe o nome da instância já criada no Evolution API que será usada para notificações globais.
-              </p>
-            </div>
+        {/* WhatsApp Notification Instance Card removed */}
 
-            {instanceConnected !== null && (
-              <div className={`flex items-center gap-2 p-3 rounded-lg border ${
-                instanceConnected 
-                  ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' 
-                  : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
-              }`}>
-                {instanceConnected ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-700 dark:text-green-300 font-medium">Instância conectada</span>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-4 w-4 text-red-600" />
-                    <span className="text-sm text-red-700 dark:text-red-300 font-medium">Instância desconectada</span>
-                  </>
-                )}
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-3">
-              <Button 
-                variant="outline"
-                onClick={async () => {
-                  if (!notificationInstanceName.trim()) {
-                    toast.error('Informe o nome da instância');
-                    return;
-                  }
-                  setCheckingInstance(true);
-                  try {
-                    const { data, error } = await supabase.functions.invoke('global-whatsapp-status', {
-                      body: { instance_name: notificationInstanceName },
-                    });
-                    if (error) throw error;
-                    setInstanceConnected(data?.connected ?? false);
-                    if (data?.connected) {
-                      toast.success('Instância conectada!');
-                    } else {
-                      toast.warning('Instância não está conectada');
-                    }
-                  } catch (error: any) {
-                    toast.error('Erro ao verificar: ' + error.message);
-                    setInstanceConnected(false);
-                  } finally {
-                    setCheckingInstance(false);
-                  }
-                }}
-                disabled={checkingInstance || !notificationInstanceName.trim()}
-              >
-                {checkingInstance ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                Verificar Conexão
-              </Button>
-
-              <Button 
-                onClick={async () => {
-                  if (!settings) return;
-                  setSavingInstance(true);
-                  try {
-                    await updateSettingsValue({ notification_instance_name: notificationInstanceName || null });
-                    toast.success('Instância de notificação salva!');
-                  } catch (error: any) {
-                    toast.error('Erro ao salvar: ' + error.message);
-                  } finally {
-                    setSavingInstance(false);
-                  }
-                }}
-                disabled={savingInstance}
-              >
-                {savingInstance ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Salvar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

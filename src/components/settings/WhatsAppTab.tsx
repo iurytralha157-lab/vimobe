@@ -34,7 +34,7 @@ import {
   useSessionAccess,
   useGrantSessionAccess,
   useRevokeSessionAccess,
-  useToggleNotificationSession,
+  // useToggleNotificationSession removed
   WhatsAppSession } from
 "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
@@ -53,7 +53,7 @@ export function WhatsAppTab() {
   const getQRCode = useGetQRCode();
   const getConnectionStatus = useGetConnectionStatus();
   const logoutSession = useLogoutSession();
-  const toggleNotification = useToggleNotificationSession();
+  // toggleNotification removed
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -329,37 +329,10 @@ export function WhatsAppTab() {
                   {/* Row 2: Responsável + notificação toggle */}
                   <div className="flex items-center justify-between gap-2 py-1.5 border-y border-border/50">
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      {(session as any).is_notification_session &&
-                  <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-[10px] px-1.5 py-0 shrink-0">
-                          <Bell className="w-2.5 h-2.5 mr-0.5" />
-                          Notif.
-                        </Badge>
-                  }
                       <span className="text-xs text-muted-foreground truncate">
                         {session.owner?.name || "—"}
                       </span>
                     </div>
-                    {isAdmin &&
-                <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Bell className="w-3.5 h-3.5 text-muted-foreground" />
-                              <Switch
-                          checked={(session as any).is_notification_session || false}
-                          onCheckedChange={(checked) =>
-                          toggleNotification.mutate({ sessionId: session.id, enabled: checked })
-                          }
-                          disabled={toggleNotification.isPending} />
-
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Usar para enviar notificações via WhatsApp</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                }
                   </div>
 
                   {/* Row 3: Action buttons */}
