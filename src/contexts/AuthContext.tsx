@@ -250,7 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        console.log("Session found, fetching profile for:", session.user.id);
+        // console.log removed for speed
         setSession(session);
         setUser(session.user);
         
