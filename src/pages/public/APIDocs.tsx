@@ -102,7 +102,7 @@ export default function APIDocs() {
               <code className="break-all">{BASE_URL}</code>
               <button
                 onClick={() => copy(BASE_URL)}
-                className="p-1 hover:bg-slate-800 rounded flex-shrink-0"
+                className="p-1 hover:bg-muted-foreground/10 rounded flex-shrink-0"
               >
                 <Copy className="h-4 w-4" />
               </button>
