@@ -177,8 +177,7 @@ async function sendWebPushNotification(
     // Ensure we use the raw uncompressed public key (65 bytes) for the header
     const rawPublicKey = getRawPublicKey(publicKey);
 
-    // VAPID JWT header for Web Push must include 'k' (key) if required, 
-    // but the critical part is 'sub' and 'aud'.
+    // VAPID JWT header for Web Push 
     const endpointUrl = new URL(subscription.endpoint);
     const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
 
