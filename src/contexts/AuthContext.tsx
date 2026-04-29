@@ -253,23 +253,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session.user);
 
-        // Adicionar um timeout para evitar que o app trave se o banco estiver lento (recursão de RLS)
+        // Adicionar um timeout para evitar que o app trave se o banco estiver lento
         const profilePromise = fetchProfile(session.user.id);
         const multiOrgPromise = checkMultiOrg(session.user.id);
         
-        // Carrega dados em paralelo sem travar o estado de loading se um falhar
-        Promise.all([
-          profilePromise.catch(e => console.error("Erro perfil:", e)),
-          multiOrgPromise.catch(e => console.error("Erro multi-org:", e))
+        // Carrega dados em paralelo, mas libera o loading após no máximo 3 segundos 
+        // para não travar o usuário em uma tela branca/carregando
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
+
+        Promise.race([
+          Promise.all([
+            profilePromise.catch(e => console.error("Erro perfil:", e)),
+            multiOrgPromise.catch(e => console.error("Erro multi-org:", e))
+          ]),
+          timeoutPromise
         ]).finally(() => {
-          if (isMounted) setLoading(false);
+          if (isMounted) {
+            console.log("Auth: Loading finalizado (via timeout ou sucesso)");
+            setLoading(false);
+          }
         });
       } catch (e) {
         console.error('Erro fatal na inicialização do Auth:', e);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
