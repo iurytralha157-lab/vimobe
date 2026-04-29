@@ -175,7 +175,7 @@ function AppRoutes() {
     // Only preload CRM pages if we are NOT on a custom domain and user is logged in
     if (user && !loading && !isCustomDomain()) {
       // Delay preloading slightly to prioritize current page render
-      const timer = setTimeout(preloadCoreCrmPages, 3000);
+      const timer = setTimeout(preloadCoreCrmPages, 1000);
       return () => clearTimeout(timer);
     }
   }, [user, loading]);
