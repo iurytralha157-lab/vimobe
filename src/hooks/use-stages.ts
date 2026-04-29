@@ -640,11 +640,13 @@ export function useLoadMoreLeads() {
       
       if (error) throw error;
       
-      // Buscar tags dos novos leads
-      const leadIds = (data || []).map((l: any) => l.id);
-      let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
+      // Formatar tags dos novos leads
+      const formattedLeads = (data || []).map((l: any) => ({
+        ...l,
+        tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+      }));
       
-      return { stageId, leads: data || [] };
+      return { stageId, leads: formattedLeads };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
       const dateFromISO = filters?.dateRange?.from?.toISOString();
