@@ -239,31 +239,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initSession = async () => {
       try {
-        // 1. Busca apenas a sessão básica (muito rápido)
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
 
         if (error || !session) {
+          console.log('Sessão inválida na inicialização:', error?.message);
           clearAllStates();
-          setLoading(false); // Libera a tela imediatamente para o Login
+          setLoading(false);
           return;
         }
 
-        // 2. Define o usuário básico
         setSession(session);
         setUser(session.user);
+
+        // Adicionar um timeout para evitar que o app trave se o banco estiver lento (recursão de RLS)
+        const profilePromise = fetchProfile(session.user.id);
+        const multiOrgPromise = checkMultiOrg(session.user.id);
         
-        // 3. LIBERA O CARREGAMENTO AQUI (Não espera por perfil ou org)
-        setLoading(false);
-
-        // 4. Busca dados pesados em background
-        fetchProfile(session.user.id);
-        checkMultiOrg(session.user.id);
-
+        // Carrega dados em paralelo sem travar o estado de loading se um falhar
+        Promise.all([
+          profilePromise.catch(e => console.error("Erro perfil:", e)),
+          multiOrgPromise.catch(e => console.error("Erro multi-org:", e))
+        ]).finally(() => {
+          if (isMounted) setLoading(false);
+        });
       } catch (e) {
-        console.error('Erro na inicialização rápida do Auth:', e);
-        if (isMounted) setLoading(false);
+        console.error('Erro fatal na inicialização do Auth:', e);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
