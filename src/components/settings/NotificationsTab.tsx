@@ -147,17 +147,17 @@ export const NotificationsTab = () => {
             )}
             <Button
               variant={subscription ? 'secondary' : 'default'}
-              size="sm"
-              className="flex-1 sm:flex-none"
+              size="lg"
+              className="flex-1 sm:flex-none font-bold h-12 px-8 text-base shadow-lg animate-pulse"
               onClick={handleToggle}
               disabled={loading || isPreparing || permission === 'denied'}
             >
               {loading || isPreparing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : subscription ? (
                 'Desativar'
               ) : (
-                'Ativar Agora'
+                '🚀 ATIVAR NOTIFICAÇÕES AGORA'
               )}
             </Button>
           </div>
