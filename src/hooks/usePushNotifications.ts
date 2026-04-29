@@ -82,13 +82,12 @@ export const usePushNotifications = () => {
       return;
     }
     try {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      if (regs.length === 0) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
         setSwStatus('none');
         return;
       }
       
-      const reg = regs.find(r => r.active) || regs[0];
       if (reg.active) setSwStatus('active');
       else if (reg.waiting) setSwStatus('waiting');
       else if (reg.installing) setSwStatus('installing');
@@ -152,9 +151,8 @@ export const usePushNotifications = () => {
   const getSubscription = useCallback(async () => {
     if (!checkSupport()) return null;
     try {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      const reg = regs.find(r => r.active) || regs[0];
-      if (!reg) return null;
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg || !reg.active) return null;
       
       const sub = await reg.pushManager.getSubscription();
       setSubscription(sub);
