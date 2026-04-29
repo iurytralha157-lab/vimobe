@@ -147,7 +147,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3 auto-rows-min">
               <KPICardsGrid 
                 data={kpiData} 
-                isLoading={statsLoading} 
+                isLoading={statsLoading || !organization?.id} 
                 periodLabel={periodLabel} 
                 propertyCount={propertyCount}
                 siteVisits={siteVisits}
@@ -156,13 +156,19 @@ export default function Dashboard() {
 
             {/* Evolution chart - fills remaining height */}
             <div className="flex-1 min-h-0">
-                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading || !organization?.id} />
             </div>
           </div>
 
           {/* Right column (col 9-12): Sales Funnel */}
           <div className="col-span-4 min-h-0 overflow-hidden">
-            {funnelComponent}
+            {statsLoading || !organization?.id ? (
+              <Card className="h-full flex items-center justify-center">
+                <Skeleton className="h-[400px] w-full" />
+              </Card>
+            ) : (
+              funnelComponent
+            )}
           </div>
         </div>
 
