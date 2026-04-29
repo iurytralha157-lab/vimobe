@@ -44,10 +44,10 @@ Deno.serve(async (req) => {
 
     console.log(`[Push] Processing request for user: ${payload.user_id}`);
 
-    // Get VAPID keys from env
-    const publicKey = Deno.env.get("VAPID_PUBLIC_KEY");
-    const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-    const mailto = Deno.env.get("VAPID_MAILTO") || "mailto:suporte@vimob.com.br";
+    // Get VAPID keys from env and sanitize (remove potential quotes or whitespace)
+    const publicKey = Deno.env.get("VAPID_PUBLIC_KEY")?.replace(/["']/g, "").trim();
+    const privateKey = Deno.env.get("VAPID_PRIVATE_KEY")?.replace(/["']/g, "").trim();
+    const mailto = (Deno.env.get("VAPID_MAILTO") || "mailto:suporte@vimob.com.br")?.replace(/["']/g, "").trim();
 
     if (!publicKey || !privateKey) {
       console.error("[Push] VAPID keys not configured in environment variables");
