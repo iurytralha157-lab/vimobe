@@ -30,21 +30,9 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
     registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
   }
 
-  // 2. Se já estiver ativo, retorna IMEDIATAMENTE (zero wait)
-  if (registration.active) {
-    return registration;
-  }
-
-  // 3. Se estiver instalando ou esperando, aguarda a ativação
-  console.log('[Push] Aguardando ativação do Service Worker...');
-  
-  // O ready promise é o caminho mais rápido nativo
-  return await Promise.race([
-    navigator.serviceWorker.ready,
-    new Promise<ServiceWorkerRegistration>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout na ativação')), 3000)
-    )
-  ]);
+  // 2. RETORNO IMEDIATO. Se estiver pronto, ótimo. Se estiver ativando, o PushManager vai lidar.
+  // Removido qualquer timeout ou loop de espera.
+  return registration;
 }
 
 export const usePushNotifications = () => {
