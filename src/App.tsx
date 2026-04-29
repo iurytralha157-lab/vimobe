@@ -133,15 +133,6 @@ const PageLoader = () => (
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
-  console.log("ProtectedRoute check:", { 
-    path: window.location.pathname,
-    loading, 
-    hasUser: !!user, 
-    hasProfile: !!profile, 
-    isSuperAdmin,
-    needsOrgSelection
-  });
-
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   
