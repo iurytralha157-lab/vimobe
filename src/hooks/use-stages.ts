@@ -34,7 +34,8 @@ const LEAD_PIPELINE_FIELDS = `
   assignee:users!leads_assigned_user_id_fkey(id, name, avatar_url),
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
-  lead_meta(campaign_name, adset_name, ad_name, platform)
+  lead_meta(campaign_name, adset_name, ad_name, platform),
+  tags:lead_tags(tag:tags(id, name, color))
 `;
 
 export function useStages(pipelineId?: string) {
@@ -204,14 +205,17 @@ export function useStagesWithLeads(
         totalCountsByStage[stage.id] = stageCountResults[index]?.count || 0;
       });
       
-      // Combinar leads de todos os estágios em um array plano
-      const leads: any[] = [];
+      // Combinar e formatar leads de todos os estágios
       const leadsByStageRaw: Record<string, any[]> = {};
       
       stages.forEach((stage, index) => {
         const stageLeads = stageLeadsResults[index]?.data || [];
-        leadsByStageRaw[stage.id] = stageLeads;
-        leads.push(...stageLeads);
+        // Formatar tags para o formato esperado (limpar o aninhamento do Supabase)
+        const formattedLeads = stageLeads.map((l: any) => ({
+          ...l,
+          tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+        }));
+        leadsByStageRaw[stage.id] = formattedLeads;
       });
       
       // Build final stages list
@@ -636,11 +640,13 @@ export function useLoadMoreLeads() {
       
       if (error) throw error;
       
-      // Buscar tags dos novos leads
-      const leadIds = (data || []).map((l: any) => l.id);
-      let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
+      // Formatar tags dos novos leads
+      const formattedLeads = (data || []).map((l: any) => ({
+        ...l,
+        tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+      }));
       
-      return { stageId, leads: data || [] };
+      return { stageId, leads: formattedLeads };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
       const dateFromISO = filters?.dateRange?.from?.toISOString();
