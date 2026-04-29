@@ -136,9 +136,10 @@ const PageLoader = () => (
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
-  if (loading) return <PageLoader />;
+  if (loading && !user) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
-  if (!profile && !isSuperAdmin) return <PageLoader />;
+  // Removido o bloqueio por falta de perfil - o app carrega o que tiver disponível
+  // if (!profile && !isSuperAdmin) return <PageLoader />;
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
@@ -174,9 +175,9 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    if (loading) return <PageLoader />;
+    if (loading && !user) return <PageLoader />;
     if (user) {
-      if (!profile && !isSuperAdmin) return <PageLoader />;
+      // Se já está logado, vai para o dashboard/admin sem esperar o perfil completo carregar
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;
@@ -197,7 +198,7 @@ function AppRoutes() {
 
   return (
     <>
-      {user && <PushNotificationHandler />}
+      {/* user && <PushNotificationHandler /> -- Comentado temporariamente para resolver lentidão */}
       {!isResetPasswordRoute && <AnnouncementBanner />}
       {!isResetPasswordRoute && <ImpersonateBanner />}
       {!isResetPasswordRoute && <Suspense fallback={null}><TrialExpiredModal /></Suspense>}
