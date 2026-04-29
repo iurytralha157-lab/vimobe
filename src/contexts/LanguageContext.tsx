@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { translations, Language, TranslationKeys } from '@/i18n';
-import { AuthContext } from './AuthContext';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LanguageContextType {
