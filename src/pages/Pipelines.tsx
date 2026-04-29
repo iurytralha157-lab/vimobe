@@ -508,24 +508,8 @@ export default function Pipelines() {
         },
       }).catch(err => console.error('Erro ao disparar automação de etapa:', err));
       
-      // Notificar partes interessadas para Telecom
-      if (isTelecom && profile?.organization_id && selectedPipelineId) {
-        // Buscar dados do lead para obter nome e assigned_user_id
-        const sourceStage = stages.find(s => s.id === oldStageId);
-        const movedLead = sourceStage?.leads?.find((l: any) => l.id === draggableId);
-        
-        if (movedLead) {
-          notifyLeadMoved({
-            leadId: draggableId,
-            leadName: movedLead.name,
-            organizationId: profile.organization_id,
-            pipelineId: selectedPipelineId,
-            fromStage: oldStage?.name || 'Desconhecido',
-            toStage: newStage?.name || 'Desconhecido',
-            assignedUserId: movedLead.assigned_user_id,
-          }).catch(err => console.error('Erro ao notificar movimentação:', err));
-        }
-      }
+      // Notificar partes interessadas para Telecom removido
+
       
       // Forçar refetch para garantir sincronização com banco (trigger pode ter alterado outros campos)
       await refetch();
