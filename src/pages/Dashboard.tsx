@@ -1,57 +1,43 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { performanceTracker } from '@/lib/performance';
 import { AppLayout } from '@/components/layout/AppLayout';
+
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
+
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
-import { useEnhancedDashboardStats, useDealsEvolutionData } from '@/hooks/use-dashboard-stats';
+import { 
+  useEnhancedDashboardStats, 
+  useDealsEvolutionData,
+} from '@/hooks/use-dashboard-stats';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Users, 
-  Target, 
-  CheckCircle2, 
-  DollarSign,
-  Building2,
-  Clock,
-  Eye,
-  TrendingUp,
-  TrendingDown,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
   const { organization, user } = useAuth();
   
 
-  // Property count - delayed for speed
-  const [propertyCount, setPropertyCount] = useState(0);
-  useEffect(() => {
-    if (!organization?.id) return;
-    const timer = setTimeout(async () => {
+  // Property count query
+  const { data: propertyCount = 0 } = useQuery({
+    queryKey: ['dashboard-property-count', organization?.id],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
       const { count, error } = await supabase
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', organization.id);
-      if (!error && count !== null) {
-        setPropertyCount(count);
-      }
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [organization?.id]);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!organization?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   const {
     filters,
@@ -80,25 +66,25 @@ export default function Dashboard() {
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
 
 
-  // Site visits count - delayed for speed
-  const [siteVisits, setSiteVisits] = useState(0);
-  useEffect(() => {
-    if (!organization?.id) return;
-    const timer = setTimeout(async () => {
+  // Site visits count - unique sessions (respects date filters)
+  const { data: siteVisits = 0 } = useQuery({
+    queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
+    queryFn: async () => {
+      if (!organization?.id) return 0;
       const { data, error } = await supabase
         .from('lead_events')
         .select('session_id')
         .eq('organization_id', organization.id)
         .gte('created_at', filters.dateRange.from.toISOString())
         .lte('created_at', filters.dateRange.to.toISOString())
-        .limit(1000);
-      if (!error && data) {
-        const uniqueSessions = new Set(data.map(e => e.session_id));
-        setSiteVisits(uniqueSessions.size);
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [organization?.id, filters.dateRange.from, filters.dateRange.to]);
+        .limit(5000);
+      if (error) throw error;
+      const uniqueSessions = new Set((data || []).map(e => e.session_id));
+      return uniqueSessions.size;
+    },
+    enabled: !!organization?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   useEffect(() => {
     if (!statsLoading && !evolutionLoading) {
@@ -208,7 +194,27 @@ export default function Dashboard() {
   );
 }
 
-// Duplicate imports removed
+// Separate KPI grid component for the 4+4 desktop layout
+import { 
+  Users, 
+  Target, 
+  CheckCircle2, 
+  DollarSign,
+  Building2,
+  Clock,
+  Eye,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 function formatKPIValue(value: string | number, format: string): string {
   if (typeof value === 'string') return value;

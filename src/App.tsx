@@ -92,15 +92,10 @@ const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
 
 function preloadCoreCrmPages() {
-  // Preloading only critical dashboard initially
   void import("./pages/Dashboard");
-  
-  // The rest can be loaded after a longer delay or on interaction
-  setTimeout(() => {
-    void import("./pages/Pipelines");
-    void import("./pages/Contacts");
-    void import("./pages/Conversations");
-  }, 5000);
+  void import("./pages/Pipelines");
+  void import("./pages/Contacts");
+  void import("./pages/Conversations");
 }
 
 function isCustomDomain(): boolean {
@@ -153,13 +148,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   
-  // If we have a user but no profile yet, and we are NOT loading, 
-  // we might have a broken state or a new user.
+  // If we have a user but no profile yet, show loader while it's fetching
   if (!profile && !isSuperAdmin) {
-    console.warn("ProtectedRoute: No profile found for authenticated user");
-    // If we're on onboarding, it's fine, but if we're trying to access dashboard,
-    // we should probably send them to onboarding to finish setup.
-    return <Navigate to="/onboarding" replace />;
+    console.log("ProtectedRoute: User found but no profile yet, waiting...");
+    return <PageLoader />;
   }
 
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
@@ -173,15 +165,16 @@ function AppRoutes() {
   useForceRefreshListener();
 
   useEffect(() => {
-    // Priority preloading
+    // Only preload CRM pages if we are NOT on a custom domain and user is logged in
     if (user && !loading && !isCustomDomain()) {
-      const timer = setTimeout(preloadCoreCrmPages, 500);
+      // Delay preloading slightly to prioritize current page render
+      const timer = setTimeout(preloadCoreCrmPages, 3000);
       return () => clearTimeout(timer);
     }
   }, [user, loading]);
 
   const getDefaultRedirect = () => {
-    // console.log removed for speed
+    console.log("Determining default redirect:", { needsOrgSelection, impersonating, isSuperAdmin });
     if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
     return "/dashboard";
