@@ -347,6 +347,28 @@ export const LeadCard = memo(function LeadCard({
                 </TooltipContent>
               </Tooltip>
 
+              {/* Cadence info */}
+              {(() => {
+                const totalTasks = lead.cadence_total_tasks || 0;
+                const completedTasks = lead.cadence_completed_tasks || 0;
+                if (totalTasks === 0) return null;
+                
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        <ListTodo className="h-2.5 w-2.5" />
+                        <span>{completedTasks}/{totalTasks}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      Progresso da cadência: {completedTasks} de {totalTasks} tarefas concluídas
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })()}
+
+
               {/* Valor do imóvel/interesse */}
               {valorInteresse > 0 && <Tooltip>
                   <TooltipTrigger asChild>
