@@ -21,44 +21,72 @@ const urlBase64ToUint8Array = (base64String: string) => {
  * Does NOT register a custom worker — relies on the PWA worker generated
  * by vite-plugin-pwa (which imports `/sw-push.js` for push events).
  */
-async function getActiveServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceWorkerRegistration> {
+async function getActiveServiceWorkerRegistration(timeoutMs = 15000): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
     throw new Error('Navegador sem suporte a Service Worker.');
   }
 
-  // 1. Check if already ready
+  console.log('[Push] Waiting for active service worker...');
+
+  // 1. Check if already ready with a shorter race
   const readyReg = await Promise.race([
     navigator.serviceWorker.ready,
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
   ]);
   
-  if (readyReg && readyReg.active) return readyReg;
+  if (readyReg && readyReg.active) {
+    console.log('[Push] Service worker is ready and active.');
+    return readyReg;
+  }
 
-  // 2. Try to get existing one
+  // 2. Try to get any existing registration and see its status
   const regs = await navigator.serviceWorker.getRegistrations();
+  console.log(`[Push] Found ${regs.length} registrations.`);
+  
   const activeReg = regs.find(r => r.active);
   if (activeReg) return activeReg;
 
-  // 3. Wait for any to activate
+  // 3. If we have a waiting worker, it might be the new one from vite-plugin-pwa
+  const waitingReg = regs.find(r => r.waiting);
+  if (waitingReg && waitingReg.waiting) {
+    console.log('[Push] Found waiting worker, skipping waiting...');
+    waitingReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    // Give it a moment to activate
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  // 4. Poll for active status with a long timeout
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timeout aguardando Service Worker.')), timeoutMs);
-    
-    const check = async () => {
+    const startTime = Date.now();
+    const interval = setInterval(async () => {
       const currentRegs = await navigator.serviceWorker.getRegistrations();
       const active = currentRegs.find(r => r.active);
+      
       if (active) {
-        clearTimeout(timeout);
+        clearInterval(interval);
+        console.log('[Push] Service worker finally active.');
         resolve(active);
-        return true;
+      } else if (Date.now() - startTime > timeoutMs) {
+        clearInterval(interval);
+        
+        // Final attempt: maybe try to register manually if absolutely nothing is found
+        if (currentRegs.length === 0) {
+          console.warn('[Push] No registrations found after timeout. Attempting manual registration...');
+          try {
+            const newReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+            // Wait a bit more for this new one
+            setTimeout(() => {
+              if (newReg.active) resolve(newReg);
+              else reject(new Error('Falha ao ativar o Service Worker após tentativa de registro manual.'));
+            }, 3000);
+          } catch (e) {
+            reject(new Error('Timeout aguardando Service Worker. Verifique se o app está instalado corretamente.'));
+          }
+        } else {
+          reject(new Error('O Service Worker está demorando muito para ativar. Tente atualizar a página.'));
+        }
       }
-      return false;
-    };
-
-    const interval = setInterval(async () => {
-      if (await check()) clearInterval(interval);
-    }, 500);
-
-    check();
+    }, 1000);
   });
 }
 
