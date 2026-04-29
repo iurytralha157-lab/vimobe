@@ -18,7 +18,7 @@ import { usePwaUpdate } from "@/hooks/use-pwa-update";
 import { useSystemBranding } from "@/hooks/use-system-branding";
 import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
-import { MetricsPanel } from "@/components/MetricsPanel";
+
 import { IOSInstallGuide } from "@/components/IOSInstallGuide";
 
 // Lazy imports - critical routes
@@ -193,7 +193,7 @@ function AppRoutes() {
       {!isResetPasswordRoute && user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
-        <MetricsPanel />
+        
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={renderAuthRoute()} />
