@@ -132,7 +132,10 @@ export const NotificationsTab = () => {
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                subscription ? 'Desativar' : 'Ativar Agora'
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" />
+                  Ativar Agora
+                </div>
               )}
             </Button>
           </div>
