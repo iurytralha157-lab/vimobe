@@ -38,48 +38,87 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export const subscribeToPush = async (userId: string) => {
+  console.log("[Push] Starting subscription process for user:", userId);
+  
   if (!isPushSupported()) {
     throw new Error("Push notifications are not supported in this browser.");
   }
 
-  const registration = await navigator.serviceWorker.register("/sw.js");
-  const permission = await Notification.requestPermission();
+  try {
+    // Ensure service worker is ready instead of always registering a new one
+    let registration: ServiceWorkerRegistration;
+    
+    console.log("[Push] Checking for existing service worker...");
+    const existingReg = await navigator.serviceWorker.getRegistration("/sw.js");
+    
+    if (existingReg) {
+      console.log("[Push] Using existing service worker registration");
+      registration = existingReg;
+    } else {
+      console.log("[Push] Registering new service worker...");
+      registration = await navigator.serviceWorker.register("/sw.js", {
+        scope: "/",
+      });
+    }
 
-  if (permission !== "granted") {
-    throw new Error("Permission not granted for notifications.");
-  }
+    // Wait for the service worker to be active
+    if (registration.installing) {
+      console.log("[Push] Service worker installing...");
+      await new Promise<void>((resolve) => {
+        registration.installing?.addEventListener("statechange", (e: any) => {
+          if (e.target.state === "activated") resolve();
+        });
+      });
+    }
 
-  if (!VAPID_PUBLIC_KEY) {
-    throw new Error("VAPID_PUBLIC_KEY is not defined in environment variables.");
-  }
+    console.log("[Push] Requesting notification permission...");
+    const permission = await Notification.requestPermission();
+    console.log("[Push] Permission result:", permission);
 
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
+    if (permission !== "granted") {
+      throw new Error("Permission not granted for notifications.");
+    }
 
-  const subscriptionJson = subscription.toJSON();
+    if (!VAPID_PUBLIC_KEY) {
+      throw new Error("VAPID_PUBLIC_KEY is not defined in environment variables.");
+    }
 
-  if (!subscriptionJson.endpoint || !subscriptionJson.keys?.p256dh || !subscriptionJson.keys?.auth) {
-    throw new Error("Invalid subscription object received from browser.");
-  }
-
-  // Alinha com o schema real do banco e o formato padrão do PushSubscription
-  const { error } = await supabase
-    .from("push_subscriptions")
-    .upsert({
-      user_id: userId,
-      subscription: subscriptionJson as any,
-    }, {
-      onConflict: 'user_id'
+    console.log("[Push] Subscribing to push manager...");
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
 
+    const subscriptionJson = subscription.toJSON();
+    console.log("[Push] Subscription successful:", subscriptionJson.endpoint);
 
-  if (error && !error.message?.includes("duplicate")) {
+    if (!subscriptionJson.endpoint || !subscriptionJson.keys?.p256dh || !subscriptionJson.keys?.auth) {
+      throw new Error("Invalid subscription object received from browser.");
+    }
+
+    // Upsert subscription to database
+    console.log("[Push] Saving subscription to database...");
+    const { error } = await supabase
+      .from("push_subscriptions")
+      .upsert({
+        user_id: userId,
+        subscription: subscriptionJson as any,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id'
+      });
+
+    if (error) {
+      console.error("[Push] Database error:", error);
+      throw error;
+    }
+
+    console.log("[Push] Subscription process complete");
+    return subscription;
+  } catch (error: any) {
+    console.error("[Push] Detailed subscription error:", error);
     throw error;
   }
-
-  return subscription;
 };
 
 export const unsubscribeFromPush = async (userId: string) => {

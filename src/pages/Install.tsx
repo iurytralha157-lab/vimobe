@@ -58,24 +58,54 @@ export default function Install() {
   };
 
   const handleTogglePush = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("Você precisa estar logado para configurar notificações");
+      return;
+    }
+    
     setIsSubscribing(true);
+    console.log("[Push] Toggle push initiated");
+    
+    // Safety timeout for the subscription process
+    const timeoutId = setTimeout(() => {
+      if (isSubscribing) {
+        setIsSubscribing(false);
+        console.warn("[Push] Subscription process timed out");
+      }
+    }, 15000);
+
     try {
       if (pushStatus === "granted") {
+        console.log("[Push] Unsubscribing...");
         await unsubscribeFromPush(user.id);
         setPushStatus("default");
         toast.success("Notificações desativadas");
       } else {
+        console.log("[Push] Subscribing...");
         await subscribeToPush(user.id);
         setPushStatus("granted");
         toast.success("Notificações ativadas com sucesso!");
       }
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || "Erro ao configurar notificações");
+      console.error("[Push] Error in handleTogglePush:", error);
+      
+      let errorMessage = "Erro ao configurar notificações";
+      if (error.message) {
+        if (error.message.includes("Permission not granted")) {
+          errorMessage = "Permissão de notificação negada. Verifique as configurações do navegador.";
+        } else if (error.message.includes("VAPID_PUBLIC_KEY")) {
+          errorMessage = "Erro de configuração: Chave VAPID ausente.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
       checkSubscriptionStatus().then(setPushStatus);
     } finally {
+      clearTimeout(timeoutId);
       setIsSubscribing(false);
+      console.log("[Push] Toggle push finished");
     }
   };
 
