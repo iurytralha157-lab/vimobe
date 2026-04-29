@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { supabase } from '@/integrations/supabase/client';
-import { Bell, BellOff, Loader2 } from 'lucide-react';
+import { Bell, BellOff, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const NotificationsTab = () => {
-  const { isSupported, permission, subscription, subscribeUser, unsubscribeUser } = usePushNotifications();
+  const { isSupported, permission, subscription, subscribeUser, unsubscribeUser, refreshSubscription } = usePushNotifications();
   const [loading, setLoading] = useState(false);
 
   const handleToggle = async () => {
@@ -17,27 +17,14 @@ export const NotificationsTab = () => {
         await unsubscribeUser();
         toast.success('Notificações desativadas');
       } else {
-        console.log('Attempting to subscribe...');
         const sub = await subscribeUser();
         if (sub) {
           toast.success('Notificações ativadas com sucesso!');
-        } else if (permission === 'denied') {
-          toast.error('Permissão de notificação negada. Por favor, ative nas configurações do dispositivo.');
-        } else {
-          toast.error('Não foi possível completar a inscrição.');
         }
       }
     } catch (err: any) {
-      console.error('Detailed error in handleToggle:', err);
-      const errorMessage = err.message || 'Erro desconhecido';
-      // Log specific known errors to help debugging
-      if (errorMessage.includes('Registration failed')) {
-        toast.error('Falha no registro do Service Worker. Tente recarregar a página.');
-      } else if (errorMessage.includes('Permission')) {
-        toast.error('Permissão de notificação não concedida.');
-      } else {
-        toast.error(`Erro ao processar notificações: ${errorMessage}`);
-      }
+      console.error('[Push] Toggle error:', err);
+      toast.error(`Erro: ${err.message || 'Erro ao processar notificações'}`);
     } finally {
       setLoading(false);
     }
@@ -52,17 +39,17 @@ export const NotificationsTab = () => {
       const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
           user_id: user.id,
-          title: 'Teste de Notificação',
-          message: 'Esta é uma notificação de teste enviada via Web Push API!',
+          title: 'Teste de Notificação 🚀',
+          message: 'Se você está vendo isso, as notificações PWA estão funcionando corretamente!',
           url: '/settings?tab=notifications'
         }
       });
 
       if (error) throw error;
-      toast.success('Solicitação de teste enviada!');
+      toast.success('Notificação de teste enviada!');
     } catch (err) {
-      console.error('Erro ao testar push:', err);
-      toast.error('Erro ao enviar notificação de teste.');
+      console.error('[Push] Test error:', err);
+      toast.error('Erro ao enviar teste. Verifique se o app está aberto.');
     } finally {
       setLoading(false);
     }
@@ -74,7 +61,7 @@ export const NotificationsTab = () => {
         <CardHeader>
           <CardTitle>Notificações Push</CardTitle>
           <CardDescription>
-            Seu navegador não suporta notificações push nativas.
+            Este navegador não suporta notificações PWA ou o site não foi instalado como App.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -83,50 +70,79 @@ export const NotificationsTab = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Notificações Push</CardTitle>
-        <CardDescription>
-          Receba notificações em tempo real diretamente no seu dispositivo.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div>
+          <CardTitle>Notificações Push</CardTitle>
+          <CardDescription>
+            Receba alertas de leads e mensagens mesmo com o app fechado.
+          </CardDescription>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => refreshSubscription()}
+          title="Sincronizar"
+        >
+          <RefreshCw className="h-4 w-4 text-muted-foreground" />
+        </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-4 border rounded-lg">
+      <CardContent className="space-y-4 pt-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4 bg-muted/30">
           <div className="flex items-center gap-3">
-            {subscription ? (
-              <Bell className="h-5 w-5 text-green-500" />
-            ) : (
-              <BellOff className="h-5 w-5 text-gray-400" />
-            )}
+            <div className={`p-2 rounded-full ${subscription ? 'bg-success/10' : 'bg-muted'}`}>
+              {subscription ? (
+                <Bell className="h-5 w-5 text-success" />
+              ) : (
+                <BellOff className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
             <div>
-              <p className="font-medium">
-                {subscription ? 'Notificações Ativas' : 'Notificações Inativas'}
+              <p className="font-semibold text-sm">
+                Status: {subscription ? 'Ativado' : 'Desativado'}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {permission === 'denied' 
-                  ? 'Permissão negada no navegador' 
+                  ? 'Acesso bloqueado pelo sistema. Ative nas configurações do iOS/Android.' 
                   : subscription 
-                    ? 'Você está inscrito para receber notificações neste dispositivo.' 
-                    : 'Clique no botão para ativar as notificações.'}
+                    ? 'Dispositivo pronto para receber notificações.' 
+                    : 'Clique para solicitar permissão de envio.'}
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          
+          <div className="flex w-full sm:w-auto gap-2">
+            {subscription && (
+              <Button 
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none"
+                onClick={handleTestNotification}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar Teste'}
+              </Button>
+            )}
             <Button 
-              variant="outline"
-              onClick={handleTestNotification}
-              disabled={!subscription || loading}
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Testar'}
-            </Button>
-            <Button 
-              variant={subscription ? "destructive" : "default"}
+              variant={subscription ? "secondary" : "default"}
+              size="sm"
+              className="flex-1 sm:flex-none"
               onClick={handleToggle}
               disabled={loading}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (subscription ? 'Desativar' : 'Ativar')}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                subscription ? 'Desativar' : 'Ativar Agora'
+              )}
             </Button>
           </div>
         </div>
+        
+        {permission === 'default' && !subscription && (
+          <p className="text-[10px] text-center text-muted-foreground italic">
+            * No iOS, você precisa ter o App adicionado à Tela de Início primeiro.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
