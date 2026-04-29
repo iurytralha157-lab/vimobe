@@ -128,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .from("users")
             .select("id, organization_id, name, email, role, avatar_url, is_active, language")
             .eq("id", userId)
-            .single(),
+            .maybeSingle(),
           checkSuperAdmin(userId),
         ]);
 
@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return false;
           }
           
-          setProfile(profileData as UserProfile);
+          setProfile(profileData as any);
 
           const storedImpersonating = localStorage.getItem("impersonating");
           const activeImpersonation: ImpersonateSession | null = storedImpersonating
@@ -163,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .from("organizations")
               .select("id, name, logo_url, theme_mode, accent_color, is_active")
               .eq("id", orgIdToFetch)
-              .single();
+              .maybeSingle();
 
             if (orgError) {
               console.error("Error fetching organization record:", orgError);
@@ -178,11 +178,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
           
-          // Fetch additional profile data without blocking
           fetchFullProfile(userId).catch(err => console.error("Non-blocking fetchFullProfile error:", err));
           return true;
+        } else {
+          console.warn("No user profile found in database for ID:", userId);
+          return false;
         }
-        return false;
       } catch (error) {
         console.error("Critical error in fetchProfile:", error);
         return false;
