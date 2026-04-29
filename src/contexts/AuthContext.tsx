@@ -9,7 +9,7 @@ interface UserProfile {
   organization_id: string | null;
   name: string;
   email: string;
-  role: "admin" | "user" | "super_admin";
+  role: "admin" | "user" | "super_admin" | null;
   avatar_url: string | null;
   is_active: boolean;
   language?: string;
