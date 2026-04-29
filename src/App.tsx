@@ -172,7 +172,7 @@ function AppRoutes() {
   const renderAuthRoute = () => {
     if (loading) return <PageLoader />;
     if (user) {
-      if (!profile && !isSuperAdmin) return <PageLoader />;
+      console.log("Auth route detected user, redirecting to:", getDefaultRedirect());
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;
