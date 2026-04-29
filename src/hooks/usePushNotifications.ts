@@ -95,8 +95,10 @@ export const usePushNotifications = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      // Check if we already synced this exact subscription to avoid redundant calls
-      const subStr = JSON.stringify(sub);
+      // Use toJSON for reliable serialization
+      const subJSON = sub.toJSON();
+      const subStr = JSON.stringify(subJSON);
+      
       const lastSub = localStorage.getItem('last_push_sub');
       if (lastSub === subStr && synced) {
         console.log('[Push] Subscription already synced, skipping...');
@@ -109,7 +111,13 @@ export const usePushNotifications = () => {
         .upsert(
           {
             user_id: user.id,
-            subscription: JSON.parse(subStr),
+            subscription: subJSON,
+            // Include basic device info for debugging
+            device_info: {
+              userAgent: navigator.userAgent,
+              timestamp: new Date().toISOString(),
+              platform: navigator.platform
+            }
           },
           { onConflict: 'user_id' }
         );
@@ -129,7 +137,7 @@ export const usePushNotifications = () => {
       setSynced(false);
       return false;
     }
-  }, []);
+  }, [synced]);
 
   const getSubscription = useCallback(async () => {
     if (!checkSupport()) return null;
