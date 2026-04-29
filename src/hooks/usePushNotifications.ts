@@ -96,6 +96,7 @@ export const usePushNotifications = () => {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [swStatus, setSwStatus] = useState<SwStatus>('unknown');
   const [synced, setSynced] = useState<boolean>(false);
+  const [isPreparing, setIsPreparing] = useState(false);
 
   const checkSupport = useCallback(() => {
     const supported =
