@@ -52,6 +52,8 @@ const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
 const Automations = lazy(() => import("./pages/Automations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const Install = lazy(() => import("./pages/Install"));
+
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
@@ -228,6 +230,8 @@ function AppRoutes() {
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/install" element={<ProtectedRoute><Install /></ProtectedRoute>} />
+
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
             <Route path="/properties/new" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
