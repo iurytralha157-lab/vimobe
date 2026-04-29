@@ -1,11 +1,20 @@
 self.addEventListener('push', function(event) {
   if (event.data) {
     const data = event.data.json();
+    console.log('[Service Worker] Push Received:', data);
+    
     const options = {
       body: data.body,
-      icon: data.icon || '/icon-192x192.png',
-      badge: data.badge || '/icon-192x192.png',
-      data: data.data || {}
+      icon: data.icon || '/icons/icon-192x192.png',
+      badge: data.badge || '/icons/icon-192x192.png',
+      data: {
+        url: data.data?.url || '/',
+        ...data.data
+      },
+      tag: 'vimob-push-notification',
+      renotify: true,
+      vibrate: [100, 50, 100],
+      actions: data.actions || []
     };
 
     event.waitUntil(
@@ -16,8 +25,9 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
+  console.log('[Service Worker] Notification Clicked:', event.notification.data);
 
-  const urlToOpen = event.notification.data.url || '/';
+  const urlToOpen = event.notification.data?.url || '/';
 
   event.waitUntil(
     clients.matchAll({
@@ -35,4 +45,14 @@ self.addEventListener('notificationclick', function(event) {
       }
     })
   );
+});
+
+self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Installing...');
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activating...');
+  event.waitUntil(clients.claim());
 });
