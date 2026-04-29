@@ -95,7 +95,6 @@ export function useWhatsAppHealthMonitor() {
         lastKnownStatus: session.status,
         consecutiveFailures: 0,
         lastCheck: new Date(),
-        notificationSent: false,
       };
 
       const isConnected = await checkSessionHealth(
