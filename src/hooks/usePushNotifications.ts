@@ -78,10 +78,15 @@ export const usePushNotifications = () => {
         return;
       }
       
-      if (reg.active) setSwStatus('active');
-      else if (reg.waiting) setSwStatus('waiting');
-      else if (reg.installing) setSwStatus('installing');
-      else setSwStatus('none');
+      if (reg.active) {
+        setSwStatus('active');
+      } else if (reg.installing) {
+        setSwStatus('installing');
+      } else if (reg.waiting) {
+        setSwStatus('waiting');
+      } else {
+        setSwStatus('none');
+      }
     } catch (err) {
       console.warn('[Push] Error checking SW status:', err);
       setSwStatus('none');
