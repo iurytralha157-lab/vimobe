@@ -114,6 +114,12 @@ export const subscribeToPush = async (userId: string) => {
     }
 
     console.log("[Push] Subscription process complete");
+    
+    // Store the public key used for this subscription
+    if (VAPID_PUBLIC_KEY) {
+      localStorage.setItem("last_vapid_public_key", VAPID_PUBLIC_KEY);
+    }
+    
     return subscription;
   } catch (error: any) {
     console.error("[Push] Detailed subscription error:", error);
