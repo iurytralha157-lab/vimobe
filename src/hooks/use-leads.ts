@@ -297,15 +297,8 @@ export function useCreateLead() {
         organizationId
       ).catch(console.error);
       
-      // Notificar todas as partes interessadas (vendedor, líderes, admins)
-      await notifyLeadCreated({
-        leadId: data.id,
-        leadName: lead.name,
-        organizationId: organizationId,
-        pipelineId: pipelineId,
-        assignedUserId: lead.assigned_user_id,
-        source: lead.source || 'manual',
-      });
+      // Notificar todas as partes interessadas removido
+
       
       return data;
     },
