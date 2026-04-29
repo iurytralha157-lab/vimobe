@@ -143,7 +143,7 @@ export function useWhatsAppHealthMonitor() {
     }
 
     isPollingRef.current = false;
-  }, [profile?.id, sessions, checkSessionHealth, createDisconnectionNotification, queryClient]);
+  }, [profile?.id, sessions, checkSessionHealth, queryClient]);
 
   // Manual trigger for immediate check
   const checkNow = useCallback(async () => {
