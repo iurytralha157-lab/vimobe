@@ -58,6 +58,7 @@ export const ptBR = {
     coverage: 'Localidades',
     telecomCustomers: 'Clientes',
     mySite: 'Meu Site',
+    install: 'Instalar App',
     more: 'Mais',
   },
 

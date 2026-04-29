@@ -148,6 +148,10 @@ const bottomItems: NavItem[] = [{
   icon: Settings,
   labelKey: 'settings',
   path: '/settings'
+}, {
+  icon: Download,
+  labelKey: 'install',
+  path: '/install'
 }];
 
 function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {
