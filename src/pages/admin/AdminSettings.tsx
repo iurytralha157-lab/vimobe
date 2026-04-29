@@ -27,7 +27,7 @@ interface SystemSettingsValue {
   maintenance_mode?: boolean | null;
   maintenance_message?: string | null;
   feature_flags?: Record<string, boolean> | null;
-  notification_instance_name?: string | null;
+  // notification_instance_name removed
 }
 
 interface SystemSettingsRow {
