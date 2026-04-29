@@ -121,6 +121,20 @@ export const subscribeToPush = async (userId: string) => {
   }
 };
 
+export const autoRegisterPush = async (userId: string) => {
+  if (!isPushSupported()) return;
+  
+  // If permission is already granted, we should ensure the subscription is up to date in DB
+  if (Notification.permission === "granted") {
+    console.log("[Push] Permission already granted, ensuring subscription is active...");
+    try {
+      await subscribeToPush(userId);
+    } catch (error) {
+      console.error("[Push] Auto-registration failed:", error);
+    }
+  }
+};
+
 export const unsubscribeFromPush = async (userId: string) => {
   const registration = await navigator.serviceWorker.getRegistration();
   if (!registration) return;
@@ -131,7 +145,6 @@ export const unsubscribeFromPush = async (userId: string) => {
   const endpoint = subscription.endpoint;
   await subscription.unsubscribe();
 
-  // Filtro compatível com JSONB para remover a inscrição específica
   const { error } = await supabase
     .from("push_subscriptions")
     .delete()
@@ -140,7 +153,6 @@ export const unsubscribeFromPush = async (userId: string) => {
 
   if (error) throw error;
 };
-
 
 export const checkSubscriptionStatus = async (): Promise<NotificationPermission> => {
   if (!isPushSupported()) return "denied";
