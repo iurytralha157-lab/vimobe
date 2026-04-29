@@ -123,9 +123,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
+    setProfileLoading(true);
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
-        // console.log removed for speed
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from("users")
