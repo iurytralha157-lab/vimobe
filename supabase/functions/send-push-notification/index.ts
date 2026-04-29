@@ -118,11 +118,7 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
     new TextEncoder().encode(unsignedToken)
   );
 
-  // Convert signature from raw format (64 bytes) to DER if necessary
-  // VAPID expects raw 64 bytes signature for ES256 in JWT
-  const sigArray = new Uint8Array(signature);
-  const signatureB64 = base64UrlEncode(sigArray);
-
+  const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   return `${unsignedToken}.${signatureB64}`;
 }
 
