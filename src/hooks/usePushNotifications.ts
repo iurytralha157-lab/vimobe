@@ -160,21 +160,18 @@ export const usePushNotifications = () => {
       refreshSwStatus();
       getSubscription();
       
-      // Pre-warm the service worker without blocking
-      getActiveServiceWorkerRegistration(5000).catch(() => {
-        console.log('[Push] SW not ready during pre-warm, will wait on demand.');
-      });
-      
       // Monitor permission changes if possible
+      let permissionStatus: PermissionStatus | null = null;
       if ('permissions' in navigator) {
         navigator.permissions.query({ name: 'notifications' as PermissionName }).then((status) => {
+          permissionStatus = status;
           status.onchange = () => {
             setPermission(Notification.permission);
             if (Notification.permission === 'granted') {
               getSubscription();
             }
           };
-        });
+        }).catch(err => console.log('[Push] Permissions query not supported', err));
       }
 
       // Listen for controller changes (new SW version active)
@@ -185,7 +182,13 @@ export const usePushNotifications = () => {
       };
       
       navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
-      return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      
+      return () => {
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+        if (permissionStatus) {
+          permissionStatus.onchange = null;
+        }
+      };
     }
   }, [checkSupport, getSubscription, refreshSwStatus]);
 
