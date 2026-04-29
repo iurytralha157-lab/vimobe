@@ -111,12 +111,16 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
     ["sign"]
   );
 
+  console.log("[WebPush] Private key imported successfully");
+
   // Sign the token
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     cryptoKey,
     new TextEncoder().encode(unsignedToken)
   );
+
+  console.log("[WebPush] Token signed successfully");
 
   const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   return `${unsignedToken}.${signatureB64}`;
