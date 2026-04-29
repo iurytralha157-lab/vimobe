@@ -15,11 +15,17 @@ self.addEventListener('push', function(event) {
         tag: data.tag || 'vimob-push-notification',
         renotify: true,
         vibrate: [100, 50, 100],
-        actions: data.actions || []
+        actions: data.actions || [],
+        // Critical for mobile to show the notification correctly
+        requireInteraction: false
       };
 
       event.waitUntil(
-        self.registration.showNotification(data.title || 'Nova Notificação', options)
+        Promise.all([
+          self.registration.showNotification(data.title || 'Nova Notificação', options),
+          // Update the application badge if supported
+          'setAppBadge' in self.navigator ? self.navigator.setAppBadge(1).catch(() => {}) : Promise.resolve()
+        ])
       );
     } catch (e) {
       console.error('[Service Worker] Error parsing push data:', e);
