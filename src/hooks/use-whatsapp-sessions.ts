@@ -16,7 +16,7 @@ export interface WhatsAppSession {
   profile_name: string | null;
   profile_picture: string | null;
   is_active: boolean;
-  is_notification_session?: boolean;
+  // is_notification_session removed
   created_at: string;
   updated_at: string;
   last_connected_at?: string | null;
