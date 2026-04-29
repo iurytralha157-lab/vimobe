@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
@@ -43,68 +42,65 @@ export const subscribeToPush = async (userId: string) => {
     throw new Error("Push notifications are not supported in this browser.");
   }
 
-  try {
-    const registration = await navigator.serviceWorker.register("/sw.js");
-    const permission = await Notification.requestPermission();
+  const registration = await navigator.serviceWorker.register("/sw.js");
+  const permission = await Notification.requestPermission();
 
-    if (permission !== "granted") {
-      throw new Error("Permission not granted for notifications.");
-    }
+  if (permission !== "granted") {
+    throw new Error("Permission not granted for notifications.");
+  }
 
-    if (!VAPID_PUBLIC_KEY) {
-      throw new Error("VAPID_PUBLIC_KEY is not defined in environment variables.");
-    }
+  if (!VAPID_PUBLIC_KEY) {
+    throw new Error("VAPID_PUBLIC_KEY is not defined in environment variables.");
+  }
 
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  });
 
-    const subscriptionJson = subscription.toJSON();
-    
-    if (!subscriptionJson.endpoint || !subscriptionJson.keys?.p256dh || !subscriptionJson.keys?.auth) {
-      throw new Error("Invalid subscription object received from browser.");
-    }
+  const subscriptionJson = subscription.toJSON();
 
-    const { error } = await supabase.from("push_subscriptions").upsert({
-      user_id: userId,
+  if (!subscriptionJson.endpoint || !subscriptionJson.keys?.p256dh || !subscriptionJson.keys?.auth) {
+    throw new Error("Invalid subscription object received from browser.");
+  }
+
+  const payload = {
+    user_id: userId,
+    subscription: {
       endpoint: subscriptionJson.endpoint,
       p256dh: subscriptionJson.keys.p256dh,
       auth: subscriptionJson.keys.auth,
       user_agent: navigator.userAgent,
-    }, {
-      onConflict: 'endpoint'
-    });
+    } as Record<string, string>,
+  };
 
-    if (error) throw error;
+  const { error } = await supabase
+    .from("push_subscriptions")
+    .insert(payload as any);
 
-    return subscription;
-  } catch (error) {
-    console.error("Error subscribing to push notifications:", error);
+  if (error && !error.message?.includes("duplicate")) {
     throw error;
   }
+
+  return subscription;
 };
 
-export const unsubscribeFromPush = async (userId: string) => {
-  try {
-    const registration = await navigator.serviceWorker.getRegistration();
-    if (registration) {
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        await subscription.unsubscribe();
-        
-        const { error } = await supabase
-          .from("push_subscriptions")
-          .delete()
-          .eq("endpoint", subscription.endpoint);
-          
-        if (error) throw error;
-      }
-    }
-  } catch (error) {
-    console.error("Error unsubscribing from push notifications:", error);
-    throw error;
-  }
+export const unsubscribeFromPush = async (_userId: string) => {
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) return;
+
+  const subscription = await registration.pushManager.getSubscription();
+  if (!subscription) return;
+
+  const endpoint = subscription.endpoint;
+  await subscription.unsubscribe();
+
+  const { error } = await (supabase as any)
+    .from("push_subscriptions")
+    .delete()
+    .eq("subscription->>endpoint", endpoint);
+
+  if (error) throw error;
 };
 
 export const checkSubscriptionStatus = async (): Promise<NotificationPermission> => {
