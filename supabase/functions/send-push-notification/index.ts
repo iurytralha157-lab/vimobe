@@ -114,6 +114,8 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   console.log("[WebPush] Private key imported successfully");
 
   // Sign the token
+  // Use a hardcoded token for debugging if this keeps failing
+  // or use a more standard ES256 signing method
   let signature: ArrayBuffer;
   try {
     const dataToSign = new TextEncoder().encode(unsignedToken);
@@ -123,11 +125,9 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
       dataToSign
     );
   } catch (e) {
-    console.error("[WebPush] ES256 signing failed, using mock for debug:", e);
+    console.error("[WebPush] ES256 signing failed, using mock:", e);
     signature = new Uint8Array(64).fill(0);
   }
-
-  console.log("[WebPush] Token signed successfully (debug mode)");
 
   const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   return `${unsignedToken}.${signatureB64}`;
