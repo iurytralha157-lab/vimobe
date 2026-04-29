@@ -124,35 +124,9 @@ Deno.serve(async (req) => {
 
             const displayName = session.display_name || session.instance_name;
 
-            // Notify session owner
-            await supabase.from("notifications").insert({
-              user_id: session.owner_user_id,
-              organization_id: session.organization_id,
-              title: "⚠️ WhatsApp Desconectado!",
-              content: `A sessão "${displayName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
-              type: "warning",
-              is_read: false,
-            });
-
-            // Notify admins
-            const { data: admins } = await supabase
-              .from("users")
-              .select("id")
-              .eq("organization_id", session.organization_id)
-              .eq("role", "admin")
-              .neq("id", session.owner_user_id);
-
-            if (admins && admins.length > 0) {
-              const adminNotifications = admins.map((admin: any) => ({
-                user_id: admin.id,
-                organization_id: session.organization_id,
-                title: "⚠️ WhatsApp Desconectado!",
-                content: `A sessão "${displayName}" perdeu a conexão. O responsável foi notificado.`,
-                type: "warning",
-                is_read: false,
-              }));
-              await supabase.from("notifications").insert(adminNotifications);
-            }
+            // Disconnected - no notifications, just update status and audit log
+            console.log(`Session ${session.instance_name} confirmed disconnected after retry`);
+            updateData.status = "disconnected";
 
             await supabase
               .from("whatsapp_sessions")
