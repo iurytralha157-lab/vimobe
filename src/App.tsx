@@ -150,6 +150,13 @@ function AppRoutes() {
   const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection } = useAuth();
   
   useForceRefreshListener();
+  
+  // Inicializa notificações apenas para usuários logados, sem bloquear o render
+  useEffect(() => {
+    if (user && !loading) {
+      console.log("Inicializando handlers de background...");
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     // Only preload CRM pages if we are NOT on a custom domain and user is logged in
@@ -190,6 +197,7 @@ function AppRoutes() {
 
   return (
     <>
+      {user && <PushNotificationHandler />}
       {!isResetPasswordRoute && <AnnouncementBanner />}
       {!isResetPasswordRoute && <ImpersonateBanner />}
       {!isResetPasswordRoute && <Suspense fallback={null}><TrialExpiredModal /></Suspense>}
@@ -328,7 +336,7 @@ const App = () => {
             ) : (
               <AuthProvider>
                 <LanguageProvider>
-                  <PushNotificationHandler />
+                  {/* Mover PushNotificationHandler para dentro de AppRoutes para carregar após o login */}
                   <AppRoutes />
                 </LanguageProvider>
               </AuthProvider>
