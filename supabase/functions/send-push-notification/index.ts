@@ -26,7 +26,8 @@ interface WebPushSubscription {
 // Importa a chave privada VAPID
 function getVapidKeys() {
   const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-  const publicKey = Deno.env.get("VAPID_PUBLIC_KEY") || Deno.env.get("VITE_VAPID_PUBLIC_KEY");
+  // Ensure we use the same public key used in the frontend registration
+  const publicKey = "BJBVpyQSbQSpeAQQs-lEf2BKa6L6vlUcXxD3F2KNML9iJW4h2Al2hhgB9KbDW9C73PCnow8ZpXIJxrUNMWxU6vA";
   
   if (!privateKey) {
     throw new Error("VAPID_PRIVATE_KEY not configured");
@@ -73,7 +74,7 @@ function parsePrivateKey(pem: string): Uint8Array {
 }
 
 // Create VAPID JWT for authorization
-async function createVapidJwt(audience: string, subject: string, privateKeyPem: string): Promise<string> {
+async function createVapidJwt(audience: string, subject: string, privateKeyPem: string, publicKey: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const exp = now + 12 * 60 * 60; // 12 hours
 
@@ -174,7 +175,7 @@ async function sendWebPushNotification(
     // Ensure we use the raw uncompressed public key (65 bytes) for the header
     const rawPublicKey = getRawPublicKey(publicKey);
 
-    // Extract audience from endpoint
+    // VAPID JWT header for Web Push 
     const endpointUrl = new URL(subscription.endpoint);
     const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
 
@@ -182,7 +183,7 @@ async function sendWebPushNotification(
     const subject = Deno.env.get("VAPID_MAILTO") || "mailto:suporte@vimob.com.br";
 
     // Create VAPID JWT
-    const jwt = await createVapidJwt(audience, subject, privateKey);
+    const jwt = await createVapidJwt(audience, subject, privateKey, rawPublicKey);
 
     // Prepare payload
     const payload = JSON.stringify({
