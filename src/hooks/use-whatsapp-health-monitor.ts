@@ -127,7 +127,7 @@ export function useWhatsAppHealthMonitor() {
 
         // Only notify locally after threshold - do NOT update DB status
         // The server-side health check (edge function) is responsible for DB status changes
-        if (state.consecutiveFailures >= ERROR_THRESHOLD && !state.notificationSent) {
+        if (state.consecutiveFailures >= ERROR_THRESHOLD) {
           console.error(`🔴 Session "${state.displayName}" appears disconnected (client-side detection)`);
           
           // Show toast as warning only - don't change DB
@@ -135,8 +135,6 @@ export function useWhatsAppHealthMonitor() {
             description: `A sessão "${state.displayName}" pode estar com problemas. Aguarde a verificação automática.`,
             duration: 10000,
           });
-
-          state.notificationSent = true;
         }
       }
 
