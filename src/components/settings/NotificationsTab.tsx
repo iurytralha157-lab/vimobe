@@ -13,6 +13,7 @@ export const NotificationsTab = () => {
     subscription,
     swStatus,
     synced,
+    isPreparing,
     subscribeUser,
     unsubscribeUser,
     refreshSubscription,
