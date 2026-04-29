@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { 
   Save, 
   ArrowLeft, 
@@ -175,6 +176,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [showSimulator, setShowSimulator] = useState(false);
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
 
   // Apply visual highlight to the active node on canvas
@@ -523,6 +525,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       // Create automation
       const automation = await createAutomation.mutateAsync({
         name,
+        is_active: isActive,
         description: `Follow-up com ${messageNodes.length} mensagens`,
         trigger_type: triggerType,
         trigger_config: {
@@ -714,7 +717,17 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
             />
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
+            <span className={`text-xs font-medium ${isActive ? 'text-green-500' : 'text-muted-foreground'}`}>
+              {isActive ? 'Ativa' : 'Inativa'}
+            </span>
+            <Switch 
+              checked={isActive} 
+              onCheckedChange={setIsActive}
+              className="scale-75 data-[state=checked]:bg-green-500"
+            />
+          </div>
           <Button 
             variant={showSimulator ? "default" : "outline"} 
             onClick={() => setShowSimulator(!showSimulator)}
