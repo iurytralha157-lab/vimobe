@@ -112,7 +112,7 @@ export const usePushNotifications = () => {
           [
             {
               user_id: user.id,
-              subscription: subJSON,
+              subscription: subJSON as any,
               device_info: {
                 userAgent: navigator.userAgent,
                 timestamp: new Date().toISOString(),
