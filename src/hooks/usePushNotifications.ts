@@ -15,14 +15,15 @@ export const usePushNotifications = () => {
       
       // Let VitePWA handle the service worker registration
       // We just wait for it to be ready
-      navigator.serviceWorker.ready.then(registration => {
-        registration.pushManager.getSubscription().then(sub => {
-          setSubscription(sub);
-        }).catch(err => {
-          console.error('Error getting push subscription:', err);
-        });
-      }).catch(err => {
-        console.error('Service worker not ready:', err);
+      // Wait for registration instead of just ready, especially for iOS
+      navigator.serviceWorker.getRegistration().then(registration => {
+        if (registration) {
+          registration.pushManager.getSubscription().then(sub => {
+            setSubscription(sub);
+          }).catch(err => {
+            console.error('Error getting push subscription:', err);
+          });
+        }
       });
     }
   }, []);
@@ -73,14 +74,19 @@ export const usePushNotifications = () => {
         throw new Error(`Permission ${result}`);
       }
 
-      // Wait for service worker with a timeout to prevent infinite loading
-      const registrationPromise = navigator.serviceWorker.ready;
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout waiting for Service Worker')), 10000)
-      );
+      // iOS Safari can be tricky with .ready, try to get current registration first
+      let registration = await navigator.serviceWorker.getRegistration();
       
-      const registration = await Promise.race([registrationPromise, timeoutPromise]) as ServiceWorkerRegistration;
-      console.log('Service worker ready for subscription');
+      if (!registration) {
+        console.log('No active registration found, waiting for ready...');
+        const registrationPromise = navigator.serviceWorker.ready;
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout waiting for Service Worker')), 15000)
+        );
+        registration = await Promise.race([registrationPromise, timeoutPromise]) as ServiceWorkerRegistration;
+      }
+      
+      console.log('Service worker registration active');
       
       const existingSub = await registration.pushManager.getSubscription();
       if (existingSub) {

@@ -93,9 +93,9 @@ export const NotificationsTab = () => {
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="flex items-center gap-3">
             {subscription ? (
-              <Bell className="h-5 w-5 text-success" />
+              <Bell className="h-5 w-5 text-green-500" />
             ) : (
-              <BellOff className="h-5 w-5 text-muted-foreground" />
+              <BellOff className="h-5 w-5 text-gray-400" />
             )}
             <div>
               <p className="font-medium">
