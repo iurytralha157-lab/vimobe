@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Download } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
@@ -148,6 +148,10 @@ const bottomItems: NavItem[] = [{
   icon: Settings,
   labelKey: 'settings',
   path: '/settings'
+}, {
+  icon: Download,
+  labelKey: 'install',
+  path: '/install'
 }];
 
 function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {

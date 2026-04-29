@@ -88,7 +88,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Removido importScripts de push
+        importScripts: ['/sw.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/supabase/],
         runtimeCaching: [
