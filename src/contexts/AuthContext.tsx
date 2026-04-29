@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
-        console.log("Fetching profile for:", userId);
+        // console.log removed for speed
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from("users")
@@ -231,7 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initialize = async () => {
       try {
-        console.log("Auth starting initialize...");
+        // console.log removed for speed
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
@@ -244,13 +244,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!session) {
-          console.log("No session found during init");
+          // console.log removed for speed
           clearAllStates();
           setLoading(false);
           return;
         }
 
-        console.log("Session found, fetching profile for:", session.user.id);
+        // console.log removed for speed
         setSession(session);
         setUser(session.user);
         
@@ -259,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           checkMultiOrg(session.user.id)
         ]);
         
-        console.log("Init sequence complete, profile success:", profileSuccess);
+        // console.log removed for speed
       } catch (e) {
         console.error("Auth init exception:", e);
         clearAllStates();

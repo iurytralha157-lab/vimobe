@@ -92,10 +92,15 @@ const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
 
 function preloadCoreCrmPages() {
+  // Preloading only critical dashboard initially
   void import("./pages/Dashboard");
-  void import("./pages/Pipelines");
-  void import("./pages/Contacts");
-  void import("./pages/Conversations");
+  
+  // The rest can be loaded after a longer delay or on interaction
+  setTimeout(() => {
+    void import("./pages/Pipelines");
+    void import("./pages/Contacts");
+    void import("./pages/Conversations");
+  }, 5000);
 }
 
 function isCustomDomain(): boolean {
@@ -148,9 +153,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   
-  // If we have a user but no profile yet, show loader while it's fetching
+  // If we have a user but no profile yet, allow basic layout to render
+  // This prevents the infinite spinner if the user is already authenticated
+  // but profile is still fetching
   if (!profile && !isSuperAdmin) {
-    console.log("ProtectedRoute: User found but no profile yet, waiting...");
+    console.log("ProtectedRoute: Profile still loading...");
     return <PageLoader />;
   }
 
@@ -165,16 +172,15 @@ function AppRoutes() {
   useForceRefreshListener();
 
   useEffect(() => {
-    // Only preload CRM pages if we are NOT on a custom domain and user is logged in
+    // Priority preloading
     if (user && !loading && !isCustomDomain()) {
-      // Delay preloading slightly to prioritize current page render
-      const timer = setTimeout(preloadCoreCrmPages, 3000);
+      const timer = setTimeout(preloadCoreCrmPages, 500);
       return () => clearTimeout(timer);
     }
   }, [user, loading]);
 
   const getDefaultRedirect = () => {
-    console.log("Determining default redirect:", { needsOrgSelection, impersonating, isSuperAdmin });
+    // console.log removed for speed
     if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
     return "/dashboard";
