@@ -19,7 +19,13 @@ export const usePushNotifications = () => {
 
   const getSubscription = useCallback(async () => {
     try {
-      const registration = await navigator.serviceWorker.getRegistration();
+      let registration = await navigator.serviceWorker.getRegistration();
+      
+      if (!registration) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length > 0) registration = registrations[0];
+      }
+
       if (registration) {
         const sub = await registration.pushManager.getSubscription();
         setSubscription(sub);
