@@ -442,13 +442,8 @@ export function useDeleteLead() {
         .eq('id', id)
         .single();
       
-      // Delete related notifications first to avoid FK constraint violation
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('lead_id', id);
-      
-      if (notifError) throw notifError;
+      // Delete related notifications removed
+
 
       const { error } = await supabase
         .from('leads')
