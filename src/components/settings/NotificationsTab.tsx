@@ -73,9 +73,18 @@ export const NotificationsTab = () => {
   const handleSync = async () => {
     setLoading(true);
     try {
-      const sub = await refreshSubscription();
-      if (sub) toast.success('Inscrição sincronizada com o servidor.');
-      else toast.message('Nenhuma inscrição local encontrada. Ative as notificações primeiro.');
+      const success = await refreshSubscription();
+      if (success) {
+        toast.success('Inscrição sincronizada com sucesso!');
+      } else {
+        // Se não sincronizou, talvez precise re-inscrever
+        if (permission === 'granted') {
+          await subscribeUser();
+          toast.success('Serviço reativado e sincronizado.');
+        } else {
+          toast.error('Não foi possível sincronizar. Tente ativar novamente.');
+        }
+      }
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao sincronizar.');
     } finally {
