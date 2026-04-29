@@ -20,7 +20,7 @@ export function APITab() {
     queryFn: async () => {
       if (!profile?.organization_id) return [];
       const { data, error } = await supabase
-        .from('organization_api_keys' as any)
+        .from('organization_api_keys')
         .select('*')
         .eq('organization_id', profile.organization_id)
         .order('created_at', { ascending: false });
@@ -35,7 +35,7 @@ export function APITab() {
       if (!profile?.organization_id) throw new Error('No organization found');
       // Geração 100% server-side via RPC SECURITY DEFINER.
       // O banco gera a chave, salva apenas o hash SHA-256 e retorna a chave em texto UMA ÚNICA VEZ.
-      const { data, error } = await supabase.rpc('generate_organization_api_key' as any, {
+      const { data, error } = await supabase.rpc('generate_organization_api_key', {
         p_organization_id: profile.organization_id,
         p_name: keyName || 'Chave Padrão',
       });
@@ -59,7 +59,7 @@ export function APITab() {
   const deleteKeyMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('organization_api_keys' as any)
+        .from('organization_api_keys')
         .delete()
         .eq('id', id);
       if (error) throw error;
