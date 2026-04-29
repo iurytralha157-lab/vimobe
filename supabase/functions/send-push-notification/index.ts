@@ -83,8 +83,6 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
     aud: audience,
     exp: exp,
     sub: subject,
-    origin: audience,
-    k: publicKey
   };
 
   const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
