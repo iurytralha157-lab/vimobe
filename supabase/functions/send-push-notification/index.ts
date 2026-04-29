@@ -121,9 +121,8 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
     new TextEncoder().encode(unsignedToken)
   );
 
-  // Convert signature from DER to raw format (64 bytes: r + s)
-  const sigArray = new Uint8Array(signature);
-  const signatureB64 = base64UrlEncode(sigArray);
+  // Convert signature to Base64URL
+  const signatureB64 = base64UrlEncode(new Uint8Array(signature));
 
   return `${unsignedToken}.${signatureB64}`;
 }
