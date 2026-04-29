@@ -180,9 +180,8 @@ async function sendWebPushNotification(
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
-        "Authorization": `vapid t=${jwt}, k=${rawPublicKey}`,
+        "Authorization": `WebPush ${jwt}`,
         "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
         "TTL": priority === 'high' ? "86400" : "3600",
         "Urgency": priority === 'high' ? "high" : "normal",
       },
