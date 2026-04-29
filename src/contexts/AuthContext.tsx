@@ -9,7 +9,7 @@ interface UserProfile {
   organization_id: string | null;
   name: string;
   email: string;
-  role: "admin" | "user" | "super_admin";
+  role: "admin" | "user" | "super_admin" | null;
   avatar_url: string | null;
   is_active: boolean;
   language?: string;
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from("users")
         .select("phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
       if (data) {
         setProfile((prev) => (prev ? { ...prev, ...data } : null));
       }
@@ -122,25 +122,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
+        console.log("Fetching profile for:", userId);
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from("users")
             .select("id, organization_id, name, email, role, avatar_url, is_active, language")
             .eq("id", userId)
-            .single(),
+            .maybeSingle(),
           checkSuperAdmin(userId),
         ]);
+
+        if (userResult.error) {
+          console.error("Error fetching user profile record:", userResult.error);
+          return false;
+        }
 
         const profileData = userResult.data;
         if (profileData) {
           setIsSuperAdmin(superAdmin);
+          
           if (!profileData.is_active && !superAdmin) {
             console.warn("User is deactivated, signing out");
             await supabase.auth.signOut();
             alert("Sua conta foi desativada. Entre em contato com o administrador.");
             return false;
           }
-          setProfile(profileData as UserProfile);
+          
+          setProfile(profileData as any);
 
           const storedImpersonating = localStorage.getItem("impersonating");
           const activeImpersonation: ImpersonateSession | null = storedImpersonating
@@ -148,14 +156,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : null;
 
           const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
+          
           if (orgIdToFetch) {
-            const { data: orgData } = await supabase
+            console.log("Fetching organization:", orgIdToFetch);
+            const { data: orgData, error: orgError } = await supabase
               .from("organizations")
               .select("id, name, logo_url, theme_mode, accent_color, is_active")
               .eq("id", orgIdToFetch)
-              .single();
+              .maybeSingle();
 
-            if (orgData) {
+            if (orgError) {
+              console.error("Error fetching organization record:", orgError);
+            } else if (orgData) {
               if (!orgData.is_active && !superAdmin && !activeImpersonation) {
                 console.warn("Organization is deactivated, signing out");
                 await supabase.auth.signOut();
@@ -165,12 +177,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setOrganization(orgData as Organization);
             }
           }
-          fetchFullProfile(userId);
+          
+          fetchFullProfile(userId).catch(err => console.error("Non-blocking fetchFullProfile error:", err));
           return true;
+        } else {
+          console.warn("No user profile found in database for ID:", userId);
+          // If super admin and no profile, we still allow basic access
+          if (superAdmin) {
+            console.log("Super admin detected without explicit profile record");
+            setIsSuperAdmin(true);
+            return true;
+          }
+          return false;
         }
-        return false;
       } catch (error) {
-        console.error("Error fetching profile:", error);
+        console.error("Critical error in fetchProfile:", error);
         return false;
       }
     });
@@ -210,22 +231,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initialize = async () => {
       try {
+        console.log("Auth starting initialize...");
         const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (!isMounted) return;
-        if (error || !session) {
+        
+        if (error) {
+          console.error("Auth getSession error:", error);
           clearAllStates();
-        } else {
-          setSession(session);
-          setUser(session.user);
-          await Promise.all([
-            fetchProfile(session.user.id),
-            checkMultiOrg(session.user.id)
-          ]);
+          setLoading(false);
+          return;
         }
+
+        if (!session) {
+          console.log("No session found during init");
+          clearAllStates();
+          setLoading(false);
+          return;
+        }
+
+        console.log("Session found, fetching profile for:", session.user.id);
+        setSession(session);
+        setUser(session.user);
+        
+        const [profileSuccess] = await Promise.all([
+          fetchProfile(session.user.id),
+          checkMultiOrg(session.user.id)
+        ]);
+        
+        console.log("Init sequence complete, profile success:", profileSuccess);
       } catch (e) {
-        console.error("Auth init error:", e);
+        console.error("Auth init exception:", e);
+        clearAllStates();
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          console.log("Setting loading to false");
+          setLoading(false);
+        }
       }
     };
 
@@ -233,7 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!isMounted) return;
-      console.log("Auth event:", event);
+      console.log("Auth state changed:", event, currentSession ? "session active" : "no session");
 
       if (event === "SIGNED_OUT") {
         clearAllStates();
@@ -244,14 +286,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        await Promise.all([
-          fetchProfile(currentSession.user.id),
-          checkMultiOrg(currentSession.user.id)
-        ]);
+        
+        // Handle events that need profile refresh
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+          console.log("Processing auth event, refreshing profile...");
+          await Promise.all([
+            fetchProfile(currentSession.user.id),
+            checkMultiOrg(currentSession.user.id)
+          ]);
+        }
         setLoading(false);
       } else {
-        clearAllStates();
-        setLoading(false);
+        // No session after change (and not a SIGNED_OUT which we handled above)
+        if (event !== "INITIAL_SESSION") {
+          clearAllStates();
+        }
+        // Only set loading false if we're not waiting for INITIAL_SESSION
+        // which is handled by initialize()
+        if (event !== "INITIAL_SESSION") {
+          setLoading(false);
+        }
       }
     });
 

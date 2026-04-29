@@ -133,8 +133,23 @@ const PageLoader = () => (
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
+  console.log("ProtectedRoute check:", { 
+    path: window.location.pathname,
+    loading, 
+    hasUser: !!user, 
+    hasProfile: !!profile, 
+    isSuperAdmin,
+    needsOrgSelection
+  });
+
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
+  
+  // Super admins bypassing org check if not impersonating
+  if (isSuperAdmin && !impersonating && !organization && !needsOrgSelection) {
+    return <>{children}</>;
+  }
+
   if (!profile && !isSuperAdmin) return <PageLoader />;
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
