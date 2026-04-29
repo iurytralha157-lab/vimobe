@@ -316,17 +316,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchProfile, checkMultiOrg]);
 
   const signIn = async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data.user) {
-      checkMultiOrg(data.user.id).catch(console.error);
-      setTimeout(() => {
-        logAuditAction("login", "session", data.user.id, undefined, {
-          email,
-          login_at: new Date().toISOString(),
-        }).catch(console.error);
-      }, 0);
+    setLoading(true);
+    try {
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && data.user) {
+        console.log("SignIn successful, refreshing data...");
+        await Promise.all([
+          fetchProfile(data.user.id),
+          checkMultiOrg(data.user.id)
+        ]);
+        
+        setTimeout(() => {
+          logAuditAction("login", "session", data.user.id, undefined, {
+            email,
+            login_at: new Date().toISOString(),
+          }).catch(console.error);
+        }, 0);
+      }
+      return { error };
+    } finally {
+      setLoading(false);
     }
-    return { error };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
