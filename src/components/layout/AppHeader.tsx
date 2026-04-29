@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Building2, Check, Key } from 'lucide-react';
+import { Bell, Moon, Sun, Loader2, LogOut, ChevronDown, UserPlus, CheckSquare, FileText, DollarSign, Info, Settings, HelpCircle, Shield, Building2, Check, Key, BookOpen } from 'lucide-react';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -261,8 +261,8 @@ export const AppHeader = React.memo(function AppHeader({
               </DropdownMenuItem>
               
               <DropdownMenuItem onClick={() => navigate('/docs/api')} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                Documentação
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                Documentação de API
               </DropdownMenuItem>
 
               {hasModule('api') && (
