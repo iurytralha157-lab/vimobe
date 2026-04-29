@@ -79,7 +79,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useCanEditCadences } from '@/hooks/use-can-edit-cadences';
 
 import { useHasPermission } from '@/hooks/use-organization-roles';
-import { notifyLeadMoved } from '@/hooks/use-lead-notifications';
+// notifyLeadMoved removed
 import { useRecordFirstResponseOnAction } from '@/hooks/use-first-response';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
