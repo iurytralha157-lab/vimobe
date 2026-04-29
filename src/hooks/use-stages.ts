@@ -35,7 +35,8 @@ const LEAD_PIPELINE_FIELDS = `
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
   lead_meta(campaign_name, adset_name, ad_name, platform),
-  tags:lead_tags(tag:tags(id, name, color))
+  tags:lead_tags(tag:tags(id, name, color)),
+  lead_tasks(id, is_done)
 `;
 
 export function useStages(pipelineId?: string) {
