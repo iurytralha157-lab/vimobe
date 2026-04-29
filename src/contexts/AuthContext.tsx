@@ -122,6 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
+        console.log("Fetching profile for:", userId);
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from("users")
@@ -131,15 +132,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           checkSuperAdmin(userId),
         ]);
 
+        if (userResult.error) {
+          console.error("Error fetching user profile record:", userResult.error);
+          return false;
+        }
+
         const profileData = userResult.data;
         if (profileData) {
           setIsSuperAdmin(superAdmin);
+          
           if (!profileData.is_active && !superAdmin) {
             console.warn("User is deactivated, signing out");
             await supabase.auth.signOut();
             alert("Sua conta foi desativada. Entre em contato com o administrador.");
             return false;
           }
+          
           setProfile(profileData as UserProfile);
 
           const storedImpersonating = localStorage.getItem("impersonating");
@@ -148,14 +156,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : null;
 
           const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
+          
           if (orgIdToFetch) {
-            const { data: orgData } = await supabase
+            console.log("Fetching organization:", orgIdToFetch);
+            const { data: orgData, error: orgError } = await supabase
               .from("organizations")
               .select("id, name, logo_url, theme_mode, accent_color, is_active")
               .eq("id", orgIdToFetch)
               .single();
 
-            if (orgData) {
+            if (orgError) {
+              console.error("Error fetching organization record:", orgError);
+            } else if (orgData) {
               if (!orgData.is_active && !superAdmin && !activeImpersonation) {
                 console.warn("Organization is deactivated, signing out");
                 await supabase.auth.signOut();
@@ -165,12 +177,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setOrganization(orgData as Organization);
             }
           }
-          fetchFullProfile(userId);
+          
+          // Fetch additional profile data without blocking
+          fetchFullProfile(userId).catch(err => console.error("Non-blocking fetchFullProfile error:", err));
           return true;
         }
         return false;
       } catch (error) {
-        console.error("Error fetching profile:", error);
+        console.error("Critical error in fetchProfile:", error);
         return false;
       }
     });
