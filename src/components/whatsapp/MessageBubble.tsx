@@ -733,7 +733,7 @@ export function MessageBubble({
 
         {/* Text content */}
         {content && messageType === "text" && (
-          <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">
+          <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words px-[10px] py-[20px] pr-[10px] pb-[10px] pt-[10px]">
             {(() => {
               const mentionRegex = /(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})/g;
               const parts = content.split(mentionRegex);
@@ -770,7 +770,7 @@ export function MessageBubble({
             "float-right -mt-4 ml-2 flex items-center gap-0.5",
             fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
           )}>
-            <span className="text-[11px] leading-none">{formatTime(sentAt)}</span>
+            <span className="text-[11px] leading-none px-0">{formatTime(sentAt)}</span>
             {getStatusIcon()}
           </span>
         )}
