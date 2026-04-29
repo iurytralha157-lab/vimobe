@@ -316,22 +316,20 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <TooltipProvider>
-          <BrandingAndPwa />
-          <Toaster />
-          <Sonner />
-          <IOSInstallGuide />
           <BrowserRouter>
-            {customDomain ? (
+            <AuthProvider>
               <LanguageProvider>
-                <CustomDomainRoutes />
-              </LanguageProvider>
-            ) : (
-              <AuthProvider>
-                <LanguageProvider>
+                <BrandingAndPwa />
+                <Toaster />
+                <Sonner />
+                <IOSInstallGuide />
+                {customDomain ? (
+                  <CustomDomainRoutes />
+                ) : (
                   <AppRoutes />
-                </LanguageProvider>
-              </AuthProvider>
-            )}
+                )}
+              </LanguageProvider>
+            </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
