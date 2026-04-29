@@ -64,19 +64,15 @@ export const subscribeToPush = async (userId: string) => {
     throw new Error("Invalid subscription object received from browser.");
   }
 
-  const payload = {
-    user_id: userId,
-    subscription: {
-      endpoint: subscriptionJson.endpoint,
-      p256dh: subscriptionJson.keys.p256dh,
-      auth: subscriptionJson.keys.auth,
-      user_agent: navigator.userAgent,
-    } as Record<string, string>,
-  };
-
+  // Alinha com o schema real do banco e o formato padrão do PushSubscription
   const { error } = await supabase
     .from("push_subscriptions")
-    .insert(payload as any);
+    .upsert({
+      user_id: userId,
+      subscription: subscriptionJson as any,
+    }, {
+      onConflict: 'user_id, subscription' // Assumindo que queremos evitar duplicatas exatas
+    });
 
   if (error && !error.message?.includes("duplicate")) {
     throw error;
@@ -85,7 +81,7 @@ export const subscribeToPush = async (userId: string) => {
   return subscription;
 };
 
-export const unsubscribeFromPush = async (_userId: string) => {
+export const unsubscribeFromPush = async (userId: string) => {
   const registration = await navigator.serviceWorker.getRegistration();
   if (!registration) return;
 
@@ -95,13 +91,16 @@ export const unsubscribeFromPush = async (_userId: string) => {
   const endpoint = subscription.endpoint;
   await subscription.unsubscribe();
 
-  const { error } = await (supabase as any)
+  // Filtro compatível com JSONB para remover a inscrição específica
+  const { error } = await supabase
     .from("push_subscriptions")
     .delete()
-    .eq("subscription->>endpoint", endpoint);
+    .eq("user_id", userId)
+    .filter("subscription->>endpoint", "eq", endpoint);
 
   if (error) throw error;
 };
+
 
 export const checkSubscriptionStatus = async (): Promise<NotificationPermission> => {
   if (!isPushSupported()) return "denied";
