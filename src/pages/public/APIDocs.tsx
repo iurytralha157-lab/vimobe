@@ -82,7 +82,7 @@ export default function APIDocs() {
             <div className="p-2 bg-primary rounded-lg">
               <Code2 className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">API Pública de Imóveis</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Documentação da API</h1>
           </div>
           <p className="text-lg text-muted-foreground">
             Integre os imóveis cadastrados no seu CRM em qualquer site ou sistema externo.

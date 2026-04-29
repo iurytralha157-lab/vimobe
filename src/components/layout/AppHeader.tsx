@@ -262,7 +262,7 @@ export const AppHeader = React.memo(function AppHeader({
               
               <DropdownMenuItem onClick={() => navigate('/docs/api')} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                Documentação da API
+                Documentação
               </DropdownMenuItem>
 
               {hasModule('api') && (
