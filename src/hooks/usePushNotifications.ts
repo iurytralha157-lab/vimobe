@@ -21,52 +21,31 @@ const urlBase64ToUint8Array = (base64String: string) => {
  * Does NOT register a custom worker — relies on the PWA worker generated
  * by vite-plugin-pwa (which imports `/sw-push.js` for push events).
  */
-async function getActiveServiceWorkerRegistration(timeoutMs = 25000): Promise<ServiceWorkerRegistration> {
+async function getActiveServiceWorkerRegistration(timeoutMs = 5000): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
     throw new Error('Navegador sem suporte a Service Worker.');
   }
 
-  // 1. Check if already ready with a shorter race
-  const readyReg = await Promise.race([
-    navigator.serviceWorker.ready,
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
-  ]);
+  // 1. Check if already ready with a short timeout
+  try {
+    const readyReg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs))
+    ]);
+    if (readyReg) return readyReg;
+  } catch (e) {
+    console.warn('[Push] navigator.serviceWorker.ready timed out, falling back to registrations');
+  }
   
-  if (readyReg && readyReg.active) return readyReg;
-
-  // 2. Try to get any existing registration
+  // 2. Fallback: Try to get any existing registration
   const regs = await navigator.serviceWorker.getRegistrations();
-  const activeReg = regs.find(r => r.active);
-  if (activeReg) return activeReg;
-
-  // 3. If we have a waiting worker, skip waiting
-  const waitingReg = regs.find(r => r.waiting);
-  if (waitingReg && waitingReg.waiting) {
-    waitingReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  if (regs.length > 0) {
+    // Return active if available, otherwise just return the first one
+    return regs.find(r => r.active) || regs[0];
   }
 
-  // 4. Poll for active status
-  return new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const interval = setInterval(async () => {
-      const currentRegs = await navigator.serviceWorker.getRegistrations();
-      const active = currentRegs.find(r => r.active);
-      
-      if (active) {
-        clearInterval(interval);
-        resolve(active);
-      } else if (Date.now() - startTime > timeoutMs) {
-        clearInterval(interval);
-        
-        // Final fallback: if there's any registration, try to use it anyway
-        if (currentRegs.length > 0) {
-          resolve(currentRegs[0]);
-        } else {
-          reject(new Error('Sistema de notificações ainda está carregando. Por favor, recarregue a página e tente novamente.'));
-        }
-      }
-    }, 500);
-  });
+  // 3. Last resort: if nothing found, it might be a cold start or first visit
+  throw new Error('Sistema de notificações ainda está sendo preparado. Por favor, tente novamente em alguns segundos.');
 }
 
 export const usePushNotifications = () => {
@@ -93,14 +72,22 @@ export const usePushNotifications = () => {
       setSwStatus('none');
       return;
     }
-    const reg =
-      (await navigator.serviceWorker.getRegistration()) ||
-      (await navigator.serviceWorker.getRegistrations()).find(Boolean);
-    if (!reg) return setSwStatus('none');
-    if (reg.active) return setSwStatus('active');
-    if (reg.waiting) return setSwStatus('waiting');
-    if (reg.installing) return setSwStatus('installing');
-    setSwStatus('none');
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length === 0) {
+        setSwStatus('none');
+        return;
+      }
+      
+      const reg = regs.find(r => r.active) || regs[0];
+      if (reg.active) setSwStatus('active');
+      else if (reg.waiting) setSwStatus('waiting');
+      else if (reg.installing) setSwStatus('installing');
+      else setSwStatus('none');
+    } catch (err) {
+      console.warn('[Push] Error checking SW status:', err);
+      setSwStatus('none');
+    }
   }, []);
 
   const syncSubscriptionWithBackend = useCallback(async (sub: PushSubscription) => {
@@ -138,19 +125,18 @@ export const usePushNotifications = () => {
   const getSubscription = useCallback(async () => {
     if (!checkSupport()) return null;
     try {
-      const reg = await navigator.serviceWorker.getRegistration();
+      const regs = await navigator.serviceWorker.getRegistrations();
+      const reg = regs.find(r => r.active) || regs[0];
       if (!reg) return null;
+      
       const sub = await reg.pushManager.getSubscription();
       setSubscription(sub);
-      if (sub) {
-        // Only sync if permission is granted
-        if (Notification.permission === 'granted') {
-          await syncSubscriptionWithBackend(sub);
-        }
+      if (sub && Notification.permission === 'granted') {
+        await syncSubscriptionWithBackend(sub);
       }
       return sub;
     } catch (err) {
-      console.error('[Push] Error getting subscription:', err);
+      console.warn('[Push] Error getting subscription:', err);
       return null;
     }
   }, [checkSupport, syncSubscriptionWithBackend]);
