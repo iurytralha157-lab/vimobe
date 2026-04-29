@@ -544,6 +544,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       await updateAutomation.mutateAsync({
         id: automationId,
         name,
+        is_active: isActive,
         description: `Follow-up com ${messageNodes.length} mensagens`,
         trigger_type: triggerType,
         trigger_config: {
