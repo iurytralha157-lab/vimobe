@@ -11,7 +11,7 @@ import {
   unsubscribeFromPush, 
   checkSubscriptionStatus 
 } from "@/lib/push";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { 
   Download, 
