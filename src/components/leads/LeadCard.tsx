@@ -178,23 +178,19 @@ export const LeadCard = memo(function LeadCard({
               </span>}
             
             {/* Tags - primeira tag em destaque */}
-            {lead.tags && lead.tags.length > 0 ? (
-                <div className="flex items-center gap-1 flex-wrap">
-                  {lead.tags.map((tag: any, idx: number) => (
-                    <span 
-                      key={tag.id || idx}
-                      className="text-[9px] px-1.5 py-0.5 font-medium rounded-full border shadow-sm" 
-                      style={{
-                        backgroundColor: tag.color || '#6b7280',
-                        color: '#FFFFFF',
-                        borderColor: tag.color || '#6b7280'
-                      }}
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
+            {lead.tags && lead.tags?.map((tag: any, idx: number) => (
+              <span 
+                key={tag.id || idx}
+                className="text-[9px] px-1.5 py-0.5 font-medium rounded-full border shadow-sm" 
+                style={{
+                  backgroundColor: tag.color || '#6b7280',
+                  color: '#FFFFFF',
+                  borderColor: tag.color || '#6b7280'
+                }}
+              >
+                {tag.name}
+              </span>
+            ))}
           </div>
 
 
