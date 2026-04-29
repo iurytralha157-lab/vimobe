@@ -237,26 +237,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('impersonating');
     };
 
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (!isMounted) return;
+    const initSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
 
-      // Se houve erro ou sessão inválida, limpar tudo
-      if (error || !session) {
-        console.log('Sessão inválida na inicialização:', error?.message);
-        clearAllStates();
-        setLoading(false);
-        return;
+        if (error || !session) {
+          console.log('Sessão inválida na inicialização:', error?.message);
+          clearAllStates();
+          setLoading(false);
+          return;
+        }
+
+        setSession(session);
+        setUser(session.user);
+
+        // Adicionar um timeout para evitar que o app trave se o banco estiver lento (recursão de RLS)
+        const profilePromise = fetchProfile(session.user.id);
+        const multiOrgPromise = checkMultiOrg(session.user.id);
+        
+        // Timeout de 5 segundos para as chamadas iniciais
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout carregando perfil')), 5000)
+        );
+
+        try {
+          await Promise.race([
+            Promise.all([profilePromise, multiOrgPromise]),
+            timeoutPromise
+          ]);
+        } catch (e) {
+          console.error('Erro ou timeout ao carregar dados iniciais:', e);
+          // Mesmo com erro, liberamos o loading para o usuário ver a tela (possivelmente com erro limitado)
+        }
+      } catch (e) {
+        console.error('Erro fatal na inicialização do Auth:', e);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
+    };
 
-      setSession(session);
-      setUser(session.user);
-
-      await Promise.all([
-        fetchProfile(session.user.id),
-        checkMultiOrg(session.user.id)
-      ]);
-      setLoading(false);
-    });
+    initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
