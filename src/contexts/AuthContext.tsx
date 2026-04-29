@@ -47,6 +47,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   organization: Organization | null;
   loading: boolean;
+  profileLoading: boolean;
   isSuperAdmin: boolean;
   impersonating: ImpersonateSession | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -59,6 +60,7 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => Promise<void>;
   needsOrgSelection: boolean;
 }
+// Removed extra brace
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -68,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
@@ -120,9 +123,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
+    setProfileLoading(true);
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
-        // console.log removed for speed
         const [userResult, superAdmin] = await Promise.all([
           supabase
             .from("users")
@@ -193,6 +196,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error("Critical error in fetchProfile:", error);
         return false;
+      } finally {
+        setProfileLoading(false);
       }
     });
   }, [checkSuperAdmin, fetchFullProfile]);
@@ -230,46 +235,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const initialize = async () => {
+      const safetyTimeout = setTimeout(() => {
+        if (isMounted) setLoading(false);
+      }, 6000);
+
       try {
-        // console.log removed for speed
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
         
-        if (error) {
-          console.error("Auth getSession error:", error);
+        if (error || !session) {
           clearAllStates();
           setLoading(false);
           return;
         }
 
-        if (!session) {
-          // console.log removed for speed
-          clearAllStates();
-          setLoading(false);
-          return;
-        }
-
-        // console.log removed for speed
         setSession(session);
         setUser(session.user);
         
-        const [profileSuccess] = await Promise.all([
+        await Promise.all([
           fetchProfile(session.user.id),
           checkMultiOrg(session.user.id)
         ]);
-        
-        // console.log removed for speed
       } catch (e) {
-        console.error("Auth init exception:", e);
-        clearAllStates();
+        console.error("Auth initialization error:", e);
       } finally {
-        if (isMounted) {
-          console.log("Setting loading to false");
-          setLoading(false);
-        }
+        clearTimeout(safetyTimeout);
+        if (isMounted) setLoading(false);
       }
     };
+// Corrected duplicate block
 
     initialize();
 
@@ -453,6 +448,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     organization,
     loading,
+    profileLoading,
     isSuperAdmin,
     impersonating,
     needsOrgSelection,
@@ -464,7 +460,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startImpersonate,
     stopImpersonate,
     switchOrganization,
-  }), [user, session, profile, organization, loading, isSuperAdmin, impersonating, needsOrgSelection, fetchProfile, switchOrganization]);
+  }), [user, session, profile, organization, loading, profileLoading, isSuperAdmin, impersonating, needsOrgSelection, fetchProfile, switchOrganization]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
