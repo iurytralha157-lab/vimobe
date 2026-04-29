@@ -21,70 +21,45 @@ const urlBase64ToUint8Array = (base64String: string) => {
  * Does NOT register a custom worker — relies on the PWA worker generated
  * by vite-plugin-pwa (which imports `/sw-push.js` for push events).
  */
-async function waitForActiveServiceWorker(
-  timeoutMs = 15000
-): Promise<ServiceWorkerRegistration> {
+async function getActiveServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
-    throw new Error('Este navegador não suporta Service Worker.');
+    throw new Error('Navegador sem suporte a Service Worker.');
   }
 
-  const start = Date.now();
+  // 1. Check if already ready
+  const readyReg = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
+  ]);
+  
+  if (readyReg && readyReg.active) return readyReg;
 
-  // Helper: wait for a registration to reach "activated" state
-  const waitForActivation = (reg: ServiceWorkerRegistration) =>
-    new Promise<ServiceWorkerRegistration>((resolve, reject) => {
-      if (reg.active) return resolve(reg);
-      const sw = reg.installing || reg.waiting;
-      if (!sw) return reject(new Error('Service Worker presente, mas sem worker em estado válido.'));
-      const onChange = () => {
-        if (sw.state === 'activated' || reg.active) {
-          sw.removeEventListener('statechange', onChange);
-          resolve(reg);
-        } else if (sw.state === 'redundant') {
-          sw.removeEventListener('statechange', onChange);
-          reject(new Error('Service Worker tornou-se redundante antes de ativar.'));
-        }
-      };
-      sw.addEventListener('statechange', onChange);
-    });
+  // 2. Try to get existing one
+  const regs = await navigator.serviceWorker.getRegistrations();
+  const activeReg = regs.find(r => r.active);
+  if (activeReg) return activeReg;
 
-  while (Date.now() - start < timeoutMs) {
-    // 1) Try existing registration
-    let reg =
-      (await navigator.serviceWorker.getRegistration()) ||
-      (await navigator.serviceWorker.getRegistrations()).find(Boolean);
-
-    if (reg) {
-      if (reg.active) return reg;
-      try {
-        return await Promise.race([
-          waitForActivation(reg),
-          new Promise<ServiceWorkerRegistration>((_, rej) =>
-            setTimeout(() => rej(new Error('timeout-activation')), 4000)
-          ),
-        ]);
-      } catch {
-        // fallthrough — try ready / loop
+  // 3. Wait for any to activate
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout aguardando Service Worker.')), timeoutMs);
+    
+    const check = async () => {
+      const currentRegs = await navigator.serviceWorker.getRegistrations();
+      const active = currentRegs.find(r => r.active);
+      if (active) {
+        clearTimeout(timeout);
+        resolve(active);
+        return true;
       }
-    }
+      return false;
+    };
 
-    // 2) Race with navigator.serviceWorker.ready
-    try {
-      const ready = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 2000)),
-      ]);
-      if (ready && ready.active) return ready;
-    } catch {
-      // ignore
-    }
+    const interval = setInterval(async () => {
+      if (await check()) clearInterval(interval);
+    }, 500);
 
-    await new Promise((r) => setTimeout(r, 500));
-  }
-
-  throw new Error(
-    'Service Worker do app ainda não está ativo. Feche e reabra o app, ou desinstale e reinstale o atalho na tela inicial.'
-  );
+    check();
+  });
 }
 
 export const usePushNotifications = () => {
@@ -121,74 +96,92 @@ export const usePushNotifications = () => {
   }, []);
 
   const syncSubscriptionWithBackend = useCallback(async (sub: PushSubscription) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
 
-    console.log('[Push] Syncing subscription with backend...');
-    const { error } = await (supabase as any)
-      .from('push_subscriptions')
-      .upsert(
-        {
-          user_id: user.id,
-          subscription: JSON.parse(JSON.stringify(sub)),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
+      console.log('[Push] Syncing subscription with backend...');
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert(
+          {
+            user_id: user.id,
+            subscription: JSON.parse(JSON.stringify(sub)),
+          },
+          { onConflict: 'user_id' }
+        );
 
-    if (error) {
-      console.error('[Push] Sync error:', error);
+      if (error) {
+        console.error('[Push] Sync error:', error);
+        setSynced(false);
+        return false;
+      }
+      
+      console.log('[Push] Sync success');
+      setSynced(true);
+      return true;
+    } catch (err) {
+      console.error('[Push] Sync exception:', err);
       setSynced(false);
       return false;
     }
-    console.log('[Push] Sync success');
-    setSynced(true);
-    return true;
   }, []);
 
   const getSubscription = useCallback(async () => {
+    if (!checkSupport()) return null;
     try {
-      const reg =
-        (await navigator.serviceWorker.getRegistration()) ||
-        (await navigator.serviceWorker.getRegistrations()).find(Boolean);
+      const reg = await navigator.serviceWorker.getRegistration();
       if (!reg) return null;
       const sub = await reg.pushManager.getSubscription();
       setSubscription(sub);
-      if (sub) await syncSubscriptionWithBackend(sub);
+      if (sub) {
+        // Only sync if permission is granted
+        if (Notification.permission === 'granted') {
+          await syncSubscriptionWithBackend(sub);
+        }
+      }
       return sub;
     } catch (err) {
       console.error('[Push] Error getting subscription:', err);
       return null;
     }
-  }, [syncSubscriptionWithBackend]);
+  }, [checkSupport, syncSubscriptionWithBackend]);
 
   useEffect(() => {
     if (checkSupport()) {
       refreshSwStatus();
       getSubscription();
+      
+      // Monitor permission changes if possible
+      if ('permissions' in navigator) {
+        navigator.permissions.query({ name: 'notifications' as PermissionName }).then((status) => {
+          status.onchange = () => {
+            setPermission(Notification.permission);
+            if (Notification.permission === 'granted') {
+              getSubscription();
+            }
+          };
+        });
+      }
     }
   }, [checkSupport, getSubscription, refreshSwStatus]);
 
   const subscribeUser = async () => {
-    if (!checkSupport()) throw new Error('Notificações não são suportadas neste navegador.');
+    if (!checkSupport()) throw new Error('Notificações não são suportadas.');
 
     console.log('[Push] Requesting permission...');
     const result = await Notification.requestPermission();
     setPermission(result);
-    if (result !== 'granted') throw new Error('Permissão negada para notificações.');
+    if (result !== 'granted') throw new Error('Permissão negada.');
 
-    console.log('[Push] Waiting for active Service Worker...');
-    const registration = await waitForActiveServiceWorker(15000);
+    console.log('[Push] Getting Service Worker...');
+    const registration = await getActiveServiceWorkerRegistration();
     await refreshSwStatus();
 
-    if (!registration.active) {
-      throw new Error(
-        'Service Worker não está ativo. Recarregue o app uma vez e tente novamente.'
-      );
-    }
-
-    console.log('[Push] SW active, subscribing to push...');
+    console.log('[Push] Subscribing to push...');
     let sub = await registration.pushManager.getSubscription();
+    
+    // Always try to subscribe if no sub exists or if we want to ensure latest
     if (!sub) {
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       sub = await registration.pushManager.subscribe({
@@ -203,25 +196,32 @@ export const usePushNotifications = () => {
   };
 
   const unsubscribeUser = async () => {
-    if (!subscription) return;
-    await subscription.unsubscribe();
-    setSubscription(null);
-    setSynced(false);
+    try {
+      if (subscription) {
+        await subscription.unsubscribe();
+      }
+      setSubscription(null);
+      setSynced(false);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await (supabase as any)
-        .from('push_subscriptions')
-        .delete()
-        .eq('user_id', user.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('user_id', user.id);
+      }
+    } catch (err) {
+      console.error('[Push] Unsubscribe error:', err);
     }
   };
 
   const resyncSubscription = useCallback(async () => {
     await refreshSwStatus();
     const sub = await getSubscription();
-    if (sub) await syncSubscriptionWithBackend(sub);
-    return sub;
+    if (sub) {
+      return await syncSubscriptionWithBackend(sub);
+    }
+    return false;
   }, [getSubscription, refreshSwStatus, syncSubscriptionWithBackend]);
 
   return {

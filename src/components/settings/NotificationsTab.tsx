@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -18,6 +18,13 @@ export const NotificationsTab = () => {
     refreshSubscription,
   } = usePushNotifications();
   const [loading, setLoading] = useState(false);
+
+  // Auto-sync on mount if permission is granted but synced is false
+  useEffect(() => {
+    if (permission === 'granted' && subscription && !synced && !loading) {
+      refreshSubscription();
+    }
+  }, [permission, subscription, synced, loading, refreshSubscription]);
 
   const handleToggle = async () => {
     setLoading(true);
@@ -73,9 +80,18 @@ export const NotificationsTab = () => {
   const handleSync = async () => {
     setLoading(true);
     try {
-      const sub = await refreshSubscription();
-      if (sub) toast.success('Inscrição sincronizada com o servidor.');
-      else toast.message('Nenhuma inscrição local encontrada. Ative as notificações primeiro.');
+      const success = await refreshSubscription();
+      if (success) {
+        toast.success('Inscrição sincronizada com sucesso!');
+      } else {
+        // Se não sincronizou, talvez precise re-inscrever
+        if (permission === 'granted') {
+          await subscribeUser();
+          toast.success('Serviço reativado e sincronizado.');
+        } else {
+          toast.error('Não foi possível sincronizar. Tente ativar novamente.');
+        }
+      }
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao sincronizar.');
     } finally {
