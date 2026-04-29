@@ -20,21 +20,8 @@ export function AdminHeader({ title }: AdminHeaderProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
   
-  const { data: notifications = [], isLoading } = useNotifications();
-  const { data: unreadCount = 0 } = useUnreadNotificationsCount();
-  const markRead = useMarkNotificationRead();
-  const markAllRead = useMarkAllNotificationsRead();
+  // Notification hooks and handlers removed
 
-  const handleNotificationClick = (notification: any) => {
-    markRead.mutate(notification.id);
-    if (notification.title?.includes('Atualize seu telefone')) {
-      navigate('/settings');
-      return;
-    }
-    if (notification.lead_id) {
-      navigate(`/crm/pipelines?lead_id=${notification.lead_id}`);
-    }
-  };
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
