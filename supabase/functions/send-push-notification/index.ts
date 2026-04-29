@@ -74,7 +74,7 @@ function parsePrivateKey(pem: string): Uint8Array {
 }
 
 // Create VAPID JWT for authorization
-async function createVapidJwt(audience: string, subject: string, privateKeyPem: string): Promise<string> {
+async function createVapidJwt(audience: string, subject: string, privateKeyPem: string, publicKey: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const exp = now + 12 * 60 * 60; // 12 hours
 
