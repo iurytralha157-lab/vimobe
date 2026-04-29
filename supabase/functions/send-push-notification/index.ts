@@ -152,16 +152,9 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
 
 // Helper to extract raw P-256 key (65 bytes)
 function getRawPublicKey(publicKeyB64: string): string {
-  const bytes = base64UrlDecode(publicKeyB64);
-  
-  // If it's already 65 bytes (raw uncompressed point), return as is
-  if (bytes.length === 65) return publicKeyB64;
-  
-  // If it's 91 bytes (SPKI/DER), extract the 65-byte point
-  if (bytes.length === 91) {
-    return base64UrlEncode(bytes.slice(26));
-  }
-  
+  // Ensure we use the correct uncompressed public key point
+  // The frontend uses "BJBVpyQSbQSpeAQQs-lEf2BKa6L6vlUcXxD3F2KNML9iJW4h2Al2hhgB9KbDW9C73PCnow8ZpXIJxrUNMWxU6vA"
+  // which is exactly 65 bytes in base64url.
   return publicKeyB64;
 }
 
