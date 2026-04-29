@@ -236,12 +236,11 @@ export function useWhatsAppHealthMonitor() {
             
             // Update our local state
             const state = healthStatesRef.current.get(updated.id);
-            if (state && !state.notificationSent) {
+            if (state) {
               toast.warning("WhatsApp Desconectado!", {
                 description: `A sessão "${displayName}" foi desconectada.`,
                 duration: 10000,
               });
-              state.notificationSent = true;
               state.lastKnownStatus = "disconnected";
             }
 
@@ -257,7 +256,6 @@ export function useWhatsAppHealthMonitor() {
             const state = healthStatesRef.current.get(updated.id);
             if (state) {
               state.consecutiveFailures = 0;
-              state.notificationSent = false;
               state.lastKnownStatus = "connected";
             }
 
