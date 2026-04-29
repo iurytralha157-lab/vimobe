@@ -210,22 +210,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initialize = async () => {
       try {
+        console.log("Auth starting initialize...");
         const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (!isMounted) return;
-        if (error || !session) {
+        
+        if (error) {
+          console.error("Auth getSession error:", error);
           clearAllStates();
-        } else {
-          setSession(session);
-          setUser(session.user);
-          await Promise.all([
-            fetchProfile(session.user.id),
-            checkMultiOrg(session.user.id)
-          ]);
+          setLoading(false);
+          return;
         }
+
+        if (!session) {
+          console.log("No session found during init");
+          clearAllStates();
+          setLoading(false);
+          return;
+        }
+
+        console.log("Session found, fetching profile for:", session.user.id);
+        setSession(session);
+        setUser(session.user);
+        
+        const [profileSuccess] = await Promise.all([
+          fetchProfile(session.user.id),
+          checkMultiOrg(session.user.id)
+        ]);
+        
+        console.log("Init sequence complete, profile success:", profileSuccess);
       } catch (e) {
-        console.error("Auth init error:", e);
+        console.error("Auth init exception:", e);
+        clearAllStates();
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          console.log("Setting loading to false");
+          setLoading(false);
+        }
       }
     };
 
