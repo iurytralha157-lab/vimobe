@@ -121,6 +121,9 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
     dataToSign
   );
 
+  // Convert raw signature to ASN.1 DER format if needed by the server
+  // Actually, Web Push usually expects the 64-byte raw signature (R + S)
+  // which is what crypto.subtle.sign returns for ECDSA.
   const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   return `${unsignedToken}.${signatureB64}`;
 }
