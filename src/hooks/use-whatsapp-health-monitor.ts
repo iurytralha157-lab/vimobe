@@ -106,7 +106,6 @@ export function useWhatsAppHealthMonitor() {
       if (isConnected) {
         // Reset failures on successful check
         state.consecutiveFailures = 0;
-        state.notificationSent = false;
         state.lastKnownStatus = "connected";
 
         // If DB says not connected but API says connected, fix the DB
