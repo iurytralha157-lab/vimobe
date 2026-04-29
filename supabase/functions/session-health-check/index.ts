@@ -122,12 +122,6 @@ Deno.serve(async (req) => {
             console.log(`Session ${session.instance_name} confirmed disconnected after retry`);
             updateData.status = "disconnected";
 
-            const displayName = session.display_name || session.instance_name;
-
-            // Disconnected - no notifications, just update status and audit log
-            console.log(`Session ${session.instance_name} confirmed disconnected after retry`);
-            updateData.status = "disconnected";
-
             await supabase
               .from("whatsapp_sessions")
               .update(updateData)
