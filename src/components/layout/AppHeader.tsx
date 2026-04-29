@@ -38,15 +38,6 @@ export const AppHeader = React.memo(function AppHeader({
   } = useTheme();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const {
-    data: notifications = [],
-    isLoading
-  } = useNotifications();
-  const {
-    data: unreadCount = 0
-  } = useUnreadNotificationsCount();
-  const markRead = useMarkNotificationRead();
-  const markAllRead = useMarkAllNotificationsRead();
   const { data: userOrganizations = [] } = useUserOrganizations(user?.id);
   
   const hasMultipleOrgs = userOrganizations.length > 1;
@@ -58,16 +49,6 @@ export const AppHeader = React.memo(function AppHeader({
     window.location.reload();
   };
 
-  const handleNotificationClick = (notification: any) => {
-    markRead.mutate(notification.id);
-    if (notification.title?.includes('Atualize seu telefone')) {
-      navigate('/settings');
-      return;
-    }
-    if (notification.lead_id) {
-      navigate(`/crm/pipelines?lead_id=${notification.lead_id}`);
-    }
-  };
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
