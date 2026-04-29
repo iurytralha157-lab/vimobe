@@ -181,6 +181,11 @@ export const usePushNotifications = () => {
       refreshSwStatus();
       getSubscription();
       
+      // Pre-warm the service worker without blocking
+      getActiveServiceWorkerRegistration(5000).catch(() => {
+        console.log('[Push] SW not ready during pre-warm, will wait on demand.');
+      });
+      
       // Monitor permission changes if possible
       if ('permissions' in navigator) {
         navigator.permissions.query({ name: 'notifications' as PermissionName }).then((status) => {
