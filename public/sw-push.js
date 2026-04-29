@@ -44,6 +44,11 @@ self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   console.log('[Service Worker] Notification Clicked:', event.notification.data);
 
+  // Clear badge count
+  if ('clearAppBadge' in self.navigator) {
+    self.navigator.clearAppBadge().catch(() => {});
+  }
+
   const urlToOpen = event.notification.data?.url || '/';
 
   event.waitUntil(
