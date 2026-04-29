@@ -12,9 +12,24 @@ export const PushNotificationHandler = () => {
       // For now, only auto-register if already granted to avoid annoying prompts
       // but we could also prompt once per session if not denied.
       const handleAutoPush = async () => {
-        // Small delay to ensure everything is loaded
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        await autoRegisterPush(user.id);
+        // Delay to ensure the app is stable
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const permission = Notification.permission;
+        
+        if (permission === "granted") {
+          await autoRegisterPush(user.id);
+        } else if (permission === "default") {
+          // If they haven't decided yet, we can try to prompt once
+          // Note: Browsers might block this if not from a direct click, 
+          // but we try it for a smoother experience if allowed.
+          console.log("[Push] Permission is default, attempting auto-subscription...");
+          try {
+            await autoRegisterPush(user.id);
+          } catch (e) {
+            console.log("[Push] Auto-prompt blocked or failed:", e);
+          }
+        }
       };
 
       handleAutoPush();
