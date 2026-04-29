@@ -220,6 +220,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   useEffect(() => {
     if (automation && !isInitialized) {
       setName(automation.name || '');
+      setIsActive(automation.is_active ?? true);
       setTriggerType(automation.trigger_type as TriggerType);
       
       const config = automation.trigger_config as Record<string, unknown> || {};
