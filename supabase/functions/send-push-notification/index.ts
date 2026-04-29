@@ -117,6 +117,7 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     cryptoKey,
+    // Use raw string directly or carefully encoded
     new TextEncoder().encode(unsignedToken)
   );
 
