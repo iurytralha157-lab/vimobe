@@ -26,7 +26,7 @@ interface WebPushSubscription {
 // Importa a chave privada VAPID
 function getVapidKeys() {
   const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-  const publicKey = Deno.env.get("VITE_VAPID_PUBLIC_KEY") || "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWjUfBw5nc02KFFL6pr1jM51bHv0CllEuy5ypnldeYLMhYSbQbKlWHK7T9VK1CF2xVgH_9HOc3tavj0iuT1mEzA";
+  const publicKey = Deno.env.get("VAPID_PUBLIC_KEY") || Deno.env.get("VITE_VAPID_PUBLIC_KEY");
   
   if (!privateKey) {
     throw new Error("VAPID_PRIVATE_KEY not configured");
@@ -91,43 +91,59 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   // Import the ECDSA private key
   const keyData = parsePrivateKey(privateKeyPem);
   
-  // Se for uma chave de 32 bytes (raw), precisamos converter para PKCS#8 para o Deno
-  let finalKeyData = keyData;
-  if (keyData.length === 32) {
+  // Deno/V8 subtle crypto expects the 32-byte raw key for P-256
+  // even when using 'pkcs8' format, or a proper pkcs8 wrapper.
+  // The error "InvalidEncoding" usually means the wrapper or the key size is wrong.
+  
+  let cryptoKey: CryptoKey;
+  try {
+    // Attempt raw import first (Deno specific behavior sometimes favors this)
+    if (keyData.length === 32) {
+      cryptoKey = await crypto.subtle.importKey(
+        "jwk",
+        {
+          kty: "EC",
+          crv: "P-256",
+          x: "", // Not needed for private key in JWK usually
+          y: "",
+          d: base64UrlEncode(keyData),
+          ext: true,
+        },
+        { name: "ECDSA", namedCurve: "P-256" },
+        false,
+        ["sign"]
+      );
+    } else {
+      throw new Error("Not raw 32 bytes");
+    }
+  } catch (e) {
+    // Fallback to the pkcs8 wrapper approach
     const pkcs8 = new Uint8Array(67);
     pkcs8.set([
       0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 
       0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20
     ]);
-    pkcs8.set(keyData, 35);
-    finalKeyData = pkcs8;
+    pkcs8.set(keyData.length === 32 ? keyData : keyData.slice(-32), 35);
+    
+    cryptoKey = await crypto.subtle.importKey(
+      "pkcs8",
+      pkcs8.buffer as ArrayBuffer,
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign"]
+    );
   }
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    finalKeyData.buffer as ArrayBuffer,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
 
   console.log("[WebPush] Private key imported successfully");
 
-  // Sign the token
-  // Use a hardcoded token for debugging if this keeps failing
-  // or use a more standard ES256 signing method
-  let signature: ArrayBuffer;
-  try {
-    const dataToSign = new TextEncoder().encode(unsignedToken);
-    signature = await crypto.subtle.sign(
-      { name: "ECDSA", hash: { name: "SHA-256" } },
-      cryptoKey,
-      dataToSign
-    );
-  } catch (e) {
-    console.error("[WebPush] ES256 signing failed, using mock:", e);
-    signature = new Uint8Array(64).fill(0);
-  }
+  // Sign the token using ECDSA with SHA-256
+  const dataToSign = new TextEncoder().encode(unsignedToken);
+  // ES256 signature must be R + S (64 bytes)
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    cryptoKey,
+    dataToSign
+  );
 
   const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   return `${unsignedToken}.${signatureB64}`;
@@ -162,8 +178,11 @@ async function sendWebPushNotification(
     const endpointUrl = new URL(subscription.endpoint);
     const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
 
+    // Use subject from env or default
+    const subject = Deno.env.get("VAPID_MAILTO") || "mailto:suporte@vimob.com.br";
+
     // Create VAPID JWT
-    const jwt = await createVapidJwt(audience, "mailto:suporte@vimob.com.br", privateKey);
+    const jwt = await createVapidJwt(audience, subject, privateKey);
 
     // Prepare payload
     const payload = JSON.stringify({
@@ -181,6 +200,7 @@ async function sendWebPushNotification(
       method: "POST",
       headers: {
         "Authorization": `WebPush ${jwt}`,
+        "Crypto-Key": `p256ecdsa=${rawPublicKey}`,
         "Content-Type": "application/octet-stream",
         "TTL": priority === 'high' ? "86400" : "3600",
         "Urgency": priority === 'high' ? "high" : "normal",
