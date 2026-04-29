@@ -12,9 +12,9 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const auth = useContext(AuthContext);
-  const profile = auth?.profile ?? null;
-  const user = auth?.user ?? null;
+  const auth = useAuth();
+  const profile = auth.profile;
+  const user = auth.user;
   const [language, setLanguageState] = useState<Language>('pt-BR');
 
   // Initialize language from profile or localStorage
