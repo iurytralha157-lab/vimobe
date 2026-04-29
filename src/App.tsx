@@ -175,9 +175,9 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    if (loading) return <PageLoader />;
+    if (loading && !user) return <PageLoader />;
     if (user) {
-      if (!profile && !isSuperAdmin) return <PageLoader />;
+      // Se já está logado, vai para o dashboard/admin sem esperar o perfil completo carregar
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;
