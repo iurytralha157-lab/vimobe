@@ -196,6 +196,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error("Critical error in fetchProfile:", error);
         return false;
+      } finally {
+        setProfileLoading(false);
       }
     });
   }, [checkSuperAdmin, fetchFullProfile]);
