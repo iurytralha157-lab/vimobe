@@ -178,8 +178,11 @@ async function sendWebPushNotification(
     const endpointUrl = new URL(subscription.endpoint);
     const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
 
+    // Use subject from env or default
+    const subject = Deno.env.get("VAPID_MAILTO") || "mailto:suporte@vimob.com.br";
+
     // Create VAPID JWT
-    const jwt = await createVapidJwt(audience, "mailto:suporte@vimob.com.br", privateKey);
+    const jwt = await createVapidJwt(audience, subject, privateKey);
 
     // Prepare payload
     const payload = JSON.stringify({
