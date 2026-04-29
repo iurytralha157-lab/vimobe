@@ -244,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (!session) {
-          console.log("No session found during init");
+          // console.log removed for speed
           clearAllStates();
           setLoading(false);
           return;
