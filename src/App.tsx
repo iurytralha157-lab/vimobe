@@ -197,7 +197,7 @@ function AppRoutes() {
 
   return (
     <>
-      {user && <PushNotificationHandler />}
+      {/* user && <PushNotificationHandler /> -- Comentado temporariamente para resolver lentidão */}
       {!isResetPasswordRoute && <AnnouncementBanner />}
       {!isResetPasswordRoute && <ImpersonateBanner />}
       {!isResetPasswordRoute && <Suspense fallback={null}><TrialExpiredModal /></Suspense>}
