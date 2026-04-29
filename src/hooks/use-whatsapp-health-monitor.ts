@@ -75,48 +75,8 @@ export function useWhatsAppHealthMonitor() {
     }
   }, []);
 
-  // Create disconnection notification
-  const createDisconnectionNotification = useCallback(async (
-    sessionName: string,
-    ownerId: string,
-    organizationId: string
-  ) => {
-    try {
-      // Create notification for the session owner
-      await supabase.from("notifications").insert({
-        user_id: ownerId,
-        organization_id: organizationId,
-        title: "⚠️ WhatsApp Desconectado!",
-        content: `A sessão "${sessionName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
-        type: "warning",
-        is_read: false,
-      });
+  // createDisconnectionNotification removed
 
-      // Also notify admins
-      const { data: admins } = await supabase
-        .from("users")
-        .select("id")
-        .eq("organization_id", organizationId)
-        .eq("role", "admin")
-        .neq("id", ownerId); // Don't duplicate for owner if also admin
-
-      if (admins && admins.length > 0) {
-        const adminNotifications = admins.map(admin => ({
-          user_id: admin.id,
-          organization_id: organizationId,
-          title: "⚠️ WhatsApp Desconectado!",
-          content: `A sessão "${sessionName}" perdeu a conexão. O responsável foi notificado.`,
-          type: "warning",
-          is_read: false,
-        }));
-
-        await supabase.from("notifications").insert(adminNotifications);
-      }
-
-    } catch (err) {
-      console.error("Failed to create disconnection notification:", err);
-    }
-  }, []);
 
   // Main polling function
   const pollSessions = useCallback(async () => {
