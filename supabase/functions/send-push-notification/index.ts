@@ -150,14 +150,20 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   return `${unsignedToken}.${signatureB64}`;
 }
 
-// Helper to extract raw P-256 key from SPKI/DER (91 bytes)
+// Helper to extract raw P-256 key (65 bytes)
 function getRawPublicKey(publicKeyB64: string): string {
   const bytes = base64UrlDecode(publicKeyB64);
+  
+  // If it's already 65 bytes (raw uncompressed point), return as is
+  if (bytes.length === 65) return publicKeyB64;
+  
+  // If it's 91 bytes (SPKI/DER), extract the 65-byte point
   if (bytes.length === 91) {
-    // Offset 26 is where the 65-byte raw uncompressed point starts
     return base64UrlEncode(bytes.slice(26));
   }
+  
   return publicKeyB64;
+}
 }
 
 // Send Web Push notification
