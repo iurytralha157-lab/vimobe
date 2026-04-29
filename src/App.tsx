@@ -153,12 +153,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   
-  // If we have a user but no profile yet, allow basic layout to render
-  // This prevents the infinite spinner if the user is already authenticated
-  // but profile is still fetching
+  // If we have a user but no profile yet, and we are NOT loading, 
+  // we might have a broken state or a new user.
   if (!profile && !isSuperAdmin) {
-    console.log("ProtectedRoute: Profile still loading...");
-    return <PageLoader />;
+    console.warn("ProtectedRoute: No profile found for authenticated user");
+    // If we're on onboarding, it's fine, but if we're trying to access dashboard,
+    // we should probably send them to onboarding to finish setup.
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
