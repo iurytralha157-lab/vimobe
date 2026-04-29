@@ -53,7 +53,7 @@ export const NotificationsTab = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('send-push', {
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: user.id,
           title: 'Teste de Notificação 🚀',
