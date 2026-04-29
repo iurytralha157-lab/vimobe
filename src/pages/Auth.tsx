@@ -251,23 +251,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background relative overflow-x-hidden">
       {/* Mobile background: optimized WebP image with crop if available */}
-      <div className="lg:hidden absolute inset-0 w-full h-[50vh] overflow-hidden pointer-events-none">
-        {loginBgUrl ? (
-          <div className="relative w-full h-full">
-            <img 
-              src={loginBgUrl.includes('supabase.co') ? `${loginBgUrl}?width=400&quality=50&format=webp` : loginBgUrl}
-              alt=""
-              className={`w-full h-full object-cover transition-opacity duration-700 ${bgLoaded ? 'opacity-40' : 'opacity-0'} blur-[2px]`}
-              loading="eager"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-background/40 to-background" />
-          </div>
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/10 to-background">
-            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/5 to-background" />
-          </div>
-        )}
-      </div>
+      <div className="lg:hidden absolute inset-0 w-full h-[50vh] overflow-hidden pointer-events-none bg-slate-900" />
 
       {/* Mobile spacer to push form below image - reduced to allow move the form up */}
       <div className="lg:hidden h-[25vh] min-h-[150px] flex-shrink-0" />
