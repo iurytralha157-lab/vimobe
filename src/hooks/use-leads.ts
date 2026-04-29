@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 import { normalizePhone } from '@/lib/phone-utils';
-import { notifyLeadCreated } from './use-lead-notifications';
+// notifyLeadCreated removed
 import { logAuditAction } from './use-audit-logs';
 export type Lead = Tables<'leads'> & {
   tags?: { id: string; name: string; color: string }[];
