@@ -26,7 +26,7 @@ function formatNumber(num: number): string {
 const metrics = [
   { key: 'whatsapp_messages', label: 'Mensagens', icon: MessageSquare, color: 'text-green-500' },
   { key: 'leads', label: 'Leads', icon: Users, color: 'text-blue-500' },
-  { key: 'notifications', label: 'Notificações', icon: Bell, color: 'text-yellow-500' },
+  // notifications removed
   { key: 'activities', label: 'Atividades', icon: Activity, color: 'text-purple-500' },
   { key: 'users', label: 'Usuários', icon: Users, color: 'text-orange-500' },
   { key: 'organizations', label: 'Organizações', icon: Building2, color: 'text-indigo-500' },
