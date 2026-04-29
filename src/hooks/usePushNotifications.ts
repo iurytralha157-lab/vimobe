@@ -163,7 +163,12 @@ export const usePushNotifications = () => {
     if (checkSupport()) {
       refreshSwStatus();
       getSubscription();
-      
+
+      // Clear badge on load
+      if ('clearAppBadge' in navigator) {
+        (navigator as any).clearAppBadge().catch(() => {});
+      }
+
       // Monitor permission changes if possible
       let permissionStatus: PermissionStatus | null = null;
       if ('permissions' in navigator) {
