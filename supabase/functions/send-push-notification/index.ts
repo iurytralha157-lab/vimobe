@@ -94,13 +94,10 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   // Se for uma chave de 32 bytes (raw), precisamos converter para PKCS#8 para o Deno
   let finalKeyData = keyData;
   if (keyData.length === 32) {
-    // PKCS#8 wrapper for P-256 private key
     const pkcs8 = new Uint8Array(67);
     pkcs8.set([
-      0x30, 0x41, // Sequence
-      0x02, 0x01, 0x00, // Version
-      0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // Algorithm (EC public key, P-256)
-      0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20 // Octet string containing the private key
+      0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 
+      0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20
     ]);
     pkcs8.set(keyData, 35);
     finalKeyData = pkcs8;
@@ -121,34 +118,11 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
     new TextEncoder().encode(unsignedToken)
   );
 
-  // Convert signature from DER to raw format (64 bytes: r + s) if necessary
-  // Deno/WebCrypto often returns raw format (64 bytes) for ES256
+  // Convert signature from raw format (64 bytes) to DER if necessary
+  // VAPID expects raw 64 bytes signature for ES256 in JWT
   const sigArray = new Uint8Array(signature);
-  let finalSignature = sigArray;
-  
-  // If it's in DER format (starts with 0x30), we might need to extract r and s
-  // But usually WebCrypto returns 64 bytes for ES256
-  if (sigArray[0] === 0x30 && sigArray.length > 64) {
-     // This is a simple DER parser for ECDSA signature
-     let pos = 2;
-     if (sigArray[pos] === 0x02) {
-       pos++;
-       const rLen = sigArray[pos++];
-       const r = sigArray.slice(pos + (rLen === 33 ? 1 : 0), pos + rLen);
-       pos += rLen;
-       if (sigArray[pos] === 0x02) {
-         pos++;
-         const sLen = sigArray[pos++];
-         const s = sigArray.slice(pos + (sLen === 33 ? 1 : 0), pos + sLen);
-         const raw = new Uint8Array(64);
-         raw.set(r, 32 - r.length);
-         raw.set(s, 64 - s.length);
-         finalSignature = raw;
-       }
-     }
-  }
+  const signatureB64 = base64UrlEncode(sigArray);
 
-  const signatureB64 = base64UrlEncode(finalSignature);
   return `${unsignedToken}.${signatureB64}`;
 }
 
