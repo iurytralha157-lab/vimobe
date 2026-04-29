@@ -268,7 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!isMounted) return;
-      console.log("Auth event:", event);
+      console.log("Auth state changed:", event, currentSession ? "session active" : "no session");
 
       if (event === "SIGNED_OUT") {
         clearAllStates();
@@ -279,14 +279,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        await Promise.all([
-          fetchProfile(currentSession.user.id),
-          checkMultiOrg(currentSession.user.id)
-        ]);
+        
+        // Handle events that need profile refresh
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+          console.log("Processing auth event, refreshing profile...");
+          await Promise.all([
+            fetchProfile(currentSession.user.id),
+            checkMultiOrg(currentSession.user.id)
+          ]);
+        }
         setLoading(false);
       } else {
-        clearAllStates();
-        setLoading(false);
+        // No session after change (and not a SIGNED_OUT which we handled above)
+        if (event !== "INITIAL_SESSION") {
+          clearAllStates();
+        }
+        // Only set loading false if we're not waiting for INITIAL_SESSION
+        // which is handled by initialize()
+        if (event !== "INITIAL_SESSION") {
+          setLoading(false);
+        }
       }
     });
 
