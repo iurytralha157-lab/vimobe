@@ -264,18 +264,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) setLoading(false);
       }
     };
-        
-        // console.log removed for speed
-      } catch (e) {
-        console.error("Auth init exception:", e);
-        clearAllStates();
-      } finally {
-        if (isMounted) {
-          console.log("Setting loading to false");
-          setLoading(false);
-        }
-      }
-    };
+// Corrected duplicate block
 
     initialize();
 
