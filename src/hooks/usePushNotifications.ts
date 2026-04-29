@@ -197,6 +197,16 @@ export const usePushNotifications = () => {
           };
         });
       }
+
+      // Listen for controller changes (new SW version active)
+      const handleControllerChange = () => {
+        console.log('[Push] Service worker controller changed.');
+        refreshSwStatus();
+        getSubscription();
+      };
+      
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+      return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
     }
   }, [checkSupport, getSubscription, refreshSwStatus]);
 
