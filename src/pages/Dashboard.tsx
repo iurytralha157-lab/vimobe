@@ -66,25 +66,25 @@ export default function Dashboard() {
   const { data: evolutionData = [], isLoading: evolutionLoading } = useDealsEvolutionData(filters);
 
 
-  // Site visits count - unique sessions (respects date filters)
-  const { data: siteVisits = 0 } = useQuery({
-    queryKey: ['dashboard-site-visits', organization?.id, filters.dateRange.from.toISOString(), filters.dateRange.to.toISOString()],
-    queryFn: async () => {
-      if (!organization?.id) return 0;
+  // Site visits count - delayed for speed
+  const [siteVisits, setSiteVisits] = useState(0);
+  useEffect(() => {
+    if (!organization?.id) return;
+    const timer = setTimeout(async () => {
       const { data, error } = await supabase
         .from('lead_events')
         .select('session_id')
         .eq('organization_id', organization.id)
         .gte('created_at', filters.dateRange.from.toISOString())
         .lte('created_at', filters.dateRange.to.toISOString())
-        .limit(5000);
-      if (error) throw error;
-      const uniqueSessions = new Set((data || []).map(e => e.session_id));
-      return uniqueSessions.size;
-    },
-    enabled: !!organization?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+        .limit(1000);
+      if (!error && data) {
+        const uniqueSessions = new Set(data.map(e => e.session_id));
+        setSiteVisits(uniqueSessions.size);
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [organization?.id, filters.dateRange.from, filters.dateRange.to]);
 
   useEffect(() => {
     if (!statsLoading && !evolutionLoading) {
