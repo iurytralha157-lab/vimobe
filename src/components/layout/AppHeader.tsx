@@ -13,14 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-const notificationIcons: Record<string, typeof Bell> = {
-  lead: UserPlus,
-  task: CheckSquare,
-  contract: FileText,
-  commission: DollarSign,
-  system: Bell,
-  info: Info
-};
+// notificationIcons removed
 
 interface AppHeaderProps {
   title?: string;
