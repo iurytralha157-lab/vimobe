@@ -134,16 +134,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
   if (loading) return <PageLoader />;
-  if (!user) return <Navigate to="/auth" replace />;
+  
+  if (!user) {
+    console.log("ProtectedRoute: No user found, redirecting to /auth");
+    return <Navigate to="/auth" replace />;
+  }
   
   // Super admins bypassing org check if not impersonating
   if (isSuperAdmin && !impersonating && !organization && !needsOrgSelection) {
     return <>{children}</>;
   }
 
-  if (!profile && !isSuperAdmin) return <PageLoader />;
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
+  
+  // If we have a user but no profile yet, show loader while it's fetching
+  if (!profile && !isSuperAdmin) {
+    console.log("ProtectedRoute: User found but no profile yet, waiting...");
+    return <PageLoader />;
+  }
+
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
   
   return <>{children}</>;
@@ -164,6 +174,7 @@ function AppRoutes() {
   }, [user, loading]);
 
   const getDefaultRedirect = () => {
+    console.log("Determining default redirect:", { needsOrgSelection, impersonating, isSuperAdmin });
     if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
     return "/dashboard";
@@ -172,7 +183,7 @@ function AppRoutes() {
   const renderAuthRoute = () => {
     if (loading) return <PageLoader />;
     if (user) {
-      if (!profile && !isSuperAdmin) return <PageLoader />;
+      console.log("Auth route detected user, redirecting to:", getDefaultRedirect());
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;

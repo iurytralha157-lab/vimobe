@@ -316,17 +316,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchProfile, checkMultiOrg]);
 
   const signIn = async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data.user) {
-      checkMultiOrg(data.user.id).catch(console.error);
-      setTimeout(() => {
-        logAuditAction("login", "session", data.user.id, undefined, {
-          email,
-          login_at: new Date().toISOString(),
-        }).catch(console.error);
-      }, 0);
+    setLoading(true);
+    try {
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && data.user) {
+        console.log("SignIn successful, refreshing data...");
+        await Promise.all([
+          fetchProfile(data.user.id),
+          checkMultiOrg(data.user.id)
+        ]);
+        
+        setTimeout(() => {
+          logAuditAction("login", "session", data.user.id, undefined, {
+            email,
+            login_at: new Date().toISOString(),
+          }).catch(console.error);
+        }, 0);
+      }
+      return { error };
+    } finally {
+      setLoading(false);
     }
-    return { error };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
@@ -408,17 +418,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) await fetchProfile(user.id);
   };
 
-  const switchOrganization = async (orgId: string) => {
+  const switchOrganization = useCallback(async (orgId: string) => {
     if (!user) return;
+    console.log("Switching organization to:", orgId);
+    
+    // Update users.organization_id to reflect active org
     await supabase.from("users").update({ organization_id: orgId }).eq("id", user.id);
-    const { data: orgData } = await supabase.from("organizations").select("*").eq("id", orgId).single();
+    
+    // Fetch the new org data
+    const { data: orgData } = await supabase.from("organizations").select("*").eq("id", orgId).maybeSingle();
     if (orgData) setOrganization(orgData as Organization);
+    
+    // Get user's role in this org from organization_members
     const { data: memberData } = await supabase
       .from("organization_members" as any)
       .select("role")
       .eq("user_id", user.id)
       .eq("organization_id", orgId)
-      .single();
+      .maybeSingle();
+      
     if (memberData) {
       const newRole = (memberData as any).role;
       await supabase.from("users").update({ role: newRole }).eq("id", user.id);
@@ -427,7 +445,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile((prev) => (prev ? { ...prev, organization_id: orgId } : prev));
     }
     setNeedsOrgSelection(false);
-  };
+  }, [user]);
 
   const value = useMemo(() => ({
     user,
@@ -446,7 +464,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startImpersonate,
     stopImpersonate,
     switchOrganization,
-  }), [user, session, profile, organization, loading, isSuperAdmin, impersonating, needsOrgSelection, fetchProfile]);
+  }), [user, session, profile, organization, loading, isSuperAdmin, impersonating, needsOrgSelection, fetchProfile, switchOrganization]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -28,7 +28,8 @@ export default function SelectOrganization() {
 
   // If only 1 org, auto-select
   useEffect(() => {
-    if (!loading && !orgsLoading && organizations.length === 1) {
+    if (!loading && !orgsLoading && organizations.length === 1 && !profile?.organization_id) {
+      console.log("Auto-selecting organization:", organizations[0].organization_id);
       handleSelectOrg(organizations[0].organization_id);
     }
   }, [loading, orgsLoading, organizations]);

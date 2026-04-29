@@ -43,10 +43,17 @@ export const AppHeader = React.memo(function AppHeader({
   const hasMultipleOrgs = userOrganizations.length > 1;
 
   const handleSwitchOrg = async (orgId: string) => {
-    await switchOrganization(orgId);
-    navigate('/dashboard', { replace: true });
-    // Force reload to reset all queries
-    window.location.reload();
+    try {
+      await switchOrganization(orgId);
+      // Wait a moment for state to stabilize before redirecting
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+        // Force reload to reset all queries and ensure clean state
+        window.location.reload();
+      }, 100);
+    } catch (err) {
+      console.error("Error switching organization:", err);
+    }
   };
 
 
