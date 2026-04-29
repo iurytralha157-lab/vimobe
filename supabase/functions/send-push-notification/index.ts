@@ -26,7 +26,7 @@ interface WebPushSubscription {
 // Importa a chave privada VAPID
 function getVapidKeys() {
   const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-  const publicKey = Deno.env.get("VITE_VAPID_PUBLIC_KEY") || "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWjUfBw5nc02KFFL6pr1jM51bHv0CllEuy5ypnldeYLMhYSbQbKlWHK7T9VK1CF2xVgH_9HOc3tavj0iuT1mEzA";
+  const publicKey = Deno.env.get("VAPID_PUBLIC_KEY") || Deno.env.get("VITE_VAPID_PUBLIC_KEY");
   
   if (!privateKey) {
     throw new Error("VAPID_PRIVATE_KEY not configured");
@@ -113,21 +113,13 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
 
   console.log("[WebPush] Private key imported successfully");
 
-  // Sign the token
-  // Use a hardcoded token for debugging if this keeps failing
-  // or use a more standard ES256 signing method
-  let signature: ArrayBuffer;
-  try {
-    const dataToSign = new TextEncoder().encode(unsignedToken);
-    signature = await crypto.subtle.sign(
-      { name: "ECDSA", hash: { name: "SHA-256" } },
-      cryptoKey,
-      dataToSign
-    );
-  } catch (e) {
-    console.error("[WebPush] ES256 signing failed, using mock:", e);
-    signature = new Uint8Array(64).fill(0);
-  }
+  // Sign the token using ECDSA with SHA-256
+  const dataToSign = new TextEncoder().encode(unsignedToken);
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: { name: "SHA-256" } },
+    cryptoKey,
+    dataToSign
+  );
 
   const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   return `${unsignedToken}.${signatureB64}`;
