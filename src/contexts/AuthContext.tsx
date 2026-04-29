@@ -259,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           checkMultiOrg(session.user.id)
         ]);
         
-        console.log("Init sequence complete, profile success:", profileSuccess);
+        // console.log removed for speed
       } catch (e) {
         console.error("Auth init exception:", e);
         clearAllStates();
