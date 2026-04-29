@@ -164,7 +164,6 @@ function getRawPublicKey(publicKeyB64: string): string {
   
   return publicKeyB64;
 }
-}
 
 // Send Web Push notification
 async function sendWebPushNotification(
