@@ -133,15 +133,6 @@ const PageLoader = () => (
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
-  console.log("ProtectedRoute check:", { 
-    path: window.location.pathname,
-    loading, 
-    hasUser: !!user, 
-    hasProfile: !!profile, 
-    isSuperAdmin,
-    needsOrgSelection
-  });
-
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   
@@ -242,7 +233,6 @@ function AppRoutes() {
             <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
-            // Notifications route removed
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
             <Route path="/properties/new" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
@@ -326,22 +316,20 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <TooltipProvider>
-          <BrandingAndPwa />
-          <Toaster />
-          <Sonner />
-          <IOSInstallGuide />
           <BrowserRouter>
-            {customDomain ? (
+            <AuthProvider>
               <LanguageProvider>
-                <CustomDomainRoutes />
-              </LanguageProvider>
-            ) : (
-              <AuthProvider>
-                <LanguageProvider>
+                <BrandingAndPwa />
+                <Toaster />
+                <Sonner />
+                <IOSInstallGuide />
+                {customDomain ? (
+                  <CustomDomainRoutes />
+                ) : (
                   <AppRoutes />
-                </LanguageProvider>
-              </AuthProvider>
-            )}
+                )}
+              </LanguageProvider>
+            </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
