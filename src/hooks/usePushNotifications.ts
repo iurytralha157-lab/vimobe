@@ -19,7 +19,13 @@ export const usePushNotifications = () => {
 
   const getSubscription = useCallback(async () => {
     try {
-      const registration = await navigator.serviceWorker.getRegistration();
+      let registration = await navigator.serviceWorker.getRegistration();
+      
+      if (!registration) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length > 0) registration = registrations[0];
+      }
+
       if (registration) {
         const sub = await registration.pushManager.getSubscription();
         setSubscription(sub);
@@ -79,11 +85,46 @@ export const usePushNotifications = () => {
     
     if (result !== 'granted') throw new Error('Permissão negada');
 
-    // Wait for SW to be ready
-    const registration = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Tempo esgotado ao aguardar Service Worker')), 10000))
-    ]);
+    // Wait for SW to be ready with a more robust check
+    console.log('[Push] Waiting for service worker to be ready...');
+    let registration: ServiceWorkerRegistration | undefined;
+    
+    try {
+      // First try the standard 'ready' promise
+      registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 5000))
+      ]);
+
+      if (!registration) {
+        console.log('[Push] navigator.serviceWorker.ready timed out, checking all registrations...');
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length > 0) {
+          registration = registrations[0];
+          console.log('[Push] Found registration via getRegistrations');
+        }
+      }
+
+      if (!registration) {
+        // Last resort: try to register manually if we are in a state where it's missing
+        console.log('[Push] No registration found, attempting manual registration...');
+        registration = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
+        
+        // Wait for it to be active
+        let retryCount = 0;
+        while (registration.installing || registration.waiting) {
+          if (retryCount > 10) break;
+          await new Promise(r => setTimeout(r, 500));
+          retryCount++;
+        }
+      }
+    } catch (err) {
+      console.error('[Push] SW Ready error:', err);
+    }
+
+    if (!registration) {
+      throw new Error('Não foi possível encontrar um Service Worker ativo. Tente recarregar a página.');
+    }
 
     console.log('[Push] SW ready, subscribing...');
     
