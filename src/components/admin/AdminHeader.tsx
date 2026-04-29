@@ -9,14 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-const notificationIcons: Record<string, typeof Bell> = {
-  lead: UserPlus,
-  task: CheckSquare,
-  contract: FileText,
-  commission: DollarSign,
-  system: Bell,
-  info: Info
-};
+// notificationIcons removed
 
 interface AdminHeaderProps {
   title?: string;
