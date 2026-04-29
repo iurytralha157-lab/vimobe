@@ -34,7 +34,7 @@ import {
   useSessionAccess,
   useGrantSessionAccess,
   useRevokeSessionAccess,
-  useToggleNotificationSession,
+  // useToggleNotificationSession removed
   WhatsAppSession } from
 "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
