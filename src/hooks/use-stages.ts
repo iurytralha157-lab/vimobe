@@ -205,14 +205,17 @@ export function useStagesWithLeads(
         totalCountsByStage[stage.id] = stageCountResults[index]?.count || 0;
       });
       
-      // Combinar leads de todos os estágios em um array plano
-      const leads: any[] = [];
+      // Combinar e formatar leads de todos os estágios
       const leadsByStageRaw: Record<string, any[]> = {};
       
       stages.forEach((stage, index) => {
         const stageLeads = stageLeadsResults[index]?.data || [];
-        leadsByStageRaw[stage.id] = stageLeads;
-        leads.push(...stageLeads);
+        // Formatar tags para o formato esperado (limpar o aninhamento do Supabase)
+        const formattedLeads = stageLeads.map((l: any) => ({
+          ...l,
+          tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
+        }));
+        leadsByStageRaw[stage.id] = formattedLeads;
       });
       
       // Build final stages list
