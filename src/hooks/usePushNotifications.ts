@@ -270,6 +270,7 @@ export const usePushNotifications = () => {
     subscription,
     swStatus,
     synced,
+    isPreparing,
     subscribeUser,
     unsubscribeUser,
     refreshSubscription: resyncSubscription,
