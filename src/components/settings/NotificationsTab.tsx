@@ -131,6 +131,8 @@ export const NotificationsTab = () => {
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : subscription ? (
+                'Desativar'
               ) : (
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4" />
