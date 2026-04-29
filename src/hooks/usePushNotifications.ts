@@ -57,6 +57,7 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     console.log('[Push] Syncing with backend...');
+    // @ts-ignore - Table might not be in types yet but exists in DB
     const { error } = await supabase
       .from('push_subscriptions')
       .upsert({
@@ -76,17 +77,16 @@ export const usePushNotifications = () => {
     const result = await Notification.requestPermission();
     setPermission(result);
     
-    if (result !== 'granted') throw new Error('Permission denied');
+    if (result !== 'granted') throw new Error('Permissão negada');
 
-    // Wait for SW to be ready with a reasonable timeout
+    // Wait for SW to be ready
     const registration = await Promise.race([
       navigator.serviceWorker.ready,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout SW ready')), 10000))
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Tempo esgotado ao aguardar Service Worker')), 10000))
     ]);
 
     console.log('[Push] SW ready, subscribing...');
     
-    // Check if already subscribed
     const existingSub = await registration.pushManager.getSubscription();
     if (existingSub) {
       await syncSubscriptionWithBackend(existingSub);
@@ -112,6 +112,7 @@ export const usePushNotifications = () => {
       
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // @ts-ignore
         await supabase
           .from('push_subscriptions')
           .delete()
@@ -129,3 +130,4 @@ export const usePushNotifications = () => {
     refreshSubscription: getSubscription
   };
 };
+
