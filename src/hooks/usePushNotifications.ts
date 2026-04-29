@@ -21,44 +21,51 @@ const urlBase64ToUint8Array = (base64String: string) => {
  * Does NOT register a custom worker — relies on the PWA worker generated
  * by vite-plugin-pwa (which imports `/sw-push.js` for push events).
  */
-async function getActiveServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceWorkerRegistration> {
+async function getActiveServiceWorkerRegistration(timeoutMs = 25000): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
     throw new Error('Navegador sem suporte a Service Worker.');
   }
 
-  // 1. Check if already ready
+  // 1. Check if already ready with a shorter race
   const readyReg = await Promise.race([
     navigator.serviceWorker.ready,
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
   ]);
   
   if (readyReg && readyReg.active) return readyReg;
 
-  // 2. Try to get existing one
+  // 2. Try to get any existing registration
   const regs = await navigator.serviceWorker.getRegistrations();
   const activeReg = regs.find(r => r.active);
   if (activeReg) return activeReg;
 
-  // 3. Wait for any to activate
+  // 3. If we have a waiting worker, skip waiting
+  const waitingReg = regs.find(r => r.waiting);
+  if (waitingReg && waitingReg.waiting) {
+    waitingReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+
+  // 4. Poll for active status
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timeout aguardando Service Worker.')), timeoutMs);
-    
-    const check = async () => {
+    const startTime = Date.now();
+    const interval = setInterval(async () => {
       const currentRegs = await navigator.serviceWorker.getRegistrations();
       const active = currentRegs.find(r => r.active);
+      
       if (active) {
-        clearTimeout(timeout);
+        clearInterval(interval);
         resolve(active);
-        return true;
+      } else if (Date.now() - startTime > timeoutMs) {
+        clearInterval(interval);
+        
+        // Final fallback: if there's any registration, try to use it anyway
+        if (currentRegs.length > 0) {
+          resolve(currentRegs[0]);
+        } else {
+          reject(new Error('Sistema de notificações ainda está carregando. Por favor, recarregue a página e tente novamente.'));
+        }
       }
-      return false;
-    };
-
-    const interval = setInterval(async () => {
-      if (await check()) clearInterval(interval);
     }, 500);
-
-    check();
   });
 }
 
@@ -68,6 +75,7 @@ export const usePushNotifications = () => {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [swStatus, setSwStatus] = useState<SwStatus>('unknown');
   const [synced, setSynced] = useState<boolean>(false);
+  const [isPreparing, setIsPreparing] = useState(false);
 
   const checkSupport = useCallback(() => {
     const supported =
@@ -152,6 +160,11 @@ export const usePushNotifications = () => {
       refreshSwStatus();
       getSubscription();
       
+      // Pre-warm the service worker without blocking
+      getActiveServiceWorkerRegistration(5000).catch(() => {
+        console.log('[Push] SW not ready during pre-warm, will wait on demand.');
+      });
+      
       // Monitor permission changes if possible
       if ('permissions' in navigator) {
         navigator.permissions.query({ name: 'notifications' as PermissionName }).then((status) => {
@@ -163,36 +176,57 @@ export const usePushNotifications = () => {
           };
         });
       }
+
+      // Listen for controller changes (new SW version active)
+      const handleControllerChange = () => {
+        console.log('[Push] Service worker controller changed.');
+        refreshSwStatus();
+        getSubscription();
+      };
+      
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+      return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
     }
   }, [checkSupport, getSubscription, refreshSwStatus]);
 
   const subscribeUser = async () => {
     if (!checkSupport()) throw new Error('Notificações não são suportadas.');
 
-    console.log('[Push] Requesting permission...');
-    const result = await Notification.requestPermission();
-    setPermission(result);
-    if (result !== 'granted') throw new Error('Permissão negada.');
+    try {
+      setIsPreparing(true);
+      console.log('[Push] Requesting permission...');
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      if (result !== 'granted') {
+        throw new Error('Permissão negada para notificações.');
+      }
 
-    console.log('[Push] Getting Service Worker...');
-    const registration = await getActiveServiceWorkerRegistration();
-    await refreshSwStatus();
+      console.log('[Push] Getting Service Worker...');
+      const registration = await getActiveServiceWorkerRegistration();
+      await refreshSwStatus();
 
-    console.log('[Push] Subscribing to push...');
-    let sub = await registration.pushManager.getSubscription();
-    
-    // Always try to subscribe if no sub exists or if we want to ensure latest
-    if (!sub) {
-      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey,
-      });
+      console.log('[Push] Subscribing to push...');
+      let sub = await registration.pushManager.getSubscription();
+      
+      // Always try to subscribe if no sub exists or if we want to ensure latest
+      if (!sub) {
+        const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+        sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+      }
+
+      const syncSuccess = await syncSubscriptionWithBackend(sub);
+      if (!syncSuccess) {
+        console.warn('[Push] Subscription achieved but sync failed.');
+      }
+      
+      setSubscription(sub);
+      return sub;
+    } finally {
+      setIsPreparing(false);
     }
-
-    await syncSubscriptionWithBackend(sub);
-    setSubscription(sub);
-    return sub;
   };
 
   const unsubscribeUser = async () => {
@@ -230,6 +264,7 @@ export const usePushNotifications = () => {
     subscription,
     swStatus,
     synced,
+    isPreparing,
     subscribeUser,
     unsubscribeUser,
     refreshSubscription: resyncSubscription,

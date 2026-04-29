@@ -13,6 +13,7 @@ export const NotificationsTab = () => {
     subscription,
     swStatus,
     synced,
+    isPreparing,
     subscribeUser,
     unsubscribeUser,
     refreshSubscription,
@@ -194,10 +195,13 @@ export const NotificationsTab = () => {
               size="sm"
               className="flex-1 sm:flex-none"
               onClick={handleToggle}
-              disabled={loading || permission === 'denied'}
+              disabled={loading || isPreparing || permission === 'denied'}
             >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+              {loading || isPreparing ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isPreparing ? 'Preparando...' : ''}
+                </span>
               ) : subscription ? (
                 'Desativar'
               ) : (
