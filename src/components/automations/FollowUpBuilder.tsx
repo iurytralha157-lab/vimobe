@@ -175,6 +175,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
   const [showSimulator, setShowSimulator] = useState(false);
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
 
   // Apply visual highlight to the active node on canvas
