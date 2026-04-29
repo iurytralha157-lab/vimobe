@@ -1,78 +1,101 @@
-## Por que o sistema ficou lento
+Plano de correção para notificações no celular
 
-Após investigar, identifiquei **3 causas principais** de lentidão introduzidas nas últimas alterações:
+O erro do print é:
 
-### 1. `refetchOnMount: false` quebrando o cache do React Query (App.tsx)
-No `QueryClient` global foi adicionado `refetchOnMount: false`. Isso faz com que **toda navegação entre páginas** mantenha dados antigos em memória sem revalidar, mas também impede o uso correto de `staleTime` em hooks que dependem de filtros dinâmicos (Dashboard, KPIs, listagens). O resultado prático é que quando o usuário entra no Dashboard, várias queries disparam em paralelo (stats, evolução, propriedades, visitas, organização) sem um padrão consistente, sobrecarregando o backend e travando a UI.
-
-### 2. `PageLoader = () => null` causando "tela branca + travamento"
-No `App.tsx`, o `PageLoader` foi reduzido a `null`. Resultado:
-- Durante o `Suspense` de páginas lazy, **nada é renderizado** — o navegador parece travar.
-- Em `ProtectedRoute`, quando `loading=true` ou perfil ainda carregando, fica completamente em branco.
-- O React continua processando o lazy chunk, dando sensação de "sistema lento" mesmo quando está só carregando.
-
-### 3. Warning de ref em `KPICardSkeleton` (Dashboard)
-Os logs mostram avisos repetidos:
-> `Function components cannot be given refs. Check the render method of KPICardSkeleton`
-
-Isso vem de `Tooltip` com `asChild` em volta de cards que renderizam o `Skeleton` sem `forwardRef`. Cada render do Dashboard (que tem 7+ skeletons) dispara o aviso, gera re-renders extras e suja o console — em dev isso é **muito custoso**.
-
-### 4. Causas secundárias acumuladas
-- `usePublicHomeData` + `useFeaturedProperties` + `useExclusiveProperties` + `usePropertyTypes` + `usePublicCities` + `usePublicNeighborhoods` no `PublicHome` — **6 queries paralelas** quando só `usePublicHomeData` já traz tudo (`featured`, `exclusive`, `latest`, `types`, `cities`).
-- `Dashboard.tsx` faz uma query separada em `lead_events` carregando **todos os session_id** sem limite — em organizações com muito tráfego isso traz milhares de linhas só para contar sessões únicas (deveria ser RPC com `count distinct`).
-
----
-
-## Plano de correção
-
-### Passo 1 — Restaurar comportamento saudável do React Query (`src/App.tsx`)
-- Remover `refetchOnMount: false` (manter `refetchOnWindowFocus: false`).
-- Manter `staleTime: 5min` e `gcTime: 15min` (esses estão ok).
-
-### Passo 2 — Restaurar um `PageLoader` mínimo e leve (`src/App.tsx`)
-Voltar com um spinner simples (apenas um div com `animate-spin`, sem texto, sem fundo de tela cheia bloqueante):
-```tsx
-const PageLoader = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-  </div>
-);
+```text
+Erro ao ativar notificações: Subscribing for push requires an active service worker
 ```
-Isso elimina a "tela branca" sem voltar à tela de carregamento bloqueante anterior.
 
-### Passo 3 — Corrigir o warning de ref no Skeleton (`src/components/ui/skeleton.tsx`)
-Converter `Skeleton` para `React.forwardRef`. Isso elimina os warnings em loop que estão poluindo o console e degradando a performance no dev.
+Isso significa que o app está tentando criar a inscrição de push antes de existir um Service Worker realmente ativo/controlando a página. Hoje o código até tenta aguardar o Service Worker, mas tem dois problemas principais:
 
-### Passo 4 — Remover queries duplicadas no `PublicHome.tsx`
-O hook `usePublicHomeData` já retorna `featured`, `exclusive`, `latest`, `types`, `cities`. Remover os imports/uses de:
-- `useFeaturedProperties`
-- `useExclusiveProperties`
-- `usePropertyTypes`
-- `usePublicCities`
+1. Ele pode pegar um registro existente que ainda não está `active`.
+2. Ele tenta registrar manualmente `/sw-push.js`, mas esse arquivo é apenas o script de eventos de push, não o Service Worker principal gerado pelo `vite-plugin-pwa`. Assim, o browser aceita o registro, mas ele ainda pode não estar no estado correto para `pushManager.subscribe()`.
 
-Manter apenas `usePublicHomeData` e `usePublicNeighborhoods` (este último depende de `selectedCidade`).
+Também encontrei uma duplicidade importante: existem dois hooks com nomes quase iguais:
 
-### Passo 5 — Otimizar contagem de visitas no Dashboard (`src/pages/Dashboard.tsx`)
-Trocar o `select('session_id')` por uma RPC `count_unique_sessions(org_id, from, to)` no Postgres que faz `SELECT COUNT(DISTINCT session_id)` server-side. Isso evita transferir milhares de linhas para o cliente.
+- `src/hooks/usePushNotifications.ts`: usado na aba Configurações > Notificações, para Web Push/PWA.
+- `src/hooks/use-push-notifications.ts`: usado no layout para Capacitor/notificação nativa.
 
-> Requer criar uma função SQL via migration. Será criada em mode default após aprovação.
+Isso deixa o fluxo confuso e aumenta a chance de o app ativar a estratégia errada.
 
-### Passo 6 — Validar
-- Recarregar Dashboard e verificar tempo de render.
-- Recarregar PublicHome (site público) e confirmar que aparece de imediato com skeletons progressivos.
-- Confirmar que não há mais warnings de ref no console.
+Objetivo
 
----
+Fazer o botão “Ativar Agora” funcionar no PWA instalado no celular, salvando a assinatura em `push_subscriptions`, e preparar o fluxo para notificações nativas via Capacitor quando o app for empacotado como aplicativo real.
 
-## Arquivos afetados
-- `src/App.tsx` — QueryClient + PageLoader
-- `src/components/ui/skeleton.tsx` — forwardRef
-- `src/pages/public/PublicHome.tsx` — remover queries duplicadas
-- `src/pages/Dashboard.tsx` — usar RPC para contagem
-- Migration SQL — criar `count_unique_sessions`
+Escopo da correção
 
-## Resultado esperado
-- Dashboard carrega em 1-2s ao invés de 5-10s.
-- Sem tela branca durante navegação (spinner curto aparece e some).
-- Console limpo, sem warnings em loop.
-- Site público continua rápido com 1 query agregada ao invés de 6.
+1. Corrigir o registro do Service Worker PWA
+   - Remover a tentativa de registrar `/sw-push.js` diretamente como Service Worker principal.
+   - Usar o Service Worker gerado pelo `vite-plugin-pwa` como origem oficial.
+   - Manter `sw-push.js` apenas como script importado pelo Workbox para tratar `push` e `notificationclick`.
+   - Garantir que o Service Worker esteja `active` antes de chamar `registration.pushManager.subscribe()`.
+
+2. Criar uma função robusta para aguardar Service Worker ativo
+   - Implementar uma rotina do tipo `getActiveServiceWorkerRegistration()` que:
+     - verifica `navigator.serviceWorker.ready`;
+     - valida `registration.active`;
+     - verifica `registration.installing` e `registration.waiting`;
+     - aguarda mudança de estado para `activated`;
+     - chama `registration.update()` quando necessário;
+     - falha com uma mensagem clara se não houver Service Worker ativo.
+   - Isso corrige especificamente o erro do print.
+
+3. Ajustar o fluxo de ativação no hook Web Push
+   - Em `src/hooks/usePushNotifications.ts`, alterar o fluxo para:
+     - checar suporte real a `Notification`, `serviceWorker` e `PushManager`;
+     - pedir permissão somente a partir do clique do usuário;
+     - aguardar Service Worker ativo;
+     - usar somente uma `ServiceWorkerRegistration` ativa;
+     - só então chamar `pushManager.subscribe()`.
+   - Se houver assinatura existente, sincronizar com o banco novamente.
+   - Se der erro, exibir mensagem em português explicando se precisa recarregar, reinstalar o PWA ou publicar a nova versão.
+
+4. Corrigir a sincronização com o banco
+   - Conferir se `push_subscriptions` recebe `user_id`, `subscription` e `updated_at` corretamente.
+   - Após ativar, chamar novamente a função de sincronização para garantir que o registro apareça no banco.
+   - Ajustar o botão “Sincronizar” para não apenas ler a assinatura local, mas também reenviar a assinatura existente para o backend.
+   - Isso resolve o problema anterior em que o teste retornava “No subscription found”.
+
+5. Unificar e nomear melhor os fluxos Web Push vs Nativo
+   - Evitar confusão entre `usePushNotifications.ts` e `use-push-notifications.ts`.
+   - Manter claro:
+     - Web/PWA instalado: usa Service Worker + `push_subscriptions`.
+     - App nativo Capacitor: usa `@capacitor/push-notifications` + `push_tokens`.
+   - A aba de configurações deve informar qual modo está sendo usado no dispositivo atual.
+
+6. Ajustar configuração PWA
+   - Adicionar proteções recomendadas no `vite.config.ts`:
+     - manter Service Worker desativado no ambiente de desenvolvimento/editor;
+     - adicionar `/~oauth` no `navigateFallbackDenylist` para não quebrar OAuth;
+     - manter o comportamento funcionando apenas no app publicado/instalado.
+   - Avaliar `registerType`: para esse caso, `autoUpdate` tende a reduzir versão antiga presa no celular. Se mantivermos `prompt`, precisa haver uma ação clara de atualização.
+
+7. Preparar o disparo de teste
+   - Corrigir o botão “Enviar Teste” para chamar a função correta e interpretar retorno `success: false` como erro visível.
+   - Hoje o teste pode retornar HTTP 200 com `{ success: false, message: "No subscription found" }`, e isso precisa aparecer corretamente na interface.
+   - Após a correção, o teste deve confirmar:
+     - assinatura salva em `push_subscriptions`;
+     - edge function encontrou a assinatura;
+     - envio do Web Push foi aceito.
+
+8. Diagnóstico visual para o usuário
+   - Adicionar, na aba de notificações, um pequeno status técnico simples:
+     - “Permissão: concedida/bloqueada/pendente”
+     - “Service Worker: ativo/não ativo”
+     - “Assinatura: sincronizada/não sincronizada”
+   - Isso ajuda a identificar rapidamente onde falhou sem depender só do toast.
+
+Notas importantes sobre notificações no celular
+
+- Para PWA no iPhone, notificações Web Push só funcionam quando o app foi adicionado à Tela de Início e aberto como app instalado.
+- Em iOS antigo abaixo de 16.4, Web Push não funciona.
+- Para “notificação nativa de verdade” publicada na App Store/Play Store, o caminho correto é Capacitor + push nativo, que já existe parcialmente no projeto, mas exige configuração externa de Firebase/APNs e sincronização com `npx cap sync` no projeto exportado.
+
+Resultado esperado depois da implementação
+
+- Ao tocar em “Ativar Agora”, o app não deve mais mostrar “requires an active service worker”.
+- O banco deve receber uma linha em `push_subscriptions` para o usuário.
+- O botão “Enviar Teste” deve disparar uma notificação no celular quando o app estiver instalado como PWA.
+- Se o dispositivo não suportar, a interface vai explicar exatamente o motivo.
+
+Depois de aprovar este plano, faço a correção no código.
