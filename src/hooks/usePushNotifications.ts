@@ -23,25 +23,35 @@ const urlBase64ToUint8Array = (base64String: string) => {
  */
 async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
-    throw new Error('Navegador sem suporte a Service Worker.');
+    throw new Error('Sem suporte a Service Worker');
   }
 
-  console.log('[Push] Manually registering/updating Service Worker...');
-  // 1. Register manually
+  console.log('[Push] Registrando/Atualizando Service Worker...');
   const registration = await navigator.serviceWorker.register('/sw.js');
-  
-  // 2. Force update to ensure we have the latest version
   await registration.update();
 
-  // 3. Get the registration directly
-  const reg = await navigator.serviceWorker.getRegistration();
+  let reg = await navigator.serviceWorker.getRegistration();
 
-  // 4. Ensure it exists and is active
-  if (!reg || !reg.active) {
-    console.warn('[Push] Service Worker found but NOT active. State:', 
-      reg?.installing ? 'installing' : (reg?.waiting ? 'waiting' : 'unknown')
-    );
-    throw new Error('Service Worker não está ativo. Por favor, aguarde um momento ou recarregue a página.');
+  if (!reg) {
+    throw new Error('Service Worker não encontrado após registro');
+  }
+
+  // 🔥 Aguarda até ficar ativo (máx 5s, mas sem travar)
+  const maxWait = 5000;
+  const start = Date.now();
+
+  console.log('[Push] Aguardando ativação do Service Worker...');
+  while (!reg.active) {
+    if (Date.now() - start > maxWait) {
+      throw new Error('Service Worker não ativou a tempo');
+    }
+
+    await new Promise(r => setTimeout(r, 300));
+    reg = await navigator.serviceWorker.getRegistration();
+    
+    if (reg?.active) {
+      console.log('[Push] Service Worker ativado com sucesso.');
+    }
   }
 
   return reg;
