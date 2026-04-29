@@ -47,6 +47,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   organization: Organization | null;
   loading: boolean;
+  profileLoading: boolean;
   isSuperAdmin: boolean;
   impersonating: ImpersonateSession | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -58,6 +59,7 @@ interface AuthContextType {
   stopImpersonate: () => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
   needsOrgSelection: boolean;
+}
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
