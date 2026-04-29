@@ -760,7 +760,17 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             />
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
+            <span className={`text-xs font-medium ${isActive ? 'text-green-500' : 'text-muted-foreground'}`}>
+              {isActive ? 'Ativa' : 'Inativa'}
+            </span>
+            <Switch 
+              checked={isActive} 
+              onCheckedChange={setIsActive}
+              className="scale-75 data-[state=checked]:bg-green-500"
+            />
+          </div>
           <Button 
             variant={showSimulator ? "default" : "outline"} 
             onClick={() => setShowSimulator(!showSimulator)}
