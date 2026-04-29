@@ -45,10 +45,28 @@ export default function SelectOrganization() {
     );
   }
 
-  if (organizations.length <= 1) {
+  if (organizations.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center">
+        <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+        <h1 className="text-xl font-bold mb-2">Nenhuma organização encontrada</h1>
+        <p className="text-muted-foreground mb-6">Você ainda não está vinculado a nenhuma organização ativa.</p>
+        {isSuperAdmin ? (
+          <Button onClick={() => navigate('/admin')}>Ir para Painel Admin</Button>
+        ) : (
+          <Button variant="outline" onClick={() => switchOrganization('')}>Tentar novamente</Button>
+        )}
+      </div>
+    );
+  }
+
+  if (organizations.length === 1) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Acessando organização...</p>
+        </div>
       </div>
     );
   }
