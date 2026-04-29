@@ -1,22 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { performanceTracker } from '@/lib/performance';
 import { AppLayout } from '@/components/layout/AppLayout';
-
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
 import { SalesFunnelWithPipeline } from '@/components/dashboard/SalesFunnelWithPipeline';
 import { DealsEvolutionChart } from '@/components/dashboard/DealsEvolutionChart';
-
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
-import { 
-  useEnhancedDashboardStats, 
-  useDealsEvolutionData,
-} from '@/hooks/use-dashboard-stats';
-
+import { useEnhancedDashboardStats, useDealsEvolutionData } from '@/hooks/use-dashboard-stats';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  Users, 
+  Target, 
+  CheckCircle2, 
+  DollarSign,
+  Building2,
+  Clock,
+  Eye,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function Dashboard() {
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
