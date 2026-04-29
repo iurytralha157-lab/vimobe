@@ -138,15 +138,13 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
 
   // Sign the token using ECDSA with SHA-256
   const dataToSign = new TextEncoder().encode(unsignedToken);
+  // ES256 signature must be R + S (64 bytes)
   const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: { name: "SHA-256" } },
+    { name: "ECDSA", hash: "SHA-256" },
     cryptoKey,
     dataToSign
   );
 
-  // Convert raw signature to ASN.1 DER format if needed by the server
-  // Actually, Web Push usually expects the 64-byte raw signature (R + S)
-  // which is what crypto.subtle.sign returns for ECDSA.
   const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   return `${unsignedToken}.${signatureB64}`;
 }
