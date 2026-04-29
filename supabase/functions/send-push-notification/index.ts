@@ -121,9 +121,34 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
     new TextEncoder().encode(unsignedToken)
   );
 
-  // Convert signature to Base64URL
-  const signatureB64 = base64UrlEncode(new Uint8Array(signature));
+  // Convert signature from DER to raw format (64 bytes: r + s) if necessary
+  // Deno/WebCrypto often returns raw format (64 bytes) for ES256
+  const sigArray = new Uint8Array(signature);
+  let finalSignature = sigArray;
+  
+  // If it's in DER format (starts with 0x30), we might need to extract r and s
+  // But usually WebCrypto returns 64 bytes for ES256
+  if (sigArray[0] === 0x30 && sigArray.length > 64) {
+     // This is a simple DER parser for ECDSA signature
+     let pos = 2;
+     if (sigArray[pos] === 0x02) {
+       pos++;
+       const rLen = sigArray[pos++];
+       const r = sigArray.slice(pos + (rLen === 33 ? 1 : 0), pos + rLen);
+       pos += rLen;
+       if (sigArray[pos] === 0x02) {
+         pos++;
+         const sLen = sigArray[pos++];
+         const s = sigArray.slice(pos + (sLen === 33 ? 1 : 0), pos + sLen);
+         const raw = new Uint8Array(64);
+         raw.set(r, 32 - r.length);
+         raw.set(s, 64 - s.length);
+         finalSignature = raw;
+       }
+     }
+  }
 
+  const signatureB64 = base64UrlEncode(finalSignature);
   return `${unsignedToken}.${signatureB64}`;
 }
 
