@@ -201,6 +201,7 @@ async function sendWebPushNotification(
       method: "POST",
       headers: {
         "Authorization": `WebPush ${jwt}`,
+        "Crypto-Key": `p256ecdsa=${publicKey}`,
         "Content-Type": "application/octet-stream",
         "TTL": priority === 'high' ? "86400" : "3600",
         "Urgency": priority === 'high' ? "high" : "normal",
