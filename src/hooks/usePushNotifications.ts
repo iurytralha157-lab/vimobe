@@ -21,31 +21,30 @@ const urlBase64ToUint8Array = (base64String: string) => {
  * Does NOT register a custom worker — relies on the PWA worker generated
  * by vite-plugin-pwa (which imports `/sw-push.js` for push events).
  */
-async function getActiveServiceWorkerRegistration(timeoutMs = 5000): Promise<ServiceWorkerRegistration> {
+async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
     throw new Error('Navegador sem suporte a Service Worker.');
   }
 
-  // 1. Check if already ready with a short timeout
-  try {
-    const readyReg = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs))
-    ]);
-    if (readyReg) return readyReg;
-  } catch (e) {
-    console.warn('[Push] navigator.serviceWorker.ready timed out, falling back to registrations');
-  }
+  console.log('[Push] Manually registering/updating Service Worker...');
+  // 1. Register manually
+  const registration = await navigator.serviceWorker.register('/sw.js');
   
-  // 2. Fallback: Try to get any existing registration
-  const regs = await navigator.serviceWorker.getRegistrations();
-  if (regs.length > 0) {
-    // Return active if available, otherwise just return the first one
-    return regs.find(r => r.active) || regs[0];
+  // 2. Force update to ensure we have the latest version
+  await registration.update();
+
+  // 3. Get the registration directly
+  const reg = await navigator.serviceWorker.getRegistration();
+
+  // 4. Ensure it exists and is active
+  if (!reg || !reg.active) {
+    console.warn('[Push] Service Worker found but NOT active. State:', 
+      reg?.installing ? 'installing' : (reg?.waiting ? 'waiting' : 'unknown')
+    );
+    throw new Error('Service Worker não está ativo. Por favor, aguarde um momento ou recarregue a página.');
   }
 
-  // 3. Last resort: if nothing found, it might be a cold start or first visit
-  throw new Error('Sistema de notificações ainda está sendo preparado. Por favor, tente novamente em alguns segundos.');
+  return reg;
 }
 
 export const usePushNotifications = () => {
@@ -73,13 +72,12 @@ export const usePushNotifications = () => {
       return;
     }
     try {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      if (regs.length === 0) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
         setSwStatus('none');
         return;
       }
       
-      const reg = regs.find(r => r.active) || regs[0];
       if (reg.active) setSwStatus('active');
       else if (reg.waiting) setSwStatus('waiting');
       else if (reg.installing) setSwStatus('installing');
@@ -143,9 +141,8 @@ export const usePushNotifications = () => {
   const getSubscription = useCallback(async () => {
     if (!checkSupport()) return null;
     try {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      const reg = regs.find(r => r.active) || regs[0];
-      if (!reg) return null;
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg || !reg.active) return null;
       
       const sub = await reg.pushManager.getSubscription();
       setSubscription(sub);
@@ -206,6 +203,8 @@ export const usePushNotifications = () => {
 
     try {
       setIsPreparing(true);
+      
+      // 1. Solicitar permissão primeiro (conforme solicitado pelo usuário)
       console.log('[Push] Requesting permission...');
       const result = await Notification.requestPermission();
       setPermission(result);
@@ -213,22 +212,26 @@ export const usePushNotifications = () => {
         throw new Error('Permissão negada para notificações.');
       }
 
-      console.log('[Push] Getting Service Worker...');
-      const registration = await getActiveServiceWorkerRegistration();
+      // 2. Garantir Service Worker (Registro manual, update, etc)
+      console.log('[Push] Ensuring Service Worker...');
+      const registration = await ensureServiceWorker();
       await refreshSwStatus();
 
-      console.log('[Push] Subscribing to push...');
+      // 3. Fazer subscribe diretamente
+      console.log('[Push] Subscribing to push directly...');
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      
+      // Tenta obter sub existente ou cria uma nova
       let sub = await registration.pushManager.getSubscription();
       
-      // Always try to subscribe if no sub exists or if we want to ensure latest
       if (!sub) {
-        const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
         sub = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey,
         });
       }
 
+      console.log('[Push] Syncing subscription with backend...');
       const syncSuccess = await syncSubscriptionWithBackend(sub);
       if (!syncSuccess) {
         console.warn('[Push] Subscription achieved but sync failed.');
@@ -236,6 +239,9 @@ export const usePushNotifications = () => {
       
       setSubscription(sub);
       return sub;
+    } catch (err: any) {
+      console.error('[Push] Subscribe error:', err);
+      throw err;
     } finally {
       setIsPreparing(false);
     }
