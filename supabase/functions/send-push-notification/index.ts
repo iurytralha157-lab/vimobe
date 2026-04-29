@@ -118,13 +118,14 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   // or use a more standard ES256 signing method
   let signature: ArrayBuffer;
   try {
+    const dataToSign = new TextEncoder().encode(unsignedToken);
     signature = await crypto.subtle.sign(
       { name: "ECDSA", hash: "SHA-256" },
       cryptoKey,
-      new TextEncoder().encode(unsignedToken)
+      dataToSign
     );
   } catch (e) {
-    console.error("[WebPush] ES256 signing failed, attempting fallback");
+    console.error("[WebPush] ES256 signing failed:", e);
     throw e;
   }
 
