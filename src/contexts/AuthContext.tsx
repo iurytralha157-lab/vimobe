@@ -456,7 +456,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startImpersonate,
     stopImpersonate,
     switchOrganization,
-  }), [user, session, profile, organization, loading, isSuperAdmin, impersonating, needsOrgSelection, fetchProfile]);
+  }), [user, session, profile, organization, loading, isSuperAdmin, impersonating, needsOrgSelection, fetchProfile, switchOrganization]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
