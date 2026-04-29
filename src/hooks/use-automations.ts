@@ -257,6 +257,7 @@ export function useCreateAutomation() {
       trigger_type: TriggerType;
       trigger_config?: Record<string, unknown>;
       flow_definition?: FlowDefinition;
+      is_active?: boolean;
     }) => {
       if (!profile?.organization_id) throw new Error('No organization');
 
