@@ -173,16 +173,22 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    if (loading) return <PageLoader />;
+    if (loading) {
+      if (user) return <AppSkeleton />;
+      return <PageLoader />;
+    }
     if (user) {
-      if (!profile && !isSuperAdmin) return <PageLoader />;
+      if (!profile && !isSuperAdmin) return <AppSkeleton />;
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;
   };
 
   const renderOnboardingRoute = () => {
-    if (loading) return <PageLoader />;
+    if (loading) {
+      if (user) return <AppSkeleton />;
+      return <PageLoader />;
+    }
     // If user is logged in and already has an org, redirect
     if (user && profile && profile.organization_id) {
       return <Navigate to={getDefaultRedirect()} replace />;
