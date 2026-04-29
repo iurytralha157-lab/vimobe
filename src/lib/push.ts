@@ -71,8 +71,9 @@ export const subscribeToPush = async (userId: string) => {
       user_id: userId,
       subscription: subscriptionJson as any,
     }, {
-      onConflict: 'user_id, subscription' // Assumindo que queremos evitar duplicatas exatas
+      onConflict: 'user_id'
     });
+
 
   if (error && !error.message?.includes("duplicate")) {
     throw error;
