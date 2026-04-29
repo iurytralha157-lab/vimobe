@@ -128,8 +128,9 @@ const queryClient = new QueryClient({
 });
 
 const PageLoader = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  <div className="fixed inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-50">
+    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+    <p className="text-sm font-medium text-muted-foreground animate-pulse">Carregando CRM...</p>
   </div>
 );
 
