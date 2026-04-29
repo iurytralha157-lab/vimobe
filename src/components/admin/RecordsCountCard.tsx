@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 interface RecordsCountCardProps {
   counts: {
     whatsapp_messages: number;
-    notifications: number;
+    // notifications removed
     activities: number;
     audit_logs: number;
     leads: number;
