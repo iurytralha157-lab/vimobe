@@ -64,11 +64,8 @@ export default function AdminSettings() {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
   const [savingFlags, setSavingFlags] = useState(false);
 
-  // WhatsApp notification instance state
-  const [notificationInstanceName, setNotificationInstanceName] = useState('');
-  const [savingInstance, setSavingInstance] = useState(false);
-  const [checkingInstance, setCheckingInstance] = useState(false);
-  const [instanceConnected, setInstanceConnected] = useState<boolean | null>(null);
+  // notificationInstanceName state removed
+
 
   // Announcements state
   const [announcementMessage, setAnnouncementMessage] = useState('');
