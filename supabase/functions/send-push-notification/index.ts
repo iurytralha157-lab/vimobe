@@ -115,10 +115,9 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
 
   // Sign the token
   const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
+    { name: "ECDSA", hash: { name: "SHA-256" } },
     cryptoKey,
-    // Garantir que a string não tenha caracteres problemáticos
-    new Uint8Array(unsignedToken.split('').map(c => c.charCodeAt(0)))
+    new TextEncoder().encode(unsignedToken)
   );
 
   console.log("[WebPush] Token signed successfully");
