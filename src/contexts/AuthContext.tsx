@@ -257,20 +257,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const profilePromise = fetchProfile(session.user.id);
         const multiOrgPromise = checkMultiOrg(session.user.id);
         
-        // Timeout de 5 segundos para as chamadas iniciais
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout carregando perfil')), 5000)
-        );
-
-        try {
-          await Promise.race([
-            Promise.all([profilePromise, multiOrgPromise]),
-            timeoutPromise
-          ]);
-        } catch (e) {
-          console.error('Erro ou timeout ao carregar dados iniciais:', e);
-          // Mesmo com erro, liberamos o loading para o usuário ver a tela (possivelmente com erro limitado)
-        }
+        // Carrega dados em paralelo sem travar o estado de loading se um falhar
+        Promise.all([
+          profilePromise.catch(e => console.error("Erro perfil:", e)),
+          multiOrgPromise.catch(e => console.error("Erro multi-org:", e))
+        ]).finally(() => {
+          if (isMounted) setLoading(false);
+        });
       } catch (e) {
         console.error('Erro fatal na inicialização do Auth:', e);
       } finally {
