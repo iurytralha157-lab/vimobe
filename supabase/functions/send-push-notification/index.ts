@@ -461,25 +461,40 @@ Deno.serve(async (req) => {
     let failedCount = 0;
     const invalidTokenIds: string[] = [];
 
-    // Send to all native tokens (FCM)
+    // Send to all native tokens and legacy web tokens in push_tokens
     for (const tokenRecord of tokens || []) {
-      if (tokenRecord.platform === 'web') continue; // Handled by webSubscriptions now or legacy
-
       let result: { success: boolean; error?: string };
       
-      // Send via FCM for native apps
-      if (!accessToken) {
-        console.error("[Push] No FCM access token available for native token");
-        result = { success: false, error: "No FCM access token" };
+      if (tokenRecord.platform === 'web') {
+        // Fallback: try to send as Web Push if the token is a JSON subscription
+        try {
+          console.log(`[Push] Attempting Web Push for legacy token ID: ${tokenRecord.id}`);
+          result = await sendWebPushNotification(
+            tokenRecord.token, // If this is a stringified JSON
+            payload.title,
+            payload.body,
+            { ...payload.data, url: payload.url },
+            payload.priority as any || "high"
+          );
+        } catch (e) {
+          console.error(`[Push] Legacy web token is not a valid subscription: ${tokenRecord.id}`);
+          result = { success: false, error: "invalid_token" };
+        }
       } else {
-        result = await sendFCMNotification(
-          tokenRecord.token,
-          accessToken,
-          payload.title,
-          payload.body,
-          { ...payload.data, url: payload.url },
-          payload.priority as any || "high"
-        );
+        // Send via FCM for native apps
+        if (!accessToken) {
+          console.error("[Push] No FCM access token available for native token");
+          result = { success: false, error: "No FCM access token" };
+        } else {
+          result = await sendFCMNotification(
+            tokenRecord.token,
+            accessToken,
+            payload.title,
+            payload.body,
+            { ...payload.data, url: payload.url },
+            payload.priority as any || "high"
+          );
+        }
       }
 
       if (result.success) {
