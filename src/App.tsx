@@ -180,7 +180,7 @@ function AppRoutes() {
   }, [user, loading]);
 
   const getDefaultRedirect = () => {
-    console.log("Determining default redirect:", { needsOrgSelection, impersonating, isSuperAdmin });
+    // console.log removed for speed
     if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
     return "/dashboard";
