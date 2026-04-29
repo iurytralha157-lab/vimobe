@@ -20,6 +20,7 @@ import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 
 import { IOSInstallGuide } from "@/components/IOSInstallGuide";
+import { PushNotificationHandler } from "@/components/PushNotificationHandler";
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
