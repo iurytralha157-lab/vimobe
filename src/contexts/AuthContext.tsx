@@ -82,23 +82,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkSuperAdmin = useCallback(async (userId: string): Promise<boolean> => {
     return performanceTracker.trackTimed("checkSuperAdmin", async () => {
       try {
-        const [rolesResult, usersResult] = await Promise.all([
-          supabase
+        // Simple race with timeout to prevent hanging
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout checking super admin")), 5000)
+        );
+
+        const checkPromise = (async () => {
+          const { data } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", userId)
             .eq("role", "super_admin")
-            .maybeSingle(),
-          supabase
-            .from("users")
-            .select("role")
-            .eq("id", userId)
-            .eq("role", "super_admin")
-            .maybeSingle(),
-        ]);
-        return !!(rolesResult.data || usersResult.data);
+            .maybeSingle();
+          return !!data;
+        })();
+
+        const result = await Promise.race([checkPromise, timeoutPromise]);
+        return !!result;
       } catch (e) {
-        console.error("Error checking super admin:", e);
+        console.error("Error checking super admin (or timeout):", e);
         return false;
       }
     });
@@ -254,10 +256,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session.user);
         
-        const [profileSuccess] = await Promise.all([
-          fetchProfile(session.user.id),
-          checkMultiOrg(session.user.id)
-        ]);
+        // Use Promise.race with a timeout for the entire profile fetch sequence
+        const timeoutPromise = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 8000));
+        
+        const fetchPromise = (async () => {
+          await Promise.all([
+            fetchProfile(session.user.id),
+            checkMultiOrg(session.user.id)
+          ]);
+          return true;
+        })();
+
+        const profileSuccess = await Promise.race([fetchPromise, timeoutPromise]);
         
         console.log("Init sequence complete, profile success:", profileSuccess);
       } catch (e) {
