@@ -150,7 +150,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   
   // If we have a user but no profile yet, show loader while it's fetching
   if (!profile && !isSuperAdmin) {
-    console.log("ProtectedRoute: User found but no profile yet, loading...");
+    console.log("ProtectedRoute: User found but no profile yet, waiting...");
     return <PageLoader />;
   }
 
