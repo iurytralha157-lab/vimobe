@@ -27,7 +27,7 @@ interface WebPushSubscription {
 function getVapidKeys() {
   const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
   // Ensure we use the same public key used in the frontend registration
-  const publicKey = "BJBVpyQSbQSpeAQQs-lEf2BKa6L6vlUcXxD3F2KNML9iJW4h2Al2hhgB9KbDW9C73PCnow8ZpXIJxrUNMWxU6vA";
+  const publicKey = Deno.env.get("VAPID_PUBLIC_KEY") || Deno.env.get("VITE_VAPID_PUBLIC_KEY");
   
   if (!privateKey) {
     throw new Error("VAPID_PRIVATE_KEY not configured");
@@ -150,13 +150,11 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   return `${unsignedToken}.${signatureB64}`;
 }
 
-// Helper to extract raw P-256 key from SPKI/DER (91 bytes)
+// Helper to extract raw P-256 key (65 bytes)
 function getRawPublicKey(publicKeyB64: string): string {
-  const bytes = base64UrlDecode(publicKeyB64);
-  if (bytes.length === 91) {
-    // Offset 26 is where the 65-byte raw uncompressed point starts
-    return base64UrlEncode(bytes.slice(26));
-  }
+  // Ensure we use the correct uncompressed public key point
+  // The frontend uses "BJBVpyQSbQSpeAQQs-lEf2BKa6L6vlUcXxD3F2KNML9iJW4h2Al2hhgB9KbDW9C73PCnow8ZpXIJxrUNMWxU6vA"
+  // which is exactly 65 bytes in base64url.
   return publicKeyB64;
 }
 
@@ -201,7 +199,6 @@ async function sendWebPushNotification(
       method: "POST",
       headers: {
         "Authorization": `WebPush ${jwt}`,
-        "Crypto-Key": `p256ecdsa=${rawPublicKey}`,
         "Content-Type": "application/octet-stream",
         "TTL": priority === 'high' ? "86400" : "3600",
         "Urgency": priority === 'high' ? "high" : "normal",
