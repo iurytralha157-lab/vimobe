@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from("users")
         .select("phone, whatsapp, cpf, cep, endereco, numero, complemento, bairro, cidade, uf")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
       if (data) {
         setProfile((prev) => (prev ? { ...prev, ...data } : null));
       }
