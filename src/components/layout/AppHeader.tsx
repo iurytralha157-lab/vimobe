@@ -4,7 +4,7 @@ import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
-// Notifications hooks removed
+import { NotificationBell } from './NotificationBell';
 import { useUserOrganizations } from '@/hooks/use-user-organizations';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -126,7 +126,7 @@ export const AppHeader = React.memo(function AppHeader({
           {resolvedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
-{/* Notifications removed */}
+<NotificationBell />
 
         {/* User Capsule */}
         <DropdownMenu>

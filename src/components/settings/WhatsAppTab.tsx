@@ -34,7 +34,7 @@ import {
   useSessionAccess,
   useGrantSessionAccess,
   useRevokeSessionAccess,
-  // useToggleNotificationSession removed
+  useToggleNotificationSession,
   WhatsAppSession } from
 "@/hooks/use-whatsapp-sessions";
 import { useOrganizationUsers } from "@/hooks/use-users";
@@ -53,7 +53,7 @@ export function WhatsAppTab() {
   const getQRCode = useGetQRCode();
   const getConnectionStatus = useGetConnectionStatus();
   const logoutSession = useLogoutSession();
-  // toggleNotification removed
+  const toggleNotification = useToggleNotificationSession();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -333,6 +333,18 @@ export function WhatsAppTab() {
                         {session.owner?.name || "—"}
                       </span>
                     </div>
+                    {isAdmin && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] text-muted-foreground font-medium">Notificações</span>
+                        <Switch
+                          checked={session.is_notification_session}
+                          onCheckedChange={(checked) => 
+                            toggleNotification.mutate({ sessionId: session.id, enabled: checked })
+                          }
+                          disabled={toggleNotification.isPending}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Row 3: Action buttons */}
