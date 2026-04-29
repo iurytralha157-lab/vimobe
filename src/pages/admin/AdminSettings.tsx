@@ -159,7 +159,6 @@ export default function AdminSettings() {
       maintenance_mode: settings.maintenance_mode,
       maintenance_message: settings.maintenance_message,
       feature_flags: settings.feature_flags,
-      notification_instance_name: settings.notification_instance_name,
     };
 
     const newValue = { ...currentValue, ...updates };
