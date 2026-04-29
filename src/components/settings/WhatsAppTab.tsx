@@ -53,7 +53,7 @@ export function WhatsAppTab() {
   const getQRCode = useGetQRCode();
   const getConnectionStatus = useGetConnectionStatus();
   const logoutSession = useLogoutSession();
-  const toggleNotification = useToggleNotificationSession();
+  // toggleNotification removed
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
