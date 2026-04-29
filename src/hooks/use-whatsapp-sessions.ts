@@ -63,7 +63,7 @@ export function useWhatsAppSessions() {
         ...session,
         display_name: (session as any).display_name || null,
         last_connected_at: (session as any).last_connected_at || null,
-        is_notification_session: (session as any).is_notification_session || false,
+        // is_notification_session removed
       })) as WhatsAppSession[];
     },
     enabled: !!profile?.organization_id,
