@@ -208,27 +208,7 @@ export default function Dashboard() {
   );
 }
 
-// Separate KPI grid component for the 4+4 desktop layout
-import { 
-  Users, 
-  Target, 
-  CheckCircle2, 
-  DollarSign,
-  Building2,
-  Clock,
-  Eye,
-  TrendingUp,
-  TrendingDown,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+// Duplicate imports removed
 
 function formatKPIValue(value: string | number, format: string): string {
   if (typeof value === 'string') return value;
