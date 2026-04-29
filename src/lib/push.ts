@@ -130,13 +130,21 @@ export const subscribeToPush = async (userId: string) => {
 export const autoRegisterPush = async (userId: string) => {
   if (!isPushSupported()) return;
   
-  // If permission is already granted, we should ensure the subscription is up to date in DB
-  if (Notification.permission === "granted") {
-    console.log("[Push] Permission already granted, ensuring subscription is active...");
-    try {
-      await subscribeToPush(userId);
-    } catch (error) {
-      console.error("[Push] Auto-registration failed:", error);
+  const lastKey = localStorage.getItem("last_vapid_public_key");
+  const currentKey = VAPID_PUBLIC_KEY;
+  const permission = Notification.permission;
+
+  // Auto-register if permission is already granted AND (key changed OR no previous record)
+  if (permission === "granted") {
+    if (lastKey !== currentKey) {
+      console.log("[Push] VAPID key changed or missing, re-subscribing...");
+      try {
+        await subscribeToPush(userId);
+      } catch (error) {
+        console.error("[Push] Auto-registration failed:", error);
+      }
+    } else {
+      console.log("[Push] Already subscribed with current key.");
     }
   }
 };
