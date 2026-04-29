@@ -35,7 +35,8 @@ const LEAD_PIPELINE_FIELDS = `
   interest_property:properties!leads_interest_property_id_fkey(id, code, title, preco),
   interest_plan:service_plans!leads_interest_plan_id_fkey(id, code, name, price),
   lead_meta(campaign_name, adset_name, ad_name, platform),
-  tags:lead_tags(tag:tags(id, name, color))
+  tags:lead_tags(tag:tags(id, name, color)),
+  lead_tasks(id, is_done)
 `;
 
 export function useStages(pipelineId?: string) {
@@ -205,19 +206,33 @@ export function useStagesWithLeads(
         totalCountsByStage[stage.id] = stageCountResults[index]?.count || 0;
       });
       
+      // Fetch cadence templates to match tasks
+      const { data: cadenceTemplates } = await supabase
+        .from('cadence_templates')
+        .select('stage_key, tasks:cadence_tasks_template(id)');
+
+      const cadenceTemplatesMap = new Map((cadenceTemplates || []).map(t => [t.stage_key, t.tasks?.length || 0]));
+
       // Combinar e formatar leads de todos os estágios
       const leadsByStageRaw: Record<string, any[]> = {};
       
       stages.forEach((stage, index) => {
         const stageLeads = stageLeadsResults[index]?.data || [];
         // Formatar tags para o formato esperado (limpar o aninhamento do Supabase)
-        const formattedLeads = stageLeads.map((l: any) => ({
-          ...l,
-          tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
-        }));
+        const formattedLeads = stageLeads.map((l: any) => {
+          const totalTasks = cadenceTemplatesMap.get(stage.stage_key) || 0;
+          const completedTasks = l.lead_tasks?.filter((t: any) => t.is_done).length || 0;
+          
+          return {
+            ...l,
+            tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || [],
+            cadence_total_tasks: totalTasks,
+            cadence_completed_tasks: completedTasks
+          };
+        });
         leadsByStageRaw[stage.id] = formattedLeads;
       });
-      
+
       // Build final stages list
       return stages.map(stage => ({
         ...stage,
@@ -640,12 +655,29 @@ export function useLoadMoreLeads() {
       
       if (error) throw error;
       
-      // Formatar tags dos novos leads
-      const formattedLeads = (data || []).map((l: any) => ({
-        ...l,
-        tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || []
-      }));
+      // Fetch cadence templates to match tasks for load more
+      const { data: cadenceTemplates } = await supabase
+        .from('cadence_templates')
+        .select('stage_key, tasks:cadence_tasks_template(id)');
       
+      const cadenceTemplatesMap = new Map((cadenceTemplates || []).map(t => [t.stage_key, t.tasks?.length || 0]));
+      
+      const stage = await supabase.from('stages').select('stage_key').eq('id', stageId).single();
+      const stageKey = stage.data?.stage_key;
+
+      // Formatar tags dos novos leads
+      const formattedLeads = (data || []).map((l: any) => {
+        const totalTasks = stageKey ? (cadenceTemplatesMap.get(stageKey) || 0) : 0;
+        const completedTasks = l.lead_tasks?.filter((t: any) => t.is_done).length || 0;
+        
+        return {
+          ...l,
+          tags: l.tags?.map((lt: any) => lt.tag).filter(Boolean) || [],
+          cadence_total_tasks: totalTasks,
+          cadence_completed_tasks: completedTasks
+        };
+      });
+
       return { stageId, leads: formattedLeads };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
