@@ -21,70 +21,45 @@ const urlBase64ToUint8Array = (base64String: string) => {
  * Does NOT register a custom worker — relies on the PWA worker generated
  * by vite-plugin-pwa (which imports `/sw-push.js` for push events).
  */
-async function waitForActiveServiceWorker(
-  timeoutMs = 15000
-): Promise<ServiceWorkerRegistration> {
+async function getActiveServiceWorkerRegistration(timeoutMs = 10000): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
-    throw new Error('Este navegador não suporta Service Worker.');
+    throw new Error('Navegador sem suporte a Service Worker.');
   }
 
-  const start = Date.now();
+  // 1. Check if already ready
+  const readyReg = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000))
+  ]);
+  
+  if (readyReg && readyReg.active) return readyReg;
 
-  // Helper: wait for a registration to reach "activated" state
-  const waitForActivation = (reg: ServiceWorkerRegistration) =>
-    new Promise<ServiceWorkerRegistration>((resolve, reject) => {
-      if (reg.active) return resolve(reg);
-      const sw = reg.installing || reg.waiting;
-      if (!sw) return reject(new Error('Service Worker presente, mas sem worker em estado válido.'));
-      const onChange = () => {
-        if (sw.state === 'activated' || reg.active) {
-          sw.removeEventListener('statechange', onChange);
-          resolve(reg);
-        } else if (sw.state === 'redundant') {
-          sw.removeEventListener('statechange', onChange);
-          reject(new Error('Service Worker tornou-se redundante antes de ativar.'));
-        }
-      };
-      sw.addEventListener('statechange', onChange);
-    });
+  // 2. Try to get existing one
+  const regs = await navigator.serviceWorker.getRegistrations();
+  const activeReg = regs.find(r => r.active);
+  if (activeReg) return activeReg;
 
-  while (Date.now() - start < timeoutMs) {
-    // 1) Try existing registration
-    let reg =
-      (await navigator.serviceWorker.getRegistration()) ||
-      (await navigator.serviceWorker.getRegistrations()).find(Boolean);
-
-    if (reg) {
-      if (reg.active) return reg;
-      try {
-        return await Promise.race([
-          waitForActivation(reg),
-          new Promise<ServiceWorkerRegistration>((_, rej) =>
-            setTimeout(() => rej(new Error('timeout-activation')), 4000)
-          ),
-        ]);
-      } catch {
-        // fallthrough — try ready / loop
+  // 3. Wait for any to activate
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout aguardando Service Worker.')), timeoutMs);
+    
+    const check = async () => {
+      const currentRegs = await navigator.serviceWorker.getRegistrations();
+      const active = currentRegs.find(r => r.active);
+      if (active) {
+        clearTimeout(timeout);
+        resolve(active);
+        return true;
       }
-    }
+      return false;
+    };
 
-    // 2) Race with navigator.serviceWorker.ready
-    try {
-      const ready = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 2000)),
-      ]);
-      if (ready && ready.active) return ready;
-    } catch {
-      // ignore
-    }
+    const interval = setInterval(async () => {
+      if (await check()) clearInterval(interval);
+    }, 500);
 
-    await new Promise((r) => setTimeout(r, 500));
-  }
-
-  throw new Error(
-    'Service Worker do app ainda não está ativo. Feche e reabra o app, ou desinstale e reinstale o atalho na tela inicial.'
-  );
+    check();
+  });
 }
 
 export const usePushNotifications = () => {
