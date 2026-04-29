@@ -268,7 +268,7 @@ export function useCreateAutomation() {
         trigger_type: data.trigger_type,
         trigger_config: (data.trigger_config || {}) as Json,
         created_by: profile.id,
-        is_active: true,
+        is_active: data.is_active ?? true,
       };
 
       if (data.flow_definition) {
