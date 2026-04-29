@@ -57,8 +57,8 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     console.log('[Push] Syncing with backend...');
-    // @ts-ignore - Table might not be in types yet but exists in DB
-    const { error } = await supabase
+    // @ts-ignore
+    const { error } = await (supabase as any)
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
@@ -113,7 +113,7 @@ export const usePushNotifications = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         // @ts-ignore
-        await supabase
+        await (supabase as any)
           .from('push_subscriptions')
           .delete()
           .eq('user_id', user.id);
