@@ -62,7 +62,15 @@ Deno.serve(async (req) => {
     }
 
     // Configure web-push
-    webpush.setVapidDetails(mailto, publicKey, privateKey);
+    try {
+      webpush.setVapidDetails(mailto, publicKey, privateKey);
+    } catch (err: any) {
+      console.error(`[Push] Failed to set VAPID details: ${err.message}`);
+      return new Response(
+        JSON.stringify({ error: `Invalid VAPID configuration: ${err.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 1. Get tokens from push_tokens (FCM/Legacy for native apps)
     const { data: tokens, error: tokensError } = await supabase

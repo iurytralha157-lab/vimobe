@@ -114,10 +114,38 @@ export const subscribeToPush = async (userId: string) => {
     }
 
     console.log("[Push] Subscription process complete");
+    
+    // Store the public key used for this subscription
+    if (VAPID_PUBLIC_KEY) {
+      localStorage.setItem("last_vapid_public_key", VAPID_PUBLIC_KEY);
+    }
+    
     return subscription;
   } catch (error: any) {
     console.error("[Push] Detailed subscription error:", error);
     throw error;
+  }
+};
+
+export const autoRegisterPush = async (userId: string) => {
+  if (!isPushSupported()) return;
+  
+  const lastKey = localStorage.getItem("last_vapid_public_key");
+  const currentKey = VAPID_PUBLIC_KEY;
+  const permission = Notification.permission;
+
+  // Auto-register if permission is already granted OR if we want to prompt (permission is default)
+  if (permission === "granted" || permission === "default") {
+    if (lastKey !== currentKey || permission === "default") {
+      console.log("[Push] VAPID key changed or missing, re-subscribing...");
+      try {
+        await subscribeToPush(userId);
+      } catch (error) {
+        console.error("[Push] Auto-registration failed:", error);
+      }
+    } else {
+      console.log("[Push] Already subscribed with current key.");
+    }
   }
 };
 
@@ -131,7 +159,6 @@ export const unsubscribeFromPush = async (userId: string) => {
   const endpoint = subscription.endpoint;
   await subscription.unsubscribe();
 
-  // Filtro compatível com JSONB para remover a inscrição específica
   const { error } = await supabase
     .from("push_subscriptions")
     .delete()
@@ -140,7 +167,6 @@ export const unsubscribeFromPush = async (userId: string) => {
 
   if (error) throw error;
 };
-
 
 export const checkSubscriptionStatus = async (): Promise<NotificationPermission> => {
   if (!isPushSupported()) return "denied";
