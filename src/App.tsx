@@ -328,6 +328,7 @@ const App = () => {
             ) : (
               <AuthProvider>
                 <LanguageProvider>
+                  <PushNotificationHandler />
                   <AppRoutes />
                 </LanguageProvider>
               </AuthProvider>
