@@ -4,7 +4,7 @@ import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
-import { useNotifications, useUnreadNotificationsCount, useMarkNotificationRead, useMarkAllNotificationsRead } from '@/hooks/use-notifications';
+// Notifications hooks removed
 import { useUserOrganizations } from '@/hooks/use-user-organizations';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
