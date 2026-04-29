@@ -236,19 +236,24 @@ export function AutomationList({ onEdit, onViewHistory }: AutomationListProps) {
               </AlertDialog>
             </div>
 
-            {/* Status badge - green solid for active */}
-            <Badge 
-              className={`absolute top-1.5 left-1.5 text-[10px] px-2 py-0.5 font-medium border-0 ${
-                automation.is_active 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-muted text-muted-foreground group-hover:bg-white/20 group-hover:text-white'
-              }`}
+            {/* Status toggle - top left */}
+            <div 
+              className="absolute top-1.5 left-1.5 flex items-center gap-1.5 z-20 bg-background/80 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-border group-hover:bg-white/10 group-hover:border-white/20" 
+              onClick={(e) => e.stopPropagation()}
             >
-              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${
-                automation.is_active ? 'bg-white' : 'bg-muted-foreground'
-              }`} />
-              {automation.is_active ? 'Ativo' : 'Inativo'}
-            </Badge>
+              <Switch 
+                checked={automation.is_active}
+                onCheckedChange={(checked) => toggleAutomation.mutate({ id: automation.id, is_active: checked })}
+                className="scale-[0.6] origin-left data-[state=checked]:bg-green-500"
+              />
+              <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                automation.is_active 
+                  ? 'text-green-500 group-hover:text-white' 
+                  : 'text-muted-foreground group-hover:text-white/70'
+              }`}>
+                {automation.is_active ? 'Ativo' : 'Inativo'}
+              </span>
+            </div>
           </div>
         );
       })}
