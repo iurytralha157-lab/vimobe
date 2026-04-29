@@ -70,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
   const [impersonating, setImpersonating] = useState<ImpersonateSession | null>(() => {
