@@ -2,10 +2,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
-const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const VAPID_MAILTO = Deno.env.get("VAPID_MAILTO") || "mailto:admin@example.com";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -27,91 +23,103 @@ serve(async (req) => {
 
     if (isTest) {
       console.log("Iniciando envio de notificação de teste...");
-      const { data: subscriptions, error: subError } = await supabaseClient
-        .from("push_subscriptions")
-        .select("*")
-        .limit(10); // Apenas alguns para teste
+      // Pega o usuário que chamou a função (via auth header se presente) ou o primeiro da lista para teste
+      const authHeader = req.headers.get("Authorization");
+      let targetUserId: string | null = null;
+      
+      if (authHeader) {
+        const { data: { user } } = await supabaseClient.auth.getUser(authHeader.replace("Bearer ", ""));
+        targetUserId = user?.id || null;
+      }
 
-      if (subError) throw subError;
+      if (!targetUserId) {
+        // Fallback: pega a inscrição mais recente para testar
+        const { data: latestSub } = await supabaseClient
+          .from("push_subscriptions")
+          .select("user_id")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        targetUserId = latestSub?.user_id || null;
+      }
 
-      const results = await Promise.all(
-        subscriptions.map((sub) => 
-          sendPushNotification(sub, {
-            title: "Teste de Notificação",
-            body: "Esta é uma notificação de teste do seu CRM!",
-            url: "/notifications",
-          }, supabaseClient)
-        )
-      );
+      if (!targetUserId) throw new Error("Nenhum usuário com inscrição encontrado para teste.");
 
-      return new Response(JSON.stringify({ success: true, results }), {
+      const { data, error } = await supabaseClient.functions.invoke("send-push", {
+        body: { 
+          user_id: targetUserId,
+          title: "Teste do CRM",
+          message: "Suas notificações push estão funcionando corretamente!",
+          url: "/notifications"
+        },
+      });
+
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Lógica de Cron (Lembretes)
+    // Lógica de Cron
     const now = new Date();
     const hourUtc = now.getUTCHours();
     
-    // Filtros de horário (ex: 12h UTC = 09h BRT, 21h UTC = 18h BRT)
+    // Conforme solicitado: hourUtc === 12 e hourUtc === 21
     if (hourUtc === 12 || hourUtc === 21) {
-       console.log(`Iniciando processamento de notificações automáticas (Hora: ${hourUtc} UTC)`);
-       // Aqui viria a lógica de buscar leads sem contato, tarefas atrasadas, etc.
-       // E chamar sendPushNotification para cada um com deduplicação via notification_log.
+       console.log(`Processando notificações agendadas...`);
+       
+       // Exemplo: Notificar usuários com leads pendentes
+       const { data: pendingLeads } = await supabaseClient
+         .from("leads")
+         .select("id, user_id, name")
+         .eq("status", "new")
+         .limit(50);
+
+       if (pendingLeads) {
+         for (const lead of pendingLeads) {
+           if (!lead.user_id) continue;
+           
+           // Verifica de-dupe no notification_log
+           const today = new Date().toISOString().split('T')[0];
+           const { data: alreadySent } = await supabaseClient
+             .from("notification_log")
+             .select("id")
+             .eq("user_id", lead.user_id)
+             .eq("kind", "pending_lead_reminder")
+             .eq("ref_id", lead.id)
+             .eq("sent_for_date", today)
+             .maybeSingle();
+
+           if (!alreadySent) {
+             await supabaseClient.functions.invoke("send-push", {
+               body: { 
+                 user_id: lead.user_id,
+                 title: "Lead Pendente",
+                 message: `Você tem o lead ${lead.name} aguardando contato.`,
+                 url: `/crm/contacts?lead=${lead.id}`
+               },
+             });
+
+             await supabaseClient.from("notification_log").insert({
+               user_id: lead.user_id,
+               kind: "pending_lead_reminder",
+               ref_id: lead.id,
+               sent_for_date: today,
+             });
+           }
+         }
+       }
     }
 
-    return new Response(JSON.stringify({ message: "Processed" }), {
+    return new Response(JSON.stringify({ status: "ok", hour: hourUtc }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error("Erro na Edge Function:", error.message);
+    console.error("Erro no dispatcher:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
   }
 });
-
-async function sendPushNotification(subscription: any, payload: any, supabase: any) {
-  try {
-    const { endpoint, keys } = subscription.subscription;
-    
-    // Usando a Edge Function 'send-push' se ela já existir, ou implementando aqui.
-    // Como o usuário pediu um sistema completo, vou usar o invoke para outra função 
-    // especializada em envio individual se disponível, ou implementar a lógica VAPID.
-    
-    // Para simplificar e garantir funcionamento, vamos chamar a função 'send-push' existente
-    // ou assumir que esta é a principal.
-    
-    console.log(`Enviando para endpoint: ${endpoint}`);
-    
-    // IMPORTANTE: Aqui você usaria uma biblioteca como 'web-push' ou faria a requisição HTTP assinada.
-    // Devido às restrições de ambiente, a forma mais robusta é delegar para um serviço ou 
-    // usar a implementação manual de criptografia Web Push (complexo para este arquivo).
-    
-    // Por enquanto, vamos simular o sucesso ou delegar para a 'send-push' se existir.
-    const { data, error } = await supabase.functions.invoke("send-push", {
-      body: { subscription, payload },
-    });
-
-    if (error) {
-      if (error.status === 410 || error.status === 404) {
-        console.log("Inscrição expirada ou inválida. Removendo...");
-        await supabase.from("push_subscriptions").delete().eq("id", subscription.id);
-      }
-      return { success: false, error };
-    }
-
-    // Registrar no log
-    await supabase.from("notification_log").insert({
-      user_id: subscription.user_id,
-      kind: payload.tag || "test",
-      sent_for_date: new Date().toISOString().split('T')[0],
-    });
-
-    return { success: true, data };
-  } catch (err: any) {
-    console.error("Erro ao enviar push:", err.message);
-    return { success: false, error: err.message };
-  }
-}
