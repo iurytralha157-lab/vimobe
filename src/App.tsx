@@ -52,6 +52,8 @@ const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
 const Automations = lazy(() => import("./pages/Automations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const Install = lazy(() => import("./pages/Install"));
+
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
