@@ -21,7 +21,6 @@ import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 
 import { IOSInstallGuide } from "@/components/IOSInstallGuide";
 import { PushNotificationHandler } from "@/components/PushNotificationHandler";
-import { AppSkeleton } from "@/components/layout/AppSkeleton";
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
@@ -129,22 +128,17 @@ const queryClient = new QueryClient({
 });
 
 const PageLoader = () => (
-  <div className="fixed inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-50">
-    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-    <p className="text-sm font-medium text-muted-foreground animate-pulse">Carregando CRM...</p>
+  <div className="flex items-center justify-center p-8">
+    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
   </div>
 );
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
-  if (loading) {
-    if (user) return <AppSkeleton />;
-    return <PageLoader />;
-  }
-  
+  if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
-  if (!profile && !isSuperAdmin) return <AppSkeleton />;
+  if (!profile && !isSuperAdmin) return <PageLoader />;
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
@@ -173,22 +167,16 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    if (loading) {
-      if (user) return <AppSkeleton />;
-      return <PageLoader />;
-    }
+    if (loading) return <PageLoader />;
     if (user) {
-      if (!profile && !isSuperAdmin) return <AppSkeleton />;
+      if (!profile && !isSuperAdmin) return <PageLoader />;
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;
   };
 
   const renderOnboardingRoute = () => {
-    if (loading) {
-      if (user) return <AppSkeleton />;
-      return <PageLoader />;
-    }
+    if (loading) return <PageLoader />;
     // If user is logged in and already has an org, redirect
     if (user && profile && profile.organization_id) {
       return <Navigate to={getDefaultRedirect()} replace />;

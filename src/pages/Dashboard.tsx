@@ -147,7 +147,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3 auto-rows-min">
               <KPICardsGrid 
                 data={kpiData} 
-                isLoading={statsLoading || !organization?.id} 
+                isLoading={statsLoading} 
                 periodLabel={periodLabel} 
                 propertyCount={propertyCount}
                 siteVisits={siteVisits}
@@ -156,19 +156,13 @@ export default function Dashboard() {
 
             {/* Evolution chart - fills remaining height */}
             <div className="flex-1 min-h-0">
-                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading || !organization?.id} />
+                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </div>
           </div>
 
           {/* Right column (col 9-12): Sales Funnel */}
           <div className="col-span-4 min-h-0 overflow-hidden">
-            {statsLoading || !organization?.id ? (
-              <Card className="h-full flex items-center justify-center">
-                <Skeleton className="h-[400px] w-full" />
-              </Card>
-            ) : (
-              funnelComponent
-            )}
+            {funnelComponent}
           </div>
         </div>
 
@@ -177,7 +171,7 @@ export default function Dashboard() {
           {/* KPIs */}
           <KPICards 
             data={kpiData} 
-            isLoading={statsLoading || !organization?.id} 
+            isLoading={statsLoading} 
             periodLabel={periodLabel}
           />
 
@@ -188,10 +182,10 @@ export default function Dashboard() {
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
-              {statsLoading || !organization?.id ? <Skeleton className="h-[300px] w-full" /> : funnelComponent}
+              {funnelComponent}
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
-                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading || !organization?.id} />
+                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </TabsContent>
           </Tabs>
         </div>
