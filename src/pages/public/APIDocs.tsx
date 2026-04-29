@@ -181,8 +181,8 @@ export default function APIDocs() {
                   </div>
                 </div>
 
-                <div className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
-                  <p className="text-slate-500 mb-2">// Exemplo de URL</p>
+                <div className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto">
+                  <p className="text-muted-foreground mb-2">// Exemplo de URL</p>
                   <code className="break-all">{BASE_URL}{ep.path}</code>
                 </div>
               </div>
