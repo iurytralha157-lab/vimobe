@@ -525,6 +525,7 @@ function FollowUpBuilderInner({ onBack, onComplete, initialTemplate }: FollowUpB
       // Create automation
       const automation = await createAutomation.mutateAsync({
         name,
+        is_active: isActive,
         description: `Follow-up com ${messageNodes.length} mensagens`,
         trigger_type: triggerType,
         trigger_config: {
