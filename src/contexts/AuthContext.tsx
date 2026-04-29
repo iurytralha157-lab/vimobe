@@ -60,7 +60,7 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => Promise<void>;
   needsOrgSelection: boolean;
 }
-}
+// Removed extra brace
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
