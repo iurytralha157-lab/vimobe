@@ -87,24 +87,10 @@ export default function Auth() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Optimized background image loading
+  // BACKGROUND REMOVED FOR SPEED
   useEffect(() => {
-    if (!loginBgUrl) return;
-    
-    // Use a small blurred placeholder or a lower quality version initially
-    const img = new Image();
-    
-    // If it's a Supabase URL, use image transformation for WebP and resizing
-    // We request a smaller width initially for mobile or a general good default
-    const optimizedUrl = loginBgUrl.includes('supabase.co') 
-      ? `${loginBgUrl}?width=800&quality=60&format=webp`
-      : loginBgUrl;
-        
-    img.src = optimizedUrl;
-    img.onload = () => setBgLoaded(true);
-
-    // Also preload the higher quality version if needed, but the 800px webp is usually enough
-  }, [loginBgUrl]);
+    setBgLoaded(true);
+  }, []);
 
   const setFieldErrorFromZod = (zodError: z.ZodError) => {
     const fieldErrors: Record<string, string> = {};
