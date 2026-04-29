@@ -1,7 +1,7 @@
 import { useState, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2 } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2, ListTodo } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { cn } from '@/lib/utils';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
