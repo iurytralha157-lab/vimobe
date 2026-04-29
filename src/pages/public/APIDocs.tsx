@@ -121,7 +121,7 @@ export default function APIDocs() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-slate-950 rounded-lg p-4 font-mono text-sm text-slate-200">
+            <div className="bg-muted border rounded-lg p-4 font-mono text-sm text-foreground">
               <code>Authorization: Bearer sk_live_…</code>
             </div>
             <div className="flex items-start gap-2 text-sm bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
