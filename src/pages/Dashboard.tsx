@@ -177,7 +177,7 @@ export default function Dashboard() {
           {/* KPIs */}
           <KPICards 
             data={kpiData} 
-            isLoading={statsLoading} 
+            isLoading={statsLoading || !organization?.id} 
             periodLabel={periodLabel}
           />
 
@@ -188,10 +188,10 @@ export default function Dashboard() {
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
-              {funnelComponent}
+              {statsLoading || !organization?.id ? <Skeleton className="h-[300px] w-full" /> : funnelComponent}
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
-                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading || !organization?.id} />
             </TabsContent>
           </Tabs>
         </div>
