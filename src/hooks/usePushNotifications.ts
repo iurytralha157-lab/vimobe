@@ -95,8 +95,10 @@ export const usePushNotifications = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      // Check if we already synced this exact subscription to avoid redundant calls
-      const subStr = JSON.stringify(sub);
+      // Use toJSON for reliable serialization
+      const subJSON = sub.toJSON();
+      const subStr = JSON.stringify(subJSON);
+      
       const lastSub = localStorage.getItem('last_push_sub');
       if (lastSub === subStr && synced) {
         console.log('[Push] Subscription already synced, skipping...');
@@ -107,10 +109,17 @@ export const usePushNotifications = () => {
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert(
-          {
-            user_id: user.id,
-            subscription: JSON.parse(subStr),
-          },
+          [
+            {
+              user_id: user.id,
+              subscription: subJSON as any,
+              device_info: {
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString(),
+                platform: navigator.platform
+              }
+            }
+          ],
           { onConflict: 'user_id' }
         );
 
@@ -129,7 +138,7 @@ export const usePushNotifications = () => {
       setSynced(false);
       return false;
     }
-  }, []);
+  }, [synced]);
 
   const getSubscription = useCallback(async () => {
     if (!checkSupport()) return null;
@@ -154,7 +163,12 @@ export const usePushNotifications = () => {
     if (checkSupport()) {
       refreshSwStatus();
       getSubscription();
-      
+
+      // Clear badge on load
+      if ('clearAppBadge' in navigator) {
+        (navigator as any).clearAppBadge().catch(() => {});
+      }
+
       // Monitor permission changes if possible
       let permissionStatus: PermissionStatus | null = null;
       if ('permissions' in navigator) {

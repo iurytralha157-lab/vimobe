@@ -36,16 +36,15 @@ Deno.serve(async (req) => {
 
     webpush.setVapidDetails(mailto, publicKey, privateKey);
 
-    // Fetch subscription from DB
-    const { data: subscriptionData, error: subError } = await supabase
+    // Fetch subscriptions from DB
+    const { data: subscriptions, error: subError } = await supabase
       .from("push_subscriptions")
       .select("subscription")
-      .eq("user_id", user_id)
-      .single();
+      .eq("user_id", user_id);
 
-    if (subError || !subscriptionData) {
+    if (subError || !subscriptions || subscriptions.length === 0) {
       console.log(`No subscription found for user ${user_id}`);
-      return new Response(JSON.stringify({ success: false, message: "No subscription found" }), {
+      return new Response(JSON.stringify({ success: false, message: "Inscrição não encontrada para este usuário." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -57,9 +56,22 @@ Deno.serve(async (req) => {
       data: { url: url || "/" }
     });
 
-    await webpush.sendNotification(subscriptionData.subscription, payload);
+    // Send to all registered subscriptions for this user
+    const sendPromises = subscriptions.map(sub => 
+      webpush.sendNotification(sub.subscription, payload)
+        .catch(err => {
+          console.error(`Error sending to one of the subscriptions for user ${user_id}:`, err);
+          // If subscription is expired or invalid, we could delete it here
+          if (err.statusCode === 410 || err.statusCode === 404) {
+             // Optional: Cleanup logic
+          }
+          return null;
+        })
+    );
 
-    return new Response(JSON.stringify({ success: true }), {
+    await Promise.all(sendPromises);
+
+    return new Response(JSON.stringify({ success: true, count: subscriptions.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
