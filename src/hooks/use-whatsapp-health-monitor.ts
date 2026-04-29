@@ -15,7 +15,7 @@ interface SessionHealthState {
   lastKnownStatus: string;
   consecutiveFailures: number;
   lastCheck: Date;
-  notificationSent: boolean;
+  // notificationSent removed
 }
 
 /**
