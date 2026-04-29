@@ -198,7 +198,7 @@ export default function APIDocs() {
           <CardContent className="space-y-6">
             <div>
               <p className="text-sm font-semibold mb-2">curl</p>
-              <pre className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
+              <pre className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
 {`curl -H "Authorization: Bearer sk_live_…" \\
   "${BASE_URL}/properties?city=Goiania&purpose=venda&page=1&per_page=20"`}
               </pre>
@@ -206,7 +206,7 @@ export default function APIDocs() {
 
             <div>
               <p className="text-sm font-semibold mb-2">JavaScript (fetch)</p>
-              <pre className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
+              <pre className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
 {`const res = await fetch(
   "${BASE_URL}/properties?purpose=venda",
   { headers: { Authorization: "Bearer " + process.env.IMOB_API_KEY } }
@@ -217,7 +217,7 @@ const { data, pagination } = await res.json();`}
 
             <div>
               <p className="text-sm font-semibold mb-2">Resposta</p>
-              <pre className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
+              <pre className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto whitespace-pre-wrap text-muted-foreground">
                 {exampleResponse}
               </pre>
             </div>
