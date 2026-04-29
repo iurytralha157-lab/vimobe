@@ -134,9 +134,9 @@ export const autoRegisterPush = async (userId: string) => {
   const currentKey = VAPID_PUBLIC_KEY;
   const permission = Notification.permission;
 
-  // Auto-register if permission is already granted AND (key changed OR no previous record)
-  if (permission === "granted") {
-    if (lastKey !== currentKey) {
+  // Auto-register if permission is already granted OR if we want to prompt (permission is default)
+  if (permission === "granted" || permission === "default") {
+    if (lastKey !== currentKey || permission === "default") {
       console.log("[Push] VAPID key changed or missing, re-subscribing...");
       try {
         await subscribeToPush(userId);
