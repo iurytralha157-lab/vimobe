@@ -98,7 +98,7 @@ export default function APIDocs() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-slate-950 rounded-lg p-4 font-mono text-sm text-slate-200 flex items-center justify-between gap-2">
+            <div className="bg-muted border rounded-lg p-4 font-mono text-sm text-foreground flex items-center justify-between gap-2">
               <code className="break-all">{BASE_URL}</code>
               <button
                 onClick={() => copy(BASE_URL)}
