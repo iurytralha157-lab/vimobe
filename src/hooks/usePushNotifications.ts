@@ -109,16 +109,17 @@ export const usePushNotifications = () => {
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert(
-          {
-            user_id: user.id,
-            subscription: subJSON,
-            // Include basic device info for debugging
-            device_info: {
-              userAgent: navigator.userAgent,
-              timestamp: new Date().toISOString(),
-              platform: navigator.platform
+          [
+            {
+              user_id: user.id,
+              subscription: subJSON,
+              device_info: {
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString(),
+                platform: navigator.platform
+              }
             }
-          },
+          ],
           { onConflict: 'user_id' }
         );
 
