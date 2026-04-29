@@ -19,6 +19,13 @@ export const NotificationsTab = () => {
   } = usePushNotifications();
   const [loading, setLoading] = useState(false);
 
+  // Auto-sync on mount if permission is granted but synced is false
+  useEffect(() => {
+    if (permission === 'granted' && subscription && !synced && !loading) {
+      refreshSubscription();
+    }
+  }, [permission, subscription, synced, loading, refreshSubscription]);
+
   const handleToggle = async () => {
     setLoading(true);
     try {
