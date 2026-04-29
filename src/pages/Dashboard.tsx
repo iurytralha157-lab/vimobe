@@ -23,21 +23,21 @@ export default function Dashboard() {
   const { organization, user } = useAuth();
   
 
-  // Property count query
-  const { data: propertyCount = 0 } = useQuery({
-    queryKey: ['dashboard-property-count', organization?.id],
-    queryFn: async () => {
-      if (!organization?.id) return 0;
+  // Property count - delayed for speed
+  const [propertyCount, setPropertyCount] = useState(0);
+  useEffect(() => {
+    if (!organization?.id) return;
+    const timer = setTimeout(async () => {
       const { count, error } = await supabase
         .from('properties')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', organization.id);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!organization?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+      if (!error && count !== null) {
+        setPropertyCount(count);
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [organization?.id]);
 
   const {
     filters,
