@@ -543,31 +543,5 @@ export function useQRCodePolling(session: WhatsAppSession | null) {
   };
 }
 
-export function useToggleNotificationSession() {
-  const queryClient = useQueryClient();
+// useToggleNotificationSession removed
 
-  return useMutation({
-    mutationFn: async ({ sessionId, enabled }: { sessionId: string; enabled: boolean }) => {
-      const { error } = await supabase
-        .from("whatsapp_sessions")
-        .update({ is_notification_session: enabled } as any)
-        .eq("id", sessionId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
-      toast({
-        title: "Configuração atualizada",
-        description: "Sessão de notificação alterada com sucesso",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
