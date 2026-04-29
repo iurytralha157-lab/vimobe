@@ -95,7 +95,7 @@ export function NotificationBell() {
                         {notification.content}
                       </p>
                       <p className="text-[10px] text-muted-foreground/60">
-                        {formatDistanceToNow(new Error(notification.created_at), {
+                        {formatDistanceToNow(new Date(notification.created_at), {
                           addSuffix: true,
                           locale: ptBR,
                         })}
