@@ -38,20 +38,10 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
 
   // 4. Ensure it exists and is active
   if (!reg || !reg.active) {
-    // If it's not active yet (e.g. first install), we might need to wait a tiny bit or 
-    // it might be in installing/waiting state. 
-    // But the user asked to throw if not active to keep it deterministic.
-    // However, on first load, it WILL be installing. 
-    // Let's try to wait for activation if it's installing/waiting, 
-    // but the user said "NÃO usar navigator.serviceWorker.ready em nenhum momento".
-    
-    // If it's not active, let's check if we can wait for the state change without 'ready'
-    if (reg && (reg.installing || reg.waiting)) {
-      console.log('[Push] Worker found but not active. State:', reg.installing?.state || reg.waiting?.state);
-      // We'll give it a moment to become active if it's already there
-      return reg; 
-    }
-    throw new Error('Service Worker não está ativo. Por favor, recarregue a página e tente novamente.');
+    console.warn('[Push] Service Worker found but NOT active. State:', 
+      reg?.installing ? 'installing' : (reg?.waiting ? 'waiting' : 'unknown')
+    );
+    throw new Error('Service Worker não está ativo. Por favor, aguarde um momento ou recarregue a página.');
   }
 
   return reg;
