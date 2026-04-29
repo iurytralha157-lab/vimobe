@@ -51,7 +51,7 @@ const FinancialReports = lazy(() => import("./pages/FinancialReports"));
 const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
 const Automations = lazy(() => import("./pages/Automations"));
-// Notifications removed
+const Install = lazy(() => import("./pages/Install"));
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
@@ -256,6 +256,7 @@ function AppRoutes() {
             <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
             <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
             <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
+            <Route path="/install" element={<ProtectedRoute><Install /></ProtectedRoute>} />
             
             {/* Financial Module */}
             <Route path="/financeiro" element={<ProtectedRoute><AdminRoute><FinancialDashboard /></AdminRoute></ProtectedRoute>} />
