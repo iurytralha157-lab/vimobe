@@ -20,7 +20,6 @@ import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 
 import { IOSInstallGuide } from "@/components/IOSInstallGuide";
-import { PushNotificationHandler } from "@/components/PushNotificationHandler";
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
@@ -53,8 +52,6 @@ const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
 const Automations = lazy(() => import("./pages/Automations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
-const Install = lazy(() => import("./pages/Install"));
-
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
@@ -136,10 +133,9 @@ const PageLoader = () => (
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
-  if (loading && !user) return <PageLoader />;
+  if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
-  // Removido o bloqueio por falta de perfil - o app carrega o que tiver disponível
-  // if (!profile && !isSuperAdmin) return <PageLoader />;
+  if (!profile && !isSuperAdmin) return <PageLoader />;
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
@@ -151,13 +147,6 @@ function AppRoutes() {
   const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection } = useAuth();
   
   useForceRefreshListener();
-  
-  // Inicializa notificações apenas para usuários logados, sem bloquear o render
-  useEffect(() => {
-    if (user && !loading) {
-      console.log("Inicializando handlers de background...");
-    }
-  }, [user, loading]);
 
   useEffect(() => {
     // Only preload CRM pages if we are NOT on a custom domain and user is logged in
@@ -175,9 +164,9 @@ function AppRoutes() {
   };
 
   const renderAuthRoute = () => {
-    if (loading && !user) return <PageLoader />;
+    if (loading) return <PageLoader />;
     if (user) {
-      // Se já está logado, vai para o dashboard/admin sem esperar o perfil completo carregar
+      if (!profile && !isSuperAdmin) return <PageLoader />;
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;
@@ -198,7 +187,6 @@ function AppRoutes() {
 
   return (
     <>
-      {/* user && <PushNotificationHandler /> -- Comentado temporariamente para resolver lentidão */}
       {!isResetPasswordRoute && <AnnouncementBanner />}
       {!isResetPasswordRoute && <ImpersonateBanner />}
       {!isResetPasswordRoute && <Suspense fallback={null}><TrialExpiredModal /></Suspense>}
@@ -240,8 +228,6 @@ function AppRoutes() {
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-            <Route path="/install" element={<ProtectedRoute><Install /></ProtectedRoute>} />
-
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
             <Route path="/properties/new" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
@@ -337,7 +323,6 @@ const App = () => {
             ) : (
               <AuthProvider>
                 <LanguageProvider>
-                  {/* Mover PushNotificationHandler para dentro de AppRoutes para carregar após o login */}
                   <AppRoutes />
                 </LanguageProvider>
               </AuthProvider>

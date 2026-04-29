@@ -237,49 +237,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('impersonating');
     };
 
-    const initSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (!isMounted) return;
 
-        if (error || !session) {
-          console.log('Sessão inválida na inicialização:', error?.message);
-          clearAllStates();
-          setLoading(false);
-          return;
-        }
-
-        setSession(session);
-        setUser(session.user);
-
-        // Adicionar um timeout para evitar que o app trave se o banco estiver lento
-        const profilePromise = fetchProfile(session.user.id);
-        const multiOrgPromise = checkMultiOrg(session.user.id);
-        
-        // Carrega dados em paralelo, mas libera o loading após no máximo 3 segundos 
-        // para não travar o usuário em uma tela branca/carregando
-        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
-
-        Promise.race([
-          Promise.all([
-            profilePromise.catch(e => console.error("Erro perfil:", e)),
-            multiOrgPromise.catch(e => console.error("Erro multi-org:", e))
-          ]),
-          timeoutPromise
-        ]).finally(() => {
-          if (isMounted) {
-            console.log("Auth: Loading finalizado (via timeout ou sucesso)");
-            setLoading(false);
-          }
-        });
-      } catch (e) {
-        console.error('Erro fatal na inicialização do Auth:', e);
-        if (isMounted) setLoading(false);
+      // Se houve erro ou sessão inválida, limpar tudo
+      if (error || !session) {
+        console.log('Sessão inválida na inicialização:', error?.message);
+        clearAllStates();
+        setLoading(false);
+        return;
       }
-    };
 
-    initSession();
+      setSession(session);
+      setUser(session.user);
+
+      await Promise.all([
+        fetchProfile(session.user.id),
+        checkMultiOrg(session.user.id)
+      ]);
+      setLoading(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
