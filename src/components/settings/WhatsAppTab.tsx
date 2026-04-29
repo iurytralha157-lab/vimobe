@@ -329,8 +329,10 @@ export function WhatsAppTab() {
                   {/* Row 2: Responsável + notificação toggle */}
                   <div className="flex items-center justify-between gap-2 py-1.5 border-y border-border/50">
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      {/* notification session badge and toggle removed */}
-
+                      <span className="text-xs text-muted-foreground truncate">
+                        {session.owner?.name || "—"}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Row 3: Action buttons */}
