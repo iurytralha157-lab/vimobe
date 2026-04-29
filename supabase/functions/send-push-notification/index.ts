@@ -91,9 +91,24 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   // Import the ECDSA private key
   const keyData = parsePrivateKey(privateKeyPem);
   
+  // Se for uma chave de 32 bytes (raw), precisamos converter para PKCS#8 para o Deno
+  let finalKeyData = keyData;
+  if (keyData.length === 32) {
+    // PKCS#8 wrapper for P-256 private key
+    const pkcs8 = new Uint8Array(67);
+    pkcs8.set([
+      0x30, 0x41, // Sequence
+      0x02, 0x01, 0x00, // Version
+      0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, // Algorithm (EC public key, P-256)
+      0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20 // Octet string containing the private key
+    ]);
+    pkcs8.set(keyData, 35);
+    finalKeyData = pkcs8;
+  }
+  
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
-    keyData.buffer as ArrayBuffer,
+    finalKeyData.buffer as ArrayBuffer,
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"]
