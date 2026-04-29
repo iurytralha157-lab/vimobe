@@ -15,49 +15,36 @@ const urlBase64ToUint8Array = (base64String: string) => {
 };
 
 /**
- * Robust Service Worker registration for iOS/Android PWA.
+ * Instant Service Worker registration for iOS/Android PWA.
  */
 async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) {
     throw new Error('Sem suporte a Service Worker neste navegador.');
   }
 
-  console.log('[Push] Iniciando registro do Service Worker...');
+  // 1. Pega o registro existente ou registra um novo
+  let registration = await navigator.serviceWorker.getRegistration();
   
-  // Register the SW. Vite PWA usually handles this, but we do it manually for maximum reliability.
-  const registration = await navigator.serviceWorker.register('/sw.js', {
-    scope: '/'
-  });
-  
-  // Force an update to ensure we have the latest version
-  try {
-    await registration.update();
-  } catch (e) {
-    console.warn('[Push] Registration update failed (normal on some browsers):', e);
+  if (!registration) {
+    console.log('[Push] Registrando novo Service Worker...');
+    registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
   }
 
-  // Use the native .ready promise which is the fastest way to get an active registration
-  // but also implement the user's requested wait loop as a fallback.
-  const readyRegistration = await Promise.race([
+  // 2. Se já estiver ativo, retorna IMEDIATAMENTE (zero wait)
+  if (registration.active) {
+    return registration;
+  }
+
+  // 3. Se estiver instalando ou esperando, aguarda a ativação
+  console.log('[Push] Aguardando ativação do Service Worker...');
+  
+  // O ready promise é o caminho mais rápido nativo
+  return await Promise.race([
     navigator.serviceWorker.ready,
     new Promise<ServiceWorkerRegistration>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout aguardando Service Worker Ready')), 5000)
+      setTimeout(() => reject(new Error('Timeout na ativação')), 3000)
     )
-  ]).catch(async () => {
-    // Fallback wait loop requested by user
-    console.log('[Push] ready promise timed out, using fallback wait loop...');
-    let reg = await navigator.serviceWorker.getRegistration();
-    const start = Date.now();
-    while (!reg?.active && Date.now() - start < 5000) {
-      await new Promise(r => setTimeout(r, 300));
-      reg = await navigator.serviceWorker.getRegistration();
-    }
-    if (!reg?.active) throw new Error('Service Worker não ativou a tempo (5s)');
-    return reg;
-  });
-
-  console.log('[Push] Service Worker está pronto e ativo.');
-  return readyRegistration;
+  ]);
 }
 
 export const usePushNotifications = () => {
@@ -87,42 +74,36 @@ export const usePushNotifications = () => {
       const subStr = JSON.stringify(subJSON);
       
       const lastSub = localStorage.getItem('last_push_sub');
-      if (lastSub === subStr && synced) {
-        console.log('[Push] Já sincronizado.');
+      if (lastSub === subStr) {
+        setSynced(true);
         return true;
       }
 
-      console.log('[Push] Sincronizando com o banco...');
+      console.log('[Push] Sincronizando token...');
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert(
-          [
-            {
-              user_id: user.id,
-              subscription: subJSON as any,
-              // REMOVED device_info as it's not in the table schema yet
-              // and was causing sync failures.
-            }
-          ],
+          {
+            user_id: user.id,
+            subscription: subJSON as any,
+            updated_at: new Date().toISOString()
+          },
           { onConflict: 'user_id' }
         );
 
       if (error) {
         console.error('[Push] Erro no sync:', error);
-        setSynced(false);
         return false;
       }
       
       localStorage.setItem('last_push_sub', subStr);
-      console.log('[Push] Sync concluído com sucesso.');
       setSynced(true);
       return true;
     } catch (err) {
       console.error('[Push] Exceção no sync:', err);
-      setSynced(false);
       return false;
     }
-  }, [synced]);
+  }, []);
 
   const getSubscription = useCallback(async () => {
     if (!checkSupport()) return null;
@@ -167,7 +148,7 @@ export const usePushNotifications = () => {
     try {
       setIsPreparing(true);
       
-      // 1. Request Permission
+      // 1. Solicita Permissão (iOS só deixa se for interação do usuário)
       console.log('[Push] Solicitando permissão...');
       const result = await Notification.requestPermission();
       setPermission(result);
@@ -175,25 +156,24 @@ export const usePushNotifications = () => {
         throw new Error('Permissão negada. Ative nas configurações do dispositivo.');
       }
 
-      // 2. Ensure SW is active (Fast)
+      // 2. Garante SW Ativo (Instantâneo se já estiver rodando)
       const registration = await ensureServiceWorker();
 
-      // 3. Subscribe
-      console.log('[Push] Criando inscrição nativa...');
+      // 3. Cria Inscrição
+      console.log('[Push] Criando inscrição...');
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       
-      let sub = await registration.pushManager.getSubscription();
-      
-      if (!sub) {
-        sub = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey,
-        });
-      }
+      const sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
 
-      // 4. Sync
-      await syncSubscriptionWithBackend(sub);
+      // 4. Sincroniza em Background (Não trava a UI)
+      syncSubscriptionWithBackend(sub).catch(err => console.error('[Push] Sync background error:', err));
+      
       setSubscription(sub);
+      setSynced(true); // Assume sucesso para UI instantânea
+      
       return sub;
     } catch (err: any) {
       console.error('[Push] Erro na ativação:', err);
