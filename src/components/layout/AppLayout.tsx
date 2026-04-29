@@ -9,8 +9,8 @@ import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
-import { usePushNotifications } from '@/hooks/use-push-notifications';
-import { usePhoneReminder } from '@/hooks/use-phone-reminder';
+// Push notifications and phone reminder removed
+
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useAuth } from '@/contexts/AuthContext';
 import { Wrench } from 'lucide-react';
