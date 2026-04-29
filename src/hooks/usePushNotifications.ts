@@ -198,30 +198,41 @@ export const usePushNotifications = () => {
   const subscribeUser = async () => {
     if (!checkSupport()) throw new Error('Notificações não são suportadas.');
 
-    console.log('[Push] Requesting permission...');
-    const result = await Notification.requestPermission();
-    setPermission(result);
-    if (result !== 'granted') throw new Error('Permissão negada.');
+    try {
+      setIsPreparing(true);
+      console.log('[Push] Requesting permission...');
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      if (result !== 'granted') {
+        throw new Error('Permissão negada para notificações.');
+      }
 
-    console.log('[Push] Getting Service Worker...');
-    const registration = await getActiveServiceWorkerRegistration();
-    await refreshSwStatus();
+      console.log('[Push] Getting Service Worker...');
+      const registration = await getActiveServiceWorkerRegistration();
+      await refreshSwStatus();
 
-    console.log('[Push] Subscribing to push...');
-    let sub = await registration.pushManager.getSubscription();
-    
-    // Always try to subscribe if no sub exists or if we want to ensure latest
-    if (!sub) {
-      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey,
-      });
+      console.log('[Push] Subscribing to push...');
+      let sub = await registration.pushManager.getSubscription();
+      
+      // Always try to subscribe if no sub exists or if we want to ensure latest
+      if (!sub) {
+        const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+        sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+      }
+
+      const syncSuccess = await syncSubscriptionWithBackend(sub);
+      if (!syncSuccess) {
+        console.warn('[Push] Subscription achieved but sync failed.');
+      }
+      
+      setSubscription(sub);
+      return sub;
+    } finally {
+      setIsPreparing(false);
     }
-
-    await syncSubscriptionWithBackend(sub);
-    setSubscription(sub);
-    return sub;
   };
 
   const unsubscribeUser = async () => {
