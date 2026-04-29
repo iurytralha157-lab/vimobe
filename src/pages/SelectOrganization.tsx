@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Loader2, Shield, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function SelectOrganization() {
   const { user, loading, profile, isSuperAdmin, switchOrganization } = useAuth();
