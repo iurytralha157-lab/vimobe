@@ -107,7 +107,6 @@ export const usePushNotifications = () => {
           {
             user_id: user.id,
             subscription: JSON.parse(JSON.stringify(sub)),
-            updated_at: new Date().toISOString(),
           },
           { onConflict: 'user_id' }
         );
