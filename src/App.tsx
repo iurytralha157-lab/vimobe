@@ -92,10 +92,15 @@ const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
 
 function preloadCoreCrmPages() {
+  // Preloading only critical dashboard initially
   void import("./pages/Dashboard");
-  void import("./pages/Pipelines");
-  void import("./pages/Contacts");
-  void import("./pages/Conversations");
+  
+  // The rest can be loaded after a longer delay or on interaction
+  setTimeout(() => {
+    void import("./pages/Pipelines");
+    void import("./pages/Contacts");
+    void import("./pages/Conversations");
+  }, 5000);
 }
 
 function isCustomDomain(): boolean {
