@@ -178,23 +178,23 @@ export default function GamificationRanking() {
 
             {/* 1st Place */}
             {topThree[0] && (
-              <div className="flex flex-col items-center gap-4 flex-1 -mt-12">
+              <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1 -mt-8 lg:-mt-12">
                 <div className="relative group">
-                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 animate-bounce">
-                    <Crown className="h-12 w-12 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                  <div className="absolute -top-8 lg:-top-12 left-1/2 -translate-x-1/2 animate-bounce">
+                    <Crown className="h-8 w-8 lg:h-12 lg:w-12 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
                   </div>
-                  <Avatar className="h-32 w-32 border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform group-hover:scale-110">
+                  <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform group-hover:scale-110">
                     <AvatarImage src={topThree[0].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-2xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
+                    <AvatarFallback className="text-lg lg:text-2xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 text-[8px] lg:text-[10px] font-black px-2 lg:px-3 py-0.5 lg:py-1 rounded-full shadow-lg whitespace-nowrap">
                     TOP 1
                   </div>
                 </div>
-                <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 w-full rounded-t-2xl p-6 text-center min-h-[180px] flex flex-col justify-center border-x border-t border-yellow-500 shadow-[0_-10px_40px_rgba(234,179,8,0.1)]">
-                  <p className="font-black text-lg truncate w-full mb-1">{topThree[0].profiles?.name}</p>
-                  <p className="text-4xl font-black text-yellow-600 drop-shadow-sm">{topThree[0].total_points.toLocaleString()}</p>
-                  <p className="text-xs uppercase font-black text-yellow-700 tracking-widest mt-2">Campeão Atual</p>
+                <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 w-full rounded-t-2xl p-2 lg:p-6 text-center min-h-[110px] lg:min-h-[180px] flex flex-col justify-center border-x border-t border-yellow-500 shadow-[0_-10px_40px_rgba(234,179,8,0.1)]">
+                  <p className="font-black text-xs lg:text-lg truncate w-full mb-0.5 lg:mb-1 px-1">{topThree[0].profiles?.name}</p>
+                  <p className="text-2xl lg:text-4xl font-black text-yellow-600 drop-shadow-sm">{topThree[0].total_points.toLocaleString()}</p>
+                  <p className="text-[9px] lg:text-xs uppercase font-black text-yellow-700 tracking-widest mt-1">Campeão</p>
                 </div>
               </div>
             )}
