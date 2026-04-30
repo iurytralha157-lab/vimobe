@@ -111,7 +111,7 @@ export function DateFilterPopover({
         <div className="p-4 space-y-4">
           {/* Preset buttons in 2-column grid matching the design */}
           <div className="grid grid-cols-2 gap-2">
-            {datePresetOptions.filter(o => o.value !== 'custom').map(option => (
+            {filteredPresets.map(option => (
               <Button
                 key={option.value}
                 variant={datePreset === option.value && !customDateRange ? "default" : "outline"}
