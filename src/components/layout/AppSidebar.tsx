@@ -19,6 +19,7 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 interface NavItem {
   icon: React.ElementType;
   labelKey: string;
@@ -209,6 +210,7 @@ export const AppSidebar = React.memo(function AppSidebar() {
   const {
     resolvedTheme
   } = useTheme();
+  const isMobile = useIsMobile();
 
   // Get the appropriate logo/favicon based on theme
   const logoUrl = useMemo(() => {
@@ -256,6 +258,8 @@ export const AppSidebar = React.memo(function AppSidebar() {
       // If modules are still loading and this item requires a module, hide it
       if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
+      // Hide install option on desktop (only show on mobile)
+      if (item.labelKey === 'install' && !isMobile) return false;
       return true;
     });
     if (isSuperAdmin) {
@@ -266,7 +270,7 @@ export const AppSidebar = React.memo(function AppSidebar() {
       }, ...items];
     }
     return items;
-  }, [isSuperAdmin, profile?.role, hasModule, modulesLoading]);
+  }, [isSuperAdmin, profile?.role, hasModule, modulesLoading, isMobile]);
   const getLabel = (labelKey: string): string => {
     return (t.nav as Record<string, string>)[labelKey] || labelKey;
   };
