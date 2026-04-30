@@ -208,11 +208,13 @@ export function PropertyPreviewDialog({
               <button
                 key={index}
                 type="button"
-                className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                className={cn(
+                  "flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200",
+                  isMobile ? "w-11 h-11" : "w-14 h-14",
                   index === currentImageIndex 
                     ? 'border-primary ring-2 ring-primary/30 scale-105' 
                     : 'border-transparent hover:border-muted-foreground/40'
-                }`}
+                )}
                 onClick={() => {
                   setCurrentImageIndex(index);
                   emblaApi?.scrollTo(index);
