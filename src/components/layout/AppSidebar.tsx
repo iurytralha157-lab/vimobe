@@ -78,6 +78,25 @@ const allNavItems: NavItem[] = [{
     labelKey: 'dre',
     path: '/financeiro/dre'
   }]
+}, {
+  icon: Trophy,
+  labelKey: 'gamification',
+  path: '/gamificacao',
+  module: 'gamification',
+  children: [{
+    icon: LayoutDashboard,
+    labelKey: 'dashboard',
+    path: '/gamificacao'
+  }, {
+    icon: TrendingUp,
+    labelKey: 'performance',
+    path: '/gamificacao/ranking'
+  }, {
+    icon: Settings,
+    labelKey: 'settings',
+    path: '/gamificacao/configuracoes',
+    adminOnly: true
+  }]
 },
 // Imobiliária module with submenu
 {
