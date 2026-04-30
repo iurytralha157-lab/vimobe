@@ -286,7 +286,7 @@ export function PropertyPreviewDialog({
 
             {/* Price */}
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-              <p className="text-2xl font-bold text-primary">
+              <p className="text-xl lg:text-2xl font-bold text-primary">
                 {formatPrice(property.preco, property.tipo_de_negocio)}
               </p>
               {property.tipo_de_negocio === 'Aluguel' && (
