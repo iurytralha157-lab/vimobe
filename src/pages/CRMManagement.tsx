@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, Users, Tags, GitBranch, Trophy, LucIcon } from 'lucide-react';
+import { Shuffle, Users, Tags, GitBranch, Trophy } from 'lucide-react';
 import { GamificationSettings } from '@/components/gamification/GamificationSettings';
 import { TeamPipelinesManager } from '@/components/teams/TeamPipelinesManager';
 import { useIsMobile } from '@/hooks/use-mobile';
