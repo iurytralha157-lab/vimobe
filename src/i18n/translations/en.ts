@@ -59,6 +59,7 @@ export const en = {
     telecomCustomers: 'Customers',
     mySite: 'My Site',
     gamification: 'Gamification',
+    history: 'History',
     more: 'More',
   },
 

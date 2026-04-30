@@ -56,6 +56,7 @@ const GamificationLayout = lazy(() => import("./pages/gamification/GamificationL
 const GamificationDashboard = lazy(() => import("./pages/gamification/GamificationDashboard"));
 const GamificationRanking = lazy(() => import("./pages/gamification/GamificationRanking"));
 const GamificationAdmin = lazy(() => import("./pages/gamification/GamificationAdmin"));
+const GamificationHistory = lazy(() => import("./pages/gamification/GamificationHistory"));
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
@@ -263,6 +264,7 @@ function AppRoutes() {
             <Route path="/gamificacao" element={<ProtectedRoute><GamificationLayout /></ProtectedRoute>}>
               <Route index element={<GamificationDashboard />} />
               <Route path="ranking" element={<GamificationRanking />} />
+              <Route path="historico" element={<GamificationHistory />} />
               <Route path="configuracoes" element={<AdminRoute><GamificationAdmin /></AdminRoute>} />
             </Route>
 

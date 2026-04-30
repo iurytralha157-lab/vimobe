@@ -59,6 +59,7 @@ export const ptBR = {
     telecomCustomers: 'Clientes',
     mySite: 'Meu Site',
     gamification: 'Gamificação',
+    history: 'Histórico',
     more: 'Mais',
   },
 

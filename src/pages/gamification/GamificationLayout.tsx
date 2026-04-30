@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AnimatedTabNav } from '@/components/ui/animated-tab-nav';
-import { LayoutDashboard, TrendingUp, Settings } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Settings, History } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -15,6 +15,7 @@ export default function GamificationLayout() {
     const items = [
       { value: '/gamificacao', label: 'Dashboard', icon: LayoutDashboard },
       { value: '/gamificacao/ranking', label: 'Ranking', icon: TrendingUp },
+      { value: '/gamificacao/historico', label: 'Histórico', icon: History },
     ];
 
     if (profile?.role === 'admin' || isSuperAdmin) {
