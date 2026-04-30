@@ -1573,6 +1573,135 @@ export type Database = {
           },
         ]
       }
+      gamification_activity_logs: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          points_earned: number
+          reference_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          points_earned: number
+          reference_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          points_earned?: number
+          reference_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_activity_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_missions: {
+        Row: {
+          action_type: string
+          bonus_points: number
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          organization_id: string | null
+          period: string | null
+          target_count: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_type: string
+          bonus_points: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          period?: string | null
+          target_count: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_type?: string
+          bonus_points?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          period?: string | null
+          target_count?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_missions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_rules: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          organization_id: string | null
+          points: number
+          updated_at: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          points?: number
+          updated_at?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          points?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string
@@ -4416,6 +4545,71 @@ export type Database = {
           },
         ]
       }
+      prospecting_reports: {
+        Row: {
+          calls: number | null
+          contacts: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          messages: number | null
+          organization_id: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          calls?: number | null
+          contacts?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          messages?: number | null
+          organization_id?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          calls?: number | null
+          contacts?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          messages?: number | null
+          organization_id?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string | null
+          id: string
+          subscription: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          subscription: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          subscription?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           created_at: string | null
@@ -5478,6 +5672,92 @@ export type Database = {
           },
         ]
       }
+      user_gamification_stats: {
+        Row: {
+          created_at: string | null
+          current_level: number | null
+          id: string
+          last_activity_at: string | null
+          organization_id: string | null
+          total_points: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          last_activity_at?: string | null
+          organization_id?: string | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          last_activity_at?: string | null
+          organization_id?: string | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_gamification_stats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_gamification_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_mission_progress: {
+        Row: {
+          current_count: number | null
+          id: string
+          is_completed: boolean | null
+          mission_id: string | null
+          reset_at: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          current_count?: number | null
+          id?: string
+          is_completed?: boolean | null
+          mission_id?: string | null
+          reset_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          current_count?: number | null
+          id?: string
+          is_completed?: boolean | null
+          mission_id?: string | null
+          reset_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_mission_progress_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "gamification_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_org_cache: {
         Row: {
           organization_id: string | null
@@ -6311,6 +6591,7 @@ export type Database = {
           source_name: string
         }[]
       }
+      get_my_org_id: { Args: never; Returns: string }
       get_session_owner: { Args: { p_session_id: string }; Returns: string }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {
