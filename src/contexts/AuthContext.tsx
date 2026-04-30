@@ -202,6 +202,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkMultiOrg = useCallback(async (userId: string) => {
     return performanceTracker.trackTimed("checkMultiOrg", async () => {
       try {
+        // Se já temos uma organização selecionada no perfil atual, não forçamos a seleção novamente
+        // Isso evita o loop infinito quando o estado do auth muda e dispara o checkMultiOrg
+        if (profile?.organization_id) {
+          setNeedsOrgSelection(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from("organization_members" as any)
           .select("organization_id")
@@ -217,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNeedsOrgSelection(false);
       }
     });
-  }, []);
+  }, [profile?.organization_id]);
 
   useEffect(() => {
     let isMounted = true;
