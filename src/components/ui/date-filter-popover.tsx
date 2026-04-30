@@ -39,6 +39,16 @@ export function DateFilterPopover({
 }: DateFilterPopoverProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const isMobile = useIsMobile();
+
+  const filteredPresets = datePresetOptions.filter(option => {
+    if (option.value === 'custom') return false;
+    if (isMobile) {
+      const presetsToRemove = ['thisMonth', 'lastMonth', 'thisQuarter', 'thisYear'];
+      return !presetsToRemove.includes(option.value);
+    }
+    return true;
+  });
 
   const handleDatePresetChange = (preset: DatePreset) => {
     // Toggle off when re-clicking the same preset (allows clearing)
