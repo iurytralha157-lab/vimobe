@@ -328,6 +328,44 @@ export function StagesEditorDialog({
                       </Draggable>
                     ))}
                     {provided.placeholder}
+                    
+                    {isAdding && (
+                      <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 border-2 border-dashed border-primary/30 rounded-lg animate-in slide-in-from-top-2">
+                        <input
+                          type="color"
+                          value={newColor}
+                          onChange={(e) => setNewColor(e.target.value)}
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded cursor-pointer border-0"
+                        />
+                        <Input
+                          placeholder="Nome da coluna..."
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="h-7 sm:h-8 flex-1 text-sm"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddStage();
+                            if (e.key === 'Escape') setIsAdding(false);
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
+                          onClick={handleAddStage}
+                        >
+                          <Check className="h-3.5 w-3.5 text-primary" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
+                          onClick={() => setIsAdding(false)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </Droppable>
