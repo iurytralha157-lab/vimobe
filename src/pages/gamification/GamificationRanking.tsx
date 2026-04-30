@@ -141,7 +141,7 @@ export default function GamificationRanking() {
         <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-4 lg:p-8 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-[400px] lg:min-h-0">
           <div className="absolute top-4 lg:top-8 left-4 lg:left-8 flex items-center gap-2">
             <div className="bg-yellow-500/20 p-1.5 lg:p-2 rounded-full">
-              <Trophy className="h-5 w-5 lg:h-6 lg:h-6 text-yellow-500" />
+              <Trophy className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-500" />
             </div>
             <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">Arena de Elite</h2>
           </div>
