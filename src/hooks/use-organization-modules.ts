@@ -35,7 +35,8 @@ const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'tags',
   'round_robin',
   'reports',
-  'gamification'
+  'gamification',
+  'performance'
 ];
 
 export function useOrganizationModules() {
