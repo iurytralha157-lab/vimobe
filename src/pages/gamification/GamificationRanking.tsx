@@ -158,20 +158,20 @@ export default function GamificationRanking() {
             
             {/* 2nd Place */}
             {topThree[1] && (
-              <div className="flex flex-col items-center gap-4 flex-1">
+              <div className="flex flex-col items-center gap-2 lg:gap-4 flex-1">
                 <div className="relative group">
-                  <Avatar className="h-24 w-24 border-4 border-slate-300 shadow-xl transition-transform group-hover:scale-110">
+                  <Avatar className="h-16 w-16 lg:h-24 lg:w-24 border-2 lg:border-4 border-slate-300 shadow-xl transition-transform group-hover:scale-110">
                     <AvatarImage src={topThree[1].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
+                    <AvatarFallback className="text-sm lg:text-xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
                   </Avatar>
-                  <div className="absolute -top-3 -right-3 bg-slate-100 text-slate-600 rounded-full p-2 border-2 border-slate-300">
-                    <Medal className="h-5 w-5" />
+                  <div className="absolute -top-2 -right-2 bg-slate-100 text-slate-600 rounded-full p-1.5 border-2 border-slate-300">
+                    <Medal className="h-4 w-4 lg:h-5 lg:w-5" />
                   </div>
                 </div>
-                <div className="bg-slate-300/30 w-full rounded-t-xl p-4 text-center min-h-[120px] flex flex-col justify-center border-x border-t border-slate-300">
-                  <p className="font-bold text-sm truncate w-full">{topThree[1].profiles?.name}</p>
-                  <p className="text-2xl font-black text-slate-600">{topThree[1].total_points.toLocaleString()}</p>
-                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mt-1">Pontos</p>
+                <div className="bg-slate-300/30 w-full rounded-t-xl p-2 lg:p-4 text-center min-h-[80px] lg:min-h-[120px] flex flex-col justify-center border-x border-t border-slate-300">
+                  <p className="font-bold text-[10px] lg:text-sm truncate w-full px-1">{topThree[1].profiles?.name}</p>
+                  <p className="text-base lg:text-2xl font-black text-slate-600">{topThree[1].total_points.toLocaleString()}</p>
+                  <p className="text-[8px] lg:text-[10px] uppercase font-bold text-slate-500 tracking-widest">Pontos</p>
                 </div>
               </div>
             )}
