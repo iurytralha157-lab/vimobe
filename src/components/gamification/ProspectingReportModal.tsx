@@ -112,7 +112,7 @@ export function ProspectingReportModal() {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-1">
             <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
