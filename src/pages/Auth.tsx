@@ -44,7 +44,18 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function Auth() {
-  const { signIn, resetPassword } = useAuth();
+  const auth = useAuth();
+  
+  // Guard against undefined context if the component renders before AuthProvider is ready
+  if (!auth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const { signIn, resetPassword } = auth;
   const { toast } = useToast();
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
