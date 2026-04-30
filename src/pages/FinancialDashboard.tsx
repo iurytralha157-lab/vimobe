@@ -47,7 +47,6 @@ export default function FinancialDashboard() {
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 md:h-32" />)}
           </div>
         </div>
-      </AppLayout>
     );
   }
 
