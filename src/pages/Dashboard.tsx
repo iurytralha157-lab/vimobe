@@ -123,29 +123,26 @@ export default function Dashboard() {
       <div className="flex flex-col gap-3 animate-fade-in h-full overflow-hidden">
 
         {/* Filters bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <DashboardFilters
-            datePreset={datePreset}
-            onDatePresetChange={setDatePreset}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-            teamId={teamId}
-            onTeamChange={setTeamId}
-            userId={userId}
-            onUserChange={setUserId}
-            source={source}
-            onSourceChange={setSource}
-            campaignId={campaignId}
-            onCampaignChange={setCampaignId}
-            adSetId={adSetId}
-            onAdSetChange={setAdSetId}
-            adId={adId}
-            onAdChange={setAdId}
-            onClear={clearFilters}
-            hasActiveFilters={hasActiveFilters}
-          />
-          <ProspectingReportModal />
-        </div>
+        <DashboardFilters
+          datePreset={datePreset}
+          onDatePresetChange={setDatePreset}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+          teamId={teamId}
+          onTeamChange={setTeamId}
+          userId={userId}
+          onUserChange={setUserId}
+          source={source}
+          onSourceChange={setSource}
+          campaignId={campaignId}
+          onCampaignChange={setCampaignId}
+          adSetId={adSetId}
+          onAdSetChange={setAdSetId}
+          adId={adId}
+          onAdChange={setAdId}
+          onClear={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+        />
 
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-3 flex-1 min-h-0">
@@ -161,18 +158,6 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Gamification Row */}
-            <div className="grid grid-cols-12 gap-3 shrink-0">
-              <div className="col-span-3">
-                <GamificationStatsWidget />
-              </div>
-              <div className="col-span-6">
-                <LeaderboardWidget />
-              </div>
-              <div className="col-span-3">
-                <MissionsWidget />
-              </div>
-            </div>
 
             {/* Evolution chart - fills remaining height */}
             <div className="flex-1 min-h-0">
