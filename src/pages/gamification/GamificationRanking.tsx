@@ -217,7 +217,7 @@ export default function GamificationRanking() {
                   </div>
                 </div>
                 <div className="bg-amber-600/20 w-full rounded-t-xl p-4 text-center min-h-[100px] flex flex-col justify-center border-x border-t border-amber-600/50">
-                  <p className="font-bold text-xs truncate w-full">{topThree[2].profiles?.full_name}</p>
+                  <p className="font-bold text-xs truncate w-full">{topThree[2].profiles?.name}</p>
                   <p className="text-xl font-black text-amber-700">{topThree[2].total_points.toLocaleString()}</p>
                   <p className="text-[10px] uppercase font-bold text-amber-600 tracking-widest mt-1">Pontos</p>
                 </div>
