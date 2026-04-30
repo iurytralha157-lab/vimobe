@@ -52,6 +52,10 @@ const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
 const Automations = lazy(() => import("./pages/Automations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const GamificationLayout = lazy(() => import("./pages/gamification/GamificationLayout"));
+const GamificationDashboard = lazy(() => import("./pages/gamification/GamificationDashboard"));
+const GamificationRanking = lazy(() => import("./pages/gamification/GamificationRanking"));
+const GamificationAdmin = lazy(() => import("./pages/gamification/GamificationAdmin"));
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
