@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AnimatedTabNav } from '@/components/ui/animated-tab-nav';
-import { LayoutDashboard, TrendingUp, Settings, History } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Settings, History, Trophy } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
