@@ -124,39 +124,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
-        console.log("Fetching profile for:", userId);
+        console.log("[Auth] Starting fetchProfile for:", userId);
+        
         // Fetch profile first (critical path). Super admin check runs in background
         // so it never blocks the UI from leaving the loading state.
-        const userResult = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("users")
           .select("id, organization_id, name, email, role, avatar_url, is_active, language")
           .eq("id", userId)
           .maybeSingle();
 
+        console.log("[Auth] Profile fetch result:", { hasData: !!profileData, error: profileError });
+
         // Kick off super admin check without awaiting; update state when ready.
         checkSuperAdmin(userId)
-          .then((isSA) => setIsSuperAdmin(isSA))
-          .catch((err) => console.warn("Background super admin check failed:", err));
+          .then((isSA) => {
+            console.log("[Auth] Super admin check result:", isSA);
+            setIsSuperAdmin(isSA);
+          })
+          .catch((err) => console.warn("[Auth] Background super admin check failed:", err));
 
-        if (userResult.error) {
-          console.error("Error fetching user profile record:", userResult.error);
+        if (profileError) {
+          console.error("[Auth] Error fetching user profile record:", profileError);
           return false;
         }
 
-        const profileData = userResult.data;
         if (profileData) {
-          // Note: isSuperAdmin will be updated asynchronously by the background check above.
           const superAdmin = profileData.role === "super_admin";
           if (superAdmin) setIsSuperAdmin(true);
           
           if (!profileData.is_active && !superAdmin) {
-            console.warn("User is deactivated, signing out");
+            console.warn("[Auth] User is deactivated, signing out");
             await supabase.auth.signOut();
             alert("Sua conta foi desativada. Entre em contato com o administrador.");
             return false;
           }
           
           setProfile(profileData as any);
+          console.log("[Auth] Profile state set");
 
           const storedImpersonating = localStorage.getItem("impersonating");
           const activeImpersonation: ImpersonateSession | null = storedImpersonating
@@ -166,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
           
           if (orgIdToFetch) {
-            console.log("Fetching organization:", orgIdToFetch);
+            console.log("[Auth] Fetching organization:", orgIdToFetch);
             const { data: orgData, error: orgError } = await supabase
               .from("organizations")
               .select("id, name, logo_url, theme_mode, accent_color, is_active")
@@ -174,34 +179,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .maybeSingle();
 
             if (orgError) {
-              console.error("Error fetching organization record:", orgError);
+              console.error("[Auth] Error fetching organization record:", orgError);
             } else if (orgData) {
               if (!orgData.is_active && !superAdmin && !activeImpersonation) {
-                console.warn("Organization is deactivated, signing out");
+                console.warn("[Auth] Organization is deactivated, signing out");
                 await supabase.auth.signOut();
                 alert("Sua organização foi desativada. Entre em contato com o suporte.");
                 return false;
               }
               setOrganization(orgData as Organization);
+              console.log("[Auth] Organization state set");
             }
           }
           
-          fetchFullProfile(userId).catch(err => console.error("Non-blocking fetchFullProfile error:", err));
+          fetchFullProfile(userId).catch(err => console.error("[Auth] Non-blocking fetchFullProfile error:", err));
           return true;
         } else {
-          console.warn("No user profile found in database for ID:", userId);
+          console.warn("[Auth] No user profile record found in database for ID:", userId);
           // If super admin and no profile, we still allow basic access.
           // Await the SA check here only as a fallback (rare path).
           const superAdminFallback = await checkSuperAdmin(userId);
           if (superAdminFallback) {
-            console.log("Super admin detected without explicit profile record");
+            console.log("[Auth] Super admin detected without explicit profile record (fallback)");
             setIsSuperAdmin(true);
             return true;
           }
           return false;
         }
       } catch (error) {
-        console.error("Critical error in fetchProfile:", error);
+        console.error("[Auth] Critical error in fetchProfile:", error);
         return false;
       }
     });
