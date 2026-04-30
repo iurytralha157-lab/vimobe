@@ -99,8 +99,6 @@ const formatCompactCurrency = (value: number): string => {
 };
 
 export default function Pipelines() {
-  return (
-    <div className="flex flex-col h-full animate-in relative">
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, organization } = useAuth();
