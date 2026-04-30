@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Property, useProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
   MapPin,
@@ -112,7 +113,7 @@ export function PropertyPreviewDialog({
   const content = isLoading ? (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="lg:w-1/2">
-        <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+        <Skeleton className={cn("w-full rounded-xl", isMobile ? "aspect-video" : "aspect-[4/3]")} />
         <div className="flex gap-2 mt-3">
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} className="w-16 h-16 rounded-lg" />
@@ -135,7 +136,10 @@ export function PropertyPreviewDialog({
       {/* Left Side - Image Gallery */}
       <div className="lg:w-1/2 flex flex-col">
         {/* Main Image with Embla Carousel */}
-        <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted group">
+        <div className={cn(
+          "relative rounded-xl overflow-hidden bg-muted group",
+          isMobile ? "aspect-video" : "aspect-[4/3]"
+        )}>
           {allImages.length > 0 ? (
             <>
               {/* Embla Carousel */}
@@ -199,7 +203,7 @@ export function PropertyPreviewDialog({
 
         {/* Thumbnail Grid */}
         {allImages.length > 1 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+          <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
             {allImages.slice(0, 8).map((img, index) => (
               <button
                 key={index}
