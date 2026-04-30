@@ -88,8 +88,10 @@ const PublishedSiteWrapper = lazy(() => import("./pages/public/PublishedSiteWrap
 
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 
-// Trial expired modal
-const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
+// Trial expired modal — imported eagerly to avoid the "Function components cannot
+// be given refs" warning that React emits when lazy() wraps a non-forwardRef
+// component used inside a Suspense boundary.
+import { TrialExpiredModal } from "./components/admin/TrialExpiredModal";
 
 function preloadCoreCrmPages() {
   void import("./pages/Dashboard");
@@ -206,7 +208,7 @@ function AppRoutes() {
     <>
       {!isResetPasswordRoute && <AnnouncementBanner />}
       {!isResetPasswordRoute && <ImpersonateBanner />}
-      {!isResetPasswordRoute && <Suspense fallback={null}><TrialExpiredModal /></Suspense>}
+      {!isResetPasswordRoute && <TrialExpiredModal />}
       {!isResetPasswordRoute && user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
