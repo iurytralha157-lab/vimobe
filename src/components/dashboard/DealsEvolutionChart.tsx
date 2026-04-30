@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   AreaChart,
   Area,
@@ -92,6 +93,7 @@ function getXInterval(chartWidth: number, totalPoints: number) {
 }
 
 export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProps) {
+  const isMobile = useIsMobile();
   const [chartSize, setChartSize] = useState({ width: 600, height: 250 });
 
   const handleResize = useCallback((width: number, height: number) => {
@@ -157,13 +159,18 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
           Evolução de Negócios
         </CardTitle>
       </CardHeader>
-      <CardContent className="pb-4 flex-1 flex flex-col">
+      <CardContent className="pb-4 flex-1 flex flex-col px-0 sm:px-[10px]">
         {/* Chart */}
         <div className="flex-1 min-h-[300px] w-full">
           <ResponsiveContainer width="100%" height={300} onResize={handleResize}>
             <AreaChart
               data={data}
-              margin={{ top: 10, right: 10, left: 12, bottom: 0 }}
+              margin={{ 
+                top: 10, 
+                right: isMobile ? 0 : 10, 
+                left: isMobile ? -35 : 12, 
+                bottom: 0 
+              }}
             >
               <defs>
                 <linearGradient id="gradientGanhos" x1="0" y1="0" x2="0" y2="1">
@@ -197,7 +204,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                width={55}
+                width={isMobile ? 40 : 55}
                 allowDecimals={false}
                 tickCount={yTickCount}
                 domain={[0, 'auto']}
