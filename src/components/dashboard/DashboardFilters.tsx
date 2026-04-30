@@ -216,8 +216,7 @@ export function DashboardFilters({
           <PopoverContent align="end" className="w-64 p-3">
             <div className="space-y-3">
               {/* Meta Campaign Filter */}
-              <div className="space-y-1.5 pb-2 border-b border-border">
-                <label className="text-xs font-medium text-muted-foreground">Campanhas Meta</label>
+              <div className="pb-2 border-b border-border">
                 <CampaignFilter 
                   campaignId={campaignId}
                   onCampaignChange={onCampaignChange}
@@ -232,7 +231,6 @@ export function DashboardFilters({
               {/* Team */}
               {availableTeams.length > 0 && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Equipe</label>
                   <TeamFilter />
                 </div>
               )}
@@ -240,14 +238,12 @@ export function DashboardFilters({
               {/* User */}
               {showUserFilter && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Corretor</label>
                   <UserFilter />
                 </div>
               )}
 
               {/* Source */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Origem</label>
                 <SourceFilter />
               </div>
 
