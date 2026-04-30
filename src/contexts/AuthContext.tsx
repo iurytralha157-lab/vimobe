@@ -260,49 +260,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initialize = async () => {
       try {
-        console.log("Auth starting initialize...");
+        console.log("[Auth] Starting initialize...");
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
         
         if (error) {
-          console.error("Auth getSession error:", error);
+          console.error("[Auth] getSession error:", error);
           clearAllStates();
           setLoading(false);
           return;
         }
 
         if (!session) {
-          console.log("No session found during init");
+          console.log("[Auth] No session found during init");
           clearAllStates();
           setLoading(false);
           return;
         }
 
-        console.log("Session found, fetching profile for:", session.user.id);
+        console.log("[Auth] Session found, user:", session.user.id);
         setSession(session);
         setUser(session.user);
         
-        // Use Promise.race with a timeout for the entire profile fetch sequence
-        const timeoutPromise = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 8000));
+        // Race the entire profile fetch sequence against an 8s timeout
+        const timeoutPromise = new Promise<boolean>((resolve) => 
+          setTimeout(() => {
+            console.warn("[Auth] Initialization profile fetch timed out (8s)");
+            resolve(false);
+          }, 8000)
+        );
         
         const fetchPromise = (async () => {
-          await Promise.all([
-            fetchProfile(session.user.id),
-            checkMultiOrg(session.user.id)
-          ]);
-          return true;
+          try {
+            await Promise.all([
+              fetchProfile(session.user.id),
+              checkMultiOrg(session.user.id)
+            ]);
+            return true;
+          } catch (e) {
+            console.error("[Auth] fetchPromise failed:", e);
+            return false;
+          }
         })();
 
-        const profileSuccess = await Promise.race([fetchPromise, timeoutPromise]);
-        
-        console.log("Init sequence complete, profile success:", profileSuccess);
+        await Promise.race([fetchPromise, timeoutPromise]);
+        console.log("[Auth] Init profile/org fetch sequence complete");
       } catch (e) {
-        console.error("Auth init exception:", e);
+        console.error("[Auth] Exception during initialize:", e);
         clearAllStates();
       } finally {
         if (isMounted) {
-          console.log("Setting loading to false");
+          console.log("[Auth] Setting loading to false");
           setLoading(false);
         }
       }
