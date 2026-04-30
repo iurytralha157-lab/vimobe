@@ -158,18 +158,6 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Gamification Row */}
-            <div className="grid grid-cols-12 gap-3 shrink-0">
-              <div className="col-span-3">
-                <GamificationStatsWidget />
-              </div>
-              <div className="col-span-6">
-                <LeaderboardWidget />
-              </div>
-              <div className="col-span-3">
-                <MissionsWidget />
-              </div>
-            </div>
 
             {/* Evolution chart - fills remaining height */}
             <div className="flex-1 min-h-0">
