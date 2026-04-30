@@ -366,7 +366,7 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
   ].filter(d => d.value > 0);
 
   return (
-    <AppLayout title="Dashboard Financeiro">
+    
       <div className="space-y-4 md:space-y-6">
         <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças</p>
 
