@@ -197,7 +197,7 @@ export default function GamificationRanking() {
                   </div>
                 </div>
                 <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 w-full rounded-t-2xl p-6 text-center min-h-[180px] flex flex-col justify-center border-x border-t border-yellow-500 shadow-[0_-10px_40px_rgba(234,179,8,0.1)]">
-                  <p className="font-black text-lg truncate w-full mb-1">{topThree[0].profiles?.full_name}</p>
+                  <p className="font-black text-lg truncate w-full mb-1">{topThree[0].profiles?.name}</p>
                   <p className="text-4xl font-black text-yellow-600 drop-shadow-sm">{topThree[0].total_points.toLocaleString()}</p>
                   <p className="text-xs uppercase font-black text-yellow-700 tracking-widest mt-2">Campeão Atual</p>
                 </div>
