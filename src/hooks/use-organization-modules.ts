@@ -17,6 +17,7 @@ export type ModuleName =
   | 'reports'
   | 'automations'  // Automações
   | 'performance'  // Performance de Corretores
+  | 'gamification'   // Gamificação
   | 'webhooks'     // Webhooks
   | 'site'         // Site Integrado
   | 'ai_agent'    // Agente de IA
@@ -33,7 +34,8 @@ const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'cadences',
   'tags',
   'round_robin',
-  'reports'
+  'reports',
+  'gamification'
 ];
 
 export function useOrganizationModules() {
