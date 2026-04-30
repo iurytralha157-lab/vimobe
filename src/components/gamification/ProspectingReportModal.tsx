@@ -113,6 +113,9 @@ export function ProspectingReportModal() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-1">
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-xs text-amber-800 mb-2">
+              ⚠️ Certifique-se de que os dados estão corretos antes de enviar.
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
