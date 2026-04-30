@@ -84,13 +84,13 @@ const allNavItems: NavItem[] = [{
   path: '/gamificacao',
   module: 'gamification',
   children: [{
-    icon: LayoutDashboard,
-    labelKey: 'dashboard',
+    icon: Trophy,
+    labelKey: 'performance',
     path: '/gamificacao'
   }, {
-    icon: TrendingUp,
-    labelKey: 'performance',
-    path: '/gamificacao/ranking'
+    icon: LayoutDashboard,
+    labelKey: 'dashboard',
+    path: '/gamificacao/dashboard'
   }, {
     icon: HistoryIcon,
     labelKey: 'history',
