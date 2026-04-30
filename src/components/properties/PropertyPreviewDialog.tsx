@@ -138,7 +138,7 @@ export function PropertyPreviewDialog({
         {/* Main Image with Embla Carousel */}
         <div className={cn(
           "relative rounded-xl overflow-hidden bg-muted group",
-          isMobile ? "aspect-video" : "aspect-[4/3]"
+          isMobile ? "aspect-[2/1]" : "aspect-video"
         )}>
           {allImages.length > 0 ? (
             <>
