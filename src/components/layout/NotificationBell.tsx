@@ -37,7 +37,7 @@ export function NotificationBell() {
     }
 
     if (notification.lead_id) {
-      navigate(`/leads?id=${notification.lead_id}`);
+      navigate(`/crm/pipelines?lead=${notification.lead_id}`);
     }
   };
 
@@ -47,11 +47,11 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-10 w-10 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
+          className="relative h-12 w-12 rounded-full bg-card dark:bg-[#111] transition-all duration-300"
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

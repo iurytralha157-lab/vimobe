@@ -6332,6 +6332,7 @@ export type Database = {
           source_name: string
         }[]
       }
+      get_my_org_id: { Args: never; Returns: string }
       get_session_owner: { Args: { p_session_id: string }; Returns: string }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {
