@@ -16,7 +16,7 @@ interface LeaderboardUser {
   user_id: string;
   total_points: number;
   profiles: {
-    full_name: string | null;
+    name: string | null;
     avatar_url: string | null;
   } | null;
 }
@@ -47,7 +47,7 @@ export default function GamificationRanking() {
           user_id,
           total_points,
           profiles:user_id (
-            full_name,
+            name,
             avatar_url
           )
         `)
@@ -69,7 +69,7 @@ export default function GamificationRanking() {
           user_id: p.id,
           total_points: 0,
           profiles: {
-            full_name: p.name,
+            name: p.name,
             avatar_url: p.avatar_url
           }
         })) as unknown as LeaderboardUser[];
@@ -117,7 +117,7 @@ export default function GamificationRanking() {
           origin: { y: 0.6 },
           colors: ['#FFD700', '#FFA500', '#FF4500']
         });
-        toast.success(`${currentTopUser.profiles?.full_name} assumiu a LIDERANÇA! 🏆`, {
+        toast.success(`${currentTopUser.profiles?.name} assumiu a LIDERANÇA! 🏆`, {
           icon: <PartyPopper className="text-yellow-500" />,
           duration: 5000,
         });
@@ -167,14 +167,14 @@ export default function GamificationRanking() {
                 <div className="relative group">
                   <Avatar className="h-24 w-24 border-4 border-slate-300 shadow-xl transition-transform group-hover:scale-110">
                     <AvatarImage src={topThree[1].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xl">{getInitials(topThree[1].profiles?.full_name || '')}</AvatarFallback>
+                    <AvatarFallback className="text-xl">{getInitials(topThree[1].profiles?.name || '')}</AvatarFallback>
                   </Avatar>
                   <div className="absolute -top-3 -right-3 bg-slate-100 text-slate-600 rounded-full p-2 border-2 border-slate-300">
                     <Medal className="h-5 w-5" />
                   </div>
                 </div>
                 <div className="bg-slate-300/30 w-full rounded-t-xl p-4 text-center min-h-[120px] flex flex-col justify-center border-x border-t border-slate-300">
-                  <p className="font-bold text-sm truncate w-full">{topThree[1].profiles?.full_name}</p>
+                  <p className="font-bold text-sm truncate w-full">{topThree[1].profiles?.name}</p>
                   <p className="text-2xl font-black text-slate-600">{topThree[1].total_points.toLocaleString()}</p>
                   <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mt-1">Pontos</p>
                 </div>
@@ -190,14 +190,14 @@ export default function GamificationRanking() {
                   </div>
                   <Avatar className="h-32 w-32 border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform group-hover:scale-110">
                     <AvatarImage src={topThree[0].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-2xl font-bold">{getInitials(topThree[0].profiles?.full_name || '')}</AvatarFallback>
+                    <AvatarFallback className="text-2xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
                   </Avatar>
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-500 text-yellow-950 text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
                     TOP 1
                   </div>
                 </div>
                 <div className="bg-gradient-to-b from-yellow-500/20 to-yellow-500/5 w-full rounded-t-2xl p-6 text-center min-h-[180px] flex flex-col justify-center border-x border-t border-yellow-500 shadow-[0_-10px_40px_rgba(234,179,8,0.1)]">
-                  <p className="font-black text-lg truncate w-full mb-1">{topThree[0].profiles?.full_name}</p>
+                  <p className="font-black text-lg truncate w-full mb-1">{topThree[0].profiles?.name}</p>
                   <p className="text-4xl font-black text-yellow-600 drop-shadow-sm">{topThree[0].total_points.toLocaleString()}</p>
                   <p className="text-xs uppercase font-black text-yellow-700 tracking-widest mt-2">Campeão Atual</p>
                 </div>
@@ -210,14 +210,14 @@ export default function GamificationRanking() {
                 <div className="relative group">
                   <Avatar className="h-20 w-20 border-4 border-amber-600 shadow-xl transition-transform group-hover:scale-110">
                     <AvatarImage src={topThree[2].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-lg">{getInitials(topThree[2].profiles?.full_name || '')}</AvatarFallback>
+                    <AvatarFallback className="text-lg">{getInitials(topThree[2].profiles?.name || '')}</AvatarFallback>
                   </Avatar>
                   <div className="absolute -top-2 -right-2 bg-amber-50 text-amber-700 rounded-full p-1.5 border-2 border-amber-600">
                     <Award className="h-4 w-4" />
                   </div>
                 </div>
                 <div className="bg-amber-600/20 w-full rounded-t-xl p-4 text-center min-h-[100px] flex flex-col justify-center border-x border-t border-amber-600/50">
-                  <p className="font-bold text-xs truncate w-full">{topThree[2].profiles?.full_name}</p>
+                  <p className="font-bold text-xs truncate w-full">{topThree[2].profiles?.name}</p>
                   <p className="text-xl font-black text-amber-700">{topThree[2].total_points.toLocaleString()}</p>
                   <p className="text-[10px] uppercase font-bold text-amber-600 tracking-widest mt-1">Pontos</p>
                 </div>
@@ -262,11 +262,11 @@ export default function GamificationRanking() {
                 
                 <Avatar className="h-10 w-10 border border-border shrink-0 transition-transform group-hover:scale-105">
                   <AvatarImage src={user.profiles?.avatar_url || undefined} />
-                  <AvatarFallback className="text-xs font-bold">{getInitials(user.profiles?.full_name || '')}</AvatarFallback>
+                  <AvatarFallback className="text-xs font-bold">{getInitials(user.profiles?.name || '')}</AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate leading-tight">{user.profiles?.full_name}</p>
+                  <p className="text-sm font-bold truncate leading-tight">{user.profiles?.name}</p>
                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Corretor Ativo</p>
                 </div>
 
