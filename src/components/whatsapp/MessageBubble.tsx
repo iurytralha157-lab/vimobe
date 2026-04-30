@@ -719,7 +719,7 @@ export function MessageBubble({
         fromMe 
           ? "bg-primary text-primary-foreground rounded-tr-none" 
           : "bg-chatBubble text-chatBubble-foreground rounded-tl-none",
-        isMediaMessage && !content ? "p-[3px]" : "px-3 py-2"
+        (messageType === "image" || messageType === "video") && !content ? "p-[3px]" : "px-3 py-2"
       )}>
         {/* Sender name for groups or sent messages with sender info */}
         {!fromMe && senderName && (
