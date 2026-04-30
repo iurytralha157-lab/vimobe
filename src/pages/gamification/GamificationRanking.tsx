@@ -134,7 +134,7 @@ export default function GamificationRanking() {
   const others = leaderboard?.slice(3) || [];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)] min-h-[500px] animate-in fade-in duration-700 overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-auto lg:h-[calc(100vh-180px)] min-h-[500px] animate-in fade-in duration-700 overflow-visible lg:overflow-hidden pb-10 lg:pb-0">
       
       {/* LEFT SIDE: PODIUM (Arena) */}
       <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
