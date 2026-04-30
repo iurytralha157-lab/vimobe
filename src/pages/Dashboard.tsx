@@ -204,6 +204,10 @@ export default function Dashboard() {
             <TabsContent value="evolution" className="mt-3">
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </TabsContent>
+            <TabsContent value="ranking" className="mt-3 space-y-3">
+              <GamificationStatsWidget />
+              <LeaderboardWidget />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
