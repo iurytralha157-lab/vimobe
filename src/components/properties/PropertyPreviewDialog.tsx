@@ -113,7 +113,7 @@ export function PropertyPreviewDialog({
   const content = isLoading ? (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="lg:w-1/2">
-        <Skeleton className={cn("w-full rounded-xl", isMobile ? "aspect-video" : "aspect-[4/3]")} />
+        <Skeleton className={cn("w-full rounded-xl", isMobile ? "aspect-[2/1]" : "aspect-video")} />
         <div className="flex gap-2 mt-3">
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} className="w-16 h-16 rounded-lg" />
