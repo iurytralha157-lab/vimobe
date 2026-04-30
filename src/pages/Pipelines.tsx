@@ -1022,13 +1022,13 @@ export default function Pipelines() {
             {/* Botão de Refresh removido */}
           </div>
         ) : (
-          /* Desktop: original two-row layout */
+          /* Desktop: Two-row layout, but optimized for middle screens */
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
             <div className="flex items-center justify-start gap-2">
-              {/* Pipeline Selector */}
-              <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-muted">
+              {/* Pipeline Selector Group */}
+              <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-1.5 bg-muted shrink-0">
                 <Settings className="h-4 w-4 text-foreground" />
-                <span className="text-xs text-foreground/90 font-medium">Pipeline</span>
+                <span className="text-xs text-foreground/90 font-medium hidden lg:inline">Pipeline</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 font-bold text-foreground hover:bg-accent">
