@@ -341,42 +341,42 @@ export function PropertyPreviewDialog({
                   </div>
                 )}
                 {property.suites !== null && property.suites !== undefined && property.suites > 0 && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Bed className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Suítes:</span>
                     <span className="font-medium ml-auto">{property.suites}</span>
                   </div>
                 )}
                 {property.andar && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Layers className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Andar:</span>
                     <span className="font-medium ml-auto">{property.andar}º</span>
                   </div>
                 )}
                 {property.area_total && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Maximize2 className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Área Total:</span>
                     <span className="font-medium ml-auto">{property.area_total}m²</span>
                   </div>
                 )}
                 {property.ano_construcao && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Ano:</span>
                     <span className="font-medium ml-auto">{property.ano_construcao}</span>
                   </div>
                 )}
                 {property.mobilia && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Sofa className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Mobília:</span>
                     <span className="font-medium ml-auto">{property.mobilia}</span>
                   </div>
                 )}
                 {property.regra_pet !== null && property.regra_pet !== undefined && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <PawPrint className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Pet:</span>
                     <span className={`font-medium ml-auto flex items-center gap-1 ${property.regra_pet ? 'text-green-600' : ''}`}>
@@ -397,7 +397,7 @@ export function PropertyPreviewDialog({
                 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   {property.condominio && (
-                    <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40">
+                    <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40">
                       <span className="text-xs text-muted-foreground block">Condomínio</span>
                       <span className="font-semibold text-orange-600 dark:text-orange-400">
                         R$ {property.condominio.toLocaleString('pt-BR')}
@@ -405,7 +405,7 @@ export function PropertyPreviewDialog({
                     </div>
                   )}
                   {property.iptu && (
-                    <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40">
+                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40">
                       <span className="text-xs text-muted-foreground block">IPTU</span>
                       <span className="font-semibold text-blue-600 dark:text-blue-400">
                         R$ {property.iptu.toLocaleString('pt-BR')}
@@ -413,7 +413,7 @@ export function PropertyPreviewDialog({
                     </div>
                   )}
                   {property.seguro_incendio && (
-                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40">
+                    <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40">
                       <span className="text-xs text-muted-foreground block">Seguro Incêndio</span>
                       <span className="font-semibold text-red-600 dark:text-red-400">
                         R$ {property.seguro_incendio.toLocaleString('pt-BR')}
@@ -421,7 +421,7 @@ export function PropertyPreviewDialog({
                     </div>
                   )}
                   {property.taxa_de_servico && (
-                    <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40">
+                    <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40">
                       <span className="text-xs text-muted-foreground block">Taxa Serviço</span>
                       <span className="font-semibold text-purple-600 dark:text-purple-400">
                         R$ {property.taxa_de_servico.toLocaleString('pt-BR')}
