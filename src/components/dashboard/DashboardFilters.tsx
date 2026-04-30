@@ -177,17 +177,17 @@ export function DashboardFilters({
     </Select>
   );
 
-  // Mobile layout - Date inline + Popover for other filters
+  // Consolidate filters for smaller screens (mobile and small desktops/tablets)
   if (isMobile) {
     return (
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2 w-full">
         {/* Date Filter - always visible */}
         <DateFilterPopover
           datePreset={datePreset}
           onDatePresetChange={onDatePresetChange}
           customDateRange={customDateRange}
           onCustomDateRangeChange={onCustomDateRangeChange}
-          triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start"
+          triggerClassName="h-8 flex-1 sm:flex-none sm:min-w-[130px] text-xs justify-start"
         />
 
         {/* Filters Popover */}
@@ -202,7 +202,7 @@ export function DashboardFilters({
               )}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              Filtros
+              <span className="hidden xs:inline">Filtros</span>
               {(hasExtraFilters) && (
                 <Badge 
                   variant="default" 
@@ -213,10 +213,19 @@ export function DashboardFilters({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 p-3">
+          <PopoverContent align="end" className="w-[280px] p-3 max-h-[80vh] overflow-y-auto">
             <div className="space-y-3">
+              <div className="flex items-center justify-between border-b pb-2 mb-2">
+                <span className="text-sm font-semibold">Filtros</span>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={onClear} className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground">
+                    Limpar tudo
+                  </Button>
+                )}
+              </div>
+
               {/* Meta Campaign Filter */}
-              <div className="pb-2 border-b border-border">
+              <div className="pb-3 border-b border-border">
                 <CampaignFilter 
                   campaignId={campaignId}
                   onCampaignChange={onCampaignChange}
@@ -247,12 +256,12 @@ export function DashboardFilters({
                 <SourceFilter />
               </div>
 
-              {/* Clear button */}
+              {/* Clear button inside popover for mobile */}
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full h-8 text-xs text-muted-foreground hover:text-foreground"
+                  className="w-full h-9 text-xs text-muted-foreground hover:text-foreground mt-2 border border-dashed"
                   onClick={onClear}
                 >
                   <X className="h-3.5 w-3.5 mr-1.5" />
