@@ -40,42 +40,38 @@ export default function GamificationRanking() {
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      const { data, error } = await supabase
+      // 1. Buscamos as pontuações
+      const { data: statsData, error: statsError } = await supabase
         .from('user_gamification_stats' as any)
-        .select(`
-          id,
-          user_id,
-          total_points,
-          profiles:user_id (
-            name,
-            avatar_url
-          )
-        `)
-        .eq('organization_id', organization.id)
-        .order('total_points', { ascending: false });
+        .select('*')
+        .eq('organization_id', organization.id);
       
-      if (error) throw error;
+      if (statsError) throw statsError;
 
-      if (!data || data.length === 0) {
-        const { data: profiles, error: profileError } = await supabase
-          .from('users' as any)
-          .select('id, name, avatar_url')
-          .eq('organization_id', organization.id);
-        
-        if (profileError) throw profileError;
-        
-        return (profiles || []).map((p: any) => ({
-          id: p.id,
-          user_id: p.id,
-          total_points: 0,
+      // 2. Buscamos os usuários (corretores) da organização
+      const { data: userData, error: userError } = await supabase
+        .from('users' as any)
+        .select('id, name, avatar_url')
+        .eq('organization_id', organization.id);
+
+      if (userError) throw userError;
+
+      // 3. Mesclamos os dados manualmente para evitar erros de relacionamento (join)
+      const mergedData = (userData || []).map(user => {
+        const stats = (statsData || []).find(s => s.user_id === user.id);
+        return {
+          id: user.id,
+          user_id: user.id,
+          total_points: stats?.total_points || 0,
           profiles: {
-            name: p.name,
-            avatar_url: p.avatar_url
+            name: user.name,
+            avatar_url: user.avatar_url
           }
-        })) as unknown as LeaderboardUser[];
-      }
+        };
+      });
 
-      return data as unknown as LeaderboardUser[];
+      // 4. Ordenamos por pontos (maior para menor)
+      return mergedData.sort((a, b) => b.total_points - a.total_points) as unknown as LeaderboardUser[];
     },
     enabled: !!organization?.id,
   });
