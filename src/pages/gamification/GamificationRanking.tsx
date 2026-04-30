@@ -183,7 +183,7 @@ export default function GamificationRanking() {
                   <div className="absolute -top-8 lg:-top-12 left-1/2 -translate-x-1/2 animate-bounce">
                     <Crown className="h-8 w-8 lg:h-12 lg:w-12 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
                   </div>
-                  <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform group-hover:scale-110">
+                  <Avatar className="h-20 w-20 lg:h-32 lg:w-32 border-2 lg:border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] transition-transform lg:group-hover:scale-110">
                     <AvatarImage src={topThree[0].profiles?.avatar_url || undefined} />
                     <AvatarFallback className="text-lg lg:text-2xl font-bold">{getInitials(topThree[0].profiles?.name || '')}</AvatarFallback>
                   </Avatar>
