@@ -50,9 +50,18 @@ const tabIntros: Record<string, { title: string; description: string; tips?: str
       'Use para marcar prioridade, interesse ou qualquer critério',
     ],
   },
+  gamification: {
+    title: 'Gamificação e Incentivos',
+    description: 'Transforme o trabalho da sua equipe em um jogo. Defina pontos para ações diárias e motive seus corretores.',
+    tips: [
+      'Ações manuais são registradas no botão "Lançar Prospecção"',
+      'Ranking em tempo real disponível no Dashboard',
+      'Ajuste os pontos para priorizar comportamentos específicos do mês',
+    ],
+  },
 };
 
-const VALID_TABS = ['teams', 'pipelines', 'distribution', 'tags'];
+const VALID_TABS = ['teams', 'pipelines', 'distribution', 'tags', 'gamification'];
 
 export default function CRMManagement() {
   const [searchParams] = useSearchParams();
