@@ -340,3 +340,74 @@ CREATE OR REPLACE TRIGGER tr_push_gamification_notification
     FOR EACH ROW
     WHEN (NEW.type = 'gamification_overtake')
     EXECUTE FUNCTION public.notify_rank_change_push();
+
+-- Trigger function for activities table (calls, messages, etc)
+CREATE OR REPLACE FUNCTION public.handle_activity_gamification()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_points INTEGER := 0;
+    v_action_type TEXT;
+    v_org_id UUID;
+BEGIN
+    -- Determine action type based on activity type
+    IF NEW.type = 'call' THEN
+        v_action_type := 'call_made';
+    ELSIF NEW.type = 'message' THEN
+        v_action_type := 'message_sent';
+    ELSIF NEW.type = 'stage_change' THEN
+        -- Only count if moved to a positive stage like visit or specific key
+        -- For now, let's just use visit_scheduled as a trigger for specific stages
+        -- Metadata might contain more info
+        IF (NEW.metadata->>'new_stage_name') ILIKE '%visita%' THEN
+            v_action_type := 'visit_scheduled';
+        ELSE
+            RETURN NEW;
+        END IF;
+    ELSIF NEW.type = 'status_change' AND NEW.metadata->>'new_status' = 'won' THEN
+        v_action_type := 'sale_closed';
+    ELSE
+        RETURN NEW;
+    END IF;
+
+    -- Get organization_id from user profile or lead
+    SELECT organization_id INTO v_org_id FROM public.profiles WHERE id = NEW.user_id;
+    
+    -- Get points from rules
+    SELECT points INTO v_points FROM public.gamification_rules WHERE organization_id = v_org_id AND action_type = v_action_type AND is_active = true;
+
+    IF v_points IS NULL OR v_points <= 0 THEN
+        -- Fallback to defaults
+        IF v_action_type = 'call_made' THEN v_points := 1;
+        ELSIF v_action_type = 'message_sent' THEN v_points := 1;
+        ELSIF v_action_type = 'visit_scheduled' THEN v_points := 30;
+        ELSIF v_action_type = 'sale_closed' THEN v_points := 100;
+        ELSE RETURN NEW;
+        END IF;
+    END IF;
+
+    -- Insert log
+    INSERT INTO public.gamification_activity_logs (user_id, organization_id, action_type, points_earned, reference_id, metadata)
+    VALUES (NEW.user_id, v_org_id, v_action_type, v_points, NEW.id, NEW.metadata);
+
+    -- Update user stats
+    INSERT INTO public.user_gamification_stats (user_id, organization_id, total_points, updated_at)
+    VALUES (NEW.user_id, v_org_id, v_points, now())
+    ON CONFLICT (user_id) DO UPDATE
+    SET total_points = public.user_gamification_stats.total_points + v_points,
+        updated_at = now();
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger for activities
+DROP TRIGGER IF EXISTS tr_activity_gamification ON public.activities;
+CREATE TRIGGER tr_activity_gamification
+    AFTER INSERT ON public.activities
+    FOR EACH ROW EXECUTE FUNCTION public.handle_activity_gamification();
+
+-- Pre-fill user_gamification_stats with existing users
+INSERT INTO public.user_gamification_stats (user_id, organization_id, total_points)
+SELECT id, organization_id, 0 FROM public.profiles
+ON CONFLICT (user_id) DO NOTHING;
+

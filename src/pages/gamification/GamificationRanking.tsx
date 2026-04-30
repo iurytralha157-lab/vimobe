@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LeaderboardUser {
   id: string;
@@ -31,12 +32,14 @@ function getInitials(name: string): string {
 
 export default function GamificationRanking() {
   const { organization } = useAuth();
+  const { t } = useLanguage();
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
 
   const { data: leaderboard, isLoading, refetch } = useQuery({
     queryKey: ['gamification-leaderboard-full', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return [];
+      
       const { data, error } = await supabase
         .from('user_gamification_stats' as any)
         .select(`
@@ -52,6 +55,26 @@ export default function GamificationRanking() {
         .order('total_points', { ascending: false });
       
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles' as any)
+          .select('id, full_name, avatar_url')
+          .eq('organization_id', organization.id);
+        
+        if (profileError) throw profileError;
+        
+        return (profiles || []).map((p: any) => ({
+          id: p.id,
+          user_id: p.id,
+          total_points: 0,
+          profiles: {
+            full_name: p.full_name,
+            avatar_url: p.avatar_url
+          }
+        })) as unknown as LeaderboardUser[];
+      }
+
       return data as unknown as LeaderboardUser[];
     },
     enabled: !!organization?.id,
@@ -120,7 +143,7 @@ export default function GamificationRanking() {
       
       {/* LEFT SIDE: PODIUM (Arena) */}
       <div className="lg:col-span-8 flex flex-col gap-6">
-        <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-8 flex flex-col items-center justify-end overflow-hidden shadow-2xl">
+        <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-8 flex flex-col items-center justify-end overflow-hidden shadow-none">
           <div className="absolute top-8 left-8 flex items-center gap-2">
             <div className="bg-yellow-500/20 p-2 rounded-full">
               <Trophy className="h-6 w-6 text-yellow-500" />
@@ -208,7 +231,7 @@ export default function GamificationRanking() {
       </div>
 
       {/* RIGHT SIDE: LIST (The Field) */}
-      <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-lg">
+      <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none">
         <div className="p-6 border-b bg-muted/30">
           <h3 className="text-lg font-bold flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-indigo-500" />
