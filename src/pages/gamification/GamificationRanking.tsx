@@ -228,11 +228,9 @@ export default function GamificationRanking() {
       {/* RIGHT SIDE: LIST (The Field) */}
       <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-full">
         <div className="p-6 border-b bg-muted/30">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-indigo-500" />
+          <h3 className="text-lg font-bold">
             Classificação Geral
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">Todos os competidores da imobiliária</p>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
