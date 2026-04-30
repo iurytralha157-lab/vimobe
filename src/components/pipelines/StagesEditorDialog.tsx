@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { GripVertical, Trash2, Loader2, Pencil, Check, X } from 'lucide-react';
+import { GripVertical, Trash2, Loader2, Pencil, Check, X, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -51,6 +51,10 @@ export function StagesEditorDialog({
   const [editingColor, setEditingColor] = useState('');
   const [deleteStage, setDeleteStage] = useState<Stage | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState('#6b7280');
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Initialize stages from props
   useEffect(() => {
@@ -171,12 +175,48 @@ export function StagesEditorDialog({
     }
   };
 
+  const handleAddStage = () => {
+    if (!newName.trim()) return;
+
+    const newStage: Stage = {
+      id: crypto.randomUUID(), // Temporary ID until save
+      name: newName.trim(),
+      color: newColor,
+      position: stages.length,
+      lead_count: 0
+    };
+
+    setStages([...stages, newStage]);
+    setNewName('');
+    setIsAdding(false);
+    setHasChanges(true);
+
+    // Scroll to bottom after addition
+    setTimeout(() => {
+      const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollArea) {
+        scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md w-[90%] sm:w-full p-4 sm:p-6 rounded-lg">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">Gerenciar Colunas</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base sm:text-lg">Gerenciar Colunas</DialogTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 gap-1.5 text-xs border-dashed border-primary/50 text-primary hover:bg-primary/5"
+                onClick={() => setIsAdding(true)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nova Coluna
+              </Button>
+            </div>
             <DialogDescription className="text-xs sm:text-sm truncate">
               Reordene as colunas de "{pipelineName}"
             </DialogDescription>
@@ -288,6 +328,44 @@ export function StagesEditorDialog({
                       </Draggable>
                     ))}
                     {provided.placeholder}
+                    
+                    {isAdding && (
+                      <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 border-2 border-dashed border-primary/30 rounded-lg animate-in slide-in-from-top-2">
+                        <input
+                          type="color"
+                          value={newColor}
+                          onChange={(e) => setNewColor(e.target.value)}
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded cursor-pointer border-0"
+                        />
+                        <Input
+                          placeholder="Nome da coluna..."
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="h-7 sm:h-8 flex-1 text-sm"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddStage();
+                            if (e.key === 'Escape') setIsAdding(false);
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
+                          onClick={handleAddStage}
+                        >
+                          <Check className="h-3.5 w-3.5 text-primary" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 sm:h-7 sm:w-7 shrink-0"
+                          onClick={() => setIsAdding(false)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </Droppable>

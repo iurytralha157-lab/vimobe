@@ -177,17 +177,17 @@ export function DashboardFilters({
     </Select>
   );
 
-  // Mobile layout - Date inline + Popover for other filters
+  // Consolidate filters for smaller screens (mobile and small desktops/tablets)
   if (isMobile) {
     return (
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2 w-full">
         {/* Date Filter - always visible */}
         <DateFilterPopover
           datePreset={datePreset}
           onDatePresetChange={onDatePresetChange}
           customDateRange={customDateRange}
           onCustomDateRangeChange={onCustomDateRangeChange}
-          triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start"
+          triggerClassName="h-8 flex-1 sm:flex-none sm:min-w-[130px] text-xs justify-start"
         />
 
         {/* Filters Popover */}
@@ -202,7 +202,7 @@ export function DashboardFilters({
               )}
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              Filtros
+              <span className="hidden xs:inline">Filtros</span>
               {(hasExtraFilters) && (
                 <Badge 
                   variant="default" 
@@ -213,10 +213,19 @@ export function DashboardFilters({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 p-3">
+          <PopoverContent align="end" className="w-[280px] p-3 max-h-[80vh] overflow-y-auto">
             <div className="space-y-3">
+              <div className="flex items-center justify-between border-b pb-2 mb-2">
+                <span className="text-sm font-semibold">Filtros</span>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={onClear} className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground">
+                    Limpar tudo
+                  </Button>
+                )}
+              </div>
+
               {/* Meta Campaign Filter */}
-              <div className="pb-2 border-b border-border">
+              <div className="pb-3 border-b border-border">
                 <CampaignFilter 
                   campaignId={campaignId}
                   onCampaignChange={onCampaignChange}
@@ -247,12 +256,12 @@ export function DashboardFilters({
                 <SourceFilter />
               </div>
 
-              {/* Clear button */}
+              {/* Clear button inside popover for mobile */}
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full h-8 text-xs text-muted-foreground hover:text-foreground"
+                  className="w-full h-9 text-xs text-muted-foreground hover:text-foreground mt-2 border border-dashed"
                   onClick={onClear}
                 >
                   <X className="h-3.5 w-3.5 mr-1.5" />
@@ -266,7 +275,7 @@ export function DashboardFilters({
     );
   }
 
-  // Desktop layout - All filters inline
+  // Desktop layout - All filters inline, but hidden on smaller screens
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {/* Date Filter */}
@@ -278,113 +287,145 @@ export function DashboardFilters({
         triggerClassName="h-8 w-auto min-w-[140px] text-xs justify-start"
       />
 
-      {/* Team Filter - Only for admin/team leader */}
-      {availableTeams.length > 0 && (
-        <Select
-          value={teamId || 'all'}
-          onValueChange={(value) => {
-            onTeamChange(value === 'all' ? null : value);
-            onUserChange(null);
-          }}
-        >
-          <SelectTrigger className={cn(
-            "h-8 w-auto min-w-[120px] text-xs",
-            teamId && "border-primary text-primary"
-          )}>
-            <Users className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-            <SelectValue placeholder="Equipe" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas equipes</SelectItem>
-            {availableTeams.map((team) => (
-              <SelectItem key={team.id} value={team.id}>
-                {team.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+      {/* Desktop Filters Popover for ALL filters when screen is not large enough */}
+      <div className="flex lg:hidden">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn(
+                "h-8 px-2.5 text-xs gap-1.5",
+                (hasExtraFilters) && "border-primary text-primary"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Filtros
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-3">
+            <div className="space-y-3">
+              <TeamFilter />
+              <UserFilter />
+              <SourceFilter />
+              <div className="pt-2 border-t">
+                <CampaignFilter 
+                  campaignId={campaignId}
+                  onCampaignChange={onCampaignChange}
+                  adSetId={adSetId}
+                  onAdSetChange={onAdSetChange}
+                  adId={adId}
+                  onAdChange={onAdChange}
+                  fullWidth
+                />
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
 
-      {/* User Filter - only for users who can view all or team leaders */}
-      {showUserFilter && (
+      {/* Show individual filters only on large screens */}
+      <div className="hidden lg:flex items-center gap-2">
+        {/* Team Filter - Only for admin/team leader */}
+        {availableTeams.length > 0 && (
+          <Select
+            value={teamId || 'all'}
+            onValueChange={(value) => {
+              onTeamChange(value === 'all' ? null : value);
+              onUserChange(null);
+            }}
+          >
+            <SelectTrigger className={cn(
+              "h-8 w-auto min-w-[120px] text-xs",
+              teamId && "border-primary text-primary"
+            )}>
+              <Users className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+              <SelectValue placeholder="Equipe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas equipes</SelectItem>
+              {availableTeams.map((team) => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* User Filter */}
+        {showUserFilter && (
+          <Select
+            value={userId || 'all'}
+            onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
+          >
+            <SelectTrigger className={cn(
+              "h-8 w-auto min-w-[110px] text-xs",
+              userId && "border-primary text-primary"
+            )}>
+              <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+              <SelectValue placeholder="Corretor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {availableUsers.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Source Filter */}
         <Select
-          value={userId || 'all'}
-          onValueChange={(value) => onUserChange(value === 'all' ? null : value)}
+          value={source || 'all'}
+          onValueChange={(value) => onSourceChange(value === 'all' ? null : value)}
         >
           <SelectTrigger className={cn(
             "h-8 w-auto min-w-[110px] text-xs",
-            userId && "border-primary text-primary"
+            source && "border-primary text-primary"
           )}>
-            <User className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-            <SelectValue placeholder="Corretor" />
+            <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+            <SelectValue placeholder="Origem" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {availableUsers.map((user) => (
-              <SelectItem key={user.id} value={user.id}>
-                {user.name}
+            {sourceOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      )}
-
-      {/* Source Filter */}
-      <Select
-        value={source || 'all'}
-        onValueChange={(value) => onSourceChange(value === 'all' ? null : value)}
-      >
-        <SelectTrigger className={cn(
-          "h-8 w-auto min-w-[110px] text-xs",
-          source && "border-primary text-primary"
-        )}>
-          <Globe className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-          <SelectValue placeholder="Origem" />
-        </SelectTrigger>
-        <SelectContent>
-          {sourceOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      
-      {/* Desktop Filters Popover for Meta Ads */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={cn(
-              "h-8 px-2.5 text-xs gap-1.5",
-              (campaignId || adSetId || adId) && "border-[#1877F2] text-[#1877F2] hover:text-[#1877F2] hover:bg-[#1877F2]/10"
-            )}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            Campanhas
-            {(campaignId || adSetId || adId) && (
-              <Badge 
-                variant="default" 
-                className="h-4 min-w-4 p-0 px-1 flex items-center justify-center text-[10px] ml-0.5 bg-[#1877F2]"
-              >
-                {[campaignId, adSetId, adId].filter(Boolean).length}
-              </Badge>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-80 p-3">
-          <CampaignFilter 
-            campaignId={campaignId}
-            onCampaignChange={onCampaignChange}
-            adSetId={adSetId}
-            onAdSetChange={onAdSetChange}
-            adId={adId}
-            onAdChange={onAdChange}
-            fullWidth
-          />
-        </PopoverContent>
-      </Popover>
+        
+        {/* Desktop Filters Popover for Meta Ads */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn(
+                "h-8 px-2.5 text-xs gap-1.5",
+                (campaignId || adSetId || adId) && "border-[#1877F2] text-[#1877F2] hover:text-[#1877F2] hover:bg-[#1877F2]/10"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Campanhas
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-3">
+            <CampaignFilter 
+              campaignId={campaignId}
+              onCampaignChange={onCampaignChange}
+              adSetId={adSetId}
+              onAdSetChange={onAdSetChange}
+              adId={adId}
+              onAdChange={onAdChange}
+              fullWidth
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
 
       {/* Clear Filters */}
       {hasActiveFilters && (
