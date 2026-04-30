@@ -93,6 +93,7 @@ function getXInterval(chartWidth: number, totalPoints: number) {
 }
 
 export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProps) {
+  const isMobile = useIsMobile();
   const [chartSize, setChartSize] = useState({ width: 600, height: 250 });
 
   const handleResize = useCallback((width: number, height: number) => {
