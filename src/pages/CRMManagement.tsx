@@ -136,10 +136,6 @@ export default function CRMManagement() {
           <TabsContent value="tags" className="mt-4">
             <TagsTab />
           </TabsContent>
-
-          <TabsContent value="gamification" className="mt-4">
-            <GamificationSettings />
-          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
