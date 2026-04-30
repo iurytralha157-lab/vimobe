@@ -308,3 +308,35 @@ CREATE TRIGGER tr_check_ranking_overtake
     AFTER UPDATE OF total_points ON public.user_gamification_stats
     FOR EACH ROW
     EXECUTE FUNCTION public.check_ranking_overtake();
+
+-- Function to call the edge function for push notifications
+CREATE OR REPLACE FUNCTION public.notify_rank_change_push()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- This uses the net extension to call the edge function
+    -- Requires 'pg_net' extension enabled in Supabase
+    PERFORM
+      net.http_post(
+        url := (SELECT value FROM public.system_settings WHERE key = 'supabase_url') || '/functions/v1/send-push',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'Authorization', 'Bearer ' || (SELECT value FROM public.system_settings WHERE key = 'supabase_service_role_key')
+        ),
+        body := jsonb_build_object(
+          'user_id', NEW.user_id,
+          'title', NEW.title,
+          'message', NEW.message,
+          'url', '/gamificacao/ranking'
+        )
+      );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger push when a gamification notification is created
+-- Checking if the notifications table has a type field we can filter
+CREATE OR REPLACE TRIGGER tr_push_gamification_notification
+    AFTER INSERT ON public.notifications
+    FOR EACH ROW
+    WHEN (NEW.type = 'gamification_overtake')
+    EXECUTE FUNCTION public.notify_rank_change_push();
