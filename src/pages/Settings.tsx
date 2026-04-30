@@ -227,6 +227,6 @@ export default function Settings() {
           )}
         </Tabs>
       </div>
-    </AppLayout>
+    
   );
 }
