@@ -190,8 +190,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return true;
         } else {
           console.warn("No user profile found in database for ID:", userId);
-          // If super admin and no profile, we still allow basic access
-          if (superAdmin) {
+          // If super admin and no profile, we still allow basic access.
+          // Await the SA check here only as a fallback (rare path).
+          const superAdminFallback = await checkSuperAdmin(userId);
+          if (superAdminFallback) {
             console.log("Super admin detected without explicit profile record");
             setIsSuperAdmin(true);
             return true;
