@@ -235,3 +235,76 @@ ON CONFLICT DO NOTHING;
 INSERT INTO public.gamification_missions (organization_id, title, description, action_type, target_count, bonus_points, period)
 SELECT id, 'Mestre das Visitas', 'Agende 3 visitas nesta semana', 'visit_scheduled', 3, 100, 'weekly' FROM public.organizations
 ON CONFLICT DO NOTHING;
+
+-- Function to check for leaderboard rank changes and notify users
+CREATE OR REPLACE FUNCTION public.check_ranking_overtake()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_overtaken_user_id UUID;
+    v_overtaker_name TEXT;
+    v_overtaken_name TEXT;
+    v_organization_id UUID;
+BEGIN
+    -- Only run if points increased
+    IF NEW.total_points > OLD.total_points THEN
+        -- Find the user who was JUST ahead of the current user before the update
+        -- but is now behind or equal
+        SELECT user_id INTO v_overtaken_user_id
+        FROM public.user_gamification_stats
+        WHERE organization_id = NEW.organization_id
+          AND total_points >= OLD.total_points
+          AND total_points < NEW.total_points
+          AND user_id != NEW.user_id
+        ORDER BY total_points DESC
+        LIMIT 1;
+
+        IF v_overtaken_user_id IS NOT NULL THEN
+            -- Get names for the notification
+            SELECT full_name INTO v_overtaker_name FROM public.profiles WHERE id = NEW.user_id;
+            SELECT full_name INTO v_overtaken_name FROM public.profiles WHERE id = v_overtaken_user_id;
+
+            -- Trigger a notification for the overtaken user
+            -- We insert into a notification queue or call the edge function via a trigger
+            -- For now, let's use the notifications table if it exists, or just log it
+            -- Assuming there is a public.notifications table based on the system architecture
+            
+            INSERT INTO public.notifications (
+                user_id,
+                title,
+                message,
+                type,
+                metadata
+            ) VALUES (
+                v_overtaken_user_id,
+                '⚠️ Você foi ultrapassado!',
+                v_overtaker_name || ' acabou de te passar no ranking de Gamificação. Bora recuperar essa vaga!',
+                'gamification_overtake',
+                jsonb_build_object('overtaker_id', NEW.user_id, 'new_points', NEW.total_points)
+            );
+            
+            -- Also notify the overtaker
+            INSERT INTO public.notifications (
+                user_id,
+                title,
+                message,
+                type,
+                metadata
+            ) VALUES (
+                NEW.user_id,
+                '🚀 Subiu no Ranking!',
+                'Parabéns! Você ultrapassou ' || v_overtaken_name || ' e subiu de posição!',
+                'gamification_overtake',
+                jsonb_build_object('overtaken_id', v_overtaken_user_id)
+            );
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger for overtakes
+DROP TRIGGER IF EXISTS tr_check_ranking_overtake ON public.user_gamification_stats;
+CREATE TRIGGER tr_check_ranking_overtake
+    AFTER UPDATE OF total_points ON public.user_gamification_stats
+    FOR EACH ROW
+    EXECUTE FUNCTION public.check_ranking_overtake();
