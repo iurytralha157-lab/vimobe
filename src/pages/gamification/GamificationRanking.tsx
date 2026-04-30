@@ -210,7 +210,7 @@ export default function GamificationRanking() {
                 <div className="relative group">
                   <Avatar className="h-20 w-20 border-4 border-amber-600 shadow-xl transition-transform group-hover:scale-110">
                     <AvatarImage src={topThree[2].profiles?.avatar_url || undefined} />
-                    <AvatarFallback className="text-lg">{getInitials(topThree[2].profiles?.full_name || '')}</AvatarFallback>
+                    <AvatarFallback className="text-lg">{getInitials(topThree[2].profiles?.name || '')}</AvatarFallback>
                   </Avatar>
                   <div className="absolute -top-2 -right-2 bg-amber-50 text-amber-700 rounded-full p-1.5 border-2 border-amber-600">
                     <Award className="h-4 w-4" />
