@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LeaderboardUser {
   id: string;
