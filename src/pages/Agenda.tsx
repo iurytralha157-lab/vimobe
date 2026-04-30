@@ -92,8 +92,8 @@ export default function Agenda() {
 
   // Check if user is admin or team leader
   const canFilterUsers = profile?.role === 'admin' || isTeamLeader;
-  return <AppLayout>
-      <div className="p-6 space-y-6">
+  return (
+    <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
