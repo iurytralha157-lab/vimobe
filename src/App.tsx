@@ -52,6 +52,10 @@ const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
 const Automations = lazy(() => import("./pages/Automations"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const GamificationLayout = lazy(() => import("./pages/gamification/GamificationLayout"));
+const GamificationDashboard = lazy(() => import("./pages/gamification/GamificationDashboard"));
+const GamificationRanking = lazy(() => import("./pages/gamification/GamificationRanking"));
+const GamificationAdmin = lazy(() => import("./pages/gamification/GamificationAdmin"));
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
@@ -255,6 +259,13 @@ function AppRoutes() {
             <Route path="/telecom/customers" element={<ProtectedRoute><TelecomCustomers /></ProtectedRoute>} />
             <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
             
+            {/* Gamification Module */}
+            <Route path="/gamificacao" element={<ProtectedRoute><GamificationLayout /></ProtectedRoute>}>
+              <Route index element={<GamificationDashboard />} />
+              <Route path="ranking" element={<GamificationRanking />} />
+              <Route path="configuracoes" element={<AdminRoute><GamificationAdmin /></AdminRoute>} />
+            </Route>
+
             {/* Automations */}
             <Route path="/automations" element={<ProtectedRoute><PermissionGuard permission="automations_view"><Automations /></PermissionGuard></ProtectedRoute>} />
             

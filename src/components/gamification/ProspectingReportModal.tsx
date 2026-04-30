@@ -112,7 +112,7 @@ export function ProspectingReportModal() {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-1">
             <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
@@ -178,6 +178,7 @@ export function ProspectingReportModal() {
                       <SelectItem value="spreadsheet">Planilha de Frios</SelectItem>
                       <SelectItem value="referral">Indicação</SelectItem>
                       <SelectItem value="recontact">Recontato de Base</SelectItem>
+                      <SelectItem value="canvassing">Panfletagem / PAP</SelectItem>
                       <SelectItem value="other">Outros</SelectItem>
                     </SelectContent>
                   </Select>

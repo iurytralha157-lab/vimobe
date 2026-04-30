@@ -106,82 +106,94 @@ export function GamificationSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            <CardTitle>Configuração de Gamificação</CardTitle>
-          </div>
-          <CardDescription>
-            Defina quantos pontos cada ação vale para os corretores da sua imobiliária.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6">
-            {rules?.map((rule) => {
-              const Icon = RULE_ICONS[rule.action_type] || Trophy;
-              const isUpdating = updateRuleMutation.isPending && updateRuleMutation.variables?.id === rule.id;
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-500" />
+              <CardTitle>Regras de Pontuação</CardTitle>
+            </div>
+            <CardDescription>
+              Defina quantos pontos cada ação vale para os corretores.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              {rules?.map((rule) => {
+                const Icon = RULE_ICONS[rule.action_type] || Trophy;
+                const isUpdating = updateRuleMutation.isPending && updateRuleMutation.variables?.id === rule.id;
 
-              return (
-                <div key={rule.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg bg-card gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Icon className="h-5 w-5 text-primary" />
+                return (
+                  <div key={rule.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg bg-card gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">{RULE_LABELS[rule.action_type] || rule.action_type}</h4>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-medium">{RULE_LABELS[rule.action_type] || rule.action_type}</h4>
-                      <p className="text-sm text-muted-foreground">Pontos por cada ocorrência</p>
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          className="w-16 h-8 text-sm"
+                          defaultValue={rule.points}
+                          onChange={(e) => handlePointChange(rule.id, e.target.value)}
+                        />
+                        <span className="text-xs font-medium text-muted-foreground">pts</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 border-l pl-4 h-8">
+                        <Switch 
+                          checked={rule.is_active} 
+                          onCheckedChange={(checked) => handleToggle(rule, checked)}
+                          disabled={isUpdating}
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleSave(rule)}
+                          disabled={isUpdating || editingRules[rule.id] === undefined}
+                        >
+                          {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-4 w-4" />}
+                        </Button>
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`points-${rule.id}`} className="sr-only">Pontos</Label>
-                      <Input
-                        id={`points-${rule.id}`}
-                        type="number"
-                        className="w-20"
-                        defaultValue={rule.points}
-                        onChange={(e) => handlePointChange(rule.id, e.target.value)}
-                      />
-                      <span className="text-sm font-medium text-muted-foreground">pts</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 border-l pl-4">
-                      <Switch 
-                        checked={rule.is_active} 
-                        onCheckedChange={(checked) => handleToggle(rule, checked)}
-                        disabled={isUpdating}
-                      />
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleSave(rule)}
-                        disabled={isUpdating || editingRules[rule.id] === undefined}
-                      >
-                        {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
-        <CardContent className="p-4 flex gap-3">
-          <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center shrink-0">
-            <Trophy className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div className="text-sm text-blue-800 dark:text-blue-300">
-            <p className="font-semibold">Dica de Gestão:</p>
-            <p>Aumente os pontos das ações que você quer incentivar no mês (ex: se o foco for prospecção, dobre os pontos de "Ligação"). Isso guiará o comportamento da equipe automaticamente.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
+          <CardContent className="p-4 flex gap-3">
+            <Trophy className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <div className="text-sm text-blue-800 dark:text-blue-300">
+              <p className="font-semibold text-xs">Dica de Gestão:</p>
+              <p className="text-xs">Aumente os pontos das ações que você quer incentivar no mês para guiar o comportamento da equipe.</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Missões Automáticas</CardTitle>
+            <CardDescription className="text-[10px]">As missões usam os pontos base definidos ao lado.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground text-center py-4 italic">
+              Em breve: Editor de missões personalizadas.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

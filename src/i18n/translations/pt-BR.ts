@@ -58,6 +58,7 @@ export const ptBR = {
     coverage: 'Localidades',
     telecomCustomers: 'Clientes',
     mySite: 'Meu Site',
+    gamification: 'Gamificação',
     more: 'Mais',
   },
 
