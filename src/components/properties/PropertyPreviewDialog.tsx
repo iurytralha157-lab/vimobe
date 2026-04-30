@@ -253,7 +253,7 @@ export function PropertyPreviewDialog({
                     </Badge>
                   )}
                 </div>
-                <h2 className="text-lg lg:text-xl font-bold leading-tight">
+                <h2 className="text-base lg:text-lg font-bold leading-tight">
                   {property.title || `${property.tipo_de_imovel} em ${property.bairro || 'Localização'}`}
                 </h2>
               </div>
