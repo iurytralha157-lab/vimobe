@@ -253,19 +253,19 @@ export default function GamificationRanking() {
                   {index + 1}
                 </div>
                 
-                <Avatar className="h-10 w-10 border border-border shrink-0 transition-transform group-hover:scale-105">
+                <Avatar className="h-8 w-8 lg:h-10 lg:w-10 border border-border shrink-0 transition-transform group-hover:scale-105">
                   <AvatarImage src={user.profiles?.avatar_url || undefined} />
-                  <AvatarFallback className="text-xs font-bold">{getInitials(user.profiles?.name || '')}</AvatarFallback>
+                  <AvatarFallback className="text-[10px] lg:text-xs font-bold">{getInitials(user.profiles?.name || '')}</AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate leading-tight">{user.profiles?.name}</p>
-                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Corretor Ativo</p>
+                  <p className="text-xs lg:text-sm font-bold truncate leading-tight">{user.profiles?.name}</p>
+                  <p className="text-[9px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Corretor Ativo</p>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-black text-indigo-600 dark:text-indigo-400">{user.total_points.toLocaleString()}</p>
-                  <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">PTS</p>
+                  <p className="text-xs lg:text-sm font-black text-indigo-600 dark:text-indigo-400">{user.total_points.toLocaleString()}</p>
+                  <p className="text-[8px] lg:text-[9px] uppercase font-bold text-muted-foreground tracking-widest">PTS</p>
                 </div>
               </div>
             );
