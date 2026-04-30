@@ -235,7 +235,7 @@ export default function GamificationRanking() {
           <p className="text-xs text-muted-foreground mt-1">Todos os competidores da imobiliária</p>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
           {leaderboard?.map((user, index) => {
             const isTop3 = index < 3;
             return (
