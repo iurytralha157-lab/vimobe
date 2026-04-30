@@ -134,11 +134,11 @@ export default function GamificationRanking() {
   const others = leaderboard?.slice(3) || [];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full min-h-[600px] animate-in fade-in duration-700">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)] min-h-[500px] animate-in fade-in duration-700 overflow-hidden">
       
       {/* LEFT SIDE: PODIUM (Arena) */}
-      <div className="lg:col-span-8 flex flex-col gap-6">
-        <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-8 flex flex-col items-center justify-end overflow-hidden shadow-none">
+      <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
+        <div className="relative flex-1 bg-gradient-to-b from-indigo-900/10 via-background to-background border rounded-2xl p-8 flex flex-col items-center justify-end overflow-hidden shadow-none min-h-0">
           <div className="absolute top-8 left-8 flex items-center gap-2">
             <div className="bg-yellow-500/20 p-2 rounded-full">
               <Trophy className="h-6 w-6 text-yellow-500" />
@@ -226,7 +226,7 @@ export default function GamificationRanking() {
       </div>
 
       {/* RIGHT SIDE: LIST (The Field) */}
-      <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none">
+      <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-full">
         <div className="p-6 border-b bg-muted/30">
           <h3 className="text-lg font-bold flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-indigo-500" />
@@ -235,7 +235,7 @@ export default function GamificationRanking() {
           <p className="text-xs text-muted-foreground mt-1">Todos os competidores da imobiliária</p>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
           {leaderboard?.map((user, index) => {
             const isTop3 = index < 3;
             return (
