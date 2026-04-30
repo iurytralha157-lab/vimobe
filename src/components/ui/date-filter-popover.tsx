@@ -10,6 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   DatePreset, 
   datePresetOptions,
@@ -38,6 +39,16 @@ export function DateFilterPopover({
 }: DateFilterPopoverProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [tempDateRange, setTempDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const isMobile = useIsMobile();
+
+  const filteredPresets = datePresetOptions.filter(option => {
+    if (option.value === 'custom') return false;
+    if (isMobile) {
+      const presetsToRemove = ['thisMonth', 'lastMonth', 'thisQuarter', 'thisYear'];
+      return !presetsToRemove.includes(option.value);
+    }
+    return true;
+  });
 
   const handleDatePresetChange = (preset: DatePreset) => {
     // Toggle off when re-clicking the same preset (allows clearing)
@@ -100,7 +111,7 @@ export function DateFilterPopover({
         <div className="p-4 space-y-4">
           {/* Preset buttons in 2-column grid matching the design */}
           <div className="grid grid-cols-2 gap-2">
-            {datePresetOptions.filter(o => o.value !== 'custom').map(option => (
+            {filteredPresets.map(option => (
               <Button
                 key={option.value}
                 variant={datePreset === option.value && !customDateRange ? "default" : "outline"}
