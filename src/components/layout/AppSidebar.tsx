@@ -270,7 +270,7 @@ export const AppSidebar = React.memo(function AppSidebar() {
       }, ...items];
     }
     return items;
-  }, [isSuperAdmin, profile?.role, hasModule, modulesLoading]);
+  }, [isSuperAdmin, profile?.role, hasModule, modulesLoading, isMobile]);
   const getLabel = (labelKey: string): string => {
     return (t.nav as Record<string, string>)[labelKey] || labelKey;
   };
