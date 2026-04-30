@@ -210,6 +210,7 @@ export const AppSidebar = React.memo(function AppSidebar() {
   const {
     resolvedTheme
   } = useTheme();
+  const isMobile = useIsMobile();
 
   // Get the appropriate logo/favicon based on theme
   const logoUrl = useMemo(() => {
@@ -257,6 +258,8 @@ export const AppSidebar = React.memo(function AppSidebar() {
       // If modules are still loading and this item requires a module, hide it
       if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
+      // Hide install option on desktop (only show on mobile)
+      if (item.labelKey === 'install' && !isMobile) return false;
       return true;
     });
     if (isSuperAdmin) {
