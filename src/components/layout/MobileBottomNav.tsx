@@ -120,6 +120,13 @@ export function MobileBottomNav() {
               <button
                 key={tab.path}
                 onClick={() => navigate(tab.path)}
+                onPointerEnter={() => {
+                  // Preload on mobile touch/hover
+                  const link = document.createElement('link');
+                  link.rel = 'prefetch';
+                  link.href = tab.path;
+                  document.head.appendChild(link);
+                }}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 py-2 px-1 min-w-[56px] transition-colors duration-200 active:scale-95",
                   active ? "text-primary" : "text-muted-foreground"
