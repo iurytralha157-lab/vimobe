@@ -341,7 +341,6 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
           </Card>
         </div>
       </div>
-    </AppLayout>
   );
 }
 
