@@ -275,9 +275,19 @@ export function DashboardFilters({
     );
   }
 
-  // Desktop layout - All filters inline
+  // Desktop layout - Optimized to prevent layout breaks
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+      {/* Date Filter */}
+      <DateFilterPopover
+        datePreset={datePreset}
+        onDatePresetChange={onDatePresetChange}
+        customDateRange={customDateRange}
+        onCustomDateRangeChange={onCustomDateRangeChange}
+        triggerClassName="h-8 w-auto min-w-[120px] lg:min-w-[140px] text-[10px] lg:text-xs justify-start"
+      />
+
+      <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
       {/* Date Filter */}
       <DateFilterPopover
         datePreset={datePreset}
