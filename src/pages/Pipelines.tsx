@@ -1125,67 +1125,122 @@ export default function Pipelines() {
                 triggerClassName="h-8 w-auto min-w-[120px] xl:min-w-[140px] text-[10px] xl:text-xs justify-start flex-shrink-0"
               />
 
-              {/* Responsible Filter */}
-              {(isAdmin || hasLeadViewAll) ? (
-                <Select value={filterUser} onValueChange={setFilterUser}>
+              {/* Collapsed Filters for Middle Screens */}
+              <div className="flex xl:hidden">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("h-8 px-2 gap-1.5 text-[10px]", ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all')) && "border-primary text-primary")}>
+                      <Filter className="h-3.5 w-3.5" />
+                      Filtros
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-64 p-3 space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium">Responsável</label>
+                      <Select value={filterUser} onValueChange={setFilterUser}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Responsável" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium">Tags</label>
+                      <Select value={filterTag} onValueChange={setFilterTag}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Tags" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {allTags.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium">Status</label>
+                      <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="open">Aberto</SelectItem>
+                          <SelectItem value="won">Ganho</SelectItem>
+                          <SelectItem value="lost">Perdido</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Full Filters Row - Only on XL screens */}
+              <div className="hidden xl:flex items-center gap-2">
+                {/* Responsible Filter */}
+                {(isAdmin || hasLeadViewAll) ? (
+                  <Select value={filterUser} onValueChange={setFilterUser}>
+                    <SelectTrigger className={cn(
+                      "h-8 w-auto min-w-[110px] text-xs flex-shrink-0",
+                      filterUser && filterUser !== 'all' && "border-primary text-primary"
+                    )}>
+                      <Filter className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                      <SelectValue placeholder="Resp." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8 flex-shrink-0">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs truncate max-w-[60px]">{profile?.name}</span>
+                  </div>
+                )}
+
+                {/* Tag Filter */}
+                <Select value={filterTag} onValueChange={setFilterTag}>
                   <SelectTrigger className={cn(
-                    "h-8 w-auto min-w-[110px] text-xs flex-shrink-0",
-                    filterUser && filterUser !== 'all' && "border-primary text-primary"
+                    "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                    filterTag && filterTag !== 'all' && "border-primary text-primary"
                   )}>
-                    <Filter className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                    <SelectValue placeholder="Resp." />
+                    <Tags className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                    <SelectValue placeholder="Tags" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {users.map(user => (
-                      <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {allTags.map(tag => (
+                      <SelectItem key={tag.id} value={tag.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                          {tag.name}
+                        </div>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
-                <div className="flex items-center gap-1.5 border rounded-md px-2 py-1.5 bg-muted/50 h-8 flex-shrink-0">
-                  <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs truncate max-w-[60px]">{profile?.name}</span>
-                </div>
-              )}
 
-              {/* Tag Filter */}
-              <Select value={filterTag} onValueChange={setFilterTag}>
-                <SelectTrigger className={cn(
-                  "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
-                  filterTag && filterTag !== 'all' && "border-primary text-primary"
-                )}>
-                  <Tags className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                  <SelectValue placeholder="Tags" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {allTags.map(tag => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tag.color }} />
-                        {tag.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Deal Status Filter */}
-              <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-                <SelectTrigger className={cn(
-                  "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
-                  filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
-                )}>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="open"><span className="flex items-center gap-2"><CircleDot className="h-3.5 w-3.5 text-muted-foreground" />Aberto</span></SelectItem>
-                  <SelectItem value="won"><span className="flex items-center gap-2"><Trophy className="h-3.5 w-3.5 text-emerald-600" />Ganho</span></SelectItem>
-                  <SelectItem value="lost"><span className="flex items-center gap-2"><XCircle className="h-3.5 w-3.5 text-red-600" />Perdido</span></SelectItem>
-                </SelectContent>
-              </Select>
+                {/* Deal Status Filter */}
+                <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                  <SelectTrigger className={cn(
+                    "h-8 w-auto min-w-[100px] text-xs flex-shrink-0",
+                    filterDealStatus && filterDealStatus !== 'all' && "border-primary text-primary"
+                  )}>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="open"><span className="flex items-center gap-2"><CircleDot className="h-3.5 w-3.5 text-muted-foreground" />Aberto</span></SelectItem>
+                    <SelectItem value="won"><span className="flex items-center gap-2"><Trophy className="h-3.5 w-3.5 text-emerald-600" />Ganho</span></SelectItem>
+                    <SelectItem value="lost"><span className="flex items-center gap-2"><XCircle className="h-3.5 w-3.5 text-red-600" />Perdido</span></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Meta Filters Popover */}
               <Popover>
