@@ -304,7 +304,6 @@ export default function Contacts() {
   };
 
   return (
-    <AppLayout title="Contatos">
       <div className="space-y-6 animate-in relative">
 
 
@@ -930,6 +929,6 @@ export default function Contacts() {
           onOpenChange={setImportDialogOpen}
         />
       </div>
-    </AppLayout>
+    
   );
 }
