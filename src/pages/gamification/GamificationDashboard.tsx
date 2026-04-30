@@ -1,6 +1,7 @@
 import { GamificationStatsWidget } from '@/components/gamification/GamificationStatsWidget';
 import { MissionsWidget } from '@/components/gamification/MissionsWidget';
 import { ProspectingReportModal } from '@/components/gamification/ProspectingReportModal';
+import { RecentActivitiesTable } from '@/components/gamification/RecentActivitiesTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity } from 'lucide-react';
 
