@@ -128,3 +128,110 @@ ON CONFLICT DO NOTHING;
 INSERT INTO public.gamification_rules (organization_id, action_type, points)
 SELECT id, 'sale_closed', 100 FROM public.organizations
 ON CONFLICT DO NOTHING;
+
+-- Gamification Missions table
+CREATE TABLE IF NOT EXISTS public.gamification_missions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    action_type TEXT NOT NULL, -- 'call_made', 'message_sent', etc.
+    target_count INTEGER NOT NULL,
+    bonus_points INTEGER NOT NULL,
+    period TEXT DEFAULT 'daily', -- 'daily', 'weekly'
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- User Mission Progress
+CREATE TABLE IF NOT EXISTS public.user_mission_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    mission_id UUID REFERENCES public.gamification_missions(id) ON DELETE CASCADE,
+    current_count INTEGER DEFAULT 0,
+    is_completed BOOLEAN DEFAULT false,
+    reset_at TIMESTAMPTZ, -- When this progress expires
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, mission_id, reset_at)
+);
+
+-- Enable RLS
+ALTER TABLE public.gamification_missions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_mission_progress ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Users can view missions of their organization" ON public.gamification_missions
+    FOR SELECT USING (organization_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid()));
+
+CREATE POLICY "Users can view their own progress" ON public.user_mission_progress
+    FOR SELECT USING (user_id = auth.uid());
+
+-- Function to update mission progress on activity
+CREATE OR REPLACE FUNCTION public.update_mission_progress()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_mission RECORD;
+    v_reset_at TIMESTAMPTZ;
+BEGIN
+    -- Determine reset_at based on period
+    IF EXISTS (SELECT 1 FROM public.gamification_missions WHERE action_type = NEW.action_type AND is_active = true AND organization_id = NEW.organization_id) THEN
+        
+        FOR v_mission IN SELECT * FROM public.gamification_missions 
+                        WHERE action_type = NEW.action_type 
+                        AND is_active = true 
+                        AND organization_id = NEW.organization_id LOOP
+            
+            IF v_mission.period = 'daily' THEN
+                v_reset_at := date_trunc('day', now()) + interval '1 day';
+            ELSIF v_mission.period = 'weekly' THEN
+                v_reset_at := date_trunc('week', now()) + interval '1 week';
+            END IF;
+
+            -- Update or insert progress
+            INSERT INTO public.user_mission_progress (user_id, mission_id, current_count, reset_at, updated_at)
+            VALUES (NEW.user_id, v_mission.id, NEW.points_earned / (SELECT points FROM public.gamification_rules WHERE organization_id = NEW.organization_id AND action_type = NEW.action_type), v_reset_at, now())
+            ON CONFLICT (user_id, mission_id, reset_at) DO UPDATE
+            SET current_count = public.user_mission_progress.current_count + 1,
+                updated_at = now();
+
+            -- Check completion
+            UPDATE public.user_mission_progress
+            SET is_completed = true
+            WHERE user_id = NEW.user_id 
+            AND mission_id = v_mission.id 
+            AND reset_at = v_reset_at
+            AND current_count >= v_mission.target_count
+            AND is_completed = false;
+
+            -- If just completed, award bonus
+            IF FOUND THEN
+                INSERT INTO public.gamification_activity_logs (user_id, organization_id, action_type, points_earned, reference_id, metadata)
+                VALUES (NEW.user_id, NEW.organization_id, 'mission_bonus', v_mission.bonus_points, v_mission.id, jsonb_build_object('mission_title', v_mission.title));
+
+                UPDATE public.user_gamification_stats
+                SET total_points = total_points + v_mission.bonus_points,
+                    updated_at = now()
+                WHERE user_id = NEW.user_id;
+            END IF;
+        END LOOP;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER tr_update_mission_progress
+    AFTER INSERT ON public.gamification_activity_logs
+    FOR EACH ROW 
+    WHEN (NEW.action_type != 'mission_bonus' AND NEW.action_type != 'prospecting_report')
+    EXECUTE FUNCTION public.update_mission_progress();
+
+-- Seed some missions
+INSERT INTO public.gamification_missions (organization_id, title, description, action_type, target_count, bonus_points, period)
+SELECT id, 'Guerreiro do Telefone', 'Faça 20 ligações em um único dia', 'call_made', 20, 50, 'daily' FROM public.organizations
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.gamification_missions (organization_id, title, description, action_type, target_count, bonus_points, period)
+SELECT id, 'Mestre das Visitas', 'Agende 3 visitas nesta semana', 'visit_scheduled', 3, 100, 'weekly' FROM public.organizations
+ON CONFLICT DO NOTHING;
