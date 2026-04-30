@@ -1103,8 +1103,8 @@ export default function Pipelines() {
               </div>
             </div>
             
-            {/* Filters Row */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-0">
+            {/* Filters Row - Responsive (shows icons/collapsed on mid screens) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0">
               {/* Search */}
               <div className="relative flex-shrink-0">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -1112,7 +1112,7 @@ export default function Pipelines() {
                   placeholder="Buscar..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="h-8 w-40 pl-8 text-xs"
+                  className="h-8 w-32 xl:w-48 pl-8 text-xs bg-muted/30 border-none focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
               </div>
 
@@ -1122,7 +1122,7 @@ export default function Pipelines() {
                 onDatePresetChange={setDatePreset}
                 customDateRange={customDateRange}
                 onCustomDateRangeChange={setCustomDateRange}
-                triggerClassName="h-8 w-auto min-w-[130px] text-xs justify-start flex-shrink-0"
+                triggerClassName="h-8 w-auto min-w-[120px] xl:min-w-[140px] text-[10px] xl:text-xs justify-start flex-shrink-0"
               />
 
               {/* Responsible Filter */}
