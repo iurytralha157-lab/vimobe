@@ -196,6 +196,7 @@ export default function Dashboard() {
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
+              <TabsTrigger value="ranking" className="text-xs">Ranking</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
               {funnelComponent}
