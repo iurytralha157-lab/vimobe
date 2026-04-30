@@ -159,8 +159,8 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
       </CardHeader>
       <CardContent className="pb-4 flex-1 flex flex-col">
         {/* Chart */}
-        <div className="flex-1 min-h-[200px]">
-          <ResponsiveContainer width="100%" height="100%" onResize={handleResize}>
+        <div className="flex-1 min-h-[300px] w-full">
+          <ResponsiveContainer width="100%" height={300} onResize={handleResize}>
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: 12, bottom: 0 }}
@@ -238,18 +238,18 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
         </div>
 
         {/* Legend with totals */}
-        <div className="flex justify-center gap-6 pt-3 border-t border-border/50 mt-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 pt-3 border-t border-border/50 mt-2">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             <div className="w-3 h-3 rounded-full bg-[#22C55E]" />
             <span className="text-xs text-muted-foreground">Ganhos</span>
             <span className="text-xs font-semibold text-foreground">{totals.ganhos}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             <div className="w-3 h-3 rounded-full bg-[#EF4444]" />
             <span className="text-xs text-muted-foreground">Perdas</span>
             <span className="text-xs font-semibold text-foreground">{totals.perdas}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             <div className="w-3 h-3 rounded-full bg-[#3B82F6]" />
             <span className="text-xs text-muted-foreground">Em Aberto</span>
             <span className="text-xs font-semibold text-foreground">{totals.abertos}</span>

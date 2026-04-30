@@ -21,8 +21,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
+  const isMobile = useIsMobile();
   const [mobileChartTab, setMobileChartTab] = useState('funnel');
   const { organization, user } = useAuth();
   
@@ -119,8 +122,11 @@ export default function Dashboard() {
 
 
   return (
-    <AppLayout title="Dashboard" disableMainScroll>
-      <div className="flex flex-col gap-3 animate-fade-in h-full overflow-hidden">
+    <AppLayout title="Dashboard" disableMainScroll={!isMobile}>
+      <div className={cn(
+        "flex flex-col gap-3 animate-fade-in",
+        !isMobile ? "h-full overflow-hidden" : ""
+      )}>
 
         {/* Filters bar */}
         <DashboardFilters
@@ -182,7 +188,7 @@ export default function Dashboard() {
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
-            <TabsList className="w-full grid grid-cols-2">
+            <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
               <TabsTrigger value="ranking" className="text-xs">Ranking</TabsTrigger>
@@ -218,7 +224,6 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
