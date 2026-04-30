@@ -309,7 +309,7 @@ export default function Contacts() {
 
 
 
-        {/* Filters - Mobile vs Desktop */}
+        {/* Filters - Mobile vs Tablet/Small Desktop vs Large Desktop */}
         {isMobile ? (
           <div className="flex gap-2 items-center w-full">
             <MobileFilters
