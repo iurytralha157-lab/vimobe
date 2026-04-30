@@ -178,6 +178,7 @@ export function ProspectingReportModal() {
                       <SelectItem value="spreadsheet">Planilha de Frios</SelectItem>
                       <SelectItem value="referral">Indicação</SelectItem>
                       <SelectItem value="recontact">Recontato de Base</SelectItem>
+                      <SelectItem value="canvassing">Panfletagem / PAP</SelectItem>
                       <SelectItem value="other">Outros</SelectItem>
                     </SelectContent>
                   </Select>
