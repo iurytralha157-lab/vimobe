@@ -253,7 +253,7 @@ export default function GamificationRanking() {
                   {index + 1}
                 </div>
                 
-                <Avatar className="h-8 w-8 lg:h-10 lg:w-10 border border-border shrink-0 transition-transform group-hover:scale-105">
+                <Avatar className="h-8 w-8 lg:h-10 lg:w-10 border border-border shrink-0 transition-transform lg:group-hover:scale-105">
                   <AvatarImage src={user.profiles?.avatar_url || undefined} />
                   <AvatarFallback className="text-[10px] lg:text-xs font-bold">{getInitials(user.profiles?.name || '')}</AvatarFallback>
                 </Avatar>
