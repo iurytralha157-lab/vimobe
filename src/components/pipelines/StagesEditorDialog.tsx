@@ -51,6 +51,10 @@ export function StagesEditorDialog({
   const [editingColor, setEditingColor] = useState('');
   const [deleteStage, setDeleteStage] = useState<Stage | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState('#6b7280');
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Initialize stages from props
   useEffect(() => {
