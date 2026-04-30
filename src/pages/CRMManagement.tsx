@@ -75,7 +75,6 @@ export default function CRMManagement() {
     { value: 'pipelines', label: 'Pipelines', icon: GitBranch },
     { value: 'distribution', label: 'Distribuição', icon: Shuffle },
     { value: 'tags', label: 'Tags', icon: Tags },
-    { value: 'gamification', label: 'Gamificação', icon: Trophy },
   ], []);
 
   const currentTab = managementTabs.find(tab => tab.value === activeTab);
