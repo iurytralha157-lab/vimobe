@@ -160,7 +160,6 @@ export function CampaignFilter({
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase">Campanha</label>
           <Select
             value={campaignId || 'all'}
             onValueChange={(val) => {
@@ -184,7 +183,6 @@ export function CampaignFilter({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase">Conjunto de Anúncios</label>
           <Select
             value={adSetId || 'all'}
             onValueChange={(val) => {
@@ -207,7 +205,6 @@ export function CampaignFilter({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase">Criativo</label>
           <Select
             value={adId || 'all'}
             onValueChange={(val) => onAdChange(val === 'all' ? null : val)}
