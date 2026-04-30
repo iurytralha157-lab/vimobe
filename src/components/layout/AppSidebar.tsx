@@ -92,6 +92,10 @@ const allNavItems: NavItem[] = [{
     labelKey: 'performance',
     path: '/gamificacao/ranking'
   }, {
+    icon: History,
+    labelKey: 'history',
+    path: '/gamificacao/historico'
+  }, {
     icon: Settings,
     labelKey: 'settings',
     path: '/gamificacao/configuracoes',
