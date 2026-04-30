@@ -16,7 +16,7 @@ interface LeaderboardUser {
   user_id: string;
   total_points: number;
   profiles: {
-    full_name: string | null;
+    name: string | null;
     avatar_url: string | null;
   } | null;
 }
