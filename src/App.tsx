@@ -323,7 +323,12 @@ const BrandingAndPwa = () => {
 
 function RoutesSwitcher() {
   const { user } = useAuth();
-  const customDomain = isCustomDomain() && !user;
+  const location = useLocation();
+  
+  // Rotas que devem ser sempre acessíveis via sistema, mesmo em domínio customizado
+  const isSystemRoute = ['/auth', '/reset-password', '/signup', '/onboarding'].includes(location.pathname);
+  
+  const customDomain = isCustomDomain() && !user && !isSystemRoute;
   return customDomain ? <CustomDomainRoutes /> : <AppRoutes />;
 }
 
