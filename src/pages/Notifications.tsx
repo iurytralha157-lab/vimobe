@@ -128,7 +128,6 @@ export default function Notifications() {
   };
 
   return (
-    <AppLayout title={isMobile ? 'Notificações' : undefined}>
       <div className="space-y-6">
         {/* Desktop: título inline como antes */}
         {!isMobile && (
