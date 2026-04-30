@@ -162,12 +162,15 @@ export default function Dashboard() {
             </div>
 
             {/* Gamification Row */}
-            <div className="grid grid-cols-3 gap-3 h-32 shrink-0">
-              <div className="col-span-1">
+            <div className="grid grid-cols-12 gap-3 shrink-0">
+              <div className="col-span-3">
                 <GamificationStatsWidget />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-6">
                 <LeaderboardWidget />
+              </div>
+              <div className="col-span-3">
+                <MissionsWidget />
               </div>
             </div>
 
