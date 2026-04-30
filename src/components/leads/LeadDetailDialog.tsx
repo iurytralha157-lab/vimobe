@@ -1674,67 +1674,78 @@ export function LeadDetailDialog({
                   <TelecomSummaryCard customer={telecomCustomer} onEdit={() => setActiveTab('contact')} />
                 </div>
               )}
-              {/* Cadência - próximas atividades */}
-              <div className="p-5 rounded-xl bg-gradient-to-br from-card to-muted/30 border shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <ListTodo className="h-4 w-4 text-primary" />
-                    </div>
-                    <h3 className="font-semibold">Próximas atividades</h3>
-                  </div>
-                  {totalTasksCount > 0 && <Badge variant="outline" className="font-normal">
-                      {completedTasksCount}/{totalTasksCount}
-                    </Badge>}
-                </div>
-                
-                {leadTasksLoading ? <div className="flex items-center justify-center py-12">
-                    <div className="relative">
-                      <div className="h-8 w-8 rounded-full border-2 border-primary/20" />
-                      <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                    </div>
-                  </div> : templateTasks.length > 0 ? <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
-                      <CheckCircle className="h-3 w-3" />
-                      Cadência: <span className="font-medium text-foreground">{stageTemplate?.name}</span>
-                    </p>
-                    {templateTasks.map((task: any) => {
-                  const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
-                  const isDone = existingTask?.is_done || false;
-                  const TaskIcon = activityTypeIcons[task.type] || Clock;
-                  return <div key={task.id} className={cn("group flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all", isDone ? "bg-muted/50 border-border" : "hover:bg-accent/50 hover:border-primary/20 hover:shadow-sm hover:-translate-y-0.5", task.type === 'message' && task.recommended_message && !isDone && "border-primary/30 bg-primary/5")} onClick={() => handleCadenceTaskClick(task)}>
-                          <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", isDone ? "bg-gradient-to-br from-green-500 to-emerald-600" : "bg-gradient-to-br from-primary/80 to-primary")}>
-                            {isDone ? <Check className="h-4 w-4 text-white" /> : <TaskIcon className="h-4 w-4 text-white" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn("text-sm font-medium truncate", isDone && "line-through text-muted-foreground")}>
-                              {task.title}
-                            </p>
-                            {task.observation && !isDone && <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
-                                <Lightbulb className="h-3 w-3" />
-                                {task.observation}
-                              </p>}
-                            {task.recommended_message && !isDone && <p className="text-xs text-primary mt-0.5 flex items-center gap-1 font-medium">
-                                <FileEdit className="h-3 w-3" />
-                                Clique para enviar mensagem
-                              </p>}
-                            <p className="text-xs text-muted-foreground">
-                              {taskTypeLabels[task.type]} • Dia {task.day_offset}
-                            </p>
-                          </div>
-                          {!isDone && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />}
-                        </div>;
-                })}
-                  </div> : <div className="text-center py-10 border border-dashed rounded-xl bg-muted/20">
-                    <div className="h-12 w-12 rounded-2xl bg-muted mx-auto mb-3 flex items-center justify-center">
-                      <ListTodo className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <p className="font-medium text-muted-foreground">Nenhuma cadência configurada</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">Configure uma para este estágio</p>
-                  </div>}
+              
+              <div className="lg:col-span-2">
+                <LeadHistory leadId={lead.id} />
               </div>
+            </div>
+          </TabsContent>
 
-              {/* Seção removida - Histórico agora é a única fonte de eventos */}
+          {/* Chat Tab */}
+          <TabsContent value="messages" className="p-6 mt-0">
+            <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
+          </TabsContent>
+
+          {/* Cadência Tab */}
+          <TabsContent value="cadence" className="p-6 mt-0">
+            {/* Cadência - próximas atividades */}
+            <div className="p-5 rounded-xl bg-gradient-to-br from-card to-muted/30 border shadow-sm max-w-2xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ListTodo className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="font-semibold">Cadência de atividades</h3>
+                </div>
+                {totalTasksCount > 0 && <Badge variant="outline" className="font-normal">
+                    {completedTasksCount}/{totalTasksCount}
+                  </Badge>}
+              </div>
+              
+              {leadTasksLoading ? <div className="flex items-center justify-center py-12">
+                  <div className="relative">
+                    <div className="h-8 w-8 rounded-full border-2 border-primary/20" />
+                    <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  </div>
+                </div> : templateTasks.length > 0 ? <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
+                    <CheckCircle className="h-3 w-3" />
+                    Cadência atual: <span className="font-medium text-foreground">{stageTemplate?.name}</span>
+                  </p>
+                  {templateTasks.map((task: any) => {
+                const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
+                const isDone = existingTask?.is_done || false;
+                const TaskIcon = activityTypeIcons[task.type] || Clock;
+                return <div key={task.id} className={cn("group flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all", isDone ? "bg-muted/50 border-border" : "hover:bg-accent/50 hover:border-primary/20 hover:shadow-sm hover:-translate-y-0.5", task.type === 'message' && task.recommended_message && !isDone && "border-primary/30 bg-primary/5")} onClick={() => handleCadenceTaskClick(task)}>
+                        <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", isDone ? "bg-gradient-to-br from-green-500 to-emerald-600" : "bg-gradient-to-br from-primary/80 to-primary")}>
+                          {isDone ? <Check className="h-4 w-4 text-white" /> : <TaskIcon className="h-4 w-4 text-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("text-sm font-medium truncate", isDone && "line-through text-muted-foreground")}>
+                            {task.title}
+                          </p>
+                          {task.observation && !isDone && <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
+                              <Lightbulb className="h-3 w-3" />
+                              {task.observation}
+                            </p>}
+                          {task.recommended_message && !isDone && <p className="text-xs text-primary mt-0.5 flex items-center gap-1 font-medium">
+                              <FileEdit className="h-3 w-3" />
+                              Clique para enviar mensagem
+                            </p>}
+                          <p className="text-xs text-muted-foreground">
+                            {taskTypeLabels[task.type]} • Dia {task.day_offset}
+                          </p>
+                        </div>
+                        {!isDone && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />}
+                      </div>;
+              })}
+                </div> : <div className="text-center py-10 border border-dashed rounded-xl bg-muted/20">
+                  <div className="h-12 w-12 rounded-2xl bg-muted mx-auto mb-3 flex items-center justify-center">
+                    <ListTodo className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium text-muted-foreground">Nenhuma cadência configurada</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Configure uma para este estágio</p>
+                </div>}
             </div>
           </TabsContent>
 
