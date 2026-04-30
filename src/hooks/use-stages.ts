@@ -648,11 +648,10 @@ export function useLoadMoreLeads() {
       
       if (error) throw error;
       
-      // Buscar tags dos novos leads
-      const leadIds = (data || []).map((l: any) => l.id);
-      let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
+      // Buscar tags e tarefas dos novos leads
+      const enrichedLeads = await getEnrichedLeadsBatch(data || []);
       
-      return { stageId, leads: data || [] };
+      return { stageId, leads: enrichedLeads };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
       const dateFromISO = filters?.dateRange?.from?.toISOString();
