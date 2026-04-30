@@ -69,7 +69,7 @@ export default function GamificationRanking() {
           user_id: p.id,
           total_points: 0,
           profiles: {
-            full_name: p.name,
+            name: p.name,
             avatar_url: p.avatar_url
           }
         })) as unknown as LeaderboardUser[];
