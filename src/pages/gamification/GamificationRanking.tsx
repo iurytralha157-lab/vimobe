@@ -117,7 +117,7 @@ export default function GamificationRanking() {
           origin: { y: 0.6 },
           colors: ['#FFD700', '#FFA500', '#FF4500']
         });
-        toast.success(`${currentTopUser.profiles?.full_name} assumiu a LIDERANÇA! 🏆`, {
+        toast.success(`${currentTopUser.profiles?.name} assumiu a LIDERANÇA! 🏆`, {
           icon: <PartyPopper className="text-yellow-500" />,
           duration: 5000,
         });
