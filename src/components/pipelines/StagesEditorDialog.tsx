@@ -175,6 +175,31 @@ export function StagesEditorDialog({
     }
   };
 
+  const handleAddStage = () => {
+    if (!newName.trim()) return;
+
+    const newStage: Stage = {
+      id: crypto.randomUUID(), // Temporary ID until save
+      name: newName.trim(),
+      color: newColor,
+      position: stages.length,
+      lead_count: 0
+    };
+
+    setStages([...stages, newStage]);
+    setNewName('');
+    setIsAdding(false);
+    setHasChanges(true);
+
+    // Scroll to bottom after addition
+    setTimeout(() => {
+      const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollArea) {
+        scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
