@@ -297,7 +297,7 @@ export function PropertyPreviewDialog({
             {/* Key Features */}
             <div className="grid grid-cols-4 gap-2">
               {property.quartos !== null && property.quartos !== undefined && property.quartos > 0 && (
-                <div className="flex flex-col items-center p-3 rounded-xl bg-muted/50 border text-center">
+                <div className="flex flex-col items-center p-2 rounded-xl bg-muted/50 border text-center">
                   <Bed className="h-5 w-5 text-primary mb-1" />
                   <span className="font-bold">{property.quartos}</span>
                   <span className="text-[10px] text-muted-foreground">Quartos</span>
