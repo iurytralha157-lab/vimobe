@@ -232,7 +232,6 @@ export default function GamificationRanking() {
             <TrendingUp className="h-5 w-5 text-indigo-500" />
             Classificação Geral
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">Todos os competidores da imobiliária</p>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
