@@ -37,8 +37,8 @@ export function GamificationStatsWidget() {
     );
   }
 
-  const points = stats?.total_points || 0;
-  const level = stats?.current_level || 1;
+  const points = (stats as any)?.total_points || 0;
+  const level = (stats as any)?.current_level || 1;
   const nextLevelPoints = level * 1000; // Simplified logic: each level is 1000 points
   const progress = Math.min((points % 1000) / 10, 100);
 
