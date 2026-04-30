@@ -92,7 +92,7 @@ const allNavItems: NavItem[] = [{
     labelKey: 'performance',
     path: '/gamificacao/ranking'
   }, {
-    icon: History,
+    icon: HistoryIcon,
     labelKey: 'history',
     path: '/gamificacao/historico'
   }, {
