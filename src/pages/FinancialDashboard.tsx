@@ -591,6 +591,6 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
           </Card>
         </div>
       </div>
-    </AppLayout>
+    
   );
 }
