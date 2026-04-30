@@ -321,10 +321,13 @@ const BrandingAndPwa = () => {
   return null;
 };
 
-const App = () => {
+function RoutesSwitcher() {
   const { user } = useAuth();
   const customDomain = isCustomDomain() && !user;
+  return customDomain ? <CustomDomainRoutes /> : <AppRoutes />;
+}
 
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -336,11 +339,7 @@ const App = () => {
                 <Toaster />
                 <Sonner />
                 <IOSInstallGuide />
-                {customDomain ? (
-                  <CustomDomainRoutes />
-                ) : (
-                  <AppRoutes />
-                )}
+                <RoutesSwitcher />
               </LanguageProvider>
             </AuthProvider>
           </BrowserRouter>
