@@ -822,14 +822,24 @@ export function LeadDetailDialog({
               {isTelecom && telecomCustomer && (
                 <TelecomSummaryCard customer={telecomCustomer} onEdit={() => setActiveTab('contact')} />
               )}
-              {/* Próximas atividades */}
+              
+              <LeadHistory leadId={lead.id} />
+            </div>}
+
+          {/* Chat Tab */}
+          {activeTab === 'messages' && <div className="h-[500px]">
+              <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
+            </div>}
+
+          {/* Cadence Tab */}
+          {activeTab === 'cadence' && <div className="space-y-4">
               <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
                       <ListTodo className="h-3.5 w-3.5 text-primary" />
                     </div>
-                    <h3 className="font-medium text-sm">Próximas atividades</h3>
+                    <h3 className="font-medium text-sm">Cadência de atividades</h3>
                   </div>
                   {totalTasksCount > 0 && <Badge variant="outline" className="text-xs">
                       {completedTasksCount}/{totalTasksCount}
@@ -839,7 +849,11 @@ export function LeadDetailDialog({
                 {leadTasksLoading ? <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div> : templateTasks.length > 0 ? <div className="space-y-2">
-                    {templateTasks.slice(0, 3).map((task: any) => {
+                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5 px-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Cadência: <span className="font-medium text-foreground">{stageTemplate?.name}</span>
+                    </p>
+                    {templateTasks.map((task: any) => {
                 const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
                 const isDone = existingTask?.is_done || false;
                 const TaskIcon = activityTypeIcons[task.type] || Clock;
@@ -863,8 +877,11 @@ export function LeadDetailDialog({
                     <p className="text-sm text-muted-foreground">Nenhuma cadência</p>
                   </div>}
               </div>
+            </div>}
 
-              {/* Seção removida - Histórico agora é a única fonte de eventos */}
+          {/* Timeline Tab */}
+          {activeTab === 'timeline' && <div className="p-2">
+              <LeadTimeline leadId={lead.id} />
             </div>}
 
 
