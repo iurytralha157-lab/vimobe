@@ -188,30 +188,22 @@ export default function PropertyForm() {
   const { id } = useParams();
   const isEditing = !!id;
   const isMobile = useIsMobile();
-  const { user, profile, isSuperAdmin } = useAuth();
 
   const [formData, setFormData] = useState<PropertyFormData>(() => {
-    // Basic initialization
-    const data = { ...initialFormData };
-    
-    // Attempt to restore from draft if not editing
     if (!id) {
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
-        // user is available here because useAuth was moved above
         const meta = user?.user_metadata?.property_draft;
         if (raw || meta) {
           return { 
-            ...data, 
+            ...initialFormData, 
             ...(meta ? meta : {}),
             ...(raw ? JSON.parse(raw) : {}) 
           };
         }
-      } catch (e) {
-        console.warn("[PropertyForm] Error restoring draft:", e);
-      }
+      } catch {}
     }
-    return data;
+    return initialFormData;
   });
   const [hasDraft] = useState(() => !id && (!!localStorage.getItem(DRAFT_KEY) || !!user?.user_metadata?.property_draft));
   const [activeTab, setActiveTab] = useState('owner');
@@ -223,7 +215,7 @@ export default function PropertyForm() {
   const { data: features = [], isLoading: loadingFeatures } = usePropertyFeatures();
   const { data: proximities = [], isLoading: loadingProximities } = usePropertyProximities();
   const { data: users = [] } = useUsers();
-  // useAuth moved to top of component to support formData initialization
+  const { user, profile, isSuperAdmin } = useAuth();
   const createPropertyType = useCreatePropertyType();
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
@@ -1148,4 +1140,3 @@ export default function PropertyForm() {
     </AppLayout>
   );
 }
-
