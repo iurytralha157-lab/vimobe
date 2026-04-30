@@ -113,7 +113,7 @@ export function PropertyPreviewDialog({
   const content = isLoading ? (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="lg:w-1/2">
-        <Skeleton className={cn("w-full rounded-xl", isMobile ? "aspect-video" : "aspect-[4/3]")} />
+        <Skeleton className={cn("w-full rounded-xl", isMobile ? "aspect-[2/1]" : "aspect-video")} />
         <div className="flex gap-2 mt-3">
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} className="w-16 h-16 rounded-lg" />
@@ -138,7 +138,7 @@ export function PropertyPreviewDialog({
         {/* Main Image with Embla Carousel */}
         <div className={cn(
           "relative rounded-xl overflow-hidden bg-muted group",
-          isMobile ? "aspect-video" : "aspect-[4/3]"
+          isMobile ? "aspect-[2/1]" : "aspect-video"
         )}>
           {allImages.length > 0 ? (
             <>
@@ -208,11 +208,13 @@ export function PropertyPreviewDialog({
               <button
                 key={index}
                 type="button"
-                className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                className={cn(
+                  "flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-200",
+                  isMobile ? "w-11 h-11" : "w-14 h-14",
                   index === currentImageIndex 
                     ? 'border-primary ring-2 ring-primary/30 scale-105' 
                     : 'border-transparent hover:border-muted-foreground/40'
-                }`}
+                )}
                 onClick={() => {
                   setCurrentImageIndex(index);
                   emblaApi?.scrollTo(index);
@@ -251,7 +253,7 @@ export function PropertyPreviewDialog({
                     </Badge>
                   )}
                 </div>
-                <h2 className="text-lg lg:text-xl font-bold leading-tight">
+                <h2 className="text-base lg:text-lg font-bold leading-tight">
                   {property.title || `${property.tipo_de_imovel} em ${property.bairro || 'Localização'}`}
                 </h2>
               </div>
@@ -284,7 +286,7 @@ export function PropertyPreviewDialog({
 
             {/* Price */}
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-              <p className="text-2xl font-bold text-primary">
+              <p className="text-xl lg:text-2xl font-bold text-primary">
                 {formatPrice(property.preco, property.tipo_de_negocio)}
               </p>
               {property.tipo_de_negocio === 'Aluguel' && (
@@ -295,7 +297,7 @@ export function PropertyPreviewDialog({
             {/* Key Features */}
             <div className="grid grid-cols-4 gap-2">
               {property.quartos !== null && property.quartos !== undefined && property.quartos > 0 && (
-                <div className="flex flex-col items-center p-3 rounded-xl bg-muted/50 border text-center">
+                <div className="flex flex-col items-center p-2 rounded-xl bg-muted/50 border text-center">
                   <Bed className="h-5 w-5 text-primary mb-1" />
                   <span className="font-bold">{property.quartos}</span>
                   <span className="text-[10px] text-muted-foreground">Quartos</span>
@@ -332,49 +334,49 @@ export function PropertyPreviewDialog({
               
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {property.tipo_de_imovel && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Home className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Tipo:</span>
                     <span className="font-medium ml-auto">{property.tipo_de_imovel}</span>
                   </div>
                 )}
                 {property.suites !== null && property.suites !== undefined && property.suites > 0 && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Bed className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Suítes:</span>
                     <span className="font-medium ml-auto">{property.suites}</span>
                   </div>
                 )}
                 {property.andar && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Layers className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Andar:</span>
                     <span className="font-medium ml-auto">{property.andar}º</span>
                   </div>
                 )}
                 {property.area_total && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Maximize2 className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Área Total:</span>
                     <span className="font-medium ml-auto">{property.area_total}m²</span>
                   </div>
                 )}
                 {property.ano_construcao && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Ano:</span>
                     <span className="font-medium ml-auto">{property.ano_construcao}</span>
                   </div>
                 )}
                 {property.mobilia && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Sofa className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Mobília:</span>
                     <span className="font-medium ml-auto">{property.mobilia}</span>
                   </div>
                 )}
                 {property.regra_pet !== null && property.regra_pet !== undefined && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <PawPrint className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Pet:</span>
                     <span className={`font-medium ml-auto flex items-center gap-1 ${property.regra_pet ? 'text-green-600' : ''}`}>
@@ -395,7 +397,7 @@ export function PropertyPreviewDialog({
                 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   {property.condominio && (
-                    <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40">
+                    <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/40">
                       <span className="text-xs text-muted-foreground block">Condomínio</span>
                       <span className="font-semibold text-orange-600 dark:text-orange-400">
                         R$ {property.condominio.toLocaleString('pt-BR')}
@@ -403,7 +405,7 @@ export function PropertyPreviewDialog({
                     </div>
                   )}
                   {property.iptu && (
-                    <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40">
+                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40">
                       <span className="text-xs text-muted-foreground block">IPTU</span>
                       <span className="font-semibold text-blue-600 dark:text-blue-400">
                         R$ {property.iptu.toLocaleString('pt-BR')}
@@ -411,7 +413,7 @@ export function PropertyPreviewDialog({
                     </div>
                   )}
                   {property.seguro_incendio && (
-                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40">
+                    <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40">
                       <span className="text-xs text-muted-foreground block">Seguro Incêndio</span>
                       <span className="font-semibold text-red-600 dark:text-red-400">
                         R$ {property.seguro_incendio.toLocaleString('pt-BR')}
@@ -419,7 +421,7 @@ export function PropertyPreviewDialog({
                     </div>
                   )}
                   {property.taxa_de_servico && (
-                    <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40">
+                    <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40">
                       <span className="text-xs text-muted-foreground block">Taxa Serviço</span>
                       <span className="font-semibold text-purple-600 dark:text-purple-400">
                         R$ {property.taxa_de_servico.toLocaleString('pt-BR')}
@@ -502,11 +504,11 @@ export function PropertyPreviewDialog({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[95vh] p-4">
+        <SheetContent side="bottom" className="h-[90vh] p-4 rounded-t-[2rem]">
           <SheetHeader className="pb-4">
             <SheetTitle>Visualizar Imóvel</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="h-[calc(95vh-80px)]">
+          <ScrollArea className="h-[calc(90vh-80px)]">
             {content}
           </ScrollArea>
         </SheetContent>
@@ -516,7 +518,7 @@ export function PropertyPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-6">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-6">
         <DialogHeader>
           <DialogTitle>Visualizar Imóvel</DialogTitle>
         </DialogHeader>
