@@ -33,9 +33,7 @@ export default function GamificationDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Suas últimas ações de pontuação aparecerão aqui.
-          </p>
+          <RecentActivitiesTable />
         </CardContent>
       </Card>
     </div>
