@@ -322,7 +322,8 @@ const BrandingAndPwa = () => {
 };
 
 const App = () => {
-  const customDomain = isCustomDomain();
+  const { user } = useAuth();
+  const customDomain = isCustomDomain() && !user;
 
   return (
     <QueryClientProvider client={queryClient}>

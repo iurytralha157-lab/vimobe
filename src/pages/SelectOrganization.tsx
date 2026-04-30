@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/use-user-organizations';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 export default function SelectOrganization() {
   const { user, loading, profile, isSuperAdmin, switchOrganization } = useAuth();
   const navigate = useNavigate();
+  const [isSelecting, setIsSelecting] = useState(false);
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
 
   useEffect(() => {
@@ -28,15 +29,21 @@ export default function SelectOrganization() {
 
   // If only 1 org, auto-select
   useEffect(() => {
-    if (!loading && !orgsLoading && organizations.length === 1 && !profile?.organization_id) {
+    if (!loading && !orgsLoading && organizations.length === 1 && !profile?.organization_id && !isSelecting) {
       console.log("Auto-selecting organization:", organizations[0].organization_id);
       handleSelectOrg(organizations[0].organization_id);
     }
-  }, [loading, orgsLoading, organizations]);
+  }, [loading, orgsLoading, organizations, profile?.organization_id, isSelecting]);
 
   const handleSelectOrg = async (orgId: string) => {
-    await switchOrganization(orgId);
-    navigate('/dashboard', { replace: true });
+    if (isSelecting) return;
+    setIsSelecting(true);
+    try {
+      await switchOrganization(orgId);
+      navigate('/dashboard', { replace: true });
+    } finally {
+      setIsSelecting(false);
+    }
   };
 
   if (loading || orgsLoading) {
