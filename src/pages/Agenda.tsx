@@ -196,5 +196,5 @@ export default function Agenda() {
         {/* Event form dialog */}
         <EventForm open={eventFormOpen} onOpenChange={handleCloseEventForm} event={editingEvent} defaultUserId={profile?.id} defaultDate={selectedDate} />
       </div>
-    </AppLayout>;
+    
 }
