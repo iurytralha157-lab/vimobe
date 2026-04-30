@@ -82,9 +82,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkSuperAdmin = useCallback(async (userId: string): Promise<boolean> => {
     return performanceTracker.trackTimed("checkSuperAdmin", async () => {
       try {
-        // Simple race with timeout to prevent hanging
-        const timeoutPromise = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error("Timeout checking super admin")), 5000)
+        // Reduced timeout to 2s — defense in depth. The RLS recursion was fixed in
+        // migration 20260430010000_fix_user_roles_rls_recursion.sql.
+        const timeoutPromise = new Promise<boolean>((resolve) =>
+          setTimeout(() => resolve(false), 2000)
         );
 
         const checkPromise = (async () => {
@@ -97,10 +98,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return !!data;
         })();
 
-        const result = await Promise.race([checkPromise, timeoutPromise]);
-        return !!result;
+        return await Promise.race([checkPromise, timeoutPromise]);
       } catch (e) {
-        console.error("Error checking super admin (or timeout):", e);
+        console.warn("checkSuperAdmin failed (non-blocking):", e);
         return false;
       }
     });
@@ -125,14 +125,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
         console.log("Fetching profile for:", userId);
-        const [userResult, superAdmin] = await Promise.all([
-          supabase
-            .from("users")
-            .select("id, organization_id, name, email, role, avatar_url, is_active, language")
-            .eq("id", userId)
-            .maybeSingle(),
-          checkSuperAdmin(userId),
-        ]);
+        // Fetch profile first (critical path). Super admin check runs in background
+        // so it never blocks the UI from leaving the loading state.
+        const userResult = await supabase
+          .from("users")
+          .select("id, organization_id, name, email, role, avatar_url, is_active, language")
+          .eq("id", userId)
+          .maybeSingle();
+
+        // Kick off super admin check without awaiting; update state when ready.
+        checkSuperAdmin(userId)
+          .then((isSA) => setIsSuperAdmin(isSA))
+          .catch((err) => console.warn("Background super admin check failed:", err));
 
         if (userResult.error) {
           console.error("Error fetching user profile record:", userResult.error);
@@ -141,7 +145,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const profileData = userResult.data;
         if (profileData) {
-          setIsSuperAdmin(superAdmin);
+          // Note: isSuperAdmin will be updated asynchronously by the background check above.
+          const superAdmin = profileData.role === "super_admin";
+          if (superAdmin) setIsSuperAdmin(true);
           
           if (!profileData.is_active && !superAdmin) {
             console.warn("User is deactivated, signing out");
