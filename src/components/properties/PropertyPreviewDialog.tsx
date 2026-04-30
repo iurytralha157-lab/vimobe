@@ -502,11 +502,11 @@ export function PropertyPreviewDialog({
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[95vh] p-4">
+        <SheetContent side="bottom" className="h-[90vh] p-4 rounded-t-[2rem]">
           <SheetHeader className="pb-4">
             <SheetTitle>Visualizar Imóvel</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="h-[calc(95vh-80px)]">
+          <ScrollArea className="h-[calc(90vh-80px)]">
             {content}
           </ScrollArea>
         </SheetContent>
@@ -516,7 +516,7 @@ export function PropertyPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-6">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-6">
         <DialogHeader>
           <DialogTitle>Visualizar Imóvel</DialogTitle>
         </DialogHeader>
