@@ -13,8 +13,8 @@ export default function GamificationLayout() {
 
   const tabs = useMemo(() => {
     const items = [
-      { value: '/gamificacao', label: 'Dashboard', icon: LayoutDashboard },
-      { value: '/gamificacao/ranking', label: 'Ranking', icon: TrendingUp },
+      { value: '/gamificacao', label: 'Arena de Ranking', icon: Trophy },
+      { value: '/gamificacao/dashboard', label: 'Meu Desempenho', icon: LayoutDashboard },
       { value: '/gamificacao/historico', label: 'Histórico', icon: History },
     ];
 
