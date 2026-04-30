@@ -2234,6 +2234,11 @@ export function LeadDetailDialog({
               <LeadHistory leadId={lead.id} />
             </div>
           </TabsContent>
+
+          {/* Timeline Tab */}
+          <TabsContent value="timeline" className="p-6 mt-0">
+            <LeadTimeline leadId={lead.id} />
+          </TabsContent>
         </Tabs>
       </ScrollArea>
     </div>);
