@@ -203,7 +203,7 @@ export function PropertyPreviewDialog({
 
         {/* Thumbnail Grid */}
         {allImages.length > 1 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+          <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
             {allImages.slice(0, 8).map((img, index) => (
               <button
                 key={index}
