@@ -40,8 +40,8 @@ export default function GamificationRanking() {
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      // 1. Buscamos as pontuações (Stats)
-      const { data: statsData, error: statsError } = await supabase
+      // 1. Buscamos as pontuações
+      const { data: statsData, error: statsError } = await (supabase as any)
         .from('user_gamification_stats')
         .select('user_id, total_points')
         .eq('organization_id', organization.id);
@@ -49,14 +49,14 @@ export default function GamificationRanking() {
       if (statsError) throw statsError;
 
       // 2. Buscamos os usuários (Profiles)
-      const { data: userData, error: userError } = await supabase
+      const { data: userData, error: userError } = await (supabase as any)
         .from('users')
         .select('id, name, avatar_url')
         .eq('organization_id', organization.id);
 
       if (userError) throw userError;
 
-      // 3. Mesclamos os dados manualmente para evitar erros de tipagem e join
+      // 3. Mesclamos os dados manualmente para evitar erros de tipagem
       const mergedData = (userData || []).map((user: any) => {
         const stats = (statsData || []).find((s: any) => s.user_id === user.id);
         return {
@@ -70,8 +70,7 @@ export default function GamificationRanking() {
         };
       });
 
-      // 4. Ordenamos por pontos (maior para menor)
-      return mergedData.sort((a, b) => b.total_points - a.total_points) as unknown as LeaderboardUser[];
+      return mergedData.sort((a: any, b: any) => b.total_points - a.total_points) as unknown as LeaderboardUser[];
     },
     enabled: !!organization?.id,
   });
