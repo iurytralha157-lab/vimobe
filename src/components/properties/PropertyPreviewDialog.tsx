@@ -113,7 +113,7 @@ export function PropertyPreviewDialog({
   const content = isLoading ? (
     <div className="flex flex-col lg:flex-row gap-6">
       <div className="lg:w-1/2">
-        <Skeleton className={cn("w-full rounded-xl", isMobile ? "aspect-[2/1]" : "aspect-video")} />
+        <Skeleton className={cn("w-full rounded-xl", isMobile ? "aspect-[16/10] mx-auto w-[95%]" : "aspect-video")} />
         <div className="flex gap-2 mt-3">
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} className="w-16 h-16 rounded-lg" />
@@ -138,7 +138,7 @@ export function PropertyPreviewDialog({
         {/* Main Image with Embla Carousel */}
         <div className={cn(
           "relative rounded-xl overflow-hidden bg-muted group",
-          isMobile ? "aspect-[2/1]" : "aspect-video"
+          isMobile ? "aspect-[16/10] mx-auto w-[95%] shadow-sm" : "aspect-video"
         )}>
           {allImages.length > 0 ? (
             <>
@@ -203,7 +203,7 @@ export function PropertyPreviewDialog({
 
         {/* Thumbnail Grid */}
         {allImages.length > 1 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
+          <div className={cn("flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide", isMobile && "px-4")}>
             {allImages.slice(0, 8).map((img, index) => (
               <button
                 key={index}

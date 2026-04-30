@@ -561,7 +561,7 @@ export function MessageBubble({
           return (
             <>
               <div 
-                className="rounded-lg overflow-hidden cursor-pointer relative w-[300px]"
+                className="rounded-md overflow-hidden cursor-pointer relative w-full max-w-[280px] sm:max-w-[300px] border-[0.5px] border-black/5"
                 onClick={() => setViewerOpen(true)}
               >
                 {imageLoading && (
@@ -572,7 +572,7 @@ export function MessageBubble({
                 <img
                   src={mediaUrl!}
                   alt={content || "Imagem"}
-                  className="w-[300px] max-h-[400px] object-cover rounded-lg"
+                  className="w-full h-auto max-h-[400px] object-cover"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
                 />
@@ -613,12 +613,12 @@ export function MessageBubble({
           return (
             <>
               <div 
-                className="rounded-lg overflow-hidden cursor-pointer relative w-[300px]"
+                className="rounded-md overflow-hidden cursor-pointer relative w-full max-w-[280px] sm:max-w-[300px] border-[0.5px] border-black/5"
                 onClick={() => setViewerOpen(true)}
               >
                 <video
                   src={mediaUrl!}
-                  className="w-[300px] max-h-[400px] object-cover rounded-lg"
+                  className="w-full h-auto max-h-[400px] object-cover"
                   preload="metadata"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -715,10 +715,10 @@ export function MessageBubble({
       )}
     >
       <div className={cn(
-        "max-w-[75%] rounded-lg relative overflow-hidden",
+        "max-w-[85%] sm:max-w-[75%] rounded-2xl relative overflow-hidden transition-all duration-200 shadow-sm",
         fromMe 
-          ? "bg-primary text-primary-foreground rounded-br-[4px] px-2 py-1.5" 
-          : "bg-chatBubble text-chatBubble-foreground rounded-bl-[4px] px-[2px] py-[2px]"
+          ? "bg-primary text-primary-foreground rounded-tr-none px-3 py-2" 
+          : "bg-chatBubble text-chatBubble-foreground rounded-tl-none px-3 py-2"
       )}>
         {/* Sender name for groups or sent messages with sender info */}
         {!fromMe && senderName && (
@@ -760,7 +760,7 @@ export function MessageBubble({
               });
             })()}
             {/* Invisible spacer for timestamp */}
-            <span className="inline-block w-[60px]"></span>
+            <span className="inline-block w-[65px]"></span>
           </p>
         )}
 
