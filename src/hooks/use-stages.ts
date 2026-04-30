@@ -214,10 +214,22 @@ export function useStagesWithLeads(
         leads.push(...stageLeads);
       });
       
+      // Enriquecer leads com tags e tarefas em lote
+      const enrichedLeads = await getEnrichedLeadsBatch(leads);
+      
+      // Mapear leads enriquecidos de volta para os seus estágios
+      const enrichedLeadsByStage: Record<string, any[]> = {};
+      enrichedLeads.forEach(lead => {
+        if (!enrichedLeadsByStage[lead.stage_id]) {
+          enrichedLeadsByStage[lead.stage_id] = [];
+        }
+        enrichedLeadsByStage[lead.stage_id].push(lead);
+      });
+      
       // Build final stages list
       return stages.map(stage => ({
         ...stage,
-        leads: leadsByStageRaw[stage.id] || [],
+        leads: enrichedLeadsByStage[stage.id] || [],
         total_lead_count: totalCountsByStage[stage.id] || 0,
         has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
       }));
