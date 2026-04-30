@@ -293,6 +293,6 @@ export default function Properties() {
         <VistaImportDialog open={vistaOpen} onOpenChange={setVistaOpen} />
         <ImoviewImportDialog open={imoviewOpen} onOpenChange={setImoviewOpen} />
       </div>
-    </AppLayout>
+    
   );
 }
