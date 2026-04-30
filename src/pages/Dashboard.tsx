@@ -115,6 +115,7 @@ export default function Dashboard() {
 
 
   return (
+    <AppLayout title="Dashboard" disableMainScroll>
       <div className="flex flex-col gap-3 animate-fade-in h-full overflow-hidden">
 
         {/* Filters bar */}
@@ -189,7 +190,7 @@ export default function Dashboard() {
           </Tabs>
         </div>
       </div>
-    
+    </AppLayout>
   );
 }
 

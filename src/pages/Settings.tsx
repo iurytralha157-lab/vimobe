@@ -106,6 +106,7 @@ export default function Settings() {
   const CurrentIcon = currentTab?.icon;
 
   return (
+    <AppLayout title={t.settings.title}>
       <div className="animate-in">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           {isMobile ? (
@@ -227,6 +228,6 @@ export default function Settings() {
           )}
         </Tabs>
       </div>
-    
+    </AppLayout>
   );
 }

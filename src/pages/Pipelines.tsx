@@ -767,10 +767,11 @@ export default function Pipelines() {
   };
 
   return (
-    <div className={cn(
-      "flex flex-col h-full overflow-hidden",
-      isMobile && "pb-24"
-    )}>
+    <AppLayout title="Pipeline" disableMainScroll>
+      <div className={cn(
+        "flex flex-col h-full overflow-hidden",
+        isMobile && "pb-24"
+      )}>
         {/* Pipeline Selector + Toolbar */}
         {/* Mobile: Single compact row */}
         {isMobile ? (
@@ -1616,5 +1617,6 @@ export default function Pipelines() {
           />
         )}
       </div>
+    </AppLayout>
   );
 }

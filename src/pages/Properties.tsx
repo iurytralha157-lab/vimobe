@@ -108,13 +108,16 @@ export default function Properties() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AppLayout title="Imóveis">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
+    <AppLayout title="Imóveis">
       <div className="space-y-4 sm:space-y-6 animate-in">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -293,6 +296,6 @@ export default function Properties() {
         <VistaImportDialog open={vistaOpen} onOpenChange={setVistaOpen} />
         <ImoviewImportDialog open={imoviewOpen} onOpenChange={setImoviewOpen} />
       </div>
-    
+    </AppLayout>
   );
 }

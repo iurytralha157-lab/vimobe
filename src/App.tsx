@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -12,7 +12,6 @@ import { AdminRoute } from "@/components/guards/AdminRoute";
 import { PermissionGuard } from "@/components/guards/PermissionGuard";
 import { ImpersonateBanner } from "@/components/admin/ImpersonateBanner";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { usePwaUpdate } from "@/hooks/use-pwa-update";
@@ -117,8 +116,8 @@ function isCustomDomain(): boolean {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 30, // 30 minutes (Keep data longer to prevent flashes)
-      gcTime: 1000 * 60 * 60,    // 1 hour
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 15,
       refetchOnWindowFocus: false,
       retry: 1,
     },
@@ -142,29 +141,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
   
   return <>{children}</>;
-}
-
-function AppLayoutWrapper() {
-  const location = useLocation();
-  // Map routes to titles for the header
-  const getTitle = () => {
-    const path = location.pathname;
-    if (path === '/dashboard') return 'Dashboard';
-    if (path.startsWith('/crm/contacts')) return 'Contatos';
-    if (path.startsWith('/crm/pipelines')) return 'Pipelines';
-    if (path.startsWith('/properties')) return 'Imóveis';
-    if (path.startsWith('/settings')) return 'Configurações';
-    if (path.startsWith('/financeiro')) return 'Financeiro';
-    if (path.startsWith('/agenda')) return 'Agenda';
-    if (path.startsWith('/notifications')) return 'Notificações';
-    return '';
-  };
-
-  return (
-    <AppLayout title={getTitle()}>
-      <Outlet />
-    </AppLayout>
-  );
 }
 
 function AppRoutes() {
@@ -220,43 +196,6 @@ function AppRoutes() {
         <MetricsPanel />
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route element={<ProtectedRoute><AppLayoutWrapper /></ProtectedRoute>}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/crm/pipelines" element={<Pipelines />} />
-              <Route path="/crm/contacts" element={<Contacts />} />
-              <Route path="/crm/management" element={<AdminRoute><CRMManagement /></AdminRoute>} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/agenda" element={<Agenda />} />
-              <Route path="/properties" element={<Properties />} />
-              <Route path="/properties/new" element={<PropertyForm />} />
-              <Route path="/properties/:id/edit" element={<PropertyForm />} />
-              <Route path="/properties/rentals" element={<PropertyRentals />} />
-              <Route path="/properties/condominiums" element={<PropertyLocations />} />
-              <Route path="/properties/locations" element={<PropertyLocations />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/site" element={<AdminRoute><SiteSettings /></AdminRoute>} />
-              <Route path="/settings/integrations/meta" element={<MetaSettings />} />
-              <Route path="/crm/conversas" element={<Conversations />} />
-              <Route path="/help" element={<Help />} />
-              
-              {/* Financial Module */}
-              <Route path="/financeiro" element={<AdminRoute><FinancialDashboard /></AdminRoute>} />
-              <Route path="/financeiro/contas" element={<AdminRoute><FinancialEntries /></AdminRoute>} />
-              <Route path="/financeiro/contratos" element={<AdminRoute><Contracts /></AdminRoute>} />
-              <Route path="/financeiro/comissoes" element={<AdminRoute><Commissions /></AdminRoute>} />
-              <Route path="/financeiro/relatorios" element={<AdminRoute><FinancialReports /></AdminRoute>} />
-              <Route path="/financeiro/dre" element={<AdminRoute><FinancialDRE /></AdminRoute>} />
-              
-              {/* Telecom Module */}
-              <Route path="/plans" element={<ServicePlans />} />
-              <Route path="/coverage" element={<CoverageAreas />} />
-              <Route path="/telecom/customers" element={<TelecomCustomers />} />
-              <Route path="/telecom/billing" element={<TelecomBilling />} />
-              
-              {/* Automations */}
-              <Route path="/automations" element={<PermissionGuard permission="automations_view"><Automations /></PermissionGuard>} />
-            </Route>
-
             <Route path="/auth" element={renderAuthRoute()} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
@@ -282,19 +221,42 @@ function AppRoutes() {
             <Route path="/admin/audit" element={<SuperAdminRoute><AdminAudit /></SuperAdminRoute>} />
             <Route path="/admin/onboarding" element={<SuperAdminRoute><AdminOnboarding /></SuperAdminRoute>} />
             
+            {/* Regular Routes */}
             <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
+            <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+            <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+            <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
+            <Route path="/properties/new" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
+            <Route path="/properties/:id/edit" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
+            <Route path="/properties/rentals" element={<ProtectedRoute><PropertyRentals /></ProtectedRoute>} />
+            <Route path="/properties/condominiums" element={<ProtectedRoute><PropertyLocations /></ProtectedRoute>} />
+            <Route path="/properties/locations" element={<ProtectedRoute><PropertyLocations /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/site" element={<ProtectedRoute><AdminRoute><SiteSettings /></AdminRoute></ProtectedRoute>} />
+            <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
+            <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
+            <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
             
-            {/* Public Site Preview */}
-            <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />
-            <Route path="/site/previsualização/*" element={<PreviewSiteWrapper />} />
+            {/* Financial Module */}
+            <Route path="/financeiro" element={<ProtectedRoute><AdminRoute><FinancialDashboard /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/contas" element={<ProtectedRoute><AdminRoute><FinancialEntries /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/contratos" element={<ProtectedRoute><AdminRoute><Contracts /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/comissoes" element={<ProtectedRoute><AdminRoute><Commissions /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/relatorios" element={<ProtectedRoute><AdminRoute><FinancialReports /></AdminRoute></ProtectedRoute>} />
+            <Route path="/financeiro/dre" element={<ProtectedRoute><AdminRoute><FinancialDRE /></AdminRoute></ProtectedRoute>} />
             
-            {/* Published Sites */}
-            <Route path="/sites/:slug/*" element={<PublishedSiteWrapper />} />
+            {/* Telecom Module */}
+            <Route path="/plans" element={<ProtectedRoute><ServicePlans /></ProtectedRoute>} />
+            <Route path="/coverage" element={<ProtectedRoute><CoverageAreas /></ProtectedRoute>} />
+            <Route path="/telecom/customers" element={<ProtectedRoute><TelecomCustomers /></ProtectedRoute>} />
+            <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
             
-            {/* Public API Documentation */}
-            <Route path="/docs/api" element={<APIDocs />} />
-            
-            <Route path="*" element={<NotFound />} />
+            {/* Automations */}
+            <Route path="/automations" element={<ProtectedRoute><PermissionGuard permission="automations_view"><Automations /></PermissionGuard></ProtectedRoute>} />
             
             {/* Public Site Preview */}
             <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />

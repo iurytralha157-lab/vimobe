@@ -325,20 +325,7 @@ export const AppSidebar = React.memo(function AppSidebar() {
                 <span>{getLabel(child.labelKey)}</span>
               </NavLink>)}
             </CollapsibleContent>
-          </Collapsible> : <NavLink 
-              to={item.children ? item.children[0].path : item.path} 
-              onMouseEnter={() => {
-                // Preload code for the route on hover
-                const path = item.children ? item.children[0].path : item.path;
-                if (path) {
-                  const link = document.createElement('link');
-                  link.rel = 'prefetch';
-                  link.href = path;
-                  document.head.appendChild(link);
-                }
-              }}
-              className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}
-            >
+          </Collapsible> : <NavLink to={item.children ? item.children[0].path : item.path} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors", "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-orange-100 dark:hover:bg-orange-900/30", (item.children ? isActiveParent(item) : location.pathname.startsWith(item.path)) && "text-sidebar-foreground bg-orange-100 dark:bg-orange-900/30", collapsed && "justify-center")}>
             <SidebarIcon item={item} size={20} />
             {!collapsed && <span>{getLabel(item.labelKey)}</span>}
           </NavLink>}
