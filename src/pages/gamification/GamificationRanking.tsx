@@ -226,9 +226,9 @@ export default function GamificationRanking() {
       </div>
 
       {/* RIGHT SIDE: LIST (The Field) */}
-      <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-full">
-        <div className="p-6 border-b bg-muted/30">
-          <h3 className="text-lg font-bold">
+      <div className="lg:col-span-4 flex flex-col overflow-hidden border rounded-2xl bg-card shadow-none h-[500px] lg:h-full">
+        <div className="p-4 lg:p-6 border-b bg-muted/30">
+          <h3 className="text-base lg:text-lg font-bold">
             Classificação Geral
           </h3>
         </div>
