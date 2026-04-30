@@ -32,12 +32,14 @@ function getInitials(name: string): string {
 
 export default function GamificationRanking() {
   const { organization } = useAuth();
+  const { t } = useLanguage();
   const [prevTopUserId, setPrevTopUserId] = useState<string | null>(null);
 
   const { data: leaderboard, isLoading, refetch } = useQuery({
     queryKey: ['gamification-leaderboard-full', organization?.id],
     queryFn: async () => {
       if (!organization?.id) return [];
+      
       const { data, error } = await supabase
         .from('user_gamification_stats' as any)
         .select(`
@@ -53,6 +55,26 @@ export default function GamificationRanking() {
         .order('total_points', { ascending: false });
       
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .eq('organization_id', organization.id);
+        
+        if (profileError) throw profileError;
+        
+        return profiles.map(p => ({
+          id: p.id,
+          user_id: p.id,
+          total_points: 0,
+          profiles: {
+            full_name: p.full_name,
+            avatar_url: p.avatar_url
+          }
+        })) as unknown as LeaderboardUser[];
+      }
+
       return data as unknown as LeaderboardUser[];
     },
     enabled: !!organization?.id,
