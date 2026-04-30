@@ -40,25 +40,25 @@ export default function GamificationRanking() {
     queryFn: async () => {
       if (!organization?.id) return [];
       
-      // 1. Buscamos as pontuações
+      // 1. Buscamos as pontuações (Stats)
       const { data: statsData, error: statsError } = await supabase
-        .from('user_gamification_stats' as any)
-        .select('*')
+        .from('user_gamification_stats')
+        .select('user_id, total_points')
         .eq('organization_id', organization.id);
       
       if (statsError) throw statsError;
 
-      // 2. Buscamos os usuários (corretores) da organização
+      // 2. Buscamos os usuários (Profiles)
       const { data: userData, error: userError } = await supabase
-        .from('users' as any)
+        .from('users')
         .select('id, name, avatar_url')
         .eq('organization_id', organization.id);
 
       if (userError) throw userError;
 
-      // 3. Mesclamos os dados manualmente para evitar erros de relacionamento (join)
-      const mergedData = (userData || []).map(user => {
-        const stats = (statsData || []).find(s => s.user_id === user.id);
+      // 3. Mesclamos os dados manualmente para evitar erros de tipagem e join
+      const mergedData = (userData || []).map((user: any) => {
+        const stats = (statsData || []).find((s: any) => s.user_id === user.id);
         return {
           id: user.id,
           user_id: user.id,
