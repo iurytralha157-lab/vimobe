@@ -362,25 +362,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchProfile, checkMultiOrg]); // This is now safe as dependencies are stable
 
   const signIn = async (email: string, password: string) => {
+    console.log("[Auth] Starting signIn for:", email);
     setLoading(true);
     try {
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error && data.user) {
-        console.log("SignIn successful, refreshing data...");
-        await Promise.all([
+      
+      if (error) {
+        console.error("[Auth] signIn error:", error);
+        return { error };
+      }
+
+      if (data.user) {
+        console.log("[Auth] signIn successful, user:", data.user.id);
+        
+        // Timeout for profile refresh to prevent infinite loader if DB is slow
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 5000));
+        const refreshPromise = Promise.all([
           fetchProfile(data.user.id),
           checkMultiOrg(data.user.id)
         ]);
+
+        await Promise.race([refreshPromise, timeoutPromise]);
+        console.log("[Auth] signIn data refresh complete (or timed out)");
         
-        setTimeout(() => {
-          logAuditAction("login", "session", data.user.id, undefined, {
-            email,
-            login_at: new Date().toISOString(),
-          }).catch(console.error);
-        }, 0);
+        // Log audit action in background
+        logAuditAction("login", "session", data.user.id, undefined, {
+          email,
+          login_at: new Date().toISOString(),
+        }).catch(err => console.error("[Auth] logAuditAction failed:", err));
       }
-      return { error };
+      return { error: null };
+    } catch (e) {
+      console.error("[Auth] signIn exception:", e);
+      return { error: e as Error };
     } finally {
+      console.log("[Auth] signIn finally, setting loading to false");
       setLoading(false);
     }
   };
