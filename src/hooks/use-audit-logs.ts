@@ -120,6 +120,10 @@ export async function logAuditAction(
       user_agent: navigator.userAgent,
     }]);
   } catch (error) {
-    console.error('Failed to log audit action:', error);
+    // Silent fail for audit logs to prevent breaking the user experience
+    // especially during login or critical actions
+    if (import.meta.env.DEV) {
+      console.warn('Audit log suppressed:', error);
+    }
   }
 }

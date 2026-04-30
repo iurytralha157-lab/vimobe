@@ -119,7 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!profileData.is_active && !superAdmin) {
             console.warn('User is deactivated, signing out');
             await supabase.auth.signOut();
-            alert('Sua conta foi desativada. Entre em contato com o administrador.');
+            // Removed intrusive alert to prevent blocking the UI
+            // toast handles this in the UI
+
             return false;
           }
 
@@ -144,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (!orgData.is_active && !superAdmin && !activeImpersonation) {
                 console.warn('Organization is deactivated, signing out');
                 await supabase.auth.signOut();
-                alert('Sua organização foi desativada. Entre em contato com o suporte.');
+                // Removed intrusive alert
                 return false;
               }
               setOrganization(orgData as Organization);
@@ -289,12 +291,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session.user);
 
-        // Usar setTimeout para evitar deadlock do Supabase
-        setTimeout(() => {
-          if (isMounted) {
+        // Use a small delay to ensure the session is fully propagated in Supabase
+        // and avoid RLS race conditions during immediate login
+        const timer = setTimeout(() => {
+          if (isMounted && session?.user?.id) {
             fetchProfile(session.user.id);
           }
-        }, 0);
+        }, 150);
+        return () => clearTimeout(timer);
+
       }
     );
 
