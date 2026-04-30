@@ -280,9 +280,6 @@ export default function GamificationRanking() {
           )}
         </div>
 
-        <div className="p-4 border-t bg-muted/20 text-center">
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Atualizado em tempo real</p>
-        </div>
       </div>
     </div>
   );
