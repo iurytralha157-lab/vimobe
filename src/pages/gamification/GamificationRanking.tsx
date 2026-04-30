@@ -87,7 +87,7 @@ export default function GamificationRanking() {
           event: '*',
           schema: 'public',
           table: 'user_gamification_stats',
-          filter: `organization_id=eq.${organization.id}`
+          // filter: `organization_id=eq.${organization.id}`
         },
         () => {
           refetch();
