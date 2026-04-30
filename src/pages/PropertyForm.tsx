@@ -191,20 +191,27 @@ export default function PropertyForm() {
   const { user, profile, isSuperAdmin } = useAuth();
 
   const [formData, setFormData] = useState<PropertyFormData>(() => {
+    // Basic initialization
+    const data = { ...initialFormData };
+    
+    // Attempt to restore from draft if not editing
     if (!id) {
       try {
         const raw = localStorage.getItem(DRAFT_KEY);
+        // user is available here because useAuth was moved above
         const meta = user?.user_metadata?.property_draft;
         if (raw || meta) {
           return { 
-            ...initialFormData, 
+            ...data, 
             ...(meta ? meta : {}),
             ...(raw ? JSON.parse(raw) : {}) 
           };
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[PropertyForm] Error restoring draft:", e);
+      }
     }
-    return initialFormData;
+    return data;
   });
   const [hasDraft] = useState(() => !id && (!!localStorage.getItem(DRAFT_KEY) || !!user?.user_metadata?.property_draft));
   const [activeTab, setActiveTab] = useState('owner');
