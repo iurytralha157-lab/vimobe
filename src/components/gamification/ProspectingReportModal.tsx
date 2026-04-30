@@ -67,7 +67,7 @@ export function ProspectingReportModal() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('prospecting_reports').insert({
+      const { error } = await supabase.from('prospecting_reports' as any).insert({
         user_id: user.id,
         organization_id: organization.id,
         calls: values.calls,
