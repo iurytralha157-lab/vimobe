@@ -210,6 +210,7 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="ranking" className="mt-3 space-y-3">
               <GamificationStatsWidget />
+              <MissionsWidget />
               <LeaderboardWidget />
             </TabsContent>
           </Tabs>
