@@ -204,7 +204,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                width={55}
+                width={isMobile ? 40 : 55}
                 allowDecimals={false}
                 tickCount={yTickCount}
                 domain={[0, 'auto']}
