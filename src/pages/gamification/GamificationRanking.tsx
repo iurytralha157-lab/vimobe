@@ -47,7 +47,7 @@ export default function GamificationRanking() {
           user_id,
           total_points,
           profiles:user_id (
-            full_name,
+            name,
             avatar_url
           )
         `)
