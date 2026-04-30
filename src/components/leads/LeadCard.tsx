@@ -189,10 +189,7 @@ export const LeadCard = memo(function LeadCard({
                   </span>
                   {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
                 </>
-              ) : (
-                // Indicador visual discreto de que existem detalhes (tags/tarefas) que podem ser carregados
-                <div className="h-4 w-1 bg-muted rounded-full" />
-              )}
+              ) : null}
           </div>
 
 
