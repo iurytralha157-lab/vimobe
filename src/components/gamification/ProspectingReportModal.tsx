@@ -63,30 +63,45 @@ export function ProspectingReportModal() {
   });
 
   async function onSubmit(values: FormValues) {
-    if (!user || !organization) return;
+    console.log("Submitting report with values:", values);
+    if (!user || !organization) {
+      console.error("Missing user or organization", { user, organization });
+      toast.error("Erro de autenticação. Tente recarregar a página.");
+      return;
+    }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('prospecting_reports' as any).insert({
+      const dataToInsert = {
         user_id: user.id,
         organization_id: organization.id,
         calls: values.calls,
         messages: values.messages,
         contacts: values.contacts,
         source: values.source,
-        description: values.description,
-      });
+        description: values.description || null,
+      };
+      
+      console.log("Inserting data into Supabase:", dataToInsert);
 
-      if (error) throw error;
+      const { data, error } = await supabase.from('prospecting_reports' as any).insert(dataToInsert).select();
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+      
+      console.log("Insert success:", data);
 
       toast.success('Relatório de prospecção enviado! Pontos creditados.');
       queryClient.invalidateQueries({ queryKey: ['gamification-stats'] });
       queryClient.invalidateQueries({ queryKey: ['gamification-leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification-recent-activities'] });
       setOpen(false);
       form.reset();
     } catch (error: any) {
-      console.error('Error submitting report:', error);
-      toast.error('Erro ao enviar relatório: ' + error.message);
+      console.error('Final error submitting report:', error);
+      toast.error('Erro ao enviar relatório: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
