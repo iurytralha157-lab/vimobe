@@ -188,21 +188,15 @@ export default function Dashboard() {
 
           {/* Charts Tabs */}
           <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
-              <TabsTrigger value="ranking" className="text-xs">Ranking</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
               {funnelComponent}
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-            </TabsContent>
-            <TabsContent value="ranking" className="mt-3 space-y-3">
-              <GamificationStatsWidget />
-              <MissionsWidget />
-              <LeaderboardWidget />
             </TabsContent>
           </Tabs>
         </div>
