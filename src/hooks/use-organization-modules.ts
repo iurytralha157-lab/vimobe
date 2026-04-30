@@ -17,6 +17,7 @@ export type ModuleName =
   | 'reports'
   | 'automations'  // Automações
   | 'performance'  // Performance de Corretores
+  | 'gamification'   // Gamificação
   | 'webhooks'     // Webhooks
   | 'site'         // Site Integrado
   | 'ai_agent'    // Agente de IA
