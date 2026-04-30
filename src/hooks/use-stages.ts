@@ -214,10 +214,22 @@ export function useStagesWithLeads(
         leads.push(...stageLeads);
       });
       
+      // Enriquecer leads com tags e tarefas em lote
+      const enrichedLeads = await getEnrichedLeadsBatch(leads);
+      
+      // Mapear leads enriquecidos de volta para os seus estágios
+      const enrichedLeadsByStage: Record<string, any[]> = {};
+      enrichedLeads.forEach(lead => {
+        if (!enrichedLeadsByStage[lead.stage_id]) {
+          enrichedLeadsByStage[lead.stage_id] = [];
+        }
+        enrichedLeadsByStage[lead.stage_id].push(lead);
+      });
+      
       // Build final stages list
       return stages.map(stage => ({
         ...stage,
-        leads: leadsByStageRaw[stage.id] || [],
+        leads: enrichedLeadsByStage[stage.id] || [],
         total_lead_count: totalCountsByStage[stage.id] || 0,
         has_more: (totalCountsByStage[stage.id] || 0) > LEADS_PER_STAGE,
       }));
@@ -636,11 +648,10 @@ export function useLoadMoreLeads() {
       
       if (error) throw error;
       
-      // Buscar tags dos novos leads
-      const leadIds = (data || []).map((l: any) => l.id);
-      let tagsByLead: Record<string, { id: string; name: string; color: string }[]> = {};
+      // Buscar tags e tarefas dos novos leads
+      const enrichedLeads = await getEnrichedLeadsBatch(data || []);
       
-      return { stageId, leads: data || [] };
+      return { stageId, leads: enrichedLeads };
     },
     onSuccess: ({ stageId, leads }, { pipelineId, filterUserId, filters }) => {
       const dateFromISO = filters?.dateRange?.from?.toISOString();
