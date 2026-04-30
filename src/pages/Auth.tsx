@@ -197,8 +197,9 @@ export default function Auth() {
       });
       
       // Determine destination based on common logic or fallback
+      // Using window.location.href for a clean redirect
       setTimeout(() => {
-        navigate("/dashboard");
+        window.location.href = "/dashboard";
       }, 500);
     } catch (error) {
       loginAttempts.recordFailedAttempt();
