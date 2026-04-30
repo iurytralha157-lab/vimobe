@@ -929,6 +929,6 @@ export default function Contacts() {
           onOpenChange={setImportDialogOpen}
         />
       </div>
-    </AppLayout>
+    
   );
 }
