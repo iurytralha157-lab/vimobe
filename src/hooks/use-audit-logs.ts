@@ -122,7 +122,7 @@ export async function logAuditAction(
   } catch (error) {
     // Silent fail for audit logs to prevent breaking the user experience
     // especially during login or critical actions
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.warn('Audit log suppressed:', error);
     }
   }
