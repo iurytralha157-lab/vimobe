@@ -56,6 +56,26 @@ export function LeaderboardWidget() {
         .limit(10);
       
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        const { data: users, error: userError } = await supabase
+          .from('users' as any)
+          .select('id, name, avatar_url')
+          .eq('organization_id', organization.id);
+        
+        if (userError) throw userError;
+        
+        return (users || []).map((u: any) => ({
+          id: u.id,
+          user_id: u.id,
+          total_points: 0,
+          profiles: {
+            full_name: u.name,
+            avatar_url: u.avatar_url
+          }
+        })) as unknown as LeaderboardUser[];
+      }
+
       return data as unknown as LeaderboardUser[];
     },
     enabled: !!organization?.id,

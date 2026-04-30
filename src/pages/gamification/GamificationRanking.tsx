@@ -58,8 +58,8 @@ export default function GamificationRanking() {
 
       if (!data || data.length === 0) {
         const { data: profiles, error: profileError } = await supabase
-          .from('profiles' as any)
-          .select('id, full_name, avatar_url')
+          .from('users' as any)
+          .select('id, name, avatar_url')
           .eq('organization_id', organization.id);
         
         if (profileError) throw profileError;
@@ -69,7 +69,7 @@ export default function GamificationRanking() {
           user_id: p.id,
           total_points: 0,
           profiles: {
-            full_name: p.full_name,
+            full_name: p.name,
             avatar_url: p.avatar_url
           }
         })) as unknown as LeaderboardUser[];
