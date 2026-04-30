@@ -266,7 +266,7 @@ export default function GamificationRanking() {
                 </Avatar>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate leading-tight">{user.profiles?.full_name}</p>
+                  <p className="text-sm font-bold truncate leading-tight">{user.profiles?.name}</p>
                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Corretor Ativo</p>
                 </div>
 
