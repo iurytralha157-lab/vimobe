@@ -202,9 +202,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkMultiOrg = useCallback(async (userId: string) => {
     return performanceTracker.trackTimed("checkMultiOrg", async () => {
       try {
-        // Se já temos uma organização selecionada no perfil atual, não forçamos a seleção novamente
-        // Isso evita o loop infinito quando o estado do auth muda e dispara o checkMultiOrg
-        if (profile?.organization_id) {
+        // We use a local check instead of depending on the profile state directly
+        // to avoid infinite loops when profile changes
+        const { data: userProfile } = await supabase
+          .from("users")
+          .select("organization_id")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (userProfile?.organization_id) {
           setNeedsOrgSelection(false);
           return;
         }
@@ -224,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setNeedsOrgSelection(false);
       }
     });
-  }, [profile?.organization_id]);
+  }, []); // Removed profile dependency to break the loop
 
   useEffect(() => {
     let isMounted = true;
@@ -330,7 +336,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, checkMultiOrg]);
+  }, [fetchProfile, checkMultiOrg]); // This is now safe as dependencies are stable
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
