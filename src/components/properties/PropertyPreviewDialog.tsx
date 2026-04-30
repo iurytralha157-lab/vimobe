@@ -334,7 +334,7 @@ export function PropertyPreviewDialog({
               
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {property.tipo_de_imovel && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-muted/30">
                     <Home className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Tipo:</span>
                     <span className="font-medium ml-auto">{property.tipo_de_imovel}</span>
