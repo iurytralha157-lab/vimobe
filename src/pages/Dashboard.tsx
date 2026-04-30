@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ProspectingReportModal } from '@/components/gamification/ProspectingReportModal';
 import { GamificationStatsWidget } from '@/components/gamification/GamificationStatsWidget';
 import { LeaderboardWidget } from '@/components/gamification/LeaderboardWidget';
+import { MissionsWidget } from '@/components/gamification/MissionsWidget';
 
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
@@ -161,12 +162,15 @@ export default function Dashboard() {
             </div>
 
             {/* Gamification Row */}
-            <div className="grid grid-cols-3 gap-3 h-32 shrink-0">
-              <div className="col-span-1">
+            <div className="grid grid-cols-12 gap-3 shrink-0">
+              <div className="col-span-3">
                 <GamificationStatsWidget />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-6">
                 <LeaderboardWidget />
+              </div>
+              <div className="col-span-3">
+                <MissionsWidget />
               </div>
             </div>
 
@@ -206,6 +210,7 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="ranking" className="mt-3 space-y-3">
               <GamificationStatsWidget />
+              <MissionsWidget />
               <LeaderboardWidget />
             </TabsContent>
           </Tabs>
