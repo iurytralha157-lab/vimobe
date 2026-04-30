@@ -159,8 +159,8 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
       </CardHeader>
       <CardContent className="pb-4 flex-1 flex flex-col">
         {/* Chart */}
-        <div className="flex-1 min-h-[200px]">
-          <ResponsiveContainer width="100%" height="100%" onResize={handleResize}>
+        <div className="flex-1 min-h-[300px] w-full">
+          <ResponsiveContainer width="100%" height={300} onResize={handleResize}>
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: 12, bottom: 0 }}
