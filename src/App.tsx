@@ -117,8 +117,8 @@ function isCustomDomain(): boolean {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 15,
+      staleTime: 1000 * 60 * 30, // 30 minutes (Keep data longer to prevent flashes)
+      gcTime: 1000 * 60 * 60,    // 1 hour
       refetchOnWindowFocus: false,
       retry: 1,
     },
