@@ -188,6 +188,7 @@ export default function PropertyForm() {
   const { id } = useParams();
   const isEditing = !!id;
   const isMobile = useIsMobile();
+  const { user, profile, isSuperAdmin } = useAuth();
 
   const [formData, setFormData] = useState<PropertyFormData>(() => {
     if (!id) {
