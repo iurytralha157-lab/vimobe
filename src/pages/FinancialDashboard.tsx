@@ -42,8 +42,7 @@ export default function FinancialDashboard() {
 
   if (isLoading) {
     return (
-      <AppLayout title="Dashboard Financeiro">
-        <div className="space-y-4 md:space-y-6">
+      <div className="space-y-4 md:space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 md:h-32" />)}
           </div>
