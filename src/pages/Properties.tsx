@@ -115,7 +115,6 @@ export default function Properties() {
   }
 
   return (
-    <AppLayout title="Imóveis">
       <div className="space-y-4 sm:space-y-6 animate-in">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
