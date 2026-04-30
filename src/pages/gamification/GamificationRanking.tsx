@@ -58,13 +58,13 @@ export default function GamificationRanking() {
 
       if (!data || data.length === 0) {
         const { data: profiles, error: profileError } = await supabase
-          .from('profiles')
+          .from('profiles' as any)
           .select('id, full_name, avatar_url')
           .eq('organization_id', organization.id);
         
         if (profileError) throw profileError;
         
-        return profiles.map(p => ({
+        return (profiles || []).map((p: any) => ({
           id: p.id,
           user_id: p.id,
           total_points: 0,
