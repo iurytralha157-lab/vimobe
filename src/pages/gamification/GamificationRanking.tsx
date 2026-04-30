@@ -240,7 +240,7 @@ export default function GamificationRanking() {
               <div 
                 key={user.id} 
                 className={cn(
-                  "group flex items-center gap-3 p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5",
+                  "group flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl transition-all duration-300 border border-transparent hover:border-indigo-500/20 hover:bg-indigo-500/5",
                   isTop3 && "bg-muted/50"
                 )}
               >
