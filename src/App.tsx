@@ -264,6 +264,7 @@ function AppRoutes() {
             <Route path="/gamificacao" element={<ProtectedRoute><GamificationLayout /></ProtectedRoute>}>
               <Route index element={<GamificationDashboard />} />
               <Route path="ranking" element={<GamificationRanking />} />
+              <Route path="historico" element={<GamificationHistory />} />
               <Route path="configuracoes" element={<AdminRoute><GamificationAdmin /></AdminRoute>} />
             </Route>
 
