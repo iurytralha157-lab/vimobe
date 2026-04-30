@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { performanceTracker } from '@/lib/performance';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ProspectingReportModal } from '@/components/gamification/ProspectingReportModal';
+import { GamificationStatsWidget } from '@/components/gamification/GamificationStatsWidget';
+import { LeaderboardWidget } from '@/components/gamification/LeaderboardWidget';
 
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { KPICards } from '@/components/dashboard/KPICards';
@@ -119,26 +122,29 @@ export default function Dashboard() {
       <div className="flex flex-col gap-3 animate-fade-in h-full overflow-hidden">
 
         {/* Filters bar */}
-        <DashboardFilters
-          datePreset={datePreset}
-          onDatePresetChange={setDatePreset}
-          customDateRange={customDateRange}
-          onCustomDateRangeChange={setCustomDateRange}
-          teamId={teamId}
-          onTeamChange={setTeamId}
-          userId={userId}
-          onUserChange={setUserId}
-          source={source}
-          onSourceChange={setSource}
-          campaignId={campaignId}
-          onCampaignChange={setCampaignId}
-          adSetId={adSetId}
-          onAdSetChange={setAdSetId}
-          adId={adId}
-          onAdChange={setAdId}
-          onClear={clearFilters}
-          hasActiveFilters={hasActiveFilters}
-        />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <DashboardFilters
+            datePreset={datePreset}
+            onDatePresetChange={setDatePreset}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={setCustomDateRange}
+            teamId={teamId}
+            onTeamChange={setTeamId}
+            userId={userId}
+            onUserChange={setUserId}
+            source={source}
+            onSourceChange={setSource}
+            campaignId={campaignId}
+            onCampaignChange={setCampaignId}
+            adSetId={adSetId}
+            onAdSetChange={setAdSetId}
+            adId={adId}
+            onAdChange={setAdId}
+            onClear={clearFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+          <ProspectingReportModal />
+        </div>
 
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-3 flex-1 min-h-0">
@@ -152,6 +158,16 @@ export default function Dashboard() {
                 propertyCount={propertyCount}
                 siteVisits={siteVisits}
               />
+            </div>
+
+            {/* Gamification Row */}
+            <div className="grid grid-cols-3 gap-3 h-32 shrink-0">
+              <div className="col-span-1">
+                <GamificationStatsWidget />
+              </div>
+              <div className="col-span-2">
+                <LeaderboardWidget />
+              </div>
             </div>
 
             {/* Evolution chart - fills remaining height */}
@@ -180,12 +196,17 @@ export default function Dashboard() {
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
+              <TabsTrigger value="ranking" className="text-xs">Ranking</TabsTrigger>
             </TabsList>
             <TabsContent value="funnel" className="mt-3">
               {funnelComponent}
             </TabsContent>
             <TabsContent value="evolution" className="mt-3">
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
+            </TabsContent>
+            <TabsContent value="ranking" className="mt-3 space-y-3">
+              <GamificationStatsWidget />
+              <LeaderboardWidget />
             </TabsContent>
           </Tabs>
         </div>
