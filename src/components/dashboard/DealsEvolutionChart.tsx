@@ -167,8 +167,8 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
               data={data}
               margin={{ 
                 top: 10, 
-                right: isMobile ? 0 : 10, 
-                left: isMobile ? -35 : 12, 
+                right: isMobile ? 10 : 10, 
+                left: isMobile ? -15 : 12, 
                 bottom: 0 
               }}
             >
