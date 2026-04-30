@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -63,30 +63,45 @@ export function ProspectingReportModal() {
   });
 
   async function onSubmit(values: FormValues) {
-    if (!user || !organization) return;
+    console.log("Submitting report with values:", values);
+    if (!user || !organization) {
+      console.error("Missing user or organization", { user, organization });
+      toast.error("Erro de autenticação. Tente recarregar a página.");
+      return;
+    }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('prospecting_reports' as any).insert({
+      const dataToInsert = {
         user_id: user.id,
         organization_id: organization.id,
         calls: values.calls,
         messages: values.messages,
         contacts: values.contacts,
         source: values.source,
-        description: values.description,
-      });
+        description: values.description || null,
+      };
+      
+      console.log("Inserting data into Supabase:", dataToInsert);
 
-      if (error) throw error;
+      const { data, error } = await supabase.from('prospecting_reports' as any).insert(dataToInsert).select();
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+      
+      console.log("Insert success:", data);
 
       toast.success('Relatório de prospecção enviado! Pontos creditados.');
       queryClient.invalidateQueries({ queryKey: ['gamification-stats'] });
       queryClient.invalidateQueries({ queryKey: ['gamification-leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['gamification-recent-activities'] });
       setOpen(false);
       form.reset();
     } catch (error: any) {
-      console.error('Error submitting report:', error);
-      toast.error('Erro ao enviar relatório: ' + error.message);
+      console.error('Final error submitting report:', error);
+      toast.error('Erro ao enviar relatório: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
@@ -113,6 +128,9 @@ export function ProspectingReportModal() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto px-1">
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-xs text-amber-800 mb-2">
+              ⚠️ Certifique-se de que os dados estão corretos antes de enviar.
+            </div>
             <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
