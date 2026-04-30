@@ -160,6 +160,16 @@ export default function Dashboard() {
               />
             </div>
 
+            {/* Gamification Row */}
+            <div className="grid grid-cols-3 gap-3 h-32 shrink-0">
+              <div className="col-span-1">
+                <GamificationStatsWidget />
+              </div>
+              <div className="col-span-2">
+                <LeaderboardWidget />
+              </div>
+            </div>
+
             {/* Evolution chart - fills remaining height */}
             <div className="flex-1 min-h-0">
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
