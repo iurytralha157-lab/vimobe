@@ -146,9 +146,9 @@ export default function GamificationRanking() {
             <h2 className="text-lg lg:text-2xl font-black italic uppercase tracking-tighter text-indigo-900 dark:text-indigo-100">Arena de Elite</h2>
           </div>
 
-          <div className="absolute top-8 right-8 text-right">
-            <div className="flex items-center gap-1 text-emerald-500 font-bold animate-pulse">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="absolute top-4 lg:top-8 right-4 lg:right-8 text-right">
+            <div className="flex items-center gap-1 text-emerald-500 text-[10px] lg:text-base font-bold animate-pulse">
+              <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500" />
               LIVE
             </div>
           </div>
