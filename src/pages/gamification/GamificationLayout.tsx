@@ -15,6 +15,7 @@ export default function GamificationLayout() {
     const items = [
       { value: '/gamificacao', label: 'Dashboard', icon: LayoutDashboard },
       { value: '/gamificacao/ranking', label: 'Ranking', icon: TrendingUp },
+      { value: '/gamificacao/historico', label: 'Histórico', icon: History },
     ];
 
     if (profile?.role === 'admin' || isSuperAdmin) {
