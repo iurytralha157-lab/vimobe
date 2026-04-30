@@ -360,17 +360,10 @@ export default function Contacts() {
             </DropdownMenu>
           </div>
         ) : (
-          <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {/* Title & Count */}
-              <div className="flex items-center gap-2 pr-2 border-r mr-1">
-                <Badge variant="secondary" className="h-6 px-2 text-xs bg-muted/50 border-none font-bold">
-                  {isLoading ? '...' : totalCount}
-                </Badge>
-              </div>
-
-              {/* Search */}
-              <div className="relative w-[180px] lg:w-[240px]">
+          <div className="bg-card rounded-xl p-1.5 px-3 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-1.5 w-full">
+              {/* Search - Always visible in desktop mode */}
+              <div className="relative flex-1 min-w-[150px] max-w-[300px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar..."
@@ -380,63 +373,109 @@ export default function Contacts() {
                 />
               </div>
 
+              {/* Individual Filters - Only on large screens */}
+              <div className="hidden xl:flex items-center gap-1.5">
+                <div className="h-6 w-[1px] bg-border mx-1" />
+                
+                {/* Pipeline */}
+                <Select value={selectedPipeline} onValueChange={(v) => {
+                  handleFilterChange(setSelectedPipeline)(v);
+                  setSelectedStage('all');
+                }}>
+                  <SelectTrigger className="w-[140px] h-9 border-none bg-transparent hover:bg-muted font-medium">
+                    <SelectValue placeholder="Pipeline" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas pipelines</SelectItem>
+                    {pipelines.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Stage */}
+                <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
+                  <SelectTrigger className="w-[140px] h-9 border-none bg-transparent hover:bg-muted font-medium">
+                    <SelectValue placeholder="Estágio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos estágios</SelectItem>
+                    {stages.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Consolidate extra filters into a single Popover for Medium screens */}
+              <div className="flex xl:hidden items-center gap-1.5">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("h-9 gap-2", (selectedPipeline !== 'all' || selectedStage !== 'all') && "border-primary text-primary")}>
+                      <Filter className="h-4 w-4" />
+                      <span>Pipeline</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-3 space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Pipeline</Label>
+                      <Select value={selectedPipeline} onValueChange={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Pipeline" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas pipelines</SelectItem>
+                          {pipelines.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Estágio</Label>
+                      <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Estágio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos estágios</SelectItem>
+                          {stages.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               <div className="h-6 w-[1px] bg-border mx-1" />
 
-              {/* Pipeline */}
-              <Select value={selectedPipeline} onValueChange={(v) => {
-                handleFilterChange(setSelectedPipeline)(v);
-                setSelectedStage('all');
-              }}>
-                <SelectTrigger className="w-[130px] lg:w-[150px] h-9 border-none bg-transparent hover:bg-muted font-medium">
-                  <SelectValue placeholder="Pipeline" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas pipelines</SelectItem>
-                  {pipelines.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Advanced Filters & Date - Always grouped on desktop */}
+              <div className="flex items-center gap-1.5 ml-auto">
+                <AdvancedFilters
+                  selectedAssignee={selectedAssignee}
+                  setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
+                  users={users}
+                  selectedTag={selectedTag}
+                  setSelectedTag={handleFilterChange(setSelectedTag)}
+                  tags={tags}
+                  selectedSource={selectedSource}
+                  setSelectedSource={handleFilterChange(setSelectedSource)}
+                  selectedDealStatus={selectedDealStatus}
+                  setSelectedDealStatus={handleFilterChange(setSelectedDealStatus)}
+                  activeCount={activeAdvancedCount}
+                />
 
-              {/* Stage */}
-              <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
-                <SelectTrigger className="w-[130px] lg:w-[150px] h-9 border-none bg-transparent hover:bg-muted font-medium">
-                  <SelectValue placeholder="Estágio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos estágios</SelectItem>
-                  {stages.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="h-6 w-[1px] bg-border mx-1" />
-
-              {/* Advanced Filters Popover */}
-              <AdvancedFilters
-                selectedAssignee={selectedAssignee}
-                setSelectedAssignee={handleFilterChange(setSelectedAssignee)}
-                users={users}
-                selectedTag={selectedTag}
-                setSelectedTag={handleFilterChange(setSelectedTag)}
-                tags={tags}
-                selectedSource={selectedSource}
-                setSelectedSource={handleFilterChange(setSelectedSource)}
-                selectedDealStatus={selectedDealStatus}
-                setSelectedDealStatus={handleFilterChange(setSelectedDealStatus)}
-                activeCount={activeAdvancedCount}
-              />
-
-              {/* Date Filter */}
-              <DateFilterPopover
-                datePreset={datePreset}
-                onDatePresetChange={handleFilterChange(setDatePreset)}
-                customDateRange={customDateRange}
-                onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
-                defaultPreset="last30days"
-                triggerClassName="rounded-lg"
-              />
+                <DateFilterPopover
+                  datePreset={datePreset}
+                  onDatePresetChange={handleFilterChange(setDatePreset)}
+                  customDateRange={customDateRange}
+                  onCustomDateRangeChange={handleFilterChange(setCustomDateRange)}
+                  defaultPreset="last30days"
+                  triggerClassName="h-9 min-w-[130px]"
+                />
+              </div>
 
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-3 text-muted-foreground hover:text-primary transition-colors">
