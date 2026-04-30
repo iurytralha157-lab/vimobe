@@ -144,6 +144,29 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AppLayoutWrapper() {
+  const location = useLocation();
+  // Map routes to titles for the header
+  const getTitle = () => {
+    const path = location.pathname;
+    if (path === '/dashboard') return 'Dashboard';
+    if (path.startsWith('/crm/contacts')) return 'Contatos';
+    if (path.startsWith('/crm/pipelines')) return 'Pipelines';
+    if (path.startsWith('/properties')) return 'Imóveis';
+    if (path.startsWith('/settings')) return 'Configurações';
+    if (path.startsWith('/financeiro')) return 'Financeiro';
+    if (path.startsWith('/agenda')) return 'Agenda';
+    if (path.startsWith('/notifications')) return 'Notificações';
+    return '';
+  };
+
+  return (
+    <AppLayout title={getTitle()}>
+      <Outlet />
+    </AppLayout>
+  );
+}
+
 function AppRoutes() {
   const { user, loading, profile, isSuperAdmin, impersonating, needsOrgSelection } = useAuth();
   
