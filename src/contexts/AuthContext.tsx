@@ -124,39 +124,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = useCallback(async (userId: string): Promise<boolean> => {
     return performanceTracker.trackTimed("fetchProfile", async () => {
       try {
-        console.log("Fetching profile for:", userId);
+        console.log("[Auth] Starting fetchProfile for:", userId);
+        
         // Fetch profile first (critical path). Super admin check runs in background
         // so it never blocks the UI from leaving the loading state.
-        const userResult = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("users")
           .select("id, organization_id, name, email, role, avatar_url, is_active, language")
           .eq("id", userId)
           .maybeSingle();
 
+        console.log("[Auth] Profile fetch result:", { hasData: !!profileData, error: profileError });
+
         // Kick off super admin check without awaiting; update state when ready.
         checkSuperAdmin(userId)
-          .then((isSA) => setIsSuperAdmin(isSA))
-          .catch((err) => console.warn("Background super admin check failed:", err));
+          .then((isSA) => {
+            console.log("[Auth] Super admin check result:", isSA);
+            setIsSuperAdmin(isSA);
+          })
+          .catch((err) => console.warn("[Auth] Background super admin check failed:", err));
 
-        if (userResult.error) {
-          console.error("Error fetching user profile record:", userResult.error);
+        if (profileError) {
+          console.error("[Auth] Error fetching user profile record:", profileError);
           return false;
         }
 
-        const profileData = userResult.data;
         if (profileData) {
-          // Note: isSuperAdmin will be updated asynchronously by the background check above.
           const superAdmin = profileData.role === "super_admin";
           if (superAdmin) setIsSuperAdmin(true);
           
           if (!profileData.is_active && !superAdmin) {
-            console.warn("User is deactivated, signing out");
+            console.warn("[Auth] User is deactivated, signing out");
             await supabase.auth.signOut();
             alert("Sua conta foi desativada. Entre em contato com o administrador.");
             return false;
           }
           
           setProfile(profileData as any);
+          console.log("[Auth] Profile state set");
 
           const storedImpersonating = localStorage.getItem("impersonating");
           const activeImpersonation: ImpersonateSession | null = storedImpersonating
@@ -166,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const orgIdToFetch = activeImpersonation?.orgId || profileData.organization_id;
           
           if (orgIdToFetch) {
-            console.log("Fetching organization:", orgIdToFetch);
+            console.log("[Auth] Fetching organization:", orgIdToFetch);
             const { data: orgData, error: orgError } = await supabase
               .from("organizations")
               .select("id, name, logo_url, theme_mode, accent_color, is_active")
@@ -174,34 +179,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .maybeSingle();
 
             if (orgError) {
-              console.error("Error fetching organization record:", orgError);
+              console.error("[Auth] Error fetching organization record:", orgError);
             } else if (orgData) {
               if (!orgData.is_active && !superAdmin && !activeImpersonation) {
-                console.warn("Organization is deactivated, signing out");
+                console.warn("[Auth] Organization is deactivated, signing out");
                 await supabase.auth.signOut();
                 alert("Sua organização foi desativada. Entre em contato com o suporte.");
                 return false;
               }
               setOrganization(orgData as Organization);
+              console.log("[Auth] Organization state set");
             }
           }
           
-          fetchFullProfile(userId).catch(err => console.error("Non-blocking fetchFullProfile error:", err));
+          fetchFullProfile(userId).catch(err => console.error("[Auth] Non-blocking fetchFullProfile error:", err));
           return true;
         } else {
-          console.warn("No user profile found in database for ID:", userId);
+          console.warn("[Auth] No user profile record found in database for ID:", userId);
           // If super admin and no profile, we still allow basic access.
           // Await the SA check here only as a fallback (rare path).
           const superAdminFallback = await checkSuperAdmin(userId);
           if (superAdminFallback) {
-            console.log("Super admin detected without explicit profile record");
+            console.log("[Auth] Super admin detected without explicit profile record (fallback)");
             setIsSuperAdmin(true);
             return true;
           }
           return false;
         }
       } catch (error) {
-        console.error("Critical error in fetchProfile:", error);
+        console.error("[Auth] Critical error in fetchProfile:", error);
         return false;
       }
     });
@@ -254,49 +260,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initialize = async () => {
       try {
-        console.log("Auth starting initialize...");
+        console.log("[Auth] Starting initialize...");
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
         
         if (error) {
-          console.error("Auth getSession error:", error);
+          console.error("[Auth] getSession error:", error);
           clearAllStates();
           setLoading(false);
           return;
         }
 
         if (!session) {
-          console.log("No session found during init");
+          console.log("[Auth] No session found during init");
           clearAllStates();
           setLoading(false);
           return;
         }
 
-        console.log("Session found, fetching profile for:", session.user.id);
+        console.log("[Auth] Session found, user:", session.user.id);
         setSession(session);
         setUser(session.user);
         
-        // Use Promise.race with a timeout for the entire profile fetch sequence
-        const timeoutPromise = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 8000));
+        // Race the entire profile fetch sequence against an 8s timeout
+        const timeoutPromise = new Promise<boolean>((resolve) => 
+          setTimeout(() => {
+            console.warn("[Auth] Initialization profile fetch timed out (8s)");
+            resolve(false);
+          }, 8000)
+        );
         
         const fetchPromise = (async () => {
-          await Promise.all([
-            fetchProfile(session.user.id),
-            checkMultiOrg(session.user.id)
-          ]);
-          return true;
+          try {
+            await Promise.all([
+              fetchProfile(session.user.id),
+              checkMultiOrg(session.user.id)
+            ]);
+            return true;
+          } catch (e) {
+            console.error("[Auth] fetchPromise failed:", e);
+            return false;
+          }
         })();
 
-        const profileSuccess = await Promise.race([fetchPromise, timeoutPromise]);
-        
-        console.log("Init sequence complete, profile success:", profileSuccess);
+        await Promise.race([fetchPromise, timeoutPromise]);
+        console.log("[Auth] Init profile/org fetch sequence complete");
       } catch (e) {
-        console.error("Auth init exception:", e);
+        console.error("[Auth] Exception during initialize:", e);
         clearAllStates();
       } finally {
         if (isMounted) {
-          console.log("Setting loading to false");
+          console.log("[Auth] Setting loading to false");
           setLoading(false);
         }
       }
@@ -347,25 +362,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchProfile, checkMultiOrg]); // This is now safe as dependencies are stable
 
   const signIn = async (email: string, password: string) => {
+    console.log("[Auth] Starting signIn for:", email);
     setLoading(true);
     try {
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error && data.user) {
-        console.log("SignIn successful, refreshing data...");
-        await Promise.all([
+      
+      if (error) {
+        console.error("[Auth] signIn error:", error);
+        return { error };
+      }
+
+      if (data.user) {
+        console.log("[Auth] signIn successful, user:", data.user.id);
+        
+        // Timeout for profile refresh to prevent infinite loader if DB is slow
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 5000));
+        const refreshPromise = Promise.all([
           fetchProfile(data.user.id),
           checkMultiOrg(data.user.id)
         ]);
+
+        await Promise.race([refreshPromise, timeoutPromise]);
+        console.log("[Auth] signIn data refresh complete (or timed out)");
         
-        setTimeout(() => {
-          logAuditAction("login", "session", data.user.id, undefined, {
-            email,
-            login_at: new Date().toISOString(),
-          }).catch(console.error);
-        }, 0);
+        // Log audit action in background
+        logAuditAction("login", "session", data.user.id, undefined, {
+          email,
+          login_at: new Date().toISOString(),
+        }).catch(err => console.error("[Auth] logAuditAction failed:", err));
       }
-      return { error };
+      return { error: null };
+    } catch (e) {
+      console.error("[Auth] signIn exception:", e);
+      return { error: e as Error };
     } finally {
+      console.log("[Auth] signIn finally, setting loading to false");
       setLoading(false);
     }
   };

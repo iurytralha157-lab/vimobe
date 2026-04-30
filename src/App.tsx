@@ -153,6 +153,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // If we have a user but no profile yet, show loader while it's fetching
   if (!profile && !isSuperAdmin) {
     console.log("ProtectedRoute: User found but no profile yet, waiting...");
+    // If we've been waiting too long or if loading is finished but still no profile,
+    // we should probably redirect to onboarding or show an error instead of hanging.
+    if (!loading) {
+      console.warn("ProtectedRoute: Loading finished but no profile found, redirecting to onboarding");
+      return <Navigate to="/onboarding" replace />;
+    }
     return <PageLoader />;
   }
 
