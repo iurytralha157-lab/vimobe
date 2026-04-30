@@ -205,7 +205,18 @@ export function StagesEditorDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md w-[90%] sm:w-full p-4 sm:p-6 rounded-lg">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">Gerenciar Colunas</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base sm:text-lg">Gerenciar Colunas</DialogTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 gap-1.5 text-xs border-dashed border-primary/50 text-primary hover:bg-primary/5"
+                onClick={() => setIsAdding(true)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nova Coluna
+              </Button>
+            </div>
             <DialogDescription className="text-xs sm:text-sm truncate">
               Reordene as colunas de "{pipelineName}"
             </DialogDescription>
