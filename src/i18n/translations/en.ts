@@ -58,7 +58,6 @@ export const en = {
     coverage: 'Coverage Areas',
     telecomCustomers: 'Customers',
     mySite: 'My Site',
-    install: 'Install App',
     more: 'More',
   },
 

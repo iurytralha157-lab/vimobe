@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrganizations } from '@/hooks/use-user-organizations';
@@ -6,12 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Loader2, Shield, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export default function SelectOrganization() {
   const { user, loading, profile, isSuperAdmin, switchOrganization } = useAuth();
   const navigate = useNavigate();
-  const [isSelecting, setIsSelecting] = useState(false);
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
 
   useEffect(() => {
@@ -29,21 +27,14 @@ export default function SelectOrganization() {
 
   // If only 1 org, auto-select
   useEffect(() => {
-    if (!loading && !orgsLoading && organizations.length === 1 && !profile?.organization_id && !isSelecting) {
-      console.log("Auto-selecting organization:", organizations[0].organization_id);
+    if (!loading && !orgsLoading && organizations.length === 1) {
       handleSelectOrg(organizations[0].organization_id);
     }
-  }, [loading, orgsLoading, organizations, profile?.organization_id, isSelecting]);
+  }, [loading, orgsLoading, organizations]);
 
   const handleSelectOrg = async (orgId: string) => {
-    if (isSelecting) return;
-    setIsSelecting(true);
-    try {
-      await switchOrganization(orgId);
-      navigate('/dashboard', { replace: true });
-    } finally {
-      setIsSelecting(false);
-    }
+    await switchOrganization(orgId);
+    navigate('/dashboard', { replace: true });
   };
 
   if (loading || orgsLoading) {
@@ -54,28 +45,10 @@ export default function SelectOrganization() {
     );
   }
 
-  if (organizations.length === 0) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center">
-        <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-        <h1 className="text-xl font-bold mb-2">Nenhuma organização encontrada</h1>
-        <p className="text-muted-foreground mb-6">Você ainda não está vinculado a nenhuma organização ativa.</p>
-        {isSuperAdmin ? (
-          <Button onClick={() => navigate('/admin')}>Ir para Painel Admin</Button>
-        ) : (
-          <Button variant="outline" onClick={() => switchOrganization('')}>Tentar novamente</Button>
-        )}
-      </div>
-    );
-  }
-
-  if (organizations.length === 1) {
+  if (organizations.length <= 1) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Acessando organização...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }

@@ -82,7 +82,7 @@ export default function APIDocs() {
             <div className="p-2 bg-primary rounded-lg">
               <Code2 className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Documentação da API</h1>
+            <h1 className="text-3xl font-bold tracking-tight">API Pública de Imóveis</h1>
           </div>
           <p className="text-lg text-muted-foreground">
             Integre os imóveis cadastrados no seu CRM em qualquer site ou sistema externo.
@@ -98,11 +98,11 @@ export default function APIDocs() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted border rounded-lg p-4 font-mono text-sm text-foreground flex items-center justify-between gap-2">
+            <div className="bg-slate-950 rounded-lg p-4 font-mono text-sm text-slate-200 flex items-center justify-between gap-2">
               <code className="break-all">{BASE_URL}</code>
               <button
                 onClick={() => copy(BASE_URL)}
-                className="p-1 hover:bg-muted-foreground/10 rounded flex-shrink-0"
+                className="p-1 hover:bg-slate-800 rounded flex-shrink-0"
               >
                 <Copy className="h-4 w-4" />
               </button>
@@ -121,7 +121,7 @@ export default function APIDocs() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted border rounded-lg p-4 font-mono text-sm text-foreground">
+            <div className="bg-slate-950 rounded-lg p-4 font-mono text-sm text-slate-200">
               <code>Authorization: Bearer sk_live_…</code>
             </div>
             <div className="flex items-start gap-2 text-sm bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
@@ -181,8 +181,8 @@ export default function APIDocs() {
                   </div>
                 </div>
 
-                <div className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto">
-                  <p className="text-muted-foreground mb-2">// Exemplo de URL</p>
+                <div className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
+                  <p className="text-slate-500 mb-2">// Exemplo de URL</p>
                   <code className="break-all">{BASE_URL}{ep.path}</code>
                 </div>
               </div>
@@ -198,7 +198,7 @@ export default function APIDocs() {
           <CardContent className="space-y-6">
             <div>
               <p className="text-sm font-semibold mb-2">curl</p>
-              <pre className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
+              <pre className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
 {`curl -H "Authorization: Bearer sk_live_…" \\
   "${BASE_URL}/properties?city=Goiania&purpose=venda&page=1&per_page=20"`}
               </pre>
@@ -206,7 +206,7 @@ export default function APIDocs() {
 
             <div>
               <p className="text-sm font-semibold mb-2">JavaScript (fetch)</p>
-              <pre className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto whitespace-pre-wrap">
+              <pre className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
 {`const res = await fetch(
   "${BASE_URL}/properties?purpose=venda",
   { headers: { Authorization: "Bearer " + process.env.IMOB_API_KEY } }
@@ -217,7 +217,7 @@ const { data, pagination } = await res.json();`}
 
             <div>
               <p className="text-sm font-semibold mb-2">Resposta</p>
-              <pre className="bg-muted border rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto whitespace-pre-wrap text-muted-foreground">
+              <pre className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-x-auto">
                 {exampleResponse}
               </pre>
             </div>

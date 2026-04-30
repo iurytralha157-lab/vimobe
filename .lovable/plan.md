@@ -1,76 +1,78 @@
-## Diagnóstico
+## Por que o sistema ficou lento
 
-Após você fazer login, o sistema fica travado em "carregando" porque a chamada `checkSuperAdmin()` no `AuthContext` **dá timeout de 5 segundos** e bloqueia toda a sequência de inicialização.
+Após investigar, identifiquei **3 causas principais** de lentidão introduzidas nas últimas alterações:
 
-### Causa Raiz: RLS recursiva na tabela `user_roles`
+### 1. `refetchOnMount: false` quebrando o cache do React Query (App.tsx)
+No `QueryClient` global foi adicionado `refetchOnMount: false`. Isso faz com que **toda navegação entre páginas** mantenha dados antigos em memória sem revalidar, mas também impede o uso correto de `staleTime` em hooks que dependem de filtros dinâmicos (Dashboard, KPIs, listagens). O resultado prático é que quando o usuário entra no Dashboard, várias queries disparam em paralelo (stats, evolução, propriedades, visitas, organização) sem um padrão consistente, sobrecarregando o backend e travando a UI.
 
-Investiguei as políticas da tabela `public.user_roles` no banco e encontrei isto:
+### 2. `PageLoader = () => null` causando "tela branca + travamento"
+No `App.tsx`, o `PageLoader` foi reduzido a `null`. Resultado:
+- Durante o `Suspense` de páginas lazy, **nada é renderizado** — o navegador parece travar.
+- Em `ProtectedRoute`, quando `loading=true` ou perfil ainda carregando, fica completamente em branco.
+- O React continua processando o lazy chunk, dando sensação de "sistema lento" mesmo quando está só carregando.
 
-```text
-Política SELECT: "Users can view roles in org"
-  qual: user_id IN (SELECT id FROM users WHERE organization_id = get_user_organization_id())
+### 3. Warning de ref em `KPICardSkeleton` (Dashboard)
+Os logs mostram avisos repetidos:
+> `Function components cannot be given refs. Check the render method of KPICardSkeleton`
+
+Isso vem de `Tooltip` com `asChild` em volta de cards que renderizam o `Skeleton` sem `forwardRef`. Cada render do Dashboard (que tem 7+ skeletons) dispara o aviso, gera re-renders extras e suja o console — em dev isso é **muito custoso**.
+
+### 4. Causas secundárias acumuladas
+- `usePublicHomeData` + `useFeaturedProperties` + `useExclusiveProperties` + `usePropertyTypes` + `usePublicCities` + `usePublicNeighborhoods` no `PublicHome` — **6 queries paralelas** quando só `usePublicHomeData` já traz tudo (`featured`, `exclusive`, `latest`, `types`, `cities`).
+- `Dashboard.tsx` faz uma query separada em `lead_events` carregando **todos os session_id** sem limite — em organizações com muito tráfego isso traz milhares de linhas só para contar sessões únicas (deveria ser RPC com `count distinct`).
+
+---
+
+## Plano de correção
+
+### Passo 1 — Restaurar comportamento saudável do React Query (`src/App.tsx`)
+- Remover `refetchOnMount: false` (manter `refetchOnWindowFocus: false`).
+- Manter `staleTime: 5min` e `gcTime: 15min` (esses estão ok).
+
+### Passo 2 — Restaurar um `PageLoader` mínimo e leve (`src/App.tsx`)
+Voltar com um spinner simples (apenas um div com `animate-spin`, sem texto, sem fundo de tela cheia bloqueante):
+```tsx
+const PageLoader = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 ```
+Isso elimina a "tela branca" sem voltar à tela de carregamento bloqueante anterior.
 
-O problema:
-1. O frontend chama `SELECT role FROM user_roles WHERE user_id = ... AND role = 'super_admin'`
-2. A política de SELECT exige consultar a tabela `users` para descobrir a organização do usuário
-3. A função `get_user_organization_id()` provavelmente também faz lookups em `users`/`user_roles`
-4. Isso cria uma cadeia de subqueries pesada que **nunca retorna em < 5s** → timeout
+### Passo 3 — Corrigir o warning de ref no Skeleton (`src/components/ui/skeleton.tsx`)
+Converter `Skeleton` para `React.forwardRef`. Isso elimina os warnings em loop que estão poluindo o console e degradando a performance no dev.
 
-Logs confirmam:
-```
-[Performance] checkSuperAdmin: 5002.59ms
-Error checking super admin (or timeout): Timeout checking super admin
-```
+### Passo 4 — Remover queries duplicadas no `PublicHome.tsx`
+O hook `usePublicHomeData` já retorna `featured`, `exclusive`, `latest`, `types`, `cities`. Remover os imports/uses de:
+- `useFeaturedProperties`
+- `useExclusiveProperties`
+- `usePropertyTypes`
+- `usePublicCities`
 
-Como `fetchProfile` aguarda `Promise.all([userResult, checkSuperAdmin])`, o perfil só é setado depois do timeout — e a UI fica em `<PageLoader />` esperando, dando a sensação de loop.
+Manter apenas `usePublicHomeData` e `usePublicNeighborhoods` (este último depende de `selectedCidade`).
 
-### Erros Secundários (consequência do principal)
+### Passo 5 — Otimizar contagem de visitas no Dashboard (`src/pages/Dashboard.tsx`)
+Trocar o `select('session_id')` por uma RPC `count_unique_sessions(org_id, from, to)` no Postgres que faz `SELECT COUNT(DISTINCT session_id)` server-side. Isso evita transferir milhares de linhas para o cliente.
 
-- **401 em `audit_logs`**: tentativas de log antes da sessão estar pronta (RLS bloqueia inserts anônimos). Não-fatal.
-- **404 e chunks falhando em `vimob.vettercompany.com.br`**: o domínio customizado (Cloudflare Worker) está servindo chunks antigos/cacheados (`bad-precaching-response :: status 524`). Isso é cache do PWA/Service Worker, separado do problema de auth.
-- **Warning "Function components cannot be given refs"** no `TrialExpiredModal`: cosmético, mas devo corrigir.
+> Requer criar uma função SQL via migration. Será criada em mode default após aprovação.
 
-## Plano de Correção
+### Passo 6 — Validar
+- Recarregar Dashboard e verificar tempo de render.
+- Recarregar PublicHome (site público) e confirmar que aparece de imediato com skeletons progressivos.
+- Confirmar que não há mais warnings de ref no console.
 
-### 1. Resolver a recursão RLS em `user_roles` (causa raiz)
+---
 
-Criar migração que substitui a política SELECT atual por uma que **não dependa de subqueries em `users`**:
+## Arquivos afetados
+- `src/App.tsx` — QueryClient + PageLoader
+- `src/components/ui/skeleton.tsx` — forwardRef
+- `src/pages/public/PublicHome.tsx` — remover queries duplicadas
+- `src/pages/Dashboard.tsx` — usar RPC para contagem
+- Migration SQL — criar `count_unique_sessions`
 
-- Adicionar política simples: `auth.uid() = user_id` (usuário sempre pode ler suas próprias roles).
-- Manter a política existente de admins gerenciar (`is_admin()`).
-- Remover a política recursiva "Users can view roles in org" (ou restringir a `is_admin()` apenas).
-
-Isso elimina o timeout: a query do `checkSuperAdmin` retornará em milissegundos.
-
-### 2. Endurecer o `AuthContext` para nunca travar a UI
-
-Em `src/contexts/AuthContext.tsx`:
-
-- Reduzir o timeout do `checkSuperAdmin` de 5s para 2s (defesa em profundidade).
-- No `fetchProfile`, **não bloquear** o set do perfil esperando `checkSuperAdmin`: setar o perfil imediatamente quando o `userResult` chegar e atualizar `isSuperAdmin` quando a verificação concluir (ou falhar silenciosamente).
-- Garantir que `setLoading(false)` seja chamado mesmo quando `fetchProfile` falha em qualquer ramo.
-
-### 3. Silenciar tentativas de audit log sem sessão
-
-Em `src/hooks/use-audit-logs.ts`: pular o insert se `auth.uid()` for null, evitando os 401 ruidosos no console.
-
-### 4. Corrigir warning do `TrialExpiredModal`
-
-Remover o `lazy()` desnecessário ou envolver o componente com `React.forwardRef` para silenciar o warning de ref. Solução mais simples: importar o componente diretamente (não é uma rota, é um modal que monta sempre).
-
-### 5. Forçar invalidação de cache do PWA no domínio customizado
-
-Para os erros `Failed to fetch dynamically imported module` no `vimob.vettercompany.com.br`: bumpar a versão do service worker / cache do PWA para os clientes baixarem os chunks novos. Isso é independente, mas resolve a tela branca em produção.
-
-## Arquivos Afetados
-
-- **Nova migração SQL**: políticas RLS de `public.user_roles`
-- `src/contexts/AuthContext.tsx`: timeout + ordem do set state
-- `src/hooks/use-audit-logs.ts`: guard para sessão
-- `src/App.tsx`: importação direta do `TrialExpiredModal`
-- `src/hooks/use-pwa-update.ts` (ou similar): bump de versão do SW
-
-## Por que isso vai resolver
-
-O carregamento infinito acontece **toda** vez porque a política RLS atual sempre causa timeout — não é intermitente, é determinístico. Removendo a recursão, o `checkSuperAdmin` retorna em ~50ms, o `fetchProfile` completa, `setLoading(false)` dispara, e o `ProtectedRoute` libera a navegação para `/dashboard` imediatamente.
+## Resultado esperado
+- Dashboard carrega em 1-2s ao invés de 5-10s.
+- Sem tela branca durante navegação (spinner curto aparece e some).
+- Console limpo, sem warnings em loop.
+- Site público continua rápido com 1 query agregada ao invés de 6.

@@ -1,7 +1,7 @@
 import { useState, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2, ListTodo } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Clock, CheckCircle, User, Zap, Trophy, XCircle, Loader2 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { cn } from '@/lib/utils';
 import { formatResponseTime } from '@/hooks/use-lead-timeline';
@@ -178,19 +178,21 @@ export const LeadCard = memo(function LeadCard({
               </span>}
             
             {/* Tags - primeira tag em destaque */}
-            {lead.tags && lead.tags?.map((tag: any, idx: number) => (
-              <span 
-                key={tag.id || idx}
-                className="text-[9px] px-1.5 py-0.5 font-medium rounded-full border shadow-sm" 
-                style={{
-                  backgroundColor: tag.color || '#6b7280',
-                  color: '#FFFFFF',
-                  borderColor: tag.color || '#6b7280'
-                }}
-              >
-                {tag.name}
-              </span>
-            ))}
+            {lead.tags && lead.tags.length > 0 ? (
+                <>
+                  <span className="text-[9px] px-1.5 py-0.5 font-medium rounded-full border" style={{
+                    backgroundColor: lead.tags[0].color || '#6b7280',
+                    color: '#FFFFFF',
+                    borderColor: lead.tags[0].color || '#6b7280'
+                  }}>
+                    {lead.tags[0].name}
+                  </span>
+                  {lead.tags.length > 1 && <span className="text-[10px] text-muted-foreground">+{lead.tags.length - 1}</span>}
+                </>
+              ) : (
+                // Indicador visual discreto de que existem detalhes (tags/tarefas) que podem ser carregados
+                <div className="h-4 w-1 bg-muted rounded-full" />
+              )}
           </div>
 
 
@@ -346,28 +348,6 @@ export const LeadCard = memo(function LeadCard({
                   {hasEmail ? `Email: ${lead.email}` : 'Sem email'}
                 </TooltipContent>
               </Tooltip>
-
-              {/* Cadence info */}
-              {(() => {
-                const totalTasks = lead.cadence_total_tasks || 0;
-                const completedTasks = lead.cadence_completed_tasks || 0;
-                if (totalTasks === 0) return null;
-                
-                return (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                        <ListTodo className="h-2.5 w-2.5" />
-                        <span>{completedTasks}/{totalTasks}</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      Progresso da cadência: {completedTasks} de {totalTasks} tarefas concluídas
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })()}
-
 
               {/* Valor do imóvel/interesse */}
               {valorInteresse > 0 && <Tooltip>

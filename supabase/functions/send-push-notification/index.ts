@@ -26,8 +26,7 @@ interface WebPushSubscription {
 // Importa a chave privada VAPID
 function getVapidKeys() {
   const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-  // Ensure we use the same public key used in the frontend registration
-  const publicKey = "BJBVpyQSbQSpeAQQs-lEf2BKa6L6vlUcXxD3F2KNML9iJW4h2Al2hhgB9KbDW9C73PCnow8ZpXIJxrUNMWxU6vA";
+  const publicKey = Deno.env.get("VITE_VAPID_PUBLIC_KEY") || "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWjUfBw5nc02KFFL6pr1jM51bHv0CllEuy5ypnldeYLMhYSbQbKlWHK7T9VK1CF2xVgH_9HOc3tavj0iuT1mEzA";
   
   if (!privateKey) {
     throw new Error("VAPID_PRIVATE_KEY not configured");
@@ -74,7 +73,7 @@ function parsePrivateKey(pem: string): Uint8Array {
 }
 
 // Create VAPID JWT for authorization
-async function createVapidJwt(audience: string, subject: string, privateKeyPem: string, publicKey: string): Promise<string> {
+async function createVapidJwt(audience: string, subject: string, privateKeyPem: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const exp = now + 12 * 60 * 60; // 12 hours
 
@@ -92,69 +91,35 @@ async function createVapidJwt(audience: string, subject: string, privateKeyPem: 
   // Import the ECDSA private key
   const keyData = parsePrivateKey(privateKeyPem);
   
-  // Deno/V8 subtle crypto expects the 32-byte raw key for P-256
-  // even when using 'pkcs8' format, or a proper pkcs8 wrapper.
-  // The error "InvalidEncoding" usually means the wrapper or the key size is wrong.
-  
-  let cryptoKey: CryptoKey;
-  try {
-    // Attempt raw import first (Deno specific behavior sometimes favors this)
-    if (keyData.length === 32) {
-      cryptoKey = await crypto.subtle.importKey(
-        "jwk",
-        {
-          kty: "EC",
-          crv: "P-256",
-          x: "", // Not needed for private key in JWK usually
-          y: "",
-          d: base64UrlEncode(keyData),
-          ext: true,
-        },
-        { name: "ECDSA", namedCurve: "P-256" },
-        false,
-        ["sign"]
-      );
-    } else {
-      throw new Error("Not raw 32 bytes");
-    }
-  } catch (e) {
-    // Fallback to the pkcs8 wrapper approach
-    const pkcs8 = new Uint8Array(67);
-    pkcs8.set([
-      0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 
-      0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20
-    ]);
-    pkcs8.set(keyData.length === 32 ? keyData : keyData.slice(-32), 35);
-    
-    cryptoKey = await crypto.subtle.importKey(
-      "pkcs8",
-      pkcs8.buffer as ArrayBuffer,
-      { name: "ECDSA", namedCurve: "P-256" },
-      false,
-      ["sign"]
-    );
-  }
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    keyData.buffer as ArrayBuffer,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
 
-  console.log("[WebPush] Private key imported successfully");
-
-  // Sign the token using ECDSA with SHA-256
-  const dataToSign = new TextEncoder().encode(unsignedToken);
-  // ES256 signature must be R + S (64 bytes)
+  // Sign the token
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     cryptoKey,
-    dataToSign
+    new TextEncoder().encode(unsignedToken)
   );
 
-  const signatureB64 = base64UrlEncode(new Uint8Array(signature));
+  // Convert signature from DER to raw format (64 bytes: r + s)
+  const sigArray = new Uint8Array(signature);
+  const signatureB64 = base64UrlEncode(sigArray);
+
   return `${unsignedToken}.${signatureB64}`;
 }
 
-// Helper to extract raw P-256 key (65 bytes)
+// Helper to extract raw P-256 key from SPKI/DER (91 bytes)
 function getRawPublicKey(publicKeyB64: string): string {
-  // Ensure we use the correct uncompressed public key point
-  // The frontend uses "BJBVpyQSbQSpeAQQs-lEf2BKa6L6vlUcXxD3F2KNML9iJW4h2Al2hhgB9KbDW9C73PCnow8ZpXIJxrUNMWxU6vA"
-  // which is exactly 65 bytes in base64url.
+  const bytes = base64UrlDecode(publicKeyB64);
+  if (bytes.length === 91) {
+    // Offset 26 is where the 65-byte raw uncompressed point starts
+    return base64UrlEncode(bytes.slice(26));
+  }
   return publicKeyB64;
 }
 
@@ -173,15 +138,12 @@ async function sendWebPushNotification(
     // Ensure we use the raw uncompressed public key (65 bytes) for the header
     const rawPublicKey = getRawPublicKey(publicKey);
 
-    // VAPID JWT header for Web Push 
+    // Extract audience from endpoint
     const endpointUrl = new URL(subscription.endpoint);
     const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
 
-    // Use subject from env or default
-    const subject = Deno.env.get("VAPID_MAILTO") || "mailto:suporte@vimob.com.br";
-
     // Create VAPID JWT
-    const jwt = await createVapidJwt(audience, subject, privateKey, rawPublicKey);
+    const jwt = await createVapidJwt(audience, "mailto:suporte@vimob.com.br", privateKey);
 
     // Prepare payload
     const payload = JSON.stringify({
@@ -198,8 +160,9 @@ async function sendWebPushNotification(
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
-        "Authorization": `WebPush ${jwt}`,
+        "Authorization": `vapid t=${jwt}, k=${rawPublicKey}`,
         "Content-Type": "application/octet-stream",
+        "Content-Encoding": "aes128gcm",
         "TTL": priority === 'high' ? "86400" : "3600",
         "Urgency": priority === 'high' ? "high" : "normal",
       },
@@ -431,15 +394,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
-    const bodyJson = await req.json();
-    const payload = {
-      user_id: bodyJson.user_id,
-      title: bodyJson.title,
-      body: bodyJson.body || bodyJson.message || "",
-      data: bodyJson.data || {},
-      priority: bodyJson.priority || "high",
-      url: bodyJson.url || bodyJson.data?.url || "/"
-    };
+    const payload: PushPayload = await req.json();
     
     if (!payload.user_id || !payload.title) {
       return new Response(
@@ -451,34 +406,28 @@ Deno.serve(async (req) => {
     // Standard Push Notification Logic
     console.log(`Sending push to user: ${payload.user_id}, title: ${payload.title}`);
 
-    // 1. Get tokens from push_tokens (FCM/Legacy)
+
+    // Get active push tokens for user
     const { data: tokens, error: tokensError } = await supabase
       .from("push_tokens")
       .select("id, token, platform")
       .eq("user_id", payload.user_id)
       .eq("is_active", true);
 
-    // 2. Get subscriptions from push_subscriptions (Native Web Push)
-    const { data: webSubscriptions, error: subError } = await supabase
-      .from("push_subscriptions")
-      .select("id, subscription")
-      .eq("user_id", payload.user_id);
+    if (tokensError) {
+      console.error("Error fetching tokens:", tokensError);
+      throw tokensError;
+    }
 
-    if (tokensError) console.error("Error fetching tokens:", tokensError);
-    if (subError) console.error("Error fetching subscriptions:", subError);
-
-    const hasTokens = tokens && tokens.length > 0;
-    const hasWebSubs = webSubscriptions && webSubscriptions.length > 0;
-
-    if (!hasTokens && !hasWebSubs) {
-      console.log("No active push tokens or subscriptions found for user");
+    if (!tokens || tokens.length === 0) {
+      console.log("No active push tokens found for user");
       return new Response(
         JSON.stringify({ success: true, sent: 0, message: "No active tokens" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Found ${tokens?.length || 0} tokens and ${webSubscriptions?.length || 0} web subscriptions`);
+    console.log(`Found ${tokens.length} active tokens`);
 
     // Get Firebase access token only if we have non-web tokens
     const hasNativeTokens = tokens.some(t => t.platform !== 'web');
@@ -498,25 +447,19 @@ Deno.serve(async (req) => {
     let failedCount = 0;
     const invalidTokenIds: string[] = [];
 
-    // Send to all native tokens and legacy web tokens in push_tokens
-    for (const tokenRecord of tokens || []) {
+    for (const tokenRecord of tokens) {
       let result: { success: boolean; error?: string };
       
       if (tokenRecord.platform === 'web') {
-        // Fallback: try to send as Web Push if the token is a JSON subscription
-        try {
-          console.log(`[Push] Attempting Web Push for legacy token ID: ${tokenRecord.id}`);
-          result = await sendWebPushNotification(
-            tokenRecord.token, // If this is a stringified JSON
-            payload.title,
-            payload.body,
-            { ...payload.data, url: payload.url },
-            payload.priority as any || "high"
-          );
-        } catch (e) {
-          console.error(`[Push] Legacy web token is not a valid subscription: ${tokenRecord.id}`);
-          result = { success: false, error: "invalid_token" };
-        }
+        // Send via Web Push
+        console.log(`[Push] Sending Web Push to token ID: ${tokenRecord.id}`);
+        result = await sendWebPushNotification(
+          tokenRecord.token,
+          payload.title,
+          payload.body || "",
+          payload.data || {},
+          payload.priority || "high"
+        );
       } else {
         // Send via FCM for native apps
         if (!accessToken) {
@@ -527,9 +470,9 @@ Deno.serve(async (req) => {
             tokenRecord.token,
             accessToken,
             payload.title,
-            payload.body,
-            { ...payload.data, url: payload.url },
-            payload.priority as any || "high"
+            payload.body || "",
+            payload.data || {},
+            payload.priority || "high"
           );
         }
       }
@@ -544,27 +487,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send to all Web Push subscriptions
-    for (const subRecord of webSubscriptions || []) {
-      console.log(`[Push] Sending Web Push to subscription ID: ${subRecord.id}`);
-      const result = await sendWebPushNotification(
-        JSON.stringify(subRecord.subscription),
-        payload.title,
-        payload.body,
-        { ...payload.data, url: payload.url },
-        payload.priority as any || "high"
-      );
-
-      if (result.success) {
-        sentCount++;
-      } else {
-        failedCount++;
-        // We don't have a mechanism to deactivate web subscriptions here easily 
-        // without more logic, but we could add it if needed.
-      }
-    }
-
-    // Deactivate invalid native tokens
+    // Deactivate invalid tokens
     if (invalidTokenIds.length > 0) {
       console.log(`Deactivating ${invalidTokenIds.length} invalid tokens`);
       await supabase

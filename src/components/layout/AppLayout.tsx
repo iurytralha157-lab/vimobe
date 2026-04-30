@@ -8,9 +8,10 @@ import { FloatingChat } from '@/components/chat/FloatingChat';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import { SidebarProvider } from '@/contexts/SidebarContext';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { WebPushPrompt } from '@/components/pwa/WebPushPrompt';
 import { useWhatsAppHealthMonitor } from '@/hooks/use-whatsapp-health-monitor';
-// Push notifications and phone reminder removed
-
+import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { usePhoneReminder } from '@/hooks/use-phone-reminder';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useAuth } from '@/contexts/AuthContext';
 import { Wrench } from 'lucide-react';
@@ -71,8 +72,11 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
   // Start WhatsApp session health monitoring
   useWhatsAppHealthMonitor();
   
-  // Notifications removed
+  // Initialize native push notifications (only in Capacitor)
+  usePushNotifications();
 
+  // Daily reminder for users without phone number
+  usePhoneReminder();
 
   return (
     <div className="h-screen flex flex-col w-full bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
@@ -109,6 +113,7 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
       
       {/* PWA Prompts */}
       <InstallPrompt />
+      <WebPushPrompt />
     </div>
   );
 }

@@ -107,15 +107,10 @@ export async function logAuditAction(
   organizationId?: string
 ) {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-
-    // Skip insert when there is no authenticated user — RLS would reject it
-    // and the resulting 401 just adds noise to the console.
-    if (!userId) return;
-
+    const { data: user } = await supabase.auth.getUser();
+    
     await supabase.from('audit_logs').insert([{
-      user_id: userId,
+      user_id: user.user?.id,
       organization_id: organizationId,
       action,
       entity_type: entityType,

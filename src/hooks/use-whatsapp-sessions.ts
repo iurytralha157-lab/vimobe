@@ -16,7 +16,7 @@ export interface WhatsAppSession {
   profile_name: string | null;
   profile_picture: string | null;
   is_active: boolean;
-  is_notification_session: boolean;
+  is_notification_session?: boolean;
   created_at: string;
   updated_at: string;
   last_connected_at?: string | null;
@@ -548,25 +548,9 @@ export function useToggleNotificationSession() {
 
   return useMutation({
     mutationFn: async ({ sessionId, enabled }: { sessionId: string; enabled: boolean }) => {
-      // First, if we are enabling, disable all others in the same org
-      if (enabled) {
-        const { data: session } = await supabase
-          .from("whatsapp_sessions")
-          .select("organization_id")
-          .eq("id", sessionId)
-          .single();
-
-        if (session) {
-          await supabase
-            .from("whatsapp_sessions")
-            .update({ is_notification_session: false })
-            .eq("organization_id", session.organization_id);
-        }
-      }
-
       const { error } = await supabase
         .from("whatsapp_sessions")
-        .update({ is_notification_session: enabled })
+        .update({ is_notification_session: enabled } as any)
         .eq("id", sessionId);
 
       if (error) throw error;
@@ -575,10 +559,15 @@ export function useToggleNotificationSession() {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-sessions"] });
       toast({
         title: "Configuração atualizada",
-        description: "A preferência de notificação foi salva",
+        description: "Sessão de notificação alterada com sucesso",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
 }
-
-

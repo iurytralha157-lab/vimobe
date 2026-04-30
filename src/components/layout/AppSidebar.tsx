@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Download } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
@@ -19,7 +19,6 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useSystemSettings } from '@/hooks/use-system-settings';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
 interface NavItem {
   icon: React.ElementType;
   labelKey: string;
@@ -149,10 +148,6 @@ const bottomItems: NavItem[] = [{
   icon: Settings,
   labelKey: 'settings',
   path: '/settings'
-}, {
-  icon: Download,
-  labelKey: 'install',
-  path: '/install'
 }];
 
 function SidebarIcon({ item, size = 20, className }: { item: NavItem; size?: number; className?: string }) {
@@ -210,7 +205,6 @@ export const AppSidebar = React.memo(function AppSidebar() {
   const {
     resolvedTheme
   } = useTheme();
-  const isMobile = useIsMobile();
 
   // Get the appropriate logo/favicon based on theme
   const logoUrl = useMemo(() => {
@@ -258,8 +252,6 @@ export const AppSidebar = React.memo(function AppSidebar() {
       // If modules are still loading and this item requires a module, hide it
       if (modulesLoading && item.module) return false;
       if (item.module && !hasModule(item.module as any)) return false;
-      // Hide install option on desktop (only show on mobile)
-      if (item.labelKey === 'install' && !isMobile) return false;
       return true;
     });
     if (isSuperAdmin) {
@@ -270,7 +262,7 @@ export const AppSidebar = React.memo(function AppSidebar() {
       }, ...items];
     }
     return items;
-  }, [isSuperAdmin, profile?.role, hasModule, modulesLoading, isMobile]);
+  }, [isSuperAdmin, profile?.role, hasModule, modulesLoading]);
   const getLabel = (labelKey: string): string => {
     return (t.nav as Record<string, string>)[labelKey] || labelKey;
   };

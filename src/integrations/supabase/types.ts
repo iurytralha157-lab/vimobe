@@ -4416,27 +4416,6 @@ export type Database = {
           },
         ]
       }
-      push_subscriptions: {
-        Row: {
-          created_at: string | null
-          id: string
-          subscription: Json
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          subscription: Json
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          subscription?: Json
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       push_tokens: {
         Row: {
           created_at: string | null
@@ -6332,7 +6311,6 @@ export type Database = {
           source_name: string
         }[]
       }
-      get_my_org_id: { Args: never; Returns: string }
       get_session_owner: { Args: { p_session_id: string }; Returns: string }
       get_team_member_ids: { Args: { p_team_id: string }; Returns: string[] }
       get_telephony_metrics: {

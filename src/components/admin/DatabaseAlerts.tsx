@@ -74,8 +74,17 @@ function getAlerts(stats: DatabaseStats, dbLimitGB: number, storageLimitGB: numb
     });
   }
   
-  // largeNotifications removed
-
+  const largeNotifications = stats.tables.find(
+    t => t.name === 'notifications' && t.estimated_rows > 10000
+  );
+  
+  if (largeNotifications) {
+    alerts.push({
+      type: 'info',
+      title: 'Muitas notificações',
+      description: `${largeNotifications.estimated_rows.toLocaleString('pt-BR')} notificações. Considere limpar notificações lidas antigas.`,
+    });
+  }
   
   // Success if all good
   if (alerts.length === 0) {

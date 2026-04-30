@@ -51,7 +51,7 @@ const FinancialReports = lazy(() => import("./pages/FinancialReports"));
 const FinancialDRE = lazy(() => import("./pages/FinancialDRE"));
 const MetaSettings = lazy(() => import("./pages/MetaSettings"));
 const Automations = lazy(() => import("./pages/Automations"));
-const Install = lazy(() => import("./pages/Install"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 
 // Telecom pages
 const ServicePlans = lazy(() => import("./pages/ServicePlans"));
@@ -88,10 +88,8 @@ const PublishedSiteWrapper = lazy(() => import("./pages/public/PublishedSiteWrap
 
 const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 
-// Trial expired modal — imported eagerly to avoid the "Function components cannot
-// be given refs" warning that React emits when lazy() wraps a non-forwardRef
-// component used inside a Suspense boundary.
-import { TrialExpiredModal } from "./components/admin/TrialExpiredModal";
+// Trial expired modal
+const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
 
 function preloadCoreCrmPages() {
   void import("./pages/Dashboard");
@@ -136,32 +134,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, profile, isSuperAdmin, impersonating, organization, needsOrgSelection } = useAuth();
   
   if (loading) return <PageLoader />;
-  
-  if (!user) {
-    console.log("ProtectedRoute: No user found, redirecting to /auth");
-    return <Navigate to="/auth" replace />;
-  }
-  
-  // Super admins bypassing org check if not impersonating
-  if (isSuperAdmin && !impersonating && !organization && !needsOrgSelection) {
-    return <>{children}</>;
-  }
-
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!profile && !isSuperAdmin) return <PageLoader />;
   if (needsOrgSelection && !impersonating) return <Navigate to="/select-organization" replace />;
   if (isSuperAdmin && !impersonating && !organization) return <Navigate to="/admin" replace />;
-  
-  // If we have a user but no profile yet, show loader while it's fetching
-  if (!profile && !isSuperAdmin) {
-    console.log("ProtectedRoute: User found but no profile yet, waiting...");
-    // If we've been waiting too long or if loading is finished but still no profile,
-    // we should probably redirect to onboarding or show an error instead of hanging.
-    if (!loading) {
-      console.warn("ProtectedRoute: Loading finished but no profile found, redirecting to onboarding");
-      return <Navigate to="/onboarding" replace />;
-    }
-    return <PageLoader />;
-  }
-
   if (!isSuperAdmin && profile && !profile.organization_id) return <Navigate to="/onboarding" replace />;
   
   return <>{children}</>;
@@ -182,7 +158,6 @@ function AppRoutes() {
   }, [user, loading]);
 
   const getDefaultRedirect = () => {
-    console.log("Determining default redirect:", { needsOrgSelection, impersonating, isSuperAdmin });
     if (needsOrgSelection && !impersonating) return "/select-organization";
     if (isSuperAdmin && !impersonating) return "/admin";
     return "/dashboard";
@@ -191,7 +166,7 @@ function AppRoutes() {
   const renderAuthRoute = () => {
     if (loading) return <PageLoader />;
     if (user) {
-      console.log("Auth route detected user, redirecting to:", getDefaultRedirect());
+      if (!profile && !isSuperAdmin) return <PageLoader />;
       return <Navigate to={getDefaultRedirect()} replace />;
     }
     return <Auth />;
@@ -214,7 +189,7 @@ function AppRoutes() {
     <>
       {!isResetPasswordRoute && <AnnouncementBanner />}
       {!isResetPasswordRoute && <ImpersonateBanner />}
-      {!isResetPasswordRoute && <TrialExpiredModal />}
+      {!isResetPasswordRoute && <Suspense fallback={null}><TrialExpiredModal /></Suspense>}
       {!isResetPasswordRoute && user && profile && profile.organization_id && <SetupGuideDialog />}
       <ScrollToTop />
       <div className={impersonating ? "pt-12" : ""}>
@@ -252,6 +227,7 @@ function AppRoutes() {
             <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/properties" element={<ProtectedRoute><Properties /></ProtectedRoute>} />
             <Route path="/properties/new" element={<ProtectedRoute><PropertyForm /></ProtectedRoute>} />
@@ -264,7 +240,6 @@ function AppRoutes() {
             <Route path="/settings/integrations/meta" element={<ProtectedRoute><MetaSettings /></ProtectedRoute>} />
             <Route path="/crm/conversas" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
             <Route path="/help" element={<ProtectedRoute><Help /></ProtectedRoute>} />
-            <Route path="/install" element={<ProtectedRoute><Install /></ProtectedRoute>} />
             
             {/* Financial Module */}
             <Route path="/financeiro" element={<ProtectedRoute><AdminRoute><FinancialDashboard /></AdminRoute></ProtectedRoute>} />
@@ -329,32 +304,29 @@ const BrandingAndPwa = () => {
   return null;
 };
 
-function RoutesSwitcher() {
-  const { user } = useAuth();
-  const location = useLocation();
-  
-  // Rotas que devem ser sempre acessíveis via sistema, mesmo em domínio customizado
-  const isSystemRoute = ['/auth', '/reset-password', '/signup', '/onboarding'].includes(location.pathname);
-  
-  const customDomain = isCustomDomain() && !user && !isSystemRoute;
-  return customDomain ? <CustomDomainRoutes /> : <AppRoutes />;
-}
-
 const App = () => {
+  const customDomain = isCustomDomain();
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         <TooltipProvider>
+          <BrandingAndPwa />
+          <Toaster />
+          <Sonner />
+          <IOSInstallGuide />
           <BrowserRouter>
-            <AuthProvider>
+            {customDomain ? (
               <LanguageProvider>
-                <BrandingAndPwa />
-                <Toaster />
-                <Sonner />
-                <IOSInstallGuide />
-                <RoutesSwitcher />
+                <CustomDomainRoutes />
               </LanguageProvider>
-            </AuthProvider>
+            ) : (
+              <AuthProvider>
+                <LanguageProvider>
+                  <AppRoutes />
+                </LanguageProvider>
+              </AuthProvider>
+            )}
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>

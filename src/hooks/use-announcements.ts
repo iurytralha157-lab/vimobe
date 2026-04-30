@@ -123,8 +123,50 @@ export function useAnnouncements() {
 
       if (error) throw error;
 
-      // Enviar notificações removido
+      // 3. Enviar notificações se habilitado
+      if (sendNotification) {
+        let usersToNotify: { id: string; organization_id: string | null }[] = [];
 
+        if (targetType === 'all') {
+          // Todos os usuários ativos
+          const { data: users } = await supabase
+            .from('users')
+            .select('id, organization_id')
+            .eq('is_active', true);
+          usersToNotify = users || [];
+        } else if (targetType === 'admins') {
+          // Apenas administradores
+          const { data: users } = await supabase
+            .from('users')
+            .select('id, organization_id')
+            .eq('is_active', true)
+            .eq('role', 'admin');
+          usersToNotify = users || [];
+        } else if (targetType === 'organizations' && targetOrganizationIds.length > 0) {
+          // Usuários de organizações específicas
+          const { data: users } = await supabase
+            .from('users')
+            .select('id, organization_id')
+            .eq('is_active', true)
+            .in('organization_id', targetOrganizationIds);
+          usersToNotify = users || [];
+        } else if (targetType === 'specific' && targetUserIds.length > 0) {
+          // Usuários específicos
+          usersToNotify = targetUserIds.map(id => ({ id, organization_id: null }));
+        }
+
+        if (usersToNotify.length > 0) {
+          const notifications = usersToNotify.map(user => ({
+            user_id: user.id,
+            organization_id: user.organization_id,
+            title: '📢 Comunicado',
+            content: message,
+            type: 'system',
+          }));
+
+          await supabase.from('notifications').insert(notifications);
+        }
+      }
 
       return announcement;
     },

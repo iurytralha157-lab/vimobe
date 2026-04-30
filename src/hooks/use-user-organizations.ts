@@ -30,7 +30,8 @@ export function useUserOrganizations(userId: string | undefined) {
             logo_url
           )
         `)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('is_active', true);
 
       if (error) {
         console.error('Error fetching user organizations:', error);

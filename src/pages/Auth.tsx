@@ -3,7 +3,6 @@ import { z } from "zod";
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail, AlertCircle, Check, ShieldAlert } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useSystemSettings } from "@/hooks/use-system-settings";
 import { useLoginAttempts } from "@/hooks/use-login-attempts";
@@ -44,20 +43,8 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function Auth() {
-  const auth = useAuth();
-  
-  // Guard against undefined context if the component renders before AuthProvider is ready
-  if (!auth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  const { signIn, resetPassword } = auth;
+  const { signIn, resetPassword } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const { data: systemSettings, isLoading: settingsLoading } = useSystemSettings();
   const loginAttempts = useLoginAttempts();
@@ -189,17 +176,6 @@ export default function Auth() {
 
       loginAttempts.resetOnSuccess();
       securityLogger.logLoginAttempt(loginData.email, true);
-      
-      // Explicitly redirect after successful login to avoid hanging
-      toast({
-        title: "Sucesso",
-        description: "Login realizado com sucesso. Redirecionando...",
-      });
-      
-      // Determine destination based on common logic or fallback
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
     } catch (error) {
       loginAttempts.recordFailedAttempt();
       securityLogger.logLoginAttempt(loginData.email, false, String(error));

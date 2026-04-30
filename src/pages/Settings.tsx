@@ -25,7 +25,7 @@ import { WebhooksTab } from '@/components/settings/WebhooksTab';
 import { WhatsAppTab } from '@/components/settings/WhatsAppTab';
 import { AIAgentTab } from '@/components/settings/AIAgentTab';
 import { APITab } from '@/components/settings/APITab';
-// NotificationsTab removed
+import { NotificationsTab } from '@/components/settings/NotificationsTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
@@ -71,7 +71,7 @@ export default function Settings() {
     const tabs: AnimatedTabItem[] = [
       { value: 'account', label: 'Conta', icon: User,
         renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> },
-      // notifications tab removed
+      { value: 'notifications', label: 'Notificações', icon: Bell },
     ];
 
     // Only admins and super admins can see the Users tab
@@ -138,7 +138,9 @@ export default function Settings() {
             <AccountTab />
           </TabsContent>
 
-          {/* notifications content removed */}
+          <TabsContent value="notifications">
+            <NotificationsTab />
+          </TabsContent>
 
           <TabsContent value="team">
             <TeamTab />

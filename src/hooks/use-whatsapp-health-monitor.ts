@@ -15,7 +15,7 @@ interface SessionHealthState {
   lastKnownStatus: string;
   consecutiveFailures: number;
   lastCheck: Date;
-  // notificationSent removed
+  notificationSent: boolean;
 }
 
 /**
@@ -75,8 +75,48 @@ export function useWhatsAppHealthMonitor() {
     }
   }, []);
 
-  // createDisconnectionNotification removed
+  // Create disconnection notification
+  const createDisconnectionNotification = useCallback(async (
+    sessionName: string,
+    ownerId: string,
+    organizationId: string
+  ) => {
+    try {
+      // Create notification for the session owner
+      await supabase.from("notifications").insert({
+        user_id: ownerId,
+        organization_id: organizationId,
+        title: "⚠️ WhatsApp Desconectado!",
+        content: `A sessão "${sessionName}" perdeu a conexão. Verifique e reconecte o WhatsApp.`,
+        type: "warning",
+        is_read: false,
+      });
 
+      // Also notify admins
+      const { data: admins } = await supabase
+        .from("users")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("role", "admin")
+        .neq("id", ownerId); // Don't duplicate for owner if also admin
+
+      if (admins && admins.length > 0) {
+        const adminNotifications = admins.map(admin => ({
+          user_id: admin.id,
+          organization_id: organizationId,
+          title: "⚠️ WhatsApp Desconectado!",
+          content: `A sessão "${sessionName}" perdeu a conexão. O responsável foi notificado.`,
+          type: "warning",
+          is_read: false,
+        }));
+
+        await supabase.from("notifications").insert(adminNotifications);
+      }
+
+    } catch (err) {
+      console.error("Failed to create disconnection notification:", err);
+    }
+  }, []);
 
   // Main polling function
   const pollSessions = useCallback(async () => {
@@ -95,6 +135,7 @@ export function useWhatsAppHealthMonitor() {
         lastKnownStatus: session.status,
         consecutiveFailures: 0,
         lastCheck: new Date(),
+        notificationSent: false,
       };
 
       const isConnected = await checkSessionHealth(
@@ -106,6 +147,7 @@ export function useWhatsAppHealthMonitor() {
       if (isConnected) {
         // Reset failures on successful check
         state.consecutiveFailures = 0;
+        state.notificationSent = false;
         state.lastKnownStatus = "connected";
 
         // If DB says not connected but API says connected, fix the DB
@@ -127,7 +169,7 @@ export function useWhatsAppHealthMonitor() {
 
         // Only notify locally after threshold - do NOT update DB status
         // The server-side health check (edge function) is responsible for DB status changes
-        if (state.consecutiveFailures >= ERROR_THRESHOLD) {
+        if (state.consecutiveFailures >= ERROR_THRESHOLD && !state.notificationSent) {
           console.error(`🔴 Session "${state.displayName}" appears disconnected (client-side detection)`);
           
           // Show toast as warning only - don't change DB
@@ -135,6 +177,8 @@ export function useWhatsAppHealthMonitor() {
             description: `A sessão "${state.displayName}" pode estar com problemas. Aguarde a verificação automática.`,
             duration: 10000,
           });
+
+          state.notificationSent = true;
         }
       }
 
@@ -143,7 +187,7 @@ export function useWhatsAppHealthMonitor() {
     }
 
     isPollingRef.current = false;
-  }, [profile?.id, sessions, checkSessionHealth, queryClient]);
+  }, [profile?.id, sessions, checkSessionHealth, createDisconnectionNotification, queryClient]);
 
   // Manual trigger for immediate check
   const checkNow = useCallback(async () => {
@@ -236,11 +280,12 @@ export function useWhatsAppHealthMonitor() {
             
             // Update our local state
             const state = healthStatesRef.current.get(updated.id);
-            if (state) {
+            if (state && !state.notificationSent) {
               toast.warning("WhatsApp Desconectado!", {
                 description: `A sessão "${displayName}" foi desconectada.`,
                 duration: 10000,
               });
+              state.notificationSent = true;
               state.lastKnownStatus = "disconnected";
             }
 
@@ -256,6 +301,7 @@ export function useWhatsAppHealthMonitor() {
             const state = healthStatesRef.current.get(updated.id);
             if (state) {
               state.consecutiveFailures = 0;
+              state.notificationSent = false;
               state.lastKnownStatus = "connected";
             }
 

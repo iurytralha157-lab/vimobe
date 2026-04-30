@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: 'autoUpdate', // Automatically update the SW without prompt for seamless UX
+      registerType: 'prompt', // We use 'prompt' and manage it via usePwaUpdate for better control
       includeAssets: ['favicon.png', 'logo-white.png', 'logo-black.png', 'sounds/notification.mp3', 'offline.html'],
       manifest: {
         name: 'Vimob Crm',
@@ -88,7 +88,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        importScripts: ['/sw.js'],
+        // Importa o service worker de push notifications
+        importScripts: ['/sw-push.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/supabase/],
         runtimeCaching: [
