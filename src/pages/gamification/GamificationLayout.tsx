@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AnimatedTabNav } from '@/components/ui/animated-tab-nav';
-import { LayoutDashboard, TrendingUp, Settings, History } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Settings, History, Trophy } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
@@ -13,8 +13,8 @@ export default function GamificationLayout() {
 
   const tabs = useMemo(() => {
     const items = [
-      { value: '/gamificacao', label: 'Dashboard', icon: LayoutDashboard },
-      { value: '/gamificacao/ranking', label: 'Ranking', icon: TrendingUp },
+      { value: '/gamificacao', label: 'Arena de Ranking', icon: Trophy },
+      { value: '/gamificacao/dashboard', label: 'Meu Desempenho', icon: LayoutDashboard },
       { value: '/gamificacao/historico', label: 'Histórico', icon: History },
     ];
 

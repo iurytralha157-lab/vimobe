@@ -262,8 +262,8 @@ function AppRoutes() {
             
             {/* Gamification Module */}
             <Route path="/gamificacao" element={<ProtectedRoute><GamificationLayout /></ProtectedRoute>}>
-              <Route index element={<GamificationDashboard />} />
-              <Route path="ranking" element={<GamificationRanking />} />
+              <Route index element={<GamificationRanking />} />
+              <Route path="dashboard" element={<GamificationDashboard />} />
               <Route path="historico" element={<GamificationHistory />} />
               <Route path="configuracoes" element={<AdminRoute><GamificationAdmin /></AdminRoute>} />
             </Route>
