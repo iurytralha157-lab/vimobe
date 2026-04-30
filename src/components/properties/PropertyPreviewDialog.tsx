@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Property, useProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import useEmblaCarousel from 'embla-carousel-react';
 import {
   MapPin,
