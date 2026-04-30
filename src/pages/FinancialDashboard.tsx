@@ -42,13 +42,11 @@ export default function FinancialDashboard() {
 
   if (isLoading) {
     return (
-      <AppLayout title="Dashboard Financeiro">
-        <div className="space-y-4 md:space-y-6">
+      <div className="space-y-4 md:space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 md:h-32" />)}
           </div>
         </div>
-      </AppLayout>
     );
   }
 
@@ -80,7 +78,6 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
   ].filter(d => d.value > 0);
 
   return (
-    <AppLayout title="Dashboard Financeiro">
       <div className="space-y-4 md:space-y-6">
         <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças - Telecom</p>
 
@@ -344,7 +341,6 @@ function TelecomFinancialDashboard({ data }: { data: ReturnType<typeof useTeleco
           </Card>
         </div>
       </div>
-    </AppLayout>
   );
 }
 
@@ -370,7 +366,7 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
   ].filter(d => d.value > 0);
 
   return (
-    <AppLayout title="Dashboard Financeiro">
+    
       <div className="space-y-4 md:space-y-6">
         <p className="text-sm md:text-base text-muted-foreground">Visão geral das finanças</p>
 
@@ -595,6 +591,6 @@ function RealEstateFinancialDashboard({ data }: { data: ReturnType<typeof useFin
           </Card>
         </div>
       </div>
-    </AppLayout>
+    
   );
 }
