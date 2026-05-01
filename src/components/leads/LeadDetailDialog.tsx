@@ -2098,7 +2098,7 @@ export function LeadDetailDialog({
                           </div>
                         </div>
                       </div>
-                    </> : <>
+                    </> : <div className="space-y-3">
                       <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                           <User className="h-4 w-4 text-primary" />
@@ -2137,15 +2137,12 @@ export function LeadDetailDialog({
                           </p>
                         </div>
                       </div>}
-                    </>}
+                    </div>}
                   </div>
                 </div>
 
-                {/* Rastreamento */}
-                <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
-
                 {/* Documentação */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -2156,7 +2153,7 @@ export function LeadDetailDialog({
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="h-8 gap-1.5"
+                      className="h-8 gap-1.5 px-3"
                       disabled={isUploading}
                       onClick={() => fileInputRef.current?.click()}
                     >
@@ -2175,9 +2172,9 @@ export function LeadDetailDialog({
                     />
                   </div>
 
-                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
+                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-3">
                     {attachments.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-6 text-muted-foreground gap-2">
+                      <div className="flex flex-col items-center justify-center py-4 text-muted-foreground gap-2">
                         <FileText className="h-8 w-8 opacity-20" />
                         <p className="text-xs">Nenhum documento anexado</p>
                       </div>
@@ -2186,7 +2183,7 @@ export function LeadDetailDialog({
                         {attachments.map((doc) => (
                           <div 
                             key={doc.id}
-                            className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
+                            className="flex items-center gap-3 p-2 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
                           >
                             <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                               <FileText className="h-4 w-4 text-primary" />
@@ -2229,6 +2226,9 @@ export function LeadDetailDialog({
                     )}
                   </div>
                 </div>
+
+                {/* Rastreamento */}
+                <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
 
                 {/* Jornada do visitante */}
                 <LeadJourneySection leadId={lead.id} />
