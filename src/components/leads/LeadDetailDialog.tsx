@@ -937,10 +937,6 @@ export function LeadDetailDialog({
                 </Button>
               </div>
               
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Histórico</p>
-                <LeadHistory leadId={lead.id} />
-              </div>
             </div>
           )}
 
