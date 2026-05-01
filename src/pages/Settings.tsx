@@ -96,7 +96,7 @@ export default function Settings() {
     }
 
     if (hasAPIModule) {
-      tabs.push({ value: 'api', label: 'API Pública', icon: Key });
+      tabs.push({ value: 'api', label: 'Configuração da API', icon: Key });
     }
 
     return tabs;
