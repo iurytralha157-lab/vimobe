@@ -355,7 +355,7 @@ export function LeadDetailDialog({
   if (!lead) return null;
 
   // Find cadence template for this lead's stage
-  const stageTemplate = cadenceTemplates.find(t => t.stage_key === lead.stage?.stage_key);
+  const stageTemplate = cadenceTemplates.find(t => t.stage_key === currentStage?.stage_key);
   const templateTasks = stageTemplate?.tasks || [];
 
   // Map lead tasks by a key to check if completed
@@ -364,6 +364,7 @@ export function LeadDetailDialog({
   const totalTasksCount = templateTasks.length;
   const leadTagIds = (lead.tags || []).map((t: any) => t.id);
   const availableTags = allTags.filter(t => !leadTagIds.includes(t.id));
+  const currentStage = lead.stage || stages.find(s => s.id === lead.stage_id);
   const currentStageIndex = stages.findIndex(s => s.id === lead.stage_id);
   const handleAddTag = async (tagId: string) => {
     try {
@@ -745,7 +746,7 @@ export function LeadDetailDialog({
             <PopoverTrigger asChild>
               <button className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium min-w-0 overflow-hidden">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-                <span className="truncate">{lead.stage?.name || 'Sem estágio'}</span>
+                <span className="truncate">{currentStage?.name || 'Sem estágio'}</span>
                 <ChevronDown className="h-3 w-3 shrink-0 ml-auto" />
               </button>
             </PopoverTrigger>
@@ -1483,7 +1484,7 @@ export function LeadDetailDialog({
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 mb-3">
             <Badge variant="outline" className="text-xs font-normal bg-background/50 backdrop-blur-sm">
-              {lead.stage?.name || 'Sem estágio'}
+              {currentStage?.name || 'Sem estágio'}
             </Badge>
             <span className="text-muted-foreground/50">•</span>
             <div className="flex items-center gap-1.5">
