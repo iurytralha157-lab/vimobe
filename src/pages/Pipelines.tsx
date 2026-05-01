@@ -1361,52 +1361,35 @@ export default function Pipelines() {
                       )}
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-medium text-muted-foreground uppercase">Campanha</label>
+                      <div className="space-y-3">
                         <Select value={filterCampaign} onValueChange={setFilterCampaign}>
                           <SelectTrigger className="h-9 text-xs">
                             <SelectValue placeholder="Todas campanhas" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Todas campanhas</SelectItem>
-                            {metaFilters?.campaigns.map(c => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
+                            {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-medium text-muted-foreground uppercase">Conjunto de Anúncios</label>
                         <Select value={filterAdSet} onValueChange={setFilterAdSet}>
                           <SelectTrigger className="h-9 text-xs">
                             <SelectValue placeholder="Todos conjuntos" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Todos conjuntos</SelectItem>
-                            {metaFilters?.adsets.map(a => (
-                              <SelectItem key={a} value={a}>{a}</SelectItem>
-                            ))}
+                            {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                           </SelectContent>
                         </Select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-medium text-muted-foreground uppercase">Criativo</label>
                         <Select value={filterAd} onValueChange={setFilterAd}>
                           <SelectTrigger className="h-9 text-xs">
                             <SelectValue placeholder="Todos criativos" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Todos criativos</SelectItem>
-                            {metaFilters?.ads.map(a => (
-                              <SelectItem key={a} value={a}>{a}</SelectItem>
-                            ))}
+                            {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
                   </div>
                 </PopoverContent>
               </Popover>
