@@ -2199,11 +2199,13 @@ export function LeadDetailDialog({
                         ) : (
                           <div className="grid gap-2">
                             {attachments.map((doc) => {
-                              const truncateFileName = (name: string, maxLength: number = 25) => {
+                              const truncateFileName = (name: string, maxLength: number = 20) => {
                                 if (name.length <= maxLength) return name;
-                                const extension = name.split('.').pop();
-                                const nameWithoutExtension = name.substring(0, name.lastIndexOf('.'));
-                                if (nameWithoutExtension.length <= maxLength) return name;
+                                const lastDotIndex = name.lastIndexOf('.');
+                                if (lastDotIndex === -1) return name.substring(0, maxLength) + '...';
+                                
+                                const extension = name.substring(lastDotIndex);
+                                const nameWithoutExtension = name.substring(0, lastDotIndex);
                                 return `${nameWithoutExtension.substring(0, maxLength)}...${extension}`;
                               };
                               
@@ -2223,36 +2225,35 @@ export function LeadDetailDialog({
                                       {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                     </p>
                                   </div>
+                                  <div className="flex items-center gap-1 shrink-0 ml-auto">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => window.open(doc.file_url, '_blank')}
+                                      title="Visualizar"
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = doc.file_url;
+                                        link.download = doc.file_name;
+                                        link.target = '_blank';
+                                        link.click();
+                                      }}
+                                      title="Baixar"
+                                    >
+                                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                  </div>
+                                </div>
                               );
                             })}
-                                <div className="flex items-center gap-1 shrink-0 ml-auto">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => window.open(doc.file_url, '_blank')}
-                                    title="Visualizar"
-                                  >
-                                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => {
-                                      const link = document.createElement('a');
-                                      link.href = doc.file_url;
-                                      link.download = doc.file_name;
-                                      link.target = '_blank';
-                                      link.click();
-                                    }}
-                                    title="Baixar"
-                                  >
-                                    <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
                           </div>
                         )}
                       </div>
