@@ -2114,9 +2114,9 @@ export function LeadDetailDialog({
                           </div>
                         </div>
                       </div>
-                    </> : <div className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Coluna 1: Dados do Contato + Documentação */}
+                    </> : (
+                      <div className="space-y-6">
+                        {/* Dados do Contato + Documentação */}
                         <div className="space-y-6">
                           <div className="space-y-3">
                             <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
@@ -2251,23 +2251,33 @@ export function LeadDetailDialog({
                           </div>
                         </div>
 
-                        {/* Coluna 2: Rastreamento + Jornada */}
-                        <div className="space-y-6">
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                                  <BarChart3 className="h-3.5 w-3.5 text-primary" />
-                                </div>
-                                <h3 className="font-medium text-sm">Rastreamento</h3>
-                              </div>
-                            </div>
-                            <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
-                          </div>
-                          <LeadJourneySection leadId={lead.id} />
+                  </div>
+                </div>
+
+                {/* Coluna 2: Rastreamento + Jornada */}
+                <div className="space-y-6">
+                  {/* Rastreamento Section */}
+                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <BarChart3 className="h-3.5 w-3.5 text-primary" />
                         </div>
+                        <h3 className="font-medium text-sm">Rastreamento</h3>
                       </div>
-                    </div>}
+                    </div>
+                    <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+                  </div>
+
+                  {/* Jornada Section */}
+                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Activity className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <h3 className="font-medium text-sm">Jornada do lead</h3>
+                    </div>
+                    <LeadJourneySection leadId={lead.id} />
                   </div>
                 </div>
               </div>
