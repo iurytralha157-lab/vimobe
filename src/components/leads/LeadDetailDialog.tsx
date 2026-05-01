@@ -1484,7 +1484,7 @@ export function LeadDetailDialog({
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 mb-3">
             <Badge variant="outline" className="text-xs font-normal bg-background/50 backdrop-blur-sm">
-              {lead.stage?.name || 'Sem estágio'}
+              {currentStage?.name || 'Sem estágio'}
             </Badge>
             <span className="text-muted-foreground/50">•</span>
             <div className="flex items-center gap-1.5">
