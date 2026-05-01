@@ -85,7 +85,9 @@ export function useOrganizationModules() {
     const moduleRecord = modules.find(m => m.module_name === moduleName);
     
     // If not found in list, check if it's enabled by default
-    if (!moduleRecord) return DEFAULT_ENABLED_MODULES.includes(moduleName);
+    if (!moduleRecord) return moduleName === 'financial' ? false : DEFAULT_ENABLED_MODULES.includes(moduleName);
+    
+    if (moduleName === 'financial') return false;
     
     return moduleRecord.is_enabled;
   };
@@ -93,7 +95,7 @@ export function useOrganizationModules() {
   // Get list of all enabled modules
   const enabledModules = (): ModuleName[] => {
     // Definimos a lista base considerando o estado atual (financeiro removido do default)
-    const baseList = DEFAULT_ENABLED_MODULES;
+    const baseList = DEFAULT_ENABLED_MODULES.filter(m => m !== 'financial');
     
     if (isSuperAdmin) return baseList;
     
@@ -103,9 +105,10 @@ export function useOrganizationModules() {
 
     // Retorna todos os módulos que não estão explicitamente marcados como is_enabled: false
     // E garante que módulos não listados em DEFAULT_ENABLED_MODULES mas ativados no DB apareçam
-    const allPossible = Array.from(new Set([...baseList, ...(modules.filter(m => m.is_enabled).map(m => m.module_name as ModuleName))]));
+    const allPossible = Array.from(new Set([...baseList, ...(modules.filter(m => m.is_enabled && m.module_name !== 'financial').map(m => m.module_name as ModuleName))]));
 
     return allPossible.filter(moduleName => {
+      if (moduleName === 'financial') return false;
       const moduleRecord = modules.find(m => m.module_name === moduleName);
       return !moduleRecord || moduleRecord.is_enabled;
     });
