@@ -100,7 +100,7 @@ export function FloatingChatButton() {
         }}
         onClick={handleClick}
         size="icon"
-        className={`h-16 w-16 rounded-full shadow-2xl hover:shadow-[0_20px_50px_rgba(255,87,34,0.3)] bg-primary text-primary-foreground transition-all duration-300 hover:scale-110 active:scale-95 select-none ${isDragging ? 'scale-95 opacity-80 cursor-grabbing' : 'cursor-grab animate-in fade-in zoom-in duration-500'}`}
+        className={`h-16 w-16 rounded-full shadow-none hover:shadow-none bg-primary text-primary-foreground transition-all duration-300 hover:scale-110 active:scale-95 select-none ${isDragging ? 'scale-95 opacity-80 cursor-grabbing' : 'cursor-grab animate-in fade-in zoom-in duration-500'}`}
       >
         <MessageCircle className="h-8 w-8 stroke-[2.5px]" />
         {leadUnreadCount > 0 && (
