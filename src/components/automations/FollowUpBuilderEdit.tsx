@@ -191,6 +191,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [showSimulator, setShowSimulator] = useState(false);
   const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
 
