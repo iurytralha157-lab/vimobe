@@ -60,7 +60,7 @@ interface EventsListProps {
   onAddEvent?: () => void;
 }
 
-export function EventsList({ events, onEditEvent, showUser = true, showLead = true }: EventsListProps) {
+export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, showLead = true }: EventsListProps) {
   const completeEvent = useCompleteScheduleEvent();
   const deleteEvent = useDeleteScheduleEvent();
 
