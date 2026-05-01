@@ -61,6 +61,8 @@ export const ptBR = {
     gamification: 'Gamificação',
     history: 'Histórico',
     more: 'Mais',
+    summary: 'Geral',
+    campaigns: 'Campanhas',
   },
 
   // Settings

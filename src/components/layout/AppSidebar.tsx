@@ -31,7 +31,17 @@ interface NavItem {
 const allNavItems: NavItem[] = [{
   icon: LayoutDashboard,
   labelKey: 'dashboard',
-  path: '/dashboard'
+  path: '/dashboard',
+  children: [{
+    icon: LayoutDashboard,
+    labelKey: 'summary',
+    path: '/dashboard'
+  }, {
+    icon: BarChart3,
+    labelKey: 'campaigns',
+    path: '/dashboard/campaigns',
+    module: 'campaigns'
+  }]
 }, {
   icon: Kanban,
   labelKey: 'pipelines',

@@ -61,6 +61,8 @@ export const en = {
     gamification: 'Gamification',
     history: 'History',
     more: 'More',
+    summary: 'Summary',
+    campaigns: 'Campaigns',
   },
 
   // Settings
