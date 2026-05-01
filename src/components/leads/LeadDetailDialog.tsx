@@ -2249,10 +2249,11 @@ export function LeadDetailDialog({
                               )}
                             </div>
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
+                </div>
 
                 {/* Coluna 2: Rastreamento + Jornada */}
                 <div className="space-y-6">
