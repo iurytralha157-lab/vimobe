@@ -2245,7 +2245,6 @@ export function LeadDetailDialog({
                   </div>
                 </div>
 
-
           {/* Deal Tab */}
           <TabsContent value="deal" className="p-6 mt-0">
             <div className="space-y-4">
