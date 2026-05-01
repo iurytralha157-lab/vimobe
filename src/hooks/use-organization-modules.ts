@@ -35,7 +35,6 @@ const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'tags',
   'round_robin',
   'reports',
-  'gamification',
   'performance'
 ];
 
