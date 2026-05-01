@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { ExternalLink } from 'lucide-react';
 import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
