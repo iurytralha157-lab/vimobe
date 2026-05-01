@@ -861,17 +861,16 @@ export default function Pipelines() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-64 p-3">
-                <div className="space-y-3">
+              <PopoverContent align="end" className="w-64 p-3 max-h-[80vh] overflow-y-auto">
+                <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Buscar</label>
                     <div className="relative">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                       <Input
-                        placeholder="Buscar..."
+                        placeholder="Buscar lead..."
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
-                        className="h-9 w-full pl-8 text-xs"
+                        className="h-9 w-full pl-8 text-sm bg-muted/20"
                       />
                     </div>
                   </div>
