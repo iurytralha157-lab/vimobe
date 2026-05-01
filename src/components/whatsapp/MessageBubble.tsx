@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, SyntheticEvent } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video, Volume2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
