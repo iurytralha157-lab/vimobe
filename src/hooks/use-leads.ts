@@ -285,6 +285,7 @@ export function useCreateLead() {
         user_id: user.user.id,
         type: 'lead_created',
         content: `Lead "${lead.name}" foi criado`,
+        metadata: { source: lead.source || 'manual' }
       });
       
       // Audit log: lead created

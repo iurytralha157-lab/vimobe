@@ -171,6 +171,15 @@ export function useCreateProperty() {
         .single();
       
       if (error) throw error;
+
+      // Log activity: property created (for gamification)
+      await supabase.from('activities').insert({
+        user_id: user.user.id,
+        lead_id: '00000000-0000-0000-0000-000000000000', // Placeholder for non-lead activities
+        type: 'property_created',
+        content: `Imóvel "${data.title}" (Cód: ${data.code}) foi captado`,
+        metadata: { property_id: data.id, code: data.code }
+      });
       return data;
     },
     onSuccess: (data) => {
