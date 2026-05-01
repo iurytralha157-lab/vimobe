@@ -297,8 +297,12 @@ export function LeadHistory({ leadId, onEventClick }: LeadHistoryProps) {
                         </Badge>
                       )}
 
-                      {/* Sistema badge: only for timeline events with no human actor and no automation */}
-                      {event.source === 'timeline' && !event.actor && !event.isAutomation && (
+                      {/* Sistema badge: only for timeline events with no human actor and no automation, and not for creation/reentry */}
+                      {event.source === 'timeline' && 
+                       !event.actor && 
+                       !event.isAutomation && 
+                       event.type !== 'lead_created' && 
+                       event.type !== 'lead_reentry' && (
                         <Badge
                           variant="outline"
                           className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
