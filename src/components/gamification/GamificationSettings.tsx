@@ -16,7 +16,9 @@ import {
   UserCheck, 
   Calendar, 
   BadgeDollarSign,
-  Loader2
+  Loader2,
+  UserPlus,
+  Home
 } from 'lucide-react';
 
 const RULE_ICONS: Record<string, any> = {
