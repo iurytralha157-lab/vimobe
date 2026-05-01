@@ -256,8 +256,9 @@ export default function Pipelines() {
       
       clearTimeout(refetchTimeout);
       refetchTimeout = setTimeout(() => {
+        if (isDraggingRef.current) return;
         refetch();
-      }, 1000); // 1000ms debounce para aguardar triggers do banco
+      }, 2000); // Aumentado para 2s para garantir estabilidade pós-automações
     };
     
     const channel = supabase
@@ -380,7 +381,23 @@ export default function Pipelines() {
     const effectiveFilterTag = filterTag !== 'all' ? filterTag : undefined;
     const effectiveFilterDealStatus = filterDealStatus !== 'all' ? filterDealStatus : undefined;
     const effectiveSearchQuery = searchQuery || undefined;
-    const queryKey = ['stages-with-leads', selectedPipelineId, filterUser, dateFromISO, dateToISO, effectiveFilterTag, effectiveFilterDealStatus, effectiveSearchQuery];
+    const effectiveFilterCampaign = filterCampaign !== 'all' ? filterCampaign : undefined;
+    const effectiveFilterAdSet = filterAdSet !== 'all' ? filterAdSet : undefined;
+    const effectiveFilterAd = filterAd !== 'all' ? filterAd : undefined;
+
+    const queryKey = [
+      'stages-with-leads', 
+      selectedPipelineId, 
+      filterUser, 
+      dateFromISO, 
+      dateToISO, 
+      effectiveFilterTag, 
+      effectiveFilterDealStatus, 
+      effectiveSearchQuery,
+      effectiveFilterCampaign,
+      effectiveFilterAdSet,
+      effectiveFilterAd
+    ];
     const previousData = queryClient.getQueryData(queryKey);
     
     queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
