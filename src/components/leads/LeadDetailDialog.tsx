@@ -141,7 +141,24 @@ export function LeadDetailDialog({
   const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({
+  const [feedback, setFeedback] = useState('');
+  
+  const handleSaveFeedback = async () => {
+    if (!feedback.trim()) return;
+    try {
+      await createActivityMutation.mutateAsync({
+        lead_id: lead.id,
+        type: 'note',
+        content: feedback,
+      });
+      setFeedback('');
+      toast.success('Feedback registrado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao registrar feedback');
+    }
+  };
+
+
     name: '',
     phone: '',
     email: '',
