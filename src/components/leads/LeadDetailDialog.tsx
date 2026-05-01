@@ -141,6 +141,9 @@ export function LeadDetailDialog({
   const [taskForOutcome, setTaskForOutcome] = useState<any>(null);
   const [quickActionOutcomeOpen, setQuickActionOutcomeOpen] = useState(false);
   const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
+  const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<any>(null);
+  const [historyEventDialogOpen, setHistoryEventDialogOpen] = useState(false);
+
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
