@@ -741,11 +741,15 @@ export function FloatingChat() {
                       mediaMimeType={msg.media_mime_type}
                       mediaStatus={msg.media_status as 'pending' | 'ready' | 'failed' | null}
                       mediaError={msg.media_error}
+                      mediaSize={msg.media_size}
                       fromMe={msg.from_me}
                       status={msg.status}
                       sentAt={msg.sent_at}
                       senderName={msg.sender_name}
                       isGroup={activeConversation!.is_group}
+                      messageId={msg.id}
+                      leadId={activeConversation!.lead?.id || activeConversation!.lead_id || undefined}
+                      leadName={activeConversation!.lead?.name || activeConversation!.contact_name || undefined}
                     />
                   </div>
                 );

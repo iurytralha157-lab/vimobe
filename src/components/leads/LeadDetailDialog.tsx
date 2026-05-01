@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { ExternalLink } from 'lucide-react';
 import { PropertyPickerDialog } from '@/components/properties/PropertyPickerDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp, RotateCw } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp, RotateCw, FileText, Download, Paperclip } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -30,6 +32,7 @@ import { useProperties } from '@/hooks/use-properties';
 import { useServicePlans } from '@/hooks/use-service-plans';
 import { useScheduleEvents, ScheduleEvent } from '@/hooks/use-schedule-events';
 import { useLeadMeta } from '@/hooks/use-lead-meta';
+import { useLeadAttachments, useCreateLeadAttachment } from '@/hooks/use-lead-attachments';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -143,6 +146,8 @@ export function LeadDetailDialog({
   const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<any>(null);
   const [historyEventDialogOpen, setHistoryEventDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
@@ -299,6 +304,48 @@ export function LeadDetailDialog({
   const { data: servicePlans = [] } = useServicePlans();
   const isTelecom = organization?.segment === 'telecom';
   const { data: telecomCustomer } = useTelecomCustomerByLead(isTelecom ? lead?.id : null);
+  const { data: attachments = [] } = useLeadAttachments(lead?.id);
+  const createAttachment = useCreateLeadAttachment();
+  
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !lead?.id) return;
+    
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `leads/${lead.id}/docs/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("whatsapp-media")
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage
+        .from("whatsapp-media")
+        .getPublicUrl(filePath);
+        
+      await createAttachment.mutateAsync({
+        lead_id: lead.id,
+        file_name: file.name,
+        file_url: urlData.publicUrl,
+        file_type: file.type.startsWith('image/') ? 'image' : 
+                   file.type.startsWith('video/') ? 'video' : 
+                   file.type.startsWith('audio/') ? 'audio' : 'document',
+        file_size: file.size
+      });
+      
+      toast.success('Documento enviado!');
+    } catch (error) {
+      console.error('Error uploading lead document:', error);
+      toast.error('Erro ao enviar documento');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
   
   // Quick action handlers for phone/email with outcome dialog
   const handleQuickPhone = () => {
@@ -2083,6 +2130,92 @@ export function LeadDetailDialog({
                         </div>
                       </div>}
                     </>}
+                  </div>
+                </div>
+
+                {/* Documentação */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <h3 className="font-medium text-sm">Documentação</h3>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 gap-1.5"
+                      disabled={isUploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Paperclip className="h-3.5 w-3.5" />
+                      )}
+                      {isUploading ? 'Enviando...' : 'Anexar'}
+                    </Button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileUpload} 
+                      className="hidden" 
+                    />
+                  </div>
+
+                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
+                    {attachments.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-6 text-muted-foreground gap-2">
+                        <FileText className="h-8 w-8 opacity-20" />
+                        <p className="text-xs">Nenhum documento anexado</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-2">
+                        {attachments.map((doc) => (
+                          <div 
+                            key={doc.id}
+                            className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
+                          >
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <FileText className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => window.open(doc.file_url, '_blank')}
+                                title="Visualizar"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = doc.file_url;
+                                  link.download = doc.file_name;
+                                  link.target = '_blank';
+                                  link.click();
+                                }}
+                                title="Baixar"
+                              >
+                                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -1,4 +1,5 @@
 import { useLeadMessages, LeadMessage } from '@/hooks/use-lead-messages';
+import { MessageBubble } from '@/components/whatsapp/MessageBubble';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageCircle, Image, FileText, Mic, Video, Loader2, User, LogIn } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
@@ -56,121 +57,25 @@ function getSenderDisplay(msg: LeadMessage): string {
   return '';
 }
 
-function MessageBubble({ msg, leadName }: { msg: LeadMessage; leadName: string }) {
+function MessageBubbleWrapper({ msg, leadName, leadId }: { msg: LeadMessage; leadName: string; leadId: string }) {
   const isMedia = msg.message_type && msg.message_type !== 'text';
   const senderLabel = msg.from_me ? getSenderDisplay(msg) : leadName;
 
   return (
-    <div className={cn("flex mb-2", msg.from_me ? "justify-end" : "justify-start")}>
-      <div className={cn(
-        "max-w-[80%] rounded-xl px-3 py-2 text-sm",
-        msg.from_me
-          ? "bg-primary text-primary-foreground rounded-br-sm"
-          : "bg-muted text-foreground rounded-bl-sm"
-      )}>
-        {/* Sender label */}
-        <div className={cn(
-          "text-[10px] font-semibold mb-0.5 flex items-center gap-1",
-          msg.from_me ? "text-primary-foreground/70" : "text-muted-foreground"
-        )}>
-          <User className="h-2.5 w-2.5" />
-          {senderLabel}
-          {msg.session_instance_name && msg.from_me && (
-            <span className="opacity-50">· {msg.session_instance_name}</span>
-          )}
-        </div>
-
-        {/* Media preview */}
-        {isMedia && msg.media_url && msg.message_type === 'image' && (
-          <img
-            src={msg.media_url}
-            alt="Imagem"
-            className="rounded-lg max-h-48 object-cover mb-1 cursor-pointer"
-            onClick={() => window.open(msg.media_url!, '_blank')}
-          />
-        )}
-
-        {isMedia && msg.media_url && msg.message_type === 'video' && (
-          <video
-            src={msg.media_url}
-            controls
-            className="rounded-lg max-h-48 w-full mb-1"
-            preload="metadata"
-          />
-        )}
-
-        {isMedia && msg.media_url && msg.message_type === 'audio' && (
-          <audio
-            src={msg.media_url}
-            controls
-            className="w-full mb-1 max-w-[250px]"
-            preload="metadata"
-          />
-        )}
-
-        {isMedia && msg.media_url && msg.message_type === 'document' && (
-          <div 
-            className={cn(
-              "flex items-center gap-1.5 mb-1 text-xs cursor-pointer hover:opacity-80",
-              msg.from_me ? "text-primary-foreground/80" : "text-muted-foreground"
-            )}
-            onClick={() => window.open(msg.media_url!, '_blank')}
-          >
-            <MessageTypeIcon type={msg.message_type} />
-            <span className="truncate">{msg.content || 'Documento'}</span>
-          </div>
-        )}
-
-        {isMedia && (!msg.media_url || !['image', 'video', 'audio', 'document'].includes(msg.message_type || '')) && (
-          <div className={cn(
-            "flex items-center gap-1.5 mb-1 text-xs",
-            msg.from_me ? "text-primary-foreground/80" : "text-muted-foreground"
-          )}>
-            <MessageTypeIcon type={msg.message_type} />
-            <span>{msg.message_type === 'audio' ? 'Áudio' : msg.message_type === 'video' ? 'Vídeo' : msg.message_type === 'sticker' ? 'Sticker' : 'Documento'}</span>
-          </div>
-        )}
-
-        {/* Text content */}
-        {msg.content && msg.content !== '[Imagem]' && msg.content !== '[Áudio]' && msg.content !== '[Gravação]' && msg.content !== '[Vídeo]' && msg.content !== '[Sticker]' && (
-          <p className="whitespace-pre-wrap break-words">
-            {(() => {
-              const mentionRegex = /(@\d{7,}|@[\w\u00C0-\u017F]+(?:\s[\w\u00C0-\u017F]+){0,2})/g;
-              const parts = msg.content.split(mentionRegex);
-              
-              if (parts.length === 1) return msg.content;
-
-              return parts.map((part, index) => {
-                if (part.match(mentionRegex)) {
-                  return (
-                    <span 
-                      key={index} 
-                      className={cn(
-                        "font-semibold px-1 py-0.5 rounded transition-all duration-200 inline-block",
-                        msg.from_me 
-                          ? "bg-primary-foreground/20 text-primary-foreground" 
-                          : "bg-primary/15 text-primary dark:bg-primary/25"
-                      )}
-                    >
-                      {part}
-                    </span>
-                  );
-                }
-                return part;
-              });
-            })()}
-          </p>
-        )}
-
-        {/* Timestamp */}
-        <div className={cn(
-          "text-[9px] mt-1 text-right",
-          msg.from_me ? "text-primary-foreground/50" : "text-muted-foreground/70"
-        )}>
-          {format(new Date(msg.sent_at), 'HH:mm')}
-        </div>
-      </div>
-    </div>
+    <MessageBubble
+      content={msg.content}
+      messageType={msg.message_type || 'text'}
+      mediaUrl={msg.media_url}
+      mediaMimeType={msg.media_mime_type}
+      mediaStatus={msg.media_status as any}
+      fromMe={msg.from_me}
+      status={msg.status || undefined}
+      sentAt={msg.sent_at}
+      senderName={msg.from_me ? senderLabel : undefined}
+      messageId={msg.id}
+      leadId={leadId}
+      leadName={leadName}
+    />
   );
 }
 
@@ -226,7 +131,7 @@ export function LeadMessagesTab({ leadId, leadName }: LeadMessagesTabProps) {
     }
 
     elements.push(
-      <MessageBubble key={msg.id} msg={msg} leadName={leadName} />
+      <MessageBubbleWrapper key={msg.id} msg={msg} leadName={leadName} leadId={leadId} />
     );
   });
 

@@ -120,7 +120,7 @@ export function LeadTrackingSection({ leadMeta, isLoading }: LeadTrackingSection
                 icon={FileText}
                 label="Formulário"
                 value={leadMeta.form_name || leadMeta.form_id || ''}
-                subValue={leadMeta.form_name && leadMeta.form_id ? `ID: ${leadMeta.form_id}` : undefined}
+                subValue={leadMeta.form_name && leadMeta.form_id && leadMeta.form_name !== leadMeta.form_id ? `ID: ${leadMeta.form_id}` : undefined}
               />
             )}
             

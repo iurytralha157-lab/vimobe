@@ -1,9 +1,20 @@
 import { useState, useRef, useEffect, SyntheticEvent } from "react";
-import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video, Volume2 } from "lucide-react";
+import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video, Volume2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MediaViewer } from "./MediaViewer";
+import { useCreateLeadAttachment } from "@/hooks/use-lead-attachments";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface MessageBubbleProps {
   content: string | null;
@@ -19,6 +30,9 @@ interface MessageBubbleProps {
   senderName?: string | null;
   isGroup?: boolean;
   onRetryMedia?: () => void;
+  messageId?: string;
+  leadId?: string;
+  leadName?: string;
 }
 
 // Generate pseudo-random waveform bars based on a seed
@@ -68,7 +82,12 @@ export function MessageBubble({
   senderName,
   isGroup,
   onRetryMedia,
+  messageId,
+  leadId,
+  leadName,
 }: MessageBubbleProps) {
+  const createAttachment = useCreateLeadAttachment();
+  const [attachConfirmOpen, setAttachConfirmOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -346,7 +365,19 @@ export function MessageBubble({
   );
 
   const renderMediaTimestamp = () => (
-    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/50 flex items-center gap-1">
+    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/50 flex items-center gap-1.5">
+      {leadId && isValidMediaUrl(mediaUrl) && (
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setAttachConfirmOpen(true);
+          }}
+          className="hover:text-primary transition-colors p-0.5"
+          title="Anexar ao Lead"
+        >
+          <Link2 className="w-3 h-3 text-white" />
+        </button>
+      )}
       <span className="text-[11px] text-white/90 leading-none">{formatTime(sentAt)}</span>
       {fromMe && <span className="text-white/90">{getStatusIcon()}</span>}
     </div>
@@ -681,13 +712,27 @@ export function MessageBubble({
             </div>
             
             {/* Timestamp area - 10% */}
-            <div className="flex flex-col items-end shrink-0 gap-0.5">
-              <span className={cn(
-                "text-[11px] leading-none whitespace-nowrap",
-                fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
-              )}>
-                {formatTime(sentAt)}
-              </span>
+            <div className="flex flex-col items-end shrink-0 gap-1">
+              <div className="flex items-center gap-1.5">
+                {leadId && hasValidMedia && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAttachConfirmOpen(true);
+                    }}
+                    className="hover:text-primary transition-colors p-0.5"
+                    title="Anexar ao Lead"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <span className={cn(
+                  "text-[11px] leading-none whitespace-nowrap",
+                  fromMe ? "text-primary-foreground/60" : "text-chatBubble-foreground/60"
+                )}>
+                  {formatTime(sentAt)}
+                </span>
+              </div>
               {fromMe && getStatusIcon()}
             </div>
           </div>
@@ -775,6 +820,37 @@ export function MessageBubble({
             {getStatusIcon()}
           </span>
         )}
+
+        <AlertDialog open={attachConfirmOpen} onOpenChange={setAttachConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Anexar ao Lead?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja anexar este arquivo de mídia à documentação do lead <strong>{leadName}</strong>?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (leadId && mediaUrl) {
+                    await createAttachment.mutateAsync({
+                      lead_id: leadId,
+                      file_name: content || (messageType === 'audio' ? 'Áudio' : messageType === 'image' ? 'Imagem' : 'Documento'),
+                      file_url: mediaUrl,
+                      file_type: messageType,
+                      file_size: mediaSize || undefined,
+                      message_id: messageId,
+                    });
+                  }
+                  setAttachConfirmOpen(false);
+                }}
+              >
+                Anexar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
