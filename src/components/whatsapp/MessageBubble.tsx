@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, SyntheticEvent } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Check, CheckCheck, Clock, Mic, Play, Pause, FileText, Download, AlertCircle, RefreshCw, Loader2, Image as ImageIcon, Video, Volume2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -834,14 +835,30 @@ export function MessageBubble({
               <AlertDialogAction
                 onClick={async () => {
                   if (leadId && mediaUrl) {
+                    const fileName = content || (messageType === 'audio' ? 'Áudio' : messageType === 'image' ? 'Imagem' : 'Documento');
+                    
                     await createAttachment.mutateAsync({
                       lead_id: leadId,
-                      file_name: content || (messageType === 'audio' ? 'Áudio' : messageType === 'image' ? 'Imagem' : 'Documento'),
+                      file_name: fileName,
                       file_url: mediaUrl,
                       file_type: messageType,
                       file_size: mediaSize || undefined,
                       message_id: messageId,
                     });
+
+                    // Adicionar ao histórico também quando anexado via chat
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      await (supabase as any).from('activities').insert({
+                        lead_id: leadId,
+                        user_id: user?.id,
+                        type: 'note',
+                        content: `Documento anexado via chat: ${fileName}`,
+                        metadata: { file_url: mediaUrl, message_id: messageId }
+                      });
+                    } catch (e) {
+                      console.error('Error adding activity for chat attachment:', e);
+                    }
                   }
                   setAttachConfirmOpen(false);
                 }}
