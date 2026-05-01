@@ -422,15 +422,16 @@ export function useUpdateLead() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['lead'] });
-      queryClient.invalidateQueries({ queryKey: ['stages'] });
-      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'] });
-      queryClient.invalidateQueries({ queryKey: ['activities'] });
-      queryClient.invalidateQueries({ queryKey: ['conversation-lead-detail'] });
+      // Sincronização cirúrgica: apenas o necessário
       if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ['lead', data.id] });
         queryClient.invalidateQueries({ queryKey: ['lead-history-v2', data.id] });
       }
+      
+      // Invalida listas apenas para refletir as mudanças (usa refetch em background)
+      queryClient.invalidateQueries({ queryKey: ['leads'], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['stages-with-leads'], refetchType: 'none' });
+      queryClient.invalidateQueries({ queryKey: ['activities'], refetchType: 'none' });
     },
     onError: (error) => {
       toast.error('Erro ao atualizar lead: ' + error.message);
