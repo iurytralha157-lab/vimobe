@@ -84,8 +84,12 @@ export function useOrganizationModules() {
     const moduleRecord = modules.find(m => m.module_name === moduleName);
     
     // If not found in list, check if it's enabled by default
-    if (!moduleRecord) return moduleName === 'financial' ? false : DEFAULT_ENABLED_MODULES.includes(moduleName);
+    if (!moduleRecord) {
+      if (moduleName === 'financial' || moduleName === 'gamification') return false;
+      return DEFAULT_ENABLED_MODULES.includes(moduleName);
+    }
     
+    // Explicit exclusions that cannot be enabled without code logic
     if (moduleName === 'financial') return false;
     
     return moduleRecord.is_enabled;
