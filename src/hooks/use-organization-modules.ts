@@ -35,7 +35,6 @@ const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'tags',
   'round_robin',
   'reports',
-  'gamification',
   'performance'
 ];
 
@@ -85,8 +84,12 @@ export function useOrganizationModules() {
     const moduleRecord = modules.find(m => m.module_name === moduleName);
     
     // If not found in list, check if it's enabled by default
-    if (!moduleRecord) return moduleName === 'financial' ? false : DEFAULT_ENABLED_MODULES.includes(moduleName);
+    if (!moduleRecord) {
+      if (moduleName === 'financial' || moduleName === 'gamification') return false;
+      return DEFAULT_ENABLED_MODULES.includes(moduleName);
+    }
     
+    // Explicit exclusions that cannot be enabled without code logic
     if (moduleName === 'financial') return false;
     
     return moduleRecord.is_enabled;
@@ -94,8 +97,8 @@ export function useOrganizationModules() {
 
   // Get list of all enabled modules
   const enabledModules = (): ModuleName[] => {
-    // Definimos a lista base considerando o estado atual (financeiro removido do default)
-    const baseList = DEFAULT_ENABLED_MODULES.filter(m => m !== 'financial');
+    // Definimos a lista base considerando os estados desativados por padrão
+    const baseList = DEFAULT_ENABLED_MODULES.filter(m => m !== 'financial' && m !== 'gamification');
     
     if (isSuperAdmin) return baseList;
     
@@ -105,7 +108,10 @@ export function useOrganizationModules() {
 
     // Retorna todos os módulos que não estão explicitamente marcados como is_enabled: false
     // E garante que módulos não listados em DEFAULT_ENABLED_MODULES mas ativados no DB apareçam
-    const allPossible = Array.from(new Set([...baseList, ...(modules.filter(m => m.is_enabled && m.module_name !== 'financial').map(m => m.module_name as ModuleName))]));
+    const allPossible = Array.from(new Set([
+      ...baseList, 
+      ...(modules.filter(m => m.is_enabled && m.module_name !== 'financial' && m.module_name !== 'gamification').map(m => m.module_name as ModuleName))
+    ]));
 
     return allPossible.filter(moduleName => {
       if (moduleName === 'financial') return false;
