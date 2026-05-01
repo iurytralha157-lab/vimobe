@@ -289,7 +289,7 @@ export function DashboardFilters({
       />
 
       {/* Desktop Filters Popover for ALL filters when screen is not large enough */}
-      <div className="flex lg:hidden">
+      <div className="flex xl:hidden">
         <Popover>
           <PopoverTrigger asChild>
             <Button 
@@ -304,12 +304,9 @@ export function DashboardFilters({
               Filtros
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 p-3">
+          <PopoverContent align="end" className="w-64 p-3 max-h-[80vh] overflow-y-auto">
             <div className="space-y-3">
-              <TeamFilter />
-              <UserFilter />
-              <SourceFilter />
-              <div className="pt-2 border-t">
+              <div className="pb-3 border-b border-border">
                 <CampaignFilter 
                   campaignId={campaignId}
                   onCampaignChange={onCampaignChange}
@@ -318,15 +315,19 @@ export function DashboardFilters({
                   adId={adId}
                   onAdChange={onAdChange}
                   fullWidth
+                  hideTitles
                 />
               </div>
+              <TeamFilter />
+              <UserFilter />
+              <SourceFilter />
             </div>
           </PopoverContent>
         </Popover>
       </div>
 
-      {/* Show individual filters only on large screens */}
-      <div className="hidden lg:flex items-center gap-2">
+      {/* Show individual filters only on extra large screens */}
+      <div className="hidden xl:flex items-center gap-2">
         {/* Team Filter - Only for admin/team leader */}
         {availableTeams.length > 0 && (
           <Select
