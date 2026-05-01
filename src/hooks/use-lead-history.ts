@@ -367,6 +367,7 @@ export function useLeadHistory(leadId: string | null) {
       );
     },
     enabled: !!leadId,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchInterval: 5000,
   });
 }
