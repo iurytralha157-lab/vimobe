@@ -2198,48 +2198,62 @@ export function LeadDetailDialog({
                           </div>
                         ) : (
                           <div className="grid gap-2">
-                            {attachments.map((doc) => (
-                              <div 
-                                key={doc.id}
-                                className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
-                              >
-                                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                  <FileText className="h-4 w-4 text-primary" />
+                            {attachments.map((doc) => {
+                              const truncateFileName = (name: string, maxLength: number = 20) => {
+                                if (name.length <= maxLength) return name;
+                                const lastDotIndex = name.lastIndexOf('.');
+                                if (lastDotIndex === -1) return name.substring(0, maxLength) + '...';
+                                
+                                const extension = name.substring(lastDotIndex);
+                                const nameWithoutExtension = name.substring(0, lastDotIndex);
+                                return `${nameWithoutExtension.substring(0, maxLength)}...${extension}`;
+                              };
+                              
+                              return (
+                                <div 
+                                  key={doc.id}
+                                  className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
+                                >
+                                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="min-w-0 flex-1 overflow-hidden">
+                                    <p className="text-sm font-medium truncate w-full" title={doc.file_name}>
+                                      {truncateFileName(doc.file_name)}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0 ml-auto">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => window.open(doc.file_url, '_blank')}
+                                      title="Visualizar"
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = doc.file_url;
+                                        link.download = doc.file_name;
+                                        link.target = '_blank';
+                                        link.click();
+                                      }}
+                                      title="Baixar"
+                                    >
+                                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="min-w-0 flex-1 overflow-hidden">
-                                  <p className="text-sm font-medium truncate w-full" title={doc.file_name}>{doc.file_name}</p>
-                                  <p className="text-[10px] text-muted-foreground">
-                                    {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0 ml-auto">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => window.open(doc.file_url, '_blank')}
-                                    title="Visualizar"
-                                  >
-                                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => {
-                                      const link = document.createElement('a');
-                                      link.href = doc.file_url;
-                                      link.download = doc.file_name;
-                                      link.target = '_blank';
-                                      link.click();
-                                    }}
-                                    title="Baixar"
-                                  >
-                                    <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
