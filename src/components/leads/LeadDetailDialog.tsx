@@ -1353,8 +1353,6 @@ export function LeadDetailDialog({
               {/* Rastreamento / Tracking Section */}
               <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
 
-              {/* Jornada do visitante */}
-              <LeadJourneySection leadId={lead.id} />
             </div>
             )
           )}
