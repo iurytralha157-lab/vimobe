@@ -27,7 +27,7 @@ export type ModuleName =
 // Note: 'automations' is disabled by default and must be explicitly enabled by super admin
 const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'crm',
-  'financial',
+  // 'financial' is now disabled by default as per request
   'properties',
   'whatsapp',
   'agenda',
@@ -92,17 +92,25 @@ export function useOrganizationModules() {
 
   // Get list of all enabled modules
   const enabledModules = (): ModuleName[] => {
-    if (isSuperAdmin) return DEFAULT_ENABLED_MODULES;
+    // Definimos a lista base considerando o estado atual (financeiro removido do default)
+    const baseList = DEFAULT_ENABLED_MODULES;
+    
+    if (isSuperAdmin) return baseList;
     
     if (!modules || modules.length === 0) {
-      return DEFAULT_ENABLED_MODULES;
+      return baseList;
     }
 
-    return DEFAULT_ENABLED_MODULES.filter(moduleName => {
+    // Retorna todos os módulos que não estão explicitamente marcados como is_enabled: false
+    // E garante que módulos não listados em DEFAULT_ENABLED_MODULES mas ativados no DB apareçam
+    const allPossible = Array.from(new Set([...baseList, ...(modules.filter(m => m.is_enabled).map(m => m.module_name as ModuleName))]));
+
+    return allPossible.filter(moduleName => {
       const moduleRecord = modules.find(m => m.module_name === moduleName);
       return !moduleRecord || moduleRecord.is_enabled;
     });
   };
+
 
   return {
     modules,

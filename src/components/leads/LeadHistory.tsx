@@ -28,14 +28,19 @@ import {
   Target,
   Smartphone,
   PenLine,
+  Eye,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface LeadHistoryProps {
   leadId: string;
+  onEventClick?: (event: UnifiedHistoryEvent) => void;
 }
+
 
 // ─── Channel labels ───────────────────────────────────────────────────────────
 const CHANNEL_LABELS: Record<string, string> = {
@@ -159,7 +164,7 @@ function getEventColors(event: UnifiedHistoryEvent): { text: string; bg: string 
   return colorMap[event.type] || { text: 'text-muted-foreground', bg: 'bg-muted' };
 }
 
-export function LeadHistory({ leadId }: LeadHistoryProps) {
+export function LeadHistory({ leadId, onEventClick }: LeadHistoryProps) {
   const { data: events = [], isLoading } = useLeadHistory(leadId);
 
   if (isLoading) {
@@ -357,20 +362,35 @@ export function LeadHistory({ leadId }: LeadHistoryProps) {
                   </div>
                 </div>
 
-                {/* Actor */}
-                {event.actor && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Avatar className="h-4 w-4">
-                      <AvatarImage src={event.actor.avatar_url || undefined} />
-                      <AvatarFallback className="text-[8px]">
-                        {event.actor.name?.[0] || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-[10px] text-muted-foreground">
-                      {event.actor.name}
-                    </span>
-                  </div>
-                )}
+                {/* Actor and Action */}
+                <div className="flex items-center justify-between gap-2 mt-1">
+                  {event.actor && (
+                    <div className="flex items-center gap-1.5">
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={event.actor.avatar_url || undefined} />
+                        <AvatarFallback className="text-[8px]">
+                          {event.actor.name?.[0] || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-[10px] text-muted-foreground">
+                        {event.actor.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {onEventClick && (event.type === 'note' || event.content?.length > 50) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 px-2 text-[10px] rounded-full hover:bg-primary/10 hover:text-primary transition-colors ml-auto"
+                      onClick={() => onEventClick(event)}
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Ver detalhe
+                    </Button>
+                  )}
+                </div>
+
               </div>
             </div>
             </React.Fragment>

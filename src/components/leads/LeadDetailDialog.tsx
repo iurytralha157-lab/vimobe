@@ -141,6 +141,9 @@ export function LeadDetailDialog({
   const [taskForOutcome, setTaskForOutcome] = useState<any>(null);
   const [quickActionOutcomeOpen, setQuickActionOutcomeOpen] = useState(false);
   const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
+  const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<any>(null);
+  const [historyEventDialogOpen, setHistoryEventDialogOpen] = useState(false);
+
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -934,13 +937,15 @@ export function LeadDetailDialog({
                 </Button>
               </div>
               
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Histórico</p>
-                <LeadHistory leadId={lead.id} />
-              </div>
             </div>
           )}
-
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Histórico</p>
+                <LeadHistory leadId={lead.id} onEventClick={(event) => {
+                  setSelectedHistoryEvent(event);
+                  setHistoryEventDialogOpen(true);
+                }} />
+              </div>
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && <div className="space-y-4">
@@ -1439,7 +1444,10 @@ export function LeadDetailDialog({
           {activeTab === 'history' && (
             <div className="space-y-4">
               <LeadJourneySection leadId={lead.id} />
-              <LeadHistory leadId={lead.id} />
+              <LeadHistory leadId={lead.id} onEventClick={(event) => {
+                setSelectedHistoryEvent(event);
+                setHistoryEventDialogOpen(true);
+              }} />
             </div>
           )}
         </div>
@@ -1820,14 +1828,15 @@ export function LeadDetailDialog({
                   </Button>
                 </div>
 
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Últimos Feedbacks</p>
-                  <LeadHistory leadId={lead.id} />
-                </div>
               </div>
             </div>
           </TabsContent>
-
+                <div className="mt-4">
+                  <LeadHistory leadId={lead.id} onEventClick={(event) => {
+                    setSelectedHistoryEvent(event);
+                    setHistoryEventDialogOpen(true);
+                  }} />
+                </div>
 
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="p-6 mt-0">
@@ -2310,7 +2319,10 @@ export function LeadDetailDialog({
           <TabsContent value="history" className="p-6 mt-0">
             <div className="space-y-4">
               <LeadJourneySection leadId={lead.id} />
-              <LeadHistory leadId={lead.id} />
+              <LeadHistory leadId={lead.id} onEventClick={(event) => {
+                setSelectedHistoryEvent(event);
+                setHistoryEventDialogOpen(true);
+              }} />
             </div>
           </TabsContent>
 
@@ -2465,6 +2477,57 @@ export function LeadDetailDialog({
         leadName={lead?.name}
         loading={dealStatusChange.isPending}
       />
+      <Dialog open={historyEventDialogOpen} onOpenChange={setHistoryEventDialogOpen}>
+        <DialogContent className="max-w-lg rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Detalhes da Atividade
+            </DialogTitle>
+          </DialogHeader>
+          {selectedHistoryEvent && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="rounded-full">
+                    {selectedHistoryEvent.label}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(selectedHistoryEvent.timestamp), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(selectedHistoryEvent.timestamp), "HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-muted/30 p-4 rounded-xl border italic text-sm text-foreground/90 whitespace-pre-wrap">
+                {selectedHistoryEvent.content || selectedHistoryEvent.metadata?.outcome_notes || "Nenhum detalhe adicional disponível."}
+              </div>
+
+              {selectedHistoryEvent.actor && (
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={selectedHistoryEvent.actor.avatar_url || undefined} />
+                    <AvatarFallback>{selectedHistoryEvent.actor.name?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{selectedHistoryEvent.actor.name}</p>
+                    <p className="text-[10px] text-muted-foreground">Responsável pelo registro</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setHistoryEventDialogOpen(false)} className="rounded-xl">
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
