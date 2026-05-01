@@ -1831,7 +1831,12 @@ export function LeadDetailDialog({
               </div>
             </div>
           </TabsContent>
-
+                <div className="mt-4">
+                  <LeadHistory leadId={lead.id} onEventClick={(event) => {
+                    setSelectedHistoryEvent(event);
+                    setHistoryEventDialogOpen(true);
+                  }} />
+                </div>
 
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="p-6 mt-0">
