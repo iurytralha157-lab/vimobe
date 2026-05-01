@@ -31,6 +31,7 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Signup = lazy(() => import("./pages/Signup"));
 const SelectOrganization = lazy(() => import("./pages/SelectOrganization"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const CampaignDashboard = lazy(() => import("./pages/CampaignDashboard"));
 const Pipelines = lazy(() => import("./pages/Pipelines"));
 const Contacts = lazy(() => import("./pages/Contacts"));
 const Properties = lazy(() => import("./pages/Properties"));
@@ -229,6 +230,7 @@ function AppRoutes() {
             {/* Regular Routes */}
             <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/campaigns" element={<ProtectedRoute><CampaignDashboard /></ProtectedRoute>} />
             <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />

@@ -21,6 +21,7 @@ export type ModuleName =
   | 'webhooks'     // Webhooks
   | 'site'         // Site Integrado
   | 'ai_agent'    // Agente de IA
+  | 'campaigns'   // Campanhas (Dashboard Meta)
   | 'api';         // API Pública
 
 // Default modules that are enabled if no explicit record exists
