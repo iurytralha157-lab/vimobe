@@ -26,6 +26,7 @@ interface CampaignFilterProps {
   adId: string | null;
   onAdChange: (id: string | null) => void;
   fullWidth?: boolean;
+  hideTitles?: boolean;
 }
 
 export function CampaignFilter({
@@ -36,6 +37,7 @@ export function CampaignFilter({
   adId,
   onAdChange,
   fullWidth = false,
+  hideTitles = false,
 }: CampaignFilterProps) {
   const { organization } = useAuth();
 
