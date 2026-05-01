@@ -2206,8 +2206,8 @@ export function LeadDetailDialog({
                                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                                   <FileText className="h-4 w-4 text-primary" />
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                                <div className="min-w-0 flex-1 overflow-hidden">
+                                  <p className="text-sm font-medium truncate w-full" title={doc.file_name}>{doc.file_name}</p>
                                   <p className="text-[10px] text-muted-foreground">
                                     {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                   </p>
