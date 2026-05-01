@@ -746,7 +746,7 @@ export function LeadDetailDialog({
             <PopoverTrigger asChild>
               <button className="flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium min-w-0 overflow-hidden">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-                <span className="truncate">{lead.stage?.name || 'Sem estágio'}</span>
+                <span className="truncate">{currentStage?.name || 'Sem estágio'}</span>
                 <ChevronDown className="h-3 w-3 shrink-0 ml-auto" />
               </button>
             </PopoverTrigger>
