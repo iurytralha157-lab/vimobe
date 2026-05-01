@@ -354,6 +354,9 @@ export function LeadDetailDialog({
   };
   if (!lead) return null;
 
+  const currentStage = lead.stage || stages.find(s => s.id === lead.stage_id);
+  const currentStageIndex = stages.findIndex(s => s.id === lead.stage_id);
+
   // Find cadence template for this lead's stage
   const stageTemplate = cadenceTemplates.find(t => t.stage_key === currentStage?.stage_key);
   const templateTasks = stageTemplate?.tasks || [];
@@ -364,8 +367,6 @@ export function LeadDetailDialog({
   const totalTasksCount = templateTasks.length;
   const leadTagIds = (lead.tags || []).map((t: any) => t.id);
   const availableTags = allTags.filter(t => !leadTagIds.includes(t.id));
-  const currentStage = lead.stage || stages.find(s => s.id === lead.stage_id);
-  const currentStageIndex = stages.findIndex(s => s.id === lead.stage_id);
   const handleAddTag = async (tagId: string) => {
     try {
       await addTag.mutateAsync({
