@@ -2141,9 +2141,6 @@ export function LeadDetailDialog({
                   </div>
                 </div>
 
-                {/* Rastreamento */}
-                <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
-
                 {/* Documentação */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -2224,6 +2221,14 @@ export function LeadDetailDialog({
                               </Button>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Rastreamento */}
+                <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
                         ))}
                       </div>
                     )}
