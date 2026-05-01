@@ -375,7 +375,7 @@ export default function Contacts() {
                   placeholder="Buscar..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="pl-9 h-9 border-none bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/20"
+                  className="pl-9 h-9 bg-muted/50 border focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
               </div>
 
@@ -423,8 +423,7 @@ export default function Contacts() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 p-3 space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Pipeline</Label>
+                    <div className="space-y-3">
                       <Select value={selectedPipeline} onValueChange={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}>
                         <SelectTrigger className="h-9">
                           <SelectValue placeholder="Pipeline" />
@@ -436,9 +435,6 @@ export default function Contacts() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Estágio</Label>
                       <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
                         <SelectTrigger className="h-9">
                           <SelectValue placeholder="Estágio" />
@@ -498,7 +494,7 @@ export default function Contacts() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 gap-2 font-medium border-none hover:bg-muted">
                       <Upload className="h-4 w-4" />
-                      {!isMobile && "Importar / Exportar"}
+                      <span className="hidden xl:inline">Importar / Exportar</span>
                       <ChevronDown className="h-4 w-4 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -524,7 +520,7 @@ export default function Contacts() {
                   className="h-9 gap-2 shadow-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Plus className="h-4 w-4" />
-                  {!isMobile && "Novo Contato"}
+                  <span className="hidden sm:inline">Novo Contato</span>
                 </Button>
               </div>
             </div>

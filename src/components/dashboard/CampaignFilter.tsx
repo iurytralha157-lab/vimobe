@@ -26,6 +26,7 @@ interface CampaignFilterProps {
   adId: string | null;
   onAdChange: (id: string | null) => void;
   fullWidth?: boolean;
+  hideTitles?: boolean;
 }
 
 export function CampaignFilter({
@@ -36,6 +37,7 @@ export function CampaignFilter({
   adId,
   onAdChange,
   fullWidth = false,
+  hideTitles = false,
 }: CampaignFilterProps) {
   const { organization } = useAuth();
 
@@ -137,26 +139,28 @@ export function CampaignFilter({
 
   const content = (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="font-medium text-sm flex items-center gap-2">
-          <Facebook className="h-4 w-4 text-[#1877F2]" />
-          Filtros Meta Ads
-        </h4>
-        {hasActiveFilters && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 px-2 text-[11px] text-muted-foreground hover:text-destructive"
-            onClick={() => {
-              onCampaignChange(null);
-              onAdSetChange(null);
-              onAdChange(null);
-            }}
-          >
-            Limpar
-          </Button>
-        )}
-      </div>
+      {!hideTitles && (
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium text-sm flex items-center gap-2">
+            <Facebook className="h-4 w-4 text-[#1877F2]" />
+            Filtros Meta Ads
+          </h4>
+          {hasActiveFilters && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-[11px] text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                onCampaignChange(null);
+                onAdSetChange(null);
+                onAdChange(null);
+              }}
+            >
+              Limpar
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="space-y-1.5">
