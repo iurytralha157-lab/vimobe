@@ -368,12 +368,18 @@ export function LeadDetailDialog({
   const leadTagIds = (lead.tags || []).map((t: any) => t.id);
   const availableTags = allTags.filter(t => !leadTagIds.includes(t.id));
   const handleAddTag = async (tagId: string) => {
+    // Optimistic update
+    const tagToAdd = allTags.find(t => t.id === tagId);
+    if (tagToAdd && lead) {
+      // Logic for optimistic UI could go here if we wanted to manage local state
+    }
+    
     try {
+      setTagPopoverOpen(false);
       await addTag.mutateAsync({
         leadId: lead.id,
         tagId
       });
-      setTagPopoverOpen(false);
       refetchStages();
     } catch (error) {
       // Error handled by mutation
@@ -553,12 +559,15 @@ export function LeadDetailDialog({
   };
   const handleMoveToStage = async (stageId: string) => {
     if (stageId === lead.stage_id) return;
+    
+    // Close popover immediately for better UX
+    setStagePopoverOpen(false);
+    
     try {
       await updateLead.mutateAsync({
         id: lead.id,
         stage_id: stageId
       });
-      setStagePopoverOpen(false);
       refetchStages();
       toast.success('Lead movido!');
     } catch (error) {

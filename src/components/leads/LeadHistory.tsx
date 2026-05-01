@@ -305,9 +305,9 @@ export function LeadHistory({ leadId, onEventClick }: LeadHistoryProps) {
                        event.type !== 'lead_reentry' && (
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                          className="text-[10px] px-1.5 py-0 h-4 bg-muted text-muted-foreground border-transparent opacity-60"
                         >
-                          Sistema
+                          Auto
                         </Badge>
                       )}
                     </div>
