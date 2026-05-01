@@ -346,18 +346,20 @@ export function useLeadHistory(leadId: string | null) {
         });
 
       // Build entry events mapped to unified format
-      const entriesMapped: UnifiedHistoryEvent[] = entryEvents.map((e: any) => ({
-        id: `entry-${e.id}`,
-        type: 'lead_reentry',
-        label: e.entry_type === 'initial' ? 'Primeira entrada' : 'Reentrada do Lead',
-        content: `Origem: ${e.source}${e.campaign_name ? ` | Campanha: ${e.campaign_name}` : ''}`,
-        timestamp: e.created_at,
-        actor: null,
-        source: 'timeline' as const,
-        metadata: e,
-        channel: e.source,
-        isAutomation: false,
-      }));
+      const entriesMapped: UnifiedHistoryEvent[] = entryEvents
+        .filter((e: any) => e.entry_type !== 'initial') // Remove redundancy with "Lead criado"
+        .map((e: any, index: number) => ({
+          id: `entry-${e.id}`,
+          type: 'lead_reentry',
+          label: `${index + 2}ª Entrada`, // First re-entry is the 2nd entry
+          content: `Origem: ${e.source}${e.campaign_name ? ` | Campanha: ${e.campaign_name}` : ''}`,
+          timestamp: e.created_at,
+          actor: null,
+          source: 'timeline' as const,
+          metadata: e,
+          channel: e.source,
+          isAutomation: false,
+        }));
 
       // Merge and sort chronologically (oldest first)
       return [...timelineMapped, ...activityMapped, ...entriesMapped].sort(
