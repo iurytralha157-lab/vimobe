@@ -1843,16 +1843,22 @@ export function LeadDetailDialog({
           {/* Schedule Tab */}
           <TabsContent value="schedule" className="p-6 mt-0">
             <div className="space-y-4">
-              <Button onClick={() => setScheduleFormOpen(true)} className="w-full rounded-xl h-11">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo agendamento
-              </Button>
+              {scheduleEvents.length > 0 && (
+                <Button onClick={() => setScheduleFormOpen(true)} className="w-full rounded-xl h-11">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo agendamento
+                </Button>
+              )}
 
               {scheduleFormOpen && <div className="rounded-xl border bg-card p-4">
                   <EventForm open={scheduleFormOpen} onOpenChange={open => !open && handleCloseScheduleForm()} leadId={lead.id} leadName={lead.name} event={editingScheduleEvent} />
                 </div>}
               
-              <EventsList events={scheduleEvents} onEditEvent={handleEditScheduleEvent} />
+              <EventsList 
+                events={scheduleEvents} 
+                onEditEvent={handleEditScheduleEvent} 
+                onAddEvent={() => setScheduleFormOpen(true)}
+              />
             </div>
           </TabsContent>
 
