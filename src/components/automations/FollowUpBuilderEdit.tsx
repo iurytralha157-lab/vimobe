@@ -16,6 +16,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -191,6 +192,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   const [filterUserId, setFilterUserId] = useState<string>('');
   const [stopOnReply, setStopOnReply] = useState<boolean>(true);
   const [onReplyStageId, setOnReplyStageId] = useState<string>('');
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [showSimulator, setShowSimulator] = useState(false);
   const [simulatorHighlightNodeId, setSimulatorHighlightNodeId] = useState<string | null>(null);
 
@@ -219,6 +221,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
   useEffect(() => {
     if (automation && !isInitialized) {
       setName(automation.name || '');
+      setIsActive(automation.is_active);
       setTriggerType(automation.trigger_type as TriggerType);
       
       const config = automation.trigger_config as Record<string, unknown> || {};
@@ -542,6 +545,7 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
       await updateAutomation.mutateAsync({
         id: automationId,
         name,
+        is_active: isActive,
         description: `Follow-up com ${messageNodes.length} mensagens`,
         trigger_type: triggerType,
         trigger_config: {
@@ -756,23 +760,35 @@ function FollowUpBuilderEditInner({ automationId, onBack, onComplete }: FollowUp
             />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant={showSimulator ? "default" : "outline"} 
-            onClick={() => setShowSimulator(!showSimulator)}
-            className="gap-2"
-          >
-            <Play className="h-4 w-4" />
-            Preview
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Salvar
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full border border-border">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-green-500' : 'text-muted-foreground'}`}>
+              {isActive ? 'Ativa' : 'Inativa'}
+            </span>
+            <Switch 
+              checked={isActive}
+              onCheckedChange={setIsActive}
+              className="scale-75 data-[state=checked]:bg-green-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant={showSimulator ? "default" : "outline"} 
+              onClick={() => setShowSimulator(!showSimulator)}
+              className="gap-2"
+            >
+              <Play className="h-4 w-4" />
+              Preview
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Salvar
+            </Button>
+          </div>
         </div>
       </div>
 
