@@ -559,12 +559,15 @@ export function LeadDetailDialog({
   };
   const handleMoveToStage = async (stageId: string) => {
     if (stageId === lead.stage_id) return;
+    
+    // Close popover immediately for better UX
+    setStagePopoverOpen(false);
+    
     try {
       await updateLead.mutateAsync({
         id: lead.id,
         stage_id: stageId
       });
-      setStagePopoverOpen(false);
       refetchStages();
       toast.success('Lead movido!');
     } catch (error) {
