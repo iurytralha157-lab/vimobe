@@ -2513,6 +2513,7 @@ export type Database = {
           empresa: string | null
           endereco: string | null
           faixa_valor_imovel: string | null
+          feedback: string | null
           finalidade_compra: string | null
           first_response_actor_user_id: string | null
           first_response_at: string | null
@@ -2571,6 +2572,7 @@ export type Database = {
           empresa?: string | null
           endereco?: string | null
           faixa_valor_imovel?: string | null
+          feedback?: string | null
           finalidade_compra?: string | null
           first_response_actor_user_id?: string | null
           first_response_at?: string | null
@@ -2629,6 +2631,7 @@ export type Database = {
           empresa?: string | null
           endereco?: string | null
           faixa_valor_imovel?: string | null
+          feedback?: string | null
           finalidade_compra?: string | null
           first_response_actor_user_id?: string | null
           first_response_at?: string | null
