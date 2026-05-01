@@ -2212,7 +2212,7 @@ export function LeadDetailDialog({
                                     {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1 shrink-0 ml-auto">
                                   <Button
                                     variant="ghost"
                                     size="icon"
