@@ -1,26 +1,17 @@
 import { useLocation, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 import { Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSystemSettings } from "@/hooks/use-system-settings";
 
 const NotFound = () => {
   const location = useLocation();
-  const [bgUrl, setBgUrl] = useState<string | null>(null);
+  const { data: systemSettings } = useSystemSettings();
+  const bgUrl = systemSettings?.login_bg_url;
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
-
-  useEffect(() => {
-    supabase
-      .from("system_settings" as any)
-      .select("login_bg_url")
-      .single()
-      .then(({ data }: any) => {
-        if (data?.login_bg_url) setBgUrl(data.login_bg_url);
-      });
-  }, []);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
