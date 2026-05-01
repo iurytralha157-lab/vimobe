@@ -25,6 +25,8 @@ const RULE_ICONS: Record<string, any> = {
   contact_made: UserCheck,
   visit_scheduled: Calendar,
   sale_closed: BadgeDollarSign,
+  lead_created_manual: UserPlus,
+  property_created: Home,
 };
 
 const RULE_LABELS: Record<string, string> = {
@@ -33,6 +35,8 @@ const RULE_LABELS: Record<string, string> = {
   contact_made: 'Contato Efetivo',
   visit_scheduled: 'Visita Agendada',
   sale_closed: 'Venda Concluída',
+  lead_created_manual: 'Cadastro Manual de Lead',
+  property_created: 'Captação de Imóvel',
 };
 
 export function GamificationSettings() {
