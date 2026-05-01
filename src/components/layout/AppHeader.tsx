@@ -260,10 +260,16 @@ export const AppHeader = React.memo(function AppHeader({
                 Guia de configuração
               </DropdownMenuItem>
               {hasModule('api') && (
-                <DropdownMenuItem onClick={() => navigate('/docs/api')} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2">
-                  <Key className="h-4 w-4 text-muted-foreground" />
-                  API Pública
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => navigate('/docs/api')} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    Documentação da API
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/settings?tab=api')} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2">
+                    <Key className="h-4 w-4 text-muted-foreground" />
+                    Configuração da API
+                  </DropdownMenuItem>
+                </>
               )}
               {isSuperAdmin && (
                 <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer rounded-xl m-1 px-3 py-2 text-sm gap-2 border-t border-border/20 mt-1">
