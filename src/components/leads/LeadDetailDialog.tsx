@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp, RotateCw, FileText, Download, Paperclip } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Building2, Loader2, CheckCircle, X, Plus, Save, User, Briefcase, MapPin, DollarSign, Clock, ChevronRight, Calendar, Target, Facebook, Instagram, Lightbulb, FileEdit, Zap, Bot, Check, Activity, ListTodo, Contact, Handshake, History, Timer, ChevronDown, Trophy, XCircle, CircleDot, UserCheck, RotateCcw, ChevronUp, RotateCw, FileText, Download, Paperclip, BarChart3 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -2253,7 +2253,17 @@ export function LeadDetailDialog({
 
                         {/* Coluna 2: Rastreamento + Jornada */}
                         <div className="space-y-6">
-                          <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                                  <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                                </div>
+                                <h3 className="font-medium text-sm">Rastreamento</h3>
+                              </div>
+                            </div>
+                            <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+                          </div>
                           <LeadJourneySection leadId={lead.id} />
                         </div>
                       </div>

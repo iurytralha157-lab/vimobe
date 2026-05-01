@@ -66,16 +66,7 @@ export function LeadTrackingSection({ leadMeta, isLoading }: LeadTrackingSection
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <BarChart3 className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <h3 className="font-medium text-sm">Rastreamento</h3>
-        </div>
-        {sourceTypeBadge}
-      </div>
+      {/* Header removido para evitar duplicação no card */}
 
       {/* Campaign Data */}
       {hasCampaignData && (
