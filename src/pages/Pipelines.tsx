@@ -1150,18 +1150,75 @@ export default function Pipelines() {
                 triggerClassName="h-8 w-auto min-w-[120px] xl:min-w-[140px] text-[10px] xl:text-xs justify-start flex-shrink-0"
               />
 
-              {/* Collapsed Filters for Middle Screens */}
+              {/* Collapsed Filters for Middle Screens (Consolidated View) */}
               <div className="flex xl:hidden">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className={cn("h-8 px-2 gap-1.5 text-[10px]", ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all')) && "border-primary text-primary")}>
+                    <Button variant="outline" size="sm" className={cn("h-8 px-2 gap-1.5 text-[10px]", ((filterUser && filterUser !== 'all') || (filterTag && filterTag !== 'all') || (filterDealStatus && filterDealStatus !== 'all') || (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all')) && "border-primary text-primary")}>
                       <Filter className="h-3.5 w-3.5" />
                       Filtros
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-64 p-3 space-y-3">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium">Responsável</label>
+                  <PopoverContent align="end" className="w-64 p-3 space-y-3 max-h-[80vh] overflow-y-auto">
+                    <div className="pb-3 border-b border-border">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={cn(
+                              "h-9 w-full text-xs gap-1.5 justify-between",
+                              (filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && "border-[#1877F2] text-[#1877F2]"
+                            )}
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <SlidersHorizontal className="h-3.5 w-3.5" />
+                              <span>Meta Ads</span>
+                            </div>
+                            {(filterCampaign !== 'all' || filterAdSet !== 'all' || filterAd !== 'all') && (
+                              <Badge className="h-4 min-w-4 p-0 px-1 text-[10px] bg-[#1877F2]">
+                                {[filterCampaign !== 'all', filterAdSet !== 'all', filterAd !== 'all'].filter(Boolean).length}
+                              </Badge>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent side="left" className="w-72 p-4 z-[100]">
+                          <div className="space-y-4">
+                            <div className="space-y-3">
+                              <Select value={filterCampaign} onValueChange={setFilterCampaign}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todas campanhas" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todas campanhas</SelectItem>
+                                  {metaFilters?.campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              <Select value={filterAdSet} onValueChange={setFilterAdSet}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos conjuntos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos conjuntos</SelectItem>
+                                  {metaFilters?.adsets.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              <Select value={filterAd} onValueChange={setFilterAd}>
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Todos criativos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">Todos criativos</SelectItem>
+                                  {metaFilters?.ads.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {(isAdmin || hasLeadViewAll) && (
                       <Select value={filterUser} onValueChange={setFilterUser}>
                         <SelectTrigger className="h-9">
                           <SelectValue placeholder="Responsável" />
@@ -1171,33 +1228,27 @@ export default function Pipelines() {
                           {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium">Tags</label>
-                      <Select value={filterTag} onValueChange={setFilterTag}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Tags" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas</SelectItem>
-                          {allTags.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium">Status</label>
-                      <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          <SelectItem value="open">Aberto</SelectItem>
-                          <SelectItem value="won">Ganho</SelectItem>
-                          <SelectItem value="lost">Perdido</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    )}
+                    <Select value={filterTag} onValueChange={setFilterTag}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Tags" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {allTags.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterDealStatus} onValueChange={setFilterDealStatus}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="open">Aberto</SelectItem>
+                        <SelectItem value="won">Ganho</SelectItem>
+                        <SelectItem value="lost">Perdido</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </PopoverContent>
                 </Popover>
               </div>
