@@ -2460,6 +2460,57 @@ export function LeadDetailDialog({
         leadName={lead?.name}
         loading={dealStatusChange.isPending}
       />
+      <Dialog open={historyEventDialogOpen} onOpenChange={setHistoryEventDialogOpen}>
+        <DialogContent className="max-w-lg rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Detalhes da Atividade
+            </DialogTitle>
+          </DialogHeader>
+          {selectedHistoryEvent && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="rounded-full">
+                    {selectedHistoryEvent.label}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(selectedHistoryEvent.timestamp), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(selectedHistoryEvent.timestamp), "HH:mm", { locale: ptBR })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-muted/30 p-4 rounded-xl border italic text-sm text-foreground/90 whitespace-pre-wrap">
+                {selectedHistoryEvent.content || selectedHistoryEvent.metadata?.outcome_notes || "Nenhum detalhe adicional disponível."}
+              </div>
+
+              {selectedHistoryEvent.actor && (
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={selectedHistoryEvent.actor.avatar_url || undefined} />
+                    <AvatarFallback>{selectedHistoryEvent.actor.name?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{selectedHistoryEvent.actor.name}</p>
+                    <p className="text-[10px] text-muted-foreground">Responsável pelo registro</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setHistoryEventDialogOpen(false)} className="rounded-xl">
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
