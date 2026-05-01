@@ -1550,7 +1550,8 @@ export function LeadDetailDialog({
     </div>);
 
   // Desktop content - defined as JSX variable (NOT a component function) to prevent re-mounting
-  const DesktopContent = () => (<div className="flex flex-col h-full max-h-[90vh]">
+  const DesktopContent = () => (
+    <div className="flex flex-col h-full max-h-[90vh]">
       {/* Premium Header */}
       <div className="relative p-6 border-b bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
         {/* Subtle background pattern */}
