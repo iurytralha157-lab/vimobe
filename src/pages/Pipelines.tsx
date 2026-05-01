@@ -256,8 +256,9 @@ export default function Pipelines() {
       
       clearTimeout(refetchTimeout);
       refetchTimeout = setTimeout(() => {
+        if (isDraggingRef.current) return;
         refetch();
-      }, 1000); // 1000ms debounce para aguardar triggers do banco
+      }, 2000); // Aumentado para 2s para garantir estabilidade pós-automações
     };
     
     const channel = supabase
