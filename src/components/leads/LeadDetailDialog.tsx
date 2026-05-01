@@ -146,6 +146,8 @@ export function LeadDetailDialog({
   const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<any>(null);
   const [historyEventDialogOpen, setHistoryEventDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
