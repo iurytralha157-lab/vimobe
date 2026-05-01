@@ -375,7 +375,7 @@ export default function Contacts() {
                   placeholder="Buscar..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="pl-9 h-9 border-none bg-muted/40 focus-visible:ring-1 focus-visible:ring-primary/20"
+                  className="pl-9 h-9 bg-muted/50 border focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
               </div>
 
