@@ -2482,8 +2482,6 @@ export function LeadDetailDialog({
           </TabsContent>
 
           {/* History Tab */}
-
-          {/* History Tab */}
           <TabsContent value="history" className="p-6 mt-0">
             <div className="space-y-4">
               <LeadJourneySection leadId={lead.id} />
@@ -2493,8 +2491,6 @@ export function LeadDetailDialog({
               }} />
             </div>
           </TabsContent>
-
-          {/* Timeline Tab */}
         </Tabs>
       </ScrollArea>
     </div>);
