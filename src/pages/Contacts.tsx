@@ -494,7 +494,7 @@ export default function Contacts() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 gap-2 font-medium border-none hover:bg-muted">
                       <Upload className="h-4 w-4" />
-                      {!isMobile && "Importar / Exportar"}
+                      <span className="hidden xl:inline">Importar / Exportar</span>
                       <ChevronDown className="h-4 w-4 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -520,7 +520,7 @@ export default function Contacts() {
                   className="h-9 gap-2 shadow-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Plus className="h-4 w-4" />
-                  {!isMobile && "Novo Contato"}
+                  <span className="hidden sm:inline">Novo Contato</span>
                 </Button>
               </div>
             </div>
