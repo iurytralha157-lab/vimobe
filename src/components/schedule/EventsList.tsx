@@ -11,7 +11,8 @@ import {
   Trash2,
   Edit2,
   Clock,
-  User
+  User,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -57,9 +58,10 @@ interface EventsListProps {
   onEditEvent?: (event: ScheduleEvent) => void;
   showUser?: boolean;
   showLead?: boolean;
+  onAddEvent?: () => void;
 }
 
-export function EventsList({ events, onEditEvent, showUser = true, showLead = true }: EventsListProps) {
+export function EventsList({ events, onEditEvent, onAddEvent, showUser = true, showLead = true }: EventsListProps) {
   const completeEvent = useCompleteScheduleEvent();
   const deleteEvent = useDeleteScheduleEvent();
 
@@ -88,9 +90,24 @@ export function EventsList({ events, onEditEvent, showUser = true, showLead = tr
 
   if (events.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <CalendarIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>Nenhuma atividade encontrada</p>
+      <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+          <CalendarIcon className="h-6 w-6 opacity-50" />
+        </div>
+        <p className="text-sm font-medium">Nenhuma atividade encontrada</p>
+        <p className="text-xs mb-4">Você ainda não agendou nenhuma atividade para este lead.</p>
+        
+        {onAddEvent && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onAddEvent}
+            className="rounded-lg h-9 px-4 text-xs font-medium"
+          >
+            <Plus className="h-3.5 w-3.5 mr-2" />
+            Novo agendamento
+          </Button>
+        )}
       </div>
     );
   }
