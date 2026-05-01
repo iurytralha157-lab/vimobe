@@ -234,6 +234,7 @@ export function DashboardFilters({
                   adId={adId}
                   onAdChange={onAdChange}
                   fullWidth
+                  hideTitles // New prop to hide internal labels
                 />
               </div>
 
