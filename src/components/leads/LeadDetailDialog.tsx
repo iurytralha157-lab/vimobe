@@ -2151,7 +2151,7 @@ export function LeadDetailDialog({
                       </div>
 
                       {/* Documentação movida para logo abaixo de Dados do Contato */}
-                      <div className="space-y-3 pt-2">
+                      <div className="space-y-3 pt-4 border-t">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -2244,6 +2244,7 @@ export function LeadDetailDialog({
                     </div>}
                   </div>
                 </div>
+
 
           {/* Deal Tab */}
           <TabsContent value="deal" className="p-6 mt-0">
