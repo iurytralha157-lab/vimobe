@@ -148,11 +148,25 @@ export function LeadDetailDialog({
   const handleSaveFeedback = async () => {
     if (!feedback.trim()) return;
     try {
+      // Registrar no histórico como uma nota
       await createActivityMutation.mutateAsync({
         lead_id: lead.id,
         type: 'note',
         content: feedback,
       });
+      
+      // Também podemos salvar como o feedback mais recente no lead
+      // (Isso requer a coluna 'feedback' que você solicitou via SQL)
+      try {
+        await updateLead.mutateAsync({
+          id: lead.id,
+          feedback: feedback
+        } as any);
+      } catch (e) {
+        // Se a coluna ainda não existir, apenas ignoramos o erro de persistência única
+        console.log("Coluna 'feedback' ainda não existe na tabela leads");
+      }
+
       setFeedback('');
       toast.success('Feedback registrado com sucesso!');
     } catch (error) {
