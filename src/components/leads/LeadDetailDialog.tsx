@@ -355,7 +355,7 @@ export function LeadDetailDialog({
   if (!lead) return null;
 
   // Find cadence template for this lead's stage
-  const stageTemplate = cadenceTemplates.find(t => t.stage_key === lead.stage?.stage_key);
+  const stageTemplate = cadenceTemplates.find(t => t.stage_key === currentStage?.stage_key);
   const templateTasks = stageTemplate?.tasks || [];
 
   // Map lead tasks by a key to check if completed
