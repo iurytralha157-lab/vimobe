@@ -1397,9 +1397,9 @@ export default function Pipelines() {
               {/* Botão de Refresh removido */}
               
               {/* Desktop New Button */}
-              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0">
-                <Plus className="h-4 w-4 mr-2" />
-                {newButtonLabel}
+              <Button data-tour="pipeline-new-lead" size="sm" onClick={() => openNewLeadDialog()} className="flex-shrink-0 bg-[#f97316] hover:bg-[#ea580c]">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{newButtonLabel}</span>
               </Button>
             </div>
           </div>
