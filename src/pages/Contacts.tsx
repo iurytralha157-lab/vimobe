@@ -447,9 +447,6 @@ export default function Contacts() {
                         </SelectContent>
                       </Select>
                     </div>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
