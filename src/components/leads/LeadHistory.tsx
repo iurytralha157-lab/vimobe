@@ -161,7 +161,7 @@ function getEventColors(event: UnifiedHistoryEvent): { text: string; bg: string 
   return colorMap[event.type] || { text: 'text-muted-foreground', bg: 'bg-muted' };
 }
 
-export function LeadHistory({ leadId }: LeadHistoryProps) {
+export function LeadHistory({ leadId, onEventClick }: LeadHistoryProps) {
   const { data: events = [], isLoading } = useLeadHistory(leadId);
 
   if (isLoading) {
