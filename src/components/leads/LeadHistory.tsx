@@ -35,7 +35,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface LeadHistoryProps {
   leadId: string;
+  onEventClick?: (event: UnifiedHistoryEvent) => void;
 }
+
 
 // ─── Channel labels ───────────────────────────────────────────────────────────
 const CHANNEL_LABELS: Record<string, string> = {
