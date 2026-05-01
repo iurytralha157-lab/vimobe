@@ -2250,8 +2250,8 @@ export function LeadDetailDialog({
                             </div>
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
