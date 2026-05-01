@@ -336,6 +336,14 @@ export function LeadDetailDialog({
                    file.type.startsWith('audio/') ? 'audio' : 'document',
         file_size: file.size
       });
+
+      // Registrar no histórico
+      await createActivityMutation.mutateAsync({
+        lead_id: lead.id,
+        type: 'note',
+        content: `Novo documento anexado: ${file.name}`,
+        metadata: { file_url: urlData.publicUrl }
+      });
       
       toast.success('Documento enviado!');
     } catch (error) {
@@ -2133,6 +2141,9 @@ export function LeadDetailDialog({
                   </div>
                 </div>
 
+                {/* Rastreamento */}
+                <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+
                 {/* Documentação */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -2218,9 +2229,6 @@ export function LeadDetailDialog({
                     )}
                   </div>
                 </div>
-
-                {/* Rastreamento */}
-                <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
 
                 {/* Jornada do visitante */}
                 <LeadJourneySection leadId={lead.id} />
