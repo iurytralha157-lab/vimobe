@@ -939,7 +939,13 @@ export function LeadDetailDialog({
               
             </div>
           )}
-
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Histórico</p>
+                <LeadHistory leadId={lead.id} onEventClick={(event) => {
+                  setSelectedHistoryEvent(event);
+                  setHistoryEventDialogOpen(true);
+                }} />
+              </div>
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && <div className="space-y-4">
