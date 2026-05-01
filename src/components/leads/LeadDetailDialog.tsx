@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { Textarea } from '@/components/ui/textarea';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -141,6 +143,37 @@ export function LeadDetailDialog({
   const [quickActionOutcomeType, setQuickActionOutcomeType] = useState<'call' | 'email'>('call');
   const [lostReasonLocal, setLostReasonLocal] = useState(lead?.lost_reason || '');
   const [lostReasonDialogOpen, setLostReasonDialogOpen] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  
+  const handleSaveFeedback = async () => {
+    if (!feedback.trim()) return;
+    try {
+      // Registrar no histórico como uma nota
+      await createActivityMutation.mutateAsync({
+        lead_id: lead.id,
+        type: 'note',
+        content: feedback,
+      });
+      
+      // Também podemos salvar como o feedback mais recente no lead
+      // (Isso requer a coluna 'feedback' que você solicitou via SQL)
+      try {
+        await updateLead.mutateAsync({
+          id: lead.id,
+          feedback: feedback
+        } as any);
+      } catch (e) {
+        // Se a coluna ainda não existir, apenas ignoramos o erro de persistência única
+        console.log("Coluna 'feedback' ainda não existe na tabela leads");
+      }
+
+      setFeedback('');
+      toast.success('Feedback registrado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao registrar feedback');
+    }
+  };
+
   const [editForm, setEditForm] = useState({
     name: '',
     phone: '',
@@ -598,16 +631,6 @@ export function LeadDetailDialog({
     label: 'Atividades',
     icon: Activity
   }, {
-    id: 'messages',
-    label: 'Chat',
-    icon: MessageCircle,
-    badge: lead.unread_count > 0 ? lead.unread_count.toString() : null
-  }, {
-    id: 'cadence',
-    label: 'Cadência',
-    icon: ListTodo,
-    badge: totalTasksCount > 0 ? `${completedTasksCount}/${totalTasksCount}` : null
-  }, {
     id: 'schedule',
     label: 'Agenda',
     icon: Calendar,
@@ -624,10 +647,6 @@ export function LeadDetailDialog({
     id: 'history',
     label: 'Histórico',
     icon: History
-  }, {
-    id: 'timeline',
-    label: 'Timeline',
-    icon: Timer
   }];
 
   // Mobile content - defined as JSX variable (NOT a component function) to prevent re-mounting
@@ -817,48 +836,53 @@ export function LeadDetailDialog({
       <div className="flex-1 overflow-y-auto" id="mobile-lead-scroll">
         <div className={cn("p-4", isEditingContact && activeTab === 'contact' ? "pb-4" : "pb-8")}>
           {/* Activities Tab */}
-          {activeTab === 'activities' && <div className="space-y-4">
+          {activeTab === 'activities' && (
+            <div className="space-y-6">
               {/* Telecom Customer Summary */}
               {isTelecom && telecomCustomer && (
                 <TelecomSummaryCard customer={telecomCustomer} onEdit={() => setActiveTab('contact')} />
               )}
               
-              <LeadHistory leadId={lead.id} />
-            </div>}
-
-          {/* Chat Tab */}
-          {activeTab === 'messages' && <div className="h-[500px]">
-              <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
-            </div>}
-
-          {/* Cadence Tab */}
-          {activeTab === 'cadence' && <div className="space-y-4">
-              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
-                <div className="flex items-center justify-between mb-3">
+              {/* Cadência Section */}
+              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
                       <ListTodo className="h-3.5 w-3.5 text-primary" />
                     </div>
                     <h3 className="font-medium text-sm">Cadência de atividades</h3>
                   </div>
-                  {totalTasksCount > 0 && <Badge variant="outline" className="text-xs">
+                  {totalTasksCount > 0 && (
+                    <Badge variant="outline" className="text-[10px]">
                       {completedTasksCount}/{totalTasksCount}
-                    </Badge>}
+                    </Badge>
+                  )}
                 </div>
                 
-                {leadTasksLoading ? <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div> : templateTasks.length > 0 ? <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5 px-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Cadência: <span className="font-medium text-foreground">{stageTemplate?.name}</span>
-                    </p>
+                {leadTasksLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : templateTasks.length > 0 ? (
+                  <div className="space-y-2">
                     {templateTasks.map((task: any) => {
-                const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
-                const isDone = existingTask?.is_done || false;
-                const TaskIcon = activityTypeIcons[task.type] || Clock;
-                return <div key={task.id} onClick={() => handleCadenceTaskClick(task)} className={cn("flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all active:scale-[0.98]", isDone ? "bg-muted/50 border-border" : "hover:bg-accent/50 hover:border-primary/20", task.type === 'message' && task.recommended_message && !isDone && "border-primary/30 bg-primary/5")}>
-                          <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", isDone ? "bg-gradient-to-br from-green-500 to-emerald-600" : "bg-gradient-to-br from-primary/80 to-primary")}>
+                      const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
+                      const isDone = existingTask?.is_done || false;
+                      const TaskIcon = activityTypeIcons[task.type] || Clock;
+                      return (
+                        <div 
+                          key={task.id} 
+                          onClick={() => handleCadenceTaskClick(task)} 
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all active:scale-[0.98]", 
+                            isDone ? "bg-muted/50 border-border" : "hover:bg-accent/50 hover:border-primary/20", 
+                            task.type === 'message' && task.recommended_message && !isDone && "border-primary/30 bg-primary/5"
+                          )}
+                        >
+                          <div className={cn(
+                            "h-8 w-8 rounded-lg flex items-center justify-center shrink-0", 
+                            isDone ? "bg-gradient-to-br from-green-500 to-emerald-600" : "bg-gradient-to-br from-primary/80 to-primary"
+                          )}>
                             {isDone ? <Check className="h-3.5 w-3.5 text-white" /> : <TaskIcon className="h-3.5 w-3.5 text-white" />}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -870,19 +894,52 @@ export function LeadDetailDialog({
                             </p>
                           </div>
                           {!isDone && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
-                        </div>;
-              })}
-                  </div> : <div className="text-center py-6 border border-dashed rounded-xl bg-muted/20">
-                    <ListTodo className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Nenhuma cadência</p>
-                  </div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 border border-dashed rounded-xl">
+                    <p className="text-xs text-muted-foreground">Nenhuma cadência</p>
+                  </div>
+                )}
               </div>
-            </div>}
 
-          {/* Timeline Tab */}
-          {activeTab === 'timeline' && <div className="p-2">
-              <LeadTimeline leadId={lead.id} />
-            </div>}
+              {/* Feedback Section */}
+              <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 shadow-sm space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <h3 className="font-medium text-sm">Feedback do Lead</h3>
+                </div>
+                <Textarea 
+                  placeholder="Feedback sobre o lead..." 
+                  className="min-h-[120px] rounded-xl resize-none text-sm"
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                />
+                <Button 
+                  className="w-full rounded-xl" 
+                  size="sm"
+                  disabled={!feedback.trim() || createActivityMutation.isPending}
+                  onClick={handleSaveFeedback}
+                >
+                  {createActivityMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Registrar Feedback
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase px-1">Histórico</p>
+                <LeadHistory leadId={lead.id} />
+              </div>
+            </div>
+          )}
 
 
           {/* Schedule Tab */}
@@ -1667,85 +1724,107 @@ export function LeadDetailDialog({
 
           {/* Atividades Tab */}
           <TabsContent value="activities" className="p-6 mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Telecom Customer Summary - Desktop */}
-              {isTelecom && telecomCustomer && (
-                <div className="lg:col-span-2">
-                  <TelecomSummaryCard customer={telecomCustomer} onEdit={() => setActiveTab('contact')} />
-                </div>
-              )}
-              
-              <div className="lg:col-span-2">
-                <LeadHistory leadId={lead.id} />
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Chat Tab */}
-          <TabsContent value="messages" className="p-6 mt-0">
-            <LeadMessagesTab leadId={lead.id} leadName={lead.name} />
-          </TabsContent>
-
-          {/* Cadência Tab */}
-          <TabsContent value="cadence" className="p-6 mt-0">
-            {/* Cadência - próximas atividades */}
-            <div className="p-5 rounded-xl bg-gradient-to-br from-card to-muted/30 border shadow-sm max-w-2xl mx-auto">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Coluna Esquerda: Cadência */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                     <ListTodo className="h-4 w-4 text-primary" />
                   </div>
                   <h3 className="font-semibold">Cadência de atividades</h3>
+                  {totalTasksCount > 0 && (
+                    <Badge variant="outline" className="font-normal ml-auto">
+                      {completedTasksCount}/{totalTasksCount}
+                    </Badge>
+                  )}
                 </div>
-                {totalTasksCount > 0 && <Badge variant="outline" className="font-normal">
-                    {completedTasksCount}/{totalTasksCount}
-                  </Badge>}
+
+                {leadTasksLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
+                  </div>
+                ) : templateTasks.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
+                      <CheckCircle className="h-3 w-3" />
+                      Cadência atual: <span className="font-medium text-foreground">{stageTemplate?.name}</span>
+                    </p>
+                    {templateTasks.map((task: any) => {
+                      const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
+                      const isDone = existingTask?.is_done || false;
+                      const TaskIcon = activityTypeIcons[task.type] || Clock;
+                      return (
+                        <div 
+                          key={task.id} 
+                          className={cn(
+                            "group flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all", 
+                            isDone ? "bg-muted/50 border-border" : "hover:bg-accent/50 hover:border-primary/20 hover:shadow-sm hover:-translate-y-0.5", 
+                            task.type === 'message' && task.recommended_message && !isDone && "border-primary/30 bg-primary/5"
+                          )} 
+                          onClick={() => handleCadenceTaskClick(task)}
+                        >
+                          <div className={cn(
+                            "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", 
+                            isDone ? "bg-gradient-to-br from-green-500 to-emerald-600" : "bg-gradient-to-br from-primary/80 to-primary"
+                          )}>
+                            {isDone ? <Check className="h-4 w-4 text-white" /> : <TaskIcon className="h-4 w-4 text-white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn("text-sm font-medium truncate", isDone && "line-through text-muted-foreground")}>
+                              {task.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {taskTypeLabels[task.type]} • Dia {task.day_offset}
+                            </p>
+                          </div>
+                          {!isDone && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 border border-dashed rounded-xl bg-muted/20">
+                    <ListTodo className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="font-medium text-muted-foreground">Nenhuma cadência configurada</p>
+                  </div>
+                )}
               </div>
-              
-              {leadTasksLoading ? <div className="flex items-center justify-center py-12">
-                  <div className="relative">
-                    <div className="h-8 w-8 rounded-full border-2 border-primary/20" />
-                    <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+
+              {/* Coluna Direita: Feedback */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4 text-primary" />
                   </div>
-                </div> : templateTasks.length > 0 ? <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
-                    <CheckCircle className="h-3 w-3" />
-                    Cadência atual: <span className="font-medium text-foreground">{stageTemplate?.name}</span>
-                  </p>
-                  {templateTasks.map((task: any) => {
-                const existingTask = leadTasksMap.get(`${task.title}-${task.day_offset}-${task.type}`);
-                const isDone = existingTask?.is_done || false;
-                const TaskIcon = activityTypeIcons[task.type] || Clock;
-                return <div key={task.id} className={cn("group flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all", isDone ? "bg-muted/50 border-border" : "hover:bg-accent/50 hover:border-primary/20 hover:shadow-sm hover:-translate-y-0.5", task.type === 'message' && task.recommended_message && !isDone && "border-primary/30 bg-primary/5")} onClick={() => handleCadenceTaskClick(task)}>
-                        <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105", isDone ? "bg-gradient-to-br from-green-500 to-emerald-600" : "bg-gradient-to-br from-primary/80 to-primary")}>
-                          {isDone ? <Check className="h-4 w-4 text-white" /> : <TaskIcon className="h-4 w-4 text-white" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn("text-sm font-medium truncate", isDone && "line-through text-muted-foreground")}>
-                            {task.title}
-                          </p>
-                          {task.observation && !isDone && <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
-                              <Lightbulb className="h-3 w-3" />
-                              {task.observation}
-                            </p>}
-                          {task.recommended_message && !isDone && <p className="text-xs text-primary mt-0.5 flex items-center gap-1 font-medium">
-                              <FileEdit className="h-3 w-3" />
-                              Clique para enviar mensagem
-                            </p>}
-                          <p className="text-xs text-muted-foreground">
-                            {taskTypeLabels[task.type]} • Dia {task.day_offset}
-                          </p>
-                        </div>
-                        {!isDone && <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />}
-                      </div>;
-              })}
-                </div> : <div className="text-center py-10 border border-dashed rounded-xl bg-muted/20">
-                  <div className="h-12 w-12 rounded-2xl bg-muted mx-auto mb-3 flex items-center justify-center">
-                    <ListTodo className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="font-medium text-muted-foreground">Nenhuma cadência configurada</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Configure uma para este estágio</p>
-                </div>}
+                  <h3 className="font-semibold">Feedback do Lead</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <Textarea 
+                    placeholder="Digite aqui o feedback sobre o atendimento ou perfil do lead..." 
+                    className="min-h-[150px] rounded-xl resize-none focus-visible:ring-primary/20"
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                  />
+                  <Button 
+                    className="w-full rounded-xl" 
+                    disabled={!feedback.trim() || createActivityMutation.isPending}
+                    onClick={handleSaveFeedback}
+                  >
+                    {createActivityMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Registrar Feedback
+                  </Button>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Últimos Feedbacks</p>
+                  <LeadHistory leadId={lead.id} />
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -2236,9 +2315,6 @@ export function LeadDetailDialog({
           </TabsContent>
 
           {/* Timeline Tab */}
-          <TabsContent value="timeline" className="p-6 mt-0">
-            <LeadTimeline leadId={lead.id} />
-          </TabsContent>
         </Tabs>
       </ScrollArea>
     </div>);
