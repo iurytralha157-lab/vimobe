@@ -423,8 +423,7 @@ export default function Contacts() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 p-3 space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Pipeline</Label>
+                    <div className="space-y-3">
                       <Select value={selectedPipeline} onValueChange={(v) => { handleFilterChange(setSelectedPipeline)(v); setSelectedStage('all'); }}>
                         <SelectTrigger className="h-9">
                           <SelectValue placeholder="Pipeline" />
@@ -436,9 +435,6 @@ export default function Contacts() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Estágio</Label>
                       <Select value={selectedStage} onValueChange={handleFilterChange(setSelectedStage)} disabled={selectedPipeline === 'all'}>
                         <SelectTrigger className="h-9">
                           <SelectValue placeholder="Estágio" />
@@ -448,6 +444,9 @@ export default function Contacts() {
                           {stages.map(s => (
                             <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                         </SelectContent>
                       </Select>
                     </div>
