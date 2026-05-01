@@ -2503,7 +2503,7 @@ export function LeadDetailDialog({
           {/* History Tab */}
           <TabsContent value="history" className="p-6 mt-0">
             <div className="space-y-4">
-              <LeadJourneySection leadId={lead.id} />
+              
               <LeadHistory leadId={lead.id} onEventClick={(event) => {
                 setSelectedHistoryEvent(event);
                 setHistoryEventDialogOpen(true);
