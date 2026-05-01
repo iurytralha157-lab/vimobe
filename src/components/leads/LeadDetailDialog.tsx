@@ -38,7 +38,7 @@ import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
-import { LeadJourneySection } from '@/components/leads/LeadJourneySection';
+
 import { LeadMessagesTab } from '@/components/leads/LeadMessagesTab';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
@@ -1353,8 +1353,6 @@ export function LeadDetailDialog({
               {/* Rastreamento / Tracking Section */}
               <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
 
-              {/* Jornada do visitante */}
-              <LeadJourneySection leadId={lead.id} />
             </div>
             )
           )}
@@ -1530,7 +1528,6 @@ export function LeadDetailDialog({
           {/* History Tab */}
           {activeTab === 'history' && (
             <div className="space-y-4">
-              <LeadJourneySection leadId={lead.id} />
               <LeadHistory leadId={lead.id} onEventClick={(event) => {
                 setSelectedHistoryEvent(event);
                 setHistoryEventDialogOpen(true);
@@ -2263,15 +2260,6 @@ export function LeadDetailDialog({
                     </div>
                     <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
                   </div>
-                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Activity className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <h3 className="font-medium text-sm">Jornada do lead</h3>
-                    </div>
-                    <LeadJourneySection leadId={lead.id} />
-                  </div>
                 </div>
               </div>
             )}
@@ -2515,7 +2503,7 @@ export function LeadDetailDialog({
           {/* History Tab */}
           <TabsContent value="history" className="p-6 mt-0">
             <div className="space-y-4">
-              <LeadJourneySection leadId={lead.id} />
+              
               <LeadHistory leadId={lead.id} onEventClick={(event) => {
                 setSelectedHistoryEvent(event);
                 setHistoryEventDialogOpen(true);
