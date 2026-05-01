@@ -27,7 +27,7 @@ export type ModuleName =
 // Note: 'automations' is disabled by default and must be explicitly enabled by super admin
 const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'crm',
-  'financial',
+  // 'financial' is now disabled by default as per request
   'properties',
   'whatsapp',
   'agenda',
