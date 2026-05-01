@@ -2098,7 +2098,7 @@ export function LeadDetailDialog({
                           </div>
                         </div>
                       </div>
-                    </> : <>
+                    </> : <div className="space-y-3">
                       <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
                         <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                           <User className="h-4 w-4 text-primary" />
@@ -2137,7 +2137,7 @@ export function LeadDetailDialog({
                           </p>
                         </div>
                       </div>}
-                    </>}
+                    </div>}
                   </div>
                 </div>
 
