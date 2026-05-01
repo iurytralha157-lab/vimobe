@@ -112,17 +112,11 @@ export default function PublicHome() {
     { name: 'STUDIOS', type: 'Studio', image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop' },
   ];
 
-  const isLoading = isConfigLoading && !siteConfig;
-  const showSkeletons = isHomeDataLoading && !homeData;
+  const isConfigLoadingState = isConfigLoading && !siteConfig;
+  const showSkeletons = (isHomeDataLoading && !homeData) || isConfigLoadingState;
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0D0D0D' }}>
-        <div className="w-12 h-12 border-4 border-[#C4A052] border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-white/50 text-sm animate-pulse">Carregando seu site imobiliário...</p>
-      </div>
-    );
-  }
+  // We no longer block the entire page with a spinner. 
+  // The layout will render and show skeletons where needed.
 
   return (
     <div style={{ backgroundColor }}>
@@ -141,8 +135,8 @@ export default function PublicHome() {
                 loading="eager"
                 className="absolute inset-0 w-full h-full object-cover"
               />
-          ) : isLoading ? (
-            <Skeleton className="absolute inset-0 w-full h-full bg-neutral-900" />
+          ) : isConfigLoadingState ? (
+            <div className="absolute inset-0 w-full h-full bg-neutral-900 animate-pulse" />
           ) : (
             <div 
               className="absolute inset-0"
@@ -155,15 +149,15 @@ export default function PublicHome() {
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-white text-center px-4 pt-20 max-w-7xl mx-auto">
           <h1 className="text-3xl md:text-5xl lg:text-7xl font-light mb-6 md:mb-10 max-w-5xl leading-[1.1] tracking-tight">
-            {isLoading ? (
+            {isConfigLoadingState ? (
               <Skeleton className="h-10 md:h-12 w-3/4 mx-auto bg-white/10" />
             ) : (
               siteConfig?.hero_title || 'Encontre o imóvel dos seus sonhos com exclusividade'
             )}
           </h1>
-          {(siteConfig?.hero_subtitle || isLoading) && (
+          {(siteConfig?.hero_subtitle || isConfigLoadingState) && (
             <p className="text-sm md:text-lg text-white/70 mb-8 md:mb-20 max-w-2xl w-full">
-              {isLoading ? (
+              {isConfigLoadingState ? (
                 <Skeleton className="h-5 md:h-6 w-1/2 mx-auto bg-white/10" />
               ) : (
                 siteConfig?.hero_subtitle

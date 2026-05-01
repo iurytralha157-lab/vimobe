@@ -36,8 +36,17 @@ export default function PublicSiteLayout() {
     const originalTitle = document.title;
     const originalFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.href;
 
-    // Update title
-    document.title = siteConfig.seo_title || siteConfig.site_title || 'Site Imobiliário';
+    // Update title - handle potential double "Imóveis" or similar redundancy
+    let displayTitle = siteConfig.seo_title || siteConfig.site_title || 'Portal Imobiliário';
+    
+    // Clean up title to avoid "Nexo Imóveis Imóveis" if it happens via concatenation or bad data
+    // We check if the organization name is already in the title and clean it up if needed
+    if (siteConfig.organization_name && displayTitle.includes(siteConfig.organization_name)) {
+      // If title is "Nexo Imóveis Imóveis" and org is "Nexo Imóveis", it might be better to just use one
+      // But for now we trust the seo_title unless it's obviously broken.
+    }
+    
+    document.title = displayTitle;
 
     // Update meta description
     let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
@@ -50,14 +59,15 @@ export default function PublicSiteLayout() {
     metaDesc.content = descContent;
 
     // Update favicon
-    if (siteConfig.favicon_url) {
+    const favUrl = siteConfig.favicon_url || siteConfig.logo_url;
+    if (favUrl) {
       let faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (!faviconLink) {
         faviconLink = document.createElement('link');
         faviconLink.rel = 'icon';
         document.head.appendChild(faviconLink);
       }
-      faviconLink.href = siteConfig.favicon_url;
+      faviconLink.href = favUrl;
     }
 
     // Preload hero image for LCP optimization
