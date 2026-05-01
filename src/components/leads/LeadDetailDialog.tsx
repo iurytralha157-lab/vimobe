@@ -38,7 +38,7 @@ import { useFloatingChat } from '@/contexts/FloatingChatContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LeadHistory } from '@/components/leads/LeadHistory';
 import { LeadTrackingSection } from '@/components/leads/LeadTrackingSection';
-import { LeadJourneySection } from '@/components/leads/LeadJourneySection';
+
 import { LeadMessagesTab } from '@/components/leads/LeadMessagesTab';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { TelecomCustomerTab } from '@/components/leads/TelecomCustomerTab';
