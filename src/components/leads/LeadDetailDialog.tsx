@@ -615,16 +615,6 @@ export function LeadDetailDialog({
     label: 'Atividades',
     icon: Activity
   }, {
-    id: 'messages',
-    label: 'Chat',
-    icon: MessageCircle,
-    badge: lead.unread_count > 0 ? lead.unread_count.toString() : null
-  }, {
-    id: 'cadence',
-    label: 'Cadência',
-    icon: ListTodo,
-    badge: totalTasksCount > 0 ? `${completedTasksCount}/${totalTasksCount}` : null
-  }, {
     id: 'schedule',
     label: 'Agenda',
     icon: Calendar,
@@ -641,10 +631,6 @@ export function LeadDetailDialog({
     id: 'history',
     label: 'Histórico',
     icon: History
-  }, {
-    id: 'timeline',
-    label: 'Timeline',
-    icon: Timer
   }];
 
   // Mobile content - defined as JSX variable (NOT a component function) to prevent re-mounting
