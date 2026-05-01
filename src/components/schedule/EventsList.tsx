@@ -57,6 +57,7 @@ interface EventsListProps {
   onEditEvent?: (event: ScheduleEvent) => void;
   showUser?: boolean;
   showLead?: boolean;
+  onAddEvent?: () => void;
 }
 
 export function EventsList({ events, onEditEvent, showUser = true, showLead = true }: EventsListProps) {
