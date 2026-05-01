@@ -317,15 +317,21 @@ export function LeadDetailDialog({
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `leads/${lead.id}/docs/${fileName}`;
       
-      const { error: uploadError } = await supabase.storage
+      console.log('Iniciando upload para storage:', filePath);
+      const { error: uploadError } = await (supabase.storage as any)
         .from("whatsapp-media")
         .upload(filePath, file);
         
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Erro no upload para storage:', uploadError);
+        throw uploadError;
+      }
       
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = (supabase.storage as any)
         .from("whatsapp-media")
         .getPublicUrl(filePath);
+        
+      console.log('Arquivo carregado. URL pública:', urlData.publicUrl);
         
       await createAttachment.mutateAsync({
         lead_id: lead.id,
@@ -337,18 +343,22 @@ export function LeadDetailDialog({
         file_size: file.size
       });
 
-      // Registrar no histórico
-      await createActivityMutation.mutateAsync({
-        lead_id: lead.id,
-        type: 'note',
-        content: `Novo documento anexado: ${file.name}`,
-        metadata: { file_url: urlData.publicUrl }
-      });
+      // Registrar no histórico de forma independente para evitar que erro aqui cancele o processo principal
+      try {
+        await createActivityMutation.mutateAsync({
+          lead_id: lead.id,
+          type: 'note',
+          content: `Novo documento anexado: ${file.name}`,
+          metadata: { file_url: urlData.publicUrl }
+        });
+      } catch (historyError) {
+        console.warn('Documento salvo, mas erro ao registrar no histórico:', historyError);
+      }
       
-      toast.success('Documento enviado!');
-    } catch (error) {
-      console.error('Error uploading lead document:', error);
-      toast.error('Erro ao enviar documento');
+      toast.success('Documento enviado com sucesso!');
+    } catch (error: any) {
+      console.error('Erro fatal no upload de documento:', error);
+      toast.error(`Erro ao enviar: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -1540,7 +1550,8 @@ export function LeadDetailDialog({
     </div>);
 
   // Desktop content - defined as JSX variable (NOT a component function) to prevent re-mounting
-  const DesktopContent = () => (<div className="flex flex-col h-full max-h-[90vh]">
+  const DesktopContent = () => (
+    <div className="flex flex-col h-full max-h-[90vh]">
       {/* Premium Header */}
       <div className="relative p-6 border-b bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden">
         {/* Subtle background pattern */}
@@ -2098,140 +2109,142 @@ export function LeadDetailDialog({
                           </div>
                         </div>
                       </div>
-                    </> : <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <User className="h-4 w-4 text-primary" />
+                    </> : <div className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Nome</p>
+                            <p className="text-sm font-medium truncate">{lead.name}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Nome</p>
-                          <p className="text-sm font-medium truncate">{lead.name}</p>
+                        {lead.phone && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Phone className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Telefone</p>
+                            <p className="text-sm font-medium truncate">{formatPhoneForDisplay(lead.phone)}</p>
+                          </div>
+                        </div>}
+                        {lead.email && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Mail className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Email</p>
+                            <p className="text-sm font-medium truncate">{lead.email}</p>
+                          </div>
+                        </div>}
+                        {(lead.cargo || lead.empresa) && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Briefcase className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Profissional</p>
+                            <p className="text-sm font-medium truncate">
+                              {[lead.cargo, lead.empresa].filter(Boolean).join(' • ')}
+                            </p>
+                          </div>
+                        </div>}
+                      </div>
+
+                      {/* Documentação movida para logo abaixo de Dados do Contato */}
+                      <div className="space-y-3 pt-4 border-t">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <FileText className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <h3 className="font-medium text-sm">Documentação</h3>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 gap-1.5 px-3"
+                            disabled={isUploading}
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            {isUploading ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Paperclip className="h-3.5 w-3.5" />
+                            )}
+                            {isUploading ? 'Enviando...' : 'Anexar'}
+                          </Button>
+                          <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleFileUpload} 
+                            className="hidden" 
+                          />
+                        </div>
+
+                        <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-3">
+                          {attachments.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-4 text-muted-foreground gap-2">
+                              <FileText className="h-8 w-8 opacity-20" />
+                              <p className="text-xs">Nenhum documento anexado</p>
+                            </div>
+                          ) : (
+                            <div className="grid gap-2">
+                              {attachments.map((doc) => (
+                                <div 
+                                  key={doc.id}
+                                  className="flex items-center gap-3 p-2 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
+                                >
+                                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => window.open(doc.file_url, '_blank')}
+                                      title="Visualizar"
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = doc.file_url;
+                                        link.download = doc.file_name;
+                                        link.target = '_blank';
+                                        link.click();
+                                      }}
+                                      title="Baixar"
+                                    >
+                                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {lead.phone && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Phone className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Telefone</p>
-                          <p className="text-sm font-medium truncate">{formatPhoneForDisplay(lead.phone)}</p>
-                        </div>
-                      </div>}
-                      {lead.email && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Mail className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Email</p>
-                          <p className="text-sm font-medium truncate">{lead.email}</p>
-                        </div>
-                      </div>}
-                      {(lead.cargo || lead.empresa) && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Briefcase className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground">Profissional</p>
-                          <p className="text-sm font-medium truncate">
-                            {[lead.cargo, lead.empresa].filter(Boolean).join(' • ')}
-                          </p>
-                        </div>
-                      </div>}
+
+                      {/* Rastreamento */}
+                      <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+
+                      {/* Jornada do visitante */}
+                      <LeadJourneySection leadId={lead.id} />
                     </div>}
                   </div>
                 </div>
-
-                {/* Documentação */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <FileText className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <h3 className="font-medium text-sm">Documentação</h3>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 gap-1.5 px-3"
-                      disabled={isUploading}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {isUploading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Paperclip className="h-3.5 w-3.5" />
-                      )}
-                      {isUploading ? 'Enviando...' : 'Anexar'}
-                    </Button>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleFileUpload} 
-                      className="hidden" 
-                    />
-                  </div>
-
-                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-3">
-                    {attachments.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-4 text-muted-foreground gap-2">
-                        <FileText className="h-8 w-8 opacity-20" />
-                        <p className="text-xs">Nenhum documento anexado</p>
-                      </div>
-                    ) : (
-                      <div className="grid gap-2">
-                        {attachments.map((doc) => (
-                          <div 
-                            key={doc.id}
-                            className="flex items-center gap-3 p-2 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
-                          >
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <FileText className="h-4 w-4 text-primary" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{doc.file_name}</p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => window.open(doc.file_url, '_blank')}
-                                title="Visualizar"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => {
-                                  const link = document.createElement('a');
-                                  link.href = doc.file_url;
-                                  link.download = doc.file_name;
-                                  link.target = '_blank';
-                                  link.click();
-                                }}
-                                title="Baixar"
-                              >
-                                <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Rastreamento */}
-                <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
-
-                {/* Jornada do visitante */}
-                <LeadJourneySection leadId={lead.id} />
               </div>
             )}
           </TabsContent>
@@ -2472,8 +2485,6 @@ export function LeadDetailDialog({
           </TabsContent>
 
           {/* History Tab */}
-
-          {/* History Tab */}
           <TabsContent value="history" className="p-6 mt-0">
             <div className="space-y-4">
               <LeadJourneySection leadId={lead.id} />
@@ -2483,8 +2494,6 @@ export function LeadDetailDialog({
               }} />
             </div>
           </TabsContent>
-
-          {/* Timeline Tab */}
         </Tabs>
       </ScrollArea>
     </div>);
