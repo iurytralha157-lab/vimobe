@@ -1823,10 +1823,6 @@ export function LeadDetailDialog({
                   </Button>
                 </div>
 
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wider">Últimos Feedbacks</p>
-                  <LeadHistory leadId={lead.id} />
-                </div>
               </div>
             </div>
           </TabsContent>
