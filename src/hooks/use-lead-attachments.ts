@@ -19,7 +19,7 @@ export function useLeadAttachments(leadId: string | null) {
     queryKey: ['lead-attachments', leadId],
     queryFn: async () => {
       if (!leadId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('lead_attachments')
         .select('*')
         .eq('lead_id', leadId)
@@ -46,7 +46,7 @@ export function useCreateLeadAttachment() {
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('lead_attachments')
         .insert({
           ...attachment,
