@@ -317,15 +317,21 @@ export function LeadDetailDialog({
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `leads/${lead.id}/docs/${fileName}`;
       
-      const { error: uploadError } = await supabase.storage
+      console.log('Iniciando upload para storage:', filePath);
+      const { error: uploadError } = await (supabase.storage as any)
         .from("whatsapp-media")
         .upload(filePath, file);
         
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Erro no upload para storage:', uploadError);
+        throw uploadError;
+      }
       
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = (supabase.storage as any)
         .from("whatsapp-media")
         .getPublicUrl(filePath);
+        
+      console.log('Arquivo carregado. URL pública:', urlData.publicUrl);
         
       await createAttachment.mutateAsync({
         lead_id: lead.id,
@@ -337,18 +343,22 @@ export function LeadDetailDialog({
         file_size: file.size
       });
 
-      // Registrar no histórico
-      await createActivityMutation.mutateAsync({
-        lead_id: lead.id,
-        type: 'note',
-        content: `Novo documento anexado: ${file.name}`,
-        metadata: { file_url: urlData.publicUrl }
-      });
+      // Registrar no histórico de forma independente para evitar que erro aqui cancele o processo principal
+      try {
+        await createActivityMutation.mutateAsync({
+          lead_id: lead.id,
+          type: 'note',
+          content: `Novo documento anexado: ${file.name}`,
+          metadata: { file_url: urlData.publicUrl }
+        });
+      } catch (historyError) {
+        console.warn('Documento salvo, mas erro ao registrar no histórico:', historyError);
+      }
       
-      toast.success('Documento enviado!');
-    } catch (error) {
-      console.error('Error uploading lead document:', error);
-      toast.error('Erro ao enviar documento');
+      toast.success('Documento enviado com sucesso!');
+    } catch (error: any) {
+      console.error('Erro fatal no upload de documento:', error);
+      toast.error(`Erro ao enviar: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
