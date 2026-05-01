@@ -1976,15 +1976,301 @@ export function LeadDetailDialog({
 
                   <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
                     {isEditingContact ? (
-                       // ... (keeps original edit form content)
-                       <div className="space-y-3">
-                          {/* (This part is tricky because I need the actual original code) */}
-                       </div>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary" />
+                          Informações Pessoais
+                        </Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5 col-span-2">
+                            <Label className="text-xs text-muted-foreground">Nome</Label>
+                            <Input value={editForm.name} onChange={e => setEditForm({
+                              ...editForm,
+                              name: e.target.value
+                            })} placeholder="Nome completo" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Telefone</Label>
+                            <PhoneInput value={editForm.phone} onChange={value => setEditForm({
+                              ...editForm,
+                              phone: value
+                            })} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Email</Label>
+                            <Input value={editForm.email} onChange={e => setEditForm({
+                              ...editForm,
+                              email: e.target.value
+                            })} placeholder="email@exemplo.com" type="email" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Cargo</Label>
+                            <Input value={editForm.cargo} onChange={e => setEditForm({
+                              ...editForm,
+                              cargo: e.target.value
+                            })} placeholder="Cargo" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Empresa</Label>
+                            <Input value={editForm.empresa} onChange={e => setEditForm({
+                              ...editForm,
+                              empresa: e.target.value
+                            })} placeholder="Empresa" />
+                          </div>
+                        </div>
+
+                        {/* Perfil Financeiro */}
+                        <div className="space-y-3 pt-3 border-t">
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            Perfil Financeiro
+                          </Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Renda Familiar</Label>
+                              <Select value={editForm.renda_familiar || 'none'} onValueChange={v => setEditForm({
+                                ...editForm,
+                                renda_familiar: v === 'none' ? '' : v
+                              })}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Não informado</SelectItem>
+                                  <SelectItem value="ate_3k">Até R$ 3.000</SelectItem>
+                                  <SelectItem value="3k_5k">R$ 3.000 - R$ 5.000</SelectItem>
+                                  <SelectItem value="5k_10k">R$ 5.000 - R$ 10.000</SelectItem>
+                                  <SelectItem value="10k_15k">R$ 10.000 - R$ 15.000</SelectItem>
+                                  <SelectItem value="15k_25k">R$ 15.000 - R$ 25.000</SelectItem>
+                                  <SelectItem value="acima_25k">Acima de R$ 25.000</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Trabalha?</Label>
+                              <Select value={editForm.trabalha ? 'sim' : 'nao'} onValueChange={v => setEditForm({
+                                ...editForm,
+                                trabalha: v === 'sim'
+                              })}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="nao">Não</SelectItem>
+                                  <SelectItem value="sim">Sim</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Profissão</Label>
+                              <Input value={editForm.profissao} onChange={e => setEditForm({
+                                ...editForm,
+                                profissao: e.target.value
+                              })} placeholder="Ex: Engenheiro, Médico..." />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Faixa do Imóvel</Label>
+                              <Select value={editForm.faixa_valor_imovel || 'none'} onValueChange={v => setEditForm({
+                                ...editForm,
+                                faixa_valor_imovel: v === 'none' ? '' : v
+                              })}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Não informado</SelectItem>
+                                  <SelectItem value="ate_200k">Até R$ 200.000</SelectItem>
+                                  <SelectItem value="200k_400k">R$ 200.000 - R$ 400.000</SelectItem>
+                                  <SelectItem value="400k_600k">R$ 400.000 - R$ 600.000</SelectItem>
+                                  <SelectItem value="600k_1m">R$ 600.000 - R$ 1.000.000</SelectItem>
+                                  <SelectItem value="1m_2m">R$ 1.000.000 - R$ 2.000.000</SelectItem>
+                                  <SelectItem value="acima_2m">Acima de R$ 2.000.000</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Finalidade da Compra</Label>
+                              <Input value={editForm.finalidade_compra} onChange={e => setEditForm({
+                                ...editForm,
+                                finalidade_compra: e.target.value
+                              })} placeholder="Ex: Moradia, Investimento..." />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Procura Financiamento?</Label>
+                              <Select value={editForm.procura_financiamento ? 'sim' : 'nao'} onValueChange={v => setEditForm({
+                                ...editForm,
+                                procura_financiamento: v === 'sim'
+                              })}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="nao">Não</SelectItem>
+                                  <SelectItem value="sim">Sim</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                       <div className="space-y-3">
-                         {/* (keeps original contact items content) */}
-                       </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Nome</p>
+                            <p className="text-sm font-medium truncate">{lead.name}</p>
+                          </div>
+                        </div>
+                        {lead.phone && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Phone className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Telefone</p>
+                            <p className="text-sm font-medium truncate">{formatPhoneForDisplay(lead.phone)}</p>
+                          </div>
+                        </div>}
+                        {lead.email && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Mail className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Email</p>
+                            <p className="text-sm font-medium truncate">{lead.email}</p>
+                          </div>
+                        </div>}
+                        {(lead.cargo || lead.empresa) && <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Briefcase className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Profissional</p>
+                            <p className="text-sm font-medium truncate">
+                              {[lead.cargo, lead.empresa].filter(Boolean).join(' • ')}
+                            </p>
+                          </div>
+                        </div>}
+                      </div>
                     )}
+                  </div>
+
+                  {/* Documentação Section */}
+                  {!isEditingContact && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FileText className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <h3 className="font-medium text-sm">Documentação</h3>
+                        </div>
+                        {(profile?.role === 'admin' || profile?.id === lead.assigned_user_id) && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 gap-1.5 px-3"
+                              disabled={isUploading}
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              {isUploading ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Paperclip className="h-3.5 w-3.5" />
+                              )}
+                              {isUploading ? 'Enviando...' : 'Anexar'}
+                            </Button>
+                            <input 
+                              type="file" 
+                              ref={fileInputRef} 
+                              onChange={handleFileUpload} 
+                              className="hidden" 
+                            />
+                          </>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-3 min-h-[100px] flex flex-col">
+                        {attachments.length === 0 ? (
+                          <div className="flex-1 flex flex-col items-center justify-center py-4 text-muted-foreground gap-2">
+                            <FileText className="h-8 w-8 opacity-20" />
+                            <p className="text-xs">Nenhum documento anexado</p>
+                          </div>
+                        ) : (
+                          <div className="grid gap-2">
+                            {attachments.map((doc) => (
+                              <div 
+                                key={doc.id}
+                                className="flex items-center gap-3 p-2.5 rounded-lg bg-background/50 hover:bg-accent transition-colors group"
+                              >
+                                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                  <FileText className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {format(new Date(doc.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => window.open(doc.file_url, '_blank')}
+                                    title="Visualizar"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => {
+                                      const link = document.createElement('a');
+                                      link.href = doc.file_url;
+                                      link.download = doc.file_name;
+                                      link.target = '_blank';
+                                      link.click();
+                                    }}
+                                    title="Baixar"
+                                  >
+                                    <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Coluna 2: Rastreamento + Jornada */}
+                <div className="space-y-6">
+                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <h3 className="font-medium text-sm">Rastreamento</h3>
+                      </div>
+                    </div>
+                    <LeadTrackingSection leadMeta={leadMeta} isLoading={leadMetaLoading} />
+                  </div>
+                  <div className="rounded-xl bg-gradient-to-br from-card to-muted/30 border p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Activity className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <h3 className="font-medium text-sm">Jornada do lead</h3>
+                    </div>
+                    <LeadJourneySection leadId={lead.id} />
                   </div>
                 </div>
               </div>
