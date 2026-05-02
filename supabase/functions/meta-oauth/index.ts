@@ -462,12 +462,25 @@ serve(async (req) => {
           });
         }
 
-        const page = pagesData.data?.find((p: any) => p.id === page_id);
-        if (!page) {
-          return new Response(JSON.stringify({ error: "Page not found or no access" }), {
-            status: 404,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+        // NEW: If ad_account_id is not provided, try to fetch it automatically
+        let ad_account_id = body.ad_account_id;
+        if (!ad_account_id) {
+          console.log("Ad account ID not provided, attempting to fetch automatically...");
+          try {
+            const adAccountsUrl = `https://graph.facebook.com/v19.0/me/adaccounts?` +
+              `access_token=${code}` +
+              `&fields=id,name,account_id`;
+            
+            const adAccountsResponse = await fetch(adAccountsUrl);
+            const adAccountsData = await adAccountsResponse.json();
+            
+            if (adAccountsData.data && adAccountsData.data.length > 0) {
+              ad_account_id = adAccountsData.data[0].id;
+              console.log("Automatically found ad account during connect_page:", ad_account_id);
+            }
+          } catch (adError) {
+            console.error("Error fetching ad accounts during connect_page:", adError);
+          }
         }
 
         // Subscribe to leadgen webhook
@@ -500,7 +513,7 @@ serve(async (req) => {
             page_id: page.id,
             page_name: page.name,
             access_token: page.access_token,
-            ad_account_id: body.ad_account_id || null,
+            ad_account_id: ad_account_id || null,
             pipeline_id,
             stage_id,
             default_status: default_status || "novo",
