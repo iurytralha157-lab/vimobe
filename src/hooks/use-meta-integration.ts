@@ -125,6 +125,7 @@ export function useMetaConnectPage() {
       stageId,
       defaultStatus,
       adAccountId,
+      selectedAdAccountIds,
     }: {
       pageId: string;
       userToken: string;
@@ -132,6 +133,7 @@ export function useMetaConnectPage() {
       stageId: string;
       defaultStatus: string;
       adAccountId?: string;
+      selectedAdAccountIds?: string[];
     }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       
