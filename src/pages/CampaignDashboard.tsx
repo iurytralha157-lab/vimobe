@@ -79,13 +79,20 @@ export default function CampaignDashboard() {
 
   const totals = useMemo(() => {
     if (!insightData?.summary) return { spend: 0, leads: 0, conversations: 0, impressions: 0, reach: 0, cpl: 0 };
+    
+    const spend = insightData.summary.totalSpend || 0;
+    const leads = insightData.summary.totalLeads || 0;
+    const conversations = insightData.summary.conversations_count || 0;
+    const totalResults = leads + conversations;
+    const avgCpl = totalResults > 0 ? spend / totalResults : 0;
+
     return {
-      spend: insightData.summary.totalSpend || 0,
-      leads: insightData.summary.totalLeads || 0,
-      conversations: insightData.summary.conversations_count || 0,
+      spend,
+      leads,
+      conversations,
       impressions: insightData.summary.totalImpressions || 0,
       reach: insightData.summary.totalReach || 0,
-      cpl: insightData.summary.avgCpl || 0
+      cpl: avgCpl
     };
   }, [insightData]);
 
