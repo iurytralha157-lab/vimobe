@@ -386,6 +386,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           avgCpl,
           totalImpressions,
           totalReach,
+          conversations_count: campaigns.reduce((s, c) => s + (c.conversations_count || 0), 0),
         },
         lastSync,
         hasSpendData,
