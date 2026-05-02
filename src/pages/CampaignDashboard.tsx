@@ -428,9 +428,14 @@ export default function CampaignDashboard() {
                           </div>
                         </td>
                         <td className="py-3 text-right">
-                          <Badge variant="secondary" className="font-normal">
-                            {formatCurrency(campaign.cpl)}
-                          </Badge>
+                          <div className="flex flex-col items-end">
+                            <Badge variant="secondary" className="font-normal text-[10px]">
+                              {formatCurrency(campaign.cpl)}
+                            </Badge>
+                            <span className="text-[9px] text-muted-foreground mt-0.5">
+                              {campaign.objective === 'MESSAGES' || campaign.objective === 'OUTCOME_MESSAGES' ? 'por conversa' : 'por lead'}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-3 text-right">
                           <div className="flex flex-col text-xs">
