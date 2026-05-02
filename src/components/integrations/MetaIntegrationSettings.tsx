@@ -584,6 +584,34 @@ export function MetaIntegrationSettings() {
               </Select>
             </div>
 
+            {availableAdAccounts && availableAdAccounts.length > 0 && (
+              <div className="space-y-2">
+                <Label>Contas de Anúncios para Sincronizar</Label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
+                  {availableAdAccounts.map((account: any) => (
+                    <div key={account.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`edit-${account.id}`}
+                        checked={selectedAdAccountIds.includes(account.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAdAccountIds([...selectedAdAccountIds, account.id]);
+                          } else {
+                            setSelectedAdAccountIds(selectedAdAccountIds.filter(id => id !== account.id));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <label htmlFor={`edit-${account.id}`} className="text-sm font-medium leading-none cursor-pointer">
+                        {account.name} <span className="text-[10px] text-muted-foreground">({account.id})</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>{meta.leadStatus}</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
