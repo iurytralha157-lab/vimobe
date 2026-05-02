@@ -86,7 +86,11 @@ interface InsightRow {
   impressions: number;
   reach: number;
   leads_count: number;
+  conversations_count: number;
   cpl: number;
+  status: string | null;
+  budget: number | null;
+  budget_type: string | null;
   fetched_at: string;
   creative_url?: string | null;
   creative_video_url?: string | null;
