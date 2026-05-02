@@ -75,6 +75,19 @@ const allNavItems: NavItem[] = [
       { icon: BarChart3, labelKey: 'reports', path: '/financeiro/relatorios' },
     ]
   },
+  // Gamificação module
+  { 
+    icon: Trophy, 
+    labelKey: 'gamification', 
+    path: '/gamificacao',
+    module: 'gamification',
+    children: [
+      { icon: Trophy, labelKey: 'performance', path: '/gamificacao' },
+      { icon: LayoutDashboard, labelKey: 'dashboard', path: '/gamificacao/dashboard' },
+      { icon: HistoryIcon, labelKey: 'history', path: '/gamificacao/historico' },
+      { icon: Settings, labelKey: 'settings', path: '/gamificacao/configuracoes', adminOnly: true },
+    ]
+  },
   // Imobiliária module
   { icon: Building2, labelKey: 'properties', path: '/properties', module: 'properties' },
   // Telecom modules
