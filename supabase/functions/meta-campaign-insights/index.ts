@@ -190,6 +190,7 @@ serve(async (req) => {
             status: campaign.effective_status || campaign.status,
             budget,
             budget_type: budgetType,
+            objective: campaign.objective,
             date_start: dateStart,
             date_stop: dateStop,
             level: "campaign",
