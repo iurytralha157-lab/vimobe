@@ -141,18 +141,38 @@ export function MobileSidebar({ externalOpen, onExternalOpenChange }: MobileSide
   // Filter nav items based on enabled modules, user role, permissions, and organization segment
   // While modules are loading, only show items without module requirement to prevent flash
   const navItems = useMemo(() => {
-    return allNavItems.filter(item => {
-      // If modules are still loading and this item requires a module, hide it to prevent flash
-      if (modulesLoading && item.module) return false;
-      if (item.module && !hasModule(item.module as any)) return false;
-      if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
-      // Check permission-based access
-      if (item.permission && !hasPermission(item.permission)) return false;
-      // Hide Contacts menu for telecom segment
-      if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
-      return true;
-    });
-  }, [hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment, modulesLoading]);
+    const filterItems = (items: NavItem[]): NavItem[] => {
+      return items.filter(item => {
+        // Module check
+        if (modulesLoading && item.module) return false;
+        if (item.module && !hasModule(item.module as any)) return false;
+        
+        // Admin only check
+        if (item.adminOnly && profile?.role !== 'admin' && !isSuperAdmin) return false;
+        
+        // Permission check
+        if (item.permission && !hasPermission(item.permission)) return false;
+        
+        // Segment specific rules
+        if (item.path === '/crm/contacts' && organization?.segment === 'telecom') return false;
+        
+        return true;
+      }).map(item => {
+        // Recursively filter children if they exist
+        if (item.children) {
+          const filteredChildren = filterItems(item.children);
+          return {
+            ...item,
+            children: filteredChildren.length > 0 ? filteredChildren : undefined
+          };
+        }
+        return item;
+      });
+    };
+
+    return filterItems(allNavItems);
+  }, [allNavItems, hasModule, hasPermission, profile?.role, isSuperAdmin, organization?.segment, modulesLoading]);
+
 
   // Filter bottom items based on user role and modules
   // While modules are loading, hide module-dependent items to prevent flash
