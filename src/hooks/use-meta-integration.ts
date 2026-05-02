@@ -18,6 +18,8 @@ export interface MetaIntegration {
   created_at: string;
   updated_at: string;
   leads_received: number | null;
+  selected_ad_accounts: string[] | null;
+  ad_account_id: string | null;
 }
 
 export interface MetaPage {
