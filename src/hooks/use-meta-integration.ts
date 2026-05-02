@@ -304,3 +304,65 @@ export function useMetaTogglePage() {
     },
   });
 }
+// Update ad accounts selection
+export function useMetaUpdateAdAccounts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ pageId, adAccountIds }: { pageId: string; adAccountIds: string[] }) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            action: "update_ad_accounts",
+            page_id: pageId,
+            selected_ad_accounts: adAccountIds,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update ad accounts");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meta-integrations"] });
+      toast.success("Contas de anúncio atualizadas!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro: ${error.message}`);
+    },
+  });
+}
+
+// Fetch available ad accounts for a user token
+export function useMetaAdAccounts(userToken?: string) {
+  return useQuery({
+    queryKey: ["meta-ad-accounts", userToken],
+    queryFn: async () => {
+      if (!userToken) return [];
+      
+      const response = await fetch(
+        `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_id&access_token=${userToken}`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch ad accounts from Meta");
+      }
+      
+      const data = await response.json();
+      return data.data || [];
+    },
+    enabled: !!userToken,
+  });
+}
