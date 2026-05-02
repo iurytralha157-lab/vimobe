@@ -84,9 +84,13 @@ export default function CampaignDashboard() {
       name: c.campaign_name,
       spend: c.spend || 0,
       leads: c.leads_count,
+      conversations: c.conversations_count || 0,
       impressions: c.impressions || 0,
       reach: c.reach || 0,
-      cpl: c.cpl || 0
+      cpl: c.cpl || 0,
+      status: c.status,
+      budget: c.budget,
+      budgetType: c.budget_type
     }));
   }, [insightData]);
 
@@ -190,12 +194,12 @@ export default function CampaignDashboard() {
             description={periodLabel}
           />
           <KPICard 
-            title="Leads do Meta" 
-            value={formatNumber(totals.leads)} 
+            title="Resultados (Meta)" 
+            value={`${formatNumber(totals.leads)} Leads`} 
             icon={Users} 
             color="green" 
             isLoading={isLoading}
-            description="Capturados via Webhook"
+            description={`${formatNumber(insightData?.summary?.conversations_count || 0)} Conversas`}
           />
           <KPICard 
             title="CPL Médio" 
@@ -362,10 +366,11 @@ export default function CampaignDashboard() {
                   <tr className="border-b">
                     <th className="text-left py-3 font-medium">Campanha</th>
                     <th className="text-right py-3 font-medium">Status</th>
+                    <th className="text-right py-3 font-medium">Orçamento</th>
                     <th className="text-right py-3 font-medium">Investimento</th>
-                    <th className="text-right py-3 font-medium">Leads</th>
+                    <th className="text-right py-3 font-medium">Leads / Conv.</th>
                     <th className="text-right py-3 font-medium">CPL</th>
-                    <th className="text-right py-3 font-medium">Alcance</th>
+                    <th className="text-right py-3 font-medium">Alcance / Imp.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -389,18 +394,46 @@ export default function CampaignDashboard() {
                           </div>
                         </td>
                         <td className="py-3 text-right">
-                          <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
-                            Ativa
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-[10px] border-transparent",
+                              campaign.status === 'ACTIVE' 
+                                ? "bg-green-50 text-green-700 border-green-200" 
+                                : "bg-gray-50 text-gray-700 border-gray-200"
+                            )}
+                          >
+                            {campaign.status === 'ACTIVE' ? 'Ativa' : 'Pausada'}
                           </Badge>
                         </td>
+                        <td className="py-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-xs">
+                              {campaign.budget ? formatCurrency(campaign.budget) : 'N/A'}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {campaign.budgetType === 'daily' ? 'Diário' : 'Vitalício'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-3 text-right">{formatCurrency(campaign.spend)}</td>
-                        <td className="py-3 text-right">{formatNumber(campaign.leads)}</td>
+                        <td className="py-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
+                            <span className="text-[10px] text-muted-foreground">{formatNumber(campaign.conversations)} Conversas</span>
+                          </div>
+                        </td>
                         <td className="py-3 text-right">
                           <Badge variant="secondary" className="font-normal">
                             {formatCurrency(campaign.cpl)}
                           </Badge>
                         </td>
-                        <td className="py-3 text-right text-muted-foreground">{formatNumber(campaign.reach)}</td>
+                        <td className="py-3 text-right">
+                          <div className="flex flex-col text-xs">
+                            <span>{formatNumber(campaign.reach)} Alcance</span>
+                            <span className="text-muted-foreground">{formatNumber(campaign.impressions)} Imp.</span>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (

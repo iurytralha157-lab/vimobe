@@ -11,9 +11,13 @@ export interface CampaignAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  conversations_count: number;
   won_count: number;
   revenue: number;
   cpl: number | null;
+  status: string | null;
+  budget: number | null;
+  budget_type: string | null;
   adsets: AdsetAggregated[];
 }
 
@@ -82,7 +86,11 @@ interface InsightRow {
   impressions: number;
   reach: number;
   leads_count: number;
+  conversations_count: number;
   cpl: number;
+  status: string | null;
+  budget: number | null;
+  budget_type: string | null;
   fetched_at: string;
   creative_url?: string | null;
   creative_video_url?: string | null;
@@ -231,7 +239,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       const { data: insightsRaw } = await (supabase as any)
         .from("meta_campaign_insights")
-        .select("campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, level, spend, impressions, reach, leads_count, cpl, fetched_at, creative_url, creative_video_url")
+        .select("campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, level, spend, impressions, reach, leads_count, conversations_count, cpl, status, budget, budget_type, fetched_at, creative_url, creative_video_url")
         .eq("organization_id", orgId)
         .gte("date_start", dateFromDate)
         .lte("date_stop", dateToDate);
@@ -313,9 +321,13 @@ export function useCampaignInsights(filters: DashboardFilters) {
           impressions: cInsight.impressions,
           reach: cInsight.reach,
           leads_count: cData?.leads.size || 0,
+          conversations_count: cInsight.conversations_count || 0,
           won_count: cData?.won.size || 0,
           revenue: cData?.revenue || 0,
           cpl: cInsight.cpl,
+          status: cInsight.status,
+          budget: cInsight.budget,
+          budget_type: cInsight.budget_type,
           adsets: adsets.sort((a, b) => (b.spend || 0) - (a.spend || 0)),
         });
       }
@@ -374,6 +386,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           avgCpl,
           totalImpressions,
           totalReach,
+          conversations_count: campaigns.reduce((s, c) => s + (c.conversations_count || 0), 0),
         },
         lastSync,
         hasSpendData,
@@ -399,6 +412,7 @@ function emptyResult() {
       avgCpl: null,
       totalImpressions: null,
       totalReach: null,
+      conversations_count: 0,
     },
     lastSync: null,
     hasSpendData: false,

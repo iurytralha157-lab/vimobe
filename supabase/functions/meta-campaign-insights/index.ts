@@ -135,9 +135,9 @@ serve(async (req) => {
         console.error("Error fetching account info:", err);
       }
 
-      // Step 3: Fetch campaign insights with Status
+      // Step 3: Fetch campaign insights with Status and Budget
       try {
-        const campaignsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/campaigns?fields=id,name,status,effective_status,objective,insights{spend,impressions,reach,actions,cost_per_action_type}&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
+        const campaignsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/campaigns?fields=id,name,status,effective_status,objective,daily_budget,lifetime_budget,insights{spend,impressions,reach,actions,cost_per_action_type}&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
         
         console.log("Fetching campaigns for:", adAccountId);
         const campaignsRes = await fetch(campaignsUrl);
@@ -152,12 +152,19 @@ serve(async (req) => {
         
         for (const campaign of campaigns) {
           const insight = campaign.insights?.data?.[0] || {};
-          const leadsAction = (insight.actions || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+          const actions = insight.actions || [];
+          
+          const leadsAction = actions.find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+          const convAction = actions.find((a: any) => a.action_type === "messaging_conversations_started" || a.action_type === "onsite_conversion.messaging_conversation_started_7d");
           const leadsCostAction = (insight.cost_per_action_type || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
           
           const leadsCount = leadsAction ? parseInt(leadsAction.value) : 0;
+          const convCount = convAction ? parseInt(convAction.value) : 0;
           const spend = parseFloat(insight.spend || "0");
           const cpl = leadsCostAction ? parseFloat(leadsCostAction.value) : (leadsCount > 0 ? spend / leadsCount : 0);
+
+          const budget = campaign.daily_budget ? parseFloat(campaign.daily_budget) / 100 : (campaign.lifetime_budget ? parseFloat(campaign.lifetime_budget) / 100 : 0);
+          const budgetType = campaign.daily_budget ? 'daily' : (campaign.lifetime_budget ? 'lifetime' : null);
 
           allInsights.push({
             organization_id: orgId,
@@ -171,7 +178,11 @@ serve(async (req) => {
             impressions: parseInt(insight.impressions || "0"),
             reach: parseInt(insight.reach || "0"),
             leads_count: leadsCount,
+            conversations_count: convCount,
             cpl: Math.round(cpl * 100) / 100,
+            status: campaign.effective_status || campaign.status,
+            budget,
+            budget_type: budgetType,
             date_start: dateStart,
             date_stop: dateStop,
             level: "campaign",
@@ -179,33 +190,45 @@ serve(async (req) => {
           });
         }
 
-        // Step 3: Fetch adset-level insights
-        const adsetsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/insights?fields=campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,actions,cost_per_action_type&level=adset&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
+        // Step 4: Fetch adset-level insights
+        const adsetsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/adsets?fields=id,name,status,effective_status,daily_budget,lifetime_budget,insights{spend,impressions,reach,actions,cost_per_action_type}&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
         
         const adsetsRes = await fetch(adsetsUrl);
         const adsetsData = await adsetsRes.json();
 
-        for (const insight of (adsetsData.data || [])) {
-          const leadsAction = (insight.actions || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+        for (const adset of (adsetsData.data || [])) {
+          const insight = adset.insights?.data?.[0] || {};
+          const actions = insight.actions || [];
+          
+          const leadsAction = actions.find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+          const convAction = actions.find((a: any) => a.action_type === "messaging_conversations_started" || a.action_type === "onsite_conversion.messaging_conversation_started_7d");
           const leadsCostAction = (insight.cost_per_action_type || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
           
           const leadsCount = leadsAction ? parseInt(leadsAction.value) : 0;
+          const convCount = convAction ? parseInt(convAction.value) : 0;
           const spend = parseFloat(insight.spend || "0");
           const cpl = leadsCostAction ? parseFloat(leadsCostAction.value) : (leadsCount > 0 ? spend / leadsCount : 0);
 
+          const budget = adset.daily_budget ? parseFloat(adset.daily_budget) / 100 : (adset.lifetime_budget ? parseFloat(adset.lifetime_budget) / 100 : 0);
+          const budgetType = adset.daily_budget ? 'daily' : (adset.lifetime_budget ? 'lifetime' : null);
+
           allInsights.push({
             organization_id: orgId,
-            campaign_id: insight.campaign_id,
-            campaign_name: insight.campaign_name,
-            adset_id: insight.adset_id,
-            adset_name: insight.adset_name,
+            campaign_id: adset.campaign_id, // This will need fetching or use current flow
+            campaign_name: null,
+            adset_id: adset.id,
+            adset_name: adset.name,
             ad_id: null,
             ad_name: null,
             spend,
             impressions: parseInt(insight.impressions || "0"),
             reach: parseInt(insight.reach || "0"),
             leads_count: leadsCount,
+            conversations_count: convCount,
             cpl: Math.round(cpl * 100) / 100,
+            status: adset.effective_status || adset.status,
+            budget,
+            budget_type: budgetType,
             date_start: dateStart,
             date_stop: dateStop,
             level: "adset",
@@ -213,17 +236,22 @@ serve(async (req) => {
           });
         }
 
-        // Step 4: Fetch ad-level insights with creative
-        const adsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/insights?fields=campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,actions,cost_per_action_type&level=ad&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
+        // Step 5: Fetch ad-level insights with status
+        const adsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/ads?fields=id,name,status,effective_status,campaign_id,adset_id,insights{spend,impressions,reach,actions,cost_per_action_type}&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
         
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
 
-        for (const insight of (adsData.data || [])) {
-          const leadsAction = (insight.actions || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+        for (const adData of (adsData.data || [])) {
+          const insight = adData.insights?.data?.[0] || {};
+          const actions = insight.actions || [];
+          
+          const leadsAction = actions.find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+          const convAction = actions.find((a: any) => a.action_type === "messaging_conversations_started" || a.action_type === "onsite_conversion.messaging_conversation_started_7d");
           const leadsCostAction = (insight.cost_per_action_type || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
           
           const leadsCount = leadsAction ? parseInt(leadsAction.value) : 0;
+          const convCount = convAction ? parseInt(convAction.value) : 0;
           const spend = parseFloat(insight.spend || "0");
           const cpl = leadsCostAction ? parseFloat(leadsCostAction.value) : (leadsCount > 0 ? spend / leadsCount : 0);
 
@@ -232,7 +260,7 @@ serve(async (req) => {
           let creativeVideoUrl = null;
           try {
             const adCreativeRes = await fetch(
-              `https://graph.facebook.com/${META_GRAPH_VERSION}/${insight.ad_id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${accessToken}`
+              `https://graph.facebook.com/${META_GRAPH_VERSION}/${adData.id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${accessToken}`
             );
             const adCreativeData = await adCreativeRes.json();
             
@@ -248,24 +276,26 @@ serve(async (req) => {
               }
             }
           } catch (err) {
-            console.warn("Error fetching creative for ad:", insight.ad_id, err);
+            console.warn("Error fetching creative for ad:", adData.id, err);
           }
 
           allInsights.push({
             organization_id: orgId,
-            campaign_id: insight.campaign_id,
-            campaign_name: insight.campaign_name,
-            adset_id: insight.adset_id,
-            adset_name: insight.adset_name,
-            ad_id: insight.ad_id,
-            ad_name: insight.ad_name,
+            campaign_id: adData.campaign_id,
+            campaign_name: null,
+            adset_id: adData.adset_id,
+            adset_name: null,
+            ad_id: adData.id,
+            ad_name: adData.name,
             creative_url: creativeUrl,
             creative_video_url: creativeVideoUrl,
             spend,
             impressions: parseInt(insight.impressions || "0"),
             reach: parseInt(insight.reach || "0"),
             leads_count: leadsCount,
+            conversations_count: convCount,
             cpl: Math.round(cpl * 100) / 100,
+            status: adData.effective_status || adData.status,
             date_start: dateStart,
             date_stop: dateStop,
             level: "ad",
@@ -277,7 +307,7 @@ serve(async (req) => {
       }
     }
 
-    // Step 5: Upsert all insights into cache
+    // Step 6: Upsert all insights into cache
     if (allInsights.length > 0) {
       const { error: upsertError } = await supabaseAdmin
         .from("meta_campaign_insights")
