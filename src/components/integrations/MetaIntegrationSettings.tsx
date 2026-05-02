@@ -197,6 +197,7 @@ export function MetaIntegrationSettings() {
       pipelineId: selectedPipelineId,
       stageId: selectedStageId,
       defaultStatus: selectedStatus,
+      selectedAdAccountIds: selectedAdAccountIds,
     });
 
     setShowEditDialog(false);
