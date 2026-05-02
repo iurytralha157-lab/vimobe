@@ -70,7 +70,7 @@ export default function CampaignDashboard() {
   React.useEffect(() => {
     // Only sync automatically if we haven't synced in the last hour or if explicitly requested
     const lastSyncTime = insightData?.lastSync ? new Date(insightData.lastSync).getTime() : 0;
-    const oneHourAgo = new Date().getTime() - 60 * 60 * 1000;
+    const oneHourAgo = new Date().getTime() - 5 * 60 * 1000;
     
     if (lastSyncTime < oneHourAgo && !isLoading && !syncMutation.isPending) {
       handleSync();
