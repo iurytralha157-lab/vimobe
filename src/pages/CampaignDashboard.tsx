@@ -242,18 +242,16 @@ export default function CampaignDashboard() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                       <XAxis 
-                        dataKey="date" 
-                        tickFormatter={(str) => format(new Date(str), 'dd/MM', { locale: ptBR })}
+                        dataKey="name" 
                         axisLine={false}
                         tickLine={false}
-                        fontSize={12}
+                        fontSize={10}
                         tick={{ fill: '#888' }}
                       />
                       <YAxis yAxisId="left" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#888' }} />
                       <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#888' }} />
                       <RechartsTooltip 
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        labelFormatter={(label) => format(new Date(label), 'dd MMMM yyyy', { locale: ptBR })}
                       />
                       <Area 
                         yAxisId="left"
