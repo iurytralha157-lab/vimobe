@@ -92,6 +92,7 @@ interface InsightRow {
   status: string | null;
   budget: number | null;
   budget_type: string | null;
+  objective: string | null;
   fetched_at: string;
   creative_url?: string | null;
   creative_video_url?: string | null;
