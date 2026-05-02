@@ -153,7 +153,7 @@ export default function Dashboard() {
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0">
           {/* Left column (col 1-8): KPIs + Activities + Evolution */}
-          <div className="col-span-8 flex flex-col gap-3">
+          <div className="col-span-8 flex flex-col gap-3 min-h-0">
             <div className="flex flex-col gap-3">
               <KPICardsGrid 
                 data={kpiData} 
@@ -178,7 +178,10 @@ export default function Dashboard() {
         </div>
 
         {/* ===== MOBILE LAYOUT ===== */}
-        <div className="lg:hidden space-y-4">
+        <div className={cn(
+          "lg:hidden flex flex-col gap-4",
+          !isMobile ? "flex-1 min-h-0" : ""
+        )}>
           {/* KPIs */}
           <KPICards 
             data={kpiData} 
@@ -187,15 +190,15 @@ export default function Dashboard() {
           />
 
           {/* Charts Tabs */}
-          <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
+          <Tabs value={mobileChartTab} onValueChange={setMobileChartTab} className={cn(!isMobile ? "flex-1 flex flex-col min-h-0" : "")}>
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
             </TabsList>
-            <TabsContent value="funnel" className="mt-3">
+            <TabsContent value="funnel" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
               {funnelComponent}
             </TabsContent>
-            <TabsContent value="evolution" className="mt-3">
+            <TabsContent value="evolution" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </TabsContent>
           </Tabs>
