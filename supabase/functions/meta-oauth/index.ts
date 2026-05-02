@@ -299,7 +299,11 @@ serve(async (req) => {
           "pages_manage_ads",
           "leads_retrieval",
           "ads_management",
-          "business_management"
+          "business_management",
+          "instagram_basic",
+          "instagram_manage_messages",
+          "instagram_manage_comments",
+          "pages_manage_metadata"
         ].join(",");
 
         const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?` +

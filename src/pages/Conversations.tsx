@@ -37,7 +37,7 @@ import { useMetaIntegrations } from "@/hooks/use-meta-integration";
 export default function Conversations() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const [activePlatform, setActivePlatform] = useState<'whatsapp' | 'meta'>('whatsapp');
+  const [activePlatform, setActivePlatform] = useState<'whatsapp' | 'instagram' | 'facebook'>('whatsapp');
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
   const [selectedPageId, setSelectedPageId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
@@ -88,7 +88,7 @@ export default function Conversations() {
   const {
     data: metaMessages,
     isLoading: loadingMetaMessages
-  } = useMetaMessages(activePlatform === 'meta' ? selectedConversation?.id || null : null);
+  } = useMetaMessages(activePlatform !== 'whatsapp' ? selectedConversation?.id || null : null);
 
   const messages = activePlatform === 'whatsapp' ? whatsappMessages : metaMessages;
   const loadingMessages = activePlatform === 'whatsapp' ? loadingWhatsAppMessages : loadingMetaMessages;
@@ -114,10 +114,8 @@ export default function Conversations() {
   
   const handleChannelChange = (value: string) => {
     if (value === 'meta-all') {
-      setActivePlatform('meta');
       setSelectedPageId('all');
     } else if (value.startsWith('meta-')) {
-      setActivePlatform('meta');
       setSelectedPageId(value.replace('meta-', ''));
     } else if (value === 'whatsapp-all') {
       setActivePlatform('whatsapp');
@@ -130,7 +128,7 @@ export default function Conversations() {
     setSelectedConversation(null);
   };
 
-  const currentChannelValue = activePlatform === 'meta' 
+  const currentChannelValue = activePlatform !== 'whatsapp' 
     ? (selectedPageId === 'all' ? 'meta-all' : `meta-${selectedPageId}`)
     : (selectedSessionId === 'all' ? 'whatsapp-all' : `whatsapp-${selectedSessionId}`);
 
@@ -180,15 +178,23 @@ export default function Conversations() {
     }
   }, [selectedConversation?.id]);
   const filteredConversations = useMemo(() => {
-    if (!conversations) return [];
-    if (!searchTerm) return conversations;
+    let source: any[] = [];
+    if (activePlatform === 'whatsapp') {
+      source = conversations || [];
+    } else {
+      source = metaConversations?.filter((conv: any) => 
+        activePlatform === 'instagram' ? conv.platform === 'instagram' : conv.platform === 'messenger'
+      ) || [];
+    }
+
+    if (!searchTerm) return source;
     const search = searchTerm.toLowerCase();
-    return conversations.filter(conv => 
+    return source.filter(conv => 
       conv.contact_name?.toLowerCase().includes(search) || 
       conv.contact_phone?.includes(search) ||
       conv.lead?.name?.toLowerCase().includes(search)
     );
-  }, [conversations, searchTerm]);
+  }, [conversations, metaConversations, activePlatform, searchTerm]);
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return;
     const textToSend = messageText.trim();
@@ -483,20 +489,29 @@ export default function Conversations() {
                     <Button 
                       variant={activePlatform === 'whatsapp' ? 'secondary' : 'ghost'} 
                       size="sm" 
-                      className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
+                      className={cn("flex-1 gap-1.5 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
                       onClick={() => setActivePlatform('whatsapp')}
                     >
-                      <WhatsAppIcon variant="logo" size={16} />
-                      <span className="text-xs font-medium">WhatsApp</span>
+                      <WhatsAppIcon variant="logo" size={14} />
+                      <span className="text-[10px] font-medium">WhatsApp</span>
                     </Button>
                     <Button 
-                      variant={activePlatform === 'meta' ? 'secondary' : 'ghost'} 
+                      variant={activePlatform === 'instagram' ? 'secondary' : 'ghost'} 
                       size="sm" 
-                      className={cn("flex-1 gap-2 h-8", activePlatform === 'meta' && "bg-background shadow-sm")}
-                      onClick={() => setActivePlatform('meta')}
+                      className={cn("flex-1 gap-1.5 h-8", activePlatform === 'instagram' && "bg-background shadow-sm")}
+                      onClick={() => setActivePlatform('instagram')}
                     >
                       <Instagram size={13} className="text-pink-500" />
-                      <span className="text-xs font-medium">Instagram</span>
+                      <span className="text-[10px] font-medium">Instagram</span>
+                    </Button>
+                    <Button 
+                      variant={activePlatform === 'facebook' ? 'secondary' : 'ghost'} 
+                      size="sm" 
+                      className={cn("flex-1 gap-1.5 h-8", activePlatform === 'facebook' && "bg-background shadow-sm")}
+                      onClick={() => setActivePlatform('facebook')}
+                    >
+                      <Facebook size={13} className="text-blue-600" />
+                      <span className="text-[10px] font-medium">Facebook</span>
                     </Button>
                   </div>
 
@@ -518,7 +533,7 @@ export default function Conversations() {
                     </Select>
                   )}
 
-                  {activePlatform === 'meta' && metaIntegrations && metaIntegrations.length > 1 && (
+                  {activePlatform !== 'whatsapp' && metaIntegrations && metaIntegrations.length > 1 && (
                     <Select value={currentChannelValue} onValueChange={handleChannelChange}>
                       <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
                         <SelectValue placeholder="Selecione a página" />
@@ -643,20 +658,29 @@ export default function Conversations() {
                 <Button 
                   variant={activePlatform === 'whatsapp' ? 'secondary' : 'ghost'} 
                   size="sm" 
-                  className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
+                  className={cn("flex-1 gap-1.5 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
                   onClick={() => setActivePlatform('whatsapp')}
                 >
-                  <WhatsAppIcon variant="logo" size={16} />
-                  <span className="text-xs font-medium">WhatsApp</span>
+                  <WhatsAppIcon variant="logo" size={14} />
+                  <span className="text-[10px] font-medium">WhatsApp</span>
                 </Button>
                 <Button 
-                  variant={activePlatform === 'meta' ? 'secondary' : 'ghost'} 
+                  variant={activePlatform === 'instagram' ? 'secondary' : 'ghost'} 
                   size="sm" 
-                  className={cn("flex-1 gap-2 h-8", activePlatform === 'meta' && "bg-background shadow-sm")}
-                  onClick={() => setActivePlatform('meta')}
+                  className={cn("flex-1 gap-1.5 h-8", activePlatform === 'instagram' && "bg-background shadow-sm")}
+                  onClick={() => setActivePlatform('instagram')}
                 >
                   <Instagram size={13} className="text-pink-500" />
-                  <span className="text-xs font-medium">Instagram</span>
+                  <span className="text-[10px] font-medium">Instagram</span>
+                </Button>
+                <Button 
+                  variant={activePlatform === 'facebook' ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  className={cn("flex-1 gap-1.5 h-8", activePlatform === 'facebook' && "bg-background shadow-sm")}
+                  onClick={() => setActivePlatform('facebook')}
+                >
+                  <Facebook size={13} className="text-blue-600" />
+                  <span className="text-[10px] font-medium">Facebook</span>
                 </Button>
               </div>
 
@@ -678,7 +702,7 @@ export default function Conversations() {
                 </Select>
               )}
 
-              {activePlatform === 'meta' && metaIntegrations && metaIntegrations.length > 1 && (
+              {activePlatform !== 'whatsapp' && metaIntegrations && metaIntegrations.length > 1 && (
                 <Select value={currentChannelValue} onValueChange={handleChannelChange}>
                   <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
                     <SelectValue placeholder="Selecione a página" />
@@ -989,11 +1013,20 @@ function ConversationItem({
   const unassignedTags = availableTags.filter(t => !leadTagIds.includes(t.id));
   return <div className={cn("w-full text-left p-2.5 flex items-center gap-2.5 hover:bg-muted/50 transition-colors group", isSelected && "bg-muted")}>
       <button type="button" onClick={onClick} className="flex items-center gap-2.5 flex-1 min-w-0">
-        <Avatar className="h-9 w-9 shrink-0">
+        <Avatar className="h-9 w-9 shrink-0 relative">
           <AvatarImage src={conversation.contact_picture || undefined} />
           <AvatarFallback className="text-xs bg-muted text-muted-foreground">
             {conversation.is_group ? <Users className="w-4 h-4" /> : (conversation.contact_name || conversation.contact_phone)?.[0]?.toUpperCase() || "?"}
           </AvatarFallback>
+          <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5 border shadow-sm">
+            {(conversation as any).platform === 'instagram' ? (
+              <Instagram size={10} className="text-pink-500" />
+            ) : (conversation as any).platform === 'messenger' ? (
+              <Facebook size={10} className="text-blue-600" />
+            ) : (
+              <WhatsAppIcon variant="logo" size={10} />
+            )}
+          </div>
         </Avatar>
         
         <div className="flex-1 w-0">
