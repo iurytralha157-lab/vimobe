@@ -12,11 +12,12 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // Redirect to frontend with success data
-function redirectWithSuccess(pages: any[], userToken: string, returnUrl: string): Response {
+function redirectWithSuccess(pages: any[], userToken: string, returnUrl: string, adAccountId?: string | null): Response {
   const data = {
     success: true,
     pages: pages,
-    userToken: userToken
+    userToken: userToken,
+    adAccountId: adAccountId
   };
   const encodedData = encodeURIComponent(btoa(JSON.stringify(data)));
   const redirectUrl = `${returnUrl}?meta_oauth_data=${encodedData}`;
@@ -201,9 +202,29 @@ serve(async (req) => {
         access_token: page.access_token,
       }));
       
-      console.log(`Found ${pages.length} pages, redirecting back...`);
+      console.log(`Found ${pages.length} pages, fetching ad accounts...`);
 
-      return redirectWithSuccess(pages, longLivedData.access_token, returnUrl);
+      // NEW: Also fetch ad accounts to find the one associated with this user
+      let ad_account_id = null;
+      try {
+        const adAccountsUrl = `https://graph.facebook.com/v19.0/me/adaccounts?` +
+          `access_token=${longLivedData.access_token}` +
+          `&fields=id,name,account_id`;
+        
+        const adAccountsResponse = await fetch(adAccountsUrl);
+        const adAccountsData = await adAccountsResponse.json();
+        
+        if (adAccountsData.data && adAccountsData.data.length > 0) {
+          // We'll pass the first one as a suggestion or default
+          ad_account_id = adAccountsData.data[0].id;
+          console.log("Found ad account:", ad_account_id);
+        }
+      } catch (adError) {
+        console.error("Error fetching ad accounts during OAuth:", adError);
+      }
+
+      console.log(`Found ${pages.length} pages, redirecting back...`);
+      return redirectWithSuccess(pages, longLivedData.access_token, returnUrl, ad_account_id);
       
     } catch (error: unknown) {
       console.error("OAuth callback error:", error);
@@ -479,6 +500,7 @@ serve(async (req) => {
             page_id: page.id,
             page_name: page.name,
             access_token: page.access_token,
+            ad_account_id: body.ad_account_id || null,
             pipeline_id,
             stage_id,
             default_status: default_status || "novo",

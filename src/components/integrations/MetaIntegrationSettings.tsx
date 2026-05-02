@@ -75,6 +75,7 @@ interface OAuthData {
   success: boolean;
   pages?: MetaPage[];
   userToken?: string;
+  adAccountId?: string;
   error?: string;
 }
 
@@ -93,6 +94,7 @@ export function MetaIntegrationSettings() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [availablePages, setAvailablePages] = useState<MetaPage[]>([]);
   const [userToken, setUserToken] = useState("");
+  const [adAccountId, setAdAccountId] = useState("");
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPage, setEditingPage] = useState<string | null>(null);
@@ -125,6 +127,9 @@ export function MetaIntegrationSettings() {
         if (decoded.success && decoded.pages && decoded.userToken) {
           setAvailablePages(decoded.pages);
           setUserToken(decoded.userToken);
+          if (decoded.adAccountId) {
+            setAdAccountId(decoded.adAccountId);
+          }
           setShowPageSelector(true);
           toast.success("Autenticação realizada com sucesso!");
         } else if (decoded.error) {
@@ -168,6 +173,7 @@ export function MetaIntegrationSettings() {
       pipelineId: selectedPipelineId,
       stageId: selectedStageId,
       defaultStatus: selectedStatus,
+      adAccountId: adAccountId,
     });
 
     setShowPageSelector(false);
@@ -205,6 +211,7 @@ export function MetaIntegrationSettings() {
     setSelectedPipelineId("");
     setSelectedStageId("");
     setSelectedStatus("novo");
+    setAdAccountId("");
   };
 
   const toggleExpanded = (integrationId: string) => {

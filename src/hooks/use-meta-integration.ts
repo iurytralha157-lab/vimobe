@@ -122,12 +122,14 @@ export function useMetaConnectPage() {
       pipelineId,
       stageId,
       defaultStatus,
+      adAccountId,
     }: {
       pageId: string;
       userToken: string;
       pipelineId: string;
       stageId: string;
       defaultStatus: string;
+      adAccountId?: string;
     }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       
@@ -146,6 +148,7 @@ export function useMetaConnectPage() {
             pipeline_id: pipelineId,
             stage_id: stageId,
             default_status: defaultStatus,
+            ad_account_id: adAccountId,
           }),
         }
       );
