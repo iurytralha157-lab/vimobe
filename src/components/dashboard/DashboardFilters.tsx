@@ -285,7 +285,7 @@ export function DashboardFilters({
         onDatePresetChange={onDatePresetChange}
         customDateRange={customDateRange}
         onCustomDateRangeChange={onCustomDateRangeChange}
-        triggerClassName="h-8 w-auto min-w-[140px] text-xs justify-start"
+        triggerClassName="h-8 w-auto min-w-[120px] text-xs justify-start"
       />
 
       {/* Desktop Filters Popover for ALL filters when screen is not large enough */}
