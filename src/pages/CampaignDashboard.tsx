@@ -144,15 +144,6 @@ export default function CampaignDashboard() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSync}
-              disabled={syncMutation.isPending || isLoading}
-            >
-              {syncMutation.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              Sincronizar
-            </Button>
             <DashboardFilters
               datePreset={datePreset}
               onDatePresetChange={setDatePreset}
