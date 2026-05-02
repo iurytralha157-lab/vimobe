@@ -25,7 +25,7 @@ export type ModuleName =
   | 'api';         // API Pública
 
 // Default modules that are enabled if no explicit record exists
-const DEFAULT_ENABLED_MODULES: ModuleName[] = [
+export const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'crm',
   'properties',
   'whatsapp',
@@ -67,8 +67,8 @@ export function useOrganizationModules() {
     // Super admin always has access to all modules when impersonating
     if (isSuperAdmin && organization?.id) return true;
     
-    // If still loading, assume module is available to prevent flicker
-    if (isLoading) return true;
+    // If still loading, only return true for default enabled modules to prevent flash
+    if (isLoading) return DEFAULT_ENABLED_MODULES.includes(moduleName);
     
     // If no organization, no modules available
     if (!organization?.id) return false;
