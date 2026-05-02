@@ -223,7 +223,8 @@ serve(async (req) => {
         console.error("Error fetching ad accounts during OAuth:", adError);
       }
 
-      return redirectWithSuccess(pages, longLivedData.access_token, returnUrl);
+      console.log(`Found ${pages.length} pages, redirecting back...`);
+      return redirectWithSuccess(pages, longLivedData.access_token, returnUrl, ad_account_id);
       
     } catch (error: unknown) {
       console.error("OAuth callback error:", error);
