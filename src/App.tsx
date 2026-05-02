@@ -230,7 +230,7 @@ function AppRoutes() {
             {/* Regular Routes */}
             <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/campaigns" element={<ProtectedRoute><CampaignDashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/campaigns" element={<ProtectedRoute><PermissionGuard permission="module_campaigns"><CampaignDashboard /></PermissionGuard></ProtectedRoute>} />
             <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
@@ -263,7 +263,7 @@ function AppRoutes() {
             <Route path="/telecom/billing" element={<ProtectedRoute><TelecomBilling /></ProtectedRoute>} />
             
             {/* Gamification Module */}
-            <Route path="/gamificacao" element={<ProtectedRoute><GamificationLayout /></ProtectedRoute>}>
+            <Route path="/gamificacao" element={<ProtectedRoute><PermissionGuard permission="module_gamification"><GamificationLayout /></PermissionGuard></ProtectedRoute>}>
               <Route index element={<GamificationRanking />} />
               <Route path="dashboard" element={<GamificationDashboard />} />
               <Route path="historico" element={<GamificationHistory />} />

@@ -40,7 +40,8 @@ const allNavItems: NavItem[] = [{
     icon: BarChart3,
     labelKey: 'campaigns',
     path: '/dashboard/campaigns',
-    module: 'campaigns'
+    module: 'campaigns',
+    permission: 'module_campaigns'
   }]
 }, {
   icon: Kanban,
@@ -93,6 +94,7 @@ const allNavItems: NavItem[] = [{
   labelKey: 'gamification',
   path: '/gamificacao',
   module: 'gamification',
+  permission: 'module_gamification',
   children: [{
     icon: Trophy,
     labelKey: 'performance',
