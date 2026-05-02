@@ -348,15 +348,26 @@ export function useMetaUpdateAdAccounts() {
   });
 }
 
-// Fetch available ad accounts for a user token
-export function useMetaAdAccounts(userToken?: string) {
+// Fetch available ad accounts for a user token or integration
+export function useMetaAdAccounts(userToken?: string, integrationId?: string) {
   return useQuery({
-    queryKey: ["meta-ad-accounts", userToken],
+    queryKey: ["meta-ad-accounts", userToken, integrationId],
     queryFn: async () => {
-      if (!userToken) return [];
+      let tokenToUse = userToken;
+      
+      if (!tokenToUse && integrationId) {
+        const { data } = await supabase
+          .from("meta_integrations")
+          .select("access_token")
+          .eq("id", integrationId)
+          .single();
+        tokenToUse = data?.access_token;
+      }
+      
+      if (!tokenToUse) return [];
       
       const response = await fetch(
-        `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_id&access_token=${userToken}`
+        `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_id&access_token=${tokenToUse}`
       );
       
       if (!response.ok) {
@@ -366,6 +377,6 @@ export function useMetaAdAccounts(userToken?: string) {
       const data = await response.json();
       return data.data || [];
     },
-    enabled: !!userToken,
+    enabled: !!userToken || !!integrationId,
   });
 }
