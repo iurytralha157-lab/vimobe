@@ -462,6 +462,14 @@ serve(async (req) => {
           });
         }
 
+        const page = pagesData.data?.find((p: any) => p.id === page_id);
+        if (!page) {
+          return new Response(JSON.stringify({ error: "Page not found or no access" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
         // NEW: If ad_account_id is not provided, try to fetch it automatically
         let ad_account_id = body.ad_account_id;
         if (!ad_account_id) {
