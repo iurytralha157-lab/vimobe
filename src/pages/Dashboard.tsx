@@ -124,8 +124,8 @@ export default function Dashboard() {
   return (
     <AppLayout title="Dashboard" disableMainScroll={!isMobile}>
       <div className={cn(
-        "flex flex-col gap-3 animate-fade-in",
-        !isMobile ? "h-full overflow-hidden" : ""
+        "flex flex-col gap-2 md:gap-3 animate-fade-in",
+        !isMobile ? "flex-1 min-h-0 overflow-hidden" : ""
       )}>
 
         {/* Filters bar */}
@@ -151,7 +151,7 @@ export default function Dashboard() {
         />
 
         {/* ===== DESKTOP LAYOUT ===== */}
-        <div className="hidden lg:grid lg:grid-cols-12 gap-3 flex-1 min-h-0">
+        <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0">
           {/* Left column (col 1-8): KPIs + Activities + Evolution */}
           <div className="col-span-8 flex flex-col gap-3">
             <div className="flex flex-col gap-3">
@@ -311,7 +311,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits 
         <Tooltip>
           <TooltipTrigger asChild>
             <Card className="card-hover cursor-default h-full">
-              <CardContent className="p-4 h-full">
+              <CardContent className="p-3 sm:p-4 h-full">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium truncate mb-1">{kpi.title}</p>
