@@ -166,7 +166,8 @@ export default function AdminOrganizationDetail() {
 
   const isModuleEnabled = (moduleName: string) => {
     const module = modules?.find((m) => m.module_name === moduleName);
-    return module ? module.is_enabled : true; // Default to enabled
+    if (module) return module.is_enabled;
+    return DEFAULT_ENABLED_MODULES.includes(moduleName as any);
   };
 
   const handleModuleToggle = async (moduleName: string, enabled: boolean) => {
