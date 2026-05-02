@@ -118,61 +118,46 @@ export function useCampaignInsights(filters: DashboardFilters) {
         }
       }
 
-      // 1. Get all lead_meta with campaign_id for this org's leads
+      // 1. Get all lead_meta with campaign_id
       const { data: leadMetaRaw } = await supabase
         .from("lead_meta")
         .select("campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, creative_url, creative_video_url, lead_id")
         .not("campaign_id", "is", null);
 
-      if (!leadMetaRaw || leadMetaRaw.length === 0) {
-        return emptyResult();
-      }
-
-      // 2. Filter leads by date range + all dashboard filters
-      const leadIds = leadMetaRaw.map(lm => lm.lead_id);
-      const batchSize = 500;
       const validLeadIds = new Set<string>();
       const wonLeadIds = new Set<string>();
       const leadRevenueMap = new Map<string, number>();
 
-      for (let i = 0; i < leadIds.length; i += batchSize) {
-        const batch = leadIds.slice(i, i + batchSize);
-        let query = supabase
-          .from("leads")
-          .select("id, deal_status, valor_interesse")
-          .in("id", batch)
-          .eq("organization_id", orgId)
-          .gte("created_at", dateFrom)
-          .lte("created_at", dateTo);
+      // 2. Filter leads by date range (if any exist)
+      if (leadMetaRaw && leadMetaRaw.length > 0) {
+        const leadIds = leadMetaRaw.map(lm => lm.lead_id);
+        const batchSize = 500;
+        for (let i = 0; i < leadIds.length; i += batchSize) {
+          const batch = leadIds.slice(i, i + batchSize);
+          let query = supabase
+            .from("leads")
+            .select("id, deal_status, valor_interesse")
+            .in("id", batch)
+            .eq("organization_id", orgId)
+            .gte("created_at", dateFrom)
+            .lte("created_at", dateTo);
 
-        // Apply team filter
-        if (teamMemberIds) {
-          query = query.in("assigned_user_id", teamMemberIds);
-        }
-        // Apply user filter
-        if (filters.userId) {
-          query = query.eq("assigned_user_id", filters.userId);
-        }
-        // Apply source filter
-        if (filters.source && filters.source !== "all") {
-          query = query.eq("source", filters.source);
-        }
+          if (teamMemberIds) query = query.in("assigned_user_id", teamMemberIds);
+          if (filters.userId) query = query.eq("assigned_user_id", filters.userId);
+          if (filters.source && filters.source !== "all") query = query.eq("source", filters.source);
 
-        const { data: leadsInRange } = await query;
-        ((leadsInRange || []) as LeadRow[]).forEach(l => {
-          validLeadIds.add(l.id);
-          if (l.deal_status === 'won') {
-            wonLeadIds.add(l.id);
-            leadRevenueMap.set(l.id, l.valor_interesse || 0);
-          }
-        });
+          const { data: leadsInRange } = await query;
+          ((leadsInRange || []) as LeadRow[]).forEach(l => {
+            validLeadIds.add(l.id);
+            if (l.deal_status === 'won') {
+              wonLeadIds.add(l.id);
+              leadRevenueMap.set(l.id, l.valor_interesse || 0);
+            }
+          });
+        }
       }
 
-      const filtered = (leadMetaRaw as LeadMetaRow[]).filter(lm => validLeadIds.has(lm.lead_id));
-
-      if (filtered.length === 0) {
-        return emptyResult();
-      }
+      const filtered = (leadMetaRaw || []).filter(lm => validLeadIds.has(lm.lead_id));
 
       // 3. Build hierarchy from lead_meta
       const campaignMap = new Map<string, {
