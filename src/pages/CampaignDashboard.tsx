@@ -453,38 +453,20 @@ export default function CampaignDashboard() {
 interface KPICardProps {
   title: string;
   value: string;
-  icon: React.ElementType;
-  color: 'blue' | 'green' | 'orange' | 'purple';
   isLoading: boolean;
-  description?: string;
 }
 
-function KPICard({ title, value, icon: Icon, color, isLoading, description }: KPICardProps) {
-  const colorMap = {
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    green: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
-    orange: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
-    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
-  };
-
+function KPICard({ title, value, isLoading }: KPICardProps) {
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <p className="text-2xl font-bold tracking-tight">{value}</p>
-            )}
-            {description && !isLoading && (
-              <p className="text-xs text-muted-foreground mt-1">{description}</p>
-            )}
-          </div>
-          <div className={cn("p-3 rounded-xl", colorMap[color])}>
-            <Icon className="h-5 w-5" />
-          </div>
+    <Card className="overflow-hidden shadow-none border-muted/60">
+      <CardContent className="p-4">
+        <div className="flex flex-row items-center justify-between gap-2">
+          <p className="text-xs font-medium text-muted-foreground whitespace-nowrap">{title}</p>
+          {isLoading ? (
+            <Skeleton className="h-5 w-16" />
+          ) : (
+            <p className="text-sm font-bold tracking-tight text-right">{value}</p>
+          )}
         </div>
       </CardContent>
     </Card>
