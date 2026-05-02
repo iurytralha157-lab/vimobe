@@ -129,37 +129,19 @@ export default function CampaignDashboard() {
   return (
     <AppLayout title="Dashboard de Campanhas">
       <div className="flex flex-col gap-6 animate-fade-in">
-        {!insightData?.hasSpendData && !isLoading && (
-          <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950/20 dark:border-orange-900/30">
-            <AlertCircle className="h-4 w-4 text-orange-600" />
-            <AlertTitle>Dados de investimento não sincronizados</AlertTitle>
-            <AlertDescription className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <span>Os leads estão sendo capturados em tempo real, mas os dados de custo e investimento precisam ser sincronizados com o Meta Ads.</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100 h-8"
-                onClick={handleSync}
-                disabled={syncMutation.isPending}
-              >
-                {syncMutation.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                Sincronizar agora
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">Performance Meta Ads</h1>
-              {insightData?.lastSync && (
-                <Badge variant="outline" className="font-normal text-[10px] py-0 h-5">
-                  Sincronizado: {format(new Date(insightData.lastSync), "HH:mm 'de' dd/MM", { locale: ptBR })}
-                </Badge>
-              )}
-            </div>
-            <p className="text-muted-foreground">Analise os resultados das suas campanhas e leads em tempo real.</p>
+          <div className="flex items-center gap-3">
+            {insightData?.lastSync && (
+              <Badge variant="outline" className="font-normal text-[10px] py-1 px-3 h-auto bg-muted/50 border-border">
+                <span className="flex items-center gap-1.5">
+                  <RefreshCw className={cn("h-3 w-3", syncMutation.isPending && "animate-spin")} />
+                  Última sincronização: {format(new Date(insightData.lastSync), "HH:mm 'de' dd/MM", { locale: ptBR })}
+                </span>
+              </Badge>
+            )}
+            {syncMutation.isPending && (
+              <span className="text-xs text-muted-foreground animate-pulse">Sincronizando com Meta...</span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button 
