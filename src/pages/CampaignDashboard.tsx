@@ -470,14 +470,14 @@ interface KPICardProps {
 
 function KPICard({ title, value, isLoading }: KPICardProps) {
   return (
-    <Card className="overflow-hidden shadow-none border-muted/60">
-      <CardContent className="p-4">
+    <Card className="overflow-hidden shadow-none border-muted/40 bg-muted/5">
+      <CardContent className="p-3">
         <div className="flex flex-row items-center justify-between gap-2">
-          <p className="text-xs font-medium text-muted-foreground whitespace-nowrap">{title}</p>
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
           {isLoading ? (
-            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-4 w-12" />
           ) : (
-            <p className="text-sm font-bold tracking-tight text-right">{value}</p>
+            <p className="text-sm font-bold tracking-tight">{value}</p>
           )}
         </div>
       </CardContent>
