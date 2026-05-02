@@ -98,7 +98,11 @@ function AppLayoutContent({ children, title, disableMainScroll = false }: AppLay
           <AppHeader title={title} />
           
           {/* Conteúdo da página */}
-          <main className={`flex-1 min-h-0 ${disableMainScroll ? 'overflow-hidden relative' : 'overflow-y-auto overflow-x-hidden'} px-4 md:px-6 pt-3 md:pt-4 ${isMobile ? 'pb-20' : 'pb-6'}`}>
+          <main className={cn(
+            "flex-1 min-h-0 px-4 md:px-6 pt-3 md:pt-4",
+            disableMainScroll ? "overflow-hidden relative pb-2 md:pb-3" : "overflow-y-auto overflow-x-hidden pb-6",
+            isMobile && "pb-20"
+          )}>
             {children}
           </main>
         </div>

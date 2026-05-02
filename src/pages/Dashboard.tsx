@@ -125,7 +125,7 @@ export default function Dashboard() {
     <AppLayout title="Dashboard" disableMainScroll={!isMobile}>
       <div className={cn(
         "flex flex-col gap-3 animate-fade-in",
-        !isMobile ? "h-full overflow-hidden" : ""
+        !isMobile ? "flex-1 min-h-0 overflow-hidden" : ""
       )}>
 
         {/* Filters bar */}
