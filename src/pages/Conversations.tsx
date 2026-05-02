@@ -464,27 +464,46 @@ export default function Conversations() {
         <div className="flex flex-col h-full">
               {/* Mobile Header with Filters */}
               <div className="p-3 border-b space-y-2 bg-card shrink-0">
-                <Select value={currentChannelValue} onValueChange={handleChannelChange}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Selecione o canal" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    <SelectGroup>
-                      <SelectLabel>WhatsApp</SelectLabel>
-                      <SelectItem value="whatsapp-all">Todas as contas WhatsApp</SelectItem>
-                      {sessions?.map(session => (
-                        <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
-                          {session.instance_name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                    <SelectSeparator />
-                    <SelectGroup>
-                      <SelectLabel>Redes Sociais</SelectLabel>
-                      <SelectItem value="meta-all">Instagram / Meta</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-1 bg-muted/50 p-1 rounded-lg">
+                    <Button 
+                      variant={activePlatform === 'whatsapp' ? 'secondary' : 'ghost'} 
+                      size="sm" 
+                      className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
+                      onClick={() => handleChannelChange('whatsapp-all')}
+                    >
+                      <WhatsAppIcon className="w-4 h-4" />
+                      <span className="text-xs font-medium">WhatsApp</span>
+                    </Button>
+                    <Button 
+                      variant={activePlatform === 'meta' ? 'secondary' : 'ghost'} 
+                      size="sm" 
+                      className={cn("flex-1 gap-2 h-8", activePlatform === 'meta' && "bg-background shadow-sm")}
+                      onClick={() => handleChannelChange('meta-all')}
+                    >
+                      <Instagram className="w-4 h-4 text-pink-500" />
+                      <span className="text-xs font-medium">Instagram</span>
+                    </Button>
+                  </div>
+
+                  {activePlatform === 'whatsapp' && sessions && sessions.length > 1 && (
+                    <Select value={currentChannelValue} onValueChange={handleChannelChange}>
+                      <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectGroup>
+                          <SelectItem value="whatsapp-all">Todas as contas</SelectItem>
+                          {sessions.map(session => (
+                            <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
+                              {session.instance_name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
 
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -587,27 +606,46 @@ export default function Conversations() {
         <aside className="w-[350px] min-w-[350px] max-w-[350px] bg-card flex flex-col overflow-hidden rounded-2xl border shadow-sm">
           {/* Header com filtros */}
           <div className="p-3 border-b space-y-2 bg-card">
-            <Select value={currentChannelValue} onValueChange={handleChannelChange}>
-              <SelectTrigger className="h-9 bg-background">
-                <SelectValue placeholder="Selecione o canal" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectGroup>
-                  <SelectLabel>WhatsApp</SelectLabel>
-                  <SelectItem value="whatsapp-all">Todas as contas WhatsApp</SelectItem>
-                  {sessions?.map(session => (
-                    <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
-                      {session.instance_name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-                <SelectSeparator />
-                <SelectGroup>
-                  <SelectLabel>Redes Sociais</SelectLabel>
-                  <SelectItem value="meta-all">Instagram / Meta</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-1 bg-muted/50 p-1 rounded-lg">
+                <Button 
+                  variant={activePlatform === 'whatsapp' ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
+                  onClick={() => handleChannelChange('whatsapp-all')}
+                >
+                  <WhatsAppIcon className="w-4 h-4" />
+                  <span className="text-xs font-medium">WhatsApp</span>
+                </Button>
+                <Button 
+                  variant={activePlatform === 'meta' ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  className={cn("flex-1 gap-2 h-8", activePlatform === 'meta' && "bg-background shadow-sm")}
+                  onClick={() => handleChannelChange('meta-all')}
+                >
+                  <Instagram className="w-4 h-4 text-pink-500" />
+                  <span className="text-xs font-medium">Instagram</span>
+                </Button>
+              </div>
+
+              {activePlatform === 'whatsapp' && sessions && sessions.length > 1 && (
+                <Select value={currentChannelValue} onValueChange={handleChannelChange}>
+                  <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectGroup>
+                      <SelectItem value="whatsapp-all">Todas as contas</SelectItem>
+                      {sessions.map(session => (
+                        <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
+                          {session.instance_name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
