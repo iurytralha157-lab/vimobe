@@ -25,7 +25,7 @@ export type ModuleName =
   | 'api';         // API Pública
 
 // Default modules that are enabled if no explicit record exists
-const DEFAULT_ENABLED_MODULES: ModuleName[] = [
+export const DEFAULT_ENABLED_MODULES: ModuleName[] = [
   'crm',
   'properties',
   'whatsapp',
