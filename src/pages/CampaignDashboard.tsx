@@ -6,14 +6,9 @@ import { useCampaignInsights, useSyncCampaignInsights } from '@/hooks/use-campai
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
-  DollarSign, 
-  Users, 
-  Target, 
-  Eye, 
   TrendingUp, 
   BarChart3,
-  RefreshCw,
-  AlertCircle
+  RefreshCw
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -415,15 +410,10 @@ export default function CampaignDashboard() {
                         <td className="py-3 text-right">{formatCurrency(campaign.spend)}</td>
                         <td className="py-3 text-right">
                           <div className="flex flex-col">
-                            {campaign.objective === 'MESSAGES' || (campaign.conversations > 0 && campaign.leads === 0) ? (
+                            {campaign.objective === 'MESSAGES' || campaign.objective === 'OUTCOME_MESSAGES' ? (
                               <span className="font-medium">{formatNumber(campaign.conversations)} Conversas</span>
-                            ) : campaign.leads > 0 ? (
-                              <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
                             ) : (
                               <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
-                            )}
-                            {campaign.leads > 0 && campaign.conversations > 0 && (
-                              <span className="text-[10px] text-muted-foreground">{formatNumber(campaign.conversations)} Conversas</span>
                             )}
                           </div>
                         </td>
@@ -470,14 +460,14 @@ interface KPICardProps {
 
 function KPICard({ title, value, isLoading }: KPICardProps) {
   return (
-    <Card className="overflow-hidden shadow-none border-muted/40 bg-muted/5">
-      <CardContent className="p-3">
-        <div className="flex flex-row items-center justify-between gap-2">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
           {isLoading ? (
-            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-7 w-20" />
           ) : (
-            <p className="text-sm font-bold tracking-tight">{value}</p>
+            <p className="text-2xl font-bold tracking-tight">{value}</p>
           )}
         </div>
       </CardContent>
