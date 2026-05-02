@@ -113,31 +113,69 @@ export default function CampaignDashboard() {
   return (
     <AppLayout title="Dashboard de Campanhas">
       <div className="flex flex-col gap-6 animate-fade-in">
+        {!insightData?.hasSpendData && !isLoading && (
+          <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950/20 dark:border-orange-900/30">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertTitle>Dados de investimento não sincronizados</AlertTitle>
+            <AlertDescription className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <span>Os leads estão sendo capturados em tempo real, mas os dados de custo e investimento precisam ser sincronizados com o Meta Ads.</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100 h-8"
+                onClick={handleSync}
+                disabled={syncMutation.isPending}
+              >
+                {syncMutation.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Sincronizar agora
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Performance Meta Ads</h1>
-            <p className="text-muted-foreground">Analise os resultados das suas campanhas em tempo real.</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">Performance Meta Ads</h1>
+              {insightData?.lastSync && (
+                <Badge variant="outline" className="font-normal text-[10px] py-0 h-5">
+                  Sincronizado: {format(new Date(insightData.lastSync), "HH:mm 'de' dd/MM", { locale: ptBR })}
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground">Analise os resultados das suas campanhas e leads em tempo real.</p>
           </div>
-          <DashboardFilters
-            datePreset={datePreset}
-            onDatePresetChange={setDatePreset}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-            teamId={teamId}
-            onTeamChange={setTeamId}
-            userId={userId}
-            onUserChange={setUserId}
-            source={source}
-            onSourceChange={setSource}
-            campaignId={campaignId}
-            onCampaignChange={setCampaignId}
-            adSetId={adSetId}
-            onAdSetChange={setAdSetId}
-            adId={adId}
-            onAdChange={setAdId}
-            onClear={clearFilters}
-            hasActiveFilters={hasActiveFilters}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSync}
+              disabled={syncMutation.isPending || isLoading}
+            >
+              {syncMutation.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Sincronizar
+            </Button>
+            <DashboardFilters
+              datePreset={datePreset}
+              onDatePresetChange={setDatePreset}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+              teamId={teamId}
+              onTeamChange={setTeamId}
+              userId={userId}
+              onUserChange={setUserId}
+              source={source}
+              onSourceChange={setSource}
+              campaignId={campaignId}
+              onCampaignChange={setCampaignId}
+              adSetId={adSetId}
+              onAdSetChange={setAdSetId}
+              adId={adId}
+              onAdChange={setAdId}
+              onClear={clearFilters}
+              hasActiveFilters={hasActiveFilters}
+            />
+          </div>
         </div>
 
         {/* KPI Cards */}
