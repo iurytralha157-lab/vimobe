@@ -321,9 +321,13 @@ export function useCampaignInsights(filters: DashboardFilters) {
           impressions: cInsight.impressions,
           reach: cInsight.reach,
           leads_count: cData?.leads.size || 0,
+          conversations_count: cInsight.conversations_count || 0,
           won_count: cData?.won.size || 0,
           revenue: cData?.revenue || 0,
           cpl: cInsight.cpl,
+          status: cInsight.status,
+          budget: cInsight.budget,
+          budget_type: cInsight.budget_type,
           adsets: adsets.sort((a, b) => (b.spend || 0) - (a.spend || 0)),
         });
       }
