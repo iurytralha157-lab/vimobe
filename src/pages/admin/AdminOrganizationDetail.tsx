@@ -35,8 +35,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue } from
-'@/components/ui/select';
+  SelectValue } from '@/components/ui/select';
+import { DEFAULT_ENABLED_MODULES } from '@/hooks/use-organization-modules';
 import {
   Dialog,
   DialogContent,
