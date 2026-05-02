@@ -329,6 +329,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           status: cInsight.status,
           budget: cInsight.budget,
           budget_type: cInsight.budget_type,
+          objective: cInsight.objective || null,
           adsets: adsets.sort((a, b) => (b.spend || 0) - (a.spend || 0)),
         });
       }
