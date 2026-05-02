@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import postgres from "https://deno.land/x/postgresjs@v3.4.4/mod.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,19 +11,26 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+  const dbUrl = Deno.env.get("SUPABASE_DB_URL");
+  if (!dbUrl) {
+    return new Response(JSON.stringify({ error: "SUPABASE_DB_URL not found" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
 
-    // Using a trick: Supabase JS doesn't have a direct SQL exec, 
-    // but we can try to use the 'pg' library if available or 
-    // just hope there's an RPC.
-    // Actually, let's use the 'postgres' driver for Deno.
-    
-    return new Response(JSON.stringify({ 
-      message: "Please run the following SQL in the Supabase Dashboard: ALTER TABLE meta_campaign_insights ADD COLUMN IF NOT EXISTS status TEXT, ADD COLUMN IF NOT EXISTS budget NUMERIC, ADD COLUMN IF NOT EXISTS budget_type TEXT, ADD COLUMN IF NOT EXISTS conversations_count INTEGER DEFAULT 0;" 
-    }), {
+  const sql = postgres(dbUrl);
+
+  try {
+    await sql`
+      ALTER TABLE meta_campaign_insights 
+      ADD COLUMN IF NOT EXISTS status TEXT,
+      ADD COLUMN IF NOT EXISTS budget NUMERIC,
+      ADD COLUMN IF NOT EXISTS budget_type TEXT,
+      ADD COLUMN IF NOT EXISTS conversations_count INTEGER DEFAULT 0;
+    `;
+
+    return new Response(JSON.stringify({ success: true, message: "Migration applied" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
@@ -32,5 +39,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
+  } finally {
+    await sql.end();
   }
 });
