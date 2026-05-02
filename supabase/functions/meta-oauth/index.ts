@@ -522,6 +522,7 @@ serve(async (req) => {
             page_name: page.name,
             access_token: page.access_token,
             ad_account_id: ad_account_id || null,
+            selected_ad_accounts: body.selected_ad_accounts || [],
             pipeline_id,
             stage_id,
             default_status: default_status || "novo",
