@@ -195,10 +195,10 @@ export default function Dashboard() {
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
             </TabsList>
-            <TabsContent value="funnel" className="mt-3">
+            <TabsContent value="funnel" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
               {funnelComponent}
             </TabsContent>
-            <TabsContent value="evolution" className="mt-3">
+            <TabsContent value="evolution" className={cn("mt-3", !isMobile ? "flex-1 min-h-0" : "")}>
                 <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </TabsContent>
           </Tabs>
