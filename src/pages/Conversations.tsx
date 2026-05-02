@@ -1013,11 +1013,20 @@ function ConversationItem({
   const unassignedTags = availableTags.filter(t => !leadTagIds.includes(t.id));
   return <div className={cn("w-full text-left p-2.5 flex items-center gap-2.5 hover:bg-muted/50 transition-colors group", isSelected && "bg-muted")}>
       <button type="button" onClick={onClick} className="flex items-center gap-2.5 flex-1 min-w-0">
-        <Avatar className="h-9 w-9 shrink-0">
+        <Avatar className="h-9 w-9 shrink-0 relative">
           <AvatarImage src={conversation.contact_picture || undefined} />
           <AvatarFallback className="text-xs bg-muted text-muted-foreground">
             {conversation.is_group ? <Users className="w-4 h-4" /> : (conversation.contact_name || conversation.contact_phone)?.[0]?.toUpperCase() || "?"}
           </AvatarFallback>
+          <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5 border shadow-sm">
+            {(conversation as any).platform === 'instagram' ? (
+              <Instagram size={10} className="text-pink-500" />
+            ) : (conversation as any).platform === 'messenger' ? (
+              <Facebook size={10} className="text-blue-600" />
+            ) : (
+              <WhatsAppIcon variant="logo" size={10} />
+            )}
+          </div>
         </Avatar>
         
         <div className="flex-1 w-0">
