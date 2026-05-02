@@ -79,32 +79,49 @@ export default function CampaignDashboard() {
 
   const totals = useMemo(() => {
     if (!insightData?.summary) return { spend: 0, leads: 0, conversations: 0, impressions: 0, reach: 0, cpl: 0 };
+    
+    const spend = insightData.summary.totalSpend || 0;
+    const leads = insightData.summary.totalLeads || 0;
+    const conversations = insightData.summary.conversations_count || 0;
+    const totalResults = leads + conversations;
+    const avgCpl = totalResults > 0 ? spend / totalResults : 0;
+
     return {
-      spend: insightData.summary.totalSpend || 0,
-      leads: insightData.summary.totalLeads || 0,
-      conversations: insightData.summary.conversations_count || 0,
+      spend,
+      leads,
+      conversations,
       impressions: insightData.summary.totalImpressions || 0,
       reach: insightData.summary.totalReach || 0,
-      cpl: insightData.summary.avgCpl || 0
+      cpl: avgCpl
     };
   }, [insightData]);
 
   const campaignStats = useMemo(() => {
     if (!insightData?.campaigns) return [];
-    return insightData.campaigns.map(c => ({
-      id: c.campaign_id,
-      name: c.campaign_name,
-      spend: c.spend || 0,
-      leads: c.leads_count,
-      conversations: c.conversations_count || 0,
-      impressions: c.impressions || 0,
-      reach: c.reach || 0,
-      cpl: c.cpl || 0,
-      status: c.status,
-      budget: c.budget,
-      budgetType: c.budget_type,
-      objective: c.objective
-    }));
+    
+    // Filtra campanhas que não tiveram atividade no período
+    return insightData.campaigns
+      .filter(c => (c.spend || 0) > 0 || (c.impressions || 0) > 0 || (c.leads_count || 0) > 0 || (c.conversations_count || 0) > 0)
+      .map(c => {
+        const isMessages = c.objective === 'MESSAGES' || c.objective === 'OUTCOME_MESSAGES';
+        const results = isMessages ? (c.conversations_count || 0) : (c.leads_count || 0);
+        const dynamicCpl = results > 0 ? (c.spend || 0) / results : 0;
+
+        return {
+          id: c.campaign_id,
+          name: c.campaign_name,
+          spend: c.spend || 0,
+          leads: c.leads_count,
+          conversations: c.conversations_count || 0,
+          impressions: c.impressions || 0,
+          reach: c.reach || 0,
+          cpl: dynamicCpl, // Usamos o CPL dinâmico baseado no objetivo
+          status: c.status,
+          budget: c.budget,
+          budgetType: c.budget_type,
+          objective: c.objective
+        };
+      });
   }, [insightData]);
 
   // For the chart, we'll use campaign data since useCampaignInsights returns aggregated data
@@ -170,46 +187,31 @@ export default function CampaignDashboard() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <KPICard 
             title="Investimento" 
             value={formatCurrency(totals.spend)} 
-            icon={DollarSign} 
-            color="blue" 
             isLoading={isLoading}
-            description={periodLabel}
           />
           <KPICard 
-            title="Leads (Meta)" 
-            value={`${formatNumber(totals.leads)} Leads`} 
-            icon={Users} 
-            color="green" 
+            title="Leads" 
+            value={formatNumber(totals.leads)} 
             isLoading={isLoading}
-            description="Baseado em formulários"
           />
           <KPICard 
-            title="Conversas (Meta)" 
-            value={`${formatNumber(totals.conversations)} Conv.`} 
-            icon={RefreshCw} 
-            color="purple" 
+            title="Conversas" 
+            value={formatNumber(totals.conversations)} 
             isLoading={isLoading}
-            description="Mensagens iniciadas"
           />
           <KPICard 
             title="CPL Médio" 
             value={formatCurrency(totals.cpl)} 
-            icon={Target} 
-            color="orange" 
             isLoading={isLoading}
-            description="Baseado no investimento"
           />
           <KPICard 
-            title="Alcance Total" 
+            title="Alcance" 
             value={formatNumber(totals.reach)} 
-            icon={Eye} 
-            color="purple" 
             isLoading={isLoading}
-            description={periodLabel}
           />
         </div>
 
@@ -363,7 +365,7 @@ export default function CampaignDashboard() {
                     <th className="text-right py-3 font-medium">Orçamento</th>
                     <th className="text-right py-3 font-medium">Investimento</th>
                     <th className="text-right py-3 font-medium">Resultado</th>
-                    <th className="text-right py-3 font-medium">CPL</th>
+                    <th className="text-right py-3 font-medium">CPR (Lead/Conv)</th>
                     <th className="text-right py-3 font-medium">Alcance / Imp.</th>
                   </tr>
                 </thead>
@@ -426,9 +428,14 @@ export default function CampaignDashboard() {
                           </div>
                         </td>
                         <td className="py-3 text-right">
-                          <Badge variant="secondary" className="font-normal">
-                            {formatCurrency(campaign.cpl)}
-                          </Badge>
+                          <div className="flex flex-col items-end">
+                            <Badge variant="secondary" className="font-normal text-[10px]">
+                              {formatCurrency(campaign.cpl)}
+                            </Badge>
+                            <span className="text-[9px] text-muted-foreground mt-0.5">
+                              {campaign.objective === 'MESSAGES' || campaign.objective === 'OUTCOME_MESSAGES' ? 'por conversa' : 'por lead'}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-3 text-right">
                           <div className="flex flex-col text-xs">
@@ -458,38 +465,20 @@ export default function CampaignDashboard() {
 interface KPICardProps {
   title: string;
   value: string;
-  icon: React.ElementType;
-  color: 'blue' | 'green' | 'orange' | 'purple';
   isLoading: boolean;
-  description?: string;
 }
 
-function KPICard({ title, value, icon: Icon, color, isLoading, description }: KPICardProps) {
-  const colorMap = {
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    green: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
-    orange: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
-    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
-  };
-
+function KPICard({ title, value, isLoading }: KPICardProps) {
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            {isLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <p className="text-2xl font-bold tracking-tight">{value}</p>
-            )}
-            {description && !isLoading && (
-              <p className="text-xs text-muted-foreground mt-1">{description}</p>
-            )}
-          </div>
-          <div className={cn("p-3 rounded-xl", colorMap[color])}>
-            <Icon className="h-5 w-5" />
-          </div>
+    <Card className="overflow-hidden shadow-none border-muted/40 bg-muted/5">
+      <CardContent className="p-3">
+        <div className="flex flex-row items-center justify-between gap-2">
+          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
+          {isLoading ? (
+            <Skeleton className="h-4 w-12" />
+          ) : (
+            <p className="text-sm font-bold tracking-tight">{value}</p>
+          )}
         </div>
       </CardContent>
     </Card>
