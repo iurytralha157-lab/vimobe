@@ -488,19 +488,26 @@ export default function Conversations() {
 
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
+                  <Input 
+                    placeholder={activePlatform === 'whatsapp' ? "Buscar conversas..." : "Buscar no Instagram/Meta..."} 
+                    value={searchTerm} 
+                    onChange={e => setSearchTerm(e.target.value)} 
+                    className="pl-8 h-9 bg-background" 
+                  />
                 </div>
 
-                <div className="flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
-                    <span>Ocultar grupos</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
-                    <span>Arquivadas</span>
-                  </label>
-                </div>
+                {activePlatform === 'whatsapp' && (
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
+                      <span>Ocultar grupos</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
+                      <span>Arquivadas</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Mobile Conversation List */}
