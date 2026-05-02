@@ -464,15 +464,25 @@ export default function Conversations() {
         <div className="flex flex-col h-full">
               {/* Mobile Header with Filters */}
               <div className="p-3 border-b space-y-2 bg-card shrink-0">
-                <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                <Select value={currentChannelValue} onValueChange={handleChannelChange}>
                   <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos os canais" />
+                    <SelectValue placeholder="Selecione o canal" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
-                    <SelectItem value="all">Todos os canais</SelectItem>
-                    {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
-                        {session.instance_name}
-                      </SelectItem>)}
+                    <SelectGroup>
+                      <SelectLabel>WhatsApp</SelectLabel>
+                      <SelectItem value="whatsapp-all">Todas as contas WhatsApp</SelectItem>
+                      {sessions?.map(session => (
+                        <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
+                          {session.instance_name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Redes Sociais</SelectLabel>
+                      <SelectItem value="meta-all">Instagram / Meta</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
 
