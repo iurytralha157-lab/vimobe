@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
-import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap, Plus } from "lucide-react";
+import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap, Plus, Instagram, Facebook } from "lucide-react";
 import { StartAutomationDialog } from "@/components/whatsapp/StartAutomationDialog";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
@@ -30,9 +30,13 @@ import { useTags, Tag as TagType } from "@/hooks/use-tags";
 import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
+import { useMetaConversations, useMetaMessages, useSendMetaMessage } from "@/hooks/use-meta-conversations";
+
+
 export default function Conversations() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const [activePlatform, setActivePlatform] = useState<'whatsapp' | 'meta'>('whatsapp');
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,12 +67,29 @@ export default function Conversations() {
     { hideGroups, showArchived },
     selectedSessionId === "all" ? (loadingSessions ? undefined : accessibleSessionIds) : undefined
   );
+
   const {
-    data: messages,
-    isLoading: loadingMessages,
-    isFetching: fetchingMessages
-  } = useWhatsAppMessages(selectedConversation?.id || null, null, messageLimit);
+    data: metaConversations,
+    isLoading: loadingMetaConversations
+  } = useMetaConversations();
+
+  const {
+    data: whatsappMessages,
+    isLoading: loadingWhatsAppMessages,
+    isFetching: fetchingWhatsAppMessages
+  } = useWhatsAppMessages(activePlatform === 'whatsapp' ? selectedConversation?.id || null : null, null, messageLimit);
+
+  const {
+    data: metaMessages,
+    isLoading: loadingMetaMessages
+  } = useMetaMessages(activePlatform === 'meta' ? selectedConversation?.id || null : null);
+
+  const messages = activePlatform === 'whatsapp' ? whatsappMessages : metaMessages;
+  const loadingMessages = activePlatform === 'whatsapp' ? loadingWhatsAppMessages : loadingMetaMessages;
+  const fetchingMessages = activePlatform === 'whatsapp' ? fetchingWhatsAppMessages : false;
+
   const sendMessage = useSendWhatsAppMessage();
+  const sendMetaMessage = useSendMetaMessage();
   const markAsRead = useMarkConversationAsRead();
   const archiveConversation = useArchiveConversation();
   const deleteConversation = useDeleteConversation();
@@ -144,10 +165,20 @@ export default function Conversations() {
     if (!messageText.trim() || !selectedConversation) return;
     const textToSend = messageText.trim();
     setMessageText("");
-    await sendMessage.mutateAsync({
-      conversation: selectedConversation,
-      text: textToSend
-    });
+    
+    if (activePlatform === 'whatsapp') {
+      await sendMessage.mutateAsync({
+        conversation: selectedConversation,
+        text: textToSend
+      });
+    } else {
+      await sendMetaMessage.mutateAsync({
+        conversationId: selectedConversation.id,
+        text: textToSend,
+        platform: (selectedConversation as any).platform || 'instagram',
+        recipientExternalId: (selectedConversation as any).external_id
+      });
+    }
   };
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -521,60 +552,158 @@ export default function Conversations() {
   // Desktop Layout
   return <AppLayout title="Conversas">
       <div className="flex h-[calc(100vh-7rem)] gap-3 overflow-hidden">
+        {/* Platform Switcher */}
+        <div className="flex flex-col gap-3 py-2 pb-6 shrink-0">
+          <Button 
+            variant={activePlatform === 'whatsapp' ? 'default' : 'ghost'} 
+            size="icon" 
+            onClick={() => {
+              setActivePlatform('whatsapp');
+              setSelectedConversation(null);
+            }}
+            className={cn(
+              "h-12 w-12 rounded-2xl transition-all duration-200 shadow-sm",
+              activePlatform === 'whatsapp' ? "bg-[#25D366] hover:bg-[#128C7E] text-white" : "bg-card hover:bg-muted text-muted-foreground"
+            )}
+            title="WhatsApp"
+          >
+            <WhatsAppIcon size={24} />
+          </Button>
+          <Button 
+            variant={activePlatform === 'meta' ? 'default' : 'ghost'} 
+            size="icon" 
+            onClick={() => {
+              setActivePlatform('meta');
+              setSelectedConversation(null);
+            }}
+            className={cn(
+              "h-12 w-12 rounded-2xl transition-all duration-200 shadow-sm",
+              activePlatform === 'meta' ? "bg-gradient-to-tr from-[#FFB300] via-[#FF0069] to-[#7024C4] hover:opacity-90 text-white border-none" : "bg-card hover:bg-muted text-muted-foreground"
+            )}
+            title="Instagram / Meta"
+          >
+            <Instagram className="w-6 h-6" />
+          </Button>
+          
+          <div className="mt-auto flex flex-col gap-3">
+             {/* Spacing to match the sidebar as requested */}
+          </div>
+        </div>
+
         {/* Sidebar */}
-        <aside className="w-[350px] min-w-[350px] max-w-[350px] bg-card flex flex-col overflow-hidden rounded-2xl">
+        <aside className="w-[350px] min-w-[350px] max-w-[350px] bg-card flex flex-col overflow-hidden rounded-2xl border shadow-sm">
           {/* Header com filtros */}
           <div className="p-3 border-b space-y-2 bg-card">
-            <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-              <SelectTrigger className="h-9 bg-background">
-                <SelectValue placeholder="Todos os canais" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">Todos os canais</SelectItem>
-                {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
-                    {session.instance_name}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
+            {activePlatform === 'whatsapp' ? (
+              <>
+                <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos os canais" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="all">Todos os canais</SelectItem>
+                    {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
+                        {session.instance_name}
+                      </SelectItem>)}
+                  </SelectContent>
+                </Select>
 
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
-            </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
+                </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
-                <span>Ocultar grupos</span>
-              </label>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
-                <span>Arquivadas</span>
-              </label>
-            </div>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                    <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
+                    <span>Ocultar grupos</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                    <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
+                    <span>Arquivadas</span>
+                  </label>
+                </div>
+              </>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Buscar no Instagram/Meta..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
+              </div>
+            )}
           </div>
 
           {/* Lista de conversas */}
           <ScrollArea className="flex-1">
             <div className="divide-y">
-              {loadingConversations ? <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div> : filteredConversations?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
-                  <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Nenhuma conversa</p>
-                </div> : filteredConversations?.map(conv => <ConversationItem key={conv.id} conversation={conv} isSelected={selectedConversation?.id === conv.id} onClick={() => setSelectedConversation(conv)} formatTime={formatConversationTime} onArchive={() => handleArchive(conv)} onDelete={() => handleDelete(conv)} availableTags={availableTags || []} onAddTag={tagId => conv.lead && addLeadTag.mutate({
-              leadId: conv.lead.id,
-              tagId
-            })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
-              leadId: conv.lead.id,
-              tagId
-            })} onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} onCreateLead={() => {
-              setCreateLeadContact({
-                phone: conv.contact_phone || undefined,
-                name: conv.contact_name || undefined
-              });
-              setCreateLeadOpen(true);
-            }} />)}
+              {activePlatform === 'whatsapp' ? (
+                loadingConversations ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredConversations?.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4">
+                    <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhuma conversa no WhatsApp</p>
+                  </div>
+                ) : (
+                  filteredConversations?.map(conv => (
+                    <ConversationItem 
+                      key={conv.id} 
+                      conversation={conv} 
+                      isSelected={selectedConversation?.id === conv.id} 
+                      onClick={() => setSelectedConversation(conv)} 
+                      formatTime={formatConversationTime} 
+                      onArchive={() => handleArchive(conv)} 
+                      onDelete={() => handleDelete(conv)} 
+                      availableTags={availableTags || []} 
+                      onAddTag={tagId => conv.lead && addLeadTag.mutate({
+                        leadId: conv.lead.id,
+                        tagId
+                      })} 
+                      onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
+                        leadId: conv.lead.id,
+                        tagId
+                      })} 
+                      onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} 
+                      onCreateLead={() => {
+                        setCreateLeadContact({
+                          phone: conv.contact_phone || undefined,
+                          name: conv.contact_name || undefined
+                        });
+                        setCreateLeadOpen(true);
+                      }} 
+                    />
+                  ))
+                )
+              ) : (
+                loadingMetaConversations ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : metaConversations?.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <Instagram className="w-8 h-8 text-muted-foreground mb-2 opacity-20" />
+                    <p className="text-sm text-muted-foreground">Nenhuma conversa no Instagram/Meta</p>
+                    <p className="text-xs text-muted-foreground mt-1">Conecte sua conta nas configurações para começar.</p>
+                  </div>
+                ) : (
+                  metaConversations?.map(conv => (
+                    <ConversationItem 
+                      key={conv.id} 
+                      conversation={conv as any} 
+                      isSelected={selectedConversation?.id === conv.id} 
+                      onClick={() => setSelectedConversation(conv as any)} 
+                      formatTime={formatConversationTime} 
+                      onArchive={() => {}} 
+                      onDelete={() => {}} 
+                      availableTags={availableTags || []} 
+                      onAddTag={() => {}} 
+                      onRemoveTag={() => {}} 
+                      onCreateLead={() => {}}
+                    />
+                  ))
+                )
+              )}
             </div>
           </ScrollArea>
         </aside>
