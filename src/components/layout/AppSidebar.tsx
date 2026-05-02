@@ -40,7 +40,8 @@ const allNavItems: NavItem[] = [{
     icon: BarChart3,
     labelKey: 'campaigns',
     path: '/dashboard/campaigns',
-    module: 'campaigns'
+    module: 'campaigns',
+    permission: 'module_campaigns'
   }]
 }, {
   icon: Kanban,
