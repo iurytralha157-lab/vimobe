@@ -94,6 +94,7 @@ const allNavItems: NavItem[] = [{
   labelKey: 'gamification',
   path: '/gamificacao',
   module: 'gamification',
+  permission: 'module_gamification',
   children: [{
     icon: Trophy,
     labelKey: 'performance',
