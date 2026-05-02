@@ -236,17 +236,22 @@ serve(async (req) => {
           });
         }
 
-        // Step 4: Fetch ad-level insights with creative
-        const adsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/insights?fields=campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,actions,cost_per_action_type&level=ad&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
+        // Step 5: Fetch ad-level insights with status
+        const adsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/ads?fields=id,name,status,effective_status,campaign_id,adset_id,insights{spend,impressions,reach,actions,cost_per_action_type}&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
         
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
 
-        for (const insight of (adsData.data || [])) {
-          const leadsAction = (insight.actions || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+        for (const adData of (adsData.data || [])) {
+          const insight = adData.insights?.data?.[0] || {};
+          const actions = insight.actions || [];
+          
+          const leadsAction = actions.find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
+          const convAction = actions.find((a: any) => a.action_type === "messaging_conversations_started" || a.action_type === "onsite_conversion.messaging_conversation_started_7d");
           const leadsCostAction = (insight.cost_per_action_type || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
           
           const leadsCount = leadsAction ? parseInt(leadsAction.value) : 0;
+          const convCount = convAction ? parseInt(convAction.value) : 0;
           const spend = parseFloat(insight.spend || "0");
           const cpl = leadsCostAction ? parseFloat(leadsCostAction.value) : (leadsCount > 0 ? spend / leadsCount : 0);
 
@@ -255,7 +260,7 @@ serve(async (req) => {
           let creativeVideoUrl = null;
           try {
             const adCreativeRes = await fetch(
-              `https://graph.facebook.com/${META_GRAPH_VERSION}/${insight.ad_id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${accessToken}`
+              `https://graph.facebook.com/${META_GRAPH_VERSION}/${adData.id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${accessToken}`
             );
             const adCreativeData = await adCreativeRes.json();
             
@@ -271,24 +276,26 @@ serve(async (req) => {
               }
             }
           } catch (err) {
-            console.warn("Error fetching creative for ad:", insight.ad_id, err);
+            console.warn("Error fetching creative for ad:", adData.id, err);
           }
 
           allInsights.push({
             organization_id: orgId,
-            campaign_id: insight.campaign_id,
-            campaign_name: insight.campaign_name,
-            adset_id: insight.adset_id,
-            adset_name: insight.adset_name,
-            ad_id: insight.ad_id,
-            ad_name: insight.ad_name,
+            campaign_id: adData.campaign_id,
+            campaign_name: null,
+            adset_id: adData.adset_id,
+            adset_name: null,
+            ad_id: adData.id,
+            ad_name: adData.name,
             creative_url: creativeUrl,
             creative_video_url: creativeVideoUrl,
             spend,
             impressions: parseInt(insight.impressions || "0"),
             reach: parseInt(insight.reach || "0"),
             leads_count: leadsCount,
+            conversations_count: convCount,
             cpl: Math.round(cpl * 100) / 100,
+            status: adData.effective_status || adData.status,
             date_start: dateStart,
             date_stop: dateStop,
             level: "ad",
@@ -300,7 +307,7 @@ serve(async (req) => {
       }
     }
 
-    // Step 5: Upsert all insights into cache
+    // Step 6: Upsert all insights into cache
     if (allInsights.length > 0) {
       const { error: upsertError } = await supabaseAdmin
         .from("meta_campaign_insights")
