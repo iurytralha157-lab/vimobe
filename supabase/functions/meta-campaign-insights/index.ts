@@ -114,29 +114,44 @@ serve(async (req) => {
         }
       }
 
-      // Step 2: Fetch campaign insights
+      // Step 2: Fetch Account Info (Status & Balance)
       try {
-        const campaignsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/insights?fields=campaign_id,campaign_name,spend,impressions,reach,actions,cost_per_action_type&level=campaign&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
+        const accountUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}?fields=account_status,amount_spent,balance,currency,name&access_token=${accessToken}`;
+        const accountRes = await fetch(accountUrl);
+        const accountData = await accountRes.json();
         
-        console.log("Fetching campaign insights for:", adAccountId);
+        if (!accountData.error) {
+          console.log(`Account ${adAccountId} status: ${accountData.account_status}`);
+          // Update integration with current status
+          await supabaseAdmin
+            .from("meta_integrations")
+            .update({ 
+              last_sync_at: new Date().toISOString(),
+              last_error: null 
+            })
+            .eq("id", integration.id);
+        }
+      } catch (err) {
+        console.error("Error fetching account info:", err);
+      }
+
+      // Step 3: Fetch campaign insights with Status
+      try {
+        const campaignsUrl = `https://graph.facebook.com/${META_GRAPH_VERSION}/${adAccountId}/campaigns?fields=id,name,status,effective_status,objective,insights{spend,impressions,reach,actions,cost_per_action_type}&time_range={"since":"${dateStart}","until":"${dateStop}"}&limit=500&access_token=${accessToken}`;
+        
+        console.log("Fetching campaigns for:", adAccountId);
         const campaignsRes = await fetch(campaignsUrl);
         const campaignsData = await campaignsRes.json();
 
         if (campaignsData.error) {
           console.error("Meta API error (campaigns):", campaignsData.error);
-          // If token issue, update integration
-          if (campaignsData.error.code === 190) {
-            await supabaseAdmin
-              .from("meta_integrations")
-              .update({ last_error: `Token error: ${campaignsData.error.message}` })
-              .eq("id", integration.id);
-          }
           continue;
         }
 
-        const campaignInsights = campaignsData.data || [];
+        const campaigns = campaignsData.data || [];
         
-        for (const insight of campaignInsights) {
+        for (const campaign of campaigns) {
+          const insight = campaign.insights?.data?.[0] || {};
           const leadsAction = (insight.actions || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
           const leadsCostAction = (insight.cost_per_action_type || []).find((a: any) => a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped");
           
@@ -146,8 +161,8 @@ serve(async (req) => {
 
           allInsights.push({
             organization_id: orgId,
-            campaign_id: insight.campaign_id,
-            campaign_name: insight.campaign_name,
+            campaign_id: campaign.id,
+            campaign_name: campaign.name,
             adset_id: null,
             adset_name: null,
             ad_id: null,

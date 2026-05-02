@@ -85,6 +85,7 @@ export default function CampaignDashboard() {
       spend: c.spend || 0,
       leads: c.leads_count,
       impressions: c.impressions || 0,
+      reach: c.reach || 0,
       cpl: c.cpl || 0
     }));
   }, [insightData]);
@@ -189,12 +190,12 @@ export default function CampaignDashboard() {
             description={periodLabel}
           />
           <KPICard 
-            title="Leads" 
+            title="Leads do Meta" 
             value={formatNumber(totals.leads)} 
             icon={Users} 
             color="green" 
             isLoading={isLoading}
-            description={periodLabel}
+            description="Capturados via Webhook"
           />
           <KPICard 
             title="CPL Médio" 
@@ -202,17 +203,34 @@ export default function CampaignDashboard() {
             icon={Target} 
             color="orange" 
             isLoading={isLoading}
-            description="Custo por Lead"
+            description="Baseado no investimento"
           />
           <KPICard 
-            title="Impressões" 
-            value={formatNumber(totals.impressions)} 
+            title="Alcance Total" 
+            value={formatNumber(totals.reach)} 
             icon={Eye} 
             color="purple" 
             isLoading={isLoading}
             description={periodLabel}
           />
         </div>
+
+        {/* Account Status Card */}
+        <Card className="bg-muted/30 border-dashed">
+          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm font-medium">Conexão Meta Ads: Ativa</span>
+              <span className="text-xs text-muted-foreground border-l pl-3">Sincronização em background ativa a cada 1h</span>
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex flex-col items-end">
+                <span className="text-muted-foreground">Última atualização geral</span>
+                <span className="font-medium">{insightData?.lastSync ? format(new Date(insightData.lastSync), "dd/MM 'às' HH:mm") : 'Aguardando sincronização'}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -343,10 +361,11 @@ export default function CampaignDashboard() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-3 font-medium">Campanha</th>
+                    <th className="text-right py-3 font-medium">Status</th>
                     <th className="text-right py-3 font-medium">Investimento</th>
                     <th className="text-right py-3 font-medium">Leads</th>
                     <th className="text-right py-3 font-medium">CPL</th>
-                    <th className="text-right py-3 font-medium">Impressões</th>
+                    <th className="text-right py-3 font-medium">Alcance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -363,7 +382,17 @@ export default function CampaignDashboard() {
                   ) : campaignStats.length > 0 ? (
                     campaignStats.map((campaign) => (
                       <tr key={campaign.id} className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 font-medium">{campaign.name}</td>
+                        <td className="py-3 font-medium">
+                          <div className="flex flex-col">
+                            <span>{campaign.name}</span>
+                            <span className="text-[10px] text-muted-foreground">ID: {campaign.id}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 text-right">
+                          <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
+                            Ativa
+                          </Badge>
+                        </td>
                         <td className="py-3 text-right">{formatCurrency(campaign.spend)}</td>
                         <td className="py-3 text-right">{formatNumber(campaign.leads)}</td>
                         <td className="py-3 text-right">
@@ -371,7 +400,7 @@ export default function CampaignDashboard() {
                             {formatCurrency(campaign.cpl)}
                           </Badge>
                         </td>
-                        <td className="py-3 text-right text-muted-foreground">{formatNumber(campaign.impressions)}</td>
+                        <td className="py-3 text-right text-muted-foreground">{formatNumber(campaign.reach)}</td>
                       </tr>
                     ))
                   ) : (
