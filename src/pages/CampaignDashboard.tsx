@@ -194,12 +194,12 @@ export default function CampaignDashboard() {
             isLoading={isLoading}
           />
           <KPICard 
-            title="Leads (Meta)" 
+            title="Leads" 
             value={formatNumber(totals.leads)} 
             isLoading={isLoading}
           />
           <KPICard 
-            title="Conversas (Meta)" 
+            title="Conversas" 
             value={formatNumber(totals.conversations)} 
             isLoading={isLoading}
           />
@@ -209,7 +209,7 @@ export default function CampaignDashboard() {
             isLoading={isLoading}
           />
           <KPICard 
-            title="Alcance Total" 
+            title="Alcance" 
             value={formatNumber(totals.reach)} 
             isLoading={isLoading}
           />
