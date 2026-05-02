@@ -242,7 +242,8 @@ serve(async (req) => {
         const adsRes = await fetch(adsUrl);
         const adsData = await adsRes.json();
 
-        for (const adData of (adsData.data || [])) {
+        // Process all ads in parallel to avoid 150s timeout
+        const adPromises = (adsData.data || []).map(async (adData: any) => {
           const insight = adData.insights?.data?.[0] || {};
           const actions = insight.actions || [];
           
@@ -255,31 +256,33 @@ serve(async (req) => {
           const spend = parseFloat(insight.spend || "0");
           const cpl = leadsCostAction ? parseFloat(leadsCostAction.value) : (leadsCount > 0 ? spend / leadsCount : 0);
 
-          // Try to get creative URL for this ad
+          // Fetch creative in parallel (only if ad had activity to save API calls)
           let creativeUrl = null;
           let creativeVideoUrl = null;
-          try {
-            const adCreativeRes = await fetch(
-              `https://graph.facebook.com/${META_GRAPH_VERSION}/${adData.id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${accessToken}`
-            );
-            const adCreativeData = await adCreativeRes.json();
-            
-            if (adCreativeData.creative) {
-              creativeUrl = adCreativeData.creative.effective_image_url || adCreativeData.creative.thumbnail_url;
+          if (spend > 0 || leadsCount > 0 || (insight.impressions && parseInt(insight.impressions) > 0)) {
+            try {
+              const adCreativeRes = await fetch(
+                `https://graph.facebook.com/${META_GRAPH_VERSION}/${adData.id}?fields=creative{effective_image_url,thumbnail_url,video_id}&access_token=${accessToken}`
+              );
+              const adCreativeData = await adCreativeRes.json();
               
-              if (adCreativeData.creative.video_id) {
-                const videoRes = await fetch(
-                  `https://graph.facebook.com/${META_GRAPH_VERSION}/${adCreativeData.creative.video_id}?fields=source&access_token=${accessToken}`
-                );
-                const videoData = await videoRes.json();
-                creativeVideoUrl = videoData.source || null;
+              if (adCreativeData.creative) {
+                creativeUrl = adCreativeData.creative.effective_image_url || adCreativeData.creative.thumbnail_url;
+                
+                if (adCreativeData.creative.video_id) {
+                  const videoRes = await fetch(
+                    `https://graph.facebook.com/${META_GRAPH_VERSION}/${adCreativeData.creative.video_id}?fields=source&access_token=${accessToken}`
+                  );
+                  const videoData = await videoRes.json();
+                  creativeVideoUrl = videoData.source || null;
+                }
               }
+            } catch (err) {
+              console.warn("Error fetching creative for ad:", adData.id, err);
             }
-          } catch (err) {
-            console.warn("Error fetching creative for ad:", adData.id, err);
           }
 
-          allInsights.push({
+          return {
             organization_id: orgId,
             campaign_id: adData.campaign_id,
             campaign_name: null,
@@ -300,7 +303,15 @@ serve(async (req) => {
             date_stop: dateStop,
             level: "ad",
             fetched_at: new Date().toISOString(),
-          });
+          };
+        });
+
+        // Process in batches of 10 to avoid overwhelming Meta API
+        const batchSize = 10;
+        for (let i = 0; i < adPromises.length; i += batchSize) {
+          const batch = adPromises.slice(i, i + batchSize);
+          const results = await Promise.all(batch);
+          allInsights.push(...results);
         }
       } catch (err) {
         console.error("Error fetching insights:", err);
