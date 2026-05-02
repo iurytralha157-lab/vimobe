@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, SelectSeparator } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { Search, Send, Phone, MessageSquare, User, Loader2, MoreVertical, Archive, Trash2, Users, Paperclip, Tag, UserPlus, ArrowLeft, Mic, ExternalLink, Zap, Plus, Instagram, Facebook } from "lucide-react";
 import { StartAutomationDialog } from "@/components/whatsapp/StartAutomationDialog";
@@ -105,6 +105,20 @@ export default function Conversations() {
   }>({});
   const [showLeadPanel, setShowLeadPanel] = useState(true);
   useWhatsAppRealtimeConversations();
+  
+  const handleChannelChange = (value: string) => {
+    if (value === 'meta-all') {
+      setActivePlatform('meta');
+      setSelectedSessionId('all');
+    } else if (value.startsWith('whatsapp-')) {
+      setActivePlatform('whatsapp');
+      const sessionId = value.replace('whatsapp-', '');
+      setSelectedSessionId(sessionId);
+    }
+    setSelectedConversation(null);
+  };
+
+  const currentChannelValue = activePlatform === 'meta' ? 'meta-all' : `whatsapp-${selectedSessionId}`;
 
   // Save hide groups preference
   useEffect(() => {
@@ -450,33 +464,50 @@ export default function Conversations() {
         <div className="flex flex-col h-full">
               {/* Mobile Header with Filters */}
               <div className="p-3 border-b space-y-2 bg-card shrink-0">
-                <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                <Select value={currentChannelValue} onValueChange={handleChannelChange}>
                   <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos os canais" />
+                    <SelectValue placeholder="Selecione o canal" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
-                    <SelectItem value="all">Todos os canais</SelectItem>
-                    {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
-                        {session.instance_name}
-                      </SelectItem>)}
+                    <SelectGroup>
+                      <SelectLabel>WhatsApp</SelectLabel>
+                      <SelectItem value="whatsapp-all">Todas as contas WhatsApp</SelectItem>
+                      {sessions?.map(session => (
+                        <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
+                          {session.instance_name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                    <SelectGroup>
+                      <SelectLabel>Redes Sociais</SelectLabel>
+                      <SelectItem value="meta-all">Instagram / Meta</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
 
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
+                  <Input 
+                    placeholder={activePlatform === 'whatsapp' ? "Buscar conversas..." : "Buscar no Instagram/Meta..."} 
+                    value={searchTerm} 
+                    onChange={e => setSearchTerm(e.target.value)} 
+                    className="pl-8 h-9 bg-background" 
+                  />
                 </div>
 
-                <div className="flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
-                    <span>Ocultar grupos</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
-                    <span>Arquivadas</span>
-                  </label>
-                </div>
+                {activePlatform === 'whatsapp' && (
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
+                      <span>Ocultar grupos</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
+                      <span>Arquivadas</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Mobile Conversation List */}
@@ -552,86 +583,55 @@ export default function Conversations() {
   // Desktop Layout
   return <AppLayout title="Conversas">
       <div className="flex h-[calc(100vh-7rem)] gap-3 overflow-hidden">
-        {/* Platform Switcher */}
-        <div className="flex flex-col gap-3 py-2 pb-6 shrink-0">
-          <Button 
-            variant={activePlatform === 'whatsapp' ? 'default' : 'ghost'} 
-            size="icon" 
-            onClick={() => {
-              setActivePlatform('whatsapp');
-              setSelectedConversation(null);
-            }}
-            className={cn(
-              "h-12 w-12 rounded-2xl transition-all duration-200 shadow-sm",
-              activePlatform === 'whatsapp' ? "bg-[#25D366] hover:bg-[#128C7E] text-white" : "bg-card hover:bg-muted text-muted-foreground"
-            )}
-            title="WhatsApp"
-          >
-            <WhatsAppIcon size={24} />
-          </Button>
-          <Button 
-            variant={activePlatform === 'meta' ? 'default' : 'ghost'} 
-            size="icon" 
-            onClick={() => {
-              setActivePlatform('meta');
-              setSelectedConversation(null);
-            }}
-            className={cn(
-              "h-12 w-12 rounded-2xl transition-all duration-200 shadow-sm",
-              activePlatform === 'meta' ? "bg-gradient-to-tr from-[#FFB300] via-[#FF0069] to-[#7024C4] hover:opacity-90 text-white border-none" : "bg-card hover:bg-muted text-muted-foreground"
-            )}
-            title="Instagram / Meta"
-          >
-            <Instagram className="w-6 h-6" />
-          </Button>
-          
-          <div className="mt-auto flex flex-col gap-3">
-             {/* Spacing to match the sidebar as requested */}
-          </div>
-        </div>
-
         {/* Sidebar */}
         <aside className="w-[350px] min-w-[350px] max-w-[350px] bg-card flex flex-col overflow-hidden rounded-2xl border shadow-sm">
           {/* Header com filtros */}
           <div className="p-3 border-b space-y-2 bg-card">
-            {activePlatform === 'whatsapp' ? (
-              <>
-                <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos os canais" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    <SelectItem value="all">Todos os canais</SelectItem>
-                    {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
-                        {session.instance_name}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
+            <Select value={currentChannelValue} onValueChange={handleChannelChange}>
+              <SelectTrigger className="h-9 bg-background">
+                <SelectValue placeholder="Selecione o canal" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                <SelectGroup>
+                  <SelectLabel>WhatsApp</SelectLabel>
+                  <SelectItem value="whatsapp-all">Todas as contas WhatsApp</SelectItem>
+                  {sessions?.map(session => (
+                    <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
+                      {session.instance_name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel>Redes Sociais</SelectLabel>
+                  <SelectItem value="meta-all">Instagram / Meta</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
 
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
-                </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder={activePlatform === 'whatsapp' ? "Buscar conversas..." : "Buscar no Instagram/Meta..."} 
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+                className="pl-8 h-9 bg-background" 
+              />
+            </div>
 
-                <div className="flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
-                    <span>Ocultar grupos</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                    <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
-                    <span>Arquivadas</span>
-                  </label>
-                </div>
-              </>
-            ) : (
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Buscar no Instagram/Meta..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
+            {activePlatform === 'whatsapp' && (
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
+                  <span>Ocultar grupos</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
+                  <span>Arquivadas</span>
+                </label>
               </div>
             )}
           </div>
-
           {/* Lista de conversas */}
           <ScrollArea className="flex-1">
             <div className="divide-y">
