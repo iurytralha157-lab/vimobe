@@ -220,6 +220,8 @@ export function MetaIntegrationSettings() {
     setSelectedStageId("");
     setSelectedStatus("novo");
     setAdAccountId("");
+    setSelectedAdAccountIds([]);
+    setEditingIntegrationId(null);
   };
 
   const toggleExpanded = (integrationId: string) => {
