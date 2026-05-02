@@ -2939,8 +2939,11 @@ export type Database = {
           ad_name: string | null
           adset_id: string | null
           adset_name: string | null
+          budget: number | null
+          budget_type: string | null
           campaign_id: string | null
           campaign_name: string | null
+          conversations_count: number | null
           cpl: number | null
           created_at: string | null
           creative_url: string | null
@@ -2955,14 +2958,18 @@ export type Database = {
           organization_id: string
           reach: number | null
           spend: number | null
+          status: string | null
         }
         Insert: {
           ad_id?: string | null
           ad_name?: string | null
           adset_id?: string | null
           adset_name?: string | null
+          budget?: number | null
+          budget_type?: string | null
           campaign_id?: string | null
           campaign_name?: string | null
+          conversations_count?: number | null
           cpl?: number | null
           created_at?: string | null
           creative_url?: string | null
@@ -2977,14 +2984,18 @@ export type Database = {
           organization_id: string
           reach?: number | null
           spend?: number | null
+          status?: string | null
         }
         Update: {
           ad_id?: string | null
           ad_name?: string | null
           adset_id?: string | null
           adset_name?: string | null
+          budget?: number | null
+          budget_type?: string | null
           campaign_id?: string | null
           campaign_name?: string | null
+          conversations_count?: number | null
           cpl?: number | null
           created_at?: string | null
           creative_url?: string | null
@@ -2999,10 +3010,77 @@ export type Database = {
           organization_id?: string
           reach?: number | null
           spend?: number | null
+          status?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "meta_campaign_insights_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_conversations: {
+        Row: {
+          contact_name: string | null
+          contact_picture: string | null
+          created_at: string | null
+          external_id: string
+          id: string
+          is_archived: boolean | null
+          last_message: string | null
+          last_message_at: string | null
+          lead_id: string | null
+          organization_id: string | null
+          page_id: string | null
+          platform: string
+          unread_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_name?: string | null
+          contact_picture?: string | null
+          created_at?: string | null
+          external_id: string
+          id?: string
+          is_archived?: boolean | null
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          organization_id?: string | null
+          page_id?: string | null
+          platform: string
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_name?: string | null
+          contact_picture?: string | null
+          created_at?: string | null
+          external_id?: string
+          id?: string
+          is_archived?: boolean | null
+          last_message?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
+          organization_id?: string | null
+          page_id?: string | null
+          platform?: string
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_conversations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3210,6 +3288,56 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string | null
+          created_at: string | null
+          external_id: string | null
+          from_me: boolean | null
+          id: string
+          media_mime_type: string | null
+          media_url: string | null
+          message_type: string | null
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          external_id?: string | null
+          from_me?: boolean | null
+          id?: string
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          external_id?: string | null
+          from_me?: boolean | null
+          id?: string
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "meta_conversations"
             referencedColumns: ["id"]
           },
         ]

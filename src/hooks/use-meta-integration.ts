@@ -53,9 +53,11 @@ export function useMetaIntegrations() {
 // Get OAuth URL - now redirects to edge function callback
 export function useMetaGetAuthUrl() {
   return useMutation({
-    mutationFn: async (returnUrl: string) => {
+    mutationFn: async (params: string | { returnUrl: string; includeInstagram?: boolean }) => {
+      const returnUrl = typeof params === "string" ? params : params.returnUrl;
+      const includeInstagram = typeof params === "string" ? false : !!params.includeInstagram;
       const { data: sessionData } = await supabase.auth.getSession();
-      
+
       const response = await fetch(
         `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
         {
@@ -67,6 +69,7 @@ export function useMetaGetAuthUrl() {
           body: JSON.stringify({
             action: "get_auth_url",
             return_url: returnUrl,
+            include_instagram: includeInstagram,
           }),
         }
       );

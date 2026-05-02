@@ -1,78 +1,66 @@
-## Por que o sistema ficou lento
 
-Após investigar, identifiquei **3 causas principais** de lentidão introduzidas nas últimas alterações:
+## Diagnóstico
 
-### 1. `refetchOnMount: false` quebrando o cache do React Query (App.tsx)
-No `QueryClient` global foi adicionado `refetchOnMount: false`. Isso faz com que **toda navegação entre páginas** mantenha dados antigos em memória sem revalidar, mas também impede o uso correto de `staleTime` em hooks que dependem de filtros dinâmicos (Dashboard, KPIs, listagens). O resultado prático é que quando o usuário entra no Dashboard, várias queries disparam em paralelo (stats, evolução, propriedades, visitas, organização) sem um padrão consistente, sobrecarregando o backend e travando a UI.
+O erro do Facebook "Este conteúdo não está disponível no momento — Invalid Scopes: `instagram_basic`, `instagram_manage_messages`" acontece porque, na minha última alteração, adicionei esses scopes na URL de OAuth (`supabase/functions/meta-oauth/index.ts`, linhas 296–307), mas o **App Meta de vocês ainda não tem o produto "Instagram Graph API" adicionado nem essas permissões liberadas**. Quando o Facebook recebe um scope que o App não declarou, ele bloqueia a tela inteira — por isso a integração inteira parou (Facebook + WhatsApp também).
 
-### 2. `PageLoader = () => null` causando "tela branca + travamento"
-No `App.tsx`, o `PageLoader` foi reduzido a `null`. Resultado:
-- Durante o `Suspense` de páginas lazy, **nada é renderizado** — o navegador parece travar.
-- Em `ProtectedRoute`, quando `loading=true` ou perfil ainda carregando, fica completamente em branco.
-- O React continua processando o lazy chunk, dando sensação de "sistema lento" mesmo quando está só carregando.
+Resposta direta às suas dúvidas:
+- **As outras integrações (WhatsApp, Facebook Pages, Leads, Anúncios) NÃO estão funcionando para novas conexões** enquanto esses scopes inválidos estiverem na URL. Conexões já existentes continuam funcionando (token já foi emitido), mas qualquer **reconexão** falha.
+- A correção é em duas frentes: (1) destravar agora removendo os scopes inválidos e (2) habilitar Instagram do jeito certo no painel da Meta, depois religar.
 
-### 3. Warning de ref em `KPICardSkeleton` (Dashboard)
-Os logs mostram avisos repetidos:
-> `Function components cannot be given refs. Check the render method of KPICardSkeleton`
+## Plano
 
-Isso vem de `Tooltip` com `asChild` em volta de cards que renderizam o `Skeleton` sem `forwardRef`. Cada render do Dashboard (que tem 7+ skeletons) dispara o aviso, gera re-renders extras e suja o console — em dev isso é **muito custoso**.
+### 1. Destravar a integração imediatamente (código)
 
-### 4. Causas secundárias acumuladas
-- `usePublicHomeData` + `useFeaturedProperties` + `useExclusiveProperties` + `usePropertyTypes` + `usePublicCities` + `usePublicNeighborhoods` no `PublicHome` — **6 queries paralelas** quando só `usePublicHomeData` já traz tudo (`featured`, `exclusive`, `latest`, `types`, `cities`).
-- `Dashboard.tsx` faz uma query separada em `lead_events` carregando **todos os session_id** sem limite — em organizações com muito tráfego isso traz milhares de linhas só para contar sessões únicas (deveria ser RPC com `count distinct`).
+Em `supabase/functions/meta-oauth/index.ts` (geração da `auth_url`):
 
----
+- **Tornar os scopes de Instagram condicionais.** Por padrão, usar apenas o conjunto que já estava funcionando antes:
+  - `pages_show_list`, `pages_read_engagement`, `pages_manage_ads`, `pages_manage_metadata`, `pages_messaging`, `leads_retrieval`, `ads_management`, `business_management`
+- Adicionar um parâmetro opcional `include_instagram: boolean` no body de `get_auth_url`. Só quando ele vier `true`, anexar:
+  - `instagram_basic`, `instagram_manage_messages`, `instagram_manage_comments`, `pages_messaging`
+- Assim a tela de Configurações > Integrações > Meta volta a abrir normalmente. Quem quiser conectar Instagram clica em um botão dedicado "Conectar Instagram" que envia `include_instagram=true`.
 
-## Plano de correção
+### 2. UI: separar visualmente WhatsApp / Facebook / Instagram
 
-### Passo 1 — Restaurar comportamento saudável do React Query (`src/App.tsx`)
-- Remover `refetchOnMount: false` (manter `refetchOnWindowFocus: false`).
-- Manter `staleTime: 5min` e `gcTime: 15min` (esses estão ok).
+Na página de Integrações Meta (`src/pages/settings/...` que monta a lista de páginas/contas conectadas):
 
-### Passo 2 — Restaurar um `PageLoader` mínimo e leve (`src/App.tsx`)
-Voltar com um spinner simples (apenas um div com `animate-spin`, sem texto, sem fundo de tela cheia bloqueante):
-```tsx
-const PageLoader = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-  </div>
-);
-```
-Isso elimina a "tela branca" sem voltar à tela de carregamento bloqueante anterior.
+- Cabeçalho com 3 abas/botões com ícone: **WhatsApp**, **Facebook**, **Instagram**.
+- Botão "Conectar Facebook" → chama `get_auth_url` sem Instagram.
+- Botão "Conectar Instagram" → chama `get_auth_url` com `include_instagram=true` e mostra um aviso: "Requer Instagram Business vinculado a uma Página do Facebook".
+- Lista de contas conectadas filtrada por plataforma, com o ícone correspondente.
 
-### Passo 3 — Corrigir o warning de ref no Skeleton (`src/components/ui/skeleton.tsx`)
-Converter `Skeleton` para `React.forwardRef`. Isso elimina os warnings em loop que estão poluindo o console e degradando a performance no dev.
+### 3. Passos manuais que VOCÊ precisa fazer no painel da Meta
 
-### Passo 4 — Remover queries duplicadas no `PublicHome.tsx`
-O hook `usePublicHomeData` já retorna `featured`, `exclusive`, `latest`, `types`, `cities`. Remover os imports/uses de:
-- `useFeaturedProperties`
-- `useExclusiveProperties`
-- `usePropertyTypes`
-- `usePublicCities`
+Sem isto, o botão "Conectar Instagram" continuará dando o mesmo erro. Não é código — é configuração do App:
 
-Manter apenas `usePublicHomeData` e `usePublicNeighborhoods` (este último depende de `selectedCidade`).
+1. Acesse https://developers.facebook.com/apps → seu App.
+2. **Add Product** → adicionar **"Instagram Graph API"** e **"Webhooks"** (se ainda não tiver).
+3. Em **App Review > Permissions and Features**, solicitar/ativar (em modo Dev já ficam disponíveis para o admin):
+   - `instagram_basic`
+   - `instagram_manage_messages`
+   - `instagram_manage_comments`
+   - `pages_messaging`
+4. Em **Instagram > API Setup with Instagram Login** (ou em **Roles**) garantir que a conta de Instagram que vocês vão usar é **Instagram Business/Creator** e está **vinculada a uma Página do Facebook**. Sem esse vínculo, comentários/DMs não fluem.
+5. Para sair do modo Development e funcionar com qualquer cliente, será necessário enviar o App para **App Review** com vídeo demonstrando cada permissão. Em Dev mode funciona para usuários listados como Admin/Developer/Tester.
 
-### Passo 5 — Otimizar contagem de visitas no Dashboard (`src/pages/Dashboard.tsx`)
-Trocar o `select('session_id')` por uma RPC `count_unique_sessions(org_id, from, to)` no Postgres que faz `SELECT COUNT(DISTINCT session_id)` server-side. Isso evita transferir milhares de linhas para o cliente.
+### 4. Webhooks de comentários e mensagens (Instagram)
 
-> Requer criar uma função SQL via migration. Será criada em mode default após aprovação.
+Depois que o passo 3 estiver feito e a reconexão funcionar:
 
-### Passo 6 — Validar
-- Recarregar Dashboard e verificar tempo de render.
-- Recarregar PublicHome (site público) e confirmar que aparece de imediato com skeletons progressivos.
-- Confirmar que não há mais warnings de ref no console.
+- No painel Meta, em **Webhooks**, assinar os campos:
+  - Para a **Página**: `messages`, `messaging_postbacks`, `feed` (comentários do Facebook).
+  - Para **Instagram**: `comments`, `messages`, `mentions`.
+- Apontar o callback para a edge function que já existe (`meta-webhook` / equivalente) — vou conferir o nome exato e atualizar a assinatura no painel.
+- Testar com o **Webhooks Tester** do próprio painel antes de testar em produção.
 
----
+### 5. Validação
 
-## Arquivos afetados
-- `src/App.tsx` — QueryClient + PageLoader
-- `src/components/ui/skeleton.tsx` — forwardRef
-- `src/pages/public/PublicHome.tsx` — remover queries duplicadas
-- `src/pages/Dashboard.tsx` — usar RPC para contagem
-- Migration SQL — criar `count_unique_sessions`
+- Reconectar Facebook (sem Instagram) → deve voltar a funcionar como antes.
+- Reconectar Instagram → após passos 3/4, deve listar a conta IG Business.
+- Enviar comentário de teste em um post do Instagram da conta conectada → verificar nos logs de `meta-webhook` que chegou e que foi criada conversa marcada `[COMENTÁRIO]`.
+- Enviar DM no Instagram → verificar se aparece em **Conversas** sob a aba Instagram.
 
-## Resultado esperado
-- Dashboard carrega em 1-2s ao invés de 5-10s.
-- Sem tela branca durante navegação (spinner curto aparece e some).
-- Console limpo, sem warnings em loop.
-- Site público continua rápido com 1 query agregada ao invés de 6.
+## Detalhes técnicos
+
+- Arquivos alterados: `supabase/functions/meta-oauth/index.ts` (scopes condicionais) + página de integrações Meta no frontend (abas + 2 botões de conexão).
+- Nada de migração de banco — `meta_integrations.instagram_business_account_id` e `selected_ad_accounts` já foram adicionadas anteriormente.
+- Risco: nenhum para conexões existentes; só muda o fluxo de reconexão.
