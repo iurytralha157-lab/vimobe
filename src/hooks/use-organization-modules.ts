@@ -89,6 +89,7 @@ export function useOrganizationModules() {
 
   // Get list of all enabled modules
   const enabledModules = (): ModuleName[] => {
+    /* 
     if (isSuperAdmin && organization?.id) {
       // Return all modules for super admin
       return [
@@ -97,6 +98,8 @@ export function useOrganizationModules() {
         'performance', 'gamification', 'webhooks', 'site', 'ai_agent', 'api'
       ];
     }
+    */
+
     
     if (!organization?.id) return [];
 
