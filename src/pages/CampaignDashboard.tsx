@@ -413,8 +413,16 @@ export default function CampaignDashboard() {
                         <td className="py-3 text-right">{formatCurrency(campaign.spend)}</td>
                         <td className="py-3 text-right">
                           <div className="flex flex-col">
-                            <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
-                            <span className="text-[10px] text-muted-foreground">{formatNumber(campaign.conversations)} Conversas</span>
+                            {campaign.objective === 'MESSAGES' || (campaign.conversations > 0 && campaign.leads === 0) ? (
+                              <span className="font-medium">{formatNumber(campaign.conversations)} Conversas</span>
+                            ) : campaign.leads > 0 ? (
+                              <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
+                            ) : (
+                              <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
+                            )}
+                            {campaign.leads > 0 && campaign.conversations > 0 && (
+                              <span className="text-[10px] text-muted-foreground">{formatNumber(campaign.conversations)} Conversas</span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 text-right">
