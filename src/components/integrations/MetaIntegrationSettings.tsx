@@ -151,13 +151,13 @@ export function MetaIntegrationSettings() {
     }
   }, [searchParams, setSearchParams]);
 
-  const handleConnect = async () => {
+  const handleConnect = async (includeInstagram = false) => {
     try {
       setIsConnecting(true);
       
       // Get current URL as return URL
       const returnUrl = window.location.href.split('?')[0];
-      const result = await getAuthUrl.mutateAsync(returnUrl);
+      const result = await getAuthUrl.mutateAsync({ returnUrl, includeInstagram });
       
       // Redirect to Facebook OAuth (same window - will redirect back)
       window.location.href = result.auth_url;
