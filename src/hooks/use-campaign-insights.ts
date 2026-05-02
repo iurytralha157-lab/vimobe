@@ -72,8 +72,11 @@ interface LeadMetaRow {
 
 interface InsightRow {
   campaign_id: string | null;
+  campaign_name: string | null;
   adset_id: string | null;
+  adset_name: string | null;
   ad_id: string | null;
+  ad_name: string | null;
   level: string;
   spend: number;
   impressions: number;
@@ -81,6 +84,8 @@ interface InsightRow {
   leads_count: number;
   cpl: number;
   fetched_at: string;
+  creative_url?: string | null;
+  creative_video_url?: string | null;
 }
 
 interface LeadRow {
