@@ -165,10 +165,20 @@ export default function Conversations() {
     if (!messageText.trim() || !selectedConversation) return;
     const textToSend = messageText.trim();
     setMessageText("");
-    await sendMessage.mutateAsync({
-      conversation: selectedConversation,
-      text: textToSend
-    });
+    
+    if (activePlatform === 'whatsapp') {
+      await sendMessage.mutateAsync({
+        conversation: selectedConversation,
+        text: textToSend
+      });
+    } else {
+      await sendMetaMessage.mutateAsync({
+        conversationId: selectedConversation.id,
+        text: textToSend,
+        platform: (selectedConversation as any).platform || 'instagram',
+        recipientExternalId: (selectedConversation as any).external_id
+      });
+    }
   };
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -584,56 +594,115 @@ export default function Conversations() {
         <aside className="w-[350px] min-w-[350px] max-w-[350px] bg-card flex flex-col overflow-hidden rounded-2xl border shadow-sm">
           {/* Header com filtros */}
           <div className="p-3 border-b space-y-2 bg-card">
-            <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-              <SelectTrigger className="h-9 bg-background">
-                <SelectValue placeholder="Todos os canais" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">Todos os canais</SelectItem>
-                {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
-                    {session.instance_name}
-                  </SelectItem>)}
-              </SelectContent>
-            </Select>
+            {activePlatform === 'whatsapp' ? (
+              <>
+                <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos os canais" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="all">Todos os canais</SelectItem>
+                    {sessions?.map(session => <SelectItem key={session.id} value={session.id}>
+                        {session.instance_name}
+                      </SelectItem>)}
+                  </SelectContent>
+                </Select>
 
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
-            </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Buscar conversas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
+                </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
-                <span>Ocultar grupos</span>
-              </label>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
-                <span>Arquivadas</span>
-              </label>
-            </div>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                    <Checkbox checked={hideGroups} onCheckedChange={checked => setHideGroups(checked === true)} />
+                    <span>Ocultar grupos</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                    <Checkbox checked={showArchived} onCheckedChange={checked => setShowArchived(checked === true)} />
+                    <span>Arquivadas</span>
+                  </label>
+                </div>
+              </>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Buscar no Instagram/Meta..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-8 h-9 bg-background" />
+              </div>
+            )}
           </div>
 
           {/* Lista de conversas */}
           <ScrollArea className="flex-1">
             <div className="divide-y">
-              {loadingConversations ? <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div> : filteredConversations?.length === 0 ? <div className="flex flex-col items-center justify-center py-12 px-4">
-                  <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Nenhuma conversa</p>
-                </div> : filteredConversations?.map(conv => <ConversationItem key={conv.id} conversation={conv} isSelected={selectedConversation?.id === conv.id} onClick={() => setSelectedConversation(conv)} formatTime={formatConversationTime} onArchive={() => handleArchive(conv)} onDelete={() => handleDelete(conv)} availableTags={availableTags || []} onAddTag={tagId => conv.lead && addLeadTag.mutate({
-              leadId: conv.lead.id,
-              tagId
-            })} onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
-              leadId: conv.lead.id,
-              tagId
-            })} onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} onCreateLead={() => {
-              setCreateLeadContact({
-                phone: conv.contact_phone || undefined,
-                name: conv.contact_name || undefined
-              });
-              setCreateLeadOpen(true);
-            }} />)}
+              {activePlatform === 'whatsapp' ? (
+                loadingConversations ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredConversations?.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4">
+                    <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Nenhuma conversa no WhatsApp</p>
+                  </div>
+                ) : (
+                  filteredConversations?.map(conv => (
+                    <ConversationItem 
+                      key={conv.id} 
+                      conversation={conv} 
+                      isSelected={selectedConversation?.id === conv.id} 
+                      onClick={() => setSelectedConversation(conv)} 
+                      formatTime={formatConversationTime} 
+                      onArchive={() => handleArchive(conv)} 
+                      onDelete={() => handleDelete(conv)} 
+                      availableTags={availableTags || []} 
+                      onAddTag={tagId => conv.lead && addLeadTag.mutate({
+                        leadId: conv.lead.id,
+                        tagId
+                      })} 
+                      onRemoveTag={tagId => conv.lead && removeLeadTag.mutate({
+                        leadId: conv.lead.id,
+                        tagId
+                      })} 
+                      onViewLead={conv.lead ? () => navigate(`/crm/pipelines?lead=${conv.lead!.id}`) : undefined} 
+                      onCreateLead={() => {
+                        setCreateLeadContact({
+                          phone: conv.contact_phone || undefined,
+                          name: conv.contact_name || undefined
+                        });
+                        setCreateLeadOpen(true);
+                      }} 
+                    />
+                  ))
+                )
+              ) : (
+                loadingMetaConversations ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : metaConversations?.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <Instagram className="w-8 h-8 text-muted-foreground mb-2 opacity-20" />
+                    <p className="text-sm text-muted-foreground">Nenhuma conversa no Instagram/Meta</p>
+                    <p className="text-xs text-muted-foreground mt-1">Conecte sua conta nas configurações para começar.</p>
+                  </div>
+                ) : (
+                  metaConversations?.map(conv => (
+                    <ConversationItem 
+                      key={conv.id} 
+                      conversation={conv as any} 
+                      isSelected={selectedConversation?.id === conv.id} 
+                      onClick={() => setSelectedConversation(conv as any)} 
+                      formatTime={formatConversationTime} 
+                      onArchive={() => {}} 
+                      onDelete={() => {}} 
+                      availableTags={availableTags || []} 
+                      onAddTag={() => {}} 
+                      onRemoveTag={() => {}} 
+                    />
+                  ))
+                )
+              )}
             </div>
           </ScrollArea>
         </aside>
