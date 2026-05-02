@@ -45,7 +45,7 @@ export function useMetaConversations() {
       if (!profile?.organization_id) return [];
       
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("meta_conversations")
           .select(`
             *,
@@ -77,7 +77,7 @@ export function useMetaMessages(conversationId: string | null) {
     queryFn: async () => {
       if (!conversationId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("meta_messages")
         .select("*")
         .eq("conversation_id", conversationId)
