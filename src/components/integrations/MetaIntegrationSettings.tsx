@@ -44,7 +44,8 @@ import {
 } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  Facebook, 
+  Facebook,
+  Instagram,
   Link, 
   Unlink, 
   Settings2, 
@@ -256,8 +257,9 @@ export function MetaIntegrationSettings() {
       <Card>
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
-              <Facebook className="h-5 w-5 text-blue-500" />
+            <div className="p-2 rounded-lg bg-muted shrink-0 flex gap-1">
+              <Facebook className="h-5 w-5 text-blue-600" />
+              <Instagram className="h-5 w-5 text-pink-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm leading-tight">{meta.title}</p>
