@@ -1,18 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
-import { useMetaInsights, MetaCampaignInsight } from '@/hooks/use-meta-insights';
+import { useCampaignInsights, useSyncCampaignInsights } from '@/hooks/use-campaign-insights';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { 
   DollarSign, 
   Users, 
   Target, 
   Eye, 
   TrendingUp, 
-  TrendingDown,
   BarChart3,
-  Calendar
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -22,10 +23,7 @@ import {
   CartesianGrid, 
   Tooltip as RechartsTooltip, 
   ResponsiveContainer, 
-  LineChart, 
-  Line,
-  Legend,
-  AreaChart,
+  AreaChart, 
   Area
 } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function CampaignDashboard() {
   const {
@@ -57,60 +56,49 @@ export default function CampaignDashboard() {
     hasActiveFilters,
   } = useDashboardFilters();
 
-  const { data: insights, isLoading } = useMetaInsights(filters);
+  const { data: insightData, isLoading } = useCampaignInsights(filters);
+  const syncMutation = useSyncCampaignInsights();
+
+  const handleSync = () => {
+    syncMutation.mutate({
+      dateStart: filters.dateRange.from.toISOString().split('T')[0],
+      dateStop: filters.dateRange.to.toISOString().split('T')[0]
+    });
+  };
 
   const totals = useMemo(() => {
-    if (!insights) return { spend: 0, leads: 0, impressions: 0, reach: 0, cpl: 0 };
-    const spend = insights.reduce((sum, item) => sum + (Number(item.spend) || 0), 0);
-    const leads = insights.reduce((sum, item) => sum + (Number(item.leads_count) || 0), 0);
-    const impressions = insights.reduce((sum, item) => sum + (Number(item.impressions) || 0), 0);
-    const reach = insights.reduce((sum, item) => sum + (Number(item.reach) || 0), 0);
-    const cpl = leads > 0 ? spend / leads : 0;
-    return { spend, leads, impressions, reach, cpl };
-  }, [insights]);
-
-  const chartData = useMemo(() => {
-    if (!insights) return [];
-    // Group by date
-    const grouped = insights.reduce((acc, item) => {
-      const date = item.date_start;
-      if (!acc[date]) {
-        acc[date] = { date, spend: 0, leads: 0 };
-      }
-      acc[date].spend += Number(item.spend) || 0;
-      acc[date].leads += Number(item.leads_count) || 0;
-      return acc;
-    }, {} as Record<string, any>);
-
-    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
-  }, [insights]);
+    if (!insightData?.summary) return { spend: 0, leads: 0, impressions: 0, reach: 0, cpl: 0 };
+    return {
+      spend: insightData.summary.totalSpend || 0,
+      leads: insightData.summary.totalLeads || 0,
+      impressions: insightData.summary.totalImpressions || 0,
+      reach: insightData.summary.totalReach || 0,
+      cpl: insightData.summary.avgCpl || 0
+    };
+  }, [insightData]);
 
   const campaignStats = useMemo(() => {
-    if (!insights) return [];
-    // Group by campaign
-    const grouped = insights.reduce((acc, item) => {
-      const id = item.campaign_id;
-      if (!acc[id]) {
-        acc[id] = { 
-          id, 
-          name: item.campaign_name, 
-          spend: 0, 
-          leads: 0, 
-          impressions: 0,
-          cpl: 0
-        };
-      }
-      acc[id].spend += Number(item.spend) || 0;
-      acc[id].leads += Number(item.leads_count) || 0;
-      acc[id].impressions += Number(item.impressions) || 0;
-      return acc;
-    }, {} as Record<string, any>);
+    if (!insightData?.campaigns) return [];
+    return insightData.campaigns.map(c => ({
+      id: c.campaign_id,
+      name: c.campaign_name,
+      spend: c.spend || 0,
+      leads: c.leads_count,
+      impressions: c.impressions || 0,
+      cpl: c.cpl || 0
+    }));
+  }, [insightData]);
 
-    return Object.values(grouped).map(c => ({
-      ...c,
-      cpl: c.leads > 0 ? c.spend / c.leads : 0
-    })).sort((a, b) => b.spend - a.spend);
-  }, [insights]);
+  // For the chart, we'll use campaign data since useCampaignInsights returns aggregated data
+  // In a more complete version, we would have daily data
+  const chartData = useMemo(() => {
+    if (!campaignStats.length) return [];
+    return campaignStats.slice(0, 10).map(c => ({
+      name: c.name,
+      spend: c.spend,
+      leads: c.leads
+    }));
+  }, [campaignStats]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -125,31 +113,69 @@ export default function CampaignDashboard() {
   return (
     <AppLayout title="Dashboard de Campanhas">
       <div className="flex flex-col gap-6 animate-fade-in">
+        {!insightData?.hasSpendData && !isLoading && (
+          <Alert variant="destructive" className="bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-950/20 dark:border-orange-900/30">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertTitle>Dados de investimento não sincronizados</AlertTitle>
+            <AlertDescription className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <span>Os leads estão sendo capturados em tempo real, mas os dados de custo e investimento precisam ser sincronizados com o Meta Ads.</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100 h-8"
+                onClick={handleSync}
+                disabled={syncMutation.isPending}
+              >
+                {syncMutation.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Sincronizar agora
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Performance Meta Ads</h1>
-            <p className="text-muted-foreground">Analise os resultados das suas campanhas em tempo real.</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">Performance Meta Ads</h1>
+              {insightData?.lastSync && (
+                <Badge variant="outline" className="font-normal text-[10px] py-0 h-5">
+                  Sincronizado: {format(new Date(insightData.lastSync), "HH:mm 'de' dd/MM", { locale: ptBR })}
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground">Analise os resultados das suas campanhas e leads em tempo real.</p>
           </div>
-          <DashboardFilters
-            datePreset={datePreset}
-            onDatePresetChange={setDatePreset}
-            customDateRange={customDateRange}
-            onCustomDateRangeChange={setCustomDateRange}
-            teamId={teamId}
-            onTeamChange={setTeamId}
-            userId={userId}
-            onUserChange={setUserId}
-            source={source}
-            onSourceChange={setSource}
-            campaignId={campaignId}
-            onCampaignChange={setCampaignId}
-            adSetId={adSetId}
-            onAdSetChange={setAdSetId}
-            adId={adId}
-            onAdChange={setAdId}
-            onClear={clearFilters}
-            hasActiveFilters={hasActiveFilters}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSync}
+              disabled={syncMutation.isPending || isLoading}
+            >
+              {syncMutation.isPending ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Sincronizar
+            </Button>
+            <DashboardFilters
+              datePreset={datePreset}
+              onDatePresetChange={setDatePreset}
+              customDateRange={customDateRange}
+              onCustomDateRangeChange={setCustomDateRange}
+              teamId={teamId}
+              onTeamChange={setTeamId}
+              userId={userId}
+              onUserChange={setUserId}
+              source={source}
+              onSourceChange={setSource}
+              campaignId={campaignId}
+              onCampaignChange={setCampaignId}
+              adSetId={adSetId}
+              onAdSetChange={setAdSetId}
+              adId={adId}
+              onAdChange={setAdId}
+              onClear={clearFilters}
+              hasActiveFilters={hasActiveFilters}
+            />
+          </div>
         </div>
 
         {/* KPI Cards */}
@@ -216,18 +242,16 @@ export default function CampaignDashboard() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                       <XAxis 
-                        dataKey="date" 
-                        tickFormatter={(str) => format(new Date(str), 'dd/MM', { locale: ptBR })}
+                        dataKey="name" 
                         axisLine={false}
                         tickLine={false}
-                        fontSize={12}
+                        fontSize={10}
                         tick={{ fill: '#888' }}
                       />
                       <YAxis yAxisId="left" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#888' }} />
                       <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#888' }} />
                       <RechartsTooltip 
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        labelFormatter={(label) => format(new Date(label), 'dd MMMM yyyy', { locale: ptBR })}
                       />
                       <Area 
                         yAxisId="left"
