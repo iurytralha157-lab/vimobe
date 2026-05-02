@@ -209,6 +209,7 @@ export function useMetaUpdatePage() {
             pipeline_id: pipelineId,
             stage_id: stageId,
             default_status: defaultStatus,
+            selected_ad_accounts: selectedAdAccountIds,
           }),
         }
       );
