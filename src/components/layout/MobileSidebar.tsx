@@ -59,7 +59,16 @@ interface NavItem {
 
 // Exact same nav items as AppSidebar (desktop)
 const allNavItems: NavItem[] = [
-  { icon: LayoutDashboard, labelKey: 'dashboard', path: '/dashboard' },
+  { 
+    icon: LayoutDashboard, 
+    labelKey: 'dashboard', 
+    path: '/dashboard',
+    children: [
+      { icon: LayoutDashboard, labelKey: 'summary', path: '/dashboard' },
+      { icon: BarChart3, labelKey: 'campaigns', path: '/dashboard/campaigns', module: 'campaigns' },
+    ]
+  },
+
   { icon: Kanban, labelKey: 'pipelines', path: '/crm/pipelines', module: 'crm' },
   { icon: WhatsAppIcon, labelKey: 'conversations', path: '/crm/conversas', module: 'whatsapp' },
   { icon: Users, labelKey: 'contacts', path: '/crm/contacts', module: 'crm' },
