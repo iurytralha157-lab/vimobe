@@ -180,14 +180,14 @@ export function DashboardFilters({
   // Consolidate filters for smaller screens (mobile and small desktops/tablets)
   if (isMobile) {
     return (
-      <div className="flex items-center justify-end gap-2 w-full">
+      <div className="flex items-center justify-start gap-2 w-full">
         {/* Date Filter - always visible */}
         <DateFilterPopover
           datePreset={datePreset}
           onDatePresetChange={onDatePresetChange}
           customDateRange={customDateRange}
           onCustomDateRangeChange={onCustomDateRangeChange}
-          triggerClassName="h-8 flex-1 sm:flex-none sm:min-w-[130px] text-xs justify-start"
+          triggerClassName="h-8 sm:min-w-[130px] text-xs justify-start"
         />
 
         {/* Filters Popover */}
@@ -278,14 +278,14 @@ export function DashboardFilters({
 
   // Desktop layout - All filters inline, but hidden on smaller screens
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex flex-wrap items-center justify-start gap-2">
       {/* Date Filter */}
       <DateFilterPopover
         datePreset={datePreset}
         onDatePresetChange={onDatePresetChange}
         customDateRange={customDateRange}
         onCustomDateRangeChange={onCustomDateRangeChange}
-        triggerClassName="h-8 w-auto min-w-[140px] text-xs justify-start"
+        triggerClassName="h-8 w-auto min-w-[120px] text-xs justify-start"
       />
 
       {/* Desktop Filters Popover for ALL filters when screen is not large enough */}
