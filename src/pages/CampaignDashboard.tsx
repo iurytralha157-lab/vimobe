@@ -6,14 +6,9 @@ import { useCampaignInsights, useSyncCampaignInsights } from '@/hooks/use-campai
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
-  DollarSign, 
-  Users, 
-  Target, 
-  Eye, 
   TrendingUp, 
   BarChart3,
-  RefreshCw,
-  AlertCircle
+  RefreshCw
 } from 'lucide-react';
 import { 
   BarChart, 
