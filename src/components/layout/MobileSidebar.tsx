@@ -36,6 +36,8 @@ import {
   Globe,
   Settings,
   HelpCircle,
+  Trophy,
+  History as HistoryIcon,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
