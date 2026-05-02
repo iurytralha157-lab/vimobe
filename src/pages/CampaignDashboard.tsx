@@ -1,18 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardFilters } from '@/components/dashboard/DashboardFilters';
 import { useDashboardFilters, datePresetOptions } from '@/hooks/use-dashboard-filters';
-import { useMetaInsights, MetaCampaignInsight } from '@/hooks/use-meta-insights';
+import { useCampaignInsights, useSyncCampaignInsights } from '@/hooks/use-campaign-insights';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { 
   DollarSign, 
   Users, 
   Target, 
   Eye, 
   TrendingUp, 
-  TrendingDown,
   BarChart3,
-  Calendar
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -22,10 +23,7 @@ import {
   CartesianGrid, 
   Tooltip as RechartsTooltip, 
   ResponsiveContainer, 
-  LineChart, 
-  Line,
-  Legend,
-  AreaChart,
+  AreaChart, 
   Area
 } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function CampaignDashboard() {
   const {
