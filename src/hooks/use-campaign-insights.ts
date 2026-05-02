@@ -18,6 +18,7 @@ export interface CampaignAggregated {
   status: string | null;
   budget: number | null;
   budget_type: string | null;
+  objective: string | null;
   adsets: AdsetAggregated[];
 }
 
@@ -91,6 +92,7 @@ interface InsightRow {
   status: string | null;
   budget: number | null;
   budget_type: string | null;
+  objective: string | null;
   fetched_at: string;
   creative_url?: string | null;
   creative_video_url?: string | null;
@@ -328,6 +330,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
           status: cInsight.status,
           budget: cInsight.budget,
           budget_type: cInsight.budget_type,
+          objective: cInsight.objective || null,
           adsets: adsets.sort((a, b) => (b.spend || 0) - (a.spend || 0)),
         });
       }

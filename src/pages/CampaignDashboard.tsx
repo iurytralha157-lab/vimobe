@@ -78,10 +78,11 @@ export default function CampaignDashboard() {
   }, [filters.dateRange.from, filters.dateRange.to, insightData?.lastSync]);
 
   const totals = useMemo(() => {
-    if (!insightData?.summary) return { spend: 0, leads: 0, impressions: 0, reach: 0, cpl: 0 };
+    if (!insightData?.summary) return { spend: 0, leads: 0, conversations: 0, impressions: 0, reach: 0, cpl: 0 };
     return {
       spend: insightData.summary.totalSpend || 0,
       leads: insightData.summary.totalLeads || 0,
+      conversations: insightData.summary.conversations_count || 0,
       impressions: insightData.summary.totalImpressions || 0,
       reach: insightData.summary.totalReach || 0,
       cpl: insightData.summary.avgCpl || 0
@@ -101,7 +102,8 @@ export default function CampaignDashboard() {
       cpl: c.cpl || 0,
       status: c.status,
       budget: c.budget,
-      budgetType: c.budget_type
+      budgetType: c.budget_type,
+      objective: c.objective
     }));
   }, [insightData]);
 
@@ -168,7 +170,7 @@ export default function CampaignDashboard() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <KPICard 
             title="Investimento" 
             value={formatCurrency(totals.spend)} 
@@ -178,12 +180,20 @@ export default function CampaignDashboard() {
             description={periodLabel}
           />
           <KPICard 
-            title="Resultados (Meta)" 
+            title="Leads (Meta)" 
             value={`${formatNumber(totals.leads)} Leads`} 
             icon={Users} 
             color="green" 
             isLoading={isLoading}
-            description={`${formatNumber(insightData?.summary?.conversations_count || 0)} Conversas`}
+            description="Baseado em formulários"
+          />
+          <KPICard 
+            title="Conversas (Meta)" 
+            value={`${formatNumber(totals.conversations)} Conv.`} 
+            icon={RefreshCw} 
+            color="purple" 
+            isLoading={isLoading}
+            description="Mensagens iniciadas"
           />
           <KPICard 
             title="CPL Médio" 
@@ -352,7 +362,7 @@ export default function CampaignDashboard() {
                     <th className="text-right py-3 font-medium">Status</th>
                     <th className="text-right py-3 font-medium">Orçamento</th>
                     <th className="text-right py-3 font-medium">Investimento</th>
-                    <th className="text-right py-3 font-medium">Leads / Conv.</th>
+                    <th className="text-right py-3 font-medium">Resultado</th>
                     <th className="text-right py-3 font-medium">CPL</th>
                     <th className="text-right py-3 font-medium">Alcance / Imp.</th>
                   </tr>
@@ -403,8 +413,16 @@ export default function CampaignDashboard() {
                         <td className="py-3 text-right">{formatCurrency(campaign.spend)}</td>
                         <td className="py-3 text-right">
                           <div className="flex flex-col">
-                            <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
-                            <span className="text-[10px] text-muted-foreground">{formatNumber(campaign.conversations)} Conversas</span>
+                            {campaign.objective === 'MESSAGES' || (campaign.conversations > 0 && campaign.leads === 0) ? (
+                              <span className="font-medium">{formatNumber(campaign.conversations)} Conversas</span>
+                            ) : campaign.leads > 0 ? (
+                              <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
+                            ) : (
+                              <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
+                            )}
+                            {campaign.leads > 0 && campaign.conversations > 0 && (
+                              <span className="text-[10px] text-muted-foreground">{formatNumber(campaign.conversations)} Conversas</span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 text-right">

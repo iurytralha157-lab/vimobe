@@ -65,6 +65,8 @@ import {
   useMetaUpdatePage,
   useMetaDisconnectPage,
   useMetaTogglePage,
+  useMetaAdAccounts,
+  useMetaUpdateAdAccounts,
   MetaPage,
   MetaIntegration,
 } from "@/hooks/use-meta-integration";
@@ -98,6 +100,8 @@ export function MetaIntegrationSettings() {
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPage, setEditingPage] = useState<string | null>(null);
+  const [editingIntegrationId, setEditingIntegrationId] = useState<string | null>(null);
+  const [selectedAdAccountIds, setSelectedAdAccountIds] = useState<string[]>([]);
   const [expandedIntegrations, setExpandedIntegrations] = useState<Set<string>>(new Set());
   
   // Form state
@@ -109,6 +113,7 @@ export function MetaIntegrationSettings() {
   const { data: integrations, isLoading: loadingIntegrations } = useMetaIntegrations();
   const { data: pipelines, isLoading: loadingPipelines } = usePipelines();
   const { data: stages } = useStages(selectedPipelineId || undefined);
+  const { data: availableAdAccounts } = useMetaAdAccounts(userToken, editingIntegrationId || undefined);
 
   const getAuthUrl = useMetaGetAuthUrl();
   const connectPage = useMetaConnectPage();
@@ -174,6 +179,7 @@ export function MetaIntegrationSettings() {
       stageId: selectedStageId,
       defaultStatus: selectedStatus,
       adAccountId: adAccountId,
+      selectedAdAccountIds: selectedAdAccountIds,
     });
 
     setShowPageSelector(false);
@@ -191,6 +197,7 @@ export function MetaIntegrationSettings() {
       pipelineId: selectedPipelineId,
       stageId: selectedStageId,
       defaultStatus: selectedStatus,
+      selectedAdAccountIds: selectedAdAccountIds,
     });
 
     setShowEditDialog(false);
@@ -200,9 +207,11 @@ export function MetaIntegrationSettings() {
 
   const openEditDialog = (integration: MetaIntegration) => {
     setEditingPage(integration.page_id);
+    setEditingIntegrationId(integration.id);
     setSelectedPipelineId("");
     setSelectedStageId("");
     setSelectedStatus("novo");
+    setSelectedAdAccountIds(integration.selected_ad_accounts || []);
     setShowEditDialog(true);
   };
 
@@ -212,6 +221,8 @@ export function MetaIntegrationSettings() {
     setSelectedStageId("");
     setSelectedStatus("novo");
     setAdAccountId("");
+    setSelectedAdAccountIds([]);
+    setEditingIntegrationId(null);
   };
 
   const toggleExpanded = (integrationId: string) => {
@@ -417,6 +428,35 @@ export function MetaIntegrationSettings() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {availableAdAccounts && availableAdAccounts.length > 0 && (
+              <div className="space-y-2">
+                <Label>Contas de Anúncios para Sincronizar</Label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
+                  {availableAdAccounts.map((account: any) => (
+                    <div key={account.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={account.id}
+                        checked={selectedAdAccountIds.includes(account.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAdAccountIds([...selectedAdAccountIds, account.id]);
+                          } else {
+                            setSelectedAdAccountIds(selectedAdAccountIds.filter(id => id !== account.id));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <label htmlFor={account.id} className="text-sm font-medium leading-none cursor-pointer">
+                        {account.name} <span className="text-[10px] text-muted-foreground">({account.id})</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Selecione as contas que deseja monitorar no Dashboard.</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>{meta.defaultPipeline}</Label>
@@ -544,6 +584,34 @@ export function MetaIntegrationSettings() {
                 </SelectContent>
               </Select>
             </div>
+
+            {availableAdAccounts && availableAdAccounts.length > 0 && (
+              <div className="space-y-2">
+                <Label>Contas de Anúncios para Sincronizar</Label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
+                  {availableAdAccounts.map((account: any) => (
+                    <div key={account.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`edit-${account.id}`}
+                        checked={selectedAdAccountIds.includes(account.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAdAccountIds([...selectedAdAccountIds, account.id]);
+                          } else {
+                            setSelectedAdAccountIds(selectedAdAccountIds.filter(id => id !== account.id));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <label htmlFor={`edit-${account.id}`} className="text-sm font-medium leading-none cursor-pointer">
+                        {account.name} <span className="text-[10px] text-muted-foreground">({account.id})</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>{meta.leadStatus}</Label>

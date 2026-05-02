@@ -84,35 +84,42 @@ serve(async (req) => {
       const accessToken = integration.access_token;
       if (!accessToken) continue;
 
-      let adAccountId = integration.ad_account_id;
+      let adAccountIds = integration.selected_ad_accounts || [];
 
-      // Step 1: Get Ad Account ID if not cached
-      if (!adAccountId) {
-        try {
-          const adAccountsRes = await fetch(
-            `https://graph.facebook.com/${META_GRAPH_VERSION}/me/adaccounts?fields=id,name,account_id&access_token=${accessToken}`
-          );
-          const adAccountsData = await adAccountsRes.json();
-          
-          if (adAccountsData.data && adAccountsData.data.length > 0) {
-            adAccountId = adAccountsData.data[0].id; // format: "act_XXXXX"
+      // If no ad accounts selected, try to get the first one available (legacy behavior)
+      if (adAccountIds.length === 0) {
+        if (integration.ad_account_id) {
+          adAccountIds = [integration.ad_account_id];
+        } else {
+          try {
+            const adAccountsRes = await fetch(
+              `https://graph.facebook.com/${META_GRAPH_VERSION}/me/adaccounts?fields=id,name,account_id&access_token=${accessToken}`
+            );
+            const adAccountsData = await adAccountsRes.json();
             
-            // Save ad_account_id
-            await supabaseAdmin
-              .from("meta_integrations")
-              .update({ ad_account_id: adAccountId })
-              .eq("id", integration.id);
-            
-            console.log(`Saved ad_account_id: ${adAccountId} for integration ${integration.id}`);
-          } else {
-            console.warn("No ad accounts found for integration:", integration.id, adAccountsData);
+            if (adAccountsData.data && adAccountsData.data.length > 0) {
+              const defaultAccountId = adAccountsData.data[0].id; // format: "act_XXXXX"
+              adAccountIds = [defaultAccountId];
+              
+              // Save as the default ad_account_id for backward compatibility
+              await supabaseAdmin
+                .from("meta_integrations")
+                .update({ ad_account_id: defaultAccountId })
+                .eq("id", integration.id);
+              
+              console.log(`Saved default ad_account_id: ${defaultAccountId} for integration ${integration.id}`);
+            } else {
+              console.warn("No ad accounts found for integration:", integration.id, adAccountsData);
+              continue;
+            }
+          } catch (err) {
+            console.error("Error fetching ad accounts:", err);
             continue;
           }
-        } catch (err) {
-          console.error("Error fetching ad accounts:", err);
-          continue;
         }
       }
+
+      for (const adAccountId of adAccountIds) {
 
       // Step 2: Fetch Account Info (Status & Balance)
       try {
@@ -183,6 +190,7 @@ serve(async (req) => {
             status: campaign.effective_status || campaign.status,
             budget,
             budget_type: budgetType,
+            objective: campaign.objective,
             date_start: dateStart,
             date_stop: dateStop,
             level: "campaign",
@@ -316,7 +324,8 @@ serve(async (req) => {
       } catch (err) {
         console.error("Error fetching insights:", err);
       }
-    }
+    } // End of adAccountId loop
+  } // End of integrations loop
 
     // Step 6: Upsert all insights into cache
     if (allInsights.length > 0) {

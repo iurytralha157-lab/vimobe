@@ -18,6 +18,8 @@ export interface MetaIntegration {
   created_at: string;
   updated_at: string;
   leads_received: number | null;
+  selected_ad_accounts: string[] | null;
+  ad_account_id: string | null;
 }
 
 export interface MetaPage {
@@ -123,6 +125,7 @@ export function useMetaConnectPage() {
       stageId,
       defaultStatus,
       adAccountId,
+      selectedAdAccountIds,
     }: {
       pageId: string;
       userToken: string;
@@ -130,6 +133,7 @@ export function useMetaConnectPage() {
       stageId: string;
       defaultStatus: string;
       adAccountId?: string;
+      selectedAdAccountIds?: string[];
     }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       
@@ -149,6 +153,7 @@ export function useMetaConnectPage() {
             stage_id: stageId,
             default_status: defaultStatus,
             ad_account_id: adAccountId,
+            selected_ad_accounts: selectedAdAccountIds,
           }),
         }
       );
@@ -180,11 +185,13 @@ export function useMetaUpdatePage() {
       pipelineId,
       stageId,
       defaultStatus,
+      selectedAdAccountIds,
     }: {
       pageId: string;
       pipelineId: string;
       stageId: string;
       defaultStatus: string;
+      selectedAdAccountIds?: string[];
     }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       
@@ -202,6 +209,7 @@ export function useMetaUpdatePage() {
             pipeline_id: pipelineId,
             stage_id: stageId,
             default_status: defaultStatus,
+            selected_ad_accounts: selectedAdAccountIds,
           }),
         }
       );
@@ -300,5 +308,78 @@ export function useMetaTogglePage() {
     onError: (error: Error) => {
       toast.error(`Erro: ${error.message}`);
     },
+  });
+}
+// Update ad accounts selection
+export function useMetaUpdateAdAccounts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ pageId, adAccountIds }: { pageId: string; adAccountIds: string[] }) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            action: "update_ad_accounts",
+            page_id: pageId,
+            selected_ad_accounts: adAccountIds,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update ad accounts");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meta-integrations"] });
+      toast.success("Contas de anúncio atualizadas!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro: ${error.message}`);
+    },
+  });
+}
+
+// Fetch available ad accounts for a user token or integration
+export function useMetaAdAccounts(userToken?: string, integrationId?: string) {
+  return useQuery({
+    queryKey: ["meta-ad-accounts", userToken, integrationId],
+    queryFn: async () => {
+      let tokenToUse = userToken;
+      
+      if (!tokenToUse && integrationId) {
+        const { data } = await supabase
+          .from("meta_integrations")
+          .select("access_token")
+          .eq("id", integrationId)
+          .single();
+        tokenToUse = data?.access_token;
+      }
+      
+      if (!tokenToUse) return [];
+      
+      const response = await fetch(
+        `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_id&access_token=${tokenToUse}`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch ad accounts from Meta");
+      }
+      
+      const data = await response.json();
+      return data.data || [];
+    },
+    enabled: !!userToken || !!integrationId,
   });
 }
