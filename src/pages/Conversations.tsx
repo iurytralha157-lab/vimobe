@@ -486,7 +486,7 @@ export default function Conversations() {
                       className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
                       onClick={() => setActivePlatform('whatsapp')}
                     >
-                      <WhatsAppIcon variant="logo" size={13} />
+                      <WhatsAppIcon variant="logo" size={16} />
                       <span className="text-xs font-medium">WhatsApp</span>
                     </Button>
                     <Button 
@@ -646,7 +646,7 @@ export default function Conversations() {
                   className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
                   onClick={() => setActivePlatform('whatsapp')}
                 >
-                  <WhatsAppIcon variant="logo" size={13} />
+                  <WhatsAppIcon variant="logo" size={16} />
                   <span className="text-xs font-medium">WhatsApp</span>
                 </Button>
                 <Button 
