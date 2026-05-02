@@ -360,10 +360,11 @@ export default function CampaignDashboard() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-3 font-medium">Campanha</th>
+                    <th className="text-right py-3 font-medium">Status</th>
                     <th className="text-right py-3 font-medium">Investimento</th>
                     <th className="text-right py-3 font-medium">Leads</th>
                     <th className="text-right py-3 font-medium">CPL</th>
-                    <th className="text-right py-3 font-medium">Impressões</th>
+                    <th className="text-right py-3 font-medium">Alcance</th>
                   </tr>
                 </thead>
                 <tbody>
