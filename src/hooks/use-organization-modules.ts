@@ -64,8 +64,10 @@ export function useOrganizationModules() {
 
   // Check if a specific module is enabled
   const hasModule = (moduleName: ModuleName): boolean => {
-    // Super admin always has access to all modules when impersonating
-    if (isSuperAdmin && organization?.id) return true;
+    // Super admins need to enable modules explicitly to see them as a regular user would,
+    // but we can keep the logic flexible. Based on user request, we want them disabled by default.
+    // if (isSuperAdmin && organization?.id) return true;
+
     
     // If still loading, only return true for default enabled modules to prevent flash
     if (isLoading) return DEFAULT_ENABLED_MODULES.includes(moduleName);
@@ -87,6 +89,7 @@ export function useOrganizationModules() {
 
   // Get list of all enabled modules
   const enabledModules = (): ModuleName[] => {
+    /* 
     if (isSuperAdmin && organization?.id) {
       // Return all modules for super admin
       return [
@@ -95,6 +98,8 @@ export function useOrganizationModules() {
         'performance', 'gamification', 'webhooks', 'site', 'ai_agent', 'api'
       ];
     }
+    */
+
     
     if (!organization?.id) return [];
 
