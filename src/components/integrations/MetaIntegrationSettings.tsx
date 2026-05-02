@@ -206,9 +206,11 @@ export function MetaIntegrationSettings() {
 
   const openEditDialog = (integration: MetaIntegration) => {
     setEditingPage(integration.page_id);
+    setEditingIntegrationId(integration.id);
     setSelectedPipelineId("");
     setSelectedStageId("");
     setSelectedStatus("novo");
+    setSelectedAdAccountIds(integration.selected_ad_accounts || []);
     setShowEditDialog(true);
   };
 
