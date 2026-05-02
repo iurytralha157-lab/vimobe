@@ -366,10 +366,11 @@ export default function CampaignDashboard() {
                   <tr className="border-b">
                     <th className="text-left py-3 font-medium">Campanha</th>
                     <th className="text-right py-3 font-medium">Status</th>
+                    <th className="text-right py-3 font-medium">Orçamento</th>
                     <th className="text-right py-3 font-medium">Investimento</th>
-                    <th className="text-right py-3 font-medium">Leads</th>
+                    <th className="text-right py-3 font-medium">Leads / Conv.</th>
                     <th className="text-right py-3 font-medium">CPL</th>
-                    <th className="text-right py-3 font-medium">Alcance</th>
+                    <th className="text-right py-3 font-medium">Alcance / Imp.</th>
                   </tr>
                 </thead>
                 <tbody>
