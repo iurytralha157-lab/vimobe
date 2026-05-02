@@ -102,7 +102,8 @@ export default function CampaignDashboard() {
       cpl: c.cpl || 0,
       status: c.status,
       budget: c.budget,
-      budgetType: c.budget_type
+      budgetType: c.budget_type,
+      objective: c.objective
     }));
   }, [insightData]);
 
