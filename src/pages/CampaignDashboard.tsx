@@ -358,7 +358,7 @@ export default function CampaignDashboard() {
                     <th className="text-right py-3 font-medium">Orçamento</th>
                     <th className="text-right py-3 font-medium">Investimento</th>
                     <th className="text-right py-3 font-medium">Resultado</th>
-                    <th className="text-right py-3 font-medium">CPL</th>
+                    <th className="text-right py-3 font-medium">CPR (Lead/Conv)</th>
                     <th className="text-right py-3 font-medium">Alcance / Imp.</th>
                   </tr>
                 </thead>
