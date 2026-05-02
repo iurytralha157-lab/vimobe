@@ -180,12 +180,20 @@ export default function CampaignDashboard() {
             description={periodLabel}
           />
           <KPICard 
-            title="Resultados (Meta)" 
+            title="Leads (Meta)" 
             value={`${formatNumber(totals.leads)} Leads`} 
             icon={Users} 
             color="green" 
             isLoading={isLoading}
-            description={`${formatNumber(insightData?.summary?.conversations_count || 0)} Conversas`}
+            description="Baseado em formulários"
+          />
+          <KPICard 
+            title="Conversas (Meta)" 
+            value={`${formatNumber(totals.conversations)} Conv.`} 
+            icon={RefreshCw} 
+            color="purple" 
+            isLoading={isLoading}
+            description="Mensagens iniciadas"
           />
           <KPICard 
             title="CPL Médio" 
