@@ -85,6 +85,7 @@ export default function CampaignDashboard() {
       spend: c.spend || 0,
       leads: c.leads_count,
       impressions: c.impressions || 0,
+      reach: c.reach || 0,
       cpl: c.cpl || 0
     }));
   }, [insightData]);
