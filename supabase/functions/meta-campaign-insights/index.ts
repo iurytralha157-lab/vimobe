@@ -324,7 +324,8 @@ serve(async (req) => {
       } catch (err) {
         console.error("Error fetching insights:", err);
       }
-    }
+    } // End of adAccountId loop
+  } // End of integrations loop
 
     // Step 6: Upsert all insights into cache
     if (allInsights.length > 0) {
