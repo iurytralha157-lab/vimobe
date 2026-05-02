@@ -105,6 +105,20 @@ export default function Conversations() {
   }>({});
   const [showLeadPanel, setShowLeadPanel] = useState(true);
   useWhatsAppRealtimeConversations();
+  
+  const handleChannelChange = (value: string) => {
+    if (value === 'meta-all') {
+      setActivePlatform('meta');
+      setSelectedSessionId('all');
+    } else if (value.startsWith('whatsapp-')) {
+      setActivePlatform('whatsapp');
+      const sessionId = value.replace('whatsapp-', '');
+      setSelectedSessionId(sessionId);
+    }
+    setSelectedConversation(null);
+  };
+
+  const currentChannelValue = activePlatform === 'meta' ? 'meta-all' : `whatsapp-${selectedSessionId}`;
 
   // Save hide groups preference
   useEffect(() => {
