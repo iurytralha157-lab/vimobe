@@ -567,6 +567,7 @@ serve(async (req) => {
             pipeline_id,
             stage_id,
             default_status,
+            selected_ad_accounts: body.selected_ad_accounts || [],
             updated_at: new Date().toISOString()
           })
           .eq("organization_id", userData.organization_id)
