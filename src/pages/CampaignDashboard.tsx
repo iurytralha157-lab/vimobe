@@ -91,20 +91,30 @@ export default function CampaignDashboard() {
 
   const campaignStats = useMemo(() => {
     if (!insightData?.campaigns) return [];
-    return insightData.campaigns.map(c => ({
-      id: c.campaign_id,
-      name: c.campaign_name,
-      spend: c.spend || 0,
-      leads: c.leads_count,
-      conversations: c.conversations_count || 0,
-      impressions: c.impressions || 0,
-      reach: c.reach || 0,
-      cpl: c.cpl || 0,
-      status: c.status,
-      budget: c.budget,
-      budgetType: c.budget_type,
-      objective: c.objective
-    }));
+    
+    // Filtra campanhas que não tiveram atividade no período
+    return insightData.campaigns
+      .filter(c => (c.spend || 0) > 0 || (c.impressions || 0) > 0 || (c.leads_count || 0) > 0 || (c.conversations_count || 0) > 0)
+      .map(c => {
+        const isMessages = c.objective === 'MESSAGES' || c.objective === 'OUTCOME_MESSAGES';
+        const results = isMessages ? (c.conversations_count || 0) : (c.leads_count || 0);
+        const dynamicCpl = results > 0 ? (c.spend || 0) / results : 0;
+
+        return {
+          id: c.campaign_id,
+          name: c.campaign_name,
+          spend: c.spend || 0,
+          leads: c.leads_count,
+          conversations: c.conversations_count || 0,
+          impressions: c.impressions || 0,
+          reach: c.reach || 0,
+          cpl: dynamicCpl, // Usamos o CPL dinâmico baseado no objetivo
+          status: c.status,
+          budget: c.budget,
+          budgetType: c.budget_type,
+          objective: c.objective
+        };
+      });
   }, [insightData]);
 
   // For the chart, we'll use campaign data since useCampaignInsights returns aggregated data
