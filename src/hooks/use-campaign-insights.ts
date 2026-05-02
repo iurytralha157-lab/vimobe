@@ -11,9 +11,13 @@ export interface CampaignAggregated {
   impressions: number | null;
   reach: number | null;
   leads_count: number;
+  conversations_count: number;
   won_count: number;
   revenue: number;
   cpl: number | null;
+  status: string | null;
+  budget: number | null;
+  budget_type: string | null;
   adsets: AdsetAggregated[];
 }
 
