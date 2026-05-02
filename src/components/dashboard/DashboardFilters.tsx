@@ -278,7 +278,7 @@ export function DashboardFilters({
 
   // Desktop layout - All filters inline, but hidden on smaller screens
   return (
-    <div className="flex flex-wrap items-center justify-start gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {/* Date Filter */}
       <DateFilterPopover
         datePreset={datePreset}
