@@ -56,60 +56,49 @@ export default function CampaignDashboard() {
     hasActiveFilters,
   } = useDashboardFilters();
 
-  const { data: insights, isLoading } = useMetaInsights(filters);
+  const { data: insightData, isLoading } = useCampaignInsights(filters);
+  const syncMutation = useSyncCampaignInsights();
+
+  const handleSync = () => {
+    syncMutation.mutate({
+      dateStart: filters.dateRange.from.toISOString().split('T')[0],
+      dateStop: filters.dateRange.to.toISOString().split('T')[0]
+    });
+  };
 
   const totals = useMemo(() => {
-    if (!insights) return { spend: 0, leads: 0, impressions: 0, reach: 0, cpl: 0 };
-    const spend = insights.reduce((sum, item) => sum + (Number(item.spend) || 0), 0);
-    const leads = insights.reduce((sum, item) => sum + (Number(item.leads_count) || 0), 0);
-    const impressions = insights.reduce((sum, item) => sum + (Number(item.impressions) || 0), 0);
-    const reach = insights.reduce((sum, item) => sum + (Number(item.reach) || 0), 0);
-    const cpl = leads > 0 ? spend / leads : 0;
-    return { spend, leads, impressions, reach, cpl };
-  }, [insights]);
-
-  const chartData = useMemo(() => {
-    if (!insights) return [];
-    // Group by date
-    const grouped = insights.reduce((acc, item) => {
-      const date = item.date_start;
-      if (!acc[date]) {
-        acc[date] = { date, spend: 0, leads: 0 };
-      }
-      acc[date].spend += Number(item.spend) || 0;
-      acc[date].leads += Number(item.leads_count) || 0;
-      return acc;
-    }, {} as Record<string, any>);
-
-    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
-  }, [insights]);
+    if (!insightData?.summary) return { spend: 0, leads: 0, impressions: 0, reach: 0, cpl: 0 };
+    return {
+      spend: insightData.summary.totalSpend || 0,
+      leads: insightData.summary.totalLeads || 0,
+      impressions: insightData.summary.totalImpressions || 0,
+      reach: insightData.summary.totalReach || 0,
+      cpl: insightData.summary.avgCpl || 0
+    };
+  }, [insightData]);
 
   const campaignStats = useMemo(() => {
-    if (!insights) return [];
-    // Group by campaign
-    const grouped = insights.reduce((acc, item) => {
-      const id = item.campaign_id;
-      if (!acc[id]) {
-        acc[id] = { 
-          id, 
-          name: item.campaign_name, 
-          spend: 0, 
-          leads: 0, 
-          impressions: 0,
-          cpl: 0
-        };
-      }
-      acc[id].spend += Number(item.spend) || 0;
-      acc[id].leads += Number(item.leads_count) || 0;
-      acc[id].impressions += Number(item.impressions) || 0;
-      return acc;
-    }, {} as Record<string, any>);
+    if (!insightData?.campaigns) return [];
+    return insightData.campaigns.map(c => ({
+      id: c.campaign_id,
+      name: c.campaign_name,
+      spend: c.spend || 0,
+      leads: c.leads_count,
+      impressions: c.impressions || 0,
+      cpl: c.cpl || 0
+    }));
+  }, [insightData]);
 
-    return Object.values(grouped).map(c => ({
-      ...c,
-      cpl: c.leads > 0 ? c.spend / c.leads : 0
-    })).sort((a, b) => b.spend - a.spend);
-  }, [insights]);
+  // For the chart, we'll use campaign data since useCampaignInsights returns aggregated data
+  // In a more complete version, we would have daily data
+  const chartData = useMemo(() => {
+    if (!campaignStats.length) return [];
+    return campaignStats.slice(0, 10).map(c => ({
+      name: c.name,
+      spend: c.spend,
+      leads: c.leads
+    }));
+  }, [campaignStats]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
