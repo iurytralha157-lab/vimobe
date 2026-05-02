@@ -178,6 +178,7 @@ export function MetaIntegrationSettings() {
       stageId: selectedStageId,
       defaultStatus: selectedStatus,
       adAccountId: adAccountId,
+      selectedAdAccountIds: selectedAdAccountIds,
     });
 
     setShowPageSelector(false);
