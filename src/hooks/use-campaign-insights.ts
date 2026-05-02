@@ -18,6 +18,7 @@ export interface CampaignAggregated {
   status: string | null;
   budget: number | null;
   budget_type: string | null;
+  objective: string | null;
   adsets: AdsetAggregated[];
 }
 
