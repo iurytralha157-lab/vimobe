@@ -30,6 +30,8 @@ import { useTags, Tag as TagType } from "@/hooks/use-tags";
 import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
+import { useMetaConversations, useMetaMessages, useSendMetaMessage } from "@/hooks/use-meta-conversations";
+
 
 export default function Conversations() {
   const isMobile = useIsMobile();
@@ -65,12 +67,29 @@ export default function Conversations() {
     { hideGroups, showArchived },
     selectedSessionId === "all" ? (loadingSessions ? undefined : accessibleSessionIds) : undefined
   );
+
   const {
-    data: messages,
-    isLoading: loadingMessages,
-    isFetching: fetchingMessages
-  } = useWhatsAppMessages(selectedConversation?.id || null, null, messageLimit);
+    data: metaConversations,
+    isLoading: loadingMetaConversations
+  } = useMetaConversations();
+
+  const {
+    data: whatsappMessages,
+    isLoading: loadingWhatsAppMessages,
+    isFetching: fetchingWhatsAppMessages
+  } = useWhatsAppMessages(activePlatform === 'whatsapp' ? selectedConversation?.id || null : null, null, messageLimit);
+
+  const {
+    data: metaMessages,
+    isLoading: loadingMetaMessages
+  } = useMetaMessages(activePlatform === 'meta' ? selectedConversation?.id || null : null);
+
+  const messages = activePlatform === 'whatsapp' ? whatsappMessages : metaMessages;
+  const loadingMessages = activePlatform === 'whatsapp' ? loadingWhatsAppMessages : loadingMetaMessages;
+  const fetchingMessages = activePlatform === 'whatsapp' ? fetchingWhatsAppMessages : false;
+
   const sendMessage = useSendWhatsAppMessage();
+  const sendMetaMessage = useSendMetaMessage();
   const markAsRead = useMarkConversationAsRead();
   const archiveConversation = useArchiveConversation();
   const deleteConversation = useDeleteConversation();
