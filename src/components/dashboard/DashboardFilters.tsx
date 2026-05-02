@@ -180,7 +180,7 @@ export function DashboardFilters({
   // Consolidate filters for smaller screens (mobile and small desktops/tablets)
   if (isMobile) {
     return (
-      <div className="flex items-center justify-start gap-2 w-full">
+      <div className="flex items-center justify-end gap-2 w-full">
         {/* Date Filter - always visible */}
         <DateFilterPopover
           datePreset={datePreset}
