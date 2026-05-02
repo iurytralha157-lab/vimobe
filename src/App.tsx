@@ -230,7 +230,7 @@ function AppRoutes() {
             {/* Regular Routes */}
             <Route path="/" element={<Navigate to={getDefaultRedirect()} replace />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/campaigns" element={<ProtectedRoute><CampaignDashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/campaigns" element={<ProtectedRoute><PermissionGuard permission="module_campaigns"><CampaignDashboard /></PermissionGuard></ProtectedRoute>} />
             <Route path="/crm/pipelines" element={<ProtectedRoute><Pipelines /></ProtectedRoute>} />
             <Route path="/crm/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
             <Route path="/crm/management" element={<ProtectedRoute><AdminRoute><CRMManagement /></AdminRoute></ProtectedRoute>} />
