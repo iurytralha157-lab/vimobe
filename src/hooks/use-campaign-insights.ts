@@ -412,6 +412,7 @@ function emptyResult() {
       avgCpl: null,
       totalImpressions: null,
       totalReach: null,
+      conversations_count: 0,
     },
     lastSync: null,
     hasSpendData: false,
