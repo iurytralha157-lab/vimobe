@@ -170,46 +170,31 @@ export default function CampaignDashboard() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <KPICard 
             title="Investimento" 
             value={formatCurrency(totals.spend)} 
-            icon={DollarSign} 
-            color="blue" 
             isLoading={isLoading}
-            description={periodLabel}
           />
           <KPICard 
             title="Leads (Meta)" 
-            value={`${formatNumber(totals.leads)} Leads`} 
-            icon={Users} 
-            color="green" 
+            value={formatNumber(totals.leads)} 
             isLoading={isLoading}
-            description="Baseado em formulários"
           />
           <KPICard 
             title="Conversas (Meta)" 
-            value={`${formatNumber(totals.conversations)} Conv.`} 
-            icon={RefreshCw} 
-            color="purple" 
+            value={formatNumber(totals.conversations)} 
             isLoading={isLoading}
-            description="Mensagens iniciadas"
           />
           <KPICard 
             title="CPL Médio" 
             value={formatCurrency(totals.cpl)} 
-            icon={Target} 
-            color="orange" 
             isLoading={isLoading}
-            description="Baseado no investimento"
           />
           <KPICard 
             title="Alcance Total" 
             value={formatNumber(totals.reach)} 
-            icon={Eye} 
-            color="purple" 
             isLoading={isLoading}
-            description={periodLabel}
           />
         </div>
 
