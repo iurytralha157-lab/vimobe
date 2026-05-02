@@ -178,7 +178,10 @@ export default function Dashboard() {
         </div>
 
         {/* ===== MOBILE LAYOUT ===== */}
-        <div className="lg:hidden space-y-4">
+        <div className={cn(
+          "lg:hidden flex flex-col gap-4",
+          !isMobile ? "flex-1 min-h-0" : ""
+        )}>
           {/* KPIs */}
           <KPICards 
             data={kpiData} 
