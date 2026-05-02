@@ -190,7 +190,7 @@ export default function Dashboard() {
           />
 
           {/* Charts Tabs */}
-          <Tabs value={mobileChartTab} onValueChange={setMobileChartTab}>
+          <Tabs value={mobileChartTab} onValueChange={setMobileChartTab} className={cn(!isMobile ? "flex-1 flex flex-col min-h-0" : "")}>
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="funnel" className="text-xs">Funil</TabsTrigger>
               <TabsTrigger value="evolution" className="text-xs">Evolução</TabsTrigger>
