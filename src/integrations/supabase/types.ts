@@ -1936,6 +1936,57 @@ export type Database = {
           },
         ]
       }
+      lead_attachments: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          lead_id: string
+          message_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          lead_id: string
+          message_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          lead_id?: string
+          message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_attachments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_entry_events: {
         Row: {
           campaign_name: string | null
