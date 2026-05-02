@@ -31,6 +31,7 @@ import { useAddLeadTag, useRemoveLeadTag } from "@/hooks/use-leads";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AudioRecorderButton } from "@/components/whatsapp/AudioRecorderButton";
 import { useMetaConversations, useMetaMessages, useSendMetaMessage } from "@/hooks/use-meta-conversations";
+import { useMetaIntegrations } from "@/hooks/use-meta-integration";
 
 
 export default function Conversations() {
@@ -38,6 +39,7 @@ export default function Conversations() {
   const navigate = useNavigate();
   const [activePlatform, setActivePlatform] = useState<'whatsapp' | 'meta'>('whatsapp');
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
+  const [selectedPageId, setSelectedPageId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<WhatsAppConversation | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [messageLimit, setMessageLimit] = useState(50);
@@ -71,7 +73,11 @@ export default function Conversations() {
   const {
     data: metaConversations,
     isLoading: loadingMetaConversations
-  } = useMetaConversations();
+  } = useMetaConversations(selectedPageId);
+
+  const {
+    data: metaIntegrations
+  } = useMetaIntegrations();
 
   const {
     data: whatsappMessages,
@@ -109,6 +115,12 @@ export default function Conversations() {
   const handleChannelChange = (value: string) => {
     if (value === 'meta-all') {
       setActivePlatform('meta');
+      setSelectedPageId('all');
+    } else if (value.startsWith('meta-')) {
+      setActivePlatform('meta');
+      setSelectedPageId(value.replace('meta-', ''));
+    } else if (value === 'whatsapp-all') {
+      setActivePlatform('whatsapp');
       setSelectedSessionId('all');
     } else if (value.startsWith('whatsapp-')) {
       setActivePlatform('whatsapp');
@@ -118,7 +130,9 @@ export default function Conversations() {
     setSelectedConversation(null);
   };
 
-  const currentChannelValue = activePlatform === 'meta' ? 'meta-all' : `whatsapp-${selectedSessionId}`;
+  const currentChannelValue = activePlatform === 'meta' 
+    ? (selectedPageId === 'all' ? 'meta-all' : `meta-${selectedPageId}`)
+    : (selectedSessionId === 'all' ? 'whatsapp-all' : `whatsapp-${selectedSessionId}`);
 
   // Save hide groups preference
   useEffect(() => {
@@ -470,16 +484,16 @@ export default function Conversations() {
                       variant={activePlatform === 'whatsapp' ? 'secondary' : 'ghost'} 
                       size="sm" 
                       className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
-                      onClick={() => handleChannelChange('whatsapp-all')}
+                      onClick={() => setActivePlatform('whatsapp')}
                     >
-                      <WhatsAppIcon className="w-4 h-4" />
+                      <WhatsAppIcon variant="logo" className="w-4 h-4" />
                       <span className="text-xs font-medium">WhatsApp</span>
                     </Button>
                     <Button 
                       variant={activePlatform === 'meta' ? 'secondary' : 'ghost'} 
                       size="sm" 
                       className={cn("flex-1 gap-2 h-8", activePlatform === 'meta' && "bg-background shadow-sm")}
-                      onClick={() => handleChannelChange('meta-all')}
+                      onClick={() => setActivePlatform('meta')}
                     >
                       <Instagram className="w-4 h-4 text-pink-500" />
                       <span className="text-xs font-medium">Instagram</span>
@@ -489,14 +503,32 @@ export default function Conversations() {
                   {activePlatform === 'whatsapp' && sessions && sessions.length > 1 && (
                     <Select value={currentChannelValue} onValueChange={handleChannelChange}>
                       <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
-                        <SelectValue placeholder="Selecione a conta" />
+                        <SelectValue placeholder="Selecione a conta WhatsApp" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover z-50">
                         <SelectGroup>
-                          <SelectItem value="whatsapp-all">Todas as contas</SelectItem>
+                          <SelectItem value="whatsapp-all">Todas as contas WhatsApp</SelectItem>
                           {sessions.map(session => (
                             <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
-                              {session.instance_name}
+                              {session.display_name || session.instance_name || session.phone_number}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {activePlatform === 'meta' && metaIntegrations && metaIntegrations.length > 1 && (
+                    <Select value={currentChannelValue} onValueChange={handleChannelChange}>
+                      <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
+                        <SelectValue placeholder="Selecione a página" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectGroup>
+                          <SelectItem value="meta-all">Todas as páginas</SelectItem>
+                          {metaIntegrations.map(integration => (
+                            <SelectItem key={integration.id} value={`meta-${integration.page_id}`}>
+                              {integration.page_name || integration.page_id}
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -612,16 +644,16 @@ export default function Conversations() {
                   variant={activePlatform === 'whatsapp' ? 'secondary' : 'ghost'} 
                   size="sm" 
                   className={cn("flex-1 gap-2 h-8", activePlatform === 'whatsapp' && "bg-background shadow-sm")}
-                  onClick={() => handleChannelChange('whatsapp-all')}
+                  onClick={() => setActivePlatform('whatsapp')}
                 >
-                  <WhatsAppIcon className="w-4 h-4" />
+                  <WhatsAppIcon variant="logo" className="w-4 h-4" />
                   <span className="text-xs font-medium">WhatsApp</span>
                 </Button>
                 <Button 
                   variant={activePlatform === 'meta' ? 'secondary' : 'ghost'} 
                   size="sm" 
                   className={cn("flex-1 gap-2 h-8", activePlatform === 'meta' && "bg-background shadow-sm")}
-                  onClick={() => handleChannelChange('meta-all')}
+                  onClick={() => setActivePlatform('meta')}
                 >
                   <Instagram className="w-4 h-4 text-pink-500" />
                   <span className="text-xs font-medium">Instagram</span>
@@ -631,14 +663,32 @@ export default function Conversations() {
               {activePlatform === 'whatsapp' && sessions && sessions.length > 1 && (
                 <Select value={currentChannelValue} onValueChange={handleChannelChange}>
                   <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
-                    <SelectValue placeholder="Selecione a conta" />
+                    <SelectValue placeholder="Selecione a conta WhatsApp" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
                     <SelectGroup>
-                      <SelectItem value="whatsapp-all">Todas as contas</SelectItem>
+                      <SelectItem value="whatsapp-all">Todas as contas WhatsApp</SelectItem>
                       {sessions.map(session => (
                         <SelectItem key={session.id} value={`whatsapp-${session.id}`}>
-                          {session.instance_name}
+                          {session.display_name || session.instance_name || session.phone_number}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              )}
+
+              {activePlatform === 'meta' && metaIntegrations && metaIntegrations.length > 1 && (
+                <Select value={currentChannelValue} onValueChange={handleChannelChange}>
+                  <SelectTrigger className="h-8 text-xs bg-background border-none focus:ring-0">
+                    <SelectValue placeholder="Selecione a página" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectGroup>
+                      <SelectItem value="meta-all">Todas as páginas</SelectItem>
+                      {metaIntegrations.map(integration => (
+                        <SelectItem key={integration.id} value={`meta-${integration.page_id}`}>
+                          {integration.page_name || integration.page_id}
                         </SelectItem>
                       ))}
                     </SelectGroup>

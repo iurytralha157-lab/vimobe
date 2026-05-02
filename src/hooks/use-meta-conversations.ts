@@ -36,23 +36,28 @@ export interface MetaMessage {
   created_at: string;
 }
 
-export function useMetaConversations() {
+export function useMetaConversations(pageId?: string) {
   const { profile } = useAuth();
 
   return useQuery({
-    queryKey: ["meta-conversations"],
+    queryKey: ["meta-conversations", pageId],
     queryFn: async () => {
       if (!profile?.organization_id) return [];
       
       try {
-        const { data, error } = await (supabase as any)
+        let query = (supabase as any)
           .from("meta_conversations")
           .select(`
             *,
             lead:leads(id, name)
           `)
-          .eq("organization_id", profile.organization_id)
-          .order("last_message_at", { ascending: false });
+          .eq("organization_id", profile.organization_id);
+
+        if (pageId && pageId !== 'all') {
+          query = query.eq("page_id", pageId);
+        }
+
+        const { data, error } = await query.order("last_message_at", { ascending: false });
 
         if (error) {
           if (error.code === 'PGRST116' || error.message.includes('relation "meta_conversations" does not exist')) {
