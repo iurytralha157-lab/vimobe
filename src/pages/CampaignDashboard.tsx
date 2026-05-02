@@ -394,18 +394,46 @@ export default function CampaignDashboard() {
                           </div>
                         </td>
                         <td className="py-3 text-right">
-                          <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
-                            Ativa
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-[10px] border-transparent",
+                              campaign.status === 'ACTIVE' 
+                                ? "bg-green-50 text-green-700 border-green-200" 
+                                : "bg-gray-50 text-gray-700 border-gray-200"
+                            )}
+                          >
+                            {campaign.status === 'ACTIVE' ? 'Ativa' : 'Pausada'}
                           </Badge>
                         </td>
+                        <td className="py-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-xs">
+                              {campaign.budget ? formatCurrency(campaign.budget) : 'N/A'}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {campaign.budgetType === 'daily' ? 'Diário' : 'Vitalício'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-3 text-right">{formatCurrency(campaign.spend)}</td>
-                        <td className="py-3 text-right">{formatNumber(campaign.leads)}</td>
+                        <td className="py-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{formatNumber(campaign.leads)} Leads</span>
+                            <span className="text-[10px] text-muted-foreground">{formatNumber(campaign.conversations)} Conversas</span>
+                          </div>
+                        </td>
                         <td className="py-3 text-right">
                           <Badge variant="secondary" className="font-normal">
                             {formatCurrency(campaign.cpl)}
                           </Badge>
                         </td>
-                        <td className="py-3 text-right text-muted-foreground">{formatNumber(campaign.reach)}</td>
+                        <td className="py-3 text-right">
+                          <div className="flex flex-col text-xs">
+                            <span>{formatNumber(campaign.reach)} Alcance</span>
+                            <span className="text-muted-foreground">{formatNumber(campaign.impressions)} Imp.</span>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
