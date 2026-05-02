@@ -112,6 +112,7 @@ export function MetaIntegrationSettings() {
   const { data: integrations, isLoading: loadingIntegrations } = useMetaIntegrations();
   const { data: pipelines, isLoading: loadingPipelines } = usePipelines();
   const { data: stages } = useStages(selectedPipelineId || undefined);
+  const { data: availableAdAccounts } = useMetaAdAccounts(userToken);
 
   const getAuthUrl = useMetaGetAuthUrl();
   const connectPage = useMetaConnectPage();
