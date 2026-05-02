@@ -185,11 +185,13 @@ export function useMetaUpdatePage() {
       pipelineId,
       stageId,
       defaultStatus,
+      selectedAdAccountIds,
     }: {
       pageId: string;
       pipelineId: string;
       stageId: string;
       defaultStatus: string;
+      selectedAdAccountIds?: string[];
     }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       
