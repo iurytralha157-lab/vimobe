@@ -254,56 +254,32 @@ interface KPICardsGridProps {
 function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits }: KPICardsGridProps) {
   if (isLoading) {
     return (
-      <>
-        <div className="col-span-2 grid grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={`top-${i}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-6 w-12" />
-                  </div>
-                  <Skeleton className="h-8 w-8 rounded-lg" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="col-span-2 grid grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={`bot-${i}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-6 w-12" />
-                  </div>
-                  <Skeleton className="h-8 w-8 rounded-lg" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </>
+      <div className="grid grid-cols-7 gap-2">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Card key={`skeleton-${i}`}>
+            <CardContent className="p-2 sm:p-3">
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     );
   }
 
-  const topKpis = [
+  const allKpis = [
     { title: 'Leads', value: data.totalLeads, trend: data.leadsTrend, icon: Users, tooltip: `Total de leads - ${periodLabel}`, format: 'number', color: 'primary' },
     { title: 'Conversão', value: data.conversionRate, trend: data.conversionTrend, icon: Target, tooltip: 'Taxa de conversão', format: 'percent', color: 'chart-2' },
     { title: 'Ganhos', value: data.closedLeads, trend: data.closedTrend, icon: CheckCircle2, tooltip: `Leads convertidos - ${periodLabel}`, format: 'number', color: 'chart-3' },
     { title: 'Tempo Resp.', value: data.avgResponseTime, icon: Clock, tooltip: 'Tempo médio de resposta', format: 'time', color: 'chart-4' },
-  ];
-
-  const bottomKpis = [
     { title: 'VGV', value: data.totalSalesValue, icon: DollarSign, tooltip: `Valor em vendas - ${periodLabel}`, format: 'currency', color: 'chart-5' },
     { title: 'Imóveis', value: propertyCount ?? 0, icon: Building2, tooltip: 'Total de imóveis cadastrados', format: 'number', color: 'chart-1' },
-    { title: 'Visitas ao Site', value: siteVisits ?? 0, icon: Eye, tooltip: `Visitas ao site no período - ${periodLabel}`, format: 'number', color: 'chart-2' },
+    { title: 'Visitas', value: siteVisits ?? 0, icon: Eye, tooltip: `Visitas ao site no período - ${periodLabel}`, format: 'number', color: 'chart-2' },
   ];
 
   const renderKPI = (kpi: any) => {
-    const Icon = kpi.icon;
     const hasTrend = kpi.trend !== undefined && kpi.trend !== 0;
     const isPositive = (kpi.trend ?? 0) >= 0;
 
@@ -311,37 +287,29 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits 
       <TooltipProvider key={kpi.title}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Card className="card-hover cursor-default h-full">
-              <CardContent className="p-3 sm:p-4 h-full flex items-center">
-                <div className="flex items-center justify-between gap-2 w-full">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{kpi.title}</p>
-                    <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-0.5 truncate">
-                      {formatKPIValue(kpi.value, kpi.format)}
-                    </p>
-                    {hasTrend && (
-                      <div className="flex items-center gap-0.5 mt-0.5">
-                        {isPositive ? (
-                          <TrendingUp className="h-3 w-3 text-emerald-500" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3 text-destructive" />
-                        )}
-                        <span className={cn(
-                          "text-[11px] sm:text-xs font-medium",
-                          isPositive ? "text-emerald-500" : "text-destructive"
-                        )}>
-                          {kpi.trend! > 0 ? '+' : ''}{kpi.trend}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.1)` }}
-                  >
-                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" style={{ color: `hsl(var(--${kpi.color}))` }} />
-                  </div>
+            <Card className="card-hover cursor-default h-full border-none bg-card/50 backdrop-blur-sm shadow-none ring-1 ring-border/50">
+              <CardContent className="p-2 sm:p-3 h-full flex flex-col justify-center">
+                <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wider truncate mb-1">{kpi.title}</p>
+                <div className="flex items-baseline gap-1.5 overflow-hidden">
+                  <p className="text-base sm:text-lg lg:text-xl font-bold truncate">
+                    {formatKPIValue(kpi.value, kpi.format)}
+                  </p>
                 </div>
+                {hasTrend && (
+                  <div className="flex items-center gap-0.5 mt-1">
+                    {isPositive ? (
+                      <TrendingUp className="h-2.5 w-2.5 text-emerald-500" />
+                    ) : (
+                      <TrendingDown className="h-2.5 w-2.5 text-destructive" />
+                    )}
+                    <span className={cn(
+                      "text-[10px] font-bold",
+                      isPositive ? "text-emerald-500" : "text-destructive"
+                    )}>
+                      {kpi.trend! > 0 ? '+' : ''}{kpi.trend}%
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TooltipTrigger>
@@ -354,15 +322,8 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits 
   };
 
   return (
-    <>
-      {/* Row 1: 4 KPIs */}
-      <div className="col-span-2 grid grid-cols-4 gap-3">
-        {topKpis.map(renderKPI)}
-      </div>
-      {/* Row 2: 3 KPIs */}
-      <div className="col-span-2 grid grid-cols-3 gap-3">
-        {bottomKpis.map(renderKPI)}
-      </div>
-    </>
+    <div className="grid grid-cols-7 gap-2">
+      {allKpis.map(renderKPI)}
+    </div>
   );
 }
