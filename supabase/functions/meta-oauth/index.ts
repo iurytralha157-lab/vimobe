@@ -503,7 +503,7 @@ serve(async (req) => {
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
             access_token: page.access_token,
-            subscribed_fields: "leadgen"
+            subscribed_fields: "leadgen,messages,messaging_postbacks,feed"
           }).toString()
         });
         const subscribeData = await subscribeResponse.json();
