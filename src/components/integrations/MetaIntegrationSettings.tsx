@@ -100,6 +100,7 @@ export function MetaIntegrationSettings() {
   const [showPageSelector, setShowPageSelector] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPage, setEditingPage] = useState<string | null>(null);
+  const [selectedAdAccountIds, setSelectedAdAccountIds] = useState<string[]>([]);
   const [expandedIntegrations, setExpandedIntegrations] = useState<Set<string>>(new Set());
   
   // Form state
