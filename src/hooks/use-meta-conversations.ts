@@ -121,7 +121,8 @@ export function useSendMetaMessage() {
           action: "sendMessage",
           platform,
           recipientId: recipientExternalId,
-          text
+          text,
+          conversationId
         }
       });
 
