@@ -65,6 +65,8 @@ import {
   useMetaUpdatePage,
   useMetaDisconnectPage,
   useMetaTogglePage,
+  useMetaAdAccounts,
+  useMetaUpdateAdAccounts,
   MetaPage,
   MetaIntegration,
 } from "@/hooks/use-meta-integration";
