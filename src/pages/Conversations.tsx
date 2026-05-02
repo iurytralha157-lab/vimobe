@@ -699,6 +699,7 @@ export default function Conversations() {
                       availableTags={availableTags || []} 
                       onAddTag={() => {}} 
                       onRemoveTag={() => {}} 
+                      onCreateLead={() => {}}
                     />
                   ))
                 )
