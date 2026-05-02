@@ -381,7 +381,17 @@ export default function CampaignDashboard() {
                   ) : campaignStats.length > 0 ? (
                     campaignStats.map((campaign) => (
                       <tr key={campaign.id} className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 font-medium">{campaign.name}</td>
+                        <td className="py-3 font-medium">
+                          <div className="flex flex-col">
+                            <span>{campaign.name}</span>
+                            <span className="text-[10px] text-muted-foreground">ID: {campaign.id}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 text-right">
+                          <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
+                            Ativa
+                          </Badge>
+                        </td>
                         <td className="py-3 text-right">{formatCurrency(campaign.spend)}</td>
                         <td className="py-3 text-right">{formatNumber(campaign.leads)}</td>
                         <td className="py-3 text-right">
@@ -389,7 +399,7 @@ export default function CampaignDashboard() {
                             {formatCurrency(campaign.cpl)}
                           </Badge>
                         </td>
-                        <td className="py-3 text-right text-muted-foreground">{formatNumber(campaign.impressions)}</td>
+                        <td className="py-3 text-right text-muted-foreground">{formatNumber(campaign.reach)}</td>
                       </tr>
                     ))
                   ) : (
