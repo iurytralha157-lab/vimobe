@@ -59,12 +59,23 @@ export default function CampaignDashboard() {
   const { data: insightData, isLoading } = useCampaignInsights(filters);
   const syncMutation = useSyncCampaignInsights();
 
-  const handleSync = () => {
+  const handleSync = React.useCallback(() => {
     syncMutation.mutate({
       dateStart: filters.dateRange.from.toISOString().split('T')[0],
       dateStop: filters.dateRange.to.toISOString().split('T')[0]
     });
-  };
+  }, [filters.dateRange.from, filters.dateRange.to, syncMutation]);
+
+  // Automatic sync on mount or date change
+  React.useEffect(() => {
+    // Only sync automatically if we haven't synced in the last hour or if explicitly requested
+    const lastSyncTime = insightData?.lastSync ? new Date(insightData.lastSync).getTime() : 0;
+    const oneHourAgo = new Date().getTime() - 60 * 60 * 1000;
+    
+    if (lastSyncTime < oneHourAgo && !isLoading && !syncMutation.isPending) {
+      handleSync();
+    }
+  }, [filters.dateRange.from, filters.dateRange.to, insightData?.lastSync]);
 
   const totals = useMemo(() => {
     if (!insightData?.summary) return { spend: 0, leads: 0, impressions: 0, reach: 0, cpl: 0 };
