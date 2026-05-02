@@ -422,6 +422,35 @@ export function MetaIntegrationSettings() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {availableAdAccounts && availableAdAccounts.length > 0 && (
+              <div className="space-y-2">
+                <Label>Contas de Anúncios para Sincronizar</Label>
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
+                  {availableAdAccounts.map((account: any) => (
+                    <div key={account.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={account.id}
+                        checked={selectedAdAccountIds.includes(account.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAdAccountIds([...selectedAdAccountIds, account.id]);
+                          } else {
+                            setSelectedAdAccountIds(selectedAdAccountIds.filter(id => id !== account.id));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <label htmlFor={account.id} className="text-sm font-medium leading-none cursor-pointer">
+                        {account.name} <span className="text-[10px] text-muted-foreground">({account.id})</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Selecione as contas que deseja monitorar no Dashboard.</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>{meta.defaultPipeline}</Label>
