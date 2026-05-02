@@ -265,19 +265,29 @@ export function MetaIntegrationSettings() {
               <p className="font-semibold text-sm leading-tight">{meta.title}</p>
               <p className="text-xs text-muted-foreground truncate">{meta.description}</p>
             </div>
-            <Button
-              size="sm"
-              className="h-8 text-xs px-2 shrink-0"
-              onClick={handleConnect}
-              disabled={isConnecting || getAuthUrl.isPending}
-            >
-              {isConnecting ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Link className="h-3.5 w-3.5" />
-              )}
-              <span className="hidden sm:inline ml-1">{hasConnectedPages ? meta.addPage : meta.connect}</span>
-            </Button>
+            <div className="flex gap-1.5 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs px-2"
+                onClick={() => handleConnect(false)}
+                disabled={isConnecting || getAuthUrl.isPending}
+              >
+                <Facebook className="h-3.5 w-3.5 text-blue-600" />
+                <span className="hidden sm:inline ml-1">{hasConnectedPages ? meta.addPage : meta.connect}</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs px-2"
+                onClick={() => handleConnect(true)}
+                disabled={isConnecting || getAuthUrl.isPending}
+                title="Requer Instagram Business vinculado a uma Página do Facebook"
+              >
+                <Instagram className="h-3.5 w-3.5 text-pink-600" />
+                <span className="hidden sm:inline ml-1">Instagram</span>
+              </Button>
+            </div>
           </div>
           {hasConnectedPages ? (
             <div className="flex items-center gap-1.5 mt-2 pl-1">
