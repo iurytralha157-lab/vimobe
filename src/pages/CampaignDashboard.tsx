@@ -84,9 +84,13 @@ export default function CampaignDashboard() {
       name: c.campaign_name,
       spend: c.spend || 0,
       leads: c.leads_count,
+      conversations: c.conversations_count || 0,
       impressions: c.impressions || 0,
       reach: c.reach || 0,
-      cpl: c.cpl || 0
+      cpl: c.cpl || 0,
+      status: c.status,
+      budget: c.budget,
+      budgetType: c.budget_type
     }));
   }, [insightData]);
 
