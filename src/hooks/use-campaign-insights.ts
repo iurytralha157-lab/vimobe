@@ -231,7 +231,7 @@ export function useCampaignInsights(filters: DashboardFilters) {
 
       const { data: insightsRaw } = await (supabase as any)
         .from("meta_campaign_insights")
-        .select("campaign_id, adset_id, ad_id, level, spend, impressions, reach, leads_count, cpl, fetched_at")
+        .select("campaign_id, campaign_name, adset_id, adset_name, ad_id, ad_name, level, spend, impressions, reach, leads_count, cpl, fetched_at, creative_url, creative_video_url")
         .eq("organization_id", orgId)
         .gte("date_start", dateFromDate)
         .lte("date_stop", dateToDate);
