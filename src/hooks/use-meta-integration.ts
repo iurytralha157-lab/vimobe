@@ -153,6 +153,7 @@ export function useMetaConnectPage() {
             stage_id: stageId,
             default_status: defaultStatus,
             ad_account_id: adAccountId,
+            selected_ad_accounts: selectedAdAccountIds,
           }),
         }
       );
