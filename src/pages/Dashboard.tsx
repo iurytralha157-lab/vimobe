@@ -154,7 +154,7 @@ export default function Dashboard() {
         <div className="hidden lg:grid lg:grid-cols-12 gap-3 flex-1 min-h-0">
           {/* Left column (col 1-8): KPIs + Activities + Evolution */}
           <div className="col-span-8 flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3 auto-rows-min">
+            <div className="flex flex-col gap-3">
               <KPICardsGrid 
                 data={kpiData} 
                 isLoading={statsLoading} 
