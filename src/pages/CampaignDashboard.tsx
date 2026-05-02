@@ -78,10 +78,11 @@ export default function CampaignDashboard() {
   }, [filters.dateRange.from, filters.dateRange.to, insightData?.lastSync]);
 
   const totals = useMemo(() => {
-    if (!insightData?.summary) return { spend: 0, leads: 0, impressions: 0, reach: 0, cpl: 0 };
+    if (!insightData?.summary) return { spend: 0, leads: 0, conversations: 0, impressions: 0, reach: 0, cpl: 0 };
     return {
       spend: insightData.summary.totalSpend || 0,
       leads: insightData.summary.totalLeads || 0,
+      conversations: insightData.summary.conversations_count || 0,
       impressions: insightData.summary.totalImpressions || 0,
       reach: insightData.summary.totalReach || 0,
       cpl: insightData.summary.avgCpl || 0
