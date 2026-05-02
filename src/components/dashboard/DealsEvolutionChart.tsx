@@ -159,7 +159,7 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
           Evolução de Negócios
         </CardTitle>
       </CardHeader>
-      <CardContent className="pb-4 flex-1 flex flex-col px-0 sm:px-[10px]">
+      <CardContent className="pb-4 flex-1 flex flex-col px-0">
         {/* Chart */}
         <div className="flex-1 min-h-[300px] lg:min-h-0 w-full h-full">
           <ResponsiveContainer width="100%" height={isMobile ? 300 : "100%"} onResize={handleResize}>
@@ -167,8 +167,8 @@ export function DealsEvolutionChart({ data, isLoading }: DealsEvolutionChartProp
               data={data}
               margin={{ 
                 top: 10, 
-                right: isMobile ? 10 : 10, 
-                left: isMobile ? -15 : 12, 
+                right: isMobile ? 10 : 40, 
+                left: isMobile ? -15 : 0, 
                 bottom: 0 
               }}
             >
