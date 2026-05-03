@@ -125,6 +125,8 @@ export function MetaIntegrationSettings() {
   // Handle OAuth callback data from URL
   useEffect(() => {
     const oauthData = searchParams.get("meta_oauth_data");
+    const igOauthData = searchParams.get("ig_oauth_data");
+
     if (oauthData) {
       try {
         const decoded = JSON.parse(atob(decodeURIComponent(oauthData))) as OAuthData;
@@ -142,10 +144,29 @@ export function MetaIntegrationSettings() {
           toast.error(decoded.error);
         }
         
-        // Clear the URL params
         setSearchParams({});
       } catch (e) {
         console.error("Failed to parse OAuth data:", e);
+        setSearchParams({});
+      }
+    }
+
+    if (igOauthData) {
+      try {
+        const decoded = JSON.parse(atob(decodeURIComponent(igOauthData))) as {
+          success: boolean;
+          username?: string;
+          instagram_user_id?: string;
+          error?: string;
+        };
+        if (decoded.success) {
+          toast.success(`Instagram conectado: @${decoded.username || decoded.instagram_user_id}`);
+        } else if (decoded.error) {
+          toast.error(`Erro Instagram: ${decoded.error}`);
+        }
+        setSearchParams({});
+      } catch (e) {
+        console.error("Failed to parse IG OAuth data:", e);
         setSearchParams({});
       }
     }
