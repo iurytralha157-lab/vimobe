@@ -279,7 +279,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, code, redirect_uri, page_id, pipeline_id, stage_id, default_status, access_token, is_active, return_url, include_instagram } = body;
+    const { action, code, redirect_uri, page_id, pipeline_id, stage_id, default_status, access_token, is_active, return_url } = body;
 
     switch (action) {
       case "get_auth_url": {
@@ -293,7 +293,7 @@ serve(async (req) => {
         };
         const state = btoa(JSON.stringify(stateData));
         
-        const baseScopes = [
+        const scopes = [
           "pages_show_list",
           "pages_read_engagement",
           "pages_manage_ads",
@@ -302,13 +302,7 @@ serve(async (req) => {
           "leads_retrieval",
           "ads_management",
           "business_management",
-        ];
-        const instagramScopes = [
-          "instagram_basic",
-          "instagram_manage_messages",
-          "instagram_manage_comments",
-        ];
-        const scopes = (include_instagram ? [...baseScopes, ...instagramScopes] : baseScopes).join(",");
+        ].join(",");
 
         const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?` +
           `client_id=${META_APP_ID}` +
