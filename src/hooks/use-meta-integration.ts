@@ -58,8 +58,10 @@ export function useMetaGetAuthUrl() {
       const includeInstagram = typeof params === "string" ? false : !!params.includeInstagram;
       const { data: sessionData } = await supabase.auth.getSession();
 
+      const endpoint = includeInstagram ? "instagram-oauth" : "meta-oauth";
+
       const response = await fetch(
-        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-oauth`,
+        `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/${endpoint}`,
         {
           method: "POST",
           headers: {
@@ -69,7 +71,6 @@ export function useMetaGetAuthUrl() {
           body: JSON.stringify({
             action: "get_auth_url",
             return_url: returnUrl,
-            include_instagram: includeInstagram,
           }),
         }
       );
