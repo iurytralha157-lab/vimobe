@@ -304,7 +304,7 @@ export function MetaIntegrationSettings() {
                 className="h-8 text-xs px-2"
                 onClick={() => handleConnect(true)}
                 disabled={isConnecting || getAuthUrl.isPending}
-                title="Conexão independente — exige app Instagram Business configurado no painel Meta"
+                title="Conexão com Instagram — exige conta Business vinculada"
               >
                 <Instagram className="h-3.5 w-3.5 text-pink-600" />
                 <span className="hidden sm:inline ml-1">Instagram</span>
@@ -325,7 +325,7 @@ export function MetaIntegrationSettings() {
             </div>
           )}
           <p className="text-[11px] text-muted-foreground mt-2 pl-1">
-            Facebook e Instagram são integrações independentes — se uma falhar, a outra continua funcionando.
+            As permissões do Instagram agora são opcionais e independentes da integração de Páginas/Facebook.
           </p>
         </CardContent>
       </Card>
