@@ -29,7 +29,7 @@ export function SubscriptionTab() {
 
   const [billingInfo, setBillingInfo] = useState({
     name: '', taxId: '', cep: '', endereco: '', numero: '',
-    complemento: '', bairro: '', cidade: '', uf: '',
+    complemento: '', bairro: '', cidade: '', uf: '', email: '', telefone: ''
   });
 
   useEffect(() => {
@@ -56,6 +56,8 @@ export function SubscriptionTab() {
             bairro: org.bairro || '',
             cidade: org.cidade || '',
             uf: org.uf || '',
+            email: org.email || '',
+            telefone: org.telefone || org.whatsapp || '',
           });
         }
       } catch (error) { console.error(error); } finally { setLoading(false); }
@@ -73,10 +75,10 @@ export function SubscriptionTab() {
       const body: any = {
         organization_id: organization?.id,
         billing_type: type,
-        holder_email: profile?.email,
+        holder_email: billingInfo.email || profile?.email,
         holder_cpf_cnpj: billingInfo.taxId,
         holder_name: billingInfo.name,
-        holder_phone: profile?.phone || (organization as any)?.telefone || (organization as any)?.whatsapp,
+        holder_phone: billingInfo.telefone || profile?.phone || (organization as any)?.telefone || (organization as any)?.whatsapp,
         holder_postal_code: billingInfo.cep,
         holder_address_number: billingInfo.numero,
       };
@@ -109,6 +111,7 @@ export function SubscriptionTab() {
       endereco: profile.endereco || '', numero: profile.numero || '',
       complemento: profile.complemento || '', bairro: profile.bairro || '',
       cidade: profile.cidade || '', uf: profile.uf || '',
+      email: profile.email || '', telefone: profile.phone || '',
     });
     toast.info('Dados importados do seu perfil');
   };
@@ -126,6 +129,8 @@ export function SubscriptionTab() {
       bairro: org.bairro || '',
       cidade: org.cidade || '', 
       uf: org.uf || '',
+      email: org.email || '',
+      telefone: org.telefone || org.whatsapp || '',
     });
     toast.info('Dados importados da empresa');
   };
@@ -177,9 +182,9 @@ export function SubscriptionTab() {
                 <div className="space-y-1">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-primary" />
-                    {plan?.name || 'Vimob'}
+                    {plan?.name || org?.plan_name || 'Plano de Assinatura'}
                   </CardTitle>
-                  <CardDescription>{plan?.description || 'Assinatura do sistema'}</CardDescription>
+                  <CardDescription>{plan?.description || 'Gestão da sua assinatura Vimob'}</CardDescription>
                 </div>
                 <Badge variant={s.variant} className="uppercase">{s.label}</Badge>
               </div>
@@ -187,12 +192,12 @@ export function SubscriptionTab() {
             <CardContent className="pt-6">
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold">Próximo Vencimento</p>
-                    <p className="text-lg font-bold">{nextBilling ? format(new Date(nextBilling), "dd 'de' MMMM, yyyy", { locale: ptBR }) : 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Vencimento da Fatura</p>
+                    <p className="text-lg font-bold">{nextBilling ? format(new Date(nextBilling + 'T12:00:00'), "dd 'de' MMMM, yyyy", { locale: ptBR }) : 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold">Valor</p>
-                    <p className="text-lg font-bold">{Number(plan?.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês</p>
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Valor Mensal</p>
+                    <p className="text-lg font-bold">{Number(plan?.price || org?.subscription_value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                   </div>
                </div>
             </CardContent>
@@ -253,8 +258,8 @@ export function SubscriptionTab() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Realizar Pagamento</CardTitle>
-                <CardDescription>Escolha o método de pagamento para renovar ou ativar sua assinatura</CardDescription>
+                <CardTitle>Pagamento de Assinatura</CardTitle>
+                <CardDescription>Selecione o método de pagamento para sua mensalidade</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="PIX">
@@ -267,14 +272,14 @@ export function SubscriptionTab() {
                   <TabsContent value="PIX" className="pt-6 space-y-4">
                     <p className="text-sm text-muted-foreground">Liberação imediata após o pagamento.</p>
                     <Button onClick={() => handleCheckout('PIX')} disabled={submitting} className="w-full">
-                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar QR Code PIX
+                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar QR Code PIX agora
                     </Button>
                   </TabsContent>
 
                   <TabsContent value="BOLETO" className="pt-6 space-y-4">
                     <p className="text-sm text-muted-foreground">Compensação em até 48h úteis.</p>
                     <Button onClick={() => handleCheckout('BOLETO')} disabled={submitting} className="w-full">
-                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar Boleto
+                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar Boleto Bancário
                     </Button>
                   </TabsContent>
 
