@@ -459,17 +459,17 @@ interface KPICardProps {
 }
 
 function KPICard({ title, value, isLoading }: KPICardProps) {
+  if (isLoading) return <Skeleton className="h-24 w-full rounded-xl" />;
+  
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          {isLoading ? (
-            <Skeleton className="h-7 w-20" />
-          ) : (
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
-          )}
-        </div>
+    <Card className="overflow-hidden border-none shadow-sm bg-card hover:shadow-md transition-all duration-300 group">
+      <CardContent className="p-5 flex flex-col items-center justify-center text-center gap-1">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
+          {title}
+        </p>
+        <p className="text-2xl font-bold text-foreground tracking-tight">
+          {value}
+        </p>
       </CardContent>
     </Card>
   );
