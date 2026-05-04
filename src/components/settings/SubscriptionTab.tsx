@@ -29,7 +29,7 @@ export function SubscriptionTab() {
 
   const [billingInfo, setBillingInfo] = useState({
     name: '', taxId: '', cep: '', endereco: '', numero: '',
-    complemento: '', bairro: '', cidade: '', uf: '',
+    complemento: '', bairro: '', cidade: '', uf: '', email: '', telefone: ''
   });
 
   useEffect(() => {
@@ -56,6 +56,8 @@ export function SubscriptionTab() {
             bairro: org.bairro || '',
             cidade: org.cidade || '',
             uf: org.uf || '',
+            email: org.email || '',
+            telefone: org.telefone || org.whatsapp || '',
           });
         }
       } catch (error) { console.error(error); } finally { setLoading(false); }
@@ -73,10 +75,10 @@ export function SubscriptionTab() {
       const body: any = {
         organization_id: organization?.id,
         billing_type: type,
-        holder_email: profile?.email,
+        holder_email: billingInfo.email || profile?.email,
         holder_cpf_cnpj: billingInfo.taxId,
         holder_name: billingInfo.name,
-        holder_phone: profile?.phone || (organization as any)?.telefone || (organization as any)?.whatsapp,
+        holder_phone: billingInfo.telefone || profile?.phone || (organization as any)?.telefone || (organization as any)?.whatsapp,
         holder_postal_code: billingInfo.cep,
         holder_address_number: billingInfo.numero,
       };
