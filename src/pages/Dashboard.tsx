@@ -275,7 +275,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits,
             </Card>
           ))}
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-3")}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={`skeleton-bottom-${i}`}>
               <CardContent className="p-4">
