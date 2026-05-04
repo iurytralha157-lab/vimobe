@@ -76,7 +76,7 @@ export function SubscriptionTab() {
         holder_email: profile?.email,
         holder_cpf_cnpj: billingInfo.taxId,
         holder_name: billingInfo.name,
-        holder_phone: profile?.phone || organization?.telefone,
+        holder_phone: profile?.phone || (organization as any)?.telefone || (organization as any)?.whatsapp,
         holder_postal_code: billingInfo.cep,
         holder_address_number: billingInfo.numero,
       };
