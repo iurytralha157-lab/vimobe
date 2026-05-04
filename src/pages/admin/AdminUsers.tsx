@@ -8,7 +8,10 @@ import {
   MoreHorizontal,
   UserX,
   UserCheck,
-  Trash2
+  Trash2,
+  Info,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -17,6 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +50,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { getFriendlyErrorMessage } from '@/lib/error-handler';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 export default function AdminUsers() {
   const { allUsers, loadingUsers, organizations, updateUser, deleteUser } = useSuperAdmin();
@@ -56,6 +68,12 @@ export default function AdminUsers() {
     userId: '',
     userName: '',
   });
+  const [detailsDialog, setDetailsDialog] = useState<{ open: boolean; user: any; loading: boolean }>({
+    open: false,
+    user: null,
+    loading: false,
+  });
+  const [showCpf, setShowCpf] = useState(false);
 
   const filteredUsers = allUsers?.filter(user => {
     // Search filter
@@ -105,6 +123,23 @@ export default function AdminUsers() {
       toast.success(currentStatus ? 'Usuário desativado' : 'Usuário ativado');
     } catch (error) {
       toast.error(getFriendlyErrorMessage(error));
+    }
+  };
+
+  const handleViewDetails = async (userId: string) => {
+    setDetailsDialog({ open: true, user: null, loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      setDetailsDialog({ open: true, user: data, loading: false });
+    } catch (error) {
+      toast.error('Erro ao carregar detalhes do usuário');
+      setDetailsDialog(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -254,6 +289,13 @@ export default function AdminUsers() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem 
+                              onClick={() => handleViewDetails(user.id)}
+                            >
+                              <Info className="h-4 w-4 mr-2" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
                               onClick={() => handleToggleStatus(user.id, user.is_active)}
                             >
                               {user.is_active ? (
@@ -313,6 +355,121 @@ export default function AdminUsers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Details Dialog */}
+      <Dialog open={detailsDialog.open} onOpenChange={(open) => setDetailsDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Usuário</DialogTitle>
+            <DialogDescription>
+              Informações completas cadastradas no perfil.
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailsDialog.loading ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              Carregando dados...
+            </div>
+          ) : detailsDialog.user ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b pb-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={detailsDialog.user.avatar_url || undefined} />
+                  <AvatarFallback className="text-xl">
+                    {getInitials(detailsDialog.user.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold">{detailsDialog.user.name}</h3>
+                  <p className="text-muted-foreground">{detailsDialog.user.email}</p>
+                  <div className="mt-1 flex gap-2">
+                    {getRoleBadge(detailsDialog.user.role)}
+                    {!detailsDialog.user.is_active && <Badge variant="outline">Inativo</Badge>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm border-b pb-1">Informações Pessoais</h4>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">CPF</Label>
+                    <div className="relative">
+                      <Input 
+                        readOnly 
+                        value={detailsDialog.user.cpf || 'Não informado'} 
+                        type={showCpf ? "text" : "password"}
+                      />
+                      {detailsDialog.user.cpf && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full px-3"
+                          onClick={() => setShowCpf(!showCpf)}
+                        >
+                          {showCpf ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Telefone</Label>
+                      <p className="text-sm font-medium">{detailsDialog.user.phone || 'N/I'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">WhatsApp</Label>
+                      <p className="text-sm font-medium">{detailsDialog.user.whatsapp || 'N/I'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm border-b pb-1">Endereço</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">CEP</Label>
+                      <p className="text-sm font-medium">{detailsDialog.user.cep || 'N/I'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">UF</Label>
+                      <p className="text-sm font-medium">{detailsDialog.user.uf || 'N/I'}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Endereço</Label>
+                    <p className="text-sm font-medium">
+                      {detailsDialog.user.endereco ? `${detailsDialog.user.endereco}, ${detailsDialog.user.numero || 'S/N'}` : 'N/I'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Bairro / Cidade</Label>
+                    <p className="text-sm font-medium">
+                      {detailsDialog.user.bairro ? `${detailsDialog.user.bairro} - ${detailsDialog.user.cidade || ''}` : 'N/I'}
+                    </p>
+                  </div>
+                  {detailsDialog.user.complemento && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Complemento</Label>
+                      <p className="text-sm font-medium">{detailsDialog.user.complemento}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button variant="outline" onClick={() => setDetailsDialog(prev => ({ ...prev, open: false }))}>
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum dado encontrado.
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

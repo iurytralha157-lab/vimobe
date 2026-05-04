@@ -67,6 +67,7 @@ export function AccountTab() {
   const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCpf, setShowCpf] = useState(false);
   
   // Organization states
   const [savingOrg, setSavingOrg] = useState(false);
@@ -352,11 +353,28 @@ export function AccountTab() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t.settings.profile.cpf}</Label>
-                  <Input 
-                    placeholder="000.000.000-00"
-                    value={profileForm.cpf}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, cpf: e.target.value }))}
-                  />
+                  <div className="relative">
+                    <Input 
+                      type={showCpf ? "text" : "password"}
+                      placeholder="000.000.000-00"
+                      value={profileForm.cpf}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, cpf: e.target.value }))}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowCpf(!showCpf)}
+                    >
+                      {showCpf ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
