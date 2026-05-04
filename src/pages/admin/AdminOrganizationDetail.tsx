@@ -100,7 +100,7 @@ export default function AdminOrganizationDetail() {
     plan_id: null as string | null,
     subscription_value: 0,
     billing_day: 1,
-    next_billing_date: '',
+    next_billing_date: null as string | null,
   });
 
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -147,7 +147,7 @@ export default function AdminOrganizationDetail() {
         plan_id: org.plan_id || null,
         subscription_value: org.subscription_value || 0,
         billing_day: org.billing_day || 1,
-        next_billing_date: org.next_billing_date || '',
+        next_billing_date: org.next_billing_date || null,
       });
     }
   }, [org]);
@@ -165,7 +165,8 @@ export default function AdminOrganizationDetail() {
   const handleSave = () => {
     updateOrganization.mutate({
       id: org.id,
-      ...formData
+      ...formData,
+      next_billing_date: formData.next_billing_date || null,
     });
   };
 
