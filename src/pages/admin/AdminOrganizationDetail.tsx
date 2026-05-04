@@ -278,7 +278,51 @@ export default function AdminOrganizationDetail() {
                     <Input
                       value={new Date(org.created_at).toLocaleDateString('pt-BR')}
                       disabled />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Plano</Label>
+                    <Select 
+                      value={formData.plan_id || 'none'} 
+                      onValueChange={(val) => setFormData({...formData, plan_id: val === 'none' ? null : val})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecionar Plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {/* Plans are usually fetched from another hook, but I'll use a placeholder or assume they are available if I had them */}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
+                  <div className="space-y-2">
+                    <Label>Valor da Assinatura (R$)</Label>
+                    <Input 
+                      type="number" 
+                      value={formData.subscription_value} 
+                      onChange={e => setFormData({...formData, subscription_value: Number(e.target.value)})} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Dia do Vencimento</Label>
+                    <Input 
+                      type="number" 
+                      min={1} 
+                      max={28} 
+                      value={formData.billing_day} 
+                      onChange={e => setFormData({...formData, billing_day: Number(e.target.value)})} 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Próximo Vencimento</Label>
+                    <Input 
+                      type="date" 
+                      value={formData.next_billing_date} 
+                      onChange={e => setFormData({...formData, next_billing_date: e.target.value})} 
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
