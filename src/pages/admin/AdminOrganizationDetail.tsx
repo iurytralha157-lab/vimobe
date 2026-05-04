@@ -172,11 +172,34 @@ export default function AdminOrganizationDetail() {
 
   const handlePlanChange = (planId: string) => {
     const selectedPlan = plans?.find(p => p.id === planId);
-    setFormData(prev => ({
-      ...prev,
-      plan_id: planId === 'none' ? null : planId,
-      subscription_value: selectedPlan ? selectedPlan.price : prev.subscription_value
-    }));
+    if (!selectedPlan && planId === 'none') {
+      setFormData(prev => ({
+        ...prev,
+        plan_id: null,
+      }));
+      return;
+    }
+
+    if (selectedPlan) {
+      // Calculate billing day from creation date if not already set or default
+      const createdAt = new Date(org.created_at);
+      const day = createdAt.getDate();
+      
+      // Calculate next billing date (same day next month)
+      const nextDate = new Date();
+      nextDate.setDate(day);
+      if (nextDate <= new Date()) {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        plan_id: planId,
+        subscription_value: selectedPlan.price,
+        billing_day: prev.billing_day || day,
+        next_billing_date: nextDate.toISOString().split('T')[0]
+      }));
+    }
   };
 
   const handleImpersonate = () => {
@@ -320,14 +343,23 @@ export default function AdminOrganizationDetail() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Dia do Vencimento</Label>
+                    <Label>Dia do Vencimento (Dia do mês)</Label>
                     <Input 
                       type="number" 
                       min={1} 
                       max={28} 
                       value={formData.billing_day} 
-                      onChange={e => setFormData({...formData, billing_day: Number(e.target.value)})} 
+                      onChange={e => {
+                        const day = Number(e.target.value);
+                        const nextDate = new Date();
+                        nextDate.setDate(day);
+                        if (nextDate <= new Date()) {
+                          nextDate.setMonth(nextDate.getMonth() + 1);
+                        }
+                        setFormData({...formData, billing_day: day, next_billing_date: nextDate.toISOString().split('T')[0]});
+                      }} 
                     />
+                    <p className="text-xs text-muted-foreground">O padrão é o dia da criação ({new Date(org.created_at).getDate()})</p>
                   </div>
 
                   <div className="space-y-2">
