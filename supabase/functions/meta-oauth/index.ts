@@ -1,3 +1,6 @@
+// ⚠️ ESTE FLUXO É EXCLUSIVO DO FACEBOOK (Páginas + Anúncios + Lead Ads).
+// NÃO adicione escopos `instagram_*` aqui — eles vivem em `instagram-oauth/index.ts`.
+// Misturar os dois fluxos quebra o login OAuth do Meta ("Conteúdo não disponível").
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
