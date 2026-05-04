@@ -97,19 +97,30 @@ function preloadCoreCrmPages() {
   void import("./pages/Conversations");
 }
 
-function isCustomDomain(): boolean {
+function getPublicSiteMode(): "custom-domain" | "slug" | null {
   const hostname = window.location.hostname;
   const pathname = window.location.pathname;
-  
-  if (pathname.startsWith('/sites/')) return false;
-  
-  return (
-    hostname !== 'localhost' &&
-    !hostname.includes('lovable.app') &&
-    !hostname.includes('lovable.dev') &&
-    !hostname.includes('lovableproject.com') &&
-    !hostname.includes('vettercompany.com.br')
-  );
+
+  // Slug-based published sites accessed on the main app domain
+  if (pathname.startsWith('/sites/')) return "slug";
+
+  // Lovable preview/dev hosts → CRM
+  if (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.endsWith('.lovable.dev') ||
+    hostname.endsWith('.lovableproject.com') ||
+    hostname === 'vimobe.lovable.app' ||
+    hostname.startsWith('id-preview--')
+  ) {
+    return null;
+  }
+
+  // Main CRM domain
+  if (hostname === 'vimob.vettercompany.com.br') return null;
+
+  // Anything else (custom domain or *.vimob.vettercompany.com.br) → public site
+  return "custom-domain";
 }
 
 const queryClient = new QueryClient({
