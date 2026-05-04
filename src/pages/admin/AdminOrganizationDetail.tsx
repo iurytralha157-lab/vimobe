@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { useAdminInvitations } from '@/hooks/use-admin-invitations';
+import { useAdminPlans } from '@/hooks/use-admin-plans';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
