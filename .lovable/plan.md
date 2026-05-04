@@ -1,61 +1,44 @@
-# Configuração da Integração Instagram no CRM
+# Separar definitivamente Meta (Páginas + Ads) do Instagram
 
-Vi pelas imagens que você configurou o caso de uso **"Gerenciar mensagens e conteúdo no Instagram"** com a **API do Instagram (Instagram Business Login)** — que é um fluxo **diferente** do Facebook Login. Isso muda o que precisamos fazer no app.
+## Diagnóstico atual
+Fui ler o código de novo agora:
 
-## O que mudou na sua configuração Meta
+- `supabase/functions/meta-oauth/index.ts` (linhas 296–305): os escopos já são **somente** de Páginas/Ads/Leads — sem nenhum `instagram_*`:
+  ```
+  pages_show_list, pages_read_engagement, pages_manage_ads,
+  pages_manage_metadata, pages_messaging, leads_retrieval,
+  ads_management, business_management
+  ```
+- `src/hooks/use-meta-integration.ts`: `useMetaGetAuthUrl` já roteia por `includeInstagram` → quando `false` chama `meta-oauth`, quando `true` chama `instagram-oauth`.
+- `src/components/integrations/MetaIntegrationSettings.tsx`: o botão principal "Conectar" chama `handleConnect(false)` (Facebook puro), e existe um botão separado "Instagram" que chama `handleConnect(true)`.
 
-Você habilitou um app **separado** para o Instagram (`Vimob-IG`, ID `795281143425966`) com escopos novos:
-- `instagram_business_basic`
-- `instagram_business_manage_messages`
-- `instagram_business_manage_comments`
+**Ou seja: a separação já está feita no código.** O erro "Conteúdo não disponível" que você viu acontece quando aperta o botão **Instagram** (porque o app Instagram no painel Meta ainda não tem a Redirect URI configurada). O botão **principal do Facebook** deve continuar funcionando normalmente.
 
-Esses escopos **não funcionam** no fluxo OAuth atual do nosso CRM (que é via `facebook.com/dialog/oauth`). Eles exigem o endpoint `instagram.com/oauth/authorize`.
+## O que faço no app para garantir robustez
 
-## O que precisa ser feito no app
+### 1. Confirmar no UI que os dois fluxos estão claros
+Em `MetaIntegrationSettings.tsx`:
+- Reforçar o rótulo do botão principal para **"Conectar Facebook (Páginas + Anúncios)"**.
+- Manter o botão **"Instagram"** separado, com tooltip explicando que é independente e exige o app Instagram configurado no painel Meta.
+- Adicionar um aviso curto: "Se o Instagram não conectar, o Facebook continua funcionando normalmente."
 
-### 1. Adicionar secrets do app Instagram
-Criar dois novos secrets no Supabase:
-- `META_INSTAGRAM_APP_ID` = `795281143425966`
-- `META_INSTAGRAM_APP_SECRET` = (a "Chave secreta do app do Instagram" mostrada na tela)
+### 2. Blindar o `meta-oauth` contra regressões
+- Adicionar comentário explícito no topo do arquivo dizendo que **nenhum escopo `instagram_*` deve ser adicionado aqui** — esses ficam exclusivamente em `instagram-oauth`.
+- Garantir que o `redirect_uri` usado no exchange do Facebook seja o callback do `meta-oauth` (não o do Instagram).
 
-### 2. Nova edge function: `instagram-oauth`
-Fluxo separado do Facebook, usando endpoints corretos do Instagram:
-- Auth URL: `https://www.instagram.com/oauth/authorize` com escopos `instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments`
-- Token exchange: `https://api.instagram.com/oauth/access_token`
-- Long-lived token: `https://graph.instagram.com/access_token?grant_type=ig_exchange_token`
-- Buscar dados da conta: `https://graph.instagram.com/v21.0/me?fields=id,username,account_type`
-- Salvar token e `instagram_user_id` em `meta_integrations` (colunas já existem: `instagram_business_account_id`)
+### 3. Testar o fluxo Facebook puro
+Após o ajuste, vou:
+- Disparar o `meta-oauth` em modo `get_auth_url` via `curl_edge_functions` para confirmar que a URL gerada aponta para `facebook.com/v19.0/dialog/oauth` sem nenhum escopo de Instagram.
+- Conferir os logs da função.
 
-### 3. Atualizar `meta-oauth/index.ts`
-Reverter a tentativa anterior de incluir escopos Instagram no fluxo Facebook — eles ficam **somente** no fluxo dedicado novo. Manter Facebook/WhatsApp limpos como já está.
+### 4. Não toco em
+- `instagram-oauth/index.ts` (já existe e está separado).
+- `meta-webhook` (continua aceitando `object: page` e `object: instagram` independentemente).
+- WhatsApp e Lead Ads — sem mudanças.
 
-### 4. Webhook do Instagram
-Configurar no painel Meta (passo 3 da sua tela "Configurar webhooks"):
-- **URL de callback**: `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/meta-webhook`
-- **Verify token**: o mesmo valor já configurado para o Facebook (secret `META_VERIFY_TOKEN`)
-- Assinar campos: `messages`, `comments`, `mentions`
+## Resumo para você
+- **Sim**, são integrações separadas e já estão separadas no código.
+- O botão "Conectar Facebook" deve voltar a funcionar normalmente — independente do Instagram estar ou não configurado no painel Meta.
+- Quando você terminar de configurar a Redirect URI do app Instagram no painel Meta (`https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/instagram-oauth`), o botão Instagram passa a funcionar também, sem afetar o Facebook.
 
-Atualizar `meta-webhook/index.ts` para tratar payloads com `object: "instagram"` (estrutura diferente do Facebook Page) e gravar leads/mensagens.
-
-### 5. UI — `MetaIntegrationSettings.tsx`
-- Botão **"Conectar Instagram"** chama a nova edge function `instagram-oauth` (não mais `meta-oauth` com flag).
-- Após conectar, listar a conta IG vinculada e permitir escolher pipeline/estágio para leads gerados via DM/comentários.
-
-### 6. Passo 4 do painel Meta — "Configurar o login da empresa no Instagram"
-Você precisa clicar em **Configurar** ali e definir:
-- **URI de redirecionamento OAuth válido**: `https://iemalzlfnbouobyjwlwi.supabase.co/functions/v1/instagram-oauth`
-- **URI de cancelamento**: mesmo valor
-- **URI de desautorização**: mesmo valor
-- **URI de exclusão de dados**: mesmo valor
-
-## Status das outras integrações
-Facebook Lead Ads e WhatsApp **continuam funcionando normalmente** — esse plano só **adiciona** o canal Instagram, sem mexer nos fluxos existentes.
-
-## Pré-requisitos seus (fora do app)
-1. Conta Instagram precisa ser **Business ou Creator** vinculada à Página do Facebook.
-2. Após implementarmos, você adiciona a conta no passo 2 ("Adicionar conta") do painel.
-3. Para uso em produção (clientes externos), é preciso submeter os escopos `instagram_business_*` no **App Review**. Em modo Dev, funciona só com contas de teste/admins do app.
-
----
-
-Posso seguir? Se sim, vou precisar que você me passe o **App Secret do Instagram** (campo "Chave secreta do app do Instagram" na imagem) para eu adicionar como secret.
+Posso seguir?
