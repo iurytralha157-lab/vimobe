@@ -336,7 +336,7 @@ export function SubscriptionTab() {
                 <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 flex items-start gap-2 mb-2">
                   <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
                   <p className="text-xs text-warning-foreground font-medium">
-                    Complete seus dados para automatizar seus próximos pagamentos.
+                    Ainda não temos seus dados de faturamento configurados. Preencha abaixo para automatizar seus próximos pagamentos.
                   </p>
                 </div>
               )}
