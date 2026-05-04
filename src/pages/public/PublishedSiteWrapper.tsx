@@ -14,11 +14,7 @@ const PublicAbout = lazy(() => import('./PublicAbout'));
 const PublicContact = lazy(() => import('./PublicContact'));
 const PublicFavorites = lazy(() => import('./PublicFavorites'));
 
-const PageLoader = () => (
-  <div className="min-h-[60vh] flex items-center justify-center">
-    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-  </div>
-);
+const PageLoader = () => null;
 
 
 function PublishedSiteProvider({ children, slug }: { children: ReactNode; slug: string }) {
