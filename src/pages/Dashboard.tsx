@@ -152,27 +152,27 @@ export default function Dashboard() {
 
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0">
-          {/* Left column (col 1-8): Evolution Chart only - now follows full height */}
-          <div className="col-span-8 flex flex-col min-h-0">
-            <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-          </div>
-
-          {/* Right column (col 9-12): KPIs + Sales Funnel */}
-          <div className="col-span-4 flex flex-col gap-3 min-h-0">
-            {/* KPIs moved here to let chart be full height */}
+          {/* Left column (col 1-8): KPIs + Evolution Chart */}
+          <div className="col-span-8 flex flex-col gap-3 min-h-0">
+            {/* KPIs back on top of evolution chart */}
             <KPICardsGrid 
               data={kpiData} 
               isLoading={statsLoading} 
               periodLabel={periodLabel} 
               propertyCount={propertyCount}
               siteVisits={siteVisits}
-              layout="side"
+              layout="top"
             />
             
-            {/* Funnel fills remaining height in right column */}
+            {/* Evolution chart fills remaining height in left column */}
             <div className="flex-1 min-h-0">
-              {funnelComponent}
+              <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
             </div>
+          </div>
+
+          {/* Right column (col 9-12): Sales Funnel */}
+          <div className="col-span-4 min-h-0 overflow-hidden">
+            {funnelComponent}
           </div>
         </div>
 
