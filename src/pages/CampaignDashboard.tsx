@@ -210,22 +210,6 @@ export default function CampaignDashboard() {
           />
         </div>
 
-        {/* Account Status Card */}
-        <Card className="bg-muted/30 border-dashed">
-          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm font-medium">Conexão Meta Ads: Ativa</span>
-              <span className="text-xs text-muted-foreground border-l pl-3">Sincronização em background ativa a cada 1h</span>
-            </div>
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex flex-col items-end">
-                <span className="text-muted-foreground">Última atualização geral</span>
-                <span className="font-medium">{insightData?.lastSync ? format(new Date(insightData.lastSync), "dd/MM 'às' HH:mm") : 'Aguardando sincronização'}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
