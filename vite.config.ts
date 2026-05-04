@@ -153,4 +153,15 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ['react', 'react-dom'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('/src/pages/public/') || id.includes('/src/components/public/') || id.includes('/src/PublicAppRoot')) {
+            return 'public-site';
+          }
+        },
+      },
+    },
+  },
 }));
