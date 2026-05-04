@@ -81,6 +81,7 @@ export default function AdminOrganizationDetail() {
   const navigate = useNavigate();
   const { organizations, updateOrganization, updateModuleAccess } = useSuperAdmin();
   const { startImpersonate } = useAuth();
+  const { plans } = useAdminPlans();
   const {
     invitations,
     isLoading: loadingInvitations,
