@@ -343,14 +343,23 @@ export default function AdminOrganizationDetail() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Dia do Vencimento</Label>
+                    <Label>Dia do Vencimento (Dia do mês)</Label>
                     <Input 
                       type="number" 
                       min={1} 
                       max={28} 
                       value={formData.billing_day} 
-                      onChange={e => setFormData({...formData, billing_day: Number(e.target.value)})} 
+                      onChange={e => {
+                        const day = Number(e.target.value);
+                        const nextDate = new Date();
+                        nextDate.setDate(day);
+                        if (nextDate <= new Date()) {
+                          nextDate.setMonth(nextDate.getMonth() + 1);
+                        }
+                        setFormData({...formData, billing_day: day, next_billing_date: nextDate.toISOString().split('T')[0]});
+                      }} 
                     />
+                    <p className="text-xs text-muted-foreground">O padrão é o dia da criação ({new Date(org.created_at).getDate()})</p>
                   </div>
 
                   <div className="space-y-2">
