@@ -79,6 +79,7 @@ export default function Settings() {
     if (profile?.role === 'admin' || isSuperAdmin) {
       tabs.push({ value: 'team', label: 'Usuários', icon: Users,
         renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> });
+      tabs.push({ value: 'subscription', label: 'Assinatura', icon: CreditCard });
     }
 
     if (hasWebhooksModule) {
