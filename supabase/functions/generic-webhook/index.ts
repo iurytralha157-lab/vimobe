@@ -336,11 +336,16 @@ Deno.serve(async (req) => {
     }
 
     // ===== LEAD NOVO =====
-    // Note: pipeline_id and stage_id are left null - distribution queues will set them via handle_lead_intake
-
+    if (!webhook.target_pipeline_id) {
+      console.log(`Webhook ${webhook.id} has no target pipeline configured. Skipping lead creation.`);
+      return new Response(
+        JSON.stringify({ success: true, message: "Webhook not configured with a pipeline, skipping" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Create lead (novo - não duplicado)
-    // Note: pipeline_id and stage_id are left null - distribution queues will set them
+
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
