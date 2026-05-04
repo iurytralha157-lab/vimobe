@@ -154,19 +154,19 @@ export default function AdminOrganizationDetail() {
   });
 
   useEffect(() => {
-    if (org) {
+    if (orgDetails) {
       setFormData({
-        name: org.name,
-        subscription_status: org.subscription_status,
-        max_users: org.max_users,
-        admin_notes: org.admin_notes || '',
-        plan_id: org.plan_id || null,
-        subscription_value: org.subscription_value || 0,
-        billing_day: org.billing_day || 1,
-        next_billing_date: org.next_billing_date || null,
+        name: orgDetails.name || '',
+        subscription_status: orgDetails.subscription_status || 'trial',
+        max_users: orgDetails.max_users || 10,
+        admin_notes: orgDetails.admin_notes || '',
+        plan_id: orgDetails.plan_id || null,
+        subscription_value: Number(orgDetails.subscription_value) || 0,
+        billing_day: orgDetails.billing_day || 1,
+        next_billing_date: orgDetails.next_billing_date || null,
       });
     }
-  }, [org]);
+  }, [orgDetails]);
 
   if (!org) {
     return (
