@@ -330,12 +330,13 @@ export default function AdminOrganizationDetail() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Próximo Vencimento</Label>
+                    <Label>Próxima Cobrança (Data de Vencimento)</Label>
                     <Input 
                       type="date" 
                       value={formData.next_billing_date} 
                       onChange={e => setFormData({...formData, next_billing_date: e.target.value})} 
                     />
+                    <p className="text-xs text-muted-foreground">O sistema gerará cobranças automaticamente nesta data.</p>
                   </div>
                 </div>
                 <div className="space-y-2">

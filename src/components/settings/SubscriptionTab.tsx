@@ -177,9 +177,9 @@ export function SubscriptionTab() {
                 <div className="space-y-1">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-primary" />
-                    {plan?.name || 'Vimob'}
+                    {plan?.name || org?.plan_name || 'Plano de Assinatura'}
                   </CardTitle>
-                  <CardDescription>{plan?.description || 'Assinatura do sistema'}</CardDescription>
+                  <CardDescription>{plan?.description || 'Gestão da sua assinatura Vimob'}</CardDescription>
                 </div>
                 <Badge variant={s.variant} className="uppercase">{s.label}</Badge>
               </div>
@@ -187,12 +187,12 @@ export function SubscriptionTab() {
             <CardContent className="pt-6">
                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold">Próximo Vencimento</p>
-                    <p className="text-lg font-bold">{nextBilling ? format(new Date(nextBilling), "dd 'de' MMMM, yyyy", { locale: ptBR }) : 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Vencimento da Fatura</p>
+                    <p className="text-lg font-bold">{nextBilling ? format(new Date(nextBilling + 'T12:00:00'), "dd 'de' MMMM, yyyy", { locale: ptBR }) : 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold">Valor</p>
-                    <p className="text-lg font-bold">{Number(plan?.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/mês</p>
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Valor Mensal</p>
+                    <p className="text-lg font-bold">{Number(plan?.price || org?.subscription_value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                   </div>
                </div>
             </CardContent>
@@ -253,8 +253,8 @@ export function SubscriptionTab() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>Realizar Pagamento</CardTitle>
-                <CardDescription>Escolha o método de pagamento para renovar ou ativar sua assinatura</CardDescription>
+                <CardTitle>Pagamento de Assinatura</CardTitle>
+                <CardDescription>Selecione o método de pagamento para sua mensalidade</CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="PIX">
@@ -267,14 +267,14 @@ export function SubscriptionTab() {
                   <TabsContent value="PIX" className="pt-6 space-y-4">
                     <p className="text-sm text-muted-foreground">Liberação imediata após o pagamento.</p>
                     <Button onClick={() => handleCheckout('PIX')} disabled={submitting} className="w-full">
-                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar QR Code PIX
+                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar QR Code PIX agora
                     </Button>
                   </TabsContent>
 
                   <TabsContent value="BOLETO" className="pt-6 space-y-4">
                     <p className="text-sm text-muted-foreground">Compensação em até 48h úteis.</p>
                     <Button onClick={() => handleCheckout('BOLETO')} disabled={submitting} className="w-full">
-                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar Boleto
+                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar Boleto Bancário
                     </Button>
                   </TabsContent>
 
