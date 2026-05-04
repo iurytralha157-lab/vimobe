@@ -228,6 +228,10 @@ export default function Settings() {
               <APITab />
             </TabsContent>
           )}
+
+          <TabsContent value="subscription">
+            <SubscriptionTab />
+          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
