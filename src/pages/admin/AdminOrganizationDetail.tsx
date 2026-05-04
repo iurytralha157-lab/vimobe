@@ -120,7 +120,7 @@ export default function AdminOrganizationDetail() {
         .eq('id', id)
         .single();
       if (error) throw error;
-      return data;
+      return data as any; // Bypass TS for dynamic fields
     },
     enabled: !!id
   });
