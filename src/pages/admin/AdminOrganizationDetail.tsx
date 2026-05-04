@@ -141,7 +141,11 @@ export default function AdminOrganizationDetail() {
         name: org.name,
         subscription_status: org.subscription_status,
         max_users: org.max_users,
-        admin_notes: org.admin_notes || ''
+        admin_notes: org.admin_notes || '',
+        plan_id: org.plan_id || null,
+        subscription_value: org.subscription_value || 0,
+        billing_day: org.billing_day || 1,
+        next_billing_date: org.next_billing_date || '',
       });
     }
   }, [org]);
