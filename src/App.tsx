@@ -266,43 +266,15 @@ function AppRoutes() {
             {/* Automations */}
             <Route path="/automations" element={<ProtectedRoute><PermissionGuard permission="automations_view"><Automations /></PermissionGuard></ProtectedRoute>} />
             
-            {/* Public Site Preview */}
+            {/* Public Site Preview (rendered inside CRM, with auth) */}
             <Route path="/site/preview/*" element={<PreviewSiteWrapper />} />
             <Route path="/site/previsualização/*" element={<PreviewSiteWrapper />} />
-            
-            {/* Published Sites */}
-            <Route path="/sites/:slug/*" element={<PublishedSiteWrapper />} />
-            
-            {/* Public API Documentation */}
-            <Route path="/docs/api" element={<APIDocs />} />
-            
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </div>
     </>
-  );
-}
-
-function CustomDomainRoutes() {
-  return (
-    <PublicSiteProvider>
-      <ScrollToTop />
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<PublicSiteLayout />}>
-            <Route index element={<PublicHome />} />
-            <Route path="imoveis" element={<PublicProperties />} />
-            <Route path="imoveis/:codigo" element={<PublicPropertyDetail />} />
-            <Route path="imovel/:code" element={<PublicPropertyDetail />} />
-            <Route path="sobre" element={<PublicAbout />} />
-            <Route path="contato" element={<PublicContact />} />
-            <Route path="favoritos" element={<PublicFavorites />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </PublicSiteProvider>
   );
 }
 
