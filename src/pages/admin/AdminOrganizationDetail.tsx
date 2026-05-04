@@ -293,7 +293,9 @@ export default function AdminOrganizationDetail() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Nenhum</SelectItem>
-                        {/* Plans are usually fetched from another hook, but I'll use a placeholder or assume they are available if I had them */}
+                        {plans?.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
