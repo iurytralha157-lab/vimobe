@@ -180,11 +180,6 @@ const bottomItems: NavItem[] = [{
   adminOnly: true,
   module: 'site'
 }, {
-  icon: CreditCard,
-  labelKey: 'subscription',
-  path: '/assinatura',
-  adminOnly: true
-}, {
   icon: Settings,
   labelKey: 'settings',
   path: '/settings'

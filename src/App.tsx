@@ -79,7 +79,7 @@ const AdminHelpEditor = lazy(() => import("./pages/admin/AdminHelpEditor"));
 const AdminDatabase = lazy(() => import("./pages/admin/AdminDatabase"));
 const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 const Checkout = lazy(() => import("./pages/Checkout"));
-const Subscription = lazy(() => import("./pages/Subscription"));
+// Subscription page is now part of Settings tab
 
 // Public site pages
 const PublicSiteLayout = lazy(() => import("./pages/public/PublicSiteLayout"));
@@ -207,7 +207,7 @@ function AppRoutes() {
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
             <Route path="/onboarding" element={renderOnboardingRoute()} />
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
-            <Route path="/assinatura" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+            <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
               loading ? <PageLoader /> : !user ? <Navigate to="/auth" replace /> : 
               <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>

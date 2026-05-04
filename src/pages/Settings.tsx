@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key, Bell } from 'lucide-react';
+import { Users, Check, AlertCircle, Loader2, Settings2, ExternalLink, Webhook, User, Bot, Facebook, Key, Bell, CreditCard } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import AVATAR_JSON from '@/components/icons/avatar-icon.json';
@@ -29,9 +29,10 @@ import { NotificationsTab } from '@/components/settings/NotificationsTab';
 import { useOrganizationModules } from '@/hooks/use-organization-modules';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-nav';
+import { SubscriptionTab } from '@/components/settings/SubscriptionTab';
 
 export default function Settings() {
-  const { profile, isSuperAdmin } = useAuth();
+  const { profile, isSuperAdmin, organization } = useAuth();
   const { data: metaIntegrations = [], isLoading: metaLoading } = useMetaIntegrations();
   const { hasModule } = useOrganizationModules();
   const { t } = useLanguage();
@@ -78,6 +79,11 @@ export default function Settings() {
     if (profile?.role === 'admin' || isSuperAdmin) {
       tabs.push({ value: 'team', label: 'Usuários', icon: Users,
         renderIcon: () => <AnimatedIcon icon={AVATAR_JSON} size={18} trigger="hover" /> });
+      
+      // Assinatura only for non-trial organizations and admins
+      if (organization?.subscription_status && organization.subscription_status !== 'trial') {
+        tabs.push({ value: 'subscription', label: 'Assinatura', icon: CreditCard });
+      }
     }
 
     if (hasWebhooksModule) {
@@ -226,6 +232,10 @@ export default function Settings() {
               <APITab />
             </TabsContent>
           )}
+
+          <TabsContent value="subscription">
+            <SubscriptionTab />
+          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
