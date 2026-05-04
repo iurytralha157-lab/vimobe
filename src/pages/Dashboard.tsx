@@ -152,28 +152,27 @@ export default function Dashboard() {
 
         {/* ===== DESKTOP LAYOUT ===== */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-2 md:gap-3 flex-1 min-h-0">
-          {/* Left column (col 1-8): KPIs + Activities + Evolution */}
-          <div className="col-span-8 flex flex-col gap-3 min-h-0">
-            <div className="flex flex-col gap-3">
-              <KPICardsGrid 
-                data={kpiData} 
-                isLoading={statsLoading} 
-                periodLabel={periodLabel} 
-                propertyCount={propertyCount}
-                siteVisits={siteVisits}
-              />
-            </div>
-
-
-            {/* Evolution chart - fills remaining height */}
-            <div className="flex-1 min-h-0">
-                <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
-            </div>
+          {/* Left column (col 1-8): Evolution Chart only - now follows full height */}
+          <div className="col-span-8 flex flex-col min-h-0">
+            <DealsEvolutionChart data={evolutionData} isLoading={evolutionLoading} />
           </div>
 
-          {/* Right column (col 9-12): Sales Funnel */}
-          <div className="col-span-4 min-h-0 overflow-hidden">
-            {funnelComponent}
+          {/* Right column (col 9-12): KPIs + Sales Funnel */}
+          <div className="col-span-4 flex flex-col gap-3 min-h-0">
+            {/* KPIs moved here to let chart be full height */}
+            <KPICardsGrid 
+              data={kpiData} 
+              isLoading={statsLoading} 
+              periodLabel={periodLabel} 
+              propertyCount={propertyCount}
+              siteVisits={siteVisits}
+              layout="side"
+            />
+            
+            {/* Funnel fills remaining height in right column */}
+            <div className="flex-1 min-h-0">
+              {funnelComponent}
+            </div>
           </div>
         </div>
 
@@ -252,13 +251,15 @@ interface KPICardsGridProps {
   periodLabel: string;
   propertyCount?: number;
   siteVisits?: number;
+  layout?: 'top' | 'side';
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits }: KPICardsGridProps) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits, layout = 'top' }: KPICardsGridProps) {
   if (isLoading) {
+    const isSide = layout === 'side';
     return (
       <div className="space-y-3">
-        <div className="grid grid-cols-4 gap-3">
+        <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-4")}>
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={`skeleton-top-${i}`}>
               <CardContent className="p-4">
@@ -274,7 +275,7 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits 
             </Card>
           ))}
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-3")}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={`skeleton-bottom-${i}`}>
               <CardContent className="p-4">
@@ -352,13 +353,15 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits 
     );
   };
 
+  const isSide = layout === 'side';
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-3">
-        {allKpis.slice(0, 4).map(renderKPI)}
+      <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-4")}>
+        {allKpis.slice(0, isSide ? 6 : 4).map(renderKPI)}
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        {allKpis.slice(4).map(renderKPI)}
+      <div className={cn("grid gap-3", isSide ? "grid-cols-1" : "grid-cols-3")}>
+        {allKpis.slice(isSide ? 6 : 4).map(renderKPI)}
       </div>
     </div>
   );
