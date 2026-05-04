@@ -32,7 +32,7 @@ import { AnimatedTabNav, AnimatedTabItem } from '@/components/ui/animated-tab-na
 import { SubscriptionTab } from '@/components/settings/SubscriptionTab';
 
 export default function Settings() {
-  const { profile, isSuperAdmin } = useAuth();
+  const { profile, isSuperAdmin, organization } = useAuth();
   const { data: metaIntegrations = [], isLoading: metaLoading } = useMetaIntegrations();
   const { hasModule } = useOrganizationModules();
   const { t } = useLanguage();
