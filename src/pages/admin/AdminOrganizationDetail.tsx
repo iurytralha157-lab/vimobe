@@ -169,6 +169,15 @@ export default function AdminOrganizationDetail() {
     });
   };
 
+  const handlePlanChange = (planId: string) => {
+    const selectedPlan = plans?.find(p => p.id === planId);
+    setFormData(prev => ({
+      ...prev,
+      plan_id: planId === 'none' ? null : planId,
+      subscription_value: selectedPlan ? selectedPlan.price : prev.subscription_value
+    }));
+  };
+
   const handleImpersonate = () => {
     startImpersonate(org.id, org.name);
     navigate('/dashboard');
