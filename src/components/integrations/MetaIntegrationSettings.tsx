@@ -325,7 +325,7 @@ export function MetaIntegrationSettings() {
             </div>
           )}
           <p className="text-[11px] text-muted-foreground mt-2 pl-1">
-            Facebook e Instagram são integrações independentes — se uma falhar, a outra continua funcionando.
+            As permissões do Instagram agora são opcionais e independentes da integração de Páginas/Facebook.
           </p>
         </CardContent>
       </Card>
