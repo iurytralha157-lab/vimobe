@@ -460,7 +460,7 @@ export default function AdminUsers() {
               <div className="flex justify-end pt-4">
                 <Button variant="outline" onClick={() => setDetailsDialog(prev => ({ ...prev, open: false }))}>
                   Fechar
-                </div>
+                </Button>
               </div>
             </div>
           ) : (
