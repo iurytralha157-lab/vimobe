@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon } from 'lucide-react';
+import { LayoutDashboard, Kanban, Building2, Shuffle, Shield, Settings, HelpCircle, ChevronDown, ChevronLeft, ChevronRight, Users, MessageSquare, Calendar, DollarSign, FileText, Receipt, TrendingUp, BarChart3, Zap, Package, MapPin, UserCheck, Globe, PieChart, Trophy, History as HistoryIcon, CreditCard } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { AnimatedIcon } from '@/components/icons/AnimatedIcon';
 import GLOBE_JSON from '@/components/icons/globe-icon.json';
@@ -179,6 +179,11 @@ const bottomItems: NavItem[] = [{
   path: '/settings/site',
   adminOnly: true,
   module: 'site'
+}, {
+  icon: CreditCard,
+  labelKey: 'subscription',
+  path: '/assinatura',
+  adminOnly: true
 }, {
   icon: Settings,
   labelKey: 'settings',
