@@ -11,17 +11,8 @@ import { CreditCard, Calendar, CheckCircle2, AlertCircle, ExternalLink } from "l
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Database } from "@/integrations/supabase/types";
 
-type Organization = Database["public"]["Tables"]["organizations"]["Row"] & {
-  next_billing_date?: string | null;
-  subscription_value?: number | null;
-};
-
-type Organization = Database["public"]["Tables"]["organizations"]["Row"] & {
-  next_billing_date?: string | null;
-  subscription_value?: number | null;
-};
-
-type Subscription = {
+type DbOrganization = Database["public"]["Tables"]["organizations"]["Row"];
+type SubscriptionRow = {
   id: string;
   organization_id: string;
   amount: number;
@@ -33,6 +24,12 @@ type Subscription = {
   created_at: string;
   updated_at: string;
 };
+
+// Interface estendida para lidar com colunas dinâmicas do BD
+interface SubscriptionOrg extends DbOrganization {
+  next_billing_date?: string | null;
+  subscription_value?: number | null;
+}
 
 const SubscriptionSettings = () => {
   const { profile } = useAuth();
@@ -46,7 +43,7 @@ const SubscriptionSettings = () => {
         .eq("id", profile?.organization_id)
         .single();
       if (error) throw error;
-      return data as Organization;
+      return data as SubscriptionOrg;
     },
     enabled: !!profile?.organization_id,
   });
@@ -60,7 +57,7 @@ const SubscriptionSettings = () => {
         .eq("organization_id", profile?.organization_id)
         .order("due_date", { ascending: false });
       if (error) throw error;
-      return data as Subscription[];
+      return data as unknown as SubscriptionRow[];
     },
     enabled: !!profile?.organization_id,
   });
