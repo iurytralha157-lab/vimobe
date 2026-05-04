@@ -238,8 +238,8 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const payload: ExecutionPayload = await req.json();
-    const { execution_id } = payload;
+    const payload: ExecutionPayload & { override_node?: any } = await req.json();
+    const { execution_id, override_node } = payload;
     console.log(`📥 Executor invoked for execution_id=${execution_id}`);
 
     if (!execution_id) {
