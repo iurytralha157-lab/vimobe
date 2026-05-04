@@ -16,10 +16,12 @@ import { useForceRefreshListener } from "@/hooks/use-force-refresh";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { usePwaUpdate } from "@/hooks/use-pwa-update";
 import { useSystemBranding } from "@/hooks/use-system-branding";
-import { PublicSiteProvider } from "@/contexts/PublicSiteContext";
 import { SetupGuideDialog } from "@/components/setup-guide/SetupGuideDialog";
 import { MetricsPanel } from "@/components/MetricsPanel";
 import { IOSInstallGuide } from "@/components/IOSInstallGuide";
+
+// Public site root — separate bundle, no CRM providers
+const PublicAppRoot = lazy(() => import("./PublicAppRoot"));
 
 // Lazy imports - critical routes
 const Auth = lazy(() => import("./pages/Auth"));
