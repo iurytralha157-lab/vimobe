@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      organization_id, checkout_token, billing_type, // PIX | CREDIT_CARD
+      organization_id, checkout_token, billing_type, // PIX | CREDIT_CARD | BOLETO
       // Card data (required for CREDIT_CARD)
       holder_name, card_number, expiry_month, expiry_year, ccv,
       // Holder info
@@ -42,8 +42,8 @@ Deno.serve(async (req) => {
       remote_ip,
     } = body;
 
-    if (!billing_type || !['PIX', 'CREDIT_CARD'].includes(billing_type)) {
-      return new Response(JSON.stringify({ error: 'billing_type must be PIX or CREDIT_CARD' }), {
+    if (!billing_type || !['PIX', 'CREDIT_CARD', 'BOLETO'].includes(billing_type)) {
+      return new Response(JSON.stringify({ error: 'billing_type must be PIX, CREDIT_CARD or BOLETO' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
