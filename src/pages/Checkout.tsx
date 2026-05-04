@@ -137,6 +137,30 @@ export default function Checkout() {
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || 'Falha');
 
+      // Update user profile if logged in
+      if (user) {
+        const updateData: any = {
+          cpf: holderCpf || undefined,
+          phone: holderPhone || undefined,
+          whatsapp: holderPhone || undefined, // Often the same
+        };
+
+        if (billingType === 'CREDIT_CARD') {
+          if (holderName) updateData.name = holderName;
+          if (postalCode) updateData.cep = postalCode;
+          if (addressNumber) updateData.numero = addressNumber;
+        }
+
+        const { error: updateError } = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('id', user.id);
+
+        if (!updateError) {
+          await refreshProfile();
+        }
+      }
+
       if (billingType === 'PIX') {
         setPixResult(result);
       } else {
