@@ -251,6 +251,7 @@ interface KPICardsGridProps {
   periodLabel: string;
   propertyCount?: number;
   siteVisits?: number;
+  layout?: 'top' | 'side';
 }
 
 function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits }: KPICardsGridProps) {
