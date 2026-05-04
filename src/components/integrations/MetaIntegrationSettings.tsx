@@ -293,9 +293,10 @@ export function MetaIntegrationSettings() {
                 className="h-8 text-xs px-2"
                 onClick={() => handleConnect(false)}
                 disabled={isConnecting || getAuthUrl.isPending}
+                title="Conecta Páginas do Facebook + Contas de Anúncios + Lead Ads (independente do Instagram)"
               >
                 <Facebook className="h-3.5 w-3.5 text-blue-600" />
-                <span className="hidden sm:inline ml-1">{hasConnectedPages ? meta.addPage : meta.connect}</span>
+                <span className="hidden sm:inline ml-1">{hasConnectedPages ? meta.addPage : "Facebook"}</span>
               </Button>
               <Button
                 size="sm"
@@ -303,7 +304,7 @@ export function MetaIntegrationSettings() {
                 className="h-8 text-xs px-2"
                 onClick={() => handleConnect(true)}
                 disabled={isConnecting || getAuthUrl.isPending}
-                title="Requer Instagram Business vinculado a uma Página do Facebook"
+                title="Conexão independente — exige app Instagram Business configurado no painel Meta"
               >
                 <Instagram className="h-3.5 w-3.5 text-pink-600" />
                 <span className="hidden sm:inline ml-1">Instagram</span>
@@ -323,6 +324,9 @@ export function MetaIntegrationSettings() {
               <span className="text-xs text-muted-foreground">{meta.noPageConnected}</span>
             </div>
           )}
+          <p className="text-[11px] text-muted-foreground mt-2 pl-1">
+            Facebook e Instagram são integrações independentes — se uma falhar, a outra continua funcionando.
+          </p>
         </CardContent>
       </Card>
 
