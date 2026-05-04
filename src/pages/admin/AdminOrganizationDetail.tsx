@@ -295,7 +295,7 @@ export default function AdminOrganizationDetail() {
                     <Label>Plano</Label>
                     <Select 
                       value={formData.plan_id || 'none'} 
-                      onValueChange={(val) => setFormData({...formData, plan_id: val === 'none' ? null : val})}
+                      onValueChange={handlePlanChange}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecionar Plano" />
