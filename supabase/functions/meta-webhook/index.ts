@@ -259,11 +259,16 @@ serve(async (req) => {
                     .maybeSingle();
 
                   if (!formConfig) {
-                    console.log(`No active form config found for form ${formId} on integration ${integration.id}. Fallback to integration defaults.`);
+                    console.log(`No active form config found for form ${formId} on integration ${integration.id}. Skipping lead creation per user request.`);
+                    continue;
                   }
 
-                  const pipelineId = formConfig?.pipeline_id || integration.pipeline_id;
-                  const stageId = formConfig?.stage_id || integration.stage_id;
+                  const pipelineId = formConfig.pipeline_id;
+                  const stageId = formConfig.stage_id;
+                  if (!pipelineId || !stageId) {
+                    console.log(`Form config exists but pipeline/stage are missing for form ${formId}. Skipping.`);
+                    continue;
+                  }
                   const propertyId = formConfig?.property_id || null;
                   const autoTags = formConfig?.auto_tags || [];
                   const fieldMapping = formConfig?.field_mapping || {};
