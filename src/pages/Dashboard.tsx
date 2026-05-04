@@ -353,13 +353,15 @@ function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits,
     );
   };
 
+  const isSide = layout === 'side';
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-3">
-        {allKpis.slice(0, 4).map(renderKPI)}
+      <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-4")}>
+        {allKpis.slice(0, isSide ? 6 : 4).map(renderKPI)}
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        {allKpis.slice(4).map(renderKPI)}
+      <div className={cn("grid gap-3", isSide ? "grid-cols-1" : "grid-cols-3")}>
+        {allKpis.slice(isSide ? 6 : 4).map(renderKPI)}
       </div>
     </div>
   );
