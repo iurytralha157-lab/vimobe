@@ -115,12 +115,17 @@ export function SubscriptionTab() {
 
   const autoFillFromOrg = () => {
     if (!organization) return;
+    const org = organization as any;
     setBillingInfo({
-      name: organization.razao_social || organization.name || '',
-      taxId: organization.cnpj || '', cep: organization.cep || '',
-      endereco: organization.endereco || '', numero: organization.numero || '',
-      complemento: organization.complemento || '', bairro: organization.bairro || '',
-      cidade: organization.cidade || '', uf: organization.uf || '',
+      name: org.razao_social || org.name || '',
+      taxId: org.cnpj || '', 
+      cep: org.cep || '',
+      endereco: org.endereco || '', 
+      numero: org.numero || '',
+      complemento: org.complemento || '', 
+      bairro: org.bairro || '',
+      cidade: org.cidade || '', 
+      uf: org.uf || '',
     });
     toast.info('Dados importados da empresa');
   };
