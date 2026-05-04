@@ -16,37 +16,53 @@ type Organization = Database["public"]["Tables"]["organizations"]["Row"] & {
   subscription_value?: number | null;
 };
 
-type Subscription = Database["public"]["Tables"]["organization_subscriptions"]["Row"];
+type Organization = Database["public"]["Tables"]["organizations"]["Row"] & {
+  next_billing_date?: string | null;
+  subscription_value?: number | null;
+};
+
+type Subscription = {
+  id: string;
+  organization_id: string;
+  amount: number;
+  due_date: string;
+  status: string | null;
+  payment_method: string | null;
+  invoice_url: string | null;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 const SubscriptionSettings = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   const { data: org, isLoading: isLoadingOrg } = useQuery({
-    queryKey: ["organization", user?.organization_id],
+    queryKey: ["organization", profile?.organization_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organizations")
         .select("*")
-        .eq("id", user?.organization_id)
+        .eq("id", profile?.organization_id)
         .single();
       if (error) throw error;
       return data as Organization;
     },
-    enabled: !!user?.organization_id,
+    enabled: !!profile?.organization_id,
   });
 
   const { data: subscriptions, isLoading: isLoadingSubs } = useQuery({
-    queryKey: ["organization_subscriptions", user?.organization_id],
+    queryKey: ["organization_subscriptions", profile?.organization_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_subscriptions" as any)
         .select("*")
-        .eq("organization_id", user?.organization_id)
+        .eq("organization_id", profile?.organization_id)
         .order("due_date", { ascending: false });
       if (error) throw error;
       return data as Subscription[];
     },
-    enabled: !!user?.organization_id,
+    enabled: !!profile?.organization_id,
   });
 
   if (isLoadingOrg || isLoadingSubs) {
