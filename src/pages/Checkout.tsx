@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, QrCode, CreditCard, CheckCircle2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CheckoutInfo {
   organization: {
@@ -47,6 +48,7 @@ interface CardResult {
 export default function Checkout() {
   const { token } = useParams<{ token: string }>();
   const [params] = useSearchParams();
+  const { user, refreshProfile } = useAuth();
   const orgId = params.get('org');
   const [info, setInfo] = useState<CheckoutInfo | null>(null);
   const [loading, setLoading] = useState(true);
