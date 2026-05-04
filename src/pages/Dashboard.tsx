@@ -122,9 +122,9 @@ export default function Dashboard() {
 
 
   return (
-    <AppLayout title="Dashboard" disableMainScroll={!isMobile}>
+    <AppLayout title="Dashboard" disableMainScroll={true}>
       <div className={cn(
-        "flex flex-col gap-2 md:gap-3 animate-fade-in",
+        "flex flex-col gap-2 md:gap-3 animate-fade-in h-full w-full",
         !isMobile ? "flex-1 min-h-0 overflow-hidden" : ""
       )}>
 
