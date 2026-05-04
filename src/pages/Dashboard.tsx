@@ -254,11 +254,12 @@ interface KPICardsGridProps {
   layout?: 'top' | 'side';
 }
 
-function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits }: KPICardsGridProps) {
+function KPICardsGrid({ data, isLoading, periodLabel, propertyCount, siteVisits, layout = 'top' }: KPICardsGridProps) {
   if (isLoading) {
+    const isSide = layout === 'side';
     return (
       <div className="space-y-3">
-        <div className="grid grid-cols-4 gap-3">
+        <div className={cn("grid gap-3", isSide ? "grid-cols-2" : "grid-cols-4")}>
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={`skeleton-top-${i}`}>
               <CardContent className="p-4">
