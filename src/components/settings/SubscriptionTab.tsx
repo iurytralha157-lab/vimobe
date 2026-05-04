@@ -393,5 +393,3 @@ export function SubscriptionTab() {
   );
 }
 
-// Add this icon if missing in imports
-import { Shield } from 'lucide-react';
