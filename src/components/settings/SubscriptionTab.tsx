@@ -111,6 +111,7 @@ export function SubscriptionTab() {
       endereco: profile.endereco || '', numero: profile.numero || '',
       complemento: profile.complemento || '', bairro: profile.bairro || '',
       cidade: profile.cidade || '', uf: profile.uf || '',
+      email: profile.email || '', telefone: profile.phone || '',
     });
     toast.info('Dados importados do seu perfil');
   };
@@ -128,6 +129,8 @@ export function SubscriptionTab() {
       bairro: org.bairro || '',
       cidade: org.cidade || '', 
       uf: org.uf || '',
+      email: org.email || '',
+      telefone: org.telefone || org.whatsapp || '',
     });
     toast.info('Dados importados da empresa');
   };
