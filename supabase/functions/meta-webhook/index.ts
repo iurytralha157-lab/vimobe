@@ -248,7 +248,8 @@ serve(async (req) => {
                 if (!integrations?.length) continue;
 
                 for (const integration of integrations) {
-                  // This is the original leadgen logic preserved
+                  console.log(`Checking form config for integration ${integration.id} and form ${formId}`);
+                  
                   const { data: formConfig } = await supabase
                     .from("meta_form_configs")
                     .select("*")
@@ -257,6 +258,12 @@ serve(async (req) => {
                     .eq("is_active", true)
                     .maybeSingle();
 
+                  if (!formConfig) {
+                    console.log(`No active form config found for form ${formId} on integration ${integration.id}. Fallback to integration defaults.`);
+                  }
+
+                  const pipelineId = formConfig?.pipeline_id || integration.pipeline_id;
+                  const stageId = formConfig?.stage_id || integration.stage_id;
                   const propertyId = formConfig?.property_id || null;
                   const autoTags = formConfig?.auto_tags || [];
                   const fieldMapping = formConfig?.field_mapping || {};
