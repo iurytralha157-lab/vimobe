@@ -40,7 +40,7 @@ export function SubscriptionTab() {
       
       try {
         // Fetch org and plan
-        const { data: org } = await supabase
+        const { data: org } = await (supabase as any)
           .from('organizations')
           .select('*')
           .eq('id', organization.id)
@@ -48,7 +48,7 @@ export function SubscriptionTab() {
 
         let plan = null;
         if (org?.plan_id) {
-          const { data: p } = await supabase
+          const { data: p } = await (supabase as any)
             .from('admin_subscription_plans')
             .select('*')
             .eq('id', org.plan_id)
@@ -57,7 +57,7 @@ export function SubscriptionTab() {
         }
 
         // Fetch history
-        const { data: hist } = await supabase
+        const { data: hist } = await (supabase as any)
           .from('organization_subscriptions')
           .select('*')
           .eq('organization_id', organization.id)
