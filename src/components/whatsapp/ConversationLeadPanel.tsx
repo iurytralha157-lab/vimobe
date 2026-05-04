@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { LeadTimeline } from "@/components/leads/LeadTimeline";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDealStatusChange } from "@/hooks/use-deal-status-change";
 import { LostReasonDialog } from "@/components/leads/LostReasonDialog";
@@ -205,7 +204,7 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
     meta?.campaign_name || meta?.ad_name || meta?.form_name || meta?.utm_source || meta?.utm_campaign;
 
   return (
-    <div className={cn("flex flex-col h-full bg-card overflow-hidden", className)}>
+    <div className={cn("flex flex-col h-full bg-card rounded-2xl overflow-hidden", className)}>
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-start justify-between">
@@ -345,21 +344,6 @@ export function ConversationLeadPanel({ leadId, onClose, className, contactPictu
             {leadTags.length === 0 && availableTagsToAdd.length === 0 && (
               <p className="text-xs text-muted-foreground">Nenhuma tag</p>
             )}
-          </section>
-
-          <Separator />
-          
-          {/* Lead Evolution / Timeline */}
-          <section className="flex-1 min-h-0 flex flex-col">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Evolução do Negócio
-              </h4>
-              <History className="h-3 w-3 text-muted-foreground" />
-            </div>
-            <div className="rounded-xl border bg-muted/30 p-3 max-h-[300px] overflow-y-auto">
-              <LeadTimeline leadId={leadId} />
-            </div>
           </section>
 
           <Separator />
