@@ -207,7 +207,7 @@ function AppRoutes() {
             <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
             <Route path="/onboarding" element={renderOnboardingRoute()} />
             <Route path="/checkout/:token" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
-            <Route path="/assinatura" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+            <Route path="/assinatura" element={<Navigate to="/settings?tab=subscription" replace />} />
             <Route path="/select-organization" element={
               loading ? <PageLoader /> : !user ? <Navigate to="/auth" replace /> : 
               <Suspense fallback={<PageLoader />}><SelectOrganization /></Suspense>
