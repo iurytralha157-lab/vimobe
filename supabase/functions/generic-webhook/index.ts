@@ -354,8 +354,8 @@ Deno.serve(async (req) => {
         phone: mappedData.phone || null,
         email: mappedData.email || null,
         message: mappedData.message || null,
-        pipeline_id: null, // Distribution queue will set this
-        stage_id: null, // Distribution queue will set this
+        pipeline_id: webhook.target_pipeline_id,
+        stage_id: webhook.target_stage_id,
         assigned_user_id: null,
         interest_property_id: resolvedPropertyId,
         interest_plan_id: resolvedPlanId,
