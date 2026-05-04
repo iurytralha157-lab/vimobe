@@ -79,7 +79,7 @@ const AdminHelpEditor = lazy(() => import("./pages/admin/AdminHelpEditor"));
 const AdminDatabase = lazy(() => import("./pages/admin/AdminDatabase"));
 const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 const Checkout = lazy(() => import("./pages/Checkout"));
-const Subscription = lazy(() => import("./pages/Subscription"));
+// Subscription page is now part of Settings tab
 
 // Public site pages
 const PublicSiteLayout = lazy(() => import("./pages/public/PublicSiteLayout"));
