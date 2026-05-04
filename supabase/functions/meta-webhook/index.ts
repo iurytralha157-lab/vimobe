@@ -326,8 +326,12 @@ serve(async (req) => {
                     }
                   }
 
+                  console.log(`Inserting lead for org ${integration.organization_id} in pipeline ${pipelineId}, stage ${stageId}`);
+                  
                   const { data: newLead, error: leadError } = await supabase.from("leads").insert({
                     organization_id: integration.organization_id,
+                    pipeline_id: pipelineId,
+                    stage_id: stageId,
                     name, email, phone,
                     message: message || `Lead gerado via Facebook Lead Ads`,
                     source: "meta",
