@@ -83,18 +83,9 @@ const AdminOnboarding = lazy(() => import("./pages/admin/AdminOnboarding"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 // Subscription page is now part of Settings tab
 
-// Public site pages
-const PublicSiteLayout = lazy(() => import("./pages/public/PublicSiteLayout"));
-const PublicHome = lazy(() => import("./pages/public/PublicHome"));
-const PublicProperties = lazy(() => import("./pages/public/PublicProperties"));
-const PublicPropertyDetail = lazy(() => import("./pages/public/PublicPropertyDetail"));
-const PublicAbout = lazy(() => import("./pages/public/PublicAbout"));
-const PublicContact = lazy(() => import("./pages/public/PublicContact"));
-const PublicFavorites = lazy(() => import("./pages/public/PublicFavorites"));
+// Public site preview (used inside CRM)
 const PreviewSiteWrapper = lazy(() => import("./pages/public/PreviewSiteWrapper"));
-const PublishedSiteWrapper = lazy(() => import("./pages/public/PublishedSiteWrapper"));
 
-const APIDocs = lazy(() => import("./pages/public/APIDocs"));
 
 // Trial expired modal
 const TrialExpiredModal = lazy(() => import("./components/admin/TrialExpiredModal").then(m => ({ default: m.TrialExpiredModal })));
