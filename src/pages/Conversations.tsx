@@ -962,12 +962,14 @@ export default function Conversations() {
 
         {/* Lead Side Panel - Desktop only */}
         {selectedConversation?.lead?.id && showLeadPanel && (
-          <ConversationLeadPanel
-            leadId={selectedConversation.lead.id}
-            onClose={() => setShowLeadPanel(false)}
-            contactPicture={selectedConversation.contact_picture}
-            className="w-[350px] min-w-[350px] max-w-[350px] shrink-0 animate-in slide-in-from-right-5 duration-300"
-          />
+          <div className="w-[350px] min-w-[350px] max-w-[350px] shrink-0 border-l border-border animate-in slide-in-from-right-5 duration-300">
+            <ConversationLeadPanel
+              leadId={selectedConversation.lead.id}
+              onClose={() => setShowLeadPanel(false)}
+              contactPicture={selectedConversation.contact_picture}
+              className="h-full"
+            />
+          </div>
         )}
       </div>
 
