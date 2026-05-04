@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,14 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CreditCard, Calendar, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Database } from "@/integrations/supabase/types";
+
+type Organization = Database["public"]["Tables"]["organizations"]["Row"] & {
+  next_billing_date?: string | null;
+  subscription_value?: number | null;
+};
+
+type Subscription = Database["public"]["Tables"]["organization_subscriptions"]["Row"];
 
 const SubscriptionSettings = () => {
   const { user } = useAuth();
@@ -22,7 +30,7 @@ const SubscriptionSettings = () => {
         .eq("id", user?.organization_id)
         .single();
       if (error) throw error;
-      return data;
+      return data as Organization;
     },
     enabled: !!user?.organization_id,
   });
@@ -31,26 +39,30 @@ const SubscriptionSettings = () => {
     queryKey: ["organization_subscriptions", user?.organization_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("organization_subscriptions")
+        .from("organization_subscriptions" as any)
         .select("*")
         .eq("organization_id", user?.organization_id)
         .order("due_date", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Subscription[];
     },
     enabled: !!user?.organization_id,
   });
 
   if (isLoadingOrg || isLoadingSubs) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <Skeleton className="h-40 w-full" />
+      <div className="container mx-auto py-6 space-y-6 animate-pulse">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid gap-6 md:grid-cols-2">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
         <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     switch (status) {
       case "paid":
         return <Badge className="bg-green-500 text-white"><CheckCircle2 className="w-3 h-3 mr-1" /> Pago</Badge>;
@@ -59,7 +71,7 @@ const SubscriptionSettings = () => {
       case "canceled":
         return <Badge variant="destructive">Cancelado</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status || "Desconhecido"}</Badge>;
     }
   };
 
@@ -139,11 +151,11 @@ const SubscriptionSettings = () => {
               {subscriptions && subscriptions.length > 0 ? (
                 subscriptions.map((sub) => (
                   <TableRow key={sub.id}>
-                    <TableCell>{format(new Date(sub.due_date), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>{sub.due_date ? format(new Date(sub.due_date), "dd/MM/yyyy") : "---"}</TableCell>
                     <TableCell>
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(sub.amount))}
                     </TableCell>
-                    <TableCell>{getStatusBadge(sub.status || "pending")}</TableCell>
+                    <TableCell>{getStatusBadge(sub.status)}</TableCell>
                     <TableCell className="text-right">
                       {sub.status === "pending" && (
                         <Button variant="outline" size="sm" onClick={handlePayment}>
